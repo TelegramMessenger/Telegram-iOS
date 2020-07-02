@@ -5648,3 +5648,24 @@ Any member of this group will be able to see messages in the channel.";
 "ChatList.AutoarchiveSuggestion.OpenSettings" = "Go to Settings";
 
 "SettingsSearch.Synonyms.ChatSettings.IntentsSettings" = "Siri Suggestions";
+
+"Stats.GroupShowMoreTopPosters_0" = "Show %@ More";
+"Stats.GroupShowMoreTopPosters_1" = "Show %@ More";
+"Stats.GroupShowMoreTopPosters_2" = "Show %@ More";
+"Stats.GroupShowMoreTopPosters_3_10" = "Show %@ More";
+"Stats.GroupShowMoreTopPosters_many" = "Show %@ More";
+"Stats.GroupShowMoreTopPosters_any" = "Show %@ More";
+
+"Stats.GroupShowMoreTopAdmins_0" = "Show %@ More";
+"Stats.GroupShowMoreTopAdmins_1" = "Show %@ More";
+"Stats.GroupShowMoreTopAdmins_2" = "Show %@ More";
+"Stats.GroupShowMoreTopAdmins_3_10" = "Show %@ More";
+"Stats.GroupShowMoreTopAdmins_many" = "Show %@ More";
+"Stats.GroupShowMoreTopAdmins_any" = "Show %@ More";
+
+"Stats.GroupShowMoreTopInviters_0" = "Show %@ More";
+"Stats.GroupShowMoreTopInviters_1" = "Show %@ More";
+"Stats.GroupShowMoreTopInviters_2" = "Show %@ More";
+"Stats.GroupShowMoreTopInviters_3_10" = "Show %@ More";
+"Stats.GroupShowMoreTopInviters_many" = "Show %@ More";
+"Stats.GroupShowMoreTopInviters_any" = "Show %@ More";
