@@ -84,8 +84,14 @@ class PeerAvatarImageGalleryItem: GalleryItem {
             if let indexData = self.entry.indexData {
                 node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
             }
-            
+            let previousContentAnimations = node.imageNode.contentAnimations
+            if synchronous {
+                node.imageNode.contentAnimations = []
+            }
             node.setEntry(self.entry, synchronous: synchronous)
+            if synchronous {
+                 node.imageNode.contentAnimations = previousContentAnimations
+            }
             node.footerContentNode.delete = self.delete
             node.footerContentNode.setMain = self.setMain
         }
@@ -125,7 +131,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private var entry: AvatarGalleryEntry?
     
     private let contentNode: PeerAvatarImageGalleryContentNode
-    private let imageNode: TransformImageNode
+    fileprivate let imageNode: TransformImageNode
     private var videoNode: UniversalVideoNode?
     private var videoContent: NativeVideoContent?
     
