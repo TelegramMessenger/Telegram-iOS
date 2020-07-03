@@ -1972,7 +1972,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         self.avatarListNode.avatarContainerNode.updateTransitionFraction(transitionFraction, transition: transition)
-        self.listContainerNode.currentItemNode.updateTransitionFraction(transitionFraction, transition: transition)
+        self.avatarListNode.listContainerNode.currentItemNode?.updateTransitionFraction(transitionFraction, transition: transition)
         
         self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
