@@ -37,6 +37,7 @@ private enum ButtonDescription: Equatable {
     }
     
     enum SoundOutput {
+        case builtin
         case speaker
         case bluetooth
     }
@@ -158,7 +159,9 @@ final class CallControllerButtonsNode: ASDisplayNode {
             
             let soundOutput: ButtonDescription.SoundOutput
             switch speakerMode {
-            case .none, .builtin, .speaker:
+            case .none, .builtin:
+                soundOutput = .builtin
+            case .speaker:
                 soundOutput = .speaker
             case .headphones:
                 soundOutput = .bluetooth
@@ -172,7 +175,6 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 topButtons.append(.mute(self.isMuted))
                 topButtons.append(.switchCamera)
             case .notAvailable:
-                topButtons.append(.enableCamera(!self.isCameraPaused))
                 topButtons.append(.mute(self.isMuted))
                 topButtons.append(.soundOutput(soundOutput))
             }
@@ -208,10 +210,12 @@ final class CallControllerButtonsNode: ASDisplayNode {
             
             let soundOutput: ButtonDescription.SoundOutput
             switch speakerMode {
-            case .none, .builtin, .speaker:
+            case .none, .builtin:
+                soundOutput = .builtin
+            case .speaker:
                 soundOutput = .speaker
             case .headphones:
-                soundOutput = .bluetooth
+                soundOutput = .builtin
             case .bluetooth:
                 soundOutput = .bluetooth
             }
@@ -222,7 +226,6 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 topButtons.append(.mute(isMuted))
                 topButtons.append(.switchCamera)
             case .notAvailable:
-                topButtons.append(.enableCamera(!self.isCameraPaused))
                 topButtons.append(.mute(isMuted))
                 topButtons.append(.soundOutput(soundOutput))
             }
@@ -293,14 +296,18 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 buttonText = strings.Call_Flip
             case let .soundOutput(value):
                 let image: CallControllerButtonItemNode.Content.Image
+                var isFilled = false
                 switch value {
+                case .builtin:
+                    image = .speaker
                 case .speaker:
                     image = .speaker
+                    isFilled = true
                 case .bluetooth:
                     image = .bluetooth
                 }
                 buttonContent = CallControllerButtonItemNode.Content(
-                    appearance: .blurred(isFilled: false),
+                    appearance: .blurred(isFilled: isFilled),
                     image: image
                 )
                 buttonText = strings.Call_Speaker
