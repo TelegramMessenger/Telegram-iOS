@@ -138,6 +138,7 @@ public:
     virtual ~TgVoipVideoCaptureInterface();
     
     virtual void switchCamera() = 0;
+    virtual void setIsVideoEnabled(bool isVideoEnabled) = 0;
     virtual void setVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) = 0;
 };
 

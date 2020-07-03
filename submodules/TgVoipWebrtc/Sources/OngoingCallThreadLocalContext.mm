@@ -41,6 +41,10 @@ using namespace TGVOIP_NAMESPACE;
     _interface->switchCamera();
 }
 
+- (void)setIsVideoEnabled:(bool)isVideoEnabled {
+    _interface->setIsVideoEnabled(isVideoEnabled);
+}
+
 - (std::shared_ptr<TgVoipVideoCaptureInterface>)getInterface {
     return _interface;
 }

@@ -10,6 +10,7 @@ namespace TGVOIP_NAMESPACE {
 
 TgVoipVideoCaptureInterfaceObject::TgVoipVideoCaptureInterfaceObject() {
     _useFrontCamera = true;
+    _isVideoEnabled = true;
     _videoSource = makeVideoSource(Manager::getMediaThread(), MediaManager::getWorkerThread());
     //this should outlive the capturer
     _videoCapturer = makeVideoCapturer(_videoSource, _useFrontCamera, [this](bool isActive) {
@@ -32,6 +33,13 @@ void TgVoipVideoCaptureInterfaceObject::switchCamera() {
             this->_isActiveUpdated(isActive);
         }
     });
+}
+
+void TgVoipVideoCaptureInterfaceObject::setIsVideoEnabled(bool isVideoEnabled) {
+    if (_isVideoEnabled != isVideoEnabled) {
+        _isVideoEnabled = isVideoEnabled;
+        _videoCapturer->setIsEnabled(isVideoEnabled);
+    }
 }
     
 void TgVoipVideoCaptureInterfaceObject::setVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) {
@@ -64,6 +72,12 @@ TgVoipVideoCaptureInterfaceImpl::~TgVoipVideoCaptureInterfaceImpl() {
 void TgVoipVideoCaptureInterfaceImpl::switchCamera() {
     _impl->perform([](TgVoipVideoCaptureInterfaceObject *impl) {
         impl->switchCamera();
+    });
+}
+
+void TgVoipVideoCaptureInterfaceImpl::setIsVideoEnabled(bool isVideoEnabled) {
+    _impl->perform([isVideoEnabled](TgVoipVideoCaptureInterfaceObject *impl) {
+        impl->setIsVideoEnabled(isVideoEnabled);
     });
 }
     

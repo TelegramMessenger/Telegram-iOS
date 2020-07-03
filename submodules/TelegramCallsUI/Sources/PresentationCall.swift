@@ -190,7 +190,7 @@ public final class PresentationCallImpl: PresentationCall {
     
     private var sessionStateDisposable: Disposable?
     
-    private let statePromise = ValuePromise<PresentationCallState>(PresentationCallState(state: .waiting, videoState: .notAvailable, remoteVideoState: .inactive), ignoreRepeated: true)
+    private let statePromise = ValuePromise<PresentationCallState>()
     public var state: Signal<PresentationCallState, NoError> {
         return self.statePromise.get()
     }
@@ -264,7 +264,9 @@ public final class PresentationCallImpl: PresentationCall {
         self.isVideo = startWithVideo
         if self.isVideo {
             self.videoCapturer = OngoingCallVideoCapturer()
-            self.statePromise.set(PresentationCallState(state: .waiting, videoState: .activeOutgoing, remoteVideoState: .inactive))
+            self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: .activeOutgoing, remoteVideoState: .inactive))
+        } else {
+            self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: .notAvailable, remoteVideoState: .inactive))
         }
         
         self.serializedData = serializedData
@@ -457,7 +459,7 @@ public final class PresentationCallImpl: PresentationCall {
         
         switch sessionState.state {
             case .ringing:
-                presentationState = PresentationCallState(state: .ringing, videoState: .notAvailable, remoteVideoState: .inactive)
+                presentationState = PresentationCallState(state: .ringing, videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState)
                 if previous == nil || previousControl == nil {
                     if !self.reportedIncomingCall {
                         self.reportedIncomingCall = true
@@ -520,7 +522,7 @@ public final class PresentationCallImpl: PresentationCall {
                             presentationState = PresentationCallState(state: .reconnecting(timestamp, reception, keyVisualHash), videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState)
                     }
                 } else {
-                    presentationState = PresentationCallState(state: .connecting(keyVisualHash), videoState: .notAvailable, remoteVideoState: .inactive)
+                    presentationState = PresentationCallState(state: .connecting(keyVisualHash), videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState)
                 }
         }
         
@@ -536,6 +538,7 @@ public final class PresentationCallImpl: PresentationCall {
                     
                     let ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, auxiliaryServers: auxiliaryServers, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, derivedState: self.derivedState, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: connections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, audioSessionActive: self.audioSessionActive.get(), logName: logName)
                     self.ongoingContext = ongoingContext
+                    ongoingContext.setIsMuted(self.isMutedValue)
                     
                     self.debugInfoValue.set(ongoingContext.debugInfo())
                     
@@ -727,6 +730,10 @@ public final class PresentationCallImpl: PresentationCall {
     
     public func setEnableVideo(_ value: Bool) {
         self.ongoingContext?.setEnableVideo(value)
+    }
+    
+    public func setOutgoingVideoIsPaused(_ isPaused: Bool) {
+        self.videoCapturer?.setIsVideoEnabled(!isPaused)
     }
     
     public func setCurrentAudioOutput(_ output: AudioSessionOutput) {

@@ -305,6 +305,10 @@ public final class OngoingCallVideoCapturer {
     public func makeOutgoingVideoView(completion: @escaping (UIView?) -> Void) {
         self.impl.makeOutgoingVideoView(completion)
     }
+    
+    public func setIsVideoEnabled(_ value: Bool) {
+        self.impl.setIsVideoEnabled(value)
+    }
 }
 
 extension OngoingCallThreadLocalContextWebrtc: OngoingCallThreadLocalContextProtocol {

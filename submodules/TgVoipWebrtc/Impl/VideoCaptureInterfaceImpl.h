@@ -18,6 +18,7 @@ public:
     ~TgVoipVideoCaptureInterfaceObject();
     
     void switchCamera();
+    void setIsVideoEnabled(bool isVideoEnabled);
     void setVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink);
     void setIsActiveUpdated(std::function<void (bool)> isActiveUpdated);
     
@@ -29,6 +30,7 @@ private:
     std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> _currentSink;
     std::function<void (bool)> _isActiveUpdated;
     bool _useFrontCamera;
+    bool _isVideoEnabled;
 };
 
 class TgVoipVideoCaptureInterfaceImpl : public TgVoipVideoCaptureInterface {
@@ -37,6 +39,7 @@ public:
     virtual ~TgVoipVideoCaptureInterfaceImpl();
     
     virtual void switchCamera();
+    virtual void setIsVideoEnabled(bool isVideoEnabled);
     virtual void setVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink);
     
 public:
