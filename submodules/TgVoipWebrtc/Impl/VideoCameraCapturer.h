@@ -17,6 +17,7 @@
 
 - (void)startCaptureWithDevice:(AVCaptureDevice *)device format:(AVCaptureDeviceFormat *)format fps:(NSInteger)fps;
 - (void)stopCapture;
+- (void)setIsEnabled:(bool)isEnabled;
 
 @end
 
