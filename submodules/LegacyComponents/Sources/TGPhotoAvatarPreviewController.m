@@ -63,10 +63,6 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     return self;
 }
 
-- (void)dealloc {
-    NSLog(@"");
-}
-
 - (void)loadView
 {
     [super loadView];
@@ -99,7 +95,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     };
     
     PGPhotoEditor *photoEditor = self.photoEditor;
-    TGPhotoAvatarCropView *cropView = [[TGPhotoAvatarCropView alloc] initWithOriginalSize:photoEditor.originalSize screenSize:[self referenceViewSize] fullPreviewView:_fullPreviewView];
+    TGPhotoAvatarCropView *cropView = [[TGPhotoAvatarCropView alloc] initWithOriginalSize:photoEditor.originalSize screenSize:[self referenceViewSize] fullPreviewView:_fullPreviewView fullPaintingView:_fullPaintingView];
     _cropView = cropView;
     [_cropView setCropRect:photoEditor.cropRect];
     [_cropView setCropOrientation:photoEditor.cropOrientation];

@@ -18,6 +18,7 @@
 @property (nonatomic, weak) UIView *dotImageView;
 @property (nonatomic, weak) UIView *dotMarkerView;
 @property (nonatomic, weak) PGPhotoEditorView *fullPreviewView;
+@property (nonatomic, weak) UIImageView *fullPaintingView;
 @property (nonatomic, weak) TGMediaPickerGalleryVideoScrubber *scrubberView;
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView;

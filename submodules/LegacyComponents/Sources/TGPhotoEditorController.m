@@ -69,6 +69,7 @@
     TGPhotoToolbarView *_landscapeToolbarView;
     TGPhotoEditorPreviewView *_previewView;
     PGPhotoEditorView *_fullPreviewView;
+    UIImageView *_fullPaintingView;
     
     PGPhotoEditor *_photoEditor;
     
@@ -335,6 +336,9 @@
         _fullPreviewView = [[PGPhotoEditorView alloc] initWithFrame:CGRectMake(0, 0, fittedSize.width, fittedSize.height)];
         _photoEditor.additionalOutputs = @[_fullPreviewView];
         [self.view addSubview:_fullPreviewView];
+        
+        _fullPaintingView = [[UIImageView alloc] init];
+        _fullPaintingView.frame = _fullPreviewView.frame;
     }
         
     _dotMarkerView = [[UIImageView alloc] initWithImage:TGCircleImage(7.0, [TGPhotoEditorInterfaceAssets accentColor])];
@@ -1219,6 +1223,7 @@
     {
         case TGPhotoEditorCropTab:
         {
+            [self updatePreviewView:true];
             __block UIView *initialBackgroundView = nil;
             
             if ([self presentedForAvatarCreation])
@@ -1230,6 +1235,7 @@
                 cropController.dotImageView = _dotImageView;
                 cropController.dotMarkerView = _dotMarkerView;
                 cropController.fullPreviewView = _fullPreviewView;
+                cropController.fullPaintingView = _fullPaintingView;
                 cropController.fromCamera = [self presentedFromCamera];
                 cropController.skipTransitionIn = skipInitialTransition;
                 if (snapshotImage != nil)
@@ -1614,9 +1620,10 @@
 
 - (void)updatePreviewView:(bool)full
 {
-    if (full)
+    if (full) {
         [_previewView setPaintingImageWithData:_photoEditor.paintingData];
-    
+        _fullPaintingView.image = _photoEditor.paintingData.image;
+    }
     UIImageOrientation cropOrientation = _photoEditor.cropOrientation;
     if ([self presentedForAvatarCreation]) {
         cropOrientation = UIImageOrientationUp;

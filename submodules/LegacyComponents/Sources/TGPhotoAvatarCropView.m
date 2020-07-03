@@ -42,12 +42,13 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
     CGFloat _currentDiameter;
     
     __weak PGPhotoEditorView *_fullPreviewView;
+    __weak UIImageView *_fullPaintingView;
 }
 @end
 
 @implementation TGPhotoAvatarCropView
 
-- (instancetype)initWithOriginalSize:(CGSize)originalSize screenSize:(CGSize)screenSize fullPreviewView:(PGPhotoEditorView *)fullPreviewView
+- (instancetype)initWithOriginalSize:(CGSize)originalSize screenSize:(CGSize)screenSize fullPreviewView:(PGPhotoEditorView *)fullPreviewView fullPaintingView:(UIImageView *)fullPaintingView
 {
     self = [super initWithFrame:CGRectZero];
     if (self != nil)
@@ -82,7 +83,12 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
         CGFloat scale = _imageView.bounds.size.width / fittedSize.width;
         _fullPreviewView.transform = CGAffineTransformMakeScale(self.cropMirrored ? -scale : scale, scale);
         _fullPreviewView.userInteractionEnabled = false;
+        
+        _fullPaintingView = fullPaintingView;
+        _fullPaintingView.frame = _fullPreviewView.frame;
+        _fullPaintingView.transform = CGAffineTransformMakeScale(self.cropMirrored ? -1.0 : 1.0, 1.0);
         [_wrapperView addSubview:_fullPreviewView];
+        [_wrapperView addSubview:_fullPaintingView];
         
         _flashView = [[UIView alloc] init];
         _flashView.alpha = 0.0;
@@ -452,6 +458,7 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
     CGSize fittedSize  = TGScaleToSize(_originalSize, CGSizeMake(1024, 1024));
     CGFloat scale = _imageView.bounds.size.width / fittedSize.width;
     _fullPreviewView.transform = CGAffineTransformMakeScale(self.cropMirrored ? -scale : scale, scale);
+    _fullPaintingView.transform = CGAffineTransformMakeScale(self.cropMirrored ? -1.0 : 1.0, 1.0);
 }
 
 - (void)invalidateCropRect

@@ -289,7 +289,7 @@
     _paintingContainerView.transform = CGAffineTransformMakeRotation(rotation);
     _paintingContainerView.frame = self.bounds;
     
-    CGFloat width = TGOrientationIsSideward(_cropOrientation, NULL) ? self.frame.size.height : self.frame.size.width;
+    CGFloat width = TGOrientationIsSideward(_cropOrientation, NULL) ? self.bounds.size.height : self.bounds.size.width;
     CGFloat ratio = 1.0;
     if (_cropRect.size.width > 0.0) {
         ratio = width / _cropRect.size.width;
