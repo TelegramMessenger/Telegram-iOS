@@ -346,6 +346,12 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.playVideoIfCentral()
             } else if let videoNode = self.videoNode {
                 videoNode.pause()
+                if let startTimestamp = self.videoStartTimestamp {
+                    videoNode.seek(startTimestamp)
+                } else {
+                    videoNode.seek(0.0)
+                }
+                videoNode.isHidden = true
             }
         }
     }
