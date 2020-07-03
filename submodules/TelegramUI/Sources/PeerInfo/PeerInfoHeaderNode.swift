@@ -221,7 +221,10 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
     
     func updateTransitionFraction(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
         if let videoNode = self.videoNode {
-            transition.updateAlpha(node: videoNode, alpha: fraction)
+            if case .immediate = transition, fraction == 1.0 {
+                return
+            }
+            transition.updateAlpha(node: videoNode, alpha: 1.0 - fraction)
         }
     }
     
@@ -253,11 +256,6 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
             let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .embedded)
             videoNode.isUserInteractionEnabled = false
             videoNode.isHidden = true
-            videoNode.ownsContentNodeUpdated = { [weak self] owns in
-                if let strongSelf = self {
-                    strongSelf.videoNode?.isHidden = !owns
-                }
-            }
             
             if let _ = video.startTimestamp {
                 self.playbackStatusDisposable.set((videoNode.status
@@ -849,7 +847,10 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     
     func updateTransitionFraction(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
         if let videoNode = self.videoNode {
-            transition.updateAlpha(node: videoNode, alpha: fraction)
+            if case .immediate = transition, fraction == 1.0 {
+                return
+            }
+            transition.updateAlpha(node: videoNode, alpha: 1.0 - fraction)
         }
     }
     
