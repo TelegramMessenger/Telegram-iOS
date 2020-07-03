@@ -332,6 +332,8 @@
     [self updatePreviewView:true];
     
     if ([self presentedForAvatarCreation]) {
+        _previewView.applyMirror = true;
+        
         CGSize fittedSize  = TGScaleToSize(_photoEditor.originalSize, CGSizeMake(1024, 1024));
         _fullPreviewView = [[PGPhotoEditorView alloc] initWithFrame:CGRectMake(0, 0, fittedSize.width, fittedSize.height)];
         _photoEditor.additionalOutputs = @[_fullPreviewView];
@@ -1223,6 +1225,7 @@
     {
         case TGPhotoEditorCropTab:
         {
+            _fullPaintingView.hidden = false;
             [self updatePreviewView:true];
             __block UIView *initialBackgroundView = nil;
             
@@ -1452,6 +1455,7 @@
             
         case TGPhotoEditorPaintTab:
         {
+            _fullPaintingView.hidden = true;
             TGPhotoPaintController *paintController = [[TGPhotoPaintController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView];
             paintController.stickersContext = _stickersContext;
             paintController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;

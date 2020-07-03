@@ -86,7 +86,6 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
         
         _fullPaintingView = fullPaintingView;
         _fullPaintingView.frame = _fullPreviewView.frame;
-        _fullPaintingView.transform = CGAffineTransformMakeScale(self.cropMirrored ? -1.0 : 1.0, 1.0);
         [_wrapperView addSubview:_fullPreviewView];
         [_wrapperView addSubview:_fullPaintingView];
         
@@ -458,7 +457,6 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
     CGSize fittedSize  = TGScaleToSize(_originalSize, CGSizeMake(1024, 1024));
     CGFloat scale = _imageView.bounds.size.width / fittedSize.width;
     _fullPreviewView.transform = CGAffineTransformMakeScale(self.cropMirrored ? -scale : scale, scale);
-    _fullPaintingView.transform = CGAffineTransformMakeScale(self.cropMirrored ? -1.0 : 1.0, 1.0);
 }
 
 - (void)invalidateCropRect

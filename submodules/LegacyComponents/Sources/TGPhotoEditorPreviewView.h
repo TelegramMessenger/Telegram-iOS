@@ -13,6 +13,9 @@
 @property (nonatomic, copy) void(^touchedUp)(void);
 @property (nonatomic, copy) void(^interactionEnded)(void);
 
+
+@property (nonatomic, readonly) bool applyMirror;
+
 @property (nonatomic, readonly) bool isTracking;
 @property (nonatomic, assign) bool customTouchDownHandling;
 
