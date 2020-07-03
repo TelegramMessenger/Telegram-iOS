@@ -431,68 +431,70 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (void)setupCanvas
 {
-    __weak TGPhotoPaintController *weakSelf = self;
-    _canvasView = [[TGPaintCanvas alloc] initWithFrame:CGRectZero];
-    _canvasView.pointInsideContainer = ^bool(CGPoint point)
-    {
-        __strong TGPhotoPaintController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return false;
-        
-        return [strongSelf->_containerView pointInside:[strongSelf->_canvasView convertPoint:point toView:strongSelf->_containerView] withEvent:nil];
-    };
-    _canvasView.shouldDraw = ^bool
-    {
-        __strong TGPhotoPaintController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return false;
-        
-        return ![strongSelf->_entitiesContainerView isTrackingAnyEntityView];
-    };
-    _canvasView.shouldDrawOnSingleTap = ^bool
-    {
-        __strong TGPhotoPaintController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return false;
-        
-        bool rotating = (strongSelf->_rotationGestureRecognizer.state == UIGestureRecognizerStateBegan || strongSelf->_rotationGestureRecognizer.state == UIGestureRecognizerStateChanged);
-        bool pinching = (strongSelf->_pinchGestureRecognizer.state == UIGestureRecognizerStateBegan || strongSelf->_pinchGestureRecognizer.state == UIGestureRecognizerStateChanged);
-        
-        if (strongSelf->_currentEntityView != nil && !rotating && !pinching)
+    if (_canvasView == nil) {
+        __weak TGPhotoPaintController *weakSelf = self;
+        _canvasView = [[TGPaintCanvas alloc] initWithFrame:CGRectZero];
+        _canvasView.pointInsideContainer = ^bool(CGPoint point)
         {
-            [strongSelf selectEntityView:nil];
-            return false;
-        }
-        
-        return true;
-    };
-    _canvasView.strokeBegan = ^
-    {
-        __strong TGPhotoPaintController *strongSelf = weakSelf;
-        if (strongSelf != nil)
-            [strongSelf selectEntityView:nil];
-    };
-    _canvasView.strokeCommited = ^
-    {
-        __strong TGPhotoPaintController *strongSelf = weakSelf;
-        if (strongSelf != nil)
-            [strongSelf updateActionsView];
-    };
-    _canvasView.hitTest = ^UIView *(CGPoint point, UIEvent *event)
-    {
-        __strong TGPhotoPaintController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return nil;
-        
-        return [strongSelf->_entitiesContainerView hitTest:[strongSelf->_canvasView convertPoint:point toView:strongSelf->_entitiesContainerView] withEvent:event];
-    };
-    _canvasView.cropRect = _photoEditor.cropRect;
-    _canvasView.cropOrientation = _photoEditor.cropOrientation;
-    _canvasView.originalSize = _photoEditor.originalSize;
-    [_canvasView setPainting:_painting];
-    [_canvasView setBrush:_brushes.firstObject];
-    [self setCurrentSwatch:_portraitSettingsView.swatch sender:nil];
-    [_paintingWrapperView addSubview:_canvasView];
+            __strong TGPhotoPaintController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return false;
+            
+            return [strongSelf->_containerView pointInside:[strongSelf->_canvasView convertPoint:point toView:strongSelf->_containerView] withEvent:nil];
+        };
+        _canvasView.shouldDraw = ^bool
+        {
+            __strong TGPhotoPaintController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return false;
+            
+            return ![strongSelf->_entitiesContainerView isTrackingAnyEntityView];
+        };
+        _canvasView.shouldDrawOnSingleTap = ^bool
+        {
+            __strong TGPhotoPaintController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return false;
+            
+            bool rotating = (strongSelf->_rotationGestureRecognizer.state == UIGestureRecognizerStateBegan || strongSelf->_rotationGestureRecognizer.state == UIGestureRecognizerStateChanged);
+            bool pinching = (strongSelf->_pinchGestureRecognizer.state == UIGestureRecognizerStateBegan || strongSelf->_pinchGestureRecognizer.state == UIGestureRecognizerStateChanged);
+            
+            if (strongSelf->_currentEntityView != nil && !rotating && !pinching)
+            {
+                [strongSelf selectEntityView:nil];
+                return false;
+            }
+            
+            return true;
+        };
+        _canvasView.strokeBegan = ^
+        {
+            __strong TGPhotoPaintController *strongSelf = weakSelf;
+            if (strongSelf != nil)
+                [strongSelf selectEntityView:nil];
+        };
+        _canvasView.strokeCommited = ^
+        {
+            __strong TGPhotoPaintController *strongSelf = weakSelf;
+            if (strongSelf != nil)
+                [strongSelf updateActionsView];
+        };
+        _canvasView.hitTest = ^UIView *(CGPoint point, UIEvent *event)
+        {
+            __strong TGPhotoPaintController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return nil;
+            
+            return [strongSelf->_entitiesContainerView hitTest:[strongSelf->_canvasView convertPoint:point toView:strongSelf->_entitiesContainerView] withEvent:event];
+        };
+        _canvasView.cropRect = _photoEditor.cropRect;
+        _canvasView.cropOrientation = _photoEditor.cropOrientation;
+        _canvasView.originalSize = _photoEditor.originalSize;
+        [_canvasView setPainting:_painting];
+        [_canvasView setBrush:_brushes.firstObject];
+        [self setCurrentSwatch:_portraitSettingsView.swatch sender:nil];
+        [_paintingWrapperView addSubview:_canvasView];
+    }
     
     _canvasView.hidden = false;
     [self.view setNeedsLayout];
@@ -1801,6 +1803,11 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         _portraitSettingsView.layer.shouldRasterize = false;
         _landscapeSettingsView.layer.shouldRasterize = false;
     }];
+    
+    if (self.presentedForAvatarCreation) {
+        _canvasView.hidden = true;
+        _entitiesContainerView.hidden = true;
+    }
 }
 
 + (CGRect)photoContainerFrameForParentViewFrame:(CGRect)parentViewFrame toolbarLandscapeSize:(CGFloat)toolbarLandscapeSize orientation:(UIInterfaceOrientation)orientation panelSize:(CGFloat)panelSize hasOnScreenNavigation:(bool)hasOnScreenNavigation
@@ -1847,6 +1854,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     }
     
     [self setupCanvas];
+    _entitiesContainerView.hidden = false;
     
     TGPhotoEditorPreviewView *previewView = _previewView;
     [previewView setPaintingHidden:true];

@@ -1155,6 +1155,10 @@
         {
             [currentController removeFromParentViewController];
             [currentController.view removeFromSuperview];
+            
+            if ([self presentedForAvatarCreation] && tab == TGPhotoEditorCropTab) {
+                _previewView.transform = CGAffineTransformIdentity;
+            }
         }];
         
         transitionReferenceFrame = [currentController transitionOutReferenceFrame];
@@ -1343,8 +1347,8 @@
                     if (strongSelf == nil)
                         return;
                     
-                    if (strongSelf->_currentTabController.finishedTransitionIn != nil)
-                    {
+                    strongSelf->_fullPaintingView.hidden = true;
+                    if (strongSelf->_currentTabController.finishedTransitionIn != nil) {
                         strongSelf->_currentTabController.finishedTransitionIn();
                         strongSelf->_currentTabController.finishedTransitionIn = nil;
                     }
@@ -1455,7 +1459,6 @@
             
         case TGPhotoEditorPaintTab:
         {
-            _fullPaintingView.hidden = true;
             TGPhotoPaintController *paintController = [[TGPhotoPaintController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView];
             paintController.stickersContext = _stickersContext;
             paintController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
