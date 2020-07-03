@@ -646,7 +646,6 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
 //            }
 //        |> runOn(Queue.mainQueue())
 //        |> delay(0.15, queue: Queue.mainQueue())
-        
       
         self.editDisposable.set((fetchMediaData(context: self.context, postbox: self.context.account.postbox, mediaReference: mediaReference)
         |> deliverOnMainQueue).start(next: { [weak self] state, isImage in
