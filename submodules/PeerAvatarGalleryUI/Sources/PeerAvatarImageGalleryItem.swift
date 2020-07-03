@@ -138,6 +138,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     fileprivate let imageNode: TransformImageNode
     private var videoNode: UniversalVideoNode?
     private var videoContent: NativeVideoContent?
+    private var videoStartTimestamp: Double?
     
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
@@ -217,6 +218,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     fileprivate func setEntry(_ entry: AvatarGalleryEntry, synchronous: Bool) {
         let previousRepresentations = self.entry?.representations
+        let previousVideoRepresentations = self.entry?.videoRepresentations
         if self.entry != entry {
             self.entry = entry
             
@@ -257,64 +259,99 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     id = image.0.id
                 }
                 if let video = entry.videoRepresentations.last, let id = id {
-                    let mediaManager = self.context.sharedContext.mediaManager
-                    let videoFileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
-                    let videoContent = NativeVideoContent(id: .profileVideo(id), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
-                    let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .embedded)
-                    videoNode.isUserInteractionEnabled = false
-                    videoNode.isHidden = true
-                    
-                    if let _ = video.startTimestamp {
-                        self.playbackStatusDisposable.set((videoNode.status
-                        |> map { status -> Bool in
-                            if let status = status, case .playing = status.status {
-                                return true
-                            } else {
-                                return false
-                            }
-                        }
-                        |> filter { playing in
-                            return playing
-                        }
-                        |> take(1)
-                        |> deliverOnMainQueue).start(completed: { [weak self] in
-                            if let strongSelf = self {
-                                Queue.mainQueue().after(0.03) {
-                                    strongSelf.videoNode?.isHidden = false
-                                }
-                            }
-                        }))
-                    } else {
-                        self.playbackStatusDisposable.set(nil)
-                        videoNode.isHidden = false
+                    if video != previousVideoRepresentations?.last {
+                        let mediaManager = self.context.sharedContext.mediaManager
+                        let videoFileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
+                        let videoContent = NativeVideoContent(id: .profileVideo(id), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
+                        let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .embedded)
+                        videoNode.isUserInteractionEnabled = false
+                        videoNode.isHidden = true
+                        self.videoStartTimestamp = video.startTimestamp
+                                            
+                        self.videoContent = videoContent
+                        self.videoNode = videoNode
+                        
+                        self.playVideoIfCentral()
+                        videoNode.updateLayout(size: largestSize.dimensions.cgSize, transition: .immediate)
+                        
+                        self.contentNode.addSubnode(videoNode)
+                        
+                        self._ready.set(videoNode.ready)
                     }
-                    
-                    videoNode.canAttachContent = true
-                    if videoNode.hasAttachedContext {
-                        if let startTimestamp = video.startTimestamp {
-                            videoNode.seek(startTimestamp)
-                        }
-                        videoNode.play()
-                    }
-                    videoNode.updateLayout(size: largestSize.dimensions.cgSize, transition: .immediate)
-                    
-                    self.videoContent = videoContent
-                    self.videoNode = videoNode
-                    
-                    self.contentNode.addSubnode(videoNode)
-                    
-                    self._ready.set(videoNode.ready)
                 } else if let videoNode = self.videoNode {
                     self.videoContent = nil
                     self.videoNode = nil
                     
-                    videoNode.removeFromSupernode()
+                    Queue.mainQueue().after(0.1) {
+                        videoNode.removeFromSupernode()
+                    }
                 }
                 
                 self.imageNode.frame = self.contentNode.bounds
                 self.videoNode?.frame = self.contentNode.bounds
             } else {
                 self._ready.set(.single(Void()))
+            }
+        }
+    }
+    
+    private func playVideoIfCentral() {
+        guard let videoNode = self.videoNode, self.isCentral else {
+            return
+        }
+        if let _ = self.videoStartTimestamp {
+            videoNode.isHidden = true
+            self.playbackStatusDisposable.set((videoNode.status
+                |> map { status -> Bool in
+                    if let status = status, case .playing = status.status {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+                |> filter { playing in
+                    return playing
+                }
+                |> take(1)
+                |> deliverOnMainQueue).start(completed: { [weak self] in
+                    if let strongSelf = self {
+                        Queue.mainQueue().after(0.03) {
+                            strongSelf.videoNode?.isHidden = false
+                        }
+                    }
+                }))
+        } else {
+            self.playbackStatusDisposable.set(nil)
+            videoNode.isHidden = false
+        }
+        
+        let hadAttachedContent = videoNode.hasAttachedContext
+        videoNode.canAttachContent = true
+        if videoNode.hasAttachedContext {
+            if let startTimestamp = self.videoStartTimestamp, !hadAttachedContent {
+                videoNode.seek(startTimestamp)
+            }
+            videoNode.play()
+        }
+    }
+    
+    var isCentral = false
+    override func centralityUpdated(isCentral: Bool) {
+        super.centralityUpdated(isCentral: isCentral)
+        
+        if self.isCentral != isCentral {
+            self.isCentral = isCentral
+            
+            if isCentral {
+                self.playVideoIfCentral()
+            } else if let videoNode = self.videoNode {
+                videoNode.pause()
+                if let startTimestamp = self.videoStartTimestamp {
+                    videoNode.seek(startTimestamp)
+                } else {
+                    videoNode.seek(0.0)
+                }
+                videoNode.isHidden = true
             }
         }
     }

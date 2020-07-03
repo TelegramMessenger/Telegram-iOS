@@ -20,7 +20,7 @@
 @property (nonatomic, readonly) bool isTracking;
 @property (nonatomic, readonly) bool isAnimating;
 
-- (instancetype)initWithOriginalSize:(CGSize)originalSize screenSize:(CGSize)screenSize fullPreviewView:(PGPhotoEditorView *)fullPreviewView;
+- (instancetype)initWithOriginalSize:(CGSize)originalSize screenSize:(CGSize)screenSize fullPreviewView:(PGPhotoEditorView *)fullPreviewView fullPaintingView:(UIImageView *)fullPaintingView;
 
 - (void)setSnapshotImage:(UIImage *)image;
 - (void)setSnapshotView:(UIView *)snapshotView;

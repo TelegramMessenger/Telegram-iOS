@@ -175,6 +175,7 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
     let imageNode: TransformImageNode
     private var videoNode: UniversalVideoNode?
     private var videoContent: NativeVideoContent?
+    private let playbackStatusDisposable = MetaDisposable()
     
     let isReady = Promise<Bool>()
     private var didSetReady: Bool = false
@@ -189,6 +190,8 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
             }
         }
     }
+    
+    var isCentral: Bool = false
     
     init(context: AccountContext) {
         self.context = context
@@ -209,6 +212,19 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
                 strongSelf.didSetReady = true
                 strongSelf.isReady.set(.single(true))
             }
+        }
+    }
+    
+    deinit {
+        self.playbackStatusDisposable.dispose()
+    }
+    
+    func updateTransitionFraction(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
+        if let videoNode = self.videoNode {
+            if case .immediate = transition, fraction == 1.0 {
+                return
+            }
+            transition.updateAlpha(node: videoNode, alpha: 1.0 - fraction)
         }
     }
     
@@ -240,11 +256,32 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
             let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .embedded)
             videoNode.isUserInteractionEnabled = false
             videoNode.isHidden = true
-            videoNode.ownsContentNodeUpdated = { [weak self] owns in
-                if let strongSelf = self {
-                    strongSelf.videoNode?.isHidden = !owns
+            
+            if let _ = video.startTimestamp {
+                self.playbackStatusDisposable.set((videoNode.status
+                |> map { status -> Bool in
+                    if let status = status, case .playing = status.status {
+                        return true
+                    } else {
+                        return false
+                    }
                 }
+                |> filter { playing in
+                    return playing
+                }
+                |> take(1)
+                |> deliverOnMainQueue).start(completed: { [weak self] in
+                    if let strongSelf = self {
+                        Queue.mainQueue().after(0.03) {
+                            strongSelf.videoNode?.isHidden = false
+                        }
+                    }
+                }))
+            } else {
+                self.playbackStatusDisposable.set(nil)
+                videoNode.isHidden = false
             }
+            
             if let startTimestamp = video.startTimestamp {
                 videoNode.seek(startTimestamp)
             }
@@ -768,6 +805,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     
     fileprivate var videoNode: UniversalVideoNode?
     private var videoContent: NativeVideoContent?
+    private var videoStartTimestamp: Double?
     
     var tapped: (() -> Void)?
     
@@ -804,6 +842,15 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             videoNode.frame = self.avatarNode.frame
             
             self.addSubnode(videoNode)
+        }
+    }
+    
+    func updateTransitionFraction(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
+        if let videoNode = self.videoNode {
+            if case .immediate = transition, fraction == 1.0 {
+                return
+            }
+            transition.updateAlpha(node: videoNode, alpha: 1.0 - fraction)
         }
     }
     
@@ -857,7 +904,11 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                     let update = {
                         videoNode.canAttachContent = !isExpanded
                         if videoNode.canAttachContent {
-                            videoNode.seek(0.0)
+                            if let videoStartTimestamp = self.videoStartTimestamp {
+                                videoNode.seek(videoStartTimestamp)
+                            } else {
+                                videoNode.seek(0.0)
+                            }
                             videoNode.play()
                         }
                     }
@@ -1042,11 +1093,7 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
     func animateAvatarCollapse(transition: ContainedViewLayoutTransition) {
         if let currentItemNode = self.listContainerNode.currentItemNode, case .animated = transition {
             if let videoNode = self.avatarContainerNode.videoNode {
-//                videoNode.position = currentItemNode.imageNode.position
-//                currentItemNode.addSubnode(videoNode)
-//                let scale = currentItemNode.imageNode.bounds.height / videoNode.bounds.height
-//                avatarCopyView.layer.transform = CATransform3DMakeScale(scale, scale, scale)
-//                self.avatarContainerNode.reattachVideoNode()
+
             } else if let unroundedImage = self.avatarContainerNode.avatarNode.unroundedImage {
                 let avatarCopyView = UIImageView()
                 avatarCopyView.image = unroundedImage
@@ -1925,6 +1972,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             transition.updateAlpha(node: self.expandedBackgroundNode, alpha: backgroundTransitionFraction)
         }
         
+        self.avatarListNode.avatarContainerNode.updateTransitionFraction(transitionFraction, transition: transition)
+        self.avatarListNode.listContainerNode.currentItemNode?.updateTransitionFraction(transitionFraction, transition: transition)
+        
         self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
         let defaultButtonSize: CGFloat = 40.0
@@ -1992,6 +2042,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let avatarSize: CGFloat = isModalOverlay ? 200.0 : 100.0
         let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 10.0), size: CGSize(width: avatarSize, height: avatarSize))
         let avatarCenter = CGPoint(x: (1.0 - transitionFraction) * avatarFrame.midX + transitionFraction * transitionSourceAvatarFrame.midX, y: (1.0 - transitionFraction) * avatarFrame.midY + transitionFraction * transitionSourceAvatarFrame.midY)
+        let avatarAlpha = transitionFraction
         
         let titleSize = titleNodeLayout[TitleNodeStateRegular]!.size
         let titleExpandedSize = titleNodeLayout[TitleNodeStateExpanded]!.size

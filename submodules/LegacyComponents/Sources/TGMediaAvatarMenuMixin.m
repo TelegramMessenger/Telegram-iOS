@@ -12,11 +12,9 @@
 #import "TGAttachmentCarouselItemView.h"
 
 #import <LegacyComponents/TGCameraController.h>
-#import "TGLegacyCameraController.h"
-#import <LegacyComponents/TGImagePickerController.h>
 #import <LegacyComponents/TGMediaAssetsController.h>
 
-@interface TGMediaAvatarMenuMixin () <TGLegacyCameraControllerDelegate>
+@interface TGMediaAvatarMenuMixin ()
 {
     TGViewController *_parentController;
     bool _hasSearchButton;
@@ -278,13 +276,6 @@
     if ([_context currentlyInSplitView])
         return;
         
-    if ([TGCameraController useLegacyCamera])
-    {
-        [self _displayLegacyCamera];
-        [menuController dismissAnimated:true];
-        return;
-    }
-    
     TGCameraController *controller = nil;
     CGSize screenSize = TGScreenSize();
     
@@ -374,16 +365,6 @@
         
         [menuController dismissAnimated:false];
     };
-}
-
-- (void)_displayLegacyCamera
-{
-    TGLegacyCameraController *legacyCameraController = [[TGLegacyCameraController alloc] initWithContext:_context];
-    legacyCameraController.sourceType = UIImagePickerControllerSourceTypeCamera;
-    legacyCameraController.avatarMode = true;
-    legacyCameraController.completionDelegate = self;
-    
-    [_parentController presentViewController:legacyCameraController animated:true completion:nil];
 }
 
 - (void)_displayMediaPicker
@@ -529,30 +510,6 @@
     {
         showMediaPicker(nil);
     }
-}
-
-- (void)imagePickerController:(TGImagePickerController *)__unused imagePicker didFinishPickingWithAssets:(NSArray *)assets
-{
-    UIImage *resultImage = nil;
-    
-    if (assets.count != 0)
-    {
-        if ([assets[0] isKindOfClass:[UIImage class]])
-            resultImage = assets[0];
-    }
-    
-    if (self.didFinishWithImage != nil)
-        self.didFinishWithImage(resultImage);
-    
-    [_parentController dismissViewControllerAnimated:true completion:nil];
-}
-
-- (void)legacyCameraControllerCompletedWithNoResult
-{
-    [_parentController dismissViewControllerAnimated:true completion:nil];
-    
-    if (self.didDismiss != nil)
-        self.didDismiss();
 }
 
 - (void)_performDelete
