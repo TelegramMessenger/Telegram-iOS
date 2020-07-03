@@ -23,8 +23,6 @@
 
 #import <LegacyComponents/JNWSpringAnimation.h>
 
-#import <LegacyComponents/TGModernGalleryEmbeddedStickersHeaderView.h>
-
 #import <LegacyComponents/TGKeyCommandController.h>
 
 #define TGModernGalleryItemPadding 20.0f
@@ -1624,7 +1622,7 @@ static CGFloat transformRotation(CGAffineTransform transform)
         {
             itemHeaderView.alpha = alpha;
             itemHeaderView.hidden = (alpha < FLT_EPSILON);
-            if (![itemHeaderView isKindOfClass:[TGModernGalleryEmbeddedStickersHeaderView class]] && itemHeaderView.tag != 0xbeef) {
+            if (itemHeaderView.tag != 0xbeef) {
                 titleAlpha -= alpha;
             }
         }
