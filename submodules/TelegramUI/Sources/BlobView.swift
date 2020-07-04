@@ -30,7 +30,7 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
         minScale: 0.55,
         maxScale: 0.9,
         scaleSpeed: 0.2,
-        isCircle: true
+        isCircle: false
     )
     private let bigBlob = BlobView(
         pointsCount: 8,
@@ -41,7 +41,7 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
         minScale: 0.55,
         maxScale: 1,
         scaleSpeed: 0.2,
-        isCircle: true
+        isCircle: false
     )
     
     override init(frame: CGRect) {
@@ -65,12 +65,18 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
     func updateLevel(_ level: CGFloat) {
         let normalizedLevel = min(1, max(level / Constants.maxLevel, 0))
         
+        smallBlob.updateSpeedLevel(to: normalizedLevel)
+        mediumBlob.updateSpeedLevel(to: normalizedLevel)
+        bigBlob.updateSpeedLevel(to: normalizedLevel)
+    }
+    
+    func tick(_ level: CGFloat) {
+        let normalizedLevel = min(1, max(level / Constants.maxLevel, 0))
+        
         smallBlob.level = normalizedLevel
         mediumBlob.level = normalizedLevel
         bigBlob.level = normalizedLevel
     }
-    
-    func tick(_ level: CGFloat) { }
     
     override func layoutSubviews() {
         super.layoutSubviews()
@@ -104,17 +110,18 @@ final class BlobView: UIView {
     let maxScale: CGFloat
     let scaleSpeed: CGFloat
     
+    var scaleLevelsToBalance = [CGFloat]()
+    
     // If true ignores randomness and pointsCount
     let isCircle: Bool
     
     var level: CGFloat = 0 {
         didSet {
-            speedLevel = max(level, speedLevel)
-            scaleLevel = max(level, scaleLevel)
-            
-            if abs(scaleLevel - lastScaleLevel) > 0.4 {
-                animateToNewScale()
-            }
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            let lv = minScale + (maxScale - minScale) * level
+            shapeLayer.transform = CATransform3DMakeScale(lv, lv, 1)
+            CATransaction.commit()
         }
     }
     
@@ -190,18 +197,27 @@ final class BlobView: UIView {
         shapeLayer.fillColor = color.cgColor
     }
     
+    func updateSpeedLevel(to newSpeedLevel: CGFloat) {
+        speedLevel = max(speedLevel, newSpeedLevel)
+    }
+    
     func startAnimating() {
         animateToNewShape()
-        animateToNewScale()
     }
     
     func animateToNewScale() {
-        let isDownscale = lastScaleLevel > scaleLevel
-        lastScaleLevel = scaleLevel
+        let scaleLevelForAnimation: CGFloat = {
+            if scaleLevelsToBalance.isEmpty {
+                return 0
+            }
+            return scaleLevelsToBalance.reduce(0, +) / CGFloat(scaleLevelsToBalance.count)
+        }()
+        let isDownscale = lastScaleLevel > scaleLevelForAnimation
+        lastScaleLevel = scaleLevelForAnimation
         
         shapeLayer.pop_removeAnimation(forKey: "scale")
         
-        let currentScale = minScale + (maxScale - minScale) * scaleLevel
+        let currentScale = minScale + (maxScale - minScale) * scaleLevelForAnimation
         let scaleAnimation = POPBasicAnimation(propertyNamed: kPOPLayerScaleXY)!
         scaleAnimation.toValue = CGPoint(x: currentScale, y: currentScale)
         scaleAnimation.duration = isDownscale ? 0.45 : CFTimeInterval(scaleSpeed)
@@ -213,6 +229,7 @@ final class BlobView: UIView {
         shapeLayer.pop_add(scaleAnimation, forKey: "scale")
         
         scaleLevel = 0
+        scaleLevelsToBalance.removeAll()
     }
     
     func animateToNewShape() {

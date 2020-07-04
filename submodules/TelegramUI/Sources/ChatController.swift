@@ -321,6 +321,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let peekData: ChatPeekTimeout?
     private let peekTimerDisposable = MetaDisposable()
     
+    private var shouldDisplayDownButton = false
+
     private var hasEmbeddedTitleContent = false
     private var isEmbeddedTitleContentHidden = false
 
@@ -2544,6 +2546,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         strongSelf.audioRecorderStatusDisposable = nil
                     }
+                    strongSelf.updateDownButtonVisibility()
                 }
             }
         })
@@ -2592,6 +2595,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             videoRecorder.lockVideo()
                         }
                     }
+                    strongSelf.updateDownButtonVisibility()
                     
                     if let previousVideoRecorderValue = previousVideoRecorderValue {
                         previousVideoRecorderValue.dismissVideo()
@@ -3091,32 +3095,33 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         self.chatDisplayNode.historyNode.contentPositionChanged = { [weak self] offset in
-            if let strongSelf = self {
-                let offsetAlpha: CGFloat
-                let plainInputSeparatorAlpha: CGFloat
-                switch offset {
-                    case let .known(offset):
-                        if offset < 40.0 {
-                            offsetAlpha = 0.0
-                        } else {
-                            offsetAlpha = 1.0
-                        }
-                        if offset < 4.0 {
-                            plainInputSeparatorAlpha = 0.0
-                        } else {
-                            plainInputSeparatorAlpha = 1.0
-                        }
-                    case .unknown:
-                        offsetAlpha = 1.0
-                        plainInputSeparatorAlpha = 1.0
-                    case .none:
+            guard let strongSelf = self else { return }
+            
+            let offsetAlpha: CGFloat
+            let plainInputSeparatorAlpha: CGFloat
+            switch offset {
+                case let .known(offset):
+                    if offset < 40.0 {
                         offsetAlpha = 0.0
+                    } else {
+                        offsetAlpha = 1.0
+                    }
+                    if offset < 4.0 {
                         plainInputSeparatorAlpha = 0.0
-                }
-                
-                strongSelf.chatDisplayNode.navigateButtons.displayDownButton = !offsetAlpha.isZero
-                strongSelf.chatDisplayNode.updatePlainInputSeparatorAlpha(plainInputSeparatorAlpha, transition: .animated(duration: 0.2, curve: .easeInOut))
+                    } else {
+                        plainInputSeparatorAlpha = 1.0
+                    }
+                case .unknown:
+                    offsetAlpha = 1.0
+                    plainInputSeparatorAlpha = 1.0
+                case .none:
+                    offsetAlpha = 0.0
+                    plainInputSeparatorAlpha = 0.0
             }
+            
+            strongSelf.shouldDisplayDownButton = !offsetAlpha.isZero
+            strongSelf.updateDownButtonVisibility()
+            strongSelf.chatDisplayNode.updatePlainInputSeparatorAlpha(plainInputSeparatorAlpha, transition: .animated(duration: 0.2, curve: .easeInOut))
         }
         
         self.chatDisplayNode.historyNode.scrolledToIndex = { [weak self] toIndex in
@@ -7634,6 +7639,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     func scrollToEndOfHistory() {
         self.chatDisplayNode.historyNode.scrollToEndOfHistory()
+    }
+    
+    func updateDownButtonVisibility() {
+        let recordingMediaMessage = self.audioRecorderValue != nil || self.videoRecorderValue != nil
+        self.chatDisplayNode.navigateButtons.displayDownButton = self.shouldDisplayDownButton && !recordingMediaMessage
     }
     
     func updateTextInputState(_ textInputState: ChatTextInputState) {

@@ -575,7 +575,6 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     [UIView animateWithDuration:0.3 delay:0.0 options:7 << 16 animations:^
     {
         _innerIconView.transform = CGAffineTransformIdentity;
-        _decoration.transform = CGAffineTransformIdentity;
         snapshotView.transform = CGAffineTransformMakeScale(0.001f, 0.001f);
     } completion:^(__unused BOOL finished) {
         [snapshotView removeFromSuperview];
@@ -837,11 +836,13 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         _innerCircleView.image = nil;
     }
     NSTimeInterval t = CACurrentMediaTime();
+    
+    _currentLevel = _currentLevel * 0.9f + _inputLevel * 0.1f;
+    [_decoration tick:_currentLevel];
+    
+    _currentTranslation = MIN(0.0, _currentTranslation * 0.7f + _targetTranslation * 0.3f);
+    
     if (t > _animationStartTime) {
-        _currentLevel = _currentLevel * 0.8f + _inputLevel * 0.2f;
-        
-        _currentTranslation = MIN(0.0, _currentTranslation * 0.7f + _targetTranslation * 0.3f);
-        
         CGFloat outerScale = outerCircleMinScale + _currentLevel * (1.0f - outerCircleMinScale);
         CGAffineTransform translation = CGAffineTransformMakeTranslation(0, _currentTranslation);
         CGAffineTransform transform = CGAffineTransformScale(translation, outerScale, outerScale);
@@ -857,8 +858,6 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         _innerCircleView.transform = transform;
         _innerIconWrapperView.transform = transform;
         _decoration.transform = transform;
-        
-        [_decoration tick:_currentLevel];
     }
 }
 
