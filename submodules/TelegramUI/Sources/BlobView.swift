@@ -48,7 +48,7 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
         super.init(frame: frame)
         
         addSubview(bigBlob)
-        //addSubview(mediumBlob)
+        addSubview(mediumBlob)
         addSubview(smallBlob)
     }
     
