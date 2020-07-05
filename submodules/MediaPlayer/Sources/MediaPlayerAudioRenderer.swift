@@ -15,6 +15,9 @@ private final class AudioPlayerRendererBufferContext {
     var state: AudioPlayerRendererState = .paused
     let timebase: CMTimebase
     let buffer: RingByteBuffer
+    var audioLevelPeak: Int16 = 0
+    var audioLevelPeakCount: Int = 0
+    var audioLevelPeakUpdate: Double = 0.0
     var bufferMaxChannelSampleIndex: Int64 = 0
     var lowWaterSize: Int
     var notifyLowWater: () -> Void
@@ -113,7 +116,6 @@ private func rendererInputProc(refCon: UnsafeMutableRawPointer, ioActionFlags: U
                         }
                         
                         let rendererBuffer = context.buffer
-                        var updatedLevel = false
                         
                         while rendererFillOffset.0 < bufferList.count {
                             if let bufferData = bufferList[rendererFillOffset.0].mData {
@@ -128,11 +130,31 @@ private func rendererInputProc(refCon: UnsafeMutableRawPointer, ioActionFlags: U
                                 let consumeCount = bufferDataSize - dataOffset
                                 
                                 let actualConsumedCount = rendererBuffer.dequeue(bufferData.advanced(by: dataOffset), count: consumeCount)
-                                if !updatedLevel && actualConsumedCount > 0 {
-                                    updatedLevel = true
-                                    let value = bufferData.advanced(by: dataOffset).assumingMemoryBound(to: UInt16.self).pointee
-                                    context.updatedLevel(Float(value) / Float(UInt16.max))
+                                
+                                var samplePtr = bufferData.advanced(by: dataOffset).assumingMemoryBound(to: Int16.self)
+                                for _ in 0 ..< actualConsumedCount / 4 {
+                                    let sample: Int16 = abs(samplePtr.pointee)
+                                    samplePtr = samplePtr.advanced(by: 2)
+                                    
+                                    if context.audioLevelPeak < sample {
+                                        context.audioLevelPeak = sample
+                                    }
+                                    context.audioLevelPeakCount += 1
+                                    
+                                    if context.audioLevelPeakCount >= 1200 {
+                                        let level = Float(context.audioLevelPeak) / (4000.0)
+                                        /*let timestamp = CFAbsoluteTimeGetCurrent()
+                                        if !context.audioLevelPeakUpdate.isZero {
+                                            let delta = timestamp - context.audioLevelPeakUpdate
+                                            print("level = \(level), delta = \(delta)")
+                                        }
+                                        context.audioLevelPeakUpdate = timestamp*/
+                                        context.updatedLevel(level)
+                                        context.audioLevelPeak = 0
+                                        context.audioLevelPeakCount = 0
+                                    }
                                 }
+                                
                                 rendererFillOffset.1 += actualConsumedCount
                                 
                                 if actualConsumedCount == 0 {

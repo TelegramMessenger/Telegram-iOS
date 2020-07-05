@@ -969,7 +969,7 @@ public final class MediaPlayer {
     }
     
     private let audioLevelPipe = ValuePipe<Float>()
-    public var audioLevelStream: Signal<Float, NoError> {
+    public var audioLevelEvents: Signal<Float, NoError> {
         return self.audioLevelPipe.signal()
     }
     
