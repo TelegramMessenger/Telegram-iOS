@@ -22,6 +22,7 @@ private final class PresentationCallToneRenderer {
     private let toneRenderer: MediaPlayerAudioRenderer
     private var toneRendererAudioSession: MediaPlayerAudioSessionCustomControl?
     private var toneRendererAudioSessionActivated = false
+    private let audioLevelPipe = ValuePipe<Float>()
     
     init(tone: PresentationCallTone) {
         let queue = Queue.mainQueue()
@@ -33,7 +34,7 @@ private final class PresentationCallToneRenderer {
         
         self.toneRenderer = MediaPlayerAudioRenderer(audioSession: .custom({ control in
             return controlImpl?(control) ?? EmptyDisposable
-        }), playAndRecord: false, forceAudioToSpeaker: false, baseRate: 1.0, updatedRate: {}, audioPaused: {})
+        }), playAndRecord: false, forceAudioToSpeaker: false, baseRate: 1.0, audioLevelPipe: self.audioLevelPipe, updatedRate: {}, audioPaused: {})
         
         controlImpl = { [weak self] control in
             queue.async {

@@ -19,17 +19,19 @@ private final class AudioPlayerRendererBufferContext {
     var lowWaterSize: Int
     var notifyLowWater: () -> Void
     var updatedRate: () -> Void
+    var updatedLevel: (Float) -> Void
     var notifiedLowWater = false
     var overflowData = Data()
     var overflowDataMaxChannelSampleIndex: Int64 = 0
     var renderTimestampTick: Int64 = 0
     
-    init(timebase: CMTimebase, buffer: RingByteBuffer, lowWaterSize: Int, notifyLowWater: @escaping () -> Void, updatedRate: @escaping () -> Void) {
+    init(timebase: CMTimebase, buffer: RingByteBuffer, lowWaterSize: Int, notifyLowWater: @escaping () -> Void, updatedRate: @escaping () -> Void, updatedLevel: @escaping (Float) -> Void) {
         self.timebase = timebase
         self.buffer = buffer
         self.lowWaterSize = lowWaterSize
         self.notifyLowWater = notifyLowWater
         self.updatedRate = updatedRate
+        self.updatedLevel = updatedLevel
     }
 }
 
@@ -111,6 +113,7 @@ private func rendererInputProc(refCon: UnsafeMutableRawPointer, ioActionFlags: U
                         }
                         
                         let rendererBuffer = context.buffer
+                        var updatedLevel = false
                         
                         while rendererFillOffset.0 < bufferList.count {
                             if let bufferData = bufferList[rendererFillOffset.0].mData {
@@ -125,6 +128,11 @@ private func rendererInputProc(refCon: UnsafeMutableRawPointer, ioActionFlags: U
                                 let consumeCount = bufferDataSize - dataOffset
                                 
                                 let actualConsumedCount = rendererBuffer.dequeue(bufferData.advanced(by: dataOffset), count: consumeCount)
+                                if !updatedLevel && actualConsumedCount > 0 {
+                                    updatedLevel = true
+                                    let value = bufferData.advanced(by: dataOffset).assumingMemoryBound(to: UInt16.self).pointee
+                                    context.updatedLevel(Float(value) / Float(UInt16.max))
+                                }
                                 rendererFillOffset.1 += actualConsumedCount
                                 
                                 if actualConsumedCount == 0 {
@@ -188,6 +196,8 @@ private final class AudioPlayerRendererContext {
     var paused = true
     var baseRate: Double
     
+    let audioLevelPipe: ValuePipe<Float>
+    
     var audioGraph: AUGraph?
     var timePitchAudioUnit: AudioComponentInstance?
     var outputAudioUnit: AudioComponentInstance?
@@ -210,12 +220,13 @@ private final class AudioPlayerRendererContext {
         }
     }
     
-    init(controlTimebase: CMTimebase, audioSession: MediaPlayerAudioSessionControl, playAndRecord: Bool, forceAudioToSpeaker: Bool, baseRate: Double, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
+    init(controlTimebase: CMTimebase, audioSession: MediaPlayerAudioSessionControl, playAndRecord: Bool, forceAudioToSpeaker: Bool, baseRate: Double, audioLevelPipe: ValuePipe<Float>, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
         assert(audioPlayerRendererQueue.isCurrent())
         
         self.audioSession = audioSession
         self.forceAudioToSpeaker = forceAudioToSpeaker
         self.baseRate = baseRate
+        self.audioLevelPipe = audioLevelPipe
         
         self.controlTimebase = controlTimebase
         self.updatedRate = updatedRate
@@ -234,6 +245,8 @@ private final class AudioPlayerRendererContext {
             notifyLowWater()
         }, updatedRate: {
             updatedRate()
+        }, updatedLevel: { level in
+            audioLevelPipe.putNext(level)
         }))
         self.bufferContextId = registerPlayerRendererBufferContext(self.bufferContext)
         
@@ -709,7 +722,7 @@ public final class MediaPlayerAudioRenderer {
     private let audioClock: CMClock
     public let audioTimebase: CMTimebase
     
-    public init(audioSession: MediaPlayerAudioSessionControl, playAndRecord: Bool, forceAudioToSpeaker: Bool, baseRate: Double, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
+    public init(audioSession: MediaPlayerAudioSessionControl, playAndRecord: Bool, forceAudioToSpeaker: Bool, baseRate: Double, audioLevelPipe: ValuePipe<Float>, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
         var audioClock: CMClock?
         CMAudioClockCreate(allocator: nil, clockOut: &audioClock)
         if audioClock == nil {
@@ -722,7 +735,7 @@ public final class MediaPlayerAudioRenderer {
         self.audioTimebase = audioTimebase!
         
         audioPlayerRendererQueue.async {
-            let context = AudioPlayerRendererContext(controlTimebase: audioTimebase!, audioSession: audioSession, playAndRecord: playAndRecord, forceAudioToSpeaker: forceAudioToSpeaker, baseRate: baseRate, updatedRate: updatedRate, audioPaused: audioPaused)
+            let context = AudioPlayerRendererContext(controlTimebase: audioTimebase!, audioSession: audioSession, playAndRecord: playAndRecord, forceAudioToSpeaker: forceAudioToSpeaker, baseRate: baseRate, audioLevelPipe: audioLevelPipe, updatedRate: updatedRate, audioPaused: audioPaused)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }
