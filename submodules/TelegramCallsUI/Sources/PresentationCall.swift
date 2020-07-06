@@ -22,6 +22,7 @@ private final class PresentationCallToneRenderer {
     private let toneRenderer: MediaPlayerAudioRenderer
     private var toneRendererAudioSession: MediaPlayerAudioSessionCustomControl?
     private var toneRendererAudioSessionActivated = false
+    private let audioLevelPipe = ValuePipe<Float>()
     
     init(tone: PresentationCallTone) {
         let queue = Queue.mainQueue()
@@ -33,7 +34,7 @@ private final class PresentationCallToneRenderer {
         
         self.toneRenderer = MediaPlayerAudioRenderer(audioSession: .custom({ control in
             return controlImpl?(control) ?? EmptyDisposable
-        }), playAndRecord: false, forceAudioToSpeaker: false, baseRate: 1.0, updatedRate: {}, audioPaused: {})
+        }), playAndRecord: false, forceAudioToSpeaker: false, baseRate: 1.0, audioLevelPipe: self.audioLevelPipe, updatedRate: {}, audioPaused: {})
         
         controlImpl = { [weak self] control in
             queue.async {
@@ -190,7 +191,7 @@ public final class PresentationCallImpl: PresentationCall {
     
     private var sessionStateDisposable: Disposable?
     
-    private let statePromise = ValuePromise<PresentationCallState>(PresentationCallState(state: .waiting, videoState: .notAvailable, remoteVideoState: .inactive), ignoreRepeated: true)
+    private let statePromise = ValuePromise<PresentationCallState>()
     public var state: Signal<PresentationCallState, NoError> {
         return self.statePromise.get()
     }
@@ -233,7 +234,9 @@ public final class PresentationCallImpl: PresentationCall {
     private var droppedCall = false
     private var dropCallKitCallTimer: SwiftSignalKit.Timer?
     
-    init(account: Account, audioSession: ManagedAudioSession, callSessionManager: CallSessionManager, callKitIntegration: CallKitIntegration?, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), initialState: CallSession?, internalId: CallSessionInternalId, peerId: PeerId, isOutgoing: Bool, peer: Peer?, proxyServer: ProxyServerSettings?, auxiliaryServers: [CallAuxiliaryServer], currentNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>) {
+    private var videoCapturer: OngoingCallVideoCapturer?
+    
+    init(account: Account, audioSession: ManagedAudioSession, callSessionManager: CallSessionManager, callKitIntegration: CallKitIntegration?, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), initialState: CallSession?, internalId: CallSessionInternalId, peerId: PeerId, isOutgoing: Bool, peer: Peer?, proxyServer: ProxyServerSettings?, auxiliaryServers: [CallAuxiliaryServer], currentNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, startWithVideo: Bool) {
         self.account = account
         self.audioSession = audioSession
         self.callSessionManager = callSessionManager
@@ -259,6 +262,13 @@ public final class PresentationCallImpl: PresentationCall {
         self.isOutgoing = isOutgoing
         self.isVideo = initialState?.type == .video
         self.peer = peer
+        self.isVideo = startWithVideo
+        if self.isVideo {
+            self.videoCapturer = OngoingCallVideoCapturer()
+            self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: .activeOutgoing, remoteVideoState: .inactive))
+        } else {
+            self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: .notAvailable, remoteVideoState: .inactive))
+        }
         
         self.serializedData = serializedData
         self.dataSaving = dataSaving
@@ -440,13 +450,17 @@ public final class PresentationCallImpl: PresentationCall {
                 mappedRemoteVideoState = .active
             }
         } else {
-            mappedVideoState = .notAvailable
+            if self.isVideo {
+                mappedVideoState = .activeOutgoing
+            } else {
+                mappedVideoState = .notAvailable
+            }
             mappedRemoteVideoState = .inactive
         }
         
         switch sessionState.state {
             case .ringing:
-                presentationState = PresentationCallState(state: .ringing, videoState: .notAvailable, remoteVideoState: .inactive)
+                presentationState = PresentationCallState(state: .ringing, videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState)
                 if previous == nil || previousControl == nil {
                     if !self.reportedIncomingCall {
                         self.reportedIncomingCall = true
@@ -509,7 +523,7 @@ public final class PresentationCallImpl: PresentationCall {
                             presentationState = PresentationCallState(state: .reconnecting(timestamp, reception, keyVisualHash), videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState)
                     }
                 } else {
-                    presentationState = PresentationCallState(state: .connecting(keyVisualHash), videoState: .notAvailable, remoteVideoState: .inactive)
+                    presentationState = PresentationCallState(state: .connecting(keyVisualHash), videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState)
                 }
         }
         
@@ -523,8 +537,9 @@ public final class PresentationCallImpl: PresentationCall {
                 if let _ = audioSessionControl, !wasActive || previousControl == nil {
                     let logName = "\(id.id)_\(id.accessHash)"
                     
-                    let ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, auxiliaryServers: auxiliaryServers, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, derivedState: self.derivedState, key: key, isOutgoing: sessionState.isOutgoing, isVideo: sessionState.type == .video, connections: connections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, audioSessionActive: self.audioSessionActive.get(), logName: logName)
+                    let ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, auxiliaryServers: auxiliaryServers, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, derivedState: self.derivedState, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: connections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, audioSessionActive: self.audioSessionActive.get(), logName: logName)
                     self.ongoingContext = ongoingContext
+                    ongoingContext.setIsMuted(self.isMutedValue)
                     
                     self.debugInfoValue.set(ongoingContext.debugInfo())
                     
@@ -718,8 +733,8 @@ public final class PresentationCallImpl: PresentationCall {
         self.ongoingContext?.setEnableVideo(value)
     }
     
-    public func switchVideoCamera() {
-        self.ongoingContext?.switchVideoCamera()
+    public func setOutgoingVideoIsPaused(_ isPaused: Bool) {
+        self.videoCapturer?.setIsVideoEnabled(!isPaused)
     }
     
     public func setCurrentAudioOutput(_ output: AudioSessionOutput) {
@@ -748,6 +763,10 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     public func makeOutgoingVideoView(completion: @escaping (UIView?) -> Void) {
-        self.ongoingContext?.makeOutgoingVideoView(completion: completion)
+        self.videoCapturer?.makeOutgoingVideoView(completion: completion)
+    }
+    
+    public func switchVideoCamera() {
+        self.videoCapturer?.switchCamera()
     }
 }

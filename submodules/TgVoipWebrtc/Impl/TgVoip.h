@@ -129,6 +129,19 @@ struct TgVoipAudioDataCallbacks {
     std::function<void(int16_t*, size_t)> preprocessed;
 };
 
+class TgVoipVideoCaptureInterface {
+protected:
+    TgVoipVideoCaptureInterface() = default;
+public:
+    static std::shared_ptr<TgVoipVideoCaptureInterface> makeInstance();
+    
+    virtual ~TgVoipVideoCaptureInterface();
+    
+    virtual void switchCamera() = 0;
+    virtual void setIsVideoEnabled(bool isVideoEnabled) = 0;
+    virtual void setVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) = 0;
+};
+
 class TgVoip {
 protected:
     TgVoip() = default;
@@ -146,7 +159,7 @@ public:
             std::vector<TgVoipRtcServer> const &rtcServers,
             TgVoipNetworkType initialNetworkType,
             TgVoipEncryptionKey const &encryptionKey,
-            bool isVideo,
+            std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture,
             std::function<void(TgVoipState)> stateUpdated,
             std::function<void(bool)> videoStateUpdated,
             std::function<void(bool)> remoteVideoIsActiveUpdated,
@@ -161,7 +174,6 @@ public:
     virtual void setEchoCancellationStrength(int strength) = 0;
     
     virtual void setIncomingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) = 0;
-    virtual void setOutgoingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) = 0;
 
     virtual std::string getLastError() = 0;
     virtual std::string getDebugInfo() = 0;
@@ -171,7 +183,6 @@ public:
     
     virtual void receiveSignalingData(const std::vector<uint8_t> &data) = 0;
     virtual void setSendVideo(bool sendVideo) = 0;
-    virtual void switchVideoCamera() = 0;
 
     virtual TgVoipFinalState stop() = 0;
 };

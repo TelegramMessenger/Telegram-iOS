@@ -13,6 +13,8 @@ namespace TGVOIP_NAMESPACE {
 class VideoCapturerInterface {
 public:
     virtual ~VideoCapturerInterface();
+    
+    virtual void setIsEnabled(bool isEnabled) = 0;
 };
 
 void configurePlatformAudio();

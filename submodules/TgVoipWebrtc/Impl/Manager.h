@@ -12,12 +12,14 @@ namespace TGVOIP_NAMESPACE {
 
 class Manager : public std::enable_shared_from_this<Manager> {
 public:
+    static rtc::Thread *getMediaThread();
+    
     Manager(
         rtc::Thread *thread,
         TgVoipEncryptionKey encryptionKey,
         bool enableP2P,
         std::vector<TgVoipRtcServer> const &rtcServers,
-        bool isVideo,
+        std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture,
         std::function<void (const TgVoipState &)> stateUpdated,
         std::function<void (bool)> videoStateUpdated,
         std::function<void (bool)> remoteVideoIsActiveUpdated,
@@ -29,17 +31,15 @@ public:
     void receiveSignalingData(const std::vector<uint8_t> &data);
     void setSendVideo(bool sendVideo);
     void setMuteOutgoingAudio(bool mute);
-    void switchVideoCamera();
     void notifyIsLocalVideoActive(bool isActive);
     void setIncomingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink);
-    void setOutgoingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink);
     
 private:
     rtc::Thread *_thread;
     TgVoipEncryptionKey _encryptionKey;
     bool _enableP2P;
     std::vector<TgVoipRtcServer> _rtcServers;
-    bool _startWithVideo;
+    std::shared_ptr<TgVoipVideoCaptureInterface> _videoCapture;
     std::function<void (const TgVoipState &)> _stateUpdated;
     std::function<void (bool)> _videoStateUpdated;
     std::function<void (bool)> _remoteVideoIsActiveUpdated;

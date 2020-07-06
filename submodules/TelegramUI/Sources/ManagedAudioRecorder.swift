@@ -166,6 +166,7 @@ final class ManagedAudioRecorderContext {
     
     private var micLevelPeak: Int16 = 0
     private var micLevelPeakCount: Int = 0
+    private var audioLevelPeakUpdate: Double = 0.0
     
     fileprivate var isPaused = false
     
@@ -213,7 +214,7 @@ final class ManagedAudioRecorderContext {
                 }
                 return ActionDisposable {
                 }
-            }), playAndRecord: true, forceAudioToSpeaker: false, baseRate: 1.0, updatedRate: {
+            }), playAndRecord: true, forceAudioToSpeaker: false, baseRate: 1.0, audioLevelPipe: ValuePipe<Float>(), updatedRate: {
             }, audioPaused: {})
             self.toneRenderer = toneRenderer
             
@@ -580,6 +581,12 @@ final class ManagedAudioRecorderContext {
             
             if self.micLevelPeakCount >= 1200 {
                 let level = Float(self.micLevelPeak) / 4000.0
+                /*let timestamp = CFAbsoluteTimeGetCurrent()
+                if !self.audioLevelPeakUpdate.isZero {
+                    let delta = timestamp - self.audioLevelPeakUpdate
+                    print("level = \(level), delta = \(delta)")
+                }
+                self.audioLevelPeakUpdate = timestamp*/
                 self.micLevel.set(level)
                 self.micLevelPeak = 0
                 self.micLevelPeakCount = 0

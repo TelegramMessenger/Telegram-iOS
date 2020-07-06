@@ -112,6 +112,10 @@
     [_videoCapturer stopCapture];
 }
 
+- (void)setIsEnabled:(bool)isEnabled {
+    [_videoCapturer setIsEnabled:isEnabled];
+}
+
 @end
 
 @interface VideoCapturerInterfaceImplHolder : NSObject
@@ -149,6 +153,16 @@ public:
         dispatch_async(dispatch_get_main_queue(), ^{
             if (implReference.reference != nil) {
                 CFBridgingRelease(implReference.reference);
+            }
+        });
+    }
+    
+    virtual void setIsEnabled(bool isEnabled) {
+        VideoCapturerInterfaceImplHolder *implReference = _implReference;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (implReference.reference != nil) {
+                VideoCapturerInterfaceImplReference *reference = (__bridge VideoCapturerInterfaceImplReference *)implReference.reference;
+                [reference setIsEnabled:isEnabled];
             }
         });
     }

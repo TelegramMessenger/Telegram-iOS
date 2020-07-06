@@ -5,9 +5,20 @@
 #include "rtc_base/logging.h"
 
 #include "Manager.h"
+#include "MediaManager.h"
 
 #include <stdarg.h>
 #include <iostream>
+
+#include "VideoCaptureInterfaceImpl.h"
+
+#if TARGET_OS_IPHONE
+
+#include "CodecsApple.h"
+
+#else
+#error "Unsupported platform"
+#endif
 
 #import <Foundation/Foundation.h>
 
@@ -142,7 +153,7 @@ public:
             std::vector<TgVoipRtcServer> const &rtcServers,
             TgVoipConfig const &config,
             TgVoipEncryptionKey const &encryptionKey,
-            bool isVideo,
+            std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture,
             TgVoipNetworkType initialNetworkType,
             std::function<void(TgVoipState)> stateUpdated,
             std::function<void(bool)> videoStateUpdated,
@@ -160,13 +171,13 @@ public:
         
         bool enableP2P = config.enableP2P;
         
-        _manager.reset(new ThreadLocalObject<Manager>(getManagerThread(), [encryptionKey = encryptionKey, enableP2P = enableP2P, isVideo, stateUpdated, videoStateUpdated, remoteVideoIsActiveUpdated, signalingDataEmitted, rtcServers](){
+        _manager.reset(new ThreadLocalObject<Manager>(getManagerThread(), [encryptionKey = encryptionKey, enableP2P = enableP2P, stateUpdated, videoStateUpdated, remoteVideoIsActiveUpdated, signalingDataEmitted, rtcServers, videoCapture](){
             return new Manager(
                 getManagerThread(),
                 encryptionKey,
                 enableP2P,
                 rtcServers,
-                isVideo,
+                videoCapture,
                 [stateUpdated](const TgVoipState &state) {
                     stateUpdated(state);
                 },
@@ -201,12 +212,6 @@ public:
             manager->setSendVideo(sendVideo);
         });
     };
-    
-    void switchVideoCamera() override {
-        _manager->perform([](Manager *manager) {
-            manager->switchVideoCamera();
-        });
-    }
 
     void setNetworkType(TgVoipNetworkType networkType) override {
         /*message::NetworkType mappedType;
@@ -265,12 +270,6 @@ public:
     void setIncomingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) override {
         _manager->perform([sink](Manager *manager) {
             manager->setIncomingVideoOutput(sink);
-        });
-    }
-    
-    void setOutgoingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) override {
-        _manager->perform([sink](Manager *manager) {
-            manager->setOutgoingVideoOutput(sink);
         });
     }
 
@@ -387,7 +386,7 @@ TgVoip *TgVoip::makeInstance(
         std::vector<TgVoipRtcServer> const &rtcServers,
         TgVoipNetworkType initialNetworkType,
         TgVoipEncryptionKey const &encryptionKey,
-        bool isVideo,
+        std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture,
         std::function<void(TgVoipState)> stateUpdated,
         std::function<void(bool)> videoStateUpdated,
         std::function<void(bool)> remoteVideoIsActiveUpdated,
@@ -400,7 +399,7 @@ TgVoip *TgVoip::makeInstance(
             rtcServers,
             config,
             encryptionKey,
-            isVideo,
+            videoCapture,
             initialNetworkType,
             stateUpdated,
             videoStateUpdated,
@@ -410,6 +409,12 @@ TgVoip *TgVoip::makeInstance(
 }
 
 TgVoip::~TgVoip() = default;
+
+std::shared_ptr<TgVoipVideoCaptureInterface>TgVoipVideoCaptureInterface::makeInstance() {
+    return std::shared_ptr<TgVoipVideoCaptureInterface>(new TgVoipVideoCaptureInterfaceImpl());
+}
+
+TgVoipVideoCaptureInterface::~TgVoipVideoCaptureInterface() = default;
 
 #ifdef TGVOIP_NAMESPACE
 }
