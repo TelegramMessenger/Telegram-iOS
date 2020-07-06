@@ -13,15 +13,12 @@ NSString *const TGAttachmentGifCellIdentifier = @"AttachmentGifCell";
     {
         _typeLabel = [[UILabel alloc] initWithFrame:CGRectZero];
         _typeLabel.backgroundColor = [UIColor clearColor];
-        _typeLabel.font = TGSystemFontOfSize(12);
+        _typeLabel.font = TGBoldSystemFontOfSize(13);
         _typeLabel.textColor = [UIColor whiteColor];
         _typeLabel.text = @"GIF";
         [self addSubview:_typeLabel];
         
         [_typeLabel sizeToFit];
-        
-        CGSize typeSize = CGSizeMake(ceil(_typeLabel.frame.size.width), ceil(_typeLabel.frame.size.height));
-        _typeLabel.frame = CGRectMake(4, self.frame.size.height - typeSize.height - 2, typeSize.width, typeSize.height);
         
         _gradientView.hidden = false;
         
@@ -33,7 +30,9 @@ NSString *const TGAttachmentGifCellIdentifier = @"AttachmentGifCell";
 - (void)layoutSubviews
 {
     [super layoutSubviews];
-    _typeLabel.frame = CGRectMake(4, self.frame.size.height - _typeLabel.frame.size.height - 2, _typeLabel.frame.size.width, _typeLabel.frame.size.height);
+    
+    CGSize typeSize = _typeLabel.frame.size;
+    _typeLabel.frame = CGRectMake(self.frame.size.width - typeSize.width - 3.0, self.frame.size.height - typeSize.height - 1.0, typeSize.width, typeSize.height);
 }
 
 @end

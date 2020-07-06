@@ -552,7 +552,7 @@
             if (strongSelf->_dismissed)
                 return;
             
-            [strongSelf setProgressVisible:progressVisible value:progress animated:true];
+            [strongSelf setProgressVisible:progressVisible value:progress animated:progressVisible];
             [strongSelf updateDoneButtonEnabled:doneEnabled animated:true];
             if (progressVisible)
                 strongSelf->_hadProgress = true;

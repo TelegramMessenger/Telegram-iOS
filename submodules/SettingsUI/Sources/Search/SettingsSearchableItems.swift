@@ -35,7 +35,7 @@ enum SettingsSearchableItemIcon {
     case faq
 }
 
-enum SettingsSearchableItemId: Hashable {
+public enum SettingsSearchableItemId: Hashable {
     case profile(Int32)
     case proxy(Int32)
     case savedMessages(Int32)
@@ -152,20 +152,20 @@ enum SettingsSearchableItemId: Hashable {
     }
 }
 
-enum SettingsSearchableItemPresentation {
+public enum SettingsSearchableItemPresentation {
     case push
     case modal
     case immediate
     case dismiss
 }
 
-struct SettingsSearchableItem {
-    let id: SettingsSearchableItemId
+public struct SettingsSearchableItem {
+    public let id: SettingsSearchableItemId
     let title: String
     let alternate: [String]
     let icon: SettingsSearchableItemIcon
     let breadcrumbs: [String]
-    let present: (AccountContext, NavigationController?, @escaping (SettingsSearchableItemPresentation, ViewController?) -> Void) -> Void
+    public let present: (AccountContext, NavigationController?, @escaping (SettingsSearchableItemPresentation, ViewController?) -> Void) -> Void
 }
 
 private func synonyms(_ string: String?) -> [String] {
