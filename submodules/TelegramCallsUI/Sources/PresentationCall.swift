@@ -167,7 +167,7 @@ public final class PresentationCallImpl: PresentationCall {
     public let internalId: CallSessionInternalId
     public let peerId: PeerId
     public let isOutgoing: Bool
-    private var isVideo: Bool
+    public var isVideo: Bool
     public let peer: Peer?
     
     private let serializedData: String?

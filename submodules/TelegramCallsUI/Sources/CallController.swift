@@ -14,9 +14,33 @@ import AccountContext
 import TelegramNotices
 import AppBundle
 
+protocol CallControllerNodeProtocol: class {
+    var isMuted: Bool { get set }
+    
+    var toggleMute: (() -> Void)? { get set }
+    var setCurrentAudioOutput: ((AudioSessionOutput) -> Void)? { get set }
+    var beginAudioOuputSelection: (() -> Void)? { get set }
+    var acceptCall: (() -> Void)? { get set }
+    var endCall: (() -> Void)? { get set }
+    var setIsVideoPaused: ((Bool) -> Void)? { get set }
+    var back: (() -> Void)? { get set }
+    var presentCallRating: ((CallId) -> Void)? { get set }
+    var callEnded: ((Bool) -> Void)? { get set }
+    var dismissedInteractively: (() -> Void)? { get set }
+    
+    func updateAudioOutputs(availableOutputs: [AudioSessionOutput], currentOutput: AudioSessionOutput?)
+    func updateCallState(_ callState: PresentationCallState)
+    func updatePeer(accountPeer: Peer, peer: Peer, hasOther: Bool)
+    
+    func animateIn()
+    func animateOut(completion: @escaping () -> Void)
+    
+    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition)
+}
+
 public final class CallController: ViewController {
-    private var controllerNode: CallControllerNode {
-        return self.displayNode as! CallControllerNode
+    private var controllerNode: CallControllerNodeProtocol {
+        return self.displayNode as! CallControllerNodeProtocol
     }
     
     private let _ready = Promise<Bool>(false)
@@ -109,7 +133,11 @@ public final class CallController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = CallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit, easyDebugAccess: self.easyDebugAccess, call: self.call)
+        if self.call.isVideo {
+            self.displayNode = CallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit, easyDebugAccess: self.easyDebugAccess, call: self.call)
+        } else {
+            self.displayNode = LegacyCallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit, easyDebugAccess: self.easyDebugAccess, call: self.call)
+        }
         self.displayNodeDidLoad()
         
         self.controllerNode.toggleMute = { [weak self] in
