@@ -133,7 +133,14 @@ private func rendererInputProc(refCon: UnsafeMutableRawPointer, ioActionFlags: U
                                 
                                 var samplePtr = bufferData.advanced(by: dataOffset).assumingMemoryBound(to: Int16.self)
                                 for _ in 0 ..< actualConsumedCount / 4 {
-                                    let sample: Int16 = abs(samplePtr.pointee)
+                                    var sample: Int16 = samplePtr.pointee
+                                    if sample < 0 {
+                                        if sample <= -32768 {
+                                            sample = Int16.max
+                                        } else {
+                                            sample = -sample
+                                        }
+                                    }
                                     samplePtr = samplePtr.advanced(by: 2)
                                     
                                     if context.audioLevelPeak < sample {

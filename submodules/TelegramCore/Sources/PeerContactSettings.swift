@@ -39,14 +39,25 @@ public func unarchiveAutomaticallyArchivedPeer(account: Account, peerId: PeerId)
     let _ = (account.postbox.transaction { transaction -> Void in
         updatePeerGroupIdInteractively(transaction: transaction, peerId: peerId, groupId: .root)
         transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-            guard let currentData = current as? CachedUserData, let currentStatusSettings = currentData.peerStatusSettings else {
+            if let currentData = current as? CachedUserData, let currentStatusSettings = currentData.peerStatusSettings {
+                var statusSettings = currentStatusSettings
+                statusSettings.flags.remove(.canBlock)
+                statusSettings.flags.remove(.canReport)
+                statusSettings.flags.remove(.autoArchived)
+                return currentData.withUpdatedPeerStatusSettings(statusSettings)
+            } else if let currentData = current as? CachedGroupData, let currentStatusSettings = currentData.peerStatusSettings {
+                var statusSettings = currentStatusSettings
+                statusSettings.flags.remove(.canReport)
+                statusSettings.flags.remove(.autoArchived)
+                return currentData.withUpdatedPeerStatusSettings(statusSettings)
+             } else if let currentData = current as? CachedChannelData, let currentStatusSettings = currentData.peerStatusSettings {
+                 var statusSettings = currentStatusSettings
+                 statusSettings.flags.remove(.canReport)
+                 statusSettings.flags.remove(.autoArchived)
+                 return currentData.withUpdatedPeerStatusSettings(statusSettings)
+             }else {
                 return current
             }
-            var statusSettings = currentStatusSettings
-            statusSettings.flags.remove(.canBlock)
-            statusSettings.flags.remove(.canReport)
-            statusSettings.flags.remove(.autoArchived)
-            return currentData.withUpdatedPeerStatusSettings(statusSettings)
         })
     }
     |> deliverOnMainQueue).start()
