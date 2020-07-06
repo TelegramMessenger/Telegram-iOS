@@ -87,6 +87,9 @@ private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReport
     } else if let _ = state.renderedPeer?.chatMainPeer {
         if let contactStatus = state.contactStatus, contactStatus.canReportIrrelevantLocation, let peerStatusSettings = contactStatus.peerStatusSettings, peerStatusSettings.contains(.canReportIrrelevantGeoLocation) {
             buttons.append(.reportIrrelevantGeoLocation)
+        } else if let contactStatus = state.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings, peerStatusSettings.contains(.autoArchived) {
+            buttons.append(.reportUserSpam)
+            buttons.append(.unarchive)
         } else {
             buttons.append(.reportSpam)
         }

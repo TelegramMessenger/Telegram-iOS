@@ -73,6 +73,7 @@ public protocol PresentationCall: class {
     var internalId: CallSessionInternalId { get }
     var peerId: PeerId { get }
     var isOutgoing: Bool { get }
+    var isVideo: Bool { get }
     var peer: Peer? { get }
     
     var state: Signal<PresentationCallState, NoError> { get }

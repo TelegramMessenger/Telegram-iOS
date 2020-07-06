@@ -25,7 +25,9 @@
 #include "api/video_track_source_proxy.h"
 #include "sdk/objc/api/RTCVideoRendererAdapter.h"
 #include "sdk/objc/native/api/video_frame.h"
+#if defined(WEBRTC_IOS)
 #include "sdk/objc/components/audio/RTCAudioSession.h"
+#endif
 #include "api/media_types.h"
 
 #import "VideoCameraCapturer.h"
@@ -47,6 +49,9 @@
         
         _videoCapturer = [[VideoCameraCapturer alloc] initWithSource:source isActiveUpdated:isActiveUpdated];
         
+        AVCaptureDevice *selectedCamera = nil;
+        
+#if TARGET_OS_IOS
         AVCaptureDevice *frontCamera = nil;
         AVCaptureDevice *backCamera = nil;
         for (AVCaptureDevice *device in [VideoCameraCapturer captureDevices]) {
@@ -56,14 +61,15 @@
                 backCamera = device;
             }
         }
-        
-        AVCaptureDevice *selectedCamera = nil;
         if (useFrontCamera && frontCamera != nil) {
             selectedCamera = frontCamera;
         } else {
             selectedCamera = backCamera;
         }
-        
+#else
+        selectedCamera = [VideoCameraCapturer captureDevices].firstObject;
+#endif
+        //        NSLog(@"%@", selectedCamera);
         if (selectedCamera == nil) {
             return nil;
         }
@@ -74,7 +80,7 @@
             return width1 < width2 ? NSOrderedAscending : NSOrderedDescending;
         }];
         
-        AVCaptureDeviceFormat *bestFormat = nil;
+        AVCaptureDeviceFormat *bestFormat = sortedFormats.firstObject;
         for (AVCaptureDeviceFormat *format in sortedFormats) {
             CMVideoDimensions dimensions = CMVideoFormatDescriptionGetDimensions(format.formatDescription);
             if (dimensions.width >= 1000 || dimensions.height >= 1000) {
