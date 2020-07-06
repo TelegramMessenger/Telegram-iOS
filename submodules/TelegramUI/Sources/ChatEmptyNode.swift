@@ -665,8 +665,7 @@ final class ChatEmptyNode: ASDisplayNode {
             let node: ASDisplayNode & ChatEmptyNodeContent
             switch contentType {
                 case .regular:
-//                    node = ChatEmptyNodeRegularChatContent()
-node = ChatEmptyNodeNearbyChatContent(account: self.account, interaction: self.interaction)
+                    node = ChatEmptyNodeRegularChatContent()
                 case .secret:
                     node = ChatEmptyNodeSecretChatContent()
                 case .group:
@@ -680,7 +679,7 @@ node = ChatEmptyNodeNearbyChatContent(account: self.account, interaction: self.i
             self.addSubnode(node)
             contentTransition = .immediate
         }
-        self.isUserInteractionEnabled = contentType == .peerNearby || contentType == .regular
+        self.isUserInteractionEnabled = contentType == .peerNearby
         
         let displayRect = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
         
