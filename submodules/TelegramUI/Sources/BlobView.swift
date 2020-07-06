@@ -5,7 +5,7 @@ import LegacyComponents
 
 private enum Constants {
     
-    static let maxLevel: CGFloat = 5
+    static let maxLevel: CGFloat = 4
 }
 
 final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration {
@@ -25,10 +25,10 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
         pointsCount: 8,
         minRandomness: 1,
         maxRandomness: 1,
-        minSpeed: 1,
+        minSpeed: 1.5,
         maxSpeed: 7,
-        minScale: 0.55,
-        maxScale: 0.9,
+        minScale: 0.52,
+        maxScale: 0.87,
         scaleSpeed: 0.2,
         isCircle: false
     )
@@ -36,9 +36,9 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
         pointsCount: 8,
         minRandomness: 1,
         maxRandomness: 1,
-        minSpeed: 1,
+        minSpeed: 1.5,
         maxSpeed: 7,
-        minScale: 0.55,
+        minScale: 0.57,
         maxScale: 1,
         scaleSpeed: 0.2,
         isCircle: false
@@ -127,6 +127,8 @@ final class BlobView: UIView {
     
     private var speedLevel: CGFloat = 0
     private var scaleLevel: CGFloat = 0
+    
+    private var lastSpeedLevel: CGFloat = 0
     private var lastScaleLevel: CGFloat = 0
     
     private let shapeLayer: CAShapeLayer = {
@@ -199,6 +201,10 @@ final class BlobView: UIView {
     
     func updateSpeedLevel(to newSpeedLevel: CGFloat) {
         speedLevel = max(speedLevel, newSpeedLevel)
+        
+        if abs(lastSpeedLevel - newSpeedLevel) > 0.5 {
+            animateToNewShape()
+        }
     }
     
     func startAnimating() {
@@ -238,7 +244,7 @@ final class BlobView: UIView {
         if pop_animation(forKey: "blob") != nil {
             fromPoints = currentPoints
             toPoints = nil
-            pop_removeAllAnimations()
+            shapeLayer.pop_removeAnimation(forKey: "blob")
         }
         
         if fromPoints == nil {
@@ -274,6 +280,7 @@ final class BlobView: UIView {
         animation.toValue = 1
         pop_add(animation, forKey: "blob")
         
+        lastSpeedLevel = speedLevel
         speedLevel = 0
     }
     
