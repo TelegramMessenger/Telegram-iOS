@@ -54,7 +54,13 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
             peer = chatPeer.chatMainPeer
         }
         
-        messageText = messages[0].text
+        messageText = ""
+        for message in messages {
+            if !message.text.isEmpty {
+                messageText = message.text
+                break
+            }
+        }
         
         var textIsReady = false
         if messages.count > 1 {
