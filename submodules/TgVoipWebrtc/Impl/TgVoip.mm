@@ -12,7 +12,7 @@
 
 #include "VideoCaptureInterfaceImpl.h"
 
-#if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE || TARGET_OS_OSX
 
 #include "CodecsApple.h"
 
