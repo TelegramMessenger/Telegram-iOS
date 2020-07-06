@@ -124,7 +124,9 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     CGFloat _currentScale;
     CGFloat _currentTranslation;
     CGFloat _targetTranslation;
+    
     CGFloat _cancelTranslation;
+    CGFloat _cancelTargetTranslation;
     
     CFAbsoluteTime _animationStartTime;
     
@@ -505,6 +507,8 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     _currentLevel = 0.0f;
     _currentTranslation = 0.0f;
     _targetTranslation = 0.0f;
+    _cancelTranslation = 0;
+    _cancelTargetTranslation = 0;
     _currentScale = 1.0f;
     [UIView animateWithDuration:0.18 animations:^{
         _innerIconWrapperView.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
@@ -531,10 +535,9 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
             [_presentation dismiss];
             _presentation = nil;
             
-            _cancelTranslation = 0;
             id<TGModernConversationInputMicButtonDelegate> delegate = _delegate;
             if ([delegate respondsToSelector:@selector(micButtonInteractionUpdateCancelTranslation:)])
-                [delegate micButtonInteractionUpdateCancelTranslation:-_cancelTranslation];
+                [delegate micButtonInteractionUpdateCancelTranslation:-_cancelTargetTranslation];
         }
         
         if (_previousIcon != nil)
@@ -565,17 +568,16 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     [self setIcon:TGTintedImage(TGComponentsImageNamed(@"RecordSendIcon"), _pallete != nil ? _pallete.iconColor : [UIColor whiteColor])];
     
     _currentScale = 1;
-    _cancelTranslation = 0;
+    _cancelTargetTranslation = 0;
     id<TGModernConversationInputMicButtonDelegate> delegate = _delegate;
     if ([delegate respondsToSelector:@selector(micButtonInteractionUpdateCancelTranslation:)])
-        [delegate micButtonInteractionUpdateCancelTranslation:-_cancelTranslation];
+        [delegate micButtonInteractionUpdateCancelTranslation:-_cancelTargetTranslation];
     
     _innerIconView.transform = CGAffineTransformMakeScale(0.3f, 0.3f);
     _innerIconView.alpha = 0.0f;
     [UIView animateWithDuration:0.3 delay:0.0 options:7 << 16 animations:^
     {
         _innerIconView.transform = CGAffineTransformIdentity;
-        _decoration.transform = CGAffineTransformIdentity;
         snapshotView.transform = CGAffineTransformMakeScale(0.001f, 0.001f);
     } completion:^(__unused BOOL finished) {
         [snapshotView removeFromSuperview];
@@ -695,7 +697,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
                 _currentScale = scale;
                 
                 _targetTranslation = distanceY;
-                _cancelTranslation = distanceX;
+                _cancelTargetTranslation = distanceX;
                 CGFloat targetLockness = _locked ? 1.0f : MIN(1.0f, fabs(_targetTranslation) / 105.0f);
                 [_lock updateLockness:targetLockness];
                 _lockView.lockness = targetLockness;
@@ -713,7 +715,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
             
             id<TGModernConversationInputMicButtonDelegate> delegate = _delegate;
             if ([delegate respondsToSelector:@selector(micButtonInteractionUpdateCancelTranslation:)])
-                [delegate micButtonInteractionUpdateCancelTranslation:-_cancelTranslation];
+                [delegate micButtonInteractionUpdateCancelTranslation:-_cancelTargetTranslation];
             
             if (distanceX < -150.0f) {
                 id<TGModernConversationInputMicButtonDelegate> delegate = _delegate;
@@ -837,11 +839,14 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         _innerCircleView.image = nil;
     }
     NSTimeInterval t = CACurrentMediaTime();
+    
+    _currentLevel = _currentLevel * 0.9f + _inputLevel * 0.1f;
+    [_decoration tick:_currentLevel];
+    
+    _currentTranslation = MIN(0.0, _currentTranslation * 0.7f + _targetTranslation * 0.3f);
+    _cancelTranslation = MIN(0.0, _cancelTranslation * 0.7f + _cancelTargetTranslation * 0.3f);
+    
     if (t > _animationStartTime) {
-        _currentLevel = _currentLevel * 0.8f + _inputLevel * 0.2f;
-        
-        _currentTranslation = MIN(0.0, _currentTranslation * 0.7f + _targetTranslation * 0.3f);
-        
         CGFloat outerScale = outerCircleMinScale + _currentLevel * (1.0f - outerCircleMinScale);
         CGAffineTransform translation = CGAffineTransformMakeTranslation(0, _currentTranslation);
         CGAffineTransform transform = CGAffineTransformScale(translation, outerScale, outerScale);
@@ -857,8 +862,6 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         _innerCircleView.transform = transform;
         _innerIconWrapperView.transform = transform;
         _decoration.transform = transform;
-        
-        [_decoration tick:_currentLevel];
     }
 }
 

@@ -5,7 +5,7 @@ import LegacyComponents
 
 private enum Constants {
     
-    static let maxLevel: CGFloat = 5
+    static let maxLevel: CGFloat = 4
 }
 
 final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration {
@@ -25,30 +25,30 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
         pointsCount: 8,
         minRandomness: 1,
         maxRandomness: 1,
-        minSpeed: 1,
+        minSpeed: 1.5,
         maxSpeed: 7,
-        minScale: 0.55,
-        maxScale: 0.9,
+        minScale: 0.52,
+        maxScale: 0.87,
         scaleSpeed: 0.2,
-        isCircle: true
+        isCircle: false
     )
     private let bigBlob = BlobView(
         pointsCount: 8,
         minRandomness: 1,
         maxRandomness: 1,
-        minSpeed: 1,
+        minSpeed: 1.5,
         maxSpeed: 7,
-        minScale: 0.55,
+        minScale: 0.57,
         maxScale: 1,
         scaleSpeed: 0.2,
-        isCircle: true
+        isCircle: false
     )
     
     override init(frame: CGRect) {
         super.init(frame: frame)
         
         addSubview(bigBlob)
-        //addSubview(mediumBlob)
+        addSubview(mediumBlob)
         addSubview(smallBlob)
     }
     
@@ -65,12 +65,18 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
     func updateLevel(_ level: CGFloat) {
         let normalizedLevel = min(1, max(level / Constants.maxLevel, 0))
         
+        smallBlob.updateSpeedLevel(to: normalizedLevel)
+        mediumBlob.updateSpeedLevel(to: normalizedLevel)
+        bigBlob.updateSpeedLevel(to: normalizedLevel)
+    }
+    
+    func tick(_ level: CGFloat) {
+        let normalizedLevel = min(1, max(level / Constants.maxLevel, 0))
+        
         smallBlob.level = normalizedLevel
         mediumBlob.level = normalizedLevel
         bigBlob.level = normalizedLevel
     }
-    
-    func tick(_ level: CGFloat) { }
     
     override func layoutSubviews() {
         super.layoutSubviews()
@@ -104,22 +110,25 @@ final class BlobView: UIView {
     let maxScale: CGFloat
     let scaleSpeed: CGFloat
     
+    var scaleLevelsToBalance = [CGFloat]()
+    
     // If true ignores randomness and pointsCount
     let isCircle: Bool
     
     var level: CGFloat = 0 {
         didSet {
-            speedLevel = max(level, speedLevel)
-            scaleLevel = max(level, scaleLevel)
-            
-            if abs(scaleLevel - lastScaleLevel) > 0.4 {
-                animateToNewScale()
-            }
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            let lv = minScale + (maxScale - minScale) * level
+            shapeLayer.transform = CATransform3DMakeScale(lv, lv, 1)
+            CATransaction.commit()
         }
     }
     
     private var speedLevel: CGFloat = 0
     private var scaleLevel: CGFloat = 0
+    
+    private var lastSpeedLevel: CGFloat = 0
     private var lastScaleLevel: CGFloat = 0
     
     private let shapeLayer: CAShapeLayer = {
@@ -190,18 +199,31 @@ final class BlobView: UIView {
         shapeLayer.fillColor = color.cgColor
     }
     
+    func updateSpeedLevel(to newSpeedLevel: CGFloat) {
+        speedLevel = max(speedLevel, newSpeedLevel)
+        
+        if abs(lastSpeedLevel - newSpeedLevel) > 0.5 {
+            animateToNewShape()
+        }
+    }
+    
     func startAnimating() {
         animateToNewShape()
-        animateToNewScale()
     }
     
     func animateToNewScale() {
-        let isDownscale = lastScaleLevel > scaleLevel
-        lastScaleLevel = scaleLevel
+        let scaleLevelForAnimation: CGFloat = {
+            if scaleLevelsToBalance.isEmpty {
+                return 0
+            }
+            return scaleLevelsToBalance.reduce(0, +) / CGFloat(scaleLevelsToBalance.count)
+        }()
+        let isDownscale = lastScaleLevel > scaleLevelForAnimation
+        lastScaleLevel = scaleLevelForAnimation
         
         shapeLayer.pop_removeAnimation(forKey: "scale")
         
-        let currentScale = minScale + (maxScale - minScale) * scaleLevel
+        let currentScale = minScale + (maxScale - minScale) * scaleLevelForAnimation
         let scaleAnimation = POPBasicAnimation(propertyNamed: kPOPLayerScaleXY)!
         scaleAnimation.toValue = CGPoint(x: currentScale, y: currentScale)
         scaleAnimation.duration = isDownscale ? 0.45 : CFTimeInterval(scaleSpeed)
@@ -213,6 +235,7 @@ final class BlobView: UIView {
         shapeLayer.pop_add(scaleAnimation, forKey: "scale")
         
         scaleLevel = 0
+        scaleLevelsToBalance.removeAll()
     }
     
     func animateToNewShape() {
@@ -221,7 +244,7 @@ final class BlobView: UIView {
         if pop_animation(forKey: "blob") != nil {
             fromPoints = currentPoints
             toPoints = nil
-            pop_removeAllAnimations()
+            shapeLayer.pop_removeAnimation(forKey: "blob")
         }
         
         if fromPoints == nil {
@@ -257,6 +280,7 @@ final class BlobView: UIView {
         animation.toValue = 1
         pop_add(animation, forKey: "blob")
         
+        lastSpeedLevel = speedLevel
         speedLevel = 0
     }
     

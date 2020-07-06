@@ -7,7 +7,7 @@ import SyncCore
 func parsedTelegramProfilePhoto(_ photo: Api.UserProfilePhoto) -> [TelegramMediaImageRepresentation] {
     var representations: [TelegramMediaImageRepresentation] = []
     switch photo {
-        case let .userProfilePhoto(_, photoSmall, photoBig, dcId):
+        case let .userProfilePhoto(flags, _, photoSmall, photoBig, dcId):
             let smallResource: TelegramMediaResource
             let fullSizeResource: TelegramMediaResource
             switch photoSmall {

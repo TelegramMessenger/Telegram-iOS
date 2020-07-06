@@ -96,26 +96,25 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                                 }
                                 return .single((.progress(mappedProgress), photoResult.resource))
                             case let .inputFile(file):
-                                if peer is TelegramUser {
-                                    var videoFile: Api.InputFile?
-                                    if let videoResult = videoResult {
-                                        switch videoResult.content {
-                                            case .error:
-                                                return .fail(.generic)
-                                            case let .result(resultData):
-                                                switch resultData {
-                                                    case let .progress(progress):
-                                                        let mappedProgress = 0.2 + progress * 0.8
-                                                        return .single((.progress(mappedProgress), photoResult.resource))
-                                                    case let .inputFile(file):
-                                                        videoFile = file
-                                                        break
-                                                    default:
-                                                        return .fail(.generic)
-                                                }
-                                        }
+                                var videoFile: Api.InputFile?
+                                if let videoResult = videoResult {
+                                    switch videoResult.content {
+                                        case .error:
+                                            return .fail(.generic)
+                                        case let .result(resultData):
+                                            switch resultData {
+                                                case let .progress(progress):
+                                                    let mappedProgress = 0.2 + progress * 0.8
+                                                    return .single((.progress(mappedProgress), photoResult.resource))
+                                                case let .inputFile(file):
+                                                    videoFile = file
+                                                    break
+                                                default:
+                                                    return .fail(.generic)
+                                            }
                                     }
-                                    
+                                }
+                                if peer is TelegramUser {
                                     var flags: Int32 = (1 << 0)
                                     if let _ = videoFile {
                                         flags |= (1 << 1)
@@ -191,11 +190,19 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                                         } |> mapError {_ in return UploadPeerPhotoError.generic}
                                     }
                                 } else {
+                                    var flags: Int32 = (1 << 0)
+                                    if let _ = videoFile {
+                                        flags |= (1 << 1)
+                                        if let _ = videoStartTimestamp {
+                                            flags |= (1 << 2)
+                                        }
+                                    }
+                                    
                                     let request: Signal<Api.Updates, MTRpcError>
                                     if let peer = peer as? TelegramGroup {
-                                        request = network.request(Api.functions.messages.editChatPhoto(chatId: peer.id.id, photo: .inputChatUploadedPhoto(file: file)))
+                                        request = network.request(Api.functions.messages.editChatPhoto(chatId: peer.id.id, photo: .inputChatUploadedPhoto(flags: flags, file: file, video: videoFile, videoStartTs: videoStartTimestamp)))
                                     } else if let peer = peer as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
-                                        request = network.request(Api.functions.channels.editPhoto(channel: inputChannel, photo: .inputChatUploadedPhoto(file: file)))
+                                        request = network.request(Api.functions.channels.editPhoto(channel: inputChannel, photo: .inputChatUploadedPhoto(flags: flags, file: file, video: videoFile, videoStartTs: videoStartTimestamp)))
                                     } else {
                                         assertionFailure()
                                         request = .complete()

@@ -39,6 +39,9 @@ static webrtc::ObjCVideoTrackSource *getObjCVideoSource(const rtc::scoped_refptr
     UIDeviceOrientation _orientation;
     
     void (^_isActiveUpdated)(bool);
+    bool _isActiveValue;
+    bool _inForegroundValue;
+    bool _isPaused;
 }
 
 @end
@@ -49,6 +52,9 @@ static webrtc::ObjCVideoTrackSource *getObjCVideoSource(const rtc::scoped_refptr
     self = [super init];
     if (self != nil) {
         _source = source;
+        _isActiveValue = true;
+        _inForegroundValue = true;
+        _isPaused = false;
         _isActiveUpdated = [isActiveUpdated copy];
         
         if (![self setupCaptureSession:[[AVCaptureSession alloc] init]]) {
@@ -122,6 +128,11 @@ static webrtc::ObjCVideoTrackSource *getObjCVideoSource(const rtc::scoped_refptr
 - (void)stopCapture {
   _isActiveUpdated = nil;
   [self stopCaptureWithCompletionHandler:nil];
+}
+
+- (void)setIsEnabled:(bool)isEnabled {
+    _isPaused = !isEnabled;
+    [self updateIsActiveValue];
 }
 
 - (void)startCaptureWithDevice:(AVCaptureDevice *)device
@@ -253,7 +264,9 @@ static webrtc::ObjCVideoTrackSource *getObjCVideoSource(const rtc::scoped_refptr
     RTCVideoFrame *videoFrame = [[RTCVideoFrame alloc] initWithBuffer:rtcPixelBuffer
                                                              rotation:_rotation
                                                           timeStampNs:timeStampNs];
-    getObjCVideoSource(_source)->OnCapturedFrame(videoFrame);
+    if (!_isPaused) {
+        getObjCVideoSource(_source)->OnCapturedFrame(videoFrame);
+    }
 }
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput
@@ -316,15 +329,23 @@ static webrtc::ObjCVideoTrackSource *getObjCVideoSource(const rtc::scoped_refptr
         _hasRetriedOnFatalError = NO;
     }];
     
-    if (_isActiveUpdated) {
-        _isActiveUpdated(true);
-    }
+    _inForegroundValue = true;
+    [self updateIsActiveValue];
 }
 
 - (void)handleCaptureSessionDidStopRunning:(NSNotification *)notification {
   RTCLog(@"Capture session stopped.");
-    if (_isActiveUpdated) {
-        _isActiveUpdated(false);
+    _inForegroundValue = false;
+    [self updateIsActiveValue];
+}
+
+- (void)updateIsActiveValue {
+    bool isActive = _inForegroundValue && !_isPaused;
+    if (isActive != _isActiveValue) {
+        _isActiveValue = isActive;
+        if (_isActiveUpdated) {
+            _isActiveUpdated(_isActiveValue);
+        }
     }
 }
 

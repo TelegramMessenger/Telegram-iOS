@@ -178,8 +178,8 @@ public final class CallController: ViewController {
             let _ = self?.call.hangUp()
         }
         
-        self.controllerNode.toggleVideo = { [weak self] in
-            let _ = self?.call.setEnableVideo(true)
+        self.controllerNode.setIsVideoPaused = { [weak self] isPaused in
+            self?.call.setOutgoingVideoIsPaused(isPaused)
         }
         
         self.controllerNode.back = { [weak self] in

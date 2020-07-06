@@ -143,7 +143,27 @@ final class SharedMediaPlayer {
         return self.playbackStateValue.get()
     }
     
-    private var playbackItem: SharedMediaPlaybackItem?
+    private let audioLevelPipe = ValuePipe<Float>()
+    var audioLevel: Signal<Float, NoError> {
+        return self.audioLevelPipe.signal()
+    }
+    private let audioLevelDisposable = MetaDisposable()
+    
+    private var playbackItem: SharedMediaPlaybackItem? {
+        didSet {
+            if playbackItem != oldValue {
+                switch playbackItem {
+                case let .audio(player):
+                    let audioLevelPipe = self.audioLevelPipe
+                    self.audioLevelDisposable.set((player.audioLevelEvents.start(next: { [weak audioLevelPipe] value in
+                        audioLevelPipe?.putNext(value)
+                    })))
+                default:
+                    self.audioLevelDisposable.set(nil)
+                }
+            }
+        }
+    }
     private var currentPlayedToEnd = false
     private var scheduledPlaybackAction: SharedMediaPlayerPlaybackControlAction?
     private var scheduledStartTime: Double?

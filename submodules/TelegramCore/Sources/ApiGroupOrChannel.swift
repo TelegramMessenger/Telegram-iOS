@@ -7,8 +7,7 @@ import SyncCore
 func imageRepresentationsForApiChatPhoto(_ photo: Api.ChatPhoto) -> [TelegramMediaImageRepresentation] {
     var representations: [TelegramMediaImageRepresentation] = []
     switch photo {
-        case let .chatPhoto(photoSmall, photoBig, dcId):
-            
+        case let .chatPhoto(flags, photoSmall, photoBig, dcId):
             let smallResource: TelegramMediaResource
             let fullSizeResource: TelegramMediaResource
             switch photoSmall {
