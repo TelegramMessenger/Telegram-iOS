@@ -302,7 +302,7 @@ public final class OngoingCallVideoCapturer {
         self.impl.switchVideoCamera()
     }
     
-    public func makeOutgoingVideoView(completion: @escaping (UIView?) -> Void) {
+    public func makeOutgoingVideoView(completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
         self.impl.makeOutgoingVideoView(completion)
     }
     
@@ -417,6 +417,10 @@ private extension OngoingCallContextState.State {
         }
     }
 }*/
+
+public protocol OngoingCallContextPresentationCallVideoView: UIView {
+    func setOnFirstFrameReceived(_ onFirstFrameReceived: (() -> Void)?)
+}
 
 public final class OngoingCallContext {
     public struct AuxiliaryServer {
@@ -725,7 +729,7 @@ public final class OngoingCallContext {
         return (poll |> then(.complete() |> delay(0.5, queue: Queue.concurrentDefaultQueue()))) |> restart
     }
     
-    public func makeIncomingVideoView(completion: @escaping (UIView?) -> Void) {
+    public func makeIncomingVideoView(completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
         self.withContext { context in
             if let context = context as? OngoingCallThreadLocalContextWebrtc {
                 context.makeIncomingVideoView(completion)
@@ -734,4 +738,7 @@ public final class OngoingCallContext {
             }
         }
     }
+}
+
+extension OngoingCallThreadLocalContextWebrtcVideoView: OngoingCallContextPresentationCallVideoView {
 }

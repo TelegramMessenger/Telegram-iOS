@@ -676,9 +676,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             
             mainWindow.inCallNavigate = { [weak self] in
                 if let strongSelf = self, let callController = strongSelf.callController {
-                    if callController.isNodeLoaded && callController.view.superview == nil {
+                    if callController.isNodeLoaded {
                         mainWindow.hostView.containerView.endEditing(true)
-                        mainWindow.present(callController, on: .calls)
+                        if callController.view.superview == nil {
+                            mainWindow.present(callController, on: .calls)
+                        } else {
+                            callController.expandFromPipIfPossible()
+                        }
                     }
                 }
             }

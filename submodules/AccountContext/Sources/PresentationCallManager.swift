@@ -67,6 +67,19 @@ public struct PresentationCallState: Equatable {
     }
 }
 
+public final class PresentationCallVideoView {
+    public let view: UIView
+    public let setOnFirstFrameReceived: ((() -> Void)?) -> Void
+    
+    public init(
+        view: UIView,
+        setOnFirstFrameReceived: @escaping ((() -> Void)?) -> Void
+    ) {
+        self.view = view
+        self.setOnFirstFrameReceived = setOnFirstFrameReceived
+    }
+}
+
 public protocol PresentationCall: class {
     var account: Account { get }
     var isIntegratedWithCallKit: Bool { get }
@@ -96,8 +109,8 @@ public protocol PresentationCall: class {
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
     func debugInfo() -> Signal<(String, String), NoError>
     
-    func makeIncomingVideoView(completion: @escaping (UIView?) -> Void)
-    func makeOutgoingVideoView(completion: @escaping (UIView?) -> Void)
+    func makeIncomingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void)
+    func makeOutgoingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void)
 }
 
 public protocol PresentationCallManager: class {

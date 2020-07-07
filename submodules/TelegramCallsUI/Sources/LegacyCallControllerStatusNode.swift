@@ -10,14 +10,14 @@ private let regularNameFont = Font.regular(36.0)
 private let compactStatusFont = Font.regular(18.0)
 private let regularStatusFont = Font.regular(18.0)
 
-enum CallControllerStatusValue: Equatable {
-    case text(string: String, displayLogo: Bool)
+enum LegacyCallControllerStatusValue: Equatable {
+    case text(String)
     case timer((String) -> String, Double)
     
-    static func ==(lhs: CallControllerStatusValue, rhs: CallControllerStatusValue) -> Bool {
+    static func ==(lhs: LegacyCallControllerStatusValue, rhs: LegacyCallControllerStatusValue) -> Bool {
         switch lhs {
-            case let .text(text, displayLogo):
-                if case .text(text, displayLogo) = rhs {
+            case let .text(text):
+                if case .text(text) = rhs {
                     return true
                 } else {
                     return false
@@ -32,16 +32,15 @@ enum CallControllerStatusValue: Equatable {
     }
 }
 
-final class CallControllerStatusNode: ASDisplayNode {
+final class LegacyCallControllerStatusNode: ASDisplayNode {
     private let titleNode: TextNode
     private let statusNode: TextNode
     private let statusMeasureNode: TextNode
-    private let receptionNode: CallControllerReceptionNode
-    private let logoNode: ASImageNode
+    private let receptionNode: LegacyCallControllerReceptionNode
     
     var title: String = ""
     var subtitle: String = ""
-    var status: CallControllerStatusValue = .text(string: "", displayLogo: false) {
+    var status: LegacyCallControllerStatusValue = .text("") {
         didSet {
             if self.status != oldValue {
                 self.statusTimer?.invalidate()
@@ -94,12 +93,8 @@ final class CallControllerStatusNode: ASDisplayNode {
         self.statusNode.displaysAsynchronously = false
         self.statusMeasureNode = TextNode()
        
-        self.receptionNode = CallControllerReceptionNode()
+        self.receptionNode = LegacyCallControllerReceptionNode()
         self.receptionNode.alpha = 0.0
-        
-        self.logoNode = ASImageNode()
-        self.logoNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallTitleLogo"), color: .white)
-        self.logoNode.isHidden = true
         
         super.init()
         
@@ -108,7 +103,6 @@ final class CallControllerStatusNode: ASDisplayNode {
         self.addSubnode(self.titleNode)
         self.addSubnode(self.statusNode)
         self.addSubnode(self.receptionNode)
-        self.addSubnode(self.logoNode)
     }
     
     deinit {
@@ -131,34 +125,29 @@ final class CallControllerStatusNode: ASDisplayNode {
         var statusOffset: CGFloat = 0.0
         let statusText: String
         let statusMeasureText: String
-        var statusDisplayLogo: Bool = false
         switch self.status {
-        case let .text(text, displayLogo):
-            statusText = text
-            statusMeasureText = text
-            statusDisplayLogo = displayLogo
-            if displayLogo {
-                statusOffset += 10.0
-            }
-        case let .timer(format, referenceTime):
-            let duration = Int32(CFAbsoluteTimeGetCurrent() - referenceTime)
-            let durationString: String
-            let measureDurationString: String
-            if duration > 60 * 60 {
-                durationString = String(format: "%02d:%02d:%02d", arguments: [duration / 3600, (duration / 60) % 60, duration % 60])
-                measureDurationString = "00:00:00"
-            } else {
-                durationString = String(format: "%02d:%02d", arguments: [(duration / 60) % 60, duration % 60])
-                measureDurationString = "00:00"
-            }
-            statusText = format(durationString)
-            statusMeasureText = format(measureDurationString)
-            if self.reception != nil {
-                statusOffset += 8.0
-            }
+            case let .text(text):
+                statusText = text
+                statusMeasureText = text
+            case let .timer(format, referenceTime):
+                let duration = Int32(CFAbsoluteTimeGetCurrent() - referenceTime)
+                let durationString: String
+                let measureDurationString: String
+                if duration > 60 * 60 {
+                    durationString = String(format: "%02d:%02d:%02d", arguments: [duration / 3600, (duration / 60) % 60, duration % 60])
+                    measureDurationString = "00:00:00"
+                } else {
+                    durationString = String(format: "%02d:%02d", arguments: [(duration / 60) % 60, duration % 60])
+                    measureDurationString = "00:00"
+                }
+                statusText = format(durationString)
+                statusMeasureText = format(measureDurationString)
+                if self.reception != nil {
+                    statusOffset += 8.0
+                }
         }
         
-        let spacing: CGFloat = 1.0
+        let spacing: CGFloat = 4.0
         let (titleLayout, titleApply) = TextNode.asyncLayout(self.titleNode)(TextNodeLayoutArguments(attributedString: NSAttributedString(string: self.title, font: nameFont, textColor: .white), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: constrainedWidth - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 2.0, bottom: 2.0, right: 2.0)))
         let (statusMeasureLayout, statusMeasureApply) = TextNode.asyncLayout(self.statusMeasureNode)(TextNodeLayoutArguments(attributedString: NSAttributedString(string: statusMeasureText, font: statusFont, textColor: .white), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedWidth - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 2.0, bottom: 2.0, right: 2.0)))
         let (statusLayout, statusApply) = TextNode.asyncLayout(self.statusNode)(TextNodeLayoutArguments(attributedString: NSAttributedString(string: statusText, font: statusFont, textColor: .white), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedWidth - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 2.0, bottom: 2.0, right: 2.0)))
@@ -170,10 +159,6 @@ final class CallControllerStatusNode: ASDisplayNode {
         self.titleNode.frame = CGRect(origin: CGPoint(x: floor((constrainedWidth - titleLayout.size.width) / 2.0), y: 0.0), size: titleLayout.size)
         self.statusNode.frame = CGRect(origin: CGPoint(x: floor((constrainedWidth - statusMeasureLayout.size.width) / 2.0) + statusOffset, y: titleLayout.size.height + spacing), size: statusLayout.size)
         self.receptionNode.frame = CGRect(origin: CGPoint(x: self.statusNode.frame.minX - receptionNodeSize.width, y: titleLayout.size.height + spacing + 9.0), size: receptionNodeSize)
-        self.logoNode.isHidden = !statusDisplayLogo
-        if let image = self.logoNode.image {
-            self.logoNode.frame = CGRect(origin: CGPoint(x: self.statusNode.frame.minX - image.size.width - 7.0, y: self.statusNode.frame.minY + 5.0), size: image.size)
-        }
         
         return titleLayout.size.height + spacing + statusLayout.size.height
     }
@@ -190,7 +175,7 @@ private final class CallControllerReceptionNodeParameters: NSObject {
 
 private let receptionNodeSize = CGSize(width: 24.0, height: 10.0)
 
-final class CallControllerReceptionNode : ASDisplayNode {
+final class LegacyCallControllerReceptionNode : ASDisplayNode {
     var reception: Int32 = 4 {
         didSet {
             self.setNeedsDisplay()

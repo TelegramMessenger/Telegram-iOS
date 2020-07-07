@@ -52,6 +52,9 @@ private:
     
     CGSize _currentSize;
     std::shared_ptr<VideoRendererAdapterImpl> _sink;
+    
+    void (^_onFirstFrameReceived)();
+    bool _firstFrameReceivedReported;
 }
 
 @end
@@ -264,6 +267,11 @@ private:
 
 - (void)renderFrame:(nullable RTCVideoFrame *)frame {
     assert([NSThread isMainThread]);
+    
+    if (!_firstFrameReceivedReported && _onFirstFrameReceived) {
+        _firstFrameReceivedReported = true;
+        _onFirstFrameReceived();
+    }
                
     if (!self.isEnabled) {
         return;
@@ -280,6 +288,11 @@ private:
     assert([NSThread isMainThread]);
     
     return _sink;
+}
+
+- (void)setOnFirstFrameReceived:(void (^ _Nullable)())onFirstFrameReceived {
+    _onFirstFrameReceived = [onFirstFrameReceived copy];
+    _firstFrameReceivedReported = false;
 }
 
 @end

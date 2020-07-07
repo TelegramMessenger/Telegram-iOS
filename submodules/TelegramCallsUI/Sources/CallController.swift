@@ -34,6 +34,7 @@ protocol CallControllerNodeProtocol: class {
     
     func animateIn()
     func animateOut(completion: @escaping () -> Void)
+    func expandFromPipIfPossible()
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition)
 }
@@ -320,7 +321,11 @@ public final class CallController: ViewController {
         })
     }
     
-    @objc func backPressed() {
+    @objc private func backPressed() {
         self.dismiss()
+    }
+    
+    public func expandFromPipIfPossible() {
+        self.controllerNode.expandFromPipIfPossible()
     }
 }
