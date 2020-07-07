@@ -2048,6 +2048,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self?.displayDiceTooltip(dice: dice)
         }, animateDiceSuccess: { [weak self] in
             self?.chatDisplayNode.animateQuizCorrectOptionSelected()
+        }, greetingStickerNode: { [weak self] in
+            return self?.chatDisplayNode.greetingStickerNode
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)

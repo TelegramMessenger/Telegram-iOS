@@ -31,14 +31,14 @@ private final class PeerInfoScreenHeaderItemNode: PeerInfoScreenItemNode {
         self.addSubnode(self.textNode)
     }
     
-    override func update(width: CGFloat, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenHeaderItem else {
             return 10.0
         }
         
         self.item = item
         
-        let sideInset: CGFloat = 16.0
+        let sideInset: CGFloat = 16.0 + safeInsets.left
         let verticalInset: CGFloat = 7.0
         
         self.textNode.maximumNumberOfLines = 0

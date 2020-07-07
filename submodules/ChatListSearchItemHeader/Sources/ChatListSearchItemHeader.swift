@@ -21,6 +21,7 @@ public enum ChatListSearchItemHeaderType: Int32 {
     case nearbyVenues
     case chats
     case chatTypes
+    case faq
 }
 
 public final class ChatListSearchItemHeader: ListViewItemHeader {
@@ -107,6 +108,8 @@ public final class ChatListSearchItemHeaderNode: ListViewItemHeaderNode {
             self.sectionHeaderNode.title = strings.Cache_ByPeerHeader.uppercased()
         case .chatTypes:
             self.sectionHeaderNode.title = strings.ChatList_ChatTypesSection.uppercased()
+        case .faq:
+            self.sectionHeaderNode.title = strings.Settings_FrequentlyAskedQuestions.uppercased()
         }
         
         self.sectionHeaderNode.action = actionTitle
@@ -157,6 +160,8 @@ public final class ChatListSearchItemHeaderNode: ListViewItemHeaderNode {
             self.sectionHeaderNode.title = strings.Cache_ByPeerHeader.uppercased()
         case .chatTypes:
             self.sectionHeaderNode.title = strings.ChatList_ChatTypesSection.uppercased()
+        case .faq:
+            self.sectionHeaderNode.title = strings.Settings_FrequentlyAskedQuestions.uppercased()
         }
         
         self.sectionHeaderNode.action = actionTitle

@@ -4136,7 +4136,7 @@ Unused sets are archived when you add more.";
 "Chat.DeleteMessagesConfirmation_1" = "Delete message";
 "Chat.DeleteMessagesConfirmation_any" = "Delete %@ messages";
 
-"Settings.Search" = "Search";
+"Settings.Search" = "Search Settings";
 
 "SettingsSearch.FAQ" = "FAQ";
 
@@ -5635,8 +5635,8 @@ Any member of this group will be able to see messages in the channel.";
 
 "Call.RemoteVideoPaused" = "%@'s video paused";
 
-"Settings.SetProfilePhotoOrVideo" = "Set Profile Photo or Video";
-"Settings.SetNewProfilePhotoOrVideo" = "Set New Profile Photo or Video";
+"Settings.SetProfilePhotoOrVideo" = "Set Photo or Video";
+"Settings.SetNewProfilePhotoOrVideo" = "Set New Photo or Video";
 "Settings.ViewVideo" = "View Video";
 "Settings.RemoveVideo" = "Remove Video";
 
@@ -5671,3 +5671,15 @@ Any member of this group will be able to see messages in the channel.";
 "Stats.GroupShowMoreTopInviters_3_10" = "Show %@ More";
 "Stats.GroupShowMoreTopInviters_many" = "Show %@ More";
 "Stats.GroupShowMoreTopInviters_any" = "Show %@ More";
+
+"Settings.AddAnotherAccount" = "Add Another Account";
+"Settings.AddAnotherAccount.Help" = "You can add up to three accounts with different phone numbers.";
+
+"ProfilePhoto.OpenGallery" = "Open Gallery";
+"ProfilePhoto.SearchWeb" = "Search Web";
+"ProfilePhoto.OpenInEditor" = "Open in Editor";
+
+"Settings.EditAccount" = "Edit Account";
+"Settings.EditPhoto" = "Edit Photo";
+
+"Settings.FrequentlyAskedQuestions" = "Frequently Asked Questions";

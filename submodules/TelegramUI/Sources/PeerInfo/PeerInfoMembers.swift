@@ -15,6 +15,7 @@ enum PeerInfoMemberRole {
 enum PeerInfoMember: Equatable {
     case channelMember(RenderedChannelParticipant)
     case legacyGroupMember(peer: RenderedPeer, role: PeerInfoMemberRole, invitedBy: PeerId?, presence: TelegramUserPresence?)
+    case account(peer: RenderedPeer)
     
     var id: PeerId {
         switch self {
@@ -22,6 +23,8 @@ enum PeerInfoMember: Equatable {
             return channelMember.peer.id
         case let .legacyGroupMember(legacyGroupMember):
             return legacyGroupMember.peer.peerId
+        case let .account(peer):
+            return peer.peerId
         }
     }
     
@@ -31,6 +34,8 @@ enum PeerInfoMember: Equatable {
             return channelMember.peer
         case let .legacyGroupMember(legacyGroupMember):
             return legacyGroupMember.peer.peers[legacyGroupMember.peer.peerId]!
+        case let .account(peer):
+            return peer.peers[peer.peerId]!
         }
     }
     
@@ -40,6 +45,8 @@ enum PeerInfoMember: Equatable {
             return channelMember.presences[channelMember.peer.id] as? TelegramUserPresence
         case let .legacyGroupMember(legacyGroupMember):
             return legacyGroupMember.presence
+        case .account:
+            return nil
         }
     }
     
@@ -58,6 +65,8 @@ enum PeerInfoMember: Equatable {
             }
         case let .legacyGroupMember(legacyGroupMember):
             return legacyGroupMember.role
+        case .account:
+            return .member
         }
     }
     
@@ -71,6 +80,8 @@ enum PeerInfoMember: Equatable {
                     return member.rank
                 }
             case .legacyGroupMember:
+                return nil
+            case .account:
                 return nil
         }
     }

@@ -40,7 +40,17 @@ class SettingsSearchRecentItem: ListViewItem {
         async {
             let node = SettingsSearchRecentItemNode()
             let makeLayout = node.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(self, params, nextItem == nil, !(previousItem is SettingsSearchRecentItem))
+            
+            var previousHeader: ListViewItemHeader?
+            if let previousItem = previousItem as? SettingsSearchRecentItem {
+                previousHeader = previousItem.header
+            }
+            var nextHeader: ListViewItemHeader?
+            if let nextItem = nextItem as? SettingsSearchRecentItem {
+                nextHeader = nextItem.header
+            }
+            
+            let (nodeLayout, nodeApply) = makeLayout(self, params, nextItem == nil || nextHeader?.id != self.header?.id, !(previousItem is SettingsSearchRecentItem) || previousHeader?.id != self.header?.id)
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
@@ -53,7 +63,16 @@ class SettingsSearchRecentItem: ListViewItem {
             if let nodeValue = node() as? SettingsSearchRecentItemNode {
                 let layout = nodeValue.asyncLayout()
                 async {
-                    let (nodeLayout, apply) = layout(self, params, nextItem == nil, !(previousItem is SettingsSearchRecentItem))
+                    var previousHeader: ListViewItemHeader?
+                    if let previousItem = previousItem as? SettingsSearchRecentItem {
+                        previousHeader = previousItem.header
+                    }
+                    var nextHeader: ListViewItemHeader?
+                    if let nextItem = nextItem as? SettingsSearchRecentItem {
+                        nextHeader = nextItem.header
+                    }
+                    
+                    let (nodeLayout, apply) = layout(self, params, nextItem == nil || nextHeader?.id != self.header?.id, !(previousItem is SettingsSearchRecentItem) || previousHeader?.id != self.header?.id)
                     Queue.mainQueue().async {
                         completion(nodeLayout, { info in
                             apply().1(info)

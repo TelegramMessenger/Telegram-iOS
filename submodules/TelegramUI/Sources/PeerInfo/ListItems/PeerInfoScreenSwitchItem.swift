@@ -59,7 +59,7 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
         }
     }
     
-    override func update(width: CGFloat, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenSwitchItem else {
             return 10.0
         }
@@ -78,7 +78,7 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
         
         self.selectionNode.pressed = nil
         
-        let sideInset: CGFloat = 16.0
+        let sideInset: CGFloat = 16.0 + safeInsets.left
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
@@ -91,9 +91,9 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
         
         let arrowInset: CGFloat = 18.0
         
-        let textFrame = CGRect(origin: CGPoint(x: sideInset, y: 11.0), size: textSize)
+        let textFrame = CGRect(origin: CGPoint(x: sideInset, y: 12.0), size: textSize)
         
-        let height = textSize.height + 22.0
+        let height = textSize.height + 24.0
         
         transition.updateFrame(node: self.textNode, frame: textFrame)
         

@@ -71,6 +71,16 @@ private final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNode
     private var didSetupSticker = false
     private let disposable = MetaDisposable()
     
+    var greetingStickerNode: ASDisplayNode? {
+        if let animationNode = self.stickerNode.animationNode, animationNode.supernode === stickerNode {
+            return animationNode
+        } else if self.stickerNode.imageNode.supernode === stickerNode {
+            return self.stickerNode.imageNode
+        } else {
+            return nil
+        }
+    }
+    
     init(account: Account, interaction: ChatPanelInterfaceInteraction?) {
         self.account = account
         self.interaction = interaction
@@ -668,9 +678,8 @@ final class ChatEmptyNode: ASDisplayNode {
             self.content = (contentType, node)
             self.addSubnode(node)
             contentTransition = .immediate
-            
-            self.isUserInteractionEnabled = contentType == .peerNearby
         }
+        self.isUserInteractionEnabled = contentType == .peerNearby
         
         let displayRect = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
         
@@ -685,6 +694,15 @@ final class ChatEmptyNode: ASDisplayNode {
         }
         
         transition.updateFrame(node: self.backgroundNode, frame: contentFrame)
+    }
+    
+    var greetingStickerNode: ASDisplayNode? {
+        if let (_, node) = self.content {
+            if let node = node as? ChatEmptyNodeNearbyChatContent {
+                return node.greetingStickerNode
+            }
+        }
+        return nil
     }
 }
 

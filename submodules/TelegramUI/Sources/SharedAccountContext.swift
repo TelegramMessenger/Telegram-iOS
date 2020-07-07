@@ -1187,6 +1187,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }, displayPsa: { _, _ in
             }, displayDiceTooltip: { _ in
             }, animateDiceSuccess: {
+            }, greetingStickerNode: {
+                return nil
             }, requestMessageUpdate: { _ in
             }, cancelInteractiveKeyboardGestures: {
             }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
