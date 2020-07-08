@@ -31,7 +31,7 @@ else
 	BUILD_NUMBER="$2"
 fi
 
-if [ "$CONFIGURATION" == "hockeyapp" ] || [ "$CONFIGURATION" == "appecenter-experimental" ]; then
+if [ "$CONFIGURATION" == "hockeyapp" ] || [ "$CONFIGURATION" == "appcenter-experimental" ]; then
 	FASTLANE_PASSWORD=""
 	FASTLANE_ITC_TEAM_NAME=""
 elif [ "$CONFIGURATION" == "appstore" ]; then
