@@ -99,7 +99,7 @@ for f in $(ls "$PROFILES_PATH"); do
 	cp -f "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$uuid.mobileprovision"
 done
 
-if [ "$1" == "hockeyapp" ] || [ "$1" == "appcenter-experimental" ]; then
+if [ "$1" == "hockeyapp" ] || [ "$1" == "appcenter-experimental" ] || [ "$1" == "appcenter-experimental-2" ]; then
 	BUILD_ENV_SCRIPT="../telegram-ios-shared/buildbox/bin/internal.sh"
 	APP_TARGET="app_arm64"
 elif [ "$1" == "appstore" ]; then
