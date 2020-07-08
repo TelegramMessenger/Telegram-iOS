@@ -605,11 +605,27 @@
     }];
 }
 
+- (NSTimeInterval)trimStartValue {
+    if (_scrubberView != nil) {
+        return _scrubberView.trimStartValue;
+    } else {
+        return _photoEditor.trimStartValue;
+    }
+}
+
+- (NSTimeInterval)trimEndValue {
+    if (_scrubberView != nil) {
+        return _scrubberView.trimEndValue;
+    } else {
+        return _photoEditor.trimEndValue;
+    }
+}
+
 - (void)_setupPlaybackStartedObserver
 {
     CMTime startTime = CMTimeMake(10, 100);
-    if (_scrubberView.trimStartValue > DBL_EPSILON)
-        startTime = CMTimeMakeWithSeconds(_scrubberView.trimStartValue + 0.1, NSEC_PER_SEC);
+    if (self.trimStartValue > DBL_EPSILON)
+        startTime = CMTimeMakeWithSeconds(self.trimStartValue + 0.1, NSEC_PER_SEC);
     
     __weak TGPhotoEditorController *weakSelf = self;
     _playerStartedObserver = [_player addBoundaryTimeObserverForTimes:@[[NSValue valueWithCMTime:startTime]] queue:NULL usingBlock:^
@@ -632,12 +648,12 @@
         [_player removeTimeObserver:_playerReachedEndObserver];
     
     CMTime endTime = CMTimeSubtract(_player.currentItem.duration, CMTimeMake(10, 100));
-    if (_scrubberView.trimEndValue > DBL_EPSILON && _scrubberView.trimEndValue < CMTimeGetSeconds(_player.currentItem.duration))
-        endTime = CMTimeMakeWithSeconds(_scrubberView.trimEndValue - 0.1, NSEC_PER_SEC);
+    if (self.trimEndValue > DBL_EPSILON && self.trimEndValue < CMTimeGetSeconds(_player.currentItem.duration))
+        endTime = CMTimeMakeWithSeconds(self.trimEndValue - 0.1, NSEC_PER_SEC);
     
     CMTime startTime = CMTimeMake(5, 100);
-    if (_scrubberView.trimStartValue > DBL_EPSILON)
-        startTime = CMTimeMakeWithSeconds(_scrubberView.trimStartValue + 0.05, NSEC_PER_SEC);
+    if (self.trimStartValue > DBL_EPSILON)
+        startTime = CMTimeMakeWithSeconds(self.trimStartValue + 0.05, NSEC_PER_SEC);
     
     __weak TGPhotoEditorController *weakSelf = self;
     _playerReachedEndObserver = [_player addBoundaryTimeObserverForTimes:@[[NSValue valueWithCMTime:endTime]] queue:NULL usingBlock:^
@@ -645,7 +661,7 @@
         __strong TGPhotoEditorController *strongSelf = weakSelf;
         if (strongSelf != nil && !strongSelf->_dismissed) {
             [strongSelf->_player seekToTime:startTime];
-            [strongSelf->_scrubberView setValue:strongSelf->_scrubberView.trimStartValue resetPosition:true];
+            [strongSelf->_scrubberView setValue:strongSelf.trimStartValue resetPosition:true];
         }
     }];
 }
@@ -663,8 +679,8 @@
     
     if (reset) {
         NSTimeInterval startPosition = 0.0f;
-        if (_scrubberView.trimStartValue > DBL_EPSILON)
-            startPosition = _scrubberView.trimStartValue;
+        if (self.trimStartValue > DBL_EPSILON)
+            startPosition = self.trimStartValue;
         
         CMTime targetTime = CMTimeMakeWithSeconds(startPosition, NSEC_PER_SEC);
         [_player.currentItem seekToTime:targetTime toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
@@ -1877,8 +1893,8 @@
     } else if ([_currentTabController isKindOfClass:[TGPhotoAvatarPreviewController class]])
     {
         videoStartValue = _dotPosition;
-        trimStartValue = _scrubberView.trimStartValue;
-        trimEndValue = _scrubberView.trimEndValue;
+        trimStartValue = self.trimStartValue;
+        trimEndValue = self.trimEndValue;
     }
     
     [self stopVideoPlayback:true];
@@ -2702,7 +2718,7 @@
 
 - (CMTimeRange)trimRange
 {
-    return CMTimeRangeMake(CMTimeMakeWithSeconds(_scrubberView.trimStartValue , NSEC_PER_SEC), CMTimeMakeWithSeconds((_scrubberView.trimEndValue - _scrubberView.trimStartValue), NSEC_PER_SEC));
+    return CMTimeRangeMake(CMTimeMakeWithSeconds(self.trimStartValue , NSEC_PER_SEC), CMTimeMakeWithSeconds((self.trimEndValue - self.trimStartValue), NSEC_PER_SEC));
 }
 
 - (void)videoScrubberDidBeginEditing:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber
