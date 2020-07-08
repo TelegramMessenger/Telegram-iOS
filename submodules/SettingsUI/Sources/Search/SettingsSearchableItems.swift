@@ -12,6 +12,7 @@ import AccountContext
 import PassportUI
 import LocalAuth
 import CallListUI
+import ChatListUI
 import NotificationSoundSelectionUI
 import PresentationDataUtils
 import PhoneNumberFormat
@@ -33,6 +34,7 @@ enum SettingsSearchableItemIcon {
     case passport
     case support
     case faq
+    case chatFolders
 }
 
 public enum SettingsSearchableItemId: Hashable {
@@ -51,6 +53,7 @@ public enum SettingsSearchableItemId: Hashable {
     case wallet(Int32)
     case support(Int32)
     case faq(Int32)
+    case chatFolders(Int32)
     
     private var namespace: Int32 {
         switch self {
@@ -84,6 +87,8 @@ public enum SettingsSearchableItemId: Hashable {
                 return 14
             case .faq:
                 return 15
+            case .chatFolders:
+                return 16
         }
     }
     
@@ -103,7 +108,8 @@ public enum SettingsSearchableItemId: Hashable {
                  let .passport(id),
                  let .wallet(id),
                  let .support(id),
-                 let .faq(id):
+                 let .faq(id),
+                 let .chatFolders(id):
                 return id
         }
     }
@@ -146,6 +152,8 @@ public enum SettingsSearchableItemId: Hashable {
                 self = .support(id)
             case 15:
                 self = .faq(id)
+            case 16:
+                self = .chatFolders(id)
             default:
                 return nil
         }
@@ -848,6 +856,11 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         
         let callItems = callSearchableItems(context: context)
         allItems.append(contentsOf: callItems)
+        
+        let chatFolders = SettingsSearchableItem(id: .chatFolders(0), title: strings.Settings_ChatFolders, alternate: synonyms(strings.SettingsSearch_Synonyms_ChatFolders), icon: .chatFolders, breadcrumbs: [], present: { context, _, present in
+            present(.push, chatListFilterPresetListController(context: context, mode: .default))
+        })
+        allItems.append(chatFolders)
         
         let stickerItems = stickerSearchableItems(context: context, archivedStickerPacks: archivedStickerPacks)
         allItems.append(contentsOf: stickerItems)

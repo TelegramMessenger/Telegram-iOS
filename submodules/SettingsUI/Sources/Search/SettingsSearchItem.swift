@@ -59,6 +59,8 @@ extension SettingsSearchableItemIcon {
                 return PresentationResourcesSettings.support
             case .faq:
                 return PresentationResourcesSettings.faq
+            case .chatFolders:
+                return PresentationResourcesSettings.chatFolders
         }
     }
 }
