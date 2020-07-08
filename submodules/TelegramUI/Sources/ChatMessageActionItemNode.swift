@@ -66,7 +66,8 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let imageNode = self.imageNode, self.item?.message.id == messageId {
             return (imageNode, imageNode.bounds, { [weak imageNode] in
-                return (imageNode?.view.snapshotContentTree(unhide: true), nil)
+                let snapshot = imageNode?.view.snapshotContentTree(unhide: true)
+                return (snapshot, nil)
             })
         } else {
             return nil
@@ -164,9 +165,13 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 return (backgroundSize.width, { boundingWidth in
-                    return (backgroundSize, { [weak self] animation, _ in
+                    return (backgroundSize, { [weak self] animation, synchronousLoads in
                         if let strongSelf = self {
                             strongSelf.item = item
+                            
+                            let maskPath = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: imageSize))
+                            let shape = CAShapeLayer()
+                            shape.path = maskPath.cgPath
                             
                             let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - imageSize.width) / 2.0), y: labelLayout.size.height + 10 + 2), size: imageSize)
                             if let image = image {
@@ -175,18 +180,19 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     imageNode = current
                                 } else {
                                     imageNode = TransformImageNode()
+                                    imageNode.layer.mask = shape
                                     strongSelf.imageNode = imageNode
                                     strongSelf.insertSubnode(imageNode, at: 0)
-                                    let arguments = TransformImageArguments(corners: ImageCorners(radius: imageSize.width / 2), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())
-                                    let apply = imageNode.asyncLayout()(arguments)
-                                    apply()
-                                    
                                     strongSelf.insertSubnode(strongSelf.mediaBackgroundNode, at: 0)
                                 }
                                 strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, photoReference: .message(message: MessageReference(item.message), media: image), storeToDownloadsPeerType: nil).start())
-                                let updateImageSignal = chatMessagePhoto(postbox: item.context.account.postbox, photoReference: .message(message: MessageReference(item.message), media: image))
+                                let updateImageSignal = chatMessagePhoto(postbox: item.context.account.postbox, photoReference: .message(message: MessageReference(item.message), media: image), synchronousLoad: synchronousLoads)
 
-                                imageNode.setSignal(updateImageSignal)
+                                imageNode.setSignal(updateImageSignal, attemptSynchronously: synchronousLoads)
+                                
+                                let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())
+                                let apply = imageNode.asyncLayout()(arguments)
+                                apply()
                                 
                                 imageNode.frame = imageFrame
                                 strongSelf.mediaBackgroundNode.frame = imageFrame.insetBy(dx: -2.0, dy: -2.0)
@@ -215,9 +221,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     videoNode.updateLayout(size: imageSize, transition: .immediate)
                                     videoNode.frame = imageFrame
                                     
-                                    let maskPath = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: imageSize))
-                                    let shape = CAShapeLayer()
-                                    shape.path = maskPath.cgPath
+                                   
                                     videoNode.layer.mask = shape
                                     
                                     strongSelf.addSubnode(videoNode)

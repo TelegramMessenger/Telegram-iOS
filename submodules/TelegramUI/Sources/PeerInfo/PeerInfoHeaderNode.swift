@@ -1130,7 +1130,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         self.avatarNode.frame = CGRect(origin: CGPoint(x: -50.0, y: -50.0), size: CGSize(width: 100.0, height: 100.0))
         self.updatingAvatarOverlay.frame = self.avatarNode.frame
         
-        let radialStatusSize: CGFloat = true ? 50.0 : 32.0
+        let radialStatusSize: CGFloat = 32.0
         let imagePosition = self.avatarNode.position
         statusNode.frame = CGRect(origin: CGPoint(x: floor(imagePosition.x - radialStatusSize / 2.0), y: floor(imagePosition.y - radialStatusSize / 2.0)), size: CGSize(width: radialStatusSize, height: radialStatusSize))
                 
