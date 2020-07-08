@@ -1019,6 +1019,11 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             if case .immediate = transition, fraction == 1.0 {
                 return
             }
+            if fraction > 0.0 {
+                self.videoNode?.pause()
+            } else {
+                self.videoNode?.play()
+            }
             transition.updateAlpha(node: videoNode, alpha: 1.0 - fraction)
         }
     }
@@ -1199,8 +1204,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
     private var videoContent: NativeVideoContent?
     private var videoStartTimestamp: Double?
     
-    var tapped: (() -> Void)?
-    var cancel: (() -> Void)?
+    var tapped: ((Bool) -> Void)?
     
     var canAttachVideo = true
     
@@ -1219,7 +1223,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
     
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            self.tapped?()
+            self.tapped?(false)
         }
     }
     
@@ -1931,7 +1935,7 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
     }
     
     @objc private func textPressed() {
-        self.avatarNode.tapped?()
+        self.avatarNode.tapped?(true)
     }
     
     func editingTextForKey(_ key: PeerInfoHeaderTextFieldNodeKey) -> String? {
@@ -2093,7 +2097,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     var performButtonAction: ((PeerInfoHeaderButtonKey) -> Void)?
     var requestAvatarExpansion: ((Bool, [AvatarGalleryEntry], AvatarGalleryEntry?, (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?) -> Void)?
-    var requestOpenAvatarForEditing: (() -> Void)?
+    var requestOpenAvatarForEditing: ((Bool) -> Void)?
     var requestUpdateLayout: (() -> Void)?
     
     var navigationTransition: PeerInfoHeaderNavigationTransition?
@@ -2176,11 +2180,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarListNode.avatarContainerNode.tapped = { [weak self] in
             self?.initiateAvatarExpansion()
         }
-        self.editingContentNode.avatarNode.tapped = { [weak self] in
+        self.editingContentNode.avatarNode.tapped = { [weak self] confirm in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.requestOpenAvatarForEditing?()
+            strongSelf.requestOpenAvatarForEditing?(confirm)
         }
     }
     

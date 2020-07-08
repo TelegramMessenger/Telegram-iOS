@@ -5679,6 +5679,8 @@ Any member of this group will be able to see messages in the channel.";
 
 "Settings.EditAccount" = "Edit Account";
 "Settings.EditPhoto" = "Edit Photo";
+"Settings.EditVideo" = "Edit Video";
+"Settings.CancelUpload" = "Cancel Upload";
 
 "Settings.FrequentlyAskedQuestions" = "Frequently Asked Questions";
 
@@ -5690,3 +5692,5 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.Dice.u26BD" = "Send a football emoji to do a free kick.";
 
 "SettingsSearch_Synonyms_ChatFolders" = "";
+
+"EditProfile.NameAndPhotoOrVideoHelp" = "Enter your name and add an optional profile photo or video.";

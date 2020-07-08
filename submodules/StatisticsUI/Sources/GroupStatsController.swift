@@ -19,6 +19,7 @@ import ItemListPeerItem
 import ItemListPeerActionItem
 
 private let maxUsersDisplayedLimit: Int32 = 10
+private let maxUsersDisplayedHighLimit: Int32 = 12
 
 private final class GroupStatsControllerArguments {
     let context: AccountContext
@@ -525,7 +526,7 @@ private func groupStatsControllerEntries(state: GroupStatsState, data: GroupStat
                 
                 var topPosters = data.topPosters
                 var effectiveExpanded = state.topPostersExpanded
-                if topPosters.count > maxUsersDisplayedLimit && !effectiveExpanded {
+                if topPosters.count > maxUsersDisplayedHighLimit && !effectiveExpanded {
                     topPosters = Array(topPosters.prefix(Int(maxUsersDisplayedLimit)))
                 } else {
                     effectiveExpanded = true
@@ -548,7 +549,7 @@ private func groupStatsControllerEntries(state: GroupStatsState, data: GroupStat
                 
                 var topAdmins = data.topAdmins
                 var effectiveExpanded = state.topAdminsExpanded
-                if topAdmins.count > maxUsersDisplayedLimit && !effectiveExpanded {
+                if topAdmins.count > maxUsersDisplayedHighLimit && !effectiveExpanded {
                     topAdmins = Array(topAdmins.prefix(Int(maxUsersDisplayedLimit)))
                 } else {
                     effectiveExpanded = true
@@ -571,7 +572,7 @@ private func groupStatsControllerEntries(state: GroupStatsState, data: GroupStat
                 
                 var topInviters = data.topInviters
                 var effectiveExpanded = state.topInvitersExpanded
-                if topInviters.count > maxUsersDisplayedLimit && !effectiveExpanded {
+                if topInviters.count > maxUsersDisplayedHighLimit && !effectiveExpanded {
                     topInviters = Array(topInviters.prefix(Int(maxUsersDisplayedLimit)))
                 } else {
                     effectiveExpanded = true

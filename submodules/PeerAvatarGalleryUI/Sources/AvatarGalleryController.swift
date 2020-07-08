@@ -707,7 +707,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             })
         }))
         
-        if let position = rawEntry.indexData?.position, position > 0 {
+        if self.peer.id == self.context.account.peerId, let position = rawEntry.indexData?.position, position > 0 {
             let title: String
             if let _ = rawEntry.videoRepresentations.last {
                 title = self.presentationData.strings.ProfilePhoto_SetMainVideo
