@@ -2060,7 +2060,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             self?.performButtonAction(key: key)
         }
         
-        self.headerNode.requestAvatarExpansion = { [weak self] entries, centralEntry, _ in
+        self.headerNode.requestAvatarExpansion = { [weak self] gallery, entries, centralEntry, _ in
             guard let strongSelf = self, let peer = strongSelf.data?.peer, peer.smallProfileImage != nil else {
                 return
             }
@@ -2070,6 +2070,15 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
                 if let (layout, navigationHeight) = strongSelf.validLayout {
                     strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                }
+                return
+            } else if !gallery {
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
+                strongSelf.headerNode.updateIsAvatarExpanded(true, transition: transition)
+                strongSelf.updateNavigationExpansionPresentation(isExpanded: true, animated: true)
+                
+                if let (layout, navigationHeight) = strongSelf.validLayout {
+                    strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: transition, additive: true)
                 }
                 return
             }
@@ -5257,6 +5266,11 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     shouldBeExpanded = true
                     
                     if self.canOpenAvatarByDragging && self.headerNode.isAvatarExpanded && offsetY <= -32.0 {
+                        if self.hapticFeedback == nil {
+                            self.hapticFeedback = HapticFeedback()
+                        }
+                        self.hapticFeedback?.impact()
+                        
                         self.canOpenAvatarByDragging = false
                         self.headerNode.initiateAvatarExpansion()
                     }

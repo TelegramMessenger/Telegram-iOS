@@ -1066,7 +1066,9 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             }
             
             if let videoNode = self.videoNode {
-                videoNode.updateLayout(size: self.avatarNode.frame.size, transition: .immediate)
+                if self.canAttachVideo {
+                    videoNode.updateLayout(size: self.avatarNode.frame.size, transition: .immediate)
+                }
                 videoNode.frame = self.avatarNode.frame
                 
                 if isExpanded == videoNode.canAttachContent {
@@ -1208,7 +1210,9 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
             
             if let videoNode = self.videoNode {
                 videoNode.isHidden = hideVideo
-                videoNode.updateLayout(size: self.avatarNode.frame.size, transition: .immediate)
+                if self.canAttachVideo {
+                    videoNode.updateLayout(size: self.avatarNode.frame.size, transition: .immediate)
+                }
                 videoNode.frame = self.avatarNode.frame
                 
                 if isEditing != videoNode.canAttachContent {
@@ -2029,7 +2033,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let navigationButtonContainer: PeerInfoHeaderNavigationButtonContainerNode
     
     var performButtonAction: ((PeerInfoHeaderButtonKey) -> Void)?
-    var requestAvatarExpansion: (([AvatarGalleryEntry], AvatarGalleryEntry?, (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?) -> Void)?
+    var requestAvatarExpansion: ((Bool, [AvatarGalleryEntry], AvatarGalleryEntry?, (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?) -> Void)?
     var requestOpenAvatarForEditing: (() -> Void)?
     var requestUpdateLayout: (() -> Void)?
     
@@ -2121,11 +2125,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     func initiateAvatarExpansion() {
         if self.isAvatarExpanded {
             if let currentEntry = self.avatarListNode.listContainerNode.currentEntry {
-                self.requestAvatarExpansion?(self.avatarListNode.listContainerNode.galleryEntries, self.avatarListNode.listContainerNode.currentEntry, self.avatarTransitionArguments(entry: currentEntry))
+                self.requestAvatarExpansion?(true, self.avatarListNode.listContainerNode.galleryEntries, self.avatarListNode.listContainerNode.currentEntry, self.avatarTransitionArguments(entry: currentEntry))
             }
         } else if let entry = self.avatarListNode.listContainerNode.galleryEntries.first{
             let _ = self.avatarListNode.avatarContainerNode.avatarNode
-            self.requestAvatarExpansion?(self.avatarListNode.listContainerNode.galleryEntries, nil, self.avatarTransitionArguments(entry: entry))
+            self.requestAvatarExpansion?(false, self.avatarListNode.listContainerNode.galleryEntries, nil, self.avatarTransitionArguments(entry: entry))
         }
     }
     
