@@ -62,4 +62,6 @@ if [ "$1" == "appstore" ]; then
 	FASTLANE_PASSWORD="$FASTLANE_PASSWORD" xcrun altool --upload-app --type ios --file "$IPA_PATH" --username "$FASTLANE_ITC_USERNAME" --password "@env:FASTLANE_PASSWORD"
 elif [ "$1" == "hockeyapp" ]; then
 	API_USER_NAME="$API_USER_NAME" API_APP_NAME="$API_APP_NAME" API_TOKEN="$API_TOKEN" sh buildbox/deploy-appcenter.sh
+elif [ "$1" == "appecenter-experimental" ]; then
+	API_USER_NAME="$API_USER_NAME" API_APP_NAME="$API_APP_NAME" API_TOKEN="$API_TOKEN" sh buildbox/deploy-appcenter.sh
 fi

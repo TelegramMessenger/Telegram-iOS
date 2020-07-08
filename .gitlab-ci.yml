@@ -27,6 +27,24 @@ internal:
       - build/artifacts/Telegram.DSYMs.zip
     expire_in: 1 week
 
+experimental:
+  tags:
+    - ios_internal
+  stage: build
+  only:
+    - experimental
+  except:
+    - tags
+  script:
+    - bash buildbox/build-telegram.sh appcenter-experimental
+    - bash buildbox/deploy-telegram.sh appcenter-experimental
+  environment:
+    name: experimental
+  artifacts:
+    paths:
+      - build/artifacts/Telegram.DSYMs.zip
+    expire_in: 1 week
+
 beta_testflight:
   tags:
     - ios_beta
