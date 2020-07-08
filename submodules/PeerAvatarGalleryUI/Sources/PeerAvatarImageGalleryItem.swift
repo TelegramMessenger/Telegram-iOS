@@ -493,12 +493,17 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             intermediateCompletion()
         })
         
+
+        if let _ = self.videoNode {
+            self.contentNode.view.superview?.bringSubviewToFront(self.contentNode.view)
+        } else {
+            self.contentNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25 * durationFactor, removeOnCompletion: false)
+        }
+        
         self.contentNode.layer.animatePosition(from: self.contentNode.layer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25 * durationFactor, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
             positionCompleted = true
             intermediateCompletion()
         })
-        
-        self.contentNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25 * durationFactor, removeOnCompletion: false)
         
         transformedFrame.origin = CGPoint()
         

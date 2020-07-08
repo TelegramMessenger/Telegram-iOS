@@ -974,6 +974,8 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     private var videoContent: NativeVideoContent?
     private var videoStartTimestamp: Double?
     
+    var canAttachVideo = true
+    
     var tapped: (() -> Void)?
     
     private var isFirstAvatarLoading = true
@@ -1069,7 +1071,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 
                 if isExpanded == videoNode.canAttachContent {
                     let update = {
-                        videoNode.canAttachContent = !isExpanded
+                        videoNode.canAttachContent = !isExpanded && self.canAttachVideo
                         if videoNode.canAttachContent {
                             if let videoStartTimestamp = self.videoStartTimestamp {
                                 videoNode.seek(videoStartTimestamp)
@@ -1104,6 +1106,8 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
     
     var tapped: (() -> Void)?
     var cancel: (() -> Void)?
+    
+    var canAttachVideo = true
     
     init(context: AccountContext) {
         self.context = context
@@ -1208,7 +1212,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
                 videoNode.frame = self.avatarNode.frame
                 
                 if isEditing != videoNode.canAttachContent {
-                    videoNode.canAttachContent = isEditing
+                    videoNode.canAttachContent = isEditing && self.canAttachVideo
                 }
             }
         }

@@ -26,6 +26,8 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     let labelNode: TextNode
     let filledBackgroundNode: LinkHighlightingNode
     var linkHighlightingNode: LinkHighlightingNode?
+    
+    private let mediaBackgroundNode: ASImageNode
     fileprivate var imageNode: TransformImageNode?
     fileprivate var videoNode: UniversalVideoNode?
     private var videoContent: NativeVideoContent?
@@ -38,6 +40,10 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         self.labelNode.displaysAsynchronously = true
         
         self.filledBackgroundNode = LinkHighlightingNode(color: .clear)
+        
+        self.mediaBackgroundNode = ASImageNode()
+        self.mediaBackgroundNode.displaysAsynchronously = false
+        self.mediaBackgroundNode.displayWithoutProcessing = true
         
         super.init()
         
@@ -103,6 +109,8 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         
         return { item, layoutConstants, _, _, _ in
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .always, forceFullCorners: false, forceAlignment: .center)
+            
+            let instantVideoBackgroundImage = PresentationResourcesChat.chatInstantVideoBackgroundImage(item.presentationData.theme.theme, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, message: item.message, accountPeerId: item.context.account.peerId)
@@ -173,6 +181,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     let apply = imageNode.asyncLayout()(arguments)
                                     apply()
                                     
+                                    strongSelf.insertSubnode(strongSelf.mediaBackgroundNode, at: 0)
                                 }
                                 strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, photoReference: .message(message: MessageReference(item.message), media: image), storeToDownloadsPeerType: nil).start())
                                 let updateImageSignal = chatMessagePhoto(postbox: item.context.account.postbox, photoReference: .message(message: MessageReference(item.message), media: image))
@@ -180,10 +189,13 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                 imageNode.setSignal(updateImageSignal)
                                 
                                 imageNode.frame = imageFrame
+                                strongSelf.mediaBackgroundNode.frame = imageFrame.insetBy(dx: -2.0, dy: -2.0)
                             } else if let imageNode = strongSelf.imageNode {
+                                strongSelf.mediaBackgroundNode.removeFromSupernode()
                                 imageNode.removeFromSupernode()
                                 strongSelf.imageNode = nil
                             }
+                            strongSelf.mediaBackgroundNode.image = instantVideoBackgroundImage
                             
                             if let image = image, let video = image.videoRepresentations.last, let id = image.id?.id {
                                 let videoFileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: image.representations, videoThumbnails: [], immediateThumbnailData: image.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))

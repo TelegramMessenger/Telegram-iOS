@@ -2133,7 +2133,11 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             case .edit:
                 (strongSelf.controller?.parent as? TabBarController)?.updateIsTabBarHidden(true, transition: .animated(duration: 0.2, curve: .easeInOut))
                 strongSelf.state = strongSelf.state.withIsEditing(true)
+                var updateOnCompletion = false
                 if strongSelf.headerNode.isAvatarExpanded {
+                    updateOnCompletion = true
+                    strongSelf.headerNode.avatarListNode.avatarContainerNode.canAttachVideo = false
+                    strongSelf.headerNode.editingContentNode.avatarNode.canAttachVideo = false
                     strongSelf.headerNode.updateIsAvatarExpanded(false, transition: .immediate)
                     strongSelf.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
                 }
@@ -2142,7 +2146,15 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
                 }
                 UIView.transition(with: strongSelf.view, duration: 0.3, options: [.transitionCrossDissolve], animations: {
-                }, completion: nil)
+                }, completion: { _ in
+                    if updateOnCompletion {
+                        strongSelf.headerNode.avatarListNode.avatarContainerNode.canAttachVideo = true
+                        strongSelf.headerNode.editingContentNode.avatarNode.canAttachVideo = true
+                        if let (layout, navigationHeight) = strongSelf.validLayout {
+                            strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                        }
+                    }
+                })
                 strongSelf.controller?.navigationItem.setLeftBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, style: .plain, target: strongSelf, action: #selector(strongSelf.editingCancelPressed)), animated: true)
             case .done, .cancel:
                 (strongSelf.controller?.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.2, curve: .easeInOut))
