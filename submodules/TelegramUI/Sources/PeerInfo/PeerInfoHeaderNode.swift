@@ -750,7 +750,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     
     func deleteItem(_ item: PeerInfoAvatarListItem) -> Bool {
         guard case let .image(image) = item else {
-            return
+            return false
         }
         var items: [PeerInfoAvatarListItem] = []
         var entries: [AvatarGalleryEntry] = []
