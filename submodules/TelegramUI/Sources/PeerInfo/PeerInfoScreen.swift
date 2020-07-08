@@ -2695,7 +2695,18 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] sticker in
                     if let strongSelf = self {
-                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), peerNearbyData: strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0, sticker: sticker) })))
+                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), keepStack: strongSelf.nearbyPeerDistance != nil ? .always : .default, peerNearbyData: strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0, sticker: sticker) }), completion: { _ in
+                            if strongSelf.nearbyPeerDistance != nil {
+                                var viewControllers = navigationController.viewControllers
+                                viewControllers = viewControllers.filter { controller in
+                                    if controller is PeerInfoScreen {
+                                        return false
+                                    }
+                                    return true
+                                }
+                                navigationController.setViewControllers(viewControllers, animated: false)
+                            }
+                        }))
                     }
                 })
             }
@@ -2909,8 +2920,19 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] sticker in
                 if let strongSelf = self {
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), activateMessageSearch: (.everything, ""), peerNearbyData:  strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0, sticker: sticker) })))
-                    }
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), keepStack: strongSelf.nearbyPeerDistance != nil ? .always : .default, activateMessageSearch: (.everything, ""), peerNearbyData:  strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0, sticker: sticker) }), completion: { _ in
+                        if strongSelf.nearbyPeerDistance != nil {
+                            var viewControllers = navigationController.viewControllers
+                            viewControllers = viewControllers.filter { controller in
+                                if controller is PeerInfoScreen {
+                                    return false
+                                }
+                                return true
+                            }
+                            navigationController.setViewControllers(viewControllers, animated: false)
+                        }
+                    }))
+                }
             })
         }
     }
@@ -3219,8 +3241,19 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] sticker in
                 if let strongSelf = self {
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), peerNearbyData: strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0, sticker: sticker) })))
-                    }
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), keepStack: strongSelf.nearbyPeerDistance != nil ? .always : .default, peerNearbyData: strongSelf.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0, sticker: sticker) }), completion: { _ in
+                        if strongSelf.nearbyPeerDistance != nil {
+                            var viewControllers = navigationController.viewControllers
+                            viewControllers = viewControllers.filter { controller in
+                                if controller is PeerInfoScreen {
+                                    return false
+                                }
+                                return true
+                            }
+                            navigationController.setViewControllers(viewControllers, animated: false)
+                        }
+                    }))
+                }
             })
         }
     }
