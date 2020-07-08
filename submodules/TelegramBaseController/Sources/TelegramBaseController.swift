@@ -520,6 +520,8 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         let nextRate: AudioPlaybackRate
                         switch settings.voicePlaybackRate {
                             case .x1:
+                                nextRate = .x1_5
+                            case .x1_5:
                                 nextRate = .x2
                             case .x2:
                                 nextRate = .x1

@@ -331,6 +331,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 
                 let baseRate: AudioPlaybackRate
                 if !value.status.baseRate.isEqual(to: 1.0) {
+                    baseRate = .x1_5
+                } else if value.status.baseRate.isEqual(to: 1.5) {
                     baseRate = .x2
                 } else {
                     baseRate = .x1
@@ -522,6 +524,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     private func updateRateButton(_ baseRate: AudioPlaybackRate) {
         switch baseRate {
             case .x2:
+                self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedRateActiveIcon(self.presentationData.theme), for: [])
+            case .x1_5:
                 self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedRateActiveIcon(self.presentationData.theme), for: [])
             default:
                 self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedRateInactiveIcon(self.presentationData.theme), for: [])
@@ -730,6 +734,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         if let currentRate = self.currentRate {
             switch currentRate {
                 case .x1:
+                    nextRate = .x1_5
+                case .x1_5:
                     nextRate = .x2
                 default:
                     nextRate = .x1

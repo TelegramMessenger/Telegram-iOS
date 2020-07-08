@@ -184,6 +184,11 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
                     self.rateButton.accessibilityLabel = self.strings.VoiceOver_Media_PlaybackRate
                     self.rateButton.accessibilityValue = self.strings.VoiceOver_Media_PlaybackRateNormal
                     self.rateButton.accessibilityHint = self.strings.VoiceOver_Media_PlaybackRateChange
+                case .x1_5:
+                    self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateActiveIcon(self.theme), for: [])
+                    self.rateButton.accessibilityLabel = self.strings.VoiceOver_Media_PlaybackRate
+                    self.rateButton.accessibilityValue = self.strings.VoiceOver_Media_PlaybackRateFast
+                    self.rateButton.accessibilityHint = self.strings.VoiceOver_Media_PlaybackRateChange
                 case .x2:
                     self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateActiveIcon(self.theme), for: [])
                     self.rateButton.accessibilityLabel = self.strings.VoiceOver_Media_PlaybackRate
@@ -381,6 +386,8 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
             switch playbackBaseRate {
                 case .x1:
                     self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateInactiveIcon(self.theme), for: [])
+                case .x1_5:
+                    self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateActiveIcon(self.theme), for: [])
                 case .x2:
                     self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateActiveIcon(self.theme), for: [])
             }
