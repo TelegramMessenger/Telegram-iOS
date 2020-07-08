@@ -12,7 +12,7 @@ if [ -z "COMMIT_ID" ]; then
 	exit 1
 fi
 
-if [ "$1" == "hockeyapp" ] || [ "$1" == "appcenter-experimental" ] || [ "$1" == "testinghockeyapp" ]; then
+if [ "$1" == "hockeyapp" ] || [ "$1" == "appcenter-experimental" ] || [ "$1" == "appcenter-experimental-2" ] || [ "$1" == "testinghockeyapp" ]; then
 	CERTS_PATH="$HOME/codesigning_data/certs"
 	PROFILES_PATH="$HOME/codesigning_data/profiles"
 elif [ "$1" == "testinghockeyapp-local" ]; then
@@ -122,6 +122,8 @@ fi
 
 if [ "$1" == "appcenter-experimental" ]; then
 	export APP_CENTER_ID="$APP_CENTER_EXPERIMENTAL_ID"
+elif [ "$1" == "appcenter-experimental-2" ]; then
+	export APP_CENTER_ID="$APP_CENTER_EXPERIMENTAL_2_ID"
 fi
 
 BUCK="$(pwd)/tools/buck" BUCK_HTTP_CACHE="$BUCK_HTTP_CACHE" BUCK_CACHE_MODE="$BUCK_CACHE_MODE" BUCK_DIR_CACHE="$BUCK_DIR_CACHE" LOCAL_CODESIGNING=1 sh "$BUILD_ENV_SCRIPT" make "$APP_TARGET"

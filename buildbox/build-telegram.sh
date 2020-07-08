@@ -57,7 +57,7 @@ cp "$BUCK" "tools/buck"
 
 BUILD_CONFIGURATION="$1"
 
-if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ]; then
+if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ]; then
 	CODESIGNING_SUBPATH="transient-data/codesigning"
 	CODESIGNING_TEAMS_SUBPATH="transient-data/teams"
 elif [ "$BUILD_CONFIGURATION" == "appstore" ]; then
@@ -89,7 +89,7 @@ fi
 
 BASE_DIR=$(pwd)
 
-if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appstore" ]; then
+if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ] || [ "$BUILD_CONFIGURATION" == "appstore" ]; then
 	if [ ! `which setup-telegram-build.sh` ]; then
 		echo "setup-telegram-build.sh not found in PATH $PATH"
 		exit 1
@@ -103,7 +103,7 @@ if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "app
 	source `which setup-codesigning.sh`
 
 	CODESIGNING_CONFIGURATION="$BUILD_CONFIGURATION"
-	if [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ]; then
+	if [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ]; then
 		CODESIGNING_CONFIGURATION="hockeyapp"
 	fi
 
