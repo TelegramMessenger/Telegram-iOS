@@ -1706,35 +1706,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             if controllerInteraction.pollActionState.pollMessageIdsInProgress[id] == nil {
-                #if DEBUG
-                if false {
-                    var found = false
-                    strongSelf.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
-                        if !found, let itemNode = itemNode as? ChatMessageBubbleItemNode, itemNode.item?.message.id == id {
-                            found = true
-                            if strongSelf.selectPollOptionFeedback == nil {
-                                strongSelf.selectPollOptionFeedback = HapticFeedback()
-                            }
-                            strongSelf.selectPollOptionFeedback?.error()
-                            itemNode.animateQuizInvalidOptionSelected()
-                        }
-                    }
-                    return;
-                }
-                if false {
-                    if strongSelf.selectPollOptionFeedback == nil {
-                        strongSelf.selectPollOptionFeedback = HapticFeedback()
-                    }
-                    strongSelf.selectPollOptionFeedback?.success()
-                    strongSelf.chatDisplayNode.animateQuizCorrectOptionSelected()
-                    return;
-                }
-                if false {
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(text: "controllerInteraction.pollActionState.pollMessageIdsInProgress[id] = opaqueIdentifiers"), elevatedLayout: true, action: { _ in return false }), in: .window(.root))
-                    return;
-                }
-                #endif
-                
                 controllerInteraction.pollActionState.pollMessageIdsInProgress[id] = opaqueIdentifiers
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
                 let disposables: DisposableDict<MessageId>
@@ -5726,7 +5697,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         statusText = strongSelf.presentationData.strings.Undo_ChatCleared
                     }
                     
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: statusText), elevatedLayout: true, action: { value in
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: statusText), elevatedLayout: false, action: { value in
                         if value == .commit {
                             let _ = clearHistoryInteractively(postbox: account.postbox, peerId: peerId, type: type).start(completed: {
                                 self?.chatDisplayNode.historyNode.historyAppearsCleared = false
@@ -7030,13 +7001,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
         
         let value: String?
-        switch dice.emoji {
+        let emoji = dice.emoji.strippedEmoji
+        switch emoji {
             case "🎲":
                 value = self.presentationData.strings.Conversation_Dice_u1F3B2
             case "🎯":
                 value = self.presentationData.strings.Conversation_Dice_u1F3AF
+            case "🏀":
+                value = self.presentationData.strings.Conversation_Dice_u1F3C0
+            case "⚽️":
+                value = self.presentationData.strings.Conversation_Dice_u26BD
             default:
-                let emojiHex = dice.emoji.unicodeScalars.map({ String(format:"%02x", $0.value) }).joined().uppercased()
+                let emojiHex = emoji.unicodeScalars.map({ String(format:"%02x", $0.value) }).joined().uppercased()
                 let key = "Conversation.Dice.u\(emojiHex)"
                 if let string = self.presentationData.strings.primaryComponent.dict[key] {
                     value = string

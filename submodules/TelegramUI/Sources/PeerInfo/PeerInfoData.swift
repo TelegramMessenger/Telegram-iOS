@@ -24,17 +24,20 @@ final class PeerInfoState {
     let selectedMessageIds: Set<MessageId>?
     let updatingAvatar: PeerInfoUpdatingAvatar?
     let updatingBio: String?
+    let avatarUploadProgress: CGFloat?
     
     init(
         isEditing: Bool,
         selectedMessageIds: Set<MessageId>?,
         updatingAvatar: PeerInfoUpdatingAvatar?,
-        updatingBio: String?
+        updatingBio: String?,
+        avatarUploadProgress: CGFloat?
     ) {
         self.isEditing = isEditing
         self.selectedMessageIds = selectedMessageIds
         self.updatingAvatar = updatingAvatar
         self.updatingBio = updatingBio
+        self.avatarUploadProgress = avatarUploadProgress
     }
     
     func withIsEditing(_ isEditing: Bool) -> PeerInfoState {
@@ -42,7 +45,8 @@ final class PeerInfoState {
             isEditing: isEditing,
             selectedMessageIds: self.selectedMessageIds,
             updatingAvatar: self.updatingAvatar,
-            updatingBio: self.updatingBio
+            updatingBio: self.updatingBio,
+            avatarUploadProgress: self.avatarUploadProgress
         )
     }
     
@@ -51,7 +55,8 @@ final class PeerInfoState {
             isEditing: self.isEditing,
             selectedMessageIds: selectedMessageIds,
             updatingAvatar: self.updatingAvatar,
-            updatingBio: self.updatingBio
+            updatingBio: self.updatingBio,
+            avatarUploadProgress: self.avatarUploadProgress
         )
     }
     
@@ -60,7 +65,8 @@ final class PeerInfoState {
             isEditing: self.isEditing,
             selectedMessageIds: self.selectedMessageIds,
             updatingAvatar: updatingAvatar,
-            updatingBio: self.updatingBio
+            updatingBio: self.updatingBio,
+            avatarUploadProgress: self.avatarUploadProgress
         )
     }
     
@@ -69,7 +75,18 @@ final class PeerInfoState {
             isEditing: self.isEditing,
             selectedMessageIds: self.selectedMessageIds,
             updatingAvatar: self.updatingAvatar,
-            updatingBio: updatingBio
+            updatingBio: updatingBio,
+            avatarUploadProgress: self.avatarUploadProgress
+        )
+    }
+    
+    func withAvatarUploadProgress(_ avatarUploadProgress: CGFloat?) -> PeerInfoState {
+        return PeerInfoState(
+            isEditing: self.isEditing,
+            selectedMessageIds: self.selectedMessageIds,
+            updatingAvatar: self.updatingAvatar,
+            updatingBio: self.updatingBio,
+            avatarUploadProgress: avatarUploadProgress
         )
     }
 }

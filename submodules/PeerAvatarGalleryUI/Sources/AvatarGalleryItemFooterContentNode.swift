@@ -213,23 +213,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     }
     
     @objc private func deleteButtonPressed() {
-        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-        let actionSheet = ActionSheetController(presentationData: presentationData)
-        let items: [ActionSheetItem] = [
-            ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: { [weak self, weak actionSheet] in
-                actionSheet?.dismissAnimated()
-                self?.delete?()
-            })
-        ]
-        
-        actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
-                                   ActionSheetItemGroup(items: [
-                                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                        actionSheet?.dismissAnimated()
-                                    })
-                                    ])
-            ])
-        self.controllerInteraction?.presentController(actionSheet, nil)
+        self.delete?()
     }
     
     @objc private func actionButtonPressed() {

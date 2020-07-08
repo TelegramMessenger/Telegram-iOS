@@ -1017,13 +1017,13 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                         strongSelf.checkNode = nil
                     }
                     
-                    var rightLabelInset: CGFloat = 15.0
+                    var rightLabelInset: CGFloat = 15.0 + params.rightInset
                     
                     if let updatedLabelArrowNode = updatedLabelArrowNode {
                         strongSelf.labelArrowNode = updatedLabelArrowNode
                         strongSelf.containerNode.addSubnode(updatedLabelArrowNode)
                         if let image = updatedLabelArrowNode.image {
-                            let labelArrowNodeFrame = CGRect(origin: CGPoint(x: params.width - params.rightInset - rightLabelInset - image.size.width + 8.0, y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
+                            let labelArrowNodeFrame = CGRect(origin: CGPoint(x: params.width - rightLabelInset - image.size.width + 8.0, y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
                             transition.updateFrame(node: updatedLabelArrowNode, frame: labelArrowNodeFrame)
                             rightLabelInset += 19.0
                         }

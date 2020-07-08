@@ -5638,8 +5638,6 @@ Any member of this group will be able to see messages in the channel.";
 "Settings.ViewVideo" = "View Video";
 "Settings.RemoveVideo" = "Remove Video";
 
-"Settings.EditProfileMedia" = "Edit";
-
 "Conversation.Unarchive" = "Unarchive";
 "Conversation.UnarchiveDone" = "The chat was moved to your main list.";
 
@@ -5681,3 +5679,10 @@ Any member of this group will be able to see messages in the channel.";
 "Settings.EditPhoto" = "Edit Photo";
 
 "Settings.FrequentlyAskedQuestions" = "Frequently Asked Questions";
+
+"Notification.ChangedGroupVideo" = "%@ changed group video";
+"Group.MessageVideoUpdated" = "Group video updated";
+"Channel.MessageVideoUpdated" = "Channel video updated";
+
+"Conversation.Dice.u1F3C0" = "Send a basketball emoji to shoot a free throw.";
+"Conversation.Dice.u26BD" = "Send a football emoji to do a free kick.";

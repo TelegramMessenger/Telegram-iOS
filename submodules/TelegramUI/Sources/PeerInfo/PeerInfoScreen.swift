@@ -47,6 +47,7 @@ import AuthTransferUI
 import DeviceAccess
 import LegacyMediaPickerUI
 import TelegramNotices
+import SaveToCameraRoll
 
 protocol PeerInfoScreenItem: class {
     var id: AnyHashable { get }
@@ -648,17 +649,24 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     
     
     if let settings = data.globalSettings {
-        if settings.suggestPhoneNumberConfirmation {
-            //                let phoneNumber = formatPhoneNumber(peer.phone ?? "")
+        if settings.suggestPhoneNumberConfirmation, let peer = data.peer as? TelegramUser {
+            //
             //                           entries.append(.phoneInfo(presentationData.theme, presentationData.strings.Settings_CheckPhoneNumberTitle(phoneNumber).0, presentationData.strings.Settings_CheckPhoneNumberText))
             //                           entries.append(.keepPhone(presentationData.theme, presentationData.strings.Settings_KeepPhoneNumber(phoneNumber).0))
             //                           entries.append(.changePhone(presentationData.theme, presentationData.strings.Settings_ChangePhoneNumber))
+            let phoneNumber = formatPhoneNumber(peer.phone ?? "")
+            items[.phone]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_KeepPhoneNumber(phoneNumber).0, action: {
+                interaction.openSettings(.addAccount)
+            }))
+            items[.phone]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_ChangePhoneNumber, action: {
+                interaction.openSettings(.addAccount)
+            }))
         }
         
         if !settings.accountsAndPeers.isEmpty {
             for (peerAccount, peer, badgeCount) in settings.accountsAndPeers {
                 let member: PeerInfoMember = .account(peer: RenderedPeer(peer: peer))
-                items[.accounts]!.append(PeerInfoScreenMemberItem(id: member.id, context: context, enclosingPeer: nil, member: member, badge: badgeCount > 0 ? "\(badgeCount)" : nil, action: { action in
+                items[.accounts]!.append(PeerInfoScreenMemberItem(id: member.id, context: context.sharedContext.makeTempAccountContext(account: peerAccount), enclosingPeer: nil, member: member, badge: badgeCount > 0 ? "\(compactNumericCountString(Int(badgeCount), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))" : nil, action: { action in
                     switch action {
                         case .open:
                             interaction.switchToAccount(peerAccount.id)
@@ -1359,7 +1367,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         isEditing: false,
         selectedMessageIds: nil,
         updatingAvatar: nil,
-        updatingBio: nil
+        updatingBio: nil,
+        avatarUploadProgress: nil
     )
     private let nearbyPeerDistance: Int32?
     private var dataDisposable: Disposable?
@@ -1371,6 +1380,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     private let addMemberDisposable = MetaDisposable()
     private let preloadHistoryDisposable = MetaDisposable()
     
+    private let editAvatarDisposable = MetaDisposable()
     private let updateAvatarDisposable = MetaDisposable()
     private let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
     
@@ -2054,14 +2064,22 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             guard let strongSelf = self, let peer = strongSelf.data?.peer, peer.smallProfileImage != nil else {
                 return
             }
-            if strongSelf.hapticFeedback == nil {
-                strongSelf.hapticFeedback = HapticFeedback()
+
+            if strongSelf.state.updatingAvatar != nil {
+                strongSelf.updateAvatarDisposable.set(nil)
+                strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
+                if let (layout, navigationHeight) = strongSelf.validLayout {
+                    strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                }
+                return
             }
-            strongSelf.hapticFeedback?.tap()
             
             let entriesPromise = Promise<[AvatarGalleryEntry]>(entries)
             let galleryController = AvatarGalleryController(context: strongSelf.context, peer: peer, sourceHasRoundCorners: !strongSelf.headerNode.isAvatarExpanded, remoteEntries: entriesPromise, centralEntryIndex: centralEntry.flatMap { entries.firstIndex(of: $0) }, replaceRootController: { controller, ready in
             })
+            galleryController.openAvatarSetup = { [weak self] completion in
+                self?.openAvatarForEditing(hasRemove: false, completion: completion)
+            }
             galleryController.avatarPhotoEditCompletion = { [weak self] image in
                 self?.updateProfilePhoto(image)
             }
@@ -2084,7 +2102,18 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         
         self.headerNode.requestOpenAvatarForEditing = { [weak self] in
-            self?.openAvatarForEditing()
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.state.updatingAvatar != nil {
+                strongSelf.updateAvatarDisposable.set(nil)
+                strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
+                if let (layout, navigationHeight) = strongSelf.validLayout {
+                    strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                }
+            } else {
+                strongSelf.openAvatarForEditing()
+            }
         }
         
         self.headerNode.requestUpdateLayout = { [weak self] in
@@ -2102,6 +2131,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             switch key {
             case .edit:
+                (strongSelf.controller?.parent as? TabBarController)?.updateIsTabBarHidden(true, transition: .animated(duration: 0.2, curve: .easeInOut))
                 strongSelf.state = strongSelf.state.withIsEditing(true)
                 if strongSelf.headerNode.isAvatarExpanded {
                     strongSelf.headerNode.updateIsAvatarExpanded(false, transition: .immediate)
@@ -2115,6 +2145,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 }, completion: nil)
                 strongSelf.controller?.navigationItem.setLeftBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, style: .plain, target: strongSelf, action: #selector(strongSelf.editingCancelPressed)), animated: true)
             case .done, .cancel:
+                (strongSelf.controller?.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.2, curve: .easeInOut))
                 strongSelf.view.endEditing(true)
                 if case .done = key {
                     guard let data = strongSelf.data else {
@@ -2128,10 +2159,11 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             let bio = strongSelf.state.updatingBio
                             
                             if peer.firstName != firstName || peer.lastName != lastName || (bio != nil && bio != cachedData.about) {
-                                
                                 var updateNameSignal: Signal<Void, NoError> = .complete()
+                                var hasProgress = false
                                 if peer.firstName != firstName || peer.lastName != lastName {
                                     updateNameSignal = updateAccountPeerName(account: context.account, firstName: firstName, lastName: lastName)
+                                    hasProgress = true
                                 }
                                 var updateBioSignal: Signal<Void, NoError> = .complete()
                                 if let bio = bio, bio != cachedData.about {
@@ -2139,6 +2171,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                     |> `catch` { _ -> Signal<Void, NoError> in
                                         return .complete()
                                     }
+                                    hasProgress = true
                                 }
                                 
                                 var dismissStatus: (() -> Void)?
@@ -2149,8 +2182,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                     self?.activeActionDisposable.set(nil)
                                     statusController?.dismiss()
                                 }
-                                strongSelf.controller?.present(statusController, in: .window(.root))
-                                
+                                if hasProgress {
+                                    strongSelf.controller?.present(statusController, in: .window(.root))
+                                }
                                 strongSelf.activeActionDisposable.set((combineLatest(updateNameSignal, updateBioSignal) |> deliverOnMainQueue
                                 |> deliverOnMainQueue).start(error: { _ in
                                     dismissStatus?()
@@ -2251,12 +2285,14 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         } else {
                             var updateDataSignals: [Signal<Never, Void>] = []
                             
+                            var hasProgress = false
                             if title != group.title {
                                 updateDataSignals.append(
                                     updatePeerTitle(account: strongSelf.context.account, peerId: group.id, title: title)
                                     |> ignoreValues
                                     |> mapError { _ in return Void() }
                                 )
+                                hasProgress = true
                             }
                             if description != (data.cachedData as? CachedGroupData)?.about {
                                 updateDataSignals.append(
@@ -2264,6 +2300,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                     |> ignoreValues
                                     |> mapError { _ in return Void() }
                                 )
+                                hasProgress = true
                             }
                             var dismissStatus: (() -> Void)?
                             let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: {
@@ -2273,8 +2310,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                 self?.activeActionDisposable.set(nil)
                                 statusController?.dismiss()
                             }
-                            strongSelf.controller?.present(statusController, in: .window(.root))
-                            
+                            if hasProgress {
+                                strongSelf.controller?.present(statusController, in: .window(.root))
+                            }
                             strongSelf.activeActionDisposable.set((combineLatest(updateDataSignals)
                             |> deliverOnMainQueue).start(error: { _ in
                                 dismissStatus?()
@@ -2305,13 +2343,14 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                 strongSelf.headerNode.editingContentNode.shakeTextForKey(.title)
                             } else {
                                 var updateDataSignals: [Signal<Never, Void>] = []
-                                
+                                var hasProgress = false
                                 if title != channel.title {
                                     updateDataSignals.append(
                                         updatePeerTitle(account: strongSelf.context.account, peerId: channel.id, title: title)
                                         |> ignoreValues
                                         |> mapError { _ in return Void() }
                                     )
+                                    hasProgress = true
                                 }
                                 if description != (data.cachedData as? CachedChannelData)?.about {
                                     updateDataSignals.append(
@@ -2319,6 +2358,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                         |> ignoreValues
                                         |> mapError { _ in return Void() }
                                     )
+                                    hasProgress = true
                                 }
                                 
                                 var dismissStatus: (() -> Void)?
@@ -2329,8 +2369,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                                     self?.activeActionDisposable.set(nil)
                                     statusController?.dismiss()
                                 }
-                                strongSelf.controller?.present(statusController, in: .window(.root))
-                                
+                                if hasProgress {
+                                    strongSelf.controller?.present(statusController, in: .window(.root))
+                                }
                                 strongSelf.activeActionDisposable.set((combineLatest(updateDataSignals)
                                 |> deliverOnMainQueue).start(error: { _ in
                                     dismissStatus?()
@@ -2461,6 +2502,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.resolveUrlDisposable.dispose()
         self.hiddenAvatarRepresentationDisposable.dispose()
         self.toggleShouldChannelMessagesSignaturesDisposable.dispose()
+        self.editAvatarDisposable.dispose()
         self.updateAvatarDisposable.dispose()
         self.selectAddMemberDisposable.dispose()
         self.addMemberDisposable.dispose()
@@ -3651,6 +3693,122 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
     }
     
+    private func editAvatarItem(_ item: PeerInfoAvatarListItem) {
+        guard case let .image(reference, representations, videoRepresentations, _) = item else {
+            return
+        }
+        
+        let mediaReference: AnyMediaReference
+        if let video = videoRepresentations.last {
+            mediaReference = .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
+        } else {
+            let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
+            mediaReference = .standalone(media: media)
+        }
+        
+        var dismissStatus: (() -> Void)?
+        let statusController = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: {
+            dismissStatus?()
+        }))
+        dismissStatus = { [weak self, weak statusController] in
+            self?.editAvatarDisposable.set(nil)
+            statusController?.dismiss()
+        }
+        self.controller?.present(statusController, in: .window(.root))
+        
+        self.editAvatarDisposable.set((fetchMediaData(context: self.context, postbox: self.context.account.postbox, mediaReference: mediaReference)
+            |> deliverOnMainQueue).start(next: { [weak self] state, isImage in
+                guard let strongSelf = self else {
+                    return
+                }
+                switch state {
+                    case .progress:
+                        break
+                    case let .data(data):
+                        dismissStatus?()
+                        
+                        let image: UIImage?
+                        let video: URL?
+                        if isImage {
+                            if let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+                                image = UIImage(data: fileData)
+                            } else {
+                                image = nil
+                            }
+                            video = nil
+                        } else {
+                            image = nil
+                            video = URL(fileURLWithPath: data.path)
+                        }
+                        
+                        presentLegacyAvatarEditor(theme: strongSelf.presentationData.theme, image: image, video: video, present: { [weak self] c, a in
+                            if let strongSelf = self {
+                                strongSelf.controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
+                            }
+                        }, imageCompletion: { [weak self] image in
+                            self?.updateProfilePhoto(image)
+                        }, videoCompletion: { [weak self] image, url, adjustments in
+                            self?.updateProfileVideo(image, url: url, adjustments: adjustments)
+                        })
+                }
+            }))
+    }
+    
+    private func setMainAvatar(_ item: PeerInfoAvatarListItem) {
+        if self.data?.peer?.id == self.context.account.peerId {
+            if case let .image(reference, _, _, _) = item {
+                if let reference = reference {
+                    let _ = updatePeerPhotoExisting(network: self.context.account.network, reference: reference).start()
+                    self.headerNode.avatarListNode.listContainerNode.setMainItem(item)
+                    
+                }
+            }
+        }
+    }
+    
+    private func deleteAvatar(_ item: PeerInfoAvatarListItem) {
+        if self.data?.peer?.id == self.context.account.peerId {
+            if case let .image(reference, _, _, _) = item {
+                if let reference = reference {
+                    let _ = removeAccountPhoto(network: self.context.account.network, reference: reference).start()
+                    let dismiss = self.headerNode.avatarListNode.listContainerNode.deleteItem(item)
+                    if dismiss {
+                        if self.headerNode.isAvatarExpanded {
+                            self.headerNode.updateIsAvatarExpanded(false, transition: .immediate)
+                            self.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
+                        }
+                        if let (layout, navigationHeight) = self.validLayout {
+                            self.scrollNode.view.setContentOffset(CGPoint(), animated: false)
+                            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                        }
+                    }
+                }
+            }
+//            if entry == self.entries.first {
+//                self.dismiss(forceAway: true)
+//            } else {
+//                if let index = self.entries.firstIndex(of: entry) {
+//                    self.entries.remove(at: index)
+//                    self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
+//                }
+//            }
+        } else {
+//            if let messageId = messageId {
+//                let _ = deleteMessagesInteractively(account: self.context.account, messageIds: [messageId], type: .forEveryone).start()
+//            }
+            
+//            if entry == self.entries.first {
+//                let _ = updatePeerPhoto(postbox: self.context.account.postbox, network: self.context.account.network, stateManager: self.context.account.stateManager, accountPeerId: self.context.account.peerId, peerId: self.peer.id, photo: nil, mapResourceToAvatarSizes: { _, _ in .single([:]) }).start()
+//                self.dismiss(forceAway: true)
+//            } else {
+//                if let index = self.entries.firstIndex(of: entry) {
+//                    self.entries.remove(at: index)
+//                    self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
+//                }
+//            }
+        }
+    }
+    
     private func openAvatarOptions() {
         let item = self.headerNode.avatarListNode.listContainerNode.currentItemNode?.item
         let index = self.headerNode.avatarListNode.listContainerNode.currentIndex
@@ -3663,32 +3821,33 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         var items: [ActionSheetItem] = []
         items.append( ActionSheetButtonItem(title: self.presentationData.strings.Settings_SetNewProfilePhotoOrVideo, color: .accent, action: { [weak self] in
             dismissAction()
-            self?.openAvatarForEditing()
+            self?.openAvatarForEditing(hasRemove: false)
         }))
         
-        if index > 0, let item = item, case let .image(image) = item {
-            let title: String
-            if image.2.isEmpty {
-                title = self.presentationData.strings.ProfilePhoto_SetMainPhoto
-            } else {
-                title = self.presentationData.strings.ProfilePhoto_SetMainVideo
+        if let item = item, case let .image(image) = item {
+            if index > 0 {
+                let title: String
+                if image.2.isEmpty {
+                    title = self.presentationData.strings.ProfilePhoto_SetMainPhoto
+                } else {
+                    title = self.presentationData.strings.ProfilePhoto_SetMainVideo
+                }
+                items.append(ActionSheetButtonItem(title: title, color: .accent, action: { [weak self] in
+                    dismissAction()
+                    self?.setMainAvatar(item)
+                }))
             }
-            
-            items.append( ActionSheetButtonItem(title: title, color: .accent, action: { [weak self] in
+        
+            items.append(ActionSheetButtonItem(title: self.presentationData.strings.ProfilePhoto_OpenInEditor, color: .accent, action: { [weak self] in
                 dismissAction()
-                self?.openAvatarForEditing()
+                self?.editAvatarItem(item)
+            }))
+        
+            items.append(ActionSheetButtonItem(title: self.presentationData.strings.GroupInfo_SetGroupPhotoDelete, color: .destructive, action: { [weak self] in
+                dismissAction()
+                self?.deleteAvatar(item)
             }))
         }
-        
-        items.append(ActionSheetButtonItem(title: self.presentationData.strings.ProfilePhoto_OpenInEditor, color: .accent, action: { [weak self] in
-            dismissAction()
-            self?.openAvatarForEditing()
-        }))
-        
-        items.append(ActionSheetButtonItem(title: self.presentationData.strings.GroupInfo_SetGroupPhotoDelete, color: .destructive, action: { [weak self] in
-            dismissAction()
-            self?.openAvatarForEditing()
-        }))
         actionSheet.setItemGroups([
             ActionSheetItemGroup(items: items),
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
@@ -3700,6 +3859,15 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     private func updateProfilePhoto(_ image: UIImage) {
         guard let data = image.jpegData(compressionQuality: 0.6) else {
             return
+        }
+        
+        if self.headerNode.isAvatarExpanded {
+            self.headerNode.updateIsAvatarExpanded(false, transition: .immediate)
+            self.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
+        }
+        if let (layout, navigationHeight) = self.validLayout {
+            self.scrollNode.view.setContentOffset(CGPoint(), animated: false)
+            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
         }
         
         let resource = LocalFileMediaResource(fileId: arc4random64())
@@ -3724,12 +3892,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             switch result {
                 case .complete:
-                    strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
-                    if let (layout, navigationHeight) = strongSelf.validLayout {
-                        strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
-                }
-                case .progress:
-                    break
+                    strongSelf.state = strongSelf.state.withUpdatingAvatar(nil).withAvatarUploadProgress(nil)
+                case let .progress(value):
+                    strongSelf.state = strongSelf.state.withAvatarUploadProgress(CGFloat(value))
+            }
+            if let (layout, navigationHeight) = strongSelf.validLayout {
+                strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
             }
         }))
     }
@@ -3737,6 +3905,15 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     private func updateProfileVideo(_ image: UIImage, url: URL, adjustments: TGVideoEditAdjustments?) {
         guard let data = image.jpegData(compressionQuality: 0.6) else {
             return
+        }
+        
+        if self.headerNode.isAvatarExpanded {
+            self.headerNode.updateIsAvatarExpanded(false, transition: .immediate)
+            self.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
+        }
+        if let (layout, navigationHeight) = self.validLayout {
+            self.scrollNode.view.setContentOffset(CGPoint(), animated: false)
+            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
         }
         
         let photoResource = LocalFileMediaResource(fileId: arc4random64())
@@ -3754,7 +3931,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         
         let account = self.context.account
-        let signal = Signal<TelegramMediaResource, UploadPeerPhotoError> { subscriber in
+        let signal = Signal<TelegramMediaResource, UploadPeerPhotoError> { [weak self] subscriber in
             var filteredPath = url.path
             if filteredPath.hasPrefix("file://") {
                 filteredPath = String(filteredPath[filteredPath.index(filteredPath.startIndex, offsetBy: "file://".count)])
@@ -3791,6 +3968,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         }
                     }
                     subscriber.putCompletion()
+                } else if let strongSelf = self, let progress = next as? NSNumber {
+                    Queue.mainQueue().async {
+                        strongSelf.state = strongSelf.state.withAvatarUploadProgress(CGFloat(progress.floatValue * 0.25))
+                        if let (layout, navigationHeight) = strongSelf.validLayout {
+                            strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                        }
+                    }
                 }
             }, error: { _ in
             }, completed: nil)
@@ -3824,17 +4008,17 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             switch result {
                 case .complete:
-                    strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
-                    if let (layout, navigationHeight) = strongSelf.validLayout {
-                        strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
-                }
-                case .progress:
-                    break
+                    strongSelf.state = strongSelf.state.withUpdatingAvatar(nil).withAvatarUploadProgress(nil)
+                case let .progress(value):
+                    strongSelf.state = strongSelf.state.withAvatarUploadProgress(CGFloat(0.25 + value * 0.75))
+            }
+            if let (layout, navigationHeight) = strongSelf.validLayout {
+                strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
             }
         }))
     }
     
-    private func openAvatarForEditing() {
+    private func openAvatarForEditing(hasRemove: Bool = true, completion: @escaping () -> Void = {}) {
         guard let peer = self.data?.peer, canEditPeerInfo(context: self.context, peer: peer) else {
             return
         }
@@ -3868,13 +4052,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 hasPhotos = true
             }
             
-            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: false, personalPhoto: false, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
+            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos && hasRemove, hasViewButton: false, personalPhoto: strongSelf.isSettings, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
             let _ = strongSelf.currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { [weak self] assetsController in
                 guard let strongSelf = self else {
                     return
                 }
-                let controller = WebSearchController(context: strongSelf.context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { [weak self] result in
+                let controller = WebSearchController(context: strongSelf.context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: strongSelf.isSettings ? nil : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { [weak self] result in
                     assetsController?.dismiss()
                     self?.updateProfilePhoto(result)
                 }))
@@ -3882,11 +4066,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             mixin.didFinishWithImage = { [weak self] image in
                 if let image = image {
+                    completion()
                     self?.updateProfilePhoto(image)
                 }
             }
             mixin.didFinishWithVideo = { [weak self] image, url, adjustments in
                 if let image = image, let url = url {
+                    completion()
                     self?.updateProfileVideo(image, url: url, adjustments: adjustments)
                 }
             }
@@ -4556,7 +4742,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         if self.isSettings {
             if let settings = self.data?.globalSettings {
-                self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, placeholder: self.presentationData.strings.Settings_Search, contentNode: SettingsSearchContainerNode(context: self.context, openResult: { [weak self] result in
+                self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, placeholder: self.presentationData.strings.Settings_Search, hasSeparator: true, contentNode: SettingsSearchContainerNode(context: self.context, openResult: { [weak self] result in
                     if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                         result.present(strongSelf.context, navigationController, { [weak self] mode, controller in
                             if let strongSelf = self {
@@ -4656,6 +4842,11 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition, additive: Bool = false) {
         self.validLayout = (layout, navigationHeight)
+        
+        if self.headerNode.isAvatarExpanded && layout.size.width > layout.size.height {
+            self.headerNode.updateIsAvatarExpanded(false, transition: transition)
+            self.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
+        }
         
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: transition)
@@ -4932,7 +5123,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 effectiveAreaExpansionFraction = paneAreaExpansionFraction
             }
             
-            transition.updateAlpha(node: self.headerNode.separatorNode, alpha: 1.0 - effectiveAreaExpansionFraction)
+            if !self.isSettings {
+                transition.updateAlpha(node: self.headerNode.separatorNode, alpha: 1.0 - effectiveAreaExpansionFraction)
+            }
             
             let visibleHeight = self.scrollNode.view.contentOffset.y + self.scrollNode.view.bounds.height - self.paneContainerNode.frame.minY
             
@@ -5009,8 +5202,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             
             let offsetY = self.scrollNode.view.contentOffset.y
             var shouldBeExpanded: Bool?
+            
+            var isLandscape = false
+            if let (layout, _) = self.validLayout, layout.size.width > layout.size.height {
+                isLandscape = true
+            }
             if offsetY <= -32.0 && scrollView.isDragging && scrollView.isTracking {
-                if let peer = self.data?.peer, peer.smallProfileImage != nil {
+                if let peer = self.data?.peer, peer.smallProfileImage != nil && self.state.updatingAvatar == nil && !isLandscape {
                     shouldBeExpanded = true
                     
                     if self.canOpenAvatarByDragging && self.headerNode.isAvatarExpanded && offsetY <= -32.0 {

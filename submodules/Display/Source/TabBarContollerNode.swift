@@ -74,6 +74,10 @@ final class TabBarControllerNode: ASDisplayNode {
         transition.updateAlpha(node: self.disabledOverlayNode, alpha: value ? 0.0 : 1.0)
     }
     
+    func updateIsTabBarHidden(_ value: Bool, transition: ContainedViewLayoutTransition) {
+        transition.updateAlpha(node: self.tabBarNode, alpha: value ? 0.0 : 1.0)
+    }
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, toolbar: Toolbar?, transition: ContainedViewLayoutTransition) {
         var tabBarHeight: CGFloat
         var options: ContainerViewLayoutInsetOptions = []

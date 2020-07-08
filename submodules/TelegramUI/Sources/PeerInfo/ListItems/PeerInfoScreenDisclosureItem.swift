@@ -153,7 +153,7 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         
         if let arrowImage = PresentationResourcesItemList.disclosureArrowImage(presentationData.theme) {
             self.arrowNode.image = arrowImage
-            let arrowFrame = CGRect(origin: CGPoint(x: width - 7.0 - arrowImage.size.width, y: floorToScreenPixels((height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
+            let arrowFrame = CGRect(origin: CGPoint(x: width - 7.0 - arrowImage.size.width - safeInsets.right, y: floorToScreenPixels((height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
             transition.updateFrame(node: self.arrowNode, frame: arrowFrame)
         }
         

@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import SyncCore
+import AccountContext
 import TelegramPresentationData
 import TelegramUIPreferences
 import TextFormat
@@ -13,6 +14,9 @@ import LocalizedPeerData
 import UrlEscaping
 import PhotoResources
 import TelegramStringFormatting
+import UniversalMediaPlayer
+import TelegramUniversalVideoContent
+import GalleryUI
 
 private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
     return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId)
@@ -23,6 +27,9 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     let filledBackgroundNode: LinkHighlightingNode
     var linkHighlightingNode: LinkHighlightingNode?
     fileprivate var imageNode: TransformImageNode?
+    fileprivate var videoNode: UniversalVideoNode?
+    private var videoContent: NativeVideoContent?
+    private var videoStartTimestamp: Double?
     private let fetchDisposable = MetaDisposable()
     
     required init() {
@@ -112,9 +119,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                
-               
-                let imageSize = CGSize(width: 70.0, height: 70.0)
+                let imageSize = layoutConstants.instantVideo.dimensions
                 
                 let (labelLayout, apply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
@@ -155,6 +160,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                         if let strongSelf = self {
                             strongSelf.item = item
                             
+                            let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - imageSize.width) / 2.0), y: labelLayout.size.height + 10 + 2), size: imageSize)
                             if let image = image {
                                 let imageNode: TransformImageNode
                                 if let current = strongSelf.imageNode {
@@ -173,12 +179,53 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
 
                                 imageNode.setSignal(updateImageSignal)
                                 
-                                imageNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - imageSize.width) / 2.0), y: labelLayout.size.height + 10 + 2), size: imageSize)
+                                imageNode.frame = imageFrame
                             } else if let imageNode = strongSelf.imageNode {
                                 imageNode.removeFromSupernode()
                                 strongSelf.imageNode = nil
                             }
                             
+                            if let image = image, let video = image.videoRepresentations.last, let id = image.id?.id {
+                                let videoFileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: image.representations, videoThumbnails: [], immediateThumbnailData: image.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
+                                let videoContent = NativeVideoContent(id: .profileVideo(id), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, autoFetchFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
+                                if videoContent.id != strongSelf.videoContent?.id {
+                                    let mediaManager = item.context.sharedContext.mediaManager
+                                    let videoNode = UniversalVideoNode(postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .secondaryOverlay)
+                                    videoNode.isUserInteractionEnabled = false
+                                    videoNode.ownsContentNodeUpdated = { [weak self] owns in
+                                        if let strongSelf = self {
+                                            strongSelf.videoNode?.isHidden = !owns
+                                        }
+                                    }
+                                    strongSelf.videoContent = videoContent
+                                    strongSelf.videoNode = videoNode
+                                    
+                                    videoNode.updateLayout(size: imageSize, transition: .immediate)
+                                    videoNode.frame = imageFrame
+                                    
+                                    let maskPath = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: imageSize))
+                                    let shape = CAShapeLayer()
+                                    shape.path = maskPath.cgPath
+                                    videoNode.layer.mask = shape
+                                    
+                                    strongSelf.addSubnode(videoNode)
+                                    
+                                    videoNode.canAttachContent = true
+                                    if let videoStartTimestamp = video.startTimestamp {
+                                        videoNode.seek(videoStartTimestamp)
+                                    } else {
+                                        videoNode.seek(0.0)
+                                    }
+                                    videoNode.play()
+                                    
+                                }
+                            } else if let videoNode = strongSelf.videoNode {
+                                strongSelf.videoContent = nil
+                                strongSelf.videoNode = nil
+                                
+                                videoNode.removeFromSupernode()
+                            }
+                                                        
                             let _ = apply()
                             let _ = backgroundApply()
                             

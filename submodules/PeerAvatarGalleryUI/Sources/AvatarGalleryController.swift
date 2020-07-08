@@ -13,6 +13,8 @@ import GalleryUI
 import LegacyComponents
 import LegacyMediaPickerUI
 import SaveToCameraRoll
+import OverlayStatusController
+import PresentationDataUtils
 
 public enum AvatarGalleryEntryId: Hashable {
     case topImage
@@ -188,6 +190,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     private let centralItemFooterContentNode = Promise<(GalleryFooterContentNode?, GalleryOverlayContentNode?)>()
     private let centralItemAttributesDisposable = DisposableSet();
     
+    public var openAvatarSetup: ((@escaping () -> Void) -> Void)?
     public var avatarPhotoEditCompletion: ((UIImage) -> Void)?
     public var avatarVideoEditCompletion: ((UIImage, URL, TGVideoEditAdjustments?) -> Void)?
     
@@ -347,6 +350,11 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     
     @objc func donePressed() {
         self.dismiss(forceAway: false)
+    }
+    
+    private func dismissImmediately() {
+        self._hiddenMedia.set(.single(nil))
+        self.presentingViewController?.dismiss(animated: false, completion: nil)
     }
     
     private func dismiss(forceAway: Bool) {
@@ -621,7 +629,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         }
     }
     
-    private func editEntry(_ rawEntry: AvatarGalleryEntry) {
+    private func openEntryEdit(_ rawEntry: AvatarGalleryEntry) {
         let mediaReference: AnyMediaReference
         if let video = rawEntry.videoRepresentations.last {
             mediaReference = .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
@@ -630,32 +638,27 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             mediaReference = .standalone(media: media)
         }
         
+        var dismissStatus: (() -> Void)?
+        let statusController = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: {
+            dismissStatus?()
+        }))
+        dismissStatus = { [weak self, weak statusController] in
+            self?.editDisposable.set(nil)
+            statusController?.dismiss()
+        }
+        self.present(statusController, in: .window(.root))
         
-//        var cancelImpl: (() -> Void)?
-//        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-//        let progressSignal = Signal<Never, NoError> { subscriber in
-//            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
-//                cancelImpl?()
-//            }))
-//            strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-//            return ActionDisposable { [weak controller] in
-//                Queue.mainQueue().async() {
-//                    controller?.dismiss()
-//                }
-//            }
-//            }
-//        |> runOn(Queue.mainQueue())
-//        |> delay(0.15, queue: Queue.mainQueue())
-      
         self.editDisposable.set((fetchMediaData(context: self.context, postbox: self.context.account.postbox, mediaReference: mediaReference)
         |> deliverOnMainQueue).start(next: { [weak self] state, isImage in
             guard let strongSelf = self else {
                 return
             }
             switch state {
-                case let .progress(value):
+                case .progress:
                     break
                 case let .data(data):
+                    dismissStatus?()
+                    
                     let image: UIImage?
                     let video: URL?
                     if isImage {
@@ -677,67 +680,131 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                         if let strongSelf = self {
                             strongSelf.present(c, in: .window(.root), with: a, blockInteraction: true)
                         }
-                    }, imageCompletion: { image in
-                        avatarPhotoEditCompletion?(image)
+                        }, imageCompletion: { image in
+                            avatarPhotoEditCompletion?(image)
                     }, videoCompletion: { image, url, adjustments in
                         avatarVideoEditCompletion?(image, url, adjustments)
                     })
-                
+                    
                     Queue.mainQueue().after(0.4) {
                         strongSelf.dismiss(forceAway: true)
-                    }
+                }
             }
         }))
     }
     
-    private func deleteEntry(_ rawEntry: AvatarGalleryEntry) {
-        var entry = rawEntry
-        if case .topImage = entry, !self.entries.isEmpty {
-            entry = self.entries[0]
+    private func editEntry(_ rawEntry: AvatarGalleryEntry) {
+        let actionSheet = ActionSheetController(presentationData: self.presentationData)
+        let dismissAction: () -> Void = { [weak actionSheet] in
+            actionSheet?.dismissAnimated()
         }
         
-        switch entry {
-            case .topImage:
-                if self.peer.id == self.context.account.peerId {
-                } else {
-                    if entry == self.entries.first {
-                        let _ = updatePeerPhoto(postbox: self.context.account.postbox, network: self.context.account.network, stateManager: self.context.account.stateManager, accountPeerId: self.context.account.peerId, peerId: self.peer.id, photo: nil, mapResourceToAvatarSizes: { _, _ in .single([:]) }).start()
-                        self.dismiss(forceAway: true)
-                    } else {
-                        if let index = self.entries.firstIndex(of: entry) {
-                            self.entries.remove(at: index)
-                            self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
-                        }
-                    }
-                }
-            case let .image(_, reference, _, _, _, _, _, messageId, _):
-                if self.peer.id == self.context.account.peerId {
-                    if let reference = reference {
-                        let _ = removeAccountPhoto(network: self.context.account.network, reference: reference).start()
-                    }
-                    if entry == self.entries.first {
-                        self.dismiss(forceAway: true)
-                    } else {
-                        if let index = self.entries.firstIndex(of: entry) {
-                            self.entries.remove(at: index)
-                            self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
-                        }
-                    }
-                } else {
-                    if let messageId = messageId {
-                        let _ = deleteMessagesInteractively(account: self.context.account, messageIds: [messageId], type: .forEveryone).start()
-                    }
-                    
-                    if entry == self.entries.first {
-                        let _ = updatePeerPhoto(postbox: self.context.account.postbox, network: self.context.account.network, stateManager: self.context.account.stateManager, accountPeerId: self.context.account.peerId, peerId: self.peer.id, photo: nil, mapResourceToAvatarSizes: { _, _ in .single([:]) }).start()
-                        self.dismiss(forceAway: true)
-                    } else {
-                        if let index = self.entries.firstIndex(of: entry) {
-                            self.entries.remove(at: index)
-                            self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
-                        }
-                    }
-                }
+        var items: [ActionSheetItem] = []
+        items.append(ActionSheetButtonItem(title: self.presentationData.strings.Settings_SetNewProfilePhotoOrVideo, color: .accent, action: { [weak self] in
+            dismissAction()
+            self?.openAvatarSetup?({ [weak self] in
+                self?.dismissImmediately()
+            })
+        }))
+        
+        if let position = rawEntry.indexData?.position, position > 0 {
+            let title: String
+            if let _ = rawEntry.videoRepresentations.last {
+                title = self.presentationData.strings.ProfilePhoto_SetMainVideo
+            } else {
+                title = self.presentationData.strings.ProfilePhoto_SetMainPhoto
+            }
+            items.append(ActionSheetButtonItem(title: title, color: .accent, action: { [weak self] in
+                dismissAction()
+                self?.setMainEntry(rawEntry)
+            }))
         }
+        
+        items.append(ActionSheetButtonItem(title: self.presentationData.strings.ProfilePhoto_OpenInEditor, color: .accent, action: { [weak self] in
+            dismissAction()
+            self?.openEntryEdit(rawEntry)
+        }))
+        
+        items.append(ActionSheetButtonItem(title: self.presentationData.strings.GroupInfo_SetGroupPhotoDelete, color: .destructive, action: { [weak self] in
+            dismissAction()
+            self?.deleteEntry(rawEntry)
+        }))
+        actionSheet.setItemGroups([
+            ActionSheetItemGroup(items: items),
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+        ])
+        self.view.endEditing(true)
+        self.present(actionSheet, in: .window(.root))
+    }
+    
+    private func deleteEntry(_ rawEntry: AvatarGalleryEntry) {
+        let proceed = {
+            var entry = rawEntry
+            if case .topImage = entry, !self.entries.isEmpty {
+                entry = self.entries[0]
+            }
+            
+            switch entry {
+                case .topImage:
+                    if self.peer.id == self.context.account.peerId {
+                    } else {
+                        if entry == self.entries.first {
+                            let _ = updatePeerPhoto(postbox: self.context.account.postbox, network: self.context.account.network, stateManager: self.context.account.stateManager, accountPeerId: self.context.account.peerId, peerId: self.peer.id, photo: nil, mapResourceToAvatarSizes: { _, _ in .single([:]) }).start()
+                            self.dismiss(forceAway: true)
+                        } else {
+                            if let index = self.entries.firstIndex(of: entry) {
+                                self.entries.remove(at: index)
+                                self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
+                            }
+                        }
+                }
+                case let .image(_, reference, _, _, _, _, _, messageId, _):
+                    if self.peer.id == self.context.account.peerId {
+                        if let reference = reference {
+                            let _ = removeAccountPhoto(network: self.context.account.network, reference: reference).start()
+                        }
+                        if entry == self.entries.first {
+                            self.dismiss(forceAway: true)
+                        } else {
+                            if let index = self.entries.firstIndex(of: entry) {
+                                self.entries.remove(at: index)
+                                self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
+                            }
+                        }
+                    } else {
+                        if let messageId = messageId {
+                            let _ = deleteMessagesInteractively(account: self.context.account, messageIds: [messageId], type: .forEveryone).start()
+                        }
+                        
+                        if entry == self.entries.first {
+                            let _ = updatePeerPhoto(postbox: self.context.account.postbox, network: self.context.account.network, stateManager: self.context.account.stateManager, accountPeerId: self.context.account.peerId, peerId: self.peer.id, photo: nil, mapResourceToAvatarSizes: { _, _ in .single([:]) }).start()
+                            self.dismiss(forceAway: true)
+                        } else {
+                            if let index = self.entries.firstIndex(of: entry) {
+                                self.entries.remove(at: index)
+                                self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
+                            }
+                        }
+                    }
+            }
+        }
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        let actionSheet = ActionSheetController(presentationData: presentationData)
+        let items: [ActionSheetItem] = [
+            ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: { [weak actionSheet] in
+                actionSheet?.dismissAnimated()
+                proceed()
+            })
+        ]
+        
+        actionSheet.setItemGroups([
+            ActionSheetItemGroup(items: items),
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])
+        ])
+        self.present(actionSheet, in: .window(.root))
     }
 }
