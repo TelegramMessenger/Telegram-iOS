@@ -738,7 +738,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     }
             }
         }
-        self.galleryEntries = entries
+        self.galleryEntries = normalizeEntries(entries)
         self.items = items
         self.itemsUpdated?(items)
         self.currentIndex = 0
@@ -767,7 +767,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     }
             }
         }
-        self.galleryEntries = entries
+        self.galleryEntries = normalizeEntries(entries)
         self.items = items
         self.itemsUpdated?(items)
         self.currentIndex = max(0, previousIndex - 1)
@@ -2072,6 +2072,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     private let videoCallsEnabled: Bool
     
     private(set) var isAvatarExpanded: Bool
+    private(set) var twoLineInfo = false
     
     let avatarListNode: PeerInfoAvatarListNode
     
@@ -2332,7 +2333,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if self.isSettings, let user = peer as? TelegramUser {
                 let formattedPhone = formatPhoneNumber(user.phone ?? "")
                 subtitleString = NSAttributedString(string: formattedPhone, font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
-                usernameString = NSAttributedString(string: user.addressName.flatMap { "@superlongusernamehere\($0)" } ?? "", font: Font.regular(15.0), textColor: presentationData.theme.list.itemAccentColor)
+                usernameString = NSAttributedString(string: user.addressName.flatMap { "@\($0)" } ?? "", font: Font.regular(15.0), textColor: presentationData.theme.list.itemAccentColor)
             } else if let statusData = statusData {
                 let subtitleColor: UIColor
                 if statusData.isActivity {
@@ -2414,6 +2415,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 usernameFrame = CGRect(origin: CGPoint(x: subtitleFrame.maxX + usernameSpacing, y: titleFrame.maxY + 1.0), size: usernameSize)
             }
         }
+        self.twoLineInfo = twoLineInfo
         
         let singleTitleLockOffset: CGFloat = (peer?.id == self.context.account.peerId || subtitleSize.height.isZero) ? 8.0 : 0.0
         
@@ -2556,7 +2558,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         var panelWithAvatarHeight: CGFloat = (self.isSettings ? 40.0 : 112.0) + avatarSize
         if twoLineInfo {
-            panelWithAvatarHeight += 7.0
+            panelWithAvatarHeight += 17.0
         }
         let buttonsCollapseStart = titleCollapseOffset
         let buttonsCollapseEnd = panelWithAvatarHeight - (navigationHeight - statusBarHeight) + 10.0
@@ -2816,7 +2818,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if self.isAvatarExpanded {
             resolvedRegularHeight = expandedAvatarListSize.height + expandedAvatarControlsHeight
         } else {
-            resolvedRegularHeight = (self.isSettings ? 40.0 : 112.0) + avatarSize + navigationHeight
+            resolvedRegularHeight = panelWithAvatarHeight + navigationHeight
         }
         
         let backgroundFrame: CGRect
