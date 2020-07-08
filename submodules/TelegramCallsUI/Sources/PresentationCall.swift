@@ -758,12 +758,34 @@ public final class PresentationCallImpl: PresentationCall {
         return self.debugInfoValue.get()
     }
     
-    public func makeIncomingVideoView(completion: @escaping (UIView?) -> Void) {
-        self.ongoingContext?.makeIncomingVideoView(completion: completion)
+    public func makeIncomingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void) {
+        self.ongoingContext?.makeIncomingVideoView(completion: { view in
+            if let view = view {
+                completion(PresentationCallVideoView(
+                    view: view,
+                    setOnFirstFrameReceived: { [weak view] f in
+                        view?.setOnFirstFrameReceived(f)
+                    }
+                ))
+            } else {
+                completion(nil)
+            }
+        })
     }
     
-    public func makeOutgoingVideoView(completion: @escaping (UIView?) -> Void) {
-        self.videoCapturer?.makeOutgoingVideoView(completion: completion)
+    public func makeOutgoingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void) {
+        self.videoCapturer?.makeOutgoingVideoView(completion: { view in
+            if let view = view {
+                completion(PresentationCallVideoView(
+                    view: view,
+                    setOnFirstFrameReceived: { [weak view] f in
+                        view?.setOnFirstFrameReceived(f)
+                    }
+                ))
+            } else {
+                completion(nil)
+            }
+        })
     }
     
     public func switchVideoCamera() {

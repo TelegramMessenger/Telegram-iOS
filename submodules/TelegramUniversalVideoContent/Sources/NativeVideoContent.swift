@@ -104,8 +104,16 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     private var initializedStatus = false
     private let _status = Promise<MediaPlayerStatus>()
+    private let _thumbnailStatus = Promise<MediaPlayerStatus?>(nil)
     var status: Signal<MediaPlayerStatus, NoError> {
-        return self._status.get()
+        return combineLatest(self._thumbnailStatus.get(), self._status.get())
+        |> map { thumbnailStatus, status in
+            if let thumbnailStatus = thumbnailStatus {
+                return thumbnailStatus
+            } else {
+                return status
+            }
+        }
     }
     
     private let _bufferingStatus = Promise<(IndexSet, Int)?>()
@@ -183,7 +191,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         self.addSubnode(self.imageNode)
         self.addSubnode(self.playerNode)
         self._status.set(combineLatest(self.dimensionsPromise.get(), self.player.status)
-        |> map { [weak self] dimensions, status in
+        |> map { dimensions, status in
             return MediaPlayerStatus(generationTimestamp: status.generationTimestamp, duration: status.duration, dimensions: dimensions, timestamp: status.timestamp, baseRate: status.baseRate, seekId: status.seekId, status: status.status, soundEnabled: status.soundEnabled)
         })
         
@@ -248,6 +256,11 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         let thumbnailNode = MediaPlayerNode(backgroundThread: false)
         self.thumbnailNode = thumbnailNode
         thumbnailPlayer.attachPlayerNode(thumbnailNode)
+        
+        self._thumbnailStatus.set(thumbnailPlayer.status
+        |> map { status in
+            return MediaPlayerStatus(generationTimestamp: status.generationTimestamp, duration: status.duration, dimensions: CGSize(), timestamp: status.timestamp, baseRate: status.baseRate, seekId: status.seekId, status: status.status, soundEnabled: status.soundEnabled)
+        })
         
         self.addSubnode(thumbnailNode)
         

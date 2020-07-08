@@ -2426,6 +2426,8 @@ Unused sets are archived when you add more.";
 "Calls.RatingFeedback" = "Write a comment...";
 
 "Call.StatusIncoming" = "Telegram Audio...";
+"Call.IncomingVoiceCall" = "Incoming Voice Call";
+"Call.IncomingVideoCall" = "Incoming Video Call";
 "Call.StatusRequesting" = "Contacting...";
 "Call.StatusWaiting" = "Waiting...";
 "Call.StatusRinging" = "Ringing...";

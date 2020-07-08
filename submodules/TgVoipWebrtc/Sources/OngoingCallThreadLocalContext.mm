@@ -49,7 +49,7 @@ using namespace TGVOIP_NAMESPACE;
     return _interface;
 }
 
-- (void)makeOutgoingVideoView:(void (^_Nonnull)(UIView * _Nullable))completion {
+- (void)makeOutgoingVideoView:(void (^_Nonnull)(OngoingCallThreadLocalContextWebrtcVideoView * _Nullable))completion {
     std::shared_ptr<TgVoipVideoCaptureInterface> interface = _interface;
     dispatch_async(dispatch_get_main_queue(), ^{
         VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
@@ -478,7 +478,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
-- (void)makeIncomingVideoView:(void (^_Nonnull)(UIView * _Nullable))completion {
+- (void)makeIncomingVideoView:(void (^_Nonnull)(OngoingCallThreadLocalContextWebrtcVideoView * _Nullable))completion {
     if (_tgVoip) {
         __weak OngoingCallThreadLocalContextWebrtc *weakSelf = self;
         dispatch_async(dispatch_get_main_queue(), ^{
@@ -498,3 +498,9 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 
 @end
 
+@implementation OngoingCallThreadLocalContextWebrtcVideoView : UIView
+
+- (void)setOnFirstFrameReceived:(void (^ _Nullable)())onFirstFrameReceived {
+}
+
+@end

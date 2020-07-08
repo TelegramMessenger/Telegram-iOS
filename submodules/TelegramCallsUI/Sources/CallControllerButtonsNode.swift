@@ -78,7 +78,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
     
     private var mode: CallControllerButtonsMode?
     
-    private var validLayout: CGFloat?
+    private var validLayout: (CGFloat, CGFloat)?
     
     var isMuted = false
     var isCameraPaused = false
@@ -94,27 +94,21 @@ final class CallControllerButtonsNode: ASDisplayNode {
         super.init()
     }
     
-    func updateLayout(strings: PresentationStrings, constrainedWidth: CGFloat, transition: ContainedViewLayoutTransition) {
-        self.validLayout = constrainedWidth
+    func updateLayout(strings: PresentationStrings, mode: CallControllerButtonsMode, constrainedWidth: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+        self.validLayout = (constrainedWidth, bottomInset)
+        
+        self.mode = mode
         
         if let mode = self.mode {
-            self.updateButtonsLayout(strings: strings, mode: mode, width: constrainedWidth, animated: transition.isAnimated)
-        }
-    }
-    
-    func updateMode(strings: PresentationStrings, mode: CallControllerButtonsMode) {
-        if self.mode != mode {
-            let previousMode = self.mode
-            self.mode = mode
-            if let validLayout = self.validLayout {
-                self.updateButtonsLayout(strings: strings, mode: mode, width: validLayout, animated: previousMode != nil)
-            }
+            return self.updateButtonsLayout(strings: strings, mode: mode, width: constrainedWidth, bottomInset: bottomInset, animated: transition.isAnimated)
+        } else {
+            return 0.0
         }
     }
     
     private var appliedMode: CallControllerButtonsMode?
     
-    private func updateButtonsLayout(strings: PresentationStrings, mode: CallControllerButtonsMode, width: CGFloat, animated: Bool) {
+    private func updateButtonsLayout(strings: PresentationStrings, mode: CallControllerButtonsMode, width: CGFloat, bottomInset: CGFloat, animated: Bool) -> CGFloat {
         let transition: ContainedViewLayoutTransition
         if animated {
             transition = .animated(duration: 0.3, curve: .spring)
@@ -150,6 +144,8 @@ final class CallControllerButtonsNode: ASDisplayNode {
             let button: ButtonDescription
             let frame: CGRect
         }
+        
+        let height: CGFloat
         
         var buttons: [PlacedButton] = []
         switch mode {
@@ -205,6 +201,8 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: bottomButtonsLeftOffset, y: smallButtonSize + topBottomSpacing), size: CGSize(width: largeButtonSize, height: largeButtonSize))))
                 bottomButtonsLeftOffset += largeButtonSize + bottomButtonsSpacing
             }
+            
+            height = smallButtonSize + topBottomSpacing + largeButtonSize + max(bottomInset + 32.0, 46.0)
         case let .active(speakerMode, videoState):
             var topButtons: [ButtonDescription] = []
             
@@ -238,9 +236,11 @@ final class CallControllerButtonsNode: ASDisplayNode {
             let topButtonsWidth = CGFloat(topButtons.count) * smallButtonSize + CGFloat(topButtons.count - 1) * topButtonsSpacing
             var topButtonsLeftOffset = floor((width - topButtonsWidth) / 2.0)
             for button in topButtons {
-                buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: topButtonsLeftOffset, y: smallButtonSize + topBottomSpacing), size: CGSize(width: smallButtonSize, height: smallButtonSize))))
+                buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: topButtonsLeftOffset, y: 0.0), size: CGSize(width: smallButtonSize, height: smallButtonSize))))
                 topButtonsLeftOffset += smallButtonSize + topButtonsSpacing
             }
+            
+            height = smallButtonSize + max(bottomInset + 19.0, 46.0)
         }
         
         let delayIncrement = 0.015
@@ -369,6 +369,8 @@ final class CallControllerButtonsNode: ASDisplayNode {
         for key in removedKeys {
             self.buttonNodes.removeValue(forKey: key)
         }
+        
+        return height
     }
     
     @objc func buttonPressed(_ button: CallControllerButtonItemNode) {
