@@ -108,9 +108,14 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     var status: Signal<MediaPlayerStatus, NoError> {
         return combineLatest(self._thumbnailStatus.get(), self._status.get())
         |> map { thumbnailStatus, status in
-            if let thumbnailStatus = thumbnailStatus {
-                return thumbnailStatus
-            } else {
+            switch status.status {
+            case .buffering:
+                if let thumbnailStatus = thumbnailStatus {
+                    return thumbnailStatus
+                } else {
+                    return status
+                }
+            default:
                 return status
             }
         }
