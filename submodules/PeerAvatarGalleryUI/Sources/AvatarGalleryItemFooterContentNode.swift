@@ -107,7 +107,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         var typeText: String?
         var buttonText: String?
         switch entry {
-            case let .image(_, _, _, videoRepresentations, peer, date, _, _, _):
+            case let .image(_, _, _, videoRepresentations, peer, date, _, _, _, _):
                 nameText = peer?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""
                 dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: date)
             
