@@ -638,8 +638,11 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     }
     
     func selectFirstItem() {
+        var previousIndex = self.currentIndex
         self.currentIndex = 0
-        self.currentIndexUpdated?()
+        if self.currentIndex != previousIndex {
+            self.currentIndexUpdated?()
+        }
         if let size = self.validLayout {
             self.updateItems(size: size, transition: .immediate, stripTransition: .immediate)
         }
@@ -660,22 +663,34 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 if let size = self.validLayout, case .tap = gesture {
                     if location.x < size.width * 1.0 / 5.0 {
                         if self.currentIndex != 0 {
+                            let previousIndex = self.currentIndex
                             self.currentIndex -= 1
-                            self.currentIndexUpdated?()
+                            if self.currentIndex != previousIndex {
+                                self.currentIndexUpdated?()
+                            }
                             self.updateItems(size: size, transition: .immediate, stripTransition: .animated(duration: 0.3, curve: .spring))
                         } else if self.items.count > 1 {
+                            let previousIndex = self.currentIndex
                             self.currentIndex = self.items.count - 1
-                            self.currentIndexUpdated?()
+                            if self.currentIndex != previousIndex {
+                                self.currentIndexUpdated?()
+                            }
                             self.updateItems(size: size, transition: .immediate, stripTransition: .animated(duration: 0.3, curve: .spring), synchronous: true)
                         }
                     } else {
                         if self.currentIndex < self.items.count - 1 {
+                            let previousIndex = self.currentIndex
                             self.currentIndex += 1
-                            self.currentIndexUpdated?()
+                            if self.currentIndex != previousIndex {
+                                self.currentIndexUpdated?()
+                            }
                             self.updateItems(size: size, transition: .immediate, stripTransition: .animated(duration: 0.3, curve: .spring))
                         } else if self.items.count > 1 {
+                            let previousIndex = self.currentIndex
                             self.currentIndex = 0
-                            self.currentIndexUpdated?()
+                            if self.currentIndex != previousIndex {
+                                self.currentIndexUpdated?()
+                            }
                             self.updateItems(size: size, transition: .immediate, stripTransition: .animated(duration: 0.3, curve: .spring), synchronous: true)
                         }
                     }
@@ -716,8 +731,11 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             } else {
                 updatedIndex = max(updatedIndex - 1, 0)
             }
+            let previousIndex = self.currentIndex
             self.currentIndex = updatedIndex
-            self.currentIndexUpdated?()
+            if self.currentIndex != previousIndex {
+                self.currentIndexUpdated?()
+            }
             self.transitionFraction = 0.0
             if let size = self.validLayout {
                 self.updateItems(size: size, transition: .animated(duration: 0.3, curve: .spring), stripTransition: .animated(duration: 0.3, curve: .spring))
@@ -751,8 +769,11 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.galleryEntries = normalizeEntries(entries)
         self.items = items
         self.itemsUpdated?(items)
+        let previousIndex = self.currentIndex
         self.currentIndex = 0
-        self.currentIndexUpdated?()
+        if self.currentIndex != previousIndex {
+            self.currentIndexUpdated?()
+        }
         self.ignoreNextProfilePhotoUpdate = true
         if let size = self.validLayout {
             self.updateItems(size: size, update: true, transition: .immediate, stripTransition: .immediate, synchronous: true)
@@ -782,7 +803,9 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.items = items
         self.itemsUpdated?(items)
         self.currentIndex = max(0, previousIndex - 1)
-        self.currentIndexUpdated?()
+        if self.currentIndex != previousIndex {
+            self.currentIndexUpdated?()
+        }
         self.ignoreNextProfilePhotoUpdate = true
         if let size = self.validLayout {
             self.updateItems(size: size, update: true, transition: .immediate, stripTransition: .immediate, synchronous: true)
