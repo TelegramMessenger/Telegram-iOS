@@ -837,10 +837,12 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
           interaction.openSettings(.username)
     }))
     
-    items[.account]!.append(PeerInfoScreenActionItem(id: ItemAddAccount, text: presentationData.strings.Settings_AddAnotherAccount, alignment: .center, action: {
-        interaction.openSettings(.addAccount)
-    }))
-    items[.account]!.append(PeerInfoScreenCommentItem(id: ItemAddAccountHelp, text: presentationData.strings.Settings_AddAnotherAccount_Help))
+    if let settings = data.globalSettings, settings.accountsAndPeers.count + 1 < maximumNumberOfAccounts {
+        items[.account]!.append(PeerInfoScreenActionItem(id: ItemAddAccount, text: presentationData.strings.Settings_AddAnotherAccount, alignment: .center, action: {
+            interaction.openSettings(.addAccount)
+        }))
+        items[.account]!.append(PeerInfoScreenCommentItem(id: ItemAddAccountHelp, text: presentationData.strings.Settings_AddAnotherAccount_Help))
+    }
     
     items[.logout]!.append(PeerInfoScreenActionItem(id: ItemLogout, text: presentationData.strings.Settings_Logout, color: .destructive, alignment: .center, action: {
         interaction.openSettings(.logout)

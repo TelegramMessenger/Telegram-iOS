@@ -403,13 +403,15 @@ private enum StatsEntry: ItemListNodeEntry {
                     }
                 }
                 var options: [ItemListPeerItemRevealOption] = []
-                options.append(ItemListPeerItemRevealOption(type: .accent, title: strings.Stats_GroupTopPoster_History, action: {
-                    arguments.openPeerHistory(peer.id)
-                }))
-                if canPromote {
-                    options.append(ItemListPeerItemRevealOption(type: .neutral, title: strings.Stats_GroupTopPoster_Promote, action: {
-                        arguments.promotePeer(peer.id)
+                if !peer.isDeleted {
+                    options.append(ItemListPeerItemRevealOption(type: .accent, title: strings.Stats_GroupTopPoster_History, action: {
+                        arguments.openPeerHistory(peer.id)
                     }))
+                    if canPromote && arguments.context.account.peerId != peer.id {
+                        options.append(ItemListPeerItemRevealOption(type: .neutral, title: strings.Stats_GroupTopPoster_Promote, action: {
+                            arguments.promotePeer(peer.id)
+                        }))
+                    }
                 }
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, context: arguments.context, peer: peer, height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(textComponents.joined(separator: ", ")), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, highlighted: false, selectable: arguments.context.account.peerId != peer.id, sectionId: self.section, action: {
                     arguments.openPeer(peer.id)
@@ -432,13 +434,15 @@ private enum StatsEntry: ItemListNodeEntry {
                     textComponents.append(strings.Stats_GroupTopAdminBans(topAdmin.bannedCount))
                 }
                 var options: [ItemListPeerItemRevealOption] = []
-                options.append(ItemListPeerItemRevealOption(type: .accent, title: strings.Stats_GroupTopAdmin_Actions, action: {
-                    arguments.openPeerAdminActions(peer.id)
-                }))
-                if canPromote {
-                    options.append(ItemListPeerItemRevealOption(type: .neutral, title: strings.Stats_GroupTopAdmin_Promote, action: {
-                        arguments.promotePeer(peer.id)
+                if !peer.isDeleted {
+                    options.append(ItemListPeerItemRevealOption(type: .accent, title: strings.Stats_GroupTopAdmin_Actions, action: {
+                        arguments.openPeerAdminActions(peer.id)
                     }))
+                    if canPromote && arguments.context.account.peerId != peer.id {
+                        options.append(ItemListPeerItemRevealOption(type: .neutral, title: strings.Stats_GroupTopAdmin_Promote, action: {
+                            arguments.promotePeer(peer.id)
+                        }))
+                    }
                 }
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, context: arguments.context, peer: peer, height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(textComponents.joined(separator: ", ")), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, highlighted: false, selectable: arguments.context.account.peerId != peer.id, sectionId: self.section, action: {
                     arguments.openPeer(peer.id)
@@ -453,13 +457,15 @@ private enum StatsEntry: ItemListNodeEntry {
                 var textComponents: [String] = []
                 textComponents.append(strings.Stats_GroupTopInviterInvites(topInviter.inviteCount))
                 var options: [ItemListPeerItemRevealOption] = []
-                options.append(ItemListPeerItemRevealOption(type: .accent, title: strings.Stats_GroupTopPoster_History, action: {
-                    arguments.openPeerHistory(peer.id)
-                }))
-                if canPromote {
-                    options.append(ItemListPeerItemRevealOption(type: .neutral, title: strings.Stats_GroupTopPoster_Promote, action: {
-                        arguments.promotePeer(peer.id)
+                if !peer.isDeleted {
+                    options.append(ItemListPeerItemRevealOption(type: .accent, title: strings.Stats_GroupTopPoster_History, action: {
+                        arguments.openPeerHistory(peer.id)
                     }))
+                    if canPromote && arguments.context.account.peerId != peer.id {
+                        options.append(ItemListPeerItemRevealOption(type: .neutral, title: strings.Stats_GroupTopPoster_Promote, action: {
+                            arguments.promotePeer(peer.id)
+                        }))
+                    }
                 }
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, context: arguments.context, peer: peer, height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(textComponents.joined(separator: ", ")), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, highlighted: false, selectable: arguments.context.account.peerId != peer.id, sectionId: self.section, action: {
                     arguments.openPeer(peer.id)
