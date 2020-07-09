@@ -2535,7 +2535,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         
         self.headerNode.avatarListNode.listContainerNode.currentIndexUpdated = { [weak self] in
-            self?.updateNavigation(transition: .immediate, additive: false)
+            self?.updateNavigation(transition: .immediate, additive: true)
         }
         
         self.dataDisposable = (screenData
