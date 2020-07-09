@@ -500,7 +500,7 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     }
 }
 
-- (void)animateOut {
+- (void)animateOut:(BOOL)toSmallSize {
     _locked = false;
     _animatedIn = false;
     _displayLink.paused = true;
@@ -511,15 +511,20 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     _cancelTargetTranslation = 0;
     _currentScale = 1.0f;
     [UIView animateWithDuration:0.18 animations:^{
-        _innerIconWrapperView.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
         _innerCircleView.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
         _outerCircleView.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
-        _decoration.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
+        if (toSmallSize) {
+            _decoration.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
+            _decoration.alpha = 0.0;
+            _innerIconWrapperView.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
+            _innerIconWrapperView.alpha = 0.0f;
+        } else {
+            _decoration.transform = CGAffineTransformMakeScale(0.33f, 0.33f);
+            _innerIconWrapperView.transform = CGAffineTransformMakeScale(0.4f, 0.4f);
+        }
         _innerCircleView.alpha = 0.0f;
         _outerCircleView.alpha = 0.0f;
-        _decoration.alpha = 0.0f;
         self.iconView.alpha = 1.0f;
-        _innerIconWrapperView.alpha = 0.0f;
         
         CGAffineTransform transform = CGAffineTransformMakeTranslation(0.0f, 100.0f);
         transform = CGAffineTransformScale(transform, 0.2f, 0.2f);

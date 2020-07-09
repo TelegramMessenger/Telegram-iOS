@@ -231,7 +231,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
                 if self.hasRecorder {
                     self.animateIn()
                 } else {
-                    self.animateOut()
+                    self.animateOut(false)
                 }
             }
         }
@@ -429,11 +429,14 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         innerIconView.layer.animateScale(from: 1.0, to: 0.3, duration: 0.15, removeOnCompletion: false)
     }
 
-    override func animateOut() {
-        super.animateOut()
-
-        innerIconView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, removeOnCompletion: false)
-        innerIconView.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, removeOnCompletion: false)
+    override func animateOut(_ toSmallSize: Bool) {
+        super.animateOut(toSmallSize)
+        
+        if !toSmallSize {
+            micDecoration.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false)
+            innerIconView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, removeOnCompletion: false)
+            innerIconView.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, removeOnCompletion: false)
+        }
     }
     
     private var previousSize = CGSize()

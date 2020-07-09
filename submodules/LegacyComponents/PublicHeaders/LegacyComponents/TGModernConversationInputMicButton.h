@@ -77,7 +77,7 @@
 @property (nonatomic) bool fadeDisabled;
 
 - (void)animateIn;
-- (void)animateOut;
+- (void)animateOut:(BOOL)toSmallSize;
 - (void)addMicLevel:(CGFloat)level;
 - (void)dismiss;
 
