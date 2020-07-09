@@ -889,6 +889,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         var validIds: [WrappedMediaResourceId] = []
         var addedItemNodesForAdditiveTransition: [PeerInfoAvatarListItemNode] = []
         var additiveTransitionOffset: CGFloat = 0.0
+        var itemsAdded = false
         if self.currentIndex >= 0 && self.currentIndex < self.items.count {
             for i in max(0, self.currentIndex - 1) ... min(self.currentIndex + 1, self.items.count - 1) {
                 validIds.append(self.items[i].id)
@@ -913,6 +914,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 
                 
                 if wasAdded {
+                    itemsAdded = true
                     addedItemNodesForAdditiveTransition.append(itemNode)
                     itemNode.frame = itemFrame
                     itemNode.update(size: size, transition: .immediate)
@@ -958,7 +960,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             }
             self.stripContainerNode.addSubnode(self.activeStripNode)
         }
-        if self.appliedStripNodeCurrentIndex != self.currentIndex {
+        if self.appliedStripNodeCurrentIndex != self.currentIndex || itemsAdded {
             if !self.itemNodes.isEmpty {
                 self.appliedStripNodeCurrentIndex = self.currentIndex
             }
