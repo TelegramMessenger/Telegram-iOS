@@ -305,7 +305,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
                         strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
                     }
                     
-                    let hasCorners = itemListHasRoundedBlockLayout(params)
+                    let hasCorners = itemListHasRoundedBlockLayout(params) && !item.noInsets
                     var hasTopCorners = false
                     var hasBottomCorners = false
                     switch neighbors.top {

@@ -81,6 +81,7 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
         let leftInset = (item.icon == nil ? sideInset : sideInset + 29.0 + 16.0)
         let rightInset = sideInset
         let separatorInset = item.icon == nil ? sideInset : leftInset - 1.0
+        let titleFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
@@ -93,7 +94,7 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
         }
         
         self.textNode.maximumNumberOfLines = 1
-        self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: textColorValue)
+        self.textNode.attributedText = NSAttributedString(string: item.text, font: titleFont, textColor: textColorValue)
         
         let textSize = self.textNode.updateLayout(CGSize(width: width - (leftInset + rightInset), height: .greatestFiniteMagnitude))
         

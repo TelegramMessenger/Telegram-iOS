@@ -114,9 +114,10 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         let leftInset = (item.icon == nil ? sideInset : sideInset + 29.0 + 16.0)
         let rightInset = sideInset + 18.0
         let separatorInset = item.icon == nil ? sideInset : leftInset - 1.0
+        let titleFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
-        
+                
         let textColorValue: UIColor = presentationData.theme.list.itemPrimaryTextColor
         let labelColorValue: UIColor
         let labelFont: UIFont
@@ -125,12 +126,12 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
             labelFont = Font.regular(15.0)
         } else {
             labelColorValue = presentationData.theme.list.itemSecondaryTextColor
-            labelFont = Font.regular(17.0)
+            labelFont = titleFont
         }
         self.labelNode.attributedText = NSAttributedString(string: item.label.text, font: labelFont, textColor: labelColorValue)
         
         self.textNode.maximumNumberOfLines = 1
-        self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: textColorValue)
+        self.textNode.attributedText = NSAttributedString(string: item.text, font: titleFont, textColor: textColorValue)
         
         let textSize = self.textNode.updateLayout(CGSize(width: width - (leftInset + rightInset), height: .greatestFiniteMagnitude))
         let labelSize = self.labelNode.updateLayout(CGSize(width: width - textSize.width - (leftInset + rightInset), height: .greatestFiniteMagnitude))
