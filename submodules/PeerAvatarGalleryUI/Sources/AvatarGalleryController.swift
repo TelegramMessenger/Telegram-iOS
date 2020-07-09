@@ -96,6 +96,22 @@ public final class AvatarGalleryControllerPresentationArguments {
     }
 }
 
+public func normalizeEntries(_ entries: [AvatarGalleryEntry]) -> [AvatarGalleryEntry] {
+       var updatedEntries: [AvatarGalleryEntry] = []
+       let count: Int32 = Int32(entries.count)
+       var index: Int32 = 0
+       for entry in entries {
+           let indexData = GalleryItemIndexData(position: index, totalCount: count)
+           if case let .topImage(representations, _, immediateThumbnailData) = entry {
+               updatedEntries.append(.topImage(representations, indexData, immediateThumbnailData))
+           } else if case let .image(id, reference, representations, videoRepresentations, peer, date, _, messageId, immediateThumbnailData) = entry {
+               updatedEntries.append(.image(id, reference, representations, videoRepresentations, peer, date, indexData, messageId, immediateThumbnailData))
+           }
+           index += 1
+       }
+       return updatedEntries
+   }
+
 public func initialAvatarGalleryEntries(peer: Peer) -> [AvatarGalleryEntry] {
     var initialEntries: [AvatarGalleryEntry] = []
     if !peer.profileImageRepresentations.isEmpty, let peerReference = PeerReference(peer) {
@@ -540,22 +556,6 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         }
     }
     
-    private func normalizeEntries(_ entries: [AvatarGalleryEntry]) -> [AvatarGalleryEntry] {
-        var updatedEntries: [AvatarGalleryEntry] = []
-        let count: Int32 = Int32(entries.count)
-        var index: Int32 = 0
-        for entry in entries {
-            let indexData = GalleryItemIndexData(position: index, totalCount: count)
-            if case let .topImage(representations, _, immediateThumbnailData) = entry {
-                updatedEntries.append(.topImage(representations, indexData, immediateThumbnailData))
-            } else if case let .image(id, reference, representations, videoRepresentations, peer, date, _, messageId, immediateThumbnailData) = entry {
-                updatedEntries.append(.image(id, reference, representations, videoRepresentations, peer, date, indexData, messageId, immediateThumbnailData))
-            }
-            index += 1
-        }
-        return updatedEntries
-    }
-    
     private func setMainEntry(_ rawEntry: AvatarGalleryEntry) {
         var entry = rawEntry
         if case .topImage = entry, !self.entries.isEmpty {
@@ -600,7 +600,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                             canDelete = false
                         }
                         
-                        entries = self.normalizeEntries(entries)
+                        entries = normalizeEntries(entries)
                         
                         self.galleryNode.pager.replaceItems(entries.map({ entry in PeerAvatarImageGalleryItem(context: self.context, peer: peer, presentationData: presentationData, entry: entry, sourceHasRoundCorners: self.sourceHasRoundCorners, delete: canDelete ? { [weak self] in
                             self?.deleteEntry(entry)
@@ -707,7 +707,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             })
         }))
         
-        if let position = rawEntry.indexData?.position, position > 0 {
+        if self.peer.id == self.context.account.peerId, let position = rawEntry.indexData?.position, position > 0 {
             let title: String
             if let _ = rawEntry.videoRepresentations.last {
                 title = self.presentationData.strings.ProfilePhoto_SetMainVideo

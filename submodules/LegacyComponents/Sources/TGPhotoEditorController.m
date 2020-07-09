@@ -2743,9 +2743,9 @@
     [self setPlayButtonHidden:true animated:false];
 }
 
-- (void)videoScrubber:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber editingStartValueDidChange:(NSTimeInterval)startValue
+- (void)videoScrubber:(TGMediaPickerGalleryVideoScrubber *)videoScrubber editingStartValueDidChange:(NSTimeInterval)startValue
 {
-    if (startValue > _dotPosition) {
+    if (startValue > _dotPosition || videoScrubber.trimEndValue < _dotPosition) {
         _resetDotPosition = true;
         [self resetDotImage];
     }
@@ -2754,7 +2754,7 @@
 
 - (void)videoScrubber:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber editingEndValueDidChange:(NSTimeInterval)endValue
 {
-    if (endValue < _dotPosition) {
+    if (endValue < _dotPosition || videoScrubber.trimStartValue > _dotPosition) {
         _resetDotPosition = true;
         [self resetDotImage];
     }

@@ -1096,8 +1096,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return peerSharedMediaControllerImpl(context: context, peerId: peerId)
     }
     
-    public func makeChatRecentActionsController(context: AccountContext, peer: Peer) -> ViewController {
-        return ChatRecentActionsController(context: context, peer: peer)
+    public func makeChatRecentActionsController(context: AccountContext, peer: Peer, adminPeerId: PeerId?) -> ViewController {
+        return ChatRecentActionsController(context: context, peer: peer, adminPeerId: adminPeerId)
     }
     
     public func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void) {

@@ -819,7 +819,7 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
     let ItemAddAccountHelp = 6
     let ItemLogout = 7
     
-    items[.help]!.append(PeerInfoScreenCommentItem(id: ItemNameHelp, text: presentationData.strings.EditProfile_NameAndPhotoHelp))
+    items[.help]!.append(PeerInfoScreenCommentItem(id: ItemNameHelp, text: presentationData.strings.EditProfile_NameAndPhotoOrVideoHelp))
     
     if let cachedData = data.cachedData as? CachedUserData {
         items[.bio]!.append(PeerInfoScreenMultilineInputItem(id: ItemBio, text: state.updatingBio ?? (cachedData.about ?? ""), placeholder: presentationData.strings.UserInfo_About_Placeholder, textUpdated: { updatedText in
@@ -837,10 +837,12 @@ private func settingsEditingItems(data: PeerInfoScreenData?, state: PeerInfoStat
           interaction.openSettings(.username)
     }))
     
-    items[.account]!.append(PeerInfoScreenActionItem(id: ItemAddAccount, text: presentationData.strings.Settings_AddAnotherAccount, alignment: .center, action: {
-        interaction.openSettings(.addAccount)
-    }))
-    items[.account]!.append(PeerInfoScreenCommentItem(id: ItemAddAccountHelp, text: presentationData.strings.Settings_AddAnotherAccount_Help))
+    if let settings = data.globalSettings, settings.accountsAndPeers.count + 1 < maximumNumberOfAccounts {
+        items[.account]!.append(PeerInfoScreenActionItem(id: ItemAddAccount, text: presentationData.strings.Settings_AddAnotherAccount, alignment: .center, action: {
+            interaction.openSettings(.addAccount)
+        }))
+        items[.account]!.append(PeerInfoScreenCommentItem(id: ItemAddAccountHelp, text: presentationData.strings.Settings_AddAnotherAccount_Help))
+    }
     
     items[.logout]!.append(PeerInfoScreenActionItem(id: ItemLogout, text: presentationData.strings.Settings_Logout, color: .destructive, alignment: .center, action: {
         interaction.openSettings(.logout)
@@ -2110,15 +2112,36 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }))
         }
         
-        self.headerNode.requestOpenAvatarForEditing = { [weak self] in
+        self.headerNode.requestOpenAvatarForEditing = { [weak self] confirm in
             guard let strongSelf = self else {
                 return
             }
             if strongSelf.state.updatingAvatar != nil {
-                strongSelf.updateAvatarDisposable.set(nil)
-                strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
-                if let (layout, navigationHeight) = strongSelf.validLayout {
-                    strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                let proceed = {
+                    strongSelf.updateAvatarDisposable.set(nil)
+                    strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
+                    if let (layout, navigationHeight) = strongSelf.validLayout {
+                        strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                    }
+                }
+                if confirm {
+                    let controller = ActionSheetController(presentationData: strongSelf.presentationData)
+                    let dismissAction: () -> Void = { [weak controller] in
+                        controller?.dismissAnimated()
+                    }
+                    
+                    var items: [ActionSheetItem] = []
+                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Settings_CancelUpload, color: .destructive, action: { [weak self] in
+                        dismissAction()
+                        proceed()
+                    }))
+                    controller.setItemGroups([
+                        ActionSheetItemGroup(items: items),
+                        ActionSheetItemGroup(items: [ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                    ])
+                    strongSelf.controller?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                } else {
+                    proceed()
                 }
             } else {
                 strongSelf.openAvatarForEditing()
@@ -2140,7 +2163,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             switch key {
             case .edit:
-                (strongSelf.controller?.parent as? TabBarController)?.updateIsTabBarHidden(true, transition: .animated(duration: 0.2, curve: .easeInOut))
+                (strongSelf.controller?.parent as? TabBarController)?.updateIsTabBarHidden(true, transition: .animated(duration: 0.3, curve: .linear))
                 strongSelf.state = strongSelf.state.withIsEditing(true)
                 var updateOnCompletion = false
                 if strongSelf.headerNode.isAvatarExpanded {
@@ -2166,7 +2189,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 })
                 strongSelf.controller?.navigationItem.setLeftBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, style: .plain, target: strongSelf, action: #selector(strongSelf.editingCancelPressed)), animated: true)
             case .done, .cancel:
-                (strongSelf.controller?.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.2, curve: .easeInOut))
+                (strongSelf.controller?.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.3, curve: .linear))
                 strongSelf.view.endEditing(true)
                 if case .done = key {
                     guard let data = strongSelf.data else {
@@ -3880,13 +3903,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         if let item = item, case let .image(image) = item {
             if index > 0 {
-                let title: String
+                let setMainTitle: String
                 if image.2.isEmpty {
-                    title = self.presentationData.strings.ProfilePhoto_SetMainPhoto
+                    setMainTitle = self.presentationData.strings.ProfilePhoto_SetMainPhoto
                 } else {
-                    title = self.presentationData.strings.ProfilePhoto_SetMainVideo
+                    setMainTitle = self.presentationData.strings.ProfilePhoto_SetMainVideo
                 }
-                items.append(ActionSheetButtonItem(title: title, color: .accent, action: { [weak self] in
+                items.append(ActionSheetButtonItem(title: setMainTitle, color: .accent, action: { [weak self] in
                     dismissAction()
                     self?.setMainAvatar(item)
                 }))
@@ -3897,7 +3920,14 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 self?.editAvatarItem(item)
             }))
         
-            items.append(ActionSheetButtonItem(title: self.presentationData.strings.GroupInfo_SetGroupPhotoDelete, color: .destructive, action: { [weak self] in
+            
+            let deleteTitle: String
+            if image.2.isEmpty {
+                deleteTitle = self.presentationData.strings.GroupInfo_SetGroupPhotoDelete
+            } else {
+                deleteTitle = self.presentationData.strings.Settings_RemoveVideo
+            }
+            items.append(ActionSheetButtonItem(title: deleteTitle, color: .destructive, action: { [weak self] in
                 dismissAction()
                 self?.deleteAvatar(item)
             }))
@@ -4116,7 +4146,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     assetsController?.dismiss()
                     self?.updateProfilePhoto(result)
                 }))
-                strongSelf.controller?.present(controller, in: .window(.root))
+                controller.navigationPresentation = .modal
+                strongSelf.controller?.push(controller)
             }
             mixin.didFinishWithImage = { [weak self] image in
                 if let image = image {
@@ -5344,7 +5375,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         guard let (_, navigationHeight) = self.validLayout else {
             return
         }
-        let height: CGFloat = self.isSettings ? 140.0 : 212.0
+        var height: CGFloat = self.isSettings ? 140.0 : 212.0
+        if self.headerNode.twoLineInfo {
+            height += 17.0
+        }
         if !self.state.isEditing {
             if targetContentOffset.pointee.y < height {
                 if targetContentOffset.pointee.y < height / 2.0 {
