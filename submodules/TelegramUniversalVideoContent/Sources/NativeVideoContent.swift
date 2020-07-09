@@ -15,7 +15,7 @@ public enum NativeVideoContentId: Hashable {
     case message(UInt32, MediaId)
     case instantPage(MediaId, MediaId)
     case contextResult(Int64, String)
-    case profileVideo(Int64)
+    case profileVideo(Int64, String?)
 }
 
 public final class NativeVideoContent: UniversalVideoContent {
