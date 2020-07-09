@@ -911,7 +911,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var chatListText: (String, String)?
             var chatListSearchResult: CachedChatListSearchResult?
             
-            let contentImageSize = CGSize(width: 18.0, height: 18.0)
+            let contentImageSide: CGFloat = max(10.0, min(20.0, floor(item.presentationData.fontSize.baseDisplaySize * 18.0 / 17.0)))
+            let contentImageSize = CGSize(width: contentImageSide, height: contentImageSide)
             let contentImageSpacing: CGFloat = 2.0
             let contentImageTrailingSpace: CGFloat = 5.0
             var contentImageSpecs: [(message: Message, media: Media, size: CGSize)] = []
@@ -1338,7 +1339,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 animateContent = true
             }
             
-            let measureString = NSAttributedString(string: "A", font: titleFont, textColor: .black)
             let (measureLayout, measureApply) = makeMeasureLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: titleRectWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let titleSpacing: CGFloat = -1.0
@@ -1633,7 +1633,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     inputActivitiesApply?()
                     
-                    var mediaPreviewOffset = textNodeFrame.origin.offsetBy(dx: 1.0, dy: 2.0)
+                    var mediaPreviewOffset = textNodeFrame.origin.offsetBy(dx: 1.0, dy: floor((measureLayout.size.height - contentImageSize.height) / 2.0))
                     var validMediaIds: [MediaId] = []
                     for (message, media, mediaSize) in contentImageSpecs {
                         guard let mediaId = media.id else {
@@ -1824,16 +1824,16 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             textFrame.origin.x = contentRect.origin.x
             transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
             
-            var mediaPreviewOffset = textFrame.origin.offsetBy(dx: 1.0, dy: 2.0)
+            var mediaPreviewOffsetX = textFrame.origin.x + 1.0
             let contentImageSpacing: CGFloat = 2.0
             for (_, media, mediaSize) in self.currentMediaPreviewSpecs {
                 guard let mediaId = media.id else {
                     continue
                 }
                 if let previewNode = self.mediaPreviewNodes[mediaId] {
-                    transition.updateFrame(node: previewNode, frame: CGRect(origin: mediaPreviewOffset, size: mediaSize))
+                    transition.updateFrame(node: previewNode, frame: CGRect(origin: CGPoint(x: mediaPreviewOffsetX, y: previewNode.frame.minY), size: mediaSize))
                 }
-                mediaPreviewOffset.x += mediaSize.width + contentImageSpacing
+                mediaPreviewOffsetX += mediaSize.width + contentImageSpacing
             }
             
             let dateFrame = self.dateNode.frame
