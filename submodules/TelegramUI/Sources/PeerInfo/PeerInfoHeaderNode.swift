@@ -1915,7 +1915,8 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
     private let requestUpdateLayout: () -> Void
     
     let avatarNode: PeerInfoEditingAvatarNode
-    let avatarTextNode: HighlightableButtonNode
+    let avatarTextNode: ImmediateTextNode
+    let avatarButtonNode: HighlightableButtonNode
     
     var itemNodes: [PeerInfoHeaderTextFieldNodeKey: PeerInfoHeaderTextFieldNode] = [:]
     
@@ -1925,13 +1926,15 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
         
         self.avatarNode = PeerInfoEditingAvatarNode(context: context)
         
-        self.avatarTextNode = HighlightableButtonNode()
+        self.avatarTextNode = ImmediateTextNode()
+        self.avatarButtonNode = HighlightableButtonNode()
         
         super.init()
         
         self.addSubnode(self.avatarNode)
+        self.avatarButtonNode.addSubnode(self.avatarTextNode)
         
-        self.avatarTextNode.addTarget(self, action: #selector(textPressed), forControlEvents: .touchUpInside)
+        self.avatarButtonNode.addTarget(self, action: #selector(textPressed), forControlEvents: .touchUpInside)
     }
     
     @objc private func textPressed() {
@@ -1954,14 +1957,14 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
         var contentHeight: CGFloat = statusBarHeight + 10.0 + avatarSize + 20.0
         
         if canEditPeerInfo(context: self.context, peer: peer)  {
-            if self.avatarTextNode.supernode == nil {
-                self.addSubnode(self.avatarTextNode)
+            if self.avatarButtonNode.supernode == nil {
+                self.addSubnode(self.avatarButtonNode)
             }
+            self.avatarTextNode.attributedText = NSAttributedString(string: presentationData.strings.Settings_SetNewProfilePhotoOrVideo, font: Font.regular(17.0), textColor: presentationData.theme.list.itemAccentColor)
             
-            self.avatarTextNode.setAttributedTitle(NSAttributedString(string: presentationData.strings.Settings_SetNewProfilePhotoOrVideo, font: Font.regular(17.0), textColor: presentationData.theme.list.itemAccentColor), for: [])
-            
-            let avatarTextSize = self.avatarTextNode.measure(CGSize(width: width, height: 32.0))
-            transition.updateFrame(node: self.avatarTextNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((width - avatarTextSize.width) / 2.0), y: contentHeight - 1.0), size: avatarTextSize))
+            let avatarTextSize = self.avatarTextNode.updateLayout(CGSize(width: width, height: 32.0))
+            transition.updateFrame(node: self.avatarTextNode, frame: CGRect(origin: CGPoint(), size: avatarTextSize))
+            transition.updateFrame(node: self.avatarButtonNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((width - avatarTextSize.width) / 2.0), y: contentHeight - 1.0), size: avatarTextSize))
             contentHeight += 32.0
         }
         

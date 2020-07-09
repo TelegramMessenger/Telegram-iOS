@@ -555,7 +555,7 @@ public func channelAdminsController(context: AccountContext, peerId initialPeerI
             |> deliverOnMainQueue).start(next: { peer in
                 if peer is TelegramGroup {
                 } else {
-                    pushControllerImpl?(context.sharedContext.makeChatRecentActionsController(context: context, peer: peer))
+                    pushControllerImpl?(context.sharedContext.makeChatRecentActionsController(context: context, peer: peer, adminPeerId: nil))
                 }
             })
         })

@@ -4144,7 +4144,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     assetsController?.dismiss()
                     self?.updateProfilePhoto(result)
                 }))
-                strongSelf.controller?.present(controller, in: .window(.root))
+                controller.navigationPresentation = .modal
+                strongSelf.controller?.push(controller)
             }
             mixin.didFinishWithImage = { [weak self] image in
                 if let image = image {
