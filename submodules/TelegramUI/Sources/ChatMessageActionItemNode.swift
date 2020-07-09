@@ -170,9 +170,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.item = item
                             
                             let maskPath = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: imageSize))
-                            let shape = CAShapeLayer()
-                            shape.path = maskPath.cgPath
-                            
+
                             let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - imageSize.width) / 2.0), y: labelLayout.size.height + 10 + 2), size: imageSize)
                             if let image = image {
                                 let imageNode: TransformImageNode
@@ -180,6 +178,8 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     imageNode = current
                                 } else {
                                     imageNode = TransformImageNode()
+                                    let shape = CAShapeLayer()
+                                    shape.path = maskPath.cgPath
                                     imageNode.layer.mask = shape
                                     strongSelf.imageNode = imageNode
                                     strongSelf.insertSubnode(imageNode, at: 0)
@@ -221,7 +221,8 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     videoNode.updateLayout(size: imageSize, transition: .immediate)
                                     videoNode.frame = imageFrame
                                     
-                                   
+                                    let shape = CAShapeLayer()
+                                    shape.path = maskPath.cgPath
                                     videoNode.layer.mask = shape
                                     
                                     strongSelf.addSubnode(videoNode)
