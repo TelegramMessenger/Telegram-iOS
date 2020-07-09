@@ -79,7 +79,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
-        recognizer.tapActionAtPoint = { [weak self] point in
+        recognizer.tapActionAtPoint = { point in
             return .keepWithSingleTap
         }
         recognizer.highlight = { [weak self] point in
@@ -94,7 +94,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
     @objc private func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
         case .ended:
-            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+            if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
                 switch gesture {
                 case .tap:
                     if let item = self.item {
@@ -239,7 +239,12 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         guard let item = self.item else {
             return
         }
-        if point != nil && item.context.account.peerId != item.member.id {
+        var highlight = point != nil
+        if case .account = item.member {
+        } else if item.context.account.peerId == item.member.id {
+            highlight = false
+        }
+        if highlight {
             self.selectionNode.updateIsHighlighted(true)
         } else {
             self.selectionNode.updateIsHighlighted(false)

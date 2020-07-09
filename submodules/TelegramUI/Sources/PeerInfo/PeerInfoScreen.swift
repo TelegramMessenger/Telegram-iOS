@@ -2465,7 +2465,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 strongSelf.paneContainerNode.updateSelectedMessageIds(strongSelf.state.selectedMessageIds, animated: true)
             case .search:
                 strongSelf.activateSearch()
-            case .editPhoto:
+            case .editPhoto, .editVideo:
                 strongSelf.openAvatarOptions()
             }
         }
@@ -2503,8 +2503,39 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             self.cachedFaq.set(.single(nil) |> then(cachedFaqInstantPage(context: self.context) |> map(Optional.init)))
             
             screenData = peerInfoScreenSettingsData(context: context, peerId: peerId, accountsAndPeers: self.accountsAndPeers.get(), activeSessionsContextAndCount: self.activeSessionsContextAndCount.get(), notificationExceptions: self.notificationExceptions.get(), privacySettings: self.privacySettings.get(), archivedStickerPacks: self.archivedPacks.get(), hasPassport: self.hasPassport.get())
+            
+            self.headerNode.displayCopyContextMenu = { [weak self] node, copyPhone, copyUsername in
+                guard let strongSelf = self, let data = strongSelf.data, let user = data.peer as? TelegramUser else {
+                    return
+                }
+                var actions: [ContextMenuAction] = []
+                if copyPhone, let phone = user.phone, !phone.isEmpty {
+                    actions.append(ContextMenuAction(content: .text(title: strongSelf.presentationData.strings.Settings_CopyPhoneNumber, accessibilityLabel: strongSelf.presentationData.strings.Settings_CopyPhoneNumber), action: {
+                        UIPasteboard.general.string = formatPhoneNumber(phone)
+                    }))
+                }
+                
+                if copyUsername, let username = user.username, !username.isEmpty {
+                    actions.append(ContextMenuAction(content: .text(title: strongSelf.presentationData.strings.Settings_CopyUsername, accessibilityLabel: strongSelf.presentationData.strings.Settings_CopyUsername), action: {
+                        UIPasteboard.general.string = username
+                    }))
+                }
+                
+                let contextMenuController = ContextMenuController(actions: actions)
+                strongSelf.controller?.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+                    if let strongSelf = self {
+                        return (node, node.bounds.insetBy(dx: 0.0, dy: -2.0), strongSelf, strongSelf.view.bounds)
+                    } else {
+                        return nil
+                    }
+                }))
+            }
         } else {
             screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, ignoreGroupInCommon: ignoreGroupInCommon)
+        }
+        
+        self.headerNode.avatarListNode.listContainerNode.currentIndexUpdated = { [weak self] in
+            self?.updateNavigation(transition: .immediate, additive: false)
         }
         
         self.dataDisposable = (screenData
@@ -2554,9 +2585,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.preloadStickerDisposable.dispose()
     }
     
-    override func didLoad() {
-        super.didLoad()
-    }
+    var canAttachVideo: Bool?
     
     private func updateData(_ data: PeerInfoScreenData) {
         let previousData = self.data
@@ -5230,7 +5259,11 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             } else {
                 if self.isSettings {
                     navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .search, isForExpandedView: false))
-                    navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .editPhoto, isForExpandedView: true))
+                    if let item = self.headerNode.avatarListNode.listContainerNode.currentItemNode?.item, case let .image(image) = item, !image.2.isEmpty {
+                        navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .editVideo, isForExpandedView: true))
+                    } else {
+                        navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .editPhoto, isForExpandedView: true))
+                    }
                 } else if peerInfoCanEdit(peer: self.data?.peer, cachedData: self.data?.cachedData) {
                     navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
                 }
@@ -5303,7 +5336,14 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         self.hapticFeedback?.impact()
                         
                         self.canOpenAvatarByDragging = false
+                        let contentOffset = scrollView.contentOffset.y
+                        scrollView.panGestureRecognizer.isEnabled = false
                         self.headerNode.initiateAvatarExpansion()
+                        scrollView.panGestureRecognizer.isEnabled = true
+                        scrollView.contentOffset = CGPoint(x: 0.0, y: contentOffset)
+                        UIView.animate(withDuration: 0.1) {
+                            scrollView.contentOffset = CGPoint()
+                        }
                     }
                 }
             } else if offsetY >= 1.0 {
@@ -5719,9 +5759,17 @@ public final class PeerInfoScreen: ViewController {
         
         super.displayNodeDidLoad()
     }
+    
+    public override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        self.controllerNode.canAttachVideo = false
+    }
         
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        
+        self.controllerNode.canAttachVideo = true
         
         if let (layout, navigationHeight) = self.validLayout {
             self.controllerNode.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)

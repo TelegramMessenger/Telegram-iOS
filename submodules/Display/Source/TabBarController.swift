@@ -186,7 +186,10 @@ open class TabBarController: ViewController {
     }
     
     public func updateIsTabBarHidden(_ value: Bool, transition: ContainedViewLayoutTransition) {
-        self.tabBarControllerNode.updateIsTabBarHidden(value, transition: transition)
+        self.tabBarControllerNode.tabBarHidden = value
+        if let layout = self.validLayout {
+            self.containerLayoutUpdated(layout, transition: .animated(duration: 0.4, curve: .slide))
+        }
     }
     
     override open func loadDisplayNode() {

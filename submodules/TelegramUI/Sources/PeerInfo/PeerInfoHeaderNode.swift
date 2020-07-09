@@ -18,6 +18,7 @@ import TelegramUniversalVideoContent
 import GalleryUI
 import UniversalMediaPlayer
 import RadialStatusNode
+import TelegramUIPreferences
 
 enum PeerInfoHeaderButtonKey: Hashable {
     case message
@@ -184,10 +185,12 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
     
     var item: PeerInfoAvatarListItem?
     
+    var canAttachVideo: Bool = true
+    
     var isExpanded: Bool = false {
         didSet {
             if let videoNode = self.videoNode, videoNode.canAttachContent != self.isExpanded {
-                videoNode.canAttachContent = self.isExpanded
+                videoNode.canAttachContent = self.isExpanded && self.canAttachVideo
                 if videoNode.canAttachContent {
                     videoNode.play()
                 }
@@ -328,7 +331,7 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
             videoNode.updateLayout(size: imageSize, transition: .immediate)
             videoNode.frame = imageFrame
             if videoNode.canAttachContent != self.isExpanded {
-                videoNode.canAttachContent = self.isExpanded
+                videoNode.canAttachContent = self.isExpanded && self.canAttachVideo
                 if videoNode.canAttachContent {
                     videoNode.play()
                 }
@@ -369,6 +372,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     private var initializedList = false
     private var ignoreNextProfilePhotoUpdate = false
     var itemsUpdated: (([PeerInfoAvatarListItem]) -> Void)?
+    var currentIndexUpdated: (() -> Void)?
     
     let isReady = Promise<Bool>()
     private var didSetReady = false
@@ -635,6 +639,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     
     func selectFirstItem() {
         self.currentIndex = 0
+        self.currentIndexUpdated?()
         if let size = self.validLayout {
             self.updateItems(size: size, transition: .immediate, stripTransition: .immediate)
         }
@@ -656,17 +661,21 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     if location.x < size.width * 1.0 / 5.0 {
                         if self.currentIndex != 0 {
                             self.currentIndex -= 1
+                            self.currentIndexUpdated?()
                             self.updateItems(size: size, transition: .immediate, stripTransition: .animated(duration: 0.3, curve: .spring))
                         } else if self.items.count > 1 {
                             self.currentIndex = self.items.count - 1
+                            self.currentIndexUpdated?()
                             self.updateItems(size: size, transition: .immediate, stripTransition: .animated(duration: 0.3, curve: .spring), synchronous: true)
                         }
                     } else {
                         if self.currentIndex < self.items.count - 1 {
                             self.currentIndex += 1
+                            self.currentIndexUpdated?()
                             self.updateItems(size: size, transition: .immediate, stripTransition: .animated(duration: 0.3, curve: .spring))
                         } else if self.items.count > 1 {
                             self.currentIndex = 0
+                            self.currentIndexUpdated?()
                             self.updateItems(size: size, transition: .immediate, stripTransition: .animated(duration: 0.3, curve: .spring), synchronous: true)
                         }
                     }
@@ -708,6 +717,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 updatedIndex = max(updatedIndex - 1, 0)
             }
             self.currentIndex = updatedIndex
+            self.currentIndexUpdated?()
             self.transitionFraction = 0.0
             if let size = self.validLayout {
                 self.updateItems(size: size, transition: .animated(duration: 0.3, curve: .spring), stripTransition: .animated(duration: 0.3, curve: .spring))
@@ -742,6 +752,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.items = items
         self.itemsUpdated?(items)
         self.currentIndex = 0
+        self.currentIndexUpdated?()
         self.ignoreNextProfilePhotoUpdate = true
         if let size = self.validLayout {
             self.updateItems(size: size, update: true, transition: .immediate, stripTransition: .immediate, synchronous: true)
@@ -771,6 +782,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.items = items
         self.itemsUpdated?(items)
         self.currentIndex = max(0, previousIndex - 1)
+        self.currentIndexUpdated?()
         self.ignoreNextProfilePhotoUpdate = true
         if let size = self.validLayout {
             self.updateItems(size: size, update: true, transition: .immediate, stripTransition: .immediate, synchronous: true)
@@ -974,7 +986,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     private var videoContent: NativeVideoContent?
     private var videoStartTimestamp: Double?
     
-    var canAttachVideo = true
+    var canAttachVideo: Bool = true
     
     var tapped: (() -> Void)?
     
@@ -1449,18 +1461,20 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
             var icon: UIImage?
             var isBold = false
             switch key {
-            case .edit:
-                text = presentationData.strings.Common_Edit
-            case .done, .cancel, .selectionDone:
-                text = presentationData.strings.Common_Done
-                isBold = true
-            case .select:
-                text = presentationData.strings.Common_Select
-            case .search:
-                text = ""
-                icon = PresentationResourcesRootController.navigationCompactSearchIcon(presentationData.theme)
-            case .editPhoto:
-                text = presentationData.strings.Settings_EditPhoto
+                case .edit:
+                    text = presentationData.strings.Common_Edit
+                case .done, .cancel, .selectionDone:
+                    text = presentationData.strings.Common_Done
+                    isBold = true
+                case .select:
+                    text = presentationData.strings.Common_Select
+                case .search:
+                    text = ""
+                    icon = PresentationResourcesRootController.navigationCompactSearchIcon(presentationData.theme)
+                case .editPhoto:
+                    text = presentationData.strings.Settings_EditPhoto
+                case .editVideo:
+                    text = presentationData.strings.Settings_EditVideo
             }
             
             let font: UIFont = isBold ? Font.semibold(17.0) : Font.regular(17.0)
@@ -1499,6 +1513,7 @@ enum PeerInfoHeaderNavigationButtonKey {
     case selectionDone
     case search
     case editPhoto
+    case editVideo
 }
 
 struct PeerInfoHeaderNavigationButtonSpec: Equatable {
@@ -1596,7 +1611,13 @@ final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
                     }
                     transition.updateFrameAdditiveToCenter(node: buttonNode, frame: buttonFrame)
                     let alphaFactor: CGFloat = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
-                    transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
+                    
+                    
+                    var buttonTransition = transition
+                    if case let .animated(duration, curve) = buttonTransition, alphaFactor == 0.0 {
+                        buttonTransition = .animated(duration: duration * 0.25, curve: curve)
+                    }
+                    buttonTransition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
                 }
             }
         }
@@ -1622,6 +1643,7 @@ protocol PeerInfoHeaderTextFieldNode: ASDisplayNode {
 
 final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeaderTextFieldNode, UITextFieldDelegate {
     private let textNode: TextFieldNode
+    private let measureTextNode: ImmediateTextNode
     private let clearIconNode: ASImageNode
     private let clearButtonNode: HighlightableButtonNode
     private let topSeparator: ASDisplayNode
@@ -1634,6 +1656,8 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
     
     override init() {
         self.textNode = TextFieldNode()
+        self.measureTextNode = ImmediateTextNode()
+        self.measureTextNode.maximumNumberOfLines = 0
         
         self.clearIconNode = ASImageNode()
         self.clearIconNode.isLayerBacked = true
@@ -1690,6 +1714,9 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
     }
     
     func update(width: CGFloat, safeInset: CGFloat, hasPrevious: Bool, placeholder: String, isEnabled: Bool, presentationData: PresentationData, updateText: String?) -> CGFloat {
+        let titleFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
+        self.textNode.textField.font = titleFont
+        
         if self.theme !== presentationData.theme {
             self.theme = presentationData.theme
             self.textNode.textField.textColor = presentationData.theme.list.itemPrimaryTextColor
@@ -1699,7 +1726,7 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
             self.clearIconNode.image = PresentationResourcesItemList.itemListClearInputIcon(presentationData.theme)
         }
         
-        let attributedPlaceholderText = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: presentationData.theme.list.itemPlaceholderTextColor)
+        let attributedPlaceholderText = NSAttributedString(string: placeholder, font: titleFont, textColor: presentationData.theme.list.itemPlaceholderTextColor)
         if self.textNode.textField.attributedPlaceholder == nil || !self.textNode.textField.attributedPlaceholder!.isEqual(to: attributedPlaceholderText) {
             self.textNode.textField.attributedPlaceholder = attributedPlaceholderText
             self.textNode.textField.accessibilityHint = attributedPlaceholderText.string
@@ -1712,7 +1739,12 @@ final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeader
         self.topSeparator.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         self.topSeparator.frame = CGRect(origin: CGPoint(x: safeInset + (hasPrevious ? 16.0 : 0.0), y: 0.0), size: CGSize(width: width, height: UIScreenPixel))
         
-        let height: CGFloat = 44.0
+        let measureText = "|"
+        let attributedMeasureText = NSAttributedString(string: measureText, font: titleFont, textColor: .black)
+        self.measureTextNode.attributedText = attributedMeasureText
+        let measureTextSize = self.measureTextNode.updateLayout(CGSize(width: width - safeInset * 2.0 - 16.0 * 2.0 - 38.0, height: .greatestFiniteMagnitude))
+        
+        let height = measureTextSize.height + 22.0
         
         let buttonSize = CGSize(width: 38.0, height: height)
         self.clearButtonNode.frame = CGRect(origin: CGPoint(x: width - safeInset - buttonSize.width, y: 0.0), size: buttonSize)
@@ -1739,6 +1771,7 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
     
     private let requestUpdateHeight: () -> Void
     
+    private var fontSize: PresentationFontSize?
     private var theme: PresentationTheme?
     private var currentParams: (width: CGFloat, safeInset: CGFloat)?
     private var currentMeasuredHeight: CGFloat?
@@ -1795,7 +1828,13 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
         guard let theme = self.theme else {
             return
         }
-        let attributedText = NSAttributedString(string: "", font: Font.regular(17.0), textColor: theme.list.itemPrimaryTextColor)
+        let font: UIFont
+        if let fontSize = self.fontSize {
+            font = Font.regular(fontSize.itemListBaseFontSize)
+        } else {
+            font = Font.regular(17.0)
+        }
+        let attributedText = NSAttributedString(string: "", font: font, textColor: theme.list.itemPrimaryTextColor)
         self.textNode.attributedText = attributedText
         self.requestUpdateHeight()
         self.updateClearButtonVisibility()
@@ -1804,11 +1843,14 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
     func update(width: CGFloat, safeInset: CGFloat, hasPrevious: Bool, placeholder: String, isEnabled: Bool, presentationData: PresentationData, updateText: String?) -> CGFloat {
         self.currentParams = (width, safeInset)
         
+        self.fontSize = presentationData.listsFontSize
+        let titleFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
+        
         if self.theme !== presentationData.theme {
             self.theme = presentationData.theme
             let textColor = presentationData.theme.list.itemPrimaryTextColor
             
-            self.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(17.0), NSAttributedString.Key.foregroundColor.rawValue: textColor]
+            self.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: titleFont, NSAttributedString.Key.foregroundColor.rawValue: textColor]
             
             self.textNode.clipsToBounds = true
             self.textNode.delegate = self
@@ -1820,13 +1862,13 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
         self.topSeparator.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         self.topSeparator.frame = CGRect(origin: CGPoint(x: safeInset + (hasPrevious ? 16.0 : 0.0), y: 0.0), size: CGSize(width: width, height: UIScreenPixel))
         
-        let attributedPlaceholderText = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: presentationData.theme.list.itemPlaceholderTextColor)
+        let attributedPlaceholderText = NSAttributedString(string: placeholder, font: titleFont, textColor: presentationData.theme.list.itemPlaceholderTextColor)
         if self.textNode.attributedPlaceholderText == nil || !self.textNode.attributedPlaceholderText!.isEqual(to: attributedPlaceholderText) {
             self.textNode.attributedPlaceholderText = attributedPlaceholderText
         }
         
         if let updateText = updateText {
-            let attributedText = NSAttributedString(string: updateText, font: Font.regular(17.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+            let attributedText = NSAttributedString(string: updateText, font: titleFont, textColor: presentationData.theme.list.itemPrimaryTextColor)
             self.textNode.attributedText = attributedText
         }
         
@@ -1834,7 +1876,7 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
         if measureText.hasSuffix("\n") || measureText.isEmpty {
            measureText += "|"
         }
-        let attributedMeasureText = NSAttributedString(string: measureText, font: Font.regular(17.0), textColor: .black)
+        let attributedMeasureText = NSAttributedString(string: measureText, font: titleFont, textColor: .black)
         self.measureTextNode.attributedText = attributedMeasureText
         let measureTextSize = self.measureTextNode.updateLayout(CGSize(width: width - safeInset * 2.0 - 16.0 * 2.0 - 38.0, height: .greatestFiniteMagnitude))
         self.currentMeasuredHeight = measureTextSize.height
@@ -2104,6 +2146,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var requestOpenAvatarForEditing: ((Bool) -> Void)?
     var requestUpdateLayout: (() -> Void)?
     
+    var displayCopyContextMenu: ((ASDisplayNode, Bool, Bool) -> Void)?
+    
     var navigationTransition: PeerInfoHeaderNavigationTransition?
     
     init(context: AccountContext, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, isSettings: Bool) {
@@ -2134,13 +2178,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.subtitleNodeRawContainer = ASDisplayNode()
         self.subtitleNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
         self.subtitleNode.displaysAsynchronously = false
-        self.subtitleNode.allowsGroupOpacity = true
         
         self.usernameNodeContainer = ASDisplayNode()
         self.usernameNodeRawContainer = ASDisplayNode()
         self.usernameNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
         self.usernameNode.displaysAsynchronously = false
-        self.usernameNode.allowsGroupOpacity = true
         
         self.regularContentNode = PeerInfoHeaderRegularContentNode()
         var requestUpdateLayoutImpl: (() -> Void)?
@@ -2173,8 +2215,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.regularContentNode.addSubnode(self.titleNodeContainer)
         self.subtitleNodeContainer.addSubnode(self.subtitleNode)
         self.regularContentNode.addSubnode(self.subtitleNodeContainer)
+        self.regularContentNode.addSubnode(self.subtitleNodeRawContainer)
         self.usernameNodeContainer.addSubnode(self.usernameNode)
         self.regularContentNode.addSubnode(self.usernameNodeContainer)
+        self.regularContentNode.addSubnode(self.usernameNodeRawContainer)
         self.regularContentNode.addSubnode(self.avatarListNode)
         self.regularContentNode.addSubnode(self.avatarListNode.listContainerNode.controlsClippingOffsetNode)
         self.addSubnode(self.regularContentNode)
@@ -2191,6 +2235,28 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 return
             }
             strongSelf.requestOpenAvatarForEditing?(confirm)
+        }
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        let usernameGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handleUsernameLongPress(_:)))
+        self.usernameNodeRawContainer.view.addGestureRecognizer(usernameGestureRecognizer)
+        
+        let phoneGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handlePhoneLongPress(_:)))
+        self.subtitleNodeRawContainer.view.addGestureRecognizer(phoneGestureRecognizer)
+    }
+    
+    @objc private func handleUsernameLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        if gestureRecognizer.state == .began {
+            self.displayCopyContextMenu?(self.usernameNodeRawContainer, !self.isAvatarExpanded, true)
+        }
+    }
+    
+    @objc private func handlePhoneLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        if gestureRecognizer.state == .began {
+            self.displayCopyContextMenu?(self.subtitleNodeRawContainer, true, !self.isAvatarExpanded)
         }
     }
     

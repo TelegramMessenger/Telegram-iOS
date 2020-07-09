@@ -42,7 +42,7 @@ private final class PeerInfoScreenCommentItemNode: PeerInfoScreenItemNode {
         let verticalInset: CGFloat = 7.0
         
         self.textNode.maximumNumberOfLines = 0
-        self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(14.0), textColor: presentationData.theme.list.freeTextColor)
+        self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: presentationData.theme.list.freeTextColor)
         
         let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
         

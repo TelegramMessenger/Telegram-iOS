@@ -225,7 +225,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             var barButtonItems: [UIBarButtonItem] = []
             let footerContent: AvatarGalleryItemFooterContent = .info
             if self.peer.id == self.context.account.peerId {
-                let rightBarButtonItem =  UIBarButtonItem(title: self.presentationData.strings.Settings_EditPhoto, style: .plain, target: self, action: #selector(self.editPressed))
+                let rightBarButtonItem =  UIBarButtonItem(title: entry.videoRepresentations.isEmpty ? self.presentationData.strings.Settings_EditPhoto : self.presentationData.strings.Settings_EditVideo, style: .plain, target: self, action: #selector(self.editPressed))
                 barButtonItems.append(rightBarButtonItem)
             }
             self._rightBarButtonItems.set(.single(barButtonItems))
