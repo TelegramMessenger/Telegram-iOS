@@ -312,7 +312,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 |> take(1)
                 |> deliverOnMainQueue).start(completed: { [weak self] in
                     if let strongSelf = self {
-                        Queue.mainQueue().after(0.03) {
+                        Queue.mainQueue().after(0.1) {
                             strongSelf.videoNode?.isHidden = false
                         }
                     }
@@ -321,7 +321,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             self.playbackStatusDisposable.set(nil)
             videoNode.isHidden = false
         }
-        
+    
         let hadAttachedContent = videoNode.hasAttachedContext
         videoNode.canAttachContent = true
         if videoNode.hasAttachedContext {
@@ -409,7 +409,12 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.contentNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.contentNode.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
             completion()
         })
-        self.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.07)
+        
+        if let _ = self.videoNode {
+            self.contentNode.view.superview?.bringSubviewToFront(self.contentNode.view)
+        } else {
+            self.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.07)
+        }
         
         transformedFrame.origin = CGPoint()
         //self.imageNode.layer.animateBounds(from: transformedFrame, to: self.imageNode.layer.bounds, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
@@ -493,7 +498,6 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             intermediateCompletion()
         })
         
-
         if let _ = self.videoNode {
             self.contentNode.view.superview?.bringSubviewToFront(self.contentNode.view)
         } else {
