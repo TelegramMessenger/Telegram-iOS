@@ -45,7 +45,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     
     private let statusDisposable = MetaDisposable()
     
-    private var gestureRecognizer: ContextGesture?
+    private(set) var gestureRecognizer: ContextGesture?
     
     init(theme: PresentationTheme) {
         self.deleteButton = HighlightableButtonNode()
@@ -251,23 +251,23 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
             self.deleteButton.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15)
             self.deleteButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
             
-            self.playButton.layer.animateScale(from: 0.01, to: 1.0, duration: 0.5, delay: 0.15)
-            self.playButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, delay: 0.15)
+            self.playButton.layer.animateScale(from: 0.01, to: 1.0, duration: 0.3, delay: 0.1)
+            self.playButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.1)
             
-            self.pauseButton.layer.animateScale(from: 0.01, to: 1.0, duration: 0.5, delay: 0.15)
-            self.pauseButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, delay: 0.15)
+            self.pauseButton.layer.animateScale(from: 0.01, to: 1.0, duration: 0.3, delay: 0.1)
+            self.pauseButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.1)
             
-            self.durationLabel.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+            self.durationLabel.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             
-            self.waveformScubberNode.layer.animateScaleY(from: 0.1, to: 1.0, duration: 0.5, delay: 0.15)
-            self.waveformScubberNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, delay: 0.15)
+            self.waveformScubberNode.layer.animateScaleY(from: 0.1, to: 1.0, duration: 0.3, delay: 0.1)
+            self.waveformScubberNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.1)
             
             self.waveformBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
             self.waveformBackgroundNode.layer.animateFrame(
                 from: self.sendButton.frame.insetBy(dx: 5.5, dy: 5.5),
                 to: waveformBackgroundFrame,
-                duration: 0.3,
-                delay: 0.15,
+                duration: 0.2,
+                delay: 0.12,
                 timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue,
                 removeOnCompletion: false
             ) { [weak self, weak prevTextInputPanelNode] finished in
@@ -285,6 +285,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     }
     
     @objc func deletePressed() {
+        self.mediaPlayer?.pause()
         self.interfaceInteraction?.deleteRecordedMedia()
     }
     
@@ -302,16 +303,6 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     
     func frameForInputActionButton() -> CGRect? {
         return self.sendButton.frame
-    }
-    
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if self.deleteButton.frame.contains(point) {
-            return self.deleteButton.view
-        }
-        if self.sendButton.frame.contains(point) {
-           return self.sendButton.view
-        }
-        return super.hitTest(point, with: event)
     }
 }
 

@@ -13,6 +13,8 @@
 - (void)updateLevel:(CGFloat)level;
 - (void)tick:(CGFloat)level;
 - (void)setColor:(UIColor *)color;
+- (void)stopAnimating;
+- (void)startAnimating;
 
 @end
 

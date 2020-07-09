@@ -214,6 +214,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var audioRecordingDotNode: AnimationNode?
     var audioRecordingTimeNode: ChatTextInputAudioRecordingTimeNode?
     var audioRecordingCancelIndicator: ChatTextInputAudioRecordingCancelIndicator?
+    var animatingBinNode: AnimationNode?
     
     private var accessoryItemButtons: [(ChatTextInputAccessoryItem, AccessoryItemIconButton)] = []
     
@@ -1054,6 +1055,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 audioRecordingDotNode = AnimationNode(animation: "BinRed")
                 self.audioRecordingDotNode = audioRecordingDotNode
                 self.addSubnode(audioRecordingDotNode)
+                self.animatingBinNode?.removeFromSupernode()
+                self.animatingBinNode = nil
             }
             
             animateDotAppearing = transition.isAnimated && !hideInfo
@@ -1349,6 +1352,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         if let prevPreviewInputPanelNode = self.prevInputPanelNode as? ChatRecordingPreviewInputPanelNode {
             self.prevInputPanelNode = nil
             
+            prevPreviewInputPanelNode.gestureRecognizer?.isEnabled = false
             prevPreviewInputPanelNode.isUserInteractionEnabled = false
             
             if self.isMediaDeleted {
@@ -1381,21 +1385,27 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             animateAlpha(for: prevPreviewInputPanelNode.playButton)
             animateAlpha(for: prevPreviewInputPanelNode.pauseButton)
             
-            let dismissBin = { [weak self, weak prevPreviewInputPanelNode] in
-                prevPreviewInputPanelNode?.deleteButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
-                prevPreviewInputPanelNode?.deleteButton.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
-                
-                self?.attachmentButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
-                self?.attachmentButton.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
-                
-                if prevPreviewInputPanelNode?.supernode === self {
-                    prevPreviewInputPanelNode?.removeFromSupernode()
+            let binNode = prevPreviewInputPanelNode.binNode
+            self.animatingBinNode = binNode
+            let dismissBin = { [weak self, weak prevPreviewInputPanelNode, weak binNode] in
+                if binNode?.supernode != nil {
+                    prevPreviewInputPanelNode?.deleteButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, delay: 0, removeOnCompletion: false) { [weak prevPreviewInputPanelNode] _ in
+                        if prevPreviewInputPanelNode?.supernode === self {
+                            prevPreviewInputPanelNode?.removeFromSupernode()
+                        }
+                    }
+                    prevPreviewInputPanelNode?.deleteButton.layer.animateScale(from: 1.0, to: 0.3, duration: 0.15, delay: 0, removeOnCompletion: false)
+                    
+                    self?.attachmentButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
+                    self?.attachmentButton.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, delay: 0, removeOnCompletion: false)
+                } else if prevPreviewInputPanelNode?.supernode === self {
+                   prevPreviewInputPanelNode?.removeFromSupernode()
                 }
             }
             
             if self.isMediaDeleted {
-                prevPreviewInputPanelNode.binNode.completion = dismissBin
-                prevPreviewInputPanelNode.binNode.play()
+                binNode.completion = dismissBin
+                binNode.play()
             } else {
                 dismissBin()
             }

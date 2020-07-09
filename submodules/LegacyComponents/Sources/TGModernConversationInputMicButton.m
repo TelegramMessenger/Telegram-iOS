@@ -514,13 +514,13 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
         _innerCircleView.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
         _outerCircleView.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
         if (toSmallSize) {
+            _decoration.transform = CGAffineTransformConcat(CGAffineTransformMakeScale(0.33f, 0.33f), CGAffineTransformMakeTranslation(-4, 0));
+            _innerIconWrapperView.transform = CGAffineTransformConcat(CGAffineTransformMakeScale(0.492f, 0.492f), CGAffineTransformMakeTranslation(-TGScreenPixel, 0));
+        } else {
             _decoration.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
             _decoration.alpha = 0.0;
             _innerIconWrapperView.transform = CGAffineTransformMakeScale(0.2f, 0.2f);
             _innerIconWrapperView.alpha = 0.0f;
-        } else {
-            _decoration.transform = CGAffineTransformMakeScale(0.33f, 0.33f);
-            _innerIconWrapperView.transform = CGAffineTransformMakeScale(0.4f, 0.4f);
         }
         _innerCircleView.alpha = 0.0f;
         _outerCircleView.alpha = 0.0f;
