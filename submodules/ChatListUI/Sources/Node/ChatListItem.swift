@@ -328,12 +328,15 @@ private final class CachedChatListSearchResult {
     }
 }
 
+private let playIconImage = UIImage(bundleImageName: "Chat List/MiniThumbnailPlay")?.precomposed()
+
 private final class ChatListMediaPreviewNode: ASDisplayNode {
     private let context: AccountContext
     private let message: Message
     private let media: Media
     
     private let imageNode: TransformImageNode
+    private let playIcon: ASImageNode
     
     private var requestedImage: Bool = false
     private var disposable: Disposable?
@@ -344,10 +347,13 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
         self.media = media
         
         self.imageNode = TransformImageNode()
+        self.playIcon = ASImageNode()
+        self.playIcon.image = playIconImage
         
         super.init()
         
         self.addSubnode(self.imageNode)
+        self.addSubnode(self.playIcon)
     }
     
     deinit {
@@ -355,8 +361,13 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
     }
     
     func updateLayout(size: CGSize, synchronousLoads: Bool) {
+        if let image = self.playIcon.image {
+            self.playIcon.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size)
+        }
+        
         var dimensions = CGSize(width: 100.0, height: 100.0)
         if let image = self.media as? TelegramMediaImage {
+            self.playIcon.isHidden = true
             if let largest = largestImageRepresentation(image.representations) {
                 dimensions = largest.dimensions.cgSize
                 if !self.requestedImage {
@@ -366,6 +377,7 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
                 }
             }
         } else if let file = self.media as? TelegramMediaFile {
+            self.playIcon.isHidden = false
             if let mediaDimensions = file.dimensions {
                 dimensions = mediaDimensions.cgSize
                 if !self.requestedImage {
