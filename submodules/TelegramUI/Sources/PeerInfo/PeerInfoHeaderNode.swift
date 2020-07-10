@@ -1212,11 +1212,6 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                     let update = {
                         videoNode.canAttachContent = !self.isExpanded && self.canAttachVideo
                         if videoNode.canAttachContent {
-//                            if let videoStartTimestamp = self.videoStartTimestamp {
-//                                videoNode.seek(videoStartTimestamp)
-//                            } else {
-//                                videoNode.seek(0.0)
-//                            }
                             videoNode.play()
                         }
                     }

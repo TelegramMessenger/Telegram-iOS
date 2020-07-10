@@ -4155,6 +4155,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             return
         }
         
+        var currentIsVideo = false
+        let item = self.headerNode.avatarListNode.listContainerNode.currentItemNode?.item
+        if let item = item, case let .image(image) = item {
+            currentIsVideo = !image.2.isEmpty
+        }
+        
         let peerId = self.peerId
         let _ = (self.context.account.postbox.transaction { transaction -> (Peer?, SearchBotsConfiguration) in
             return (transaction.getPeer(peerId), currentSearchBotsConfiguration(transaction: transaction))
@@ -4184,7 +4190,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 hasPhotos = true
             }
             
-            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos && hasRemove, hasViewButton: false, personalPhoto: strongSelf.isSettings, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
+            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos && hasRemove, hasViewButton: false, personalPhoto: strongSelf.isSettings, isVideo: currentIsVideo, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
             let _ = strongSelf.currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { [weak self] assetsController in
                 guard let strongSelf = self else {
@@ -5803,23 +5809,7 @@ public final class PeerInfoScreen: ViewController {
         
         super.displayNodeDidLoad()
     }
-    
-    public override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
         
-        self.controllerNode.canAttachVideo = false
-    }
-        
-    override public func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        
-        self.controllerNode.canAttachVideo = true
-        
-        if let (layout, navigationHeight) = self.validLayout {
-            self.controllerNode.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
-        }
-    }
-    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
