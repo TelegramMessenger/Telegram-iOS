@@ -13,6 +13,8 @@
 - (void)updateLevel:(CGFloat)level;
 - (void)tick:(CGFloat)level;
 - (void)setColor:(UIColor *)color;
+- (void)stopAnimating;
+- (void)startAnimating;
 
 @end
 
@@ -77,7 +79,7 @@
 @property (nonatomic) bool fadeDisabled;
 
 - (void)animateIn;
-- (void)animateOut;
+- (void)animateOut:(BOOL)toSmallSize;
 - (void)addMicLevel:(CGFloat)level;
 - (void)dismiss;
 

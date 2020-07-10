@@ -1121,6 +1121,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var immediatelyLayoutInputPanelAndAnimateAppearance = false
         var secondaryInputPanelSize: CGSize?
         var immediatelyLayoutSecondaryInputPanelAndAnimateAppearance = false
+        var inputPanelNodeHandlesTransition = false
         
         let inputPanelNodes = inputPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.inputPanelNode, currentSecondaryPanel: self.secondaryInputPanelNode, textInputPanelNode: self.textInputPanelNode, interfaceInteraction: self.interfaceInteraction)
         
@@ -1132,11 +1133,18 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                     let _ = inputTextPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: layout.size.height - insets.top - insets.bottom, isSecondary: false, transition: transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics)
                 }
-                dismissedInputPanelNode = self.inputPanelNode
-                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: layout.size.height - insets.top - insets.bottom, isSecondary: false, transition: inputPanelNode.supernode == nil ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics)
+                if let prevInputPanelNode = self.inputPanelNode, inputPanelNode.canHandleTransition(from: prevInputPanelNode) {
+                    inputPanelNodeHandlesTransition = true
+                    inputPanelNode.removeFromSupernode()
+                    inputPanelNode.prevInputPanelNode = prevInputPanelNode
+                    inputPanelNode.addSubnode(prevInputPanelNode)
+                } else {
+                    dismissedInputPanelNode = self.inputPanelNode
+                }
+                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: layout.size.height - insets.top - insets.bottom, isSecondary: false, transition: inputPanelNode.supernode !== self ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics)
                 inputPanelSize = CGSize(width: layout.size.width, height: inputPanelHeight)
                 self.inputPanelNode = inputPanelNode
-                if inputPanelNode.supernode == nil {
+                if inputPanelNode.supernode !== self {
                     immediatelyLayoutInputPanelAndAnimateAppearance = true
                     self.insertSubnode(inputPanelNode, aboveSubnode: self.inputPanelBackgroundNode)
                 }
@@ -1547,21 +1555,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             transition.animatePositionAdditive(node: titleAccessoryPanelNode, offset: CGPoint(x: 0.0, y: -titleAccessoryPanelFrame.height))
         }
         
-        if let inputPanelNode = self.inputPanelNode, let apparentInputPanelFrame = apparentInputPanelFrame, !inputPanelNode.frame.equalTo(apparentInputPanelFrame) {
-            if immediatelyLayoutInputPanelAndAnimateAppearance {
-                inputPanelNode.frame = apparentInputPanelFrame.offsetBy(dx: 0.0, dy: apparentInputPanelFrame.height + previousInputPanelBackgroundFrame.maxY - apparentInputBackgroundFrame.maxY)
-                inputPanelNode.alpha = 0.0
-            }
-            if !transition.isAnimated {
-                inputPanelNode.layer.removeAllAnimations()
-                if let currentDismissedInputPanelNode = self.currentDismissedInputPanelNode, inputPanelNode is ChatSearchInputPanelNode {
-                    currentDismissedInputPanelNode.layer.removeAllAnimations()
-                }
-            }
-            transition.updateFrame(node: inputPanelNode, frame: apparentInputPanelFrame)
-            transition.updateAlpha(node: inputPanelNode, alpha: 1.0)
-        }
-        
         if let secondaryInputPanelNode = self.secondaryInputPanelNode, let apparentSecondaryInputPanelFrame = apparentSecondaryInputPanelFrame, !secondaryInputPanelNode.frame.equalTo(apparentSecondaryInputPanelFrame) {
             if immediatelyLayoutSecondaryInputPanelAndAnimateAppearance {
                 secondaryInputPanelNode.frame = apparentSecondaryInputPanelFrame.offsetBy(dx: 0.0, dy: apparentSecondaryInputPanelFrame.height + previousInputPanelBackgroundFrame.maxY - apparentSecondaryInputPanelFrame.maxY)
@@ -1644,6 +1637,28 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             transition.updateFrame(node: dismissedTitleAccessoryPanelNode, frame: dismissedPanelFrame, completion: { [weak dismissedTitleAccessoryPanelNode] _ in
                 dismissedTitleAccessoryPanelNode?.removeFromSupernode()
             })
+        }
+        
+        if let inputPanelNode = self.inputPanelNode,
+            let apparentInputPanelFrame = apparentInputPanelFrame,
+            !inputPanelNode.frame.equalTo(apparentInputPanelFrame) {
+            if immediatelyLayoutInputPanelAndAnimateAppearance {
+                inputPanelNode.frame = apparentInputPanelFrame.offsetBy(dx: 0.0, dy: apparentInputPanelFrame.height + previousInputPanelBackgroundFrame.maxY - apparentInputBackgroundFrame.maxY)
+                inputPanelNode.alpha = 0.0
+            }
+            if !transition.isAnimated {
+                inputPanelNode.layer.removeAllAnimations()
+                if let currentDismissedInputPanelNode = self.currentDismissedInputPanelNode, inputPanelNode is ChatSearchInputPanelNode {
+                    currentDismissedInputPanelNode.layer.removeAllAnimations()
+                }
+            }
+            if inputPanelNodeHandlesTransition {
+                inputPanelNode.frame = apparentInputPanelFrame
+                inputPanelNode.alpha = 1.0
+            } else {
+                transition.updateFrame(node: inputPanelNode, frame: apparentInputPanelFrame)
+                transition.updateAlpha(node: inputPanelNode, alpha: 1.0)
+            }
         }
         
         if let dismissedInputPanelNode = dismissedInputPanelNode, dismissedInputPanelNode !== self.secondaryInputPanelNode {

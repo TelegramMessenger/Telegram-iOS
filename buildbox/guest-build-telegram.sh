@@ -12,7 +12,7 @@ if [ -z "COMMIT_ID" ]; then
 	exit 1
 fi
 
-if [ "$1" == "hockeyapp" ] || [ "$1" == "testinghockeyapp" ]; then
+if [ "$1" == "hockeyapp" ] || [ "$1" == "appcenter-experimental" ] || [ "$1" == "appcenter-experimental-2" ] || [ "$1" == "testinghockeyapp" ]; then
 	CERTS_PATH="$HOME/codesigning_data/certs"
 	PROFILES_PATH="$HOME/codesigning_data/profiles"
 elif [ "$1" == "testinghockeyapp-local" ]; then
@@ -99,7 +99,7 @@ for f in $(ls "$PROFILES_PATH"); do
 	cp -f "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$uuid.mobileprovision"
 done
 
-if [ "$1" == "hockeyapp" ]; then
+if [ "$1" == "hockeyapp" ] || [ "$1" == "appcenter-experimental" ] || [ "$1" == "appcenter-experimental-2" ]; then
 	BUILD_ENV_SCRIPT="../telegram-ios-shared/buildbox/bin/internal.sh"
 	APP_TARGET="app_arm64"
 elif [ "$1" == "appstore" ]; then
@@ -118,6 +118,12 @@ fi
 
 if [ -d "$BUCK_DIR_CACHE" ]; then
 	sudo chown telegram "$BUCK_DIR_CACHE"
+fi
+
+if [ "$1" == "appcenter-experimental" ]; then
+	export APP_CENTER_ID="$APP_CENTER_EXPERIMENTAL_ID"
+elif [ "$1" == "appcenter-experimental-2" ]; then
+	export APP_CENTER_ID="$APP_CENTER_EXPERIMENTAL_2_ID"
 fi
 
 BUCK="$(pwd)/tools/buck" BUCK_HTTP_CACHE="$BUCK_HTTP_CACHE" BUCK_CACHE_MODE="$BUCK_CACHE_MODE" BUCK_DIR_CACHE="$BUCK_DIR_CACHE" LOCAL_CODESIGNING=1 sh "$BUILD_ENV_SCRIPT" make "$APP_TARGET"
