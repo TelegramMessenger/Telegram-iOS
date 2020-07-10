@@ -132,7 +132,7 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.currentPhotoNode.displayWithoutProcessing = true
         
         self.addPhotoButton = HighlightableButtonNode()
-        self.addPhotoButton.setAttributedTitle(NSAttributedString(string: "\(self.strings.Login_InfoAvatarAdd)\n\(self.strings.Login_InfoAvatarPhoto)", font: Font.regular(16.0), textColor: self.theme.list.itemPlaceholderTextColor, paragraphAlignment: .center), for: .normal)
+        self.addPhotoButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Avatar/EditAvatarIconLarge"), color: self.theme.list.itemPlaceholderTextColor), for: .normal)
         self.addPhotoButton.setBackgroundImage(generateCircleImage(diameter: 110.0, lineWidth: 1.0, color: self.theme.list.itemPlaceholderTextColor), for: .normal)
         
         self.addPhotoButton.addSubnode(self.currentPhotoNode)

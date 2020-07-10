@@ -65,9 +65,28 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let imageNode = self.imageNode, self.item?.message.id == messageId {
-            return (imageNode, imageNode.bounds, { [weak imageNode] in
-                let snapshot = imageNode?.view.snapshotContentTree(unhide: true)
-                return (snapshot, nil)
+            return (imageNode, imageNode.bounds, { [weak self] in
+                guard let strongSelf = self, let imageNode = strongSelf.imageNode else {
+                    return (nil, nil)
+                }
+                
+                let resultView = imageNode.view.snapshotContentTree(unhide: true)
+                if let resultView = resultView, strongSelf.mediaBackgroundNode.supernode != nil, let backgroundView = strongSelf.mediaBackgroundNode.view.snapshotContentTree(unhide: true) {
+                    let backgroundContainer = UIView()
+                    
+                    backgroundContainer.addSubview(backgroundView)
+                    let backgroundFrame = strongSelf.mediaBackgroundNode.layer.convert(strongSelf.mediaBackgroundNode.bounds, to: resultView.layer)
+                    backgroundContainer.frame = CGRect(origin: CGPoint(x: -2.0, y: -2.0), size: CGSize(width: resultView.frame.width + 4.0, height: resultView.frame.height + 4.0))
+                    backgroundView.frame = backgroundContainer.bounds
+                    let viewWithBackground = UIView()
+                    viewWithBackground.addSubview(backgroundContainer)
+                    viewWithBackground.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: resultView.frame.size)
+                    resultView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: resultView.frame.size)
+                    viewWithBackground.addSubview(resultView)
+                    return (viewWithBackground, backgroundContainer)
+                }
+                
+                return (resultView, nil)
             })
         } else {
             return nil
@@ -100,6 +119,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         }
         
         self.imageNode?.isHidden = mediaHidden
+        self.mediaBackgroundNode.isHidden = mediaHidden
         return mediaHidden
     }
     

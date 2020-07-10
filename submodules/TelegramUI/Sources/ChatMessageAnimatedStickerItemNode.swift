@@ -41,6 +41,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var isPlaying = false
     private var animateGreeting = false
     private weak var greetingStickerParentNode: ASDisplayNode?
+    private weak var greetingStickerListNode: ASDisplayNode?
     private var greetingCompletion: (() -> Void)?
     
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
@@ -238,11 +239,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             self.animationNode = animationNode
         } else {
             let animationNode: AnimatedStickerNode
-            if let (node, parentNode, greetingCompletion)  = item.controllerInteraction.greetingStickerNode(), let greetingStickerNode = node as? AnimatedStickerNode {
+            if let (node, parentNode, listNode, greetingCompletion)  = item.controllerInteraction.greetingStickerNode(), let greetingStickerNode = node as? AnimatedStickerNode {
                 animationNode = greetingStickerNode
                 self.imageNode.alpha = 0.0
                 self.animateGreeting = true
                 self.greetingStickerParentNode = parentNode
+                self.greetingStickerListNode = listNode
                 self.greetingCompletion = greetingCompletion
                 self.dateAndStatusNode.alpha = 0.0
             } else {
@@ -767,26 +769,31 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         let initialFrame = animationNode.view.convert(animationNode.bounds, to: parentNode.view)
                         parentNode.addSubnode(animationNode)
                         animationNode.frame = initialFrame
-                        if true {
-                            let targetScale = animationNodeFrame.width / initialFrame.width
-                            animationNode.layer.animateScale(from: 1.0, to: targetScale, duration: 0.3, removeOnCompletion: false)
-                            animationNode.layer.animatePosition(from: initialFrame.center, to: CGPoint(x: animationNodeFrame.midX, y: initialFrame.center.y + 173.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak self] finished in
-                                if let strongSelf = self {
-                                    animationNode.layer.removeAllAnimations()
-                                    strongSelf.animationNode?.frame = animationNodeFrame
-                                    strongSelf.contextSourceNode.contentNode.insertSubnode(animationNode, aboveSubnode: strongSelf.imageNode)
-                                    
-                                    if let animationNode = strongSelf.animationNode as? AnimatedStickerNode {
-                                        animationNode.updateLayout(size: updatedContentFrame.insetBy(dx: imageInset, dy: imageInset).size)
-                                    }
-                                    
-                                    strongSelf.dateAndStatusNode.alpha = 1.0
-                                    strongSelf.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                                    
-                                    strongSelf.greetingCompletion?()
-                                }
-                            })
+                        
+                        var targetPosition = initialFrame.center.y
+                        if let listNode = strongSelf.greetingStickerListNode as? ListView {
+                            targetPosition = listNode.frame.height - listNode.insets.top - animationNodeFrame.height / 2.0 - 12.0
                         }
+                        
+                        let targetScale = animationNodeFrame.width / initialFrame.width
+                        animationNode.layer.animateScale(from: 1.0, to: targetScale, duration: 0.3, removeOnCompletion: false)
+                        animationNode.layer.animatePosition(from: initialFrame.center, to: CGPoint(x: animationNodeFrame.midX, y: targetPosition), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak self] finished in
+                            if let strongSelf = self {
+                                animationNode.layer.removeAllAnimations()
+                                strongSelf.animationNode?.frame = animationNodeFrame
+                                strongSelf.contextSourceNode.contentNode.insertSubnode(animationNode, aboveSubnode: strongSelf.imageNode)
+                                
+                                if let animationNode = strongSelf.animationNode as? AnimatedStickerNode {
+                                    animationNode.updateLayout(size: updatedContentFrame.insetBy(dx: imageInset, dy: imageInset).size)
+                                }
+                                
+                                strongSelf.dateAndStatusNode.alpha = 1.0
+                                strongSelf.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                
+                                strongSelf.greetingCompletion?()
+                            }
+                        })
+                        
                     } else if strongSelf.animationNode?.supernode === strongSelf.contextSourceNode.contentNode {
                         strongSelf.animationNode?.frame = animationNodeFrame
                     }

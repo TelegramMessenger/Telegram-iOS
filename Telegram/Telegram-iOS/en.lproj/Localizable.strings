@@ -5688,8 +5688,8 @@ Any member of this group will be able to see messages in the channel.";
 "Group.MessageVideoUpdated" = "Group video updated";
 "Channel.MessageVideoUpdated" = "Channel video updated";
 
-"Conversation.Dice.u1F3C0" = "Send a basketball emoji to shoot a free throw.";
-"Conversation.Dice.u26BD" = "Send a football emoji to do a free kick.";
+"Conversation.Dice.u1F3C0" = "Send a basketball emoji to try your luck.";
+"Conversation.Dice.u26BD" = "Send a football emoji to try your luck.";
 
 "SettingsSearch_Synonyms_ChatFolders" = "";
 

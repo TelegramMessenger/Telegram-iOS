@@ -197,13 +197,13 @@ private func profileSearchableItems(context: AccountContext, canAddAccount: Bool
     }
     
     var items: [SettingsSearchableItem] = []
-    items.append(SettingsSearchableItem(id: .profile(0), title: strings.EditProfile_Title, alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_Title), icon: icon, breadcrumbs: [], present: { context, _, present in
-        presentProfileSettings(context, present, nil)
-    }))
-    
-    items.append(SettingsSearchableItem(id: .profile(1), title: strings.UserInfo_About_Placeholder, alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_Title), icon: icon, breadcrumbs: [strings.EditProfile_Title], present: { context, _, present in
-        presentProfileSettings(context, present, .bio)
-    }))
+//    items.append(SettingsSearchableItem(id: .profile(0), title: strings.EditProfile_Title, alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_Title), icon: icon, breadcrumbs: [], present: { context, _, present in
+//        presentProfileSettings(context, present, nil)
+//    }))
+//
+//    items.append(SettingsSearchableItem(id: .profile(1), title: strings.UserInfo_About_Placeholder, alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_Title), icon: icon, breadcrumbs: [strings.EditProfile_Title], present: { context, _, present in
+//        presentProfileSettings(context, present, .bio)
+//    }))
     items.append(SettingsSearchableItem(id: .profile(2), title: strings.Settings_PhoneNumber, alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_PhoneNumber), icon: icon, breadcrumbs: [strings.EditProfile_Title], present: { context, _, present in
         let _ = (context.account.postbox.transaction { transaction -> String in
             return (transaction.getPeer(context.account.peerId) as? TelegramUser)?.phone ?? ""

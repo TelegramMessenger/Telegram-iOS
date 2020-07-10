@@ -2086,7 +2086,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             
             let entriesPromise = Promise<[AvatarGalleryEntry]>(entries)
-            let galleryController = AvatarGalleryController(context: strongSelf.context, peer: peer, sourceHasRoundCorners: !strongSelf.headerNode.isAvatarExpanded, remoteEntries: entriesPromise, centralEntryIndex: centralEntry.flatMap { entries.firstIndex(of: $0) }, replaceRootController: { controller, ready in
+            let galleryController = AvatarGalleryController(context: strongSelf.context, peer: peer, sourceHasRoundCorners: !strongSelf.headerNode.isAvatarExpanded, remoteEntries: entriesPromise, skipInitial: true, centralEntryIndex: centralEntry.flatMap { entries.firstIndex(of: $0) }, replaceRootController: { controller, ready in
             })
             galleryController.openAvatarSetup = { [weak self] completion in
                 self?.openAvatarForEditing(hasRemove: false, completion: completion)
@@ -2535,7 +2535,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         
         self.headerNode.avatarListNode.listContainerNode.currentIndexUpdated = { [weak self] in
-            self?.updateNavigation(transition: .immediate, additive: false)
+            self?.updateNavigation(transition: .immediate, additive: true)
         }
         
         self.dataDisposable = (screenData
@@ -4067,6 +4067,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
                     }
                     
+                    if let timestamp = videoStartTimestamp {
+                        videoStartTimestamp = max(0.0, min(timestamp, result.duration))
+                    }
+                    
                     var value = stat()
                     if stat(result.fileURL.path, &value) == 0 {
                         if let data = try? Data(contentsOf: result.fileURL) {
@@ -5415,11 +5419,19 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         guard let (_, navigationHeight) = self.validLayout else {
             return
         }
-        var height: CGFloat = self.isSettings ? 140.0 : 212.0
-        if self.headerNode.twoLineInfo {
-            height += 17.0
-        }
-        if !self.state.isEditing {
+        if self.state.isEditing && self.isSettings {
+            if targetContentOffset.pointee.y < navigationHeight {
+                if targetContentOffset.pointee.y < navigationHeight / 2.0 {
+                    targetContentOffset.pointee.y = 0.0
+                } else {
+                    targetContentOffset.pointee.y = navigationHeight
+                }
+            }
+        } else {
+            var height: CGFloat = self.isSettings ? 140.0 : 212.0
+            if self.headerNode.twoLineInfo {
+                height += 17.0
+            }
             if targetContentOffset.pointee.y < height {
                 if targetContentOffset.pointee.y < height / 2.0 {
                     targetContentOffset.pointee.y = 0.0

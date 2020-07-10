@@ -318,11 +318,14 @@ private func peerInfoScreenInputData(context: AccountContext, peerId: PeerId, is
 
 private func peerInfoProfilePhotos(context: AccountContext, peerId: PeerId) -> Signal<Any, NoError> {
     return context.account.postbox.combinedView(keys: [.basicPeer(peerId)])
-    |> map { view -> AvatarGalleryEntry? in
+    |> mapToSignal { view -> Signal<AvatarGalleryEntry?, NoError> in
         guard let peer = (view.views[.basicPeer(peerId)] as? BasicPeerView)?.peer else {
-            return nil
+            return .single(nil)
         }
-        return initialAvatarGalleryEntries(peer: peer).first
+        return initialAvatarGalleryEntries(account: context.account, peer: peer)
+        |> map { entries in
+            return entries.first
+        }
     }
     |> distinctUntilChanged
     |> mapToSignal { firstEntry -> Signal<[AvatarGalleryEntry], NoError> in

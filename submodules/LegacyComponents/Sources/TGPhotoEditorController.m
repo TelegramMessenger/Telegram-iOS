@@ -1716,7 +1716,7 @@
         CGFloat duration = self.view.frame.size.height / velocity;
         CGRect targetFrame = CGRectOffset(self.view.frame, 0, self.view.frame.size.height);
         
-        [UIView animateWithDuration:duration animations:^
+        [UIView animateWithDuration:duration delay:0.4 options:kNilOptions animations:^
         {
             self.view.frame = targetFrame;
         } completion:^(__unused BOOL finished)
