@@ -1310,22 +1310,32 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
                 transition.updateAlpha(node: self.iconNode, alpha: iconHidden ? 0.0 : 1.0)
                 transition.updateAlpha(node: self.updatingAvatarOverlay, alpha: overlayHidden ? 0.0 : 1.0)
             } else {
+                var immediately = self.currentRepresentation == nil
                 if isEditing {
-                    iconHidden = peer.profileImageRepresentations.isEmpty
-                    overlayHidden = peer.profileImageRepresentations.isEmpty
+                    immediately = peer.profileImageRepresentations.isEmpty
+                    iconHidden = immediately
+                    overlayHidden = immediately
                 } else {
                     iconHidden = true
                     overlayHidden = true
                 }
-                Queue.mainQueue().after(0.3) { [weak self] in
-                    guard let strongSelf = self else {
-                        return
+                
+                let targetAlpha: CGFloat = overlayHidden ? 0.0 : 1.0
+                if self.updatingAvatarOverlay.alpha != targetAlpha {
+                    let update = {
+                        self.statusNode.transitionToState(.none)
+                        self.currentRepresentation = nil
+                        self.imageNode.setSignal(.single(nil))
+                        transition.updateAlpha(node: self.iconNode, alpha: iconHidden ? 0.0 : 1.0)
+                        transition.updateAlpha(node: self.updatingAvatarOverlay, alpha: overlayHidden ? 0.0 : 1.0)
                     }
-                    strongSelf.statusNode.transitionToState(.none)
-                    strongSelf.currentRepresentation = nil
-                    strongSelf.imageNode.setSignal(.single(nil))
-                    transition.updateAlpha(node: strongSelf.iconNode, alpha: iconHidden ? 0.0 : 1.0)
-                    transition.updateAlpha(node: strongSelf.updatingAvatarOverlay, alpha: overlayHidden ? 0.0 : 1.0)
+                    if immediately {
+                        update()
+                    } else {
+                        Queue.mainQueue().after(0.3) {
+                            update()
+                        }
+                    }
                 }
             }
             if !overlayHidden && self.updatingAvatarOverlay.image == nil {
