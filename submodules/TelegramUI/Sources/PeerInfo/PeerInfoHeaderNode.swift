@@ -1312,9 +1312,9 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
             } else {
                 var immediately = self.currentRepresentation == nil
                 if isEditing {
-                    immediately = peer.profileImageRepresentations.isEmpty
-                    iconHidden = immediately
-                    overlayHidden = immediately
+                    immediately = immediately || peer.profileImageRepresentations.isEmpty
+                    iconHidden = peer.profileImageRepresentations.isEmpty
+                    overlayHidden = peer.profileImageRepresentations.isEmpty
                 } else {
                     iconHidden = true
                     overlayHidden = true
