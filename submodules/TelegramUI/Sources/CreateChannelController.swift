@@ -367,10 +367,8 @@ public func createChannelController(context: AccountContext) -> ViewController {
                                     context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
                                 }
                                 
-                                updateState { state in
-                                    var state = state
-                                    state.avatar = .image(representation, false)
-                                    return state
+                                if let timestamp = videoStartTimestamp {
+                                    videoStartTimestamp = max(0.0, min(timestamp, result.duration))
                                 }
                                 
                                 var value = stat()
@@ -412,6 +410,14 @@ public func createChannelController(context: AccountContext) -> ViewController {
                             return uploadedPeerVideo(postbox: context.account.postbox, network: context.account.network, messageMediaPreuploadManager: context.account.messageMediaPreuploadManager, resource: resource) |> map(Optional.init)
                         } else {
                             return .single(nil)
+                        }
+                    } |> afterNext { next in
+                        if let next = next, next.isCompleted {
+                            updateState { state in
+                                var state = state
+                                state.avatar = .image(representation, false)
+                                return state
+                            }
                         }
                     })
                     uploadedVideoAvatar = (promise, videoStartTimestamp)

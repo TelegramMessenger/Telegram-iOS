@@ -4067,6 +4067,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
                     }
                     
+                    if let timestamp = videoStartTimestamp {
+                        videoStartTimestamp = max(0.0, min(timestamp, result.duration))
+                    }
+                    
                     var value = stat()
                     if stat(result.fileURL.path, &value) == 0 {
                         if let data = try? Data(contentsOf: result.fileURL) {

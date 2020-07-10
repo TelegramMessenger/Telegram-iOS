@@ -22,9 +22,17 @@ public func updateAccountPhoto(account: Account, resource: MediaResource?, video
 public struct UploadedPeerPhotoData {
     fileprivate let resource: MediaResource
     fileprivate let content: UploadedPeerPhotoDataContent
+    
+    public var isCompleted: Bool {
+        if case let .result(result) = content, case .inputFile = result {
+            return true
+        } else {
+            return false
+        }
+    }
 }
 
-private enum UploadedPeerPhotoDataContent {
+enum UploadedPeerPhotoDataContent {
     case result(MultipartUploadResult)
     case error
 }

@@ -268,42 +268,44 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
         if let video = videoRepresentations.last, let id = id {
             let mediaManager = self.context.sharedContext.mediaManager
             let videoFileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
-            let videoContent = NativeVideoContent(id: .profileVideo(id, nil), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: true, autoFetchFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
-            let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .embedded)
-            videoNode.isUserInteractionEnabled = false
-            videoNode.isHidden = true
+            let videoContent = NativeVideoContent(id: .profileVideo(id, nil), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
             
-            if let startTimestamp = video.startTimestamp {
-                self.playbackStatusDisposable.set((videoNode.status
-                |> map { status -> Bool in
-                    if let status = status, case .playing = status.status {
-                        return true
-                    } else {
-                        return false
-                    }
-                }
-                |> filter { playing in
-                    return playing
-                }
-                |> take(1)
-                |> deliverOnMainQueue).start(completed: { [weak self] in
-                    if let strongSelf = self {
-                        Queue.mainQueue().after(0.15) {
-                            strongSelf.videoNode?.isHidden = false
+            if videoContent.id != self.videoContent?.id {
+                let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .embedded)
+                videoNode.isUserInteractionEnabled = false
+                videoNode.isHidden = true
+                
+                if let _ = video.startTimestamp {
+                    self.playbackStatusDisposable.set((videoNode.status
+                    |> map { status -> Bool in
+                        if let status = status, case .playing = status.status {
+                            return true
+                        } else {
+                            return false
                         }
                     }
-                }))
-                videoNode.seek(startTimestamp)
-            } else {
-                self.playbackStatusDisposable.set(nil)
-                videoNode.isHidden = false
+                    |> filter { playing in
+                        return playing
+                    }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                        if let strongSelf = self {
+                            Queue.mainQueue().after(0.12) {
+                                strongSelf.videoNode?.isHidden = false
+                            }
+                        }
+                    }))
+                } else {
+                    self.playbackStatusDisposable.set(nil)
+                    videoNode.isHidden = false
+                }
+                            
+                self.videoContent = videoContent
+                self.videoNode = videoNode
+                self.statusPromise.set(videoNode.status |> map { ($0, video.startTimestamp) })
+                
+                self.addSubnode(videoNode)
             }
-                        
-            self.videoContent = videoContent
-            self.videoNode = videoNode
-            self.statusPromise.set(videoNode.status |> map { ($0, video.startTimestamp) })
-            
-            self.addSubnode(videoNode)
         } else {
             if let videoNode = self.videoNode {
                 self.videoContent = nil
@@ -1114,7 +1116,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             if let item = item, case let .image(reference, representations, videoRepresentations, immediateThumbnailData) = item, let video = videoRepresentations.last, case let .cloud(imageId, _, _) = reference {
                 let id = imageId
                 let videoFileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
-                let videoContent = NativeVideoContent(id: .profileVideo(id, nil), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, autoFetchFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
+                let videoContent = NativeVideoContent(id: .profileVideo(id, nil), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, autoFetchFullSizeThumbnail: true, startTimestamp: video.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
                 if videoContent.id != self.videoContent?.id {
                     let mediaManager = self.context.sharedContext.mediaManager
                     let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .embedded)
@@ -1215,14 +1217,14 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
         self.updatingAvatarOverlay = ASImageNode()
         self.updatingAvatarOverlay.displayWithoutProcessing = true
         self.updatingAvatarOverlay.displaysAsynchronously = false
-        self.updatingAvatarOverlay.isHidden = true
+        self.updatingAvatarOverlay.alpha = 0.0
         
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(rgb: 0x000000, alpha: 0.6))
         self.statusNode.isUserInteractionEnabled = false
         
         self.iconNode = ASImageNode()
         self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Avatar/EditAvatarIconLarge"), color: .white)
-        self.iconNode.isHidden = true
+        self.iconNode.alpha = 0.0
         
         super.init()
         
@@ -1251,6 +1253,8 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
         self.imageNode.frame = CGRect(origin: CGPoint(x: -avatarSize / 2.0, y: -avatarSize / 2.0), size: CGSize(width: avatarSize, height: avatarSize))
         self.updatingAvatarOverlay.frame = self.imageNode.frame
         
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
+        
         if canEditPeerInfo(context: self.context, peer: peer) {
             var overlayHidden = false
             var iconHidden = false
@@ -1268,8 +1272,9 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
                         }
                     }
                 }
-                self.iconNode.isHidden = iconHidden
-                self.updatingAvatarOverlay.isHidden = overlayHidden
+                
+                transition.updateAlpha(node: self.iconNode, alpha: iconHidden ? 0.0 : 1.0)
+                transition.updateAlpha(node: self.updatingAvatarOverlay, alpha: overlayHidden ? 0.0 : 1.0)
             } else {
                 if isEditing {
                     iconHidden = peer.profileImageRepresentations.isEmpty
@@ -1279,11 +1284,14 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
                     overlayHidden = true
                 }
                 Queue.mainQueue().after(0.15) { [weak self] in
-                    self?.statusNode.transitionToState(.none)
-                    self?.currentRepresentation = nil
-                    self?.imageNode.setSignal(.single(nil))
-                    self?.iconNode.isHidden = iconHidden
-                    self?.updatingAvatarOverlay.isHidden = overlayHidden
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.statusNode.transitionToState(.none)
+                    strongSelf.currentRepresentation = nil
+                    strongSelf.imageNode.setSignal(.single(nil))
+                    transition.updateAlpha(node: strongSelf.iconNode, alpha: iconHidden ? 0.0 : 1.0)
+                    transition.updateAlpha(node: strongSelf.updatingAvatarOverlay, alpha: overlayHidden ? 0.0 : 1.0)
                 }
             }
             if !overlayHidden && self.updatingAvatarOverlay.image == nil {
@@ -1291,9 +1299,9 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
             }
         } else {
             self.statusNode.transitionToState(.none)
-            self.iconNode.isHidden = true
-            self.updatingAvatarOverlay.isHidden = true
             self.currentRepresentation = nil
+            transition.updateAlpha(node: self.iconNode, alpha: 0.0)
+            transition.updateAlpha(node: self.updatingAvatarOverlay, alpha: 0.0)
         }
     }
 }
@@ -1346,7 +1354,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         if let item = item, case let .image(reference, representations, videoRepresentations, immediateThumbnailData) = item, let video = videoRepresentations.last, case let .cloud(imageId, _, _) = reference {
             let id = imageId
             let videoFileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
-            let videoContent = NativeVideoContent(id: .profileVideo(id, nil), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, autoFetchFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
+            let videoContent = NativeVideoContent(id: .profileVideo(id, nil), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, autoFetchFullSizeThumbnail: true, startTimestamp: video.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
             if videoContent.id != self.videoContent?.id {
                 let mediaManager = self.context.sharedContext.mediaManager
                 let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .overlay)

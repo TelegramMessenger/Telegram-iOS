@@ -625,12 +625,10 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                                     context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
                                 }
                                 
-                                updateState { state in
-                                    var state = state
-                                    state.avatar = .image(representation, false)
-                                    return state
+                                if let timestamp = videoStartTimestamp {
+                                    videoStartTimestamp = max(0.0, min(timestamp, result.duration))
                                 }
-                                
+                                                                
                                 var value = stat()
                                 if stat(result.fileURL.path, &value) == 0 {
                                     if let data = try? Data(contentsOf: result.fileURL) {
@@ -670,6 +668,14 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                             return uploadedPeerVideo(postbox: context.account.postbox, network: context.account.network, messageMediaPreuploadManager: context.account.messageMediaPreuploadManager, resource: resource) |> map(Optional.init)
                         } else {
                             return .single(nil)
+                        }
+                    } |> afterNext { next in
+                        if let next = next, next.isCompleted {
+                            updateState { state in
+                                var state = state
+                                state.avatar = .image(representation, false)
+                                return state
+                            }
                         }
                     })
                     uploadedVideoAvatar = (promise, videoStartTimestamp)

@@ -113,7 +113,7 @@ private func mappedInsertEntries(context: AccountContext, presentationData: Item
     return entries.map { entry -> ListViewInsertItem in
         switch entry.entry {
             case let .displayTab(theme, text, value):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: 0, style: .blocks, updated: { value in
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, noCorners: true, sectionId: 0, style: .blocks, updated: { value in
                     nodeInteraction.updateShowCallsTab(value)
                 }), directionHint: entry.directionHint)
             case let .displayTabInfo(theme, text):
@@ -130,7 +130,7 @@ private func mappedUpdateEntries(context: AccountContext, presentationData: Item
     return entries.map { entry -> ListViewUpdateItem in
         switch entry.entry {
             case let .displayTab(theme, text, value):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: 0, style: .blocks, updated: { value in
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, noCorners: true, sectionId: 0, style: .blocks, updated: { value in
                     nodeInteraction.updateShowCallsTab(value)
                 }), directionHint: entry.directionHint)
             case let .displayTabInfo(theme, text):
