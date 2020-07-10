@@ -2426,6 +2426,8 @@ Unused sets are archived when you add more.";
 "Calls.RatingFeedback" = "Write a comment...";
 
 "Call.StatusIncoming" = "Telegram Audio...";
+"Call.IncomingVoiceCall" = "Incoming Voice Call";
+"Call.IncomingVideoCall" = "Incoming Video Call";
 "Call.StatusRequesting" = "Contacting...";
 "Call.StatusWaiting" = "Waiting...";
 "Call.StatusRinging" = "Ringing...";
@@ -4134,7 +4136,7 @@ Unused sets are archived when you add more.";
 "Chat.DeleteMessagesConfirmation_1" = "Delete message";
 "Chat.DeleteMessagesConfirmation_any" = "Delete %@ messages";
 
-"Settings.Search" = "Search";
+"Settings.Search" = "Search Settings";
 
 "SettingsSearch.FAQ" = "FAQ";
 
@@ -5633,12 +5635,10 @@ Any member of this group will be able to see messages in the channel.";
 
 "Call.RemoteVideoPaused" = "%@'s video paused";
 
-"Settings.SetProfilePhotoOrVideo" = "Set Profile Photo or Video";
-"Settings.SetNewProfilePhotoOrVideo" = "Set New Profile Photo or Video";
+"Settings.SetProfilePhotoOrVideo" = "Set Photo or Video";
+"Settings.SetNewProfilePhotoOrVideo" = "Set New Photo or Video";
 "Settings.ViewVideo" = "View Video";
 "Settings.RemoveVideo" = "Remove Video";
-
-"Settings.EditProfileMedia" = "Edit";
 
 "Conversation.Unarchive" = "Unarchive";
 "Conversation.UnarchiveDone" = "The chat was moved to your main list.";
@@ -5669,3 +5669,28 @@ Any member of this group will be able to see messages in the channel.";
 "Stats.GroupShowMoreTopInviters_3_10" = "Show %@ More";
 "Stats.GroupShowMoreTopInviters_many" = "Show %@ More";
 "Stats.GroupShowMoreTopInviters_any" = "Show %@ More";
+
+"Settings.AddAnotherAccount" = "Add Another Account";
+"Settings.AddAnotherAccount.Help" = "You can add up to three accounts with different phone numbers.";
+
+"ProfilePhoto.OpenGallery" = "Open Gallery";
+"ProfilePhoto.SearchWeb" = "Search Web";
+"ProfilePhoto.OpenInEditor" = "Open in Editor";
+
+"Settings.EditAccount" = "Edit Account";
+"Settings.EditPhoto" = "Edit Photo";
+"Settings.EditVideo" = "Edit Video";
+"Settings.CancelUpload" = "Cancel Upload";
+
+"Settings.FrequentlyAskedQuestions" = "Frequently Asked Questions";
+
+"Notification.ChangedGroupVideo" = "%@ changed group video";
+"Group.MessageVideoUpdated" = "Group video updated";
+"Channel.MessageVideoUpdated" = "Channel video updated";
+
+"Conversation.Dice.u1F3C0" = "Send a basketball emoji to try your luck.";
+"Conversation.Dice.u26BD" = "Send a football emoji to try your luck.";
+
+"SettingsSearch_Synonyms_ChatFolders" = "";
+
+"EditProfile.NameAndPhotoOrVideoHelp" = "Enter your name and add an optional profile photo or video.";

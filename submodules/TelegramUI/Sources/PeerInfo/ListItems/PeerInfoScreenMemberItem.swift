@@ -21,22 +21,28 @@ enum PeerInfoScreenMemberItemAction {
 final class PeerInfoScreenMemberItem: PeerInfoScreenItem {
     let id: AnyHashable
     let context: AccountContext
-    let enclosingPeer: Peer
+    let enclosingPeer: Peer?
     let member: PeerInfoMember
+    let badge: String?
     let action: ((PeerInfoScreenMemberItemAction) -> Void)?
+    let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
     init(
         id: AnyHashable,
         context: AccountContext,
-        enclosingPeer: Peer,
+        enclosingPeer: Peer?,
         member: PeerInfoMember,
-        action: ((PeerInfoScreenMemberItemAction) -> Void)?
+        badge: String? = nil,
+        action: ((PeerInfoScreenMemberItemAction) -> Void)?,
+        contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil
     ) {
         self.id = id
         self.context = context
         self.enclosingPeer = enclosingPeer
         self.member = member
+        self.badge = badge
         self.action = action
+        self.contextAction = contextAction
     }
     
     func node() -> PeerInfoScreenItemNode {
@@ -73,7 +79,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
-        recognizer.tapActionAtPoint = { [weak self] point in
+        recognizer.tapActionAtPoint = { point in
             return .keepWithSingleTap
         }
         recognizer.highlight = { [weak self] point in
@@ -88,7 +94,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
     @objc private func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
         case .ended:
-            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+            if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
                 switch gesture {
                 case .tap:
                     if let item = self.item {
@@ -103,7 +109,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         }
     }
     
-    override func update(width: CGFloat, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenMemberItem else {
             return 10.0
         }
@@ -116,7 +122,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
             }
         }
         
-        let sideInset: CGFloat = 16.0
+        let sideInset: CGFloat = 16.0 + safeInsets.left
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
@@ -152,14 +158,40 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
                 item.action?(.remove)
             }))
         }
+        if actions.contains(.logout) {
+            options.append(ItemListPeerItemRevealOption(type: .destructive, title: presentationData.strings.Settings_Context_Logout, action: {
+                item.action?(.remove)
+            }))
+        }
         
-        let peerItem = ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: item.context, peer: item.member.peer, height: .peerList, presence: item.member.presence, text: .presence, label: label == nil ? .none : .text(label!, .standard), editing: ItemListPeerItemEditing(editable: !options.isEmpty, editing: false, revealed: nil), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, selectable: false, sectionId: 0, action: nil, setPeerIdWithRevealedOptions: { lhs, rhs in
+        let itemLabel: ItemListPeerItemLabel
+        if let label = label {
+            itemLabel = .text(label, .standard)
+        } else if let badge = item.badge {
+            itemLabel = .badge(badge)
+        } else {
+            itemLabel = .none
+        }
+        
+        let itemHeight: ItemListPeerItemHeight
+        let itemText: ItemListPeerItemText
+        var synchronousLoads = false
+        if case .account = item.member {
+            itemHeight = .generic
+            itemText = .none
+            synchronousLoads = true
+        } else {
+            itemHeight = .peerList
+            itemText = .presence
+        }
+        
+        let peerItem = ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: item.context, peer: item.member.peer, height: itemHeight, presence: item.member.presence, text: itemText, label: itemLabel, editing: ItemListPeerItemEditing(editable: !options.isEmpty, editing: false, revealed: nil), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, selectable: false, sectionId: 0, action: nil, setPeerIdWithRevealedOptions: { lhs, rhs in
             
         }, removePeer: { _ in
             
-        }, contextAction: nil, hasTopStripe: false, hasTopGroupInset: false, noInsets: true, displayDecorations: false)
+        }, contextAction: item.contextAction, hasTopStripe: false, hasTopGroupInset: false, noInsets: true, displayDecorations: false)
         
-        let params = ListViewItemLayoutParams(width: width, leftInset: 0.0, rightInset: 0.0, availableHeight: 1000.0)
+        let params = ListViewItemLayoutParams(width: width, leftInset: safeInsets.left, rightInset: safeInsets.right, availableHeight: 1000.0)
         
         let itemNode: ItemListPeerItemNode
         if let current = self.itemNode {
@@ -177,7 +209,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
             })
         } else {
             var itemNodeValue: ListViewItemNode?
-            peerItem.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
+            peerItem.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: synchronousLoads, previousItem: nil, nextItem: nil, completion: { node, apply in
                 itemNodeValue = node
                 apply().1(ListViewItemApply(isOnScreen: true))
             })
@@ -209,7 +241,12 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         guard let item = self.item else {
             return
         }
-        if point != nil && item.context.account.peerId != item.member.id {
+        var highlight = point != nil
+        if case .account = item.member {
+        } else if item.context.account.peerId == item.member.id {
+            highlight = false
+        }
+        if highlight {
             self.selectionNode.updateIsHighlighted(true)
         } else {
             self.selectionNode.updateIsHighlighted(false)

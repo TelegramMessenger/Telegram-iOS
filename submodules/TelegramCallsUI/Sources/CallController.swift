@@ -34,6 +34,7 @@ protocol CallControllerNodeProtocol: class {
     
     func animateIn()
     func animateOut(completion: @escaping () -> Void)
+    func expandFromPipIfPossible()
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition)
 }
@@ -133,7 +134,7 @@ public final class CallController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        if self.call.isVideo {
+        if self.call.isVideoPossible {
             self.displayNode = CallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit, easyDebugAccess: self.easyDebugAccess, call: self.call)
         } else {
             self.displayNode = LegacyCallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit, easyDebugAccess: self.easyDebugAccess, call: self.call)
@@ -320,7 +321,11 @@ public final class CallController: ViewController {
         })
     }
     
-    @objc func backPressed() {
+    @objc private func backPressed() {
         self.dismiss()
+    }
+    
+    public func expandFromPipIfPossible() {
+        self.controllerNode.expandFromPipIfPossible()
     }
 }

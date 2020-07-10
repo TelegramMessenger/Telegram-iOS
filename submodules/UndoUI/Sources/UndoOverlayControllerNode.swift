@@ -498,7 +498,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         let rightInset: CGFloat = 16.0
         var contentHeight: CGFloat = 20.0
         
-        let margin: CGFloat = 12.0
+        let margin: CGFloat = 11.0
         
         let buttonTextSize = self.undoButtonTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
         let buttonMinX: CGFloat
@@ -508,8 +508,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             buttonMinX = layout.size.width - layout.safeInsets.left - rightInset
         }
         
-        let titleSize = self.titleNode.updateLayout(CGSize(width: buttonMinX - 8.0 - leftInset - layout.safeInsets.left - margin, height: .greatestFiniteMagnitude))
-        let textSize = self.textNode.updateLayout(CGSize(width: buttonMinX - 8.0 - leftInset - layout.safeInsets.left - margin, height: .greatestFiniteMagnitude))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: buttonMinX - 6.0 - leftInset - layout.safeInsets.left - margin, height: .greatestFiniteMagnitude))
+        let textSize = self.textNode.updateLayout(CGSize(width: buttonMinX - 6.0 - leftInset - layout.safeInsets.left - margin, height: .greatestFiniteMagnitude))
         
         if !titleSize.width.isZero {
             contentHeight += titleSize.height + 1.0

@@ -5,12 +5,13 @@
 #import <UIKit/UIKit.h>
 
 #import "api/media_stream_interface.h"
+#import <TgVoip/OngoingCallThreadLocalContext.h>
 
 #include <memory>
 
 @class RTCVideoFrame;
 
-@interface VideoMetalView : UIView
+@interface VideoMetalView : OngoingCallThreadLocalContextWebrtcVideoView
 
 @property(nonatomic) UIViewContentMode videoContentMode;
 @property(nonatomic, getter=isEnabled) BOOL enabled;

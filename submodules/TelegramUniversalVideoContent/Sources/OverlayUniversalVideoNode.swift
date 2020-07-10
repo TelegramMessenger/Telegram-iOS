@@ -164,4 +164,8 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode {
             self.defaultExpand()
         }
     }
+    
+    public func controlPlay() {
+        self.videoNode.play()
+    }
 }

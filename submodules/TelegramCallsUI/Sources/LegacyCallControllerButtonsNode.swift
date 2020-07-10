@@ -15,13 +15,7 @@ enum LegacyCallControllerButtonsSpeakerMode {
 }
 
 enum LegacyCallControllerButtonsMode: Equatable {
-    enum VideoState: Equatable {
-        case notAvailable
-        case available(Bool)
-        case active
-    }
-    
-    case active(speakerMode: LegacyCallControllerButtonsSpeakerMode, videoState: VideoState)
+    case active(speakerMode: LegacyCallControllerButtonsSpeakerMode)
     case incoming
 }
 
@@ -142,41 +136,27 @@ final class LegacyCallControllerButtonsNode: ASDisplayNode {
                 for button in [self.muteButton, self.endButton, self.speakerButton, self.swichCameraButton] {
                     button.alpha = 0.0
                 }
-            case let .active(speakerMode, videoState):
+            case let .active(speakerMode):
                 for button in [self.muteButton] {
                     if animated && button.alpha.isZero {
                         button.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                     }
                     button.alpha = 1.0
                 }
-                switch videoState {
-                case .active, .available:
-                    for button in [self.speakerButton] {
-                        if animated && !button.alpha.isZero {
-                            button.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
-                        }
-                        button.alpha = 0.0
+                
+                for button in [self.swichCameraButton] {
+                    if animated && !button.alpha.isZero {
+                        button.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
                     }
-                    for button in [self.swichCameraButton] {
-                        if animated && button.alpha.isZero {
-                            button.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                        }
-                        button.alpha = 1.0
-                    }
-                case .notAvailable:
-                    for button in [self.swichCameraButton] {
-                        if animated && !button.alpha.isZero {
-                            button.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
-                        }
-                        button.alpha = 0.0
-                    }
-                    for button in [self.speakerButton] {
-                        if animated && button.alpha.isZero {
-                            button.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                        }
-                        button.alpha = 1.0
-                    }
+                    button.alpha = 0.0
                 }
+                for button in [self.speakerButton] {
+                    if animated && button.alpha.isZero {
+                        button.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                    }
+                    button.alpha = 1.0
+                }
+                
                 var animatingAcceptButton = false
                 if self.endButton.alpha.isZero {
                     if animated {

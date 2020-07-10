@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "ic_editaccount.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

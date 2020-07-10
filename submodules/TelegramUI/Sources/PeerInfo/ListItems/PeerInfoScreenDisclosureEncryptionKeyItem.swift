@@ -66,7 +66,7 @@ private final class PeerInfoScreenDisclosureEncryptionKeyItemNode: PeerInfoScree
         self.addSubnode(self.arrowNode)
     }
     
-    override func update(width: CGFloat, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenDisclosureEncryptionKeyItem else {
             return 10.0
         }
@@ -79,7 +79,7 @@ private final class PeerInfoScreenDisclosureEncryptionKeyItemNode: PeerInfoScree
         
         self.selectionNode.pressed = item.action
         
-        let sideInset: CGFloat = 16.0
+        let sideInset: CGFloat = 16.0 + safeInsets.left
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
@@ -90,9 +90,9 @@ private final class PeerInfoScreenDisclosureEncryptionKeyItemNode: PeerInfoScree
         
         let arrowInset: CGFloat = 18.0
         
-        let textFrame = CGRect(origin: CGPoint(x: sideInset, y: 11.0), size: textSize)
+        let textFrame = CGRect(origin: CGPoint(x: sideInset, y: 12.0), size: textSize)
         
-        let height = textSize.height + 22.0
+        let height = textSize.height + 24.0
         
         if let arrowImage = PresentationResourcesItemList.disclosureArrowImage(presentationData.theme) {
             self.arrowNode.image = arrowImage

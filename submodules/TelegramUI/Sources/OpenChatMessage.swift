@@ -46,8 +46,8 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
             switch action.action {
             case let .photoUpdated(image):
                 if let peer = messageMainPeer(message), let image = image {
-                    let promise: Promise<[AvatarGalleryEntry]> = Promise([AvatarGalleryEntry.image(image.imageId, image.reference, image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), image.videoRepresentations, peer, message.timestamp, nil, message.id, image.immediateThumbnailData)])
-                    let galleryController = AvatarGalleryController(context: context, peer: peer, remoteEntries: promise, replaceRootController: { controller, ready in
+                    let promise: Promise<[AvatarGalleryEntry]> = Promise([AvatarGalleryEntry.image(image.imageId, image.reference, image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), image.videoRepresentations, peer, message.timestamp, nil, message.id, image.immediateThumbnailData, "action")])
+                    let galleryController = AvatarGalleryController(context: context, peer: peer, remoteEntries: promise, skipInitial: true, replaceRootController: { controller, ready in
                         
                     })
                     return .chatAvatars(galleryController, image)

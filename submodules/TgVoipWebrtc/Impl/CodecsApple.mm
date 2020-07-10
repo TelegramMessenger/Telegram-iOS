@@ -195,11 +195,19 @@ std::unique_ptr<webrtc::VideoDecoderFactory> makeVideoDecoderFactory() {
 }
 
 bool supportsH265Encoding() {
+#if TARGET_OS_IOS
     if (@available(iOS 11.0, *)) {
         return [[AVAssetExportSession allExportPresets] containsObject:AVAssetExportPresetHEVCHighestQuality];
     } else {
         return false;
     }
+#else
+    if (@available(macOS 10.13, *)) {
+        return [[AVAssetExportSession allExportPresets] containsObject:AVAssetExportPresetHEVCHighestQuality];
+    } else {
+        return false;
+    }
+#endif
 }
 
 rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> makeVideoSource(rtc::Thread *signalingThread, rtc::Thread *workerThread) {

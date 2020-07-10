@@ -928,8 +928,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             let transformedCopyViewFinalFrame = videoNode.view.convert(videoNode.view.bounds, to: self.view)
             
             let (maybeSurfaceCopyView, _) = node.2()
-            let (maybeCopyView, copyViewBackgrond) = node.2()
-            copyViewBackgrond?.alpha = 0.0
+            let (maybeCopyView, copyViewBackground) = node.2()
+            copyViewBackground?.alpha = 0.0
             let surfaceCopyView = maybeSurfaceCopyView!
             let copyView = maybeCopyView!
             
@@ -1032,8 +1032,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         var copyCompleted = false
         
         let (maybeSurfaceCopyView, _) = node.2()
-        let (maybeCopyView, copyViewBackgrond) = node.2()
-        copyViewBackgrond?.alpha = 0.0
+        let (maybeCopyView, copyViewBackground) = node.2()
+        copyViewBackground?.alpha = 0.0
         let surfaceCopyView = maybeSurfaceCopyView!
         let copyView = maybeCopyView!
         

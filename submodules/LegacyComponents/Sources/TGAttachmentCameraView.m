@@ -49,7 +49,7 @@
         [_wrapperView addSubview:_previewView];
         [camera attachPreviewView:_previewView];
         
-        _iconView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"AttachmentMenuInteractiveCameraIcon")];
+        _iconView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"Editor/Camera"]];
         [self addSubview:_iconView];
         
         [self addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapGesture:)]];

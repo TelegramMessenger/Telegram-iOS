@@ -101,6 +101,7 @@ private final class ChatInfoTitlePanelInviteInfoNode: ASDisplayNode {
     private var theme: PresentationTheme?
     
     private let labelNode: ImmediateTextNode
+    private let filledBackgroundFillNode: LinkHighlightingNode
     private let filledBackgroundNode: LinkHighlightingNode
     
     init(openInvitePeer: @escaping () -> Void) {
@@ -108,10 +109,12 @@ private final class ChatInfoTitlePanelInviteInfoNode: ASDisplayNode {
         self.labelNode.maximumNumberOfLines = 1
         self.labelNode.textAlignment = .center
         
+        self.filledBackgroundFillNode = LinkHighlightingNode(color: .clear)
         self.filledBackgroundNode = LinkHighlightingNode(color: .clear)
         
         super.init()
         
+        self.addSubnode(self.filledBackgroundFillNode)
         self.addSubnode(self.filledBackgroundNode)
         self.addSubnode(self.labelNode)
         
@@ -184,15 +187,18 @@ private final class ChatInfoTitlePanelInviteInfoNode: ASDisplayNode {
         }
         
         let backgroundLayout = self.filledBackgroundNode.asyncLayout()
-        let serviceColor = serviceMessageColorComponents(theme: theme, wallpaper: wallpaper)
-        let backgroundApply = backgroundLayout(serviceColor.fill, labelRects, 10.0, 10.0, 0.0)
+        let backgroundFillLayout = self.filledBackgroundFillNode.asyncLayout()
+        let backgroundApply = backgroundLayout(theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillStatic, labelRects, 10.0, 10.0, 0.0)
+        let backgroundFillApply = backgroundFillLayout(theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillFloating, labelRects, 10.0, 10.0, 0.0)
         backgroundApply()
+        backgroundFillApply()
         
         let backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
         
         let labelFrame = CGRect(origin: CGPoint(x: floor((width - labelLayout.size.width) / 2.0), y: topInset + floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
         self.labelNode.frame = labelFrame
         self.filledBackgroundNode.frame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
+        self.filledBackgroundFillNode.frame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
         
         return topInset + backgroundSize.height + bottomInset
     }

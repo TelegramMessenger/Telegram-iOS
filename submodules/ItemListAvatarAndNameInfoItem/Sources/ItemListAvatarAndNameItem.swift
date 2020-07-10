@@ -563,8 +563,8 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                         if strongSelf.updatingAvatarOverlay.supernode == nil {
                             strongSelf.insertSubnode(strongSelf.updatingAvatarOverlay, aboveSubnode: strongSelf.avatarNode)
                         }
-                        if let updatingImage = item.updatingImage, case .image(_, true) = updatingImage {
-                            strongSelf.activityIndicator.isHidden = false
+                        if let updatingImage = item.updatingImage, case let .image(_, loading) = updatingImage {
+                            strongSelf.activityIndicator.isHidden = !loading
                         }
                     } else if strongSelf.updatingAvatarOverlay.supernode != nil {
                         if animated {

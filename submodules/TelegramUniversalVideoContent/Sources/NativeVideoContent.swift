@@ -15,7 +15,7 @@ public enum NativeVideoContentId: Hashable {
     case message(UInt32, MediaId)
     case instantPage(MediaId, MediaId)
     case contextResult(Int64, String)
-    case profileVideo(Int64)
+    case profileVideo(Int64, String?)
 }
 
 public final class NativeVideoContent: UniversalVideoContent {
@@ -32,11 +32,12 @@ public final class NativeVideoContent: UniversalVideoContent {
     let fetchAutomatically: Bool
     let onlyFullSizeThumbnail: Bool
     let autoFetchFullSizeThumbnail: Bool
+    let startTimestamp: Double?
     let continuePlayingWithoutSoundOnLostAudioSession: Bool
     let placeholderColor: UIColor
     let tempFilePath: String?
     
-    public init(id: NativeVideoContentId, fileReference: FileMediaReference, imageReference: ImageMediaReference? = nil, streamVideo: MediaPlayerStreaming = .none, loopVideo: Bool = false, enableSound: Bool = true, baseRate: Double = 1.0, fetchAutomatically: Bool = true, onlyFullSizeThumbnail: Bool = false, autoFetchFullSizeThumbnail: Bool = false, continuePlayingWithoutSoundOnLostAudioSession: Bool = false, placeholderColor: UIColor = .white, tempFilePath: String? = nil) {
+    public init(id: NativeVideoContentId, fileReference: FileMediaReference, imageReference: ImageMediaReference? = nil, streamVideo: MediaPlayerStreaming = .none, loopVideo: Bool = false, enableSound: Bool = true, baseRate: Double = 1.0, fetchAutomatically: Bool = true, onlyFullSizeThumbnail: Bool = false, autoFetchFullSizeThumbnail: Bool = false, startTimestamp: Double? = nil, continuePlayingWithoutSoundOnLostAudioSession: Bool = false, placeholderColor: UIColor = .white, tempFilePath: String? = nil) {
         self.id = id
         self.nativeId = id
         self.fileReference = fileReference
@@ -62,13 +63,14 @@ public final class NativeVideoContent: UniversalVideoContent {
         self.fetchAutomatically = fetchAutomatically
         self.onlyFullSizeThumbnail = onlyFullSizeThumbnail
         self.autoFetchFullSizeThumbnail = autoFetchFullSizeThumbnail
+        self.startTimestamp = startTimestamp
         self.continuePlayingWithoutSoundOnLostAudioSession = continuePlayingWithoutSoundOnLostAudioSession
         self.placeholderColor = placeholderColor
         self.tempFilePath = tempFilePath
     }
     
     public func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
-        return NativeVideoContentNode(postbox: postbox, audioSessionManager: audioSession, fileReference: self.fileReference, imageReference: self.imageReference, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically, onlyFullSizeThumbnail: self.onlyFullSizeThumbnail, autoFetchFullSizeThumbnail: self.autoFetchFullSizeThumbnail, continuePlayingWithoutSoundOnLostAudioSession: self.continuePlayingWithoutSoundOnLostAudioSession, placeholderColor: self.placeholderColor, tempFilePath: self.tempFilePath)
+        return NativeVideoContentNode(postbox: postbox, audioSessionManager: audioSession, fileReference: self.fileReference, imageReference: self.imageReference, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically, onlyFullSizeThumbnail: self.onlyFullSizeThumbnail, autoFetchFullSizeThumbnail: self.autoFetchFullSizeThumbnail, startTimestamp: self.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: self.continuePlayingWithoutSoundOnLostAudioSession, placeholderColor: self.placeholderColor, tempFilePath: self.tempFilePath)
     }
     
     public func isEqual(to other: UniversalVideoContent) -> Bool {
@@ -104,8 +106,21 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     private var initializedStatus = false
     private let _status = Promise<MediaPlayerStatus>()
+    private let _thumbnailStatus = Promise<MediaPlayerStatus?>(nil)
     var status: Signal<MediaPlayerStatus, NoError> {
-        return self._status.get()
+        return combineLatest(self._thumbnailStatus.get(), self._status.get())
+        |> map { thumbnailStatus, status in
+            switch status.status {
+            case .buffering:
+                if let thumbnailStatus = thumbnailStatus {
+                    return thumbnailStatus
+                } else {
+                    return status
+                }
+            default:
+                return status
+            }
+        }
     }
     
     private let _bufferingStatus = Promise<(IndexSet, Int)?>()
@@ -128,7 +143,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     private var shouldPlay: Bool = false
     
-    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, fileReference: FileMediaReference, imageReference: ImageMediaReference?, streamVideo: MediaPlayerStreaming, loopVideo: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool, onlyFullSizeThumbnail: Bool, autoFetchFullSizeThumbnail: Bool, continuePlayingWithoutSoundOnLostAudioSession: Bool = false, placeholderColor: UIColor, tempFilePath: String?) {
+    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, fileReference: FileMediaReference, imageReference: ImageMediaReference?, streamVideo: MediaPlayerStreaming, loopVideo: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool, onlyFullSizeThumbnail: Bool, autoFetchFullSizeThumbnail: Bool, startTimestamp: Double?, continuePlayingWithoutSoundOnLostAudioSession: Bool = false, placeholderColor: UIColor, tempFilePath: String?) {
         self.postbox = postbox
         self.fileReference = fileReference
         self.placeholderColor = placeholderColor
@@ -183,7 +198,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         self.addSubnode(self.imageNode)
         self.addSubnode(self.playerNode)
         self._status.set(combineLatest(self.dimensionsPromise.get(), self.player.status)
-        |> map { [weak self] dimensions, status in
+        |> map { dimensions, status in
             return MediaPlayerStatus(generationTimestamp: status.generationTimestamp, duration: status.duration, dimensions: dimensions, timestamp: status.timestamp, baseRate: status.baseRate, seekId: status.seekId, status: status.status, soundEnabled: status.soundEnabled)
         })
         
@@ -212,6 +227,10 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         
         self.imageNode.imageUpdated = { [weak self] _ in
             self?._ready.set(.single(Void()))
+        }
+        
+        if let startTimestamp = startTimestamp {
+            self.seek(startTimestamp)
         }
     }
     
@@ -248,6 +267,11 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         let thumbnailNode = MediaPlayerNode(backgroundThread: false)
         self.thumbnailNode = thumbnailNode
         thumbnailPlayer.attachPlayerNode(thumbnailNode)
+        
+        self._thumbnailStatus.set(thumbnailPlayer.status
+        |> map { status in
+            return MediaPlayerStatus(generationTimestamp: status.generationTimestamp, duration: status.duration, dimensions: CGSize(), timestamp: status.timestamp, baseRate: status.baseRate, seekId: status.seekId, status: status.status, soundEnabled: status.soundEnabled)
+        })
         
         self.addSubnode(thumbnailNode)
         

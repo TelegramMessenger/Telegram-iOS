@@ -57,14 +57,14 @@ private enum DataAndStorageSection: Int32 {
     case enableSensitiveContent
 }
 
-enum DataAndStorageEntryTag: ItemListItemTag {
+public enum DataAndStorageEntryTag: ItemListItemTag {
     case automaticDownloadReset
     case autoplayGifs
     case autoplayVideos
     case saveEditedPhotos
     case downloadInBackground
     
-    func isEqual(to other: ItemListItemTag) -> Bool {
+    public func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? DataAndStorageEntryTag, self == other {
             return true
         } else {
@@ -518,7 +518,7 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     return entries
 }
 
-func dataAndStorageController(context: AccountContext, focusOnItemTag: DataAndStorageEntryTag? = nil) -> ViewController {
+public func dataAndStorageController(context: AccountContext, focusOnItemTag: DataAndStorageEntryTag? = nil) -> ViewController {
     let initialState = DataAndStorageControllerState()
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     

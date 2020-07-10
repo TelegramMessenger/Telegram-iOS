@@ -12,6 +12,7 @@ import AccountContext
 import PassportUI
 import LocalAuth
 import CallListUI
+import ChatListUI
 import NotificationSoundSelectionUI
 import PresentationDataUtils
 import PhoneNumberFormat
@@ -33,9 +34,10 @@ enum SettingsSearchableItemIcon {
     case passport
     case support
     case faq
+    case chatFolders
 }
 
-enum SettingsSearchableItemId: Hashable {
+public enum SettingsSearchableItemId: Hashable {
     case profile(Int32)
     case proxy(Int32)
     case savedMessages(Int32)
@@ -51,6 +53,7 @@ enum SettingsSearchableItemId: Hashable {
     case wallet(Int32)
     case support(Int32)
     case faq(Int32)
+    case chatFolders(Int32)
     
     private var namespace: Int32 {
         switch self {
@@ -84,6 +87,8 @@ enum SettingsSearchableItemId: Hashable {
                 return 14
             case .faq:
                 return 15
+            case .chatFolders:
+                return 16
         }
     }
     
@@ -103,7 +108,8 @@ enum SettingsSearchableItemId: Hashable {
                  let .passport(id),
                  let .wallet(id),
                  let .support(id),
-                 let .faq(id):
+                 let .faq(id),
+                 let .chatFolders(id):
                 return id
         }
     }
@@ -146,26 +152,28 @@ enum SettingsSearchableItemId: Hashable {
                 self = .support(id)
             case 15:
                 self = .faq(id)
+            case 16:
+                self = .chatFolders(id)
             default:
                 return nil
         }
     }
 }
 
-enum SettingsSearchableItemPresentation {
+public enum SettingsSearchableItemPresentation {
     case push
     case modal
     case immediate
     case dismiss
 }
 
-struct SettingsSearchableItem {
-    let id: SettingsSearchableItemId
+public struct SettingsSearchableItem {
+    public let id: SettingsSearchableItemId
     let title: String
     let alternate: [String]
     let icon: SettingsSearchableItemIcon
     let breadcrumbs: [String]
-    let present: (AccountContext, NavigationController?, @escaping (SettingsSearchableItemPresentation, ViewController?) -> Void) -> Void
+    public let present: (AccountContext, NavigationController?, @escaping (SettingsSearchableItemPresentation, ViewController?) -> Void) -> Void
 }
 
 private func synonyms(_ string: String?) -> [String] {
@@ -189,13 +197,13 @@ private func profileSearchableItems(context: AccountContext, canAddAccount: Bool
     }
     
     var items: [SettingsSearchableItem] = []
-    items.append(SettingsSearchableItem(id: .profile(0), title: strings.EditProfile_Title, alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_Title), icon: icon, breadcrumbs: [], present: { context, _, present in
-        presentProfileSettings(context, present, nil)
-    }))
-    
-    items.append(SettingsSearchableItem(id: .profile(1), title: strings.UserInfo_About_Placeholder, alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_Title), icon: icon, breadcrumbs: [strings.EditProfile_Title], present: { context, _, present in
-        presentProfileSettings(context, present, .bio)
-    }))
+//    items.append(SettingsSearchableItem(id: .profile(0), title: strings.EditProfile_Title, alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_Title), icon: icon, breadcrumbs: [], present: { context, _, present in
+//        presentProfileSettings(context, present, nil)
+//    }))
+//
+//    items.append(SettingsSearchableItem(id: .profile(1), title: strings.UserInfo_About_Placeholder, alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_Title), icon: icon, breadcrumbs: [strings.EditProfile_Title], present: { context, _, present in
+//        presentProfileSettings(context, present, .bio)
+//    }))
     items.append(SettingsSearchableItem(id: .profile(2), title: strings.Settings_PhoneNumber, alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_PhoneNumber), icon: icon, breadcrumbs: [strings.EditProfile_Title], present: { context, _, present in
         let _ = (context.account.postbox.transaction { transaction -> String in
             return (transaction.getPeer(context.account.peerId) as? TelegramUser)?.phone ?? ""
@@ -848,6 +856,11 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         
         let callItems = callSearchableItems(context: context)
         allItems.append(contentsOf: callItems)
+        
+        let chatFolders = SettingsSearchableItem(id: .chatFolders(0), title: strings.Settings_ChatFolders, alternate: synonyms(strings.SettingsSearch_Synonyms_ChatFolders), icon: .chatFolders, breadcrumbs: [], present: { context, _, present in
+            present(.push, chatListFilterPresetListController(context: context, mode: .default))
+        })
+        allItems.append(chatFolders)
         
         let stickerItems = stickerSearchableItems(context: context, archivedStickerPacks: archivedStickerPacks)
         allItems.append(contentsOf: stickerItems)

@@ -173,8 +173,8 @@ final class ChatMediaInputStickerGridItem: GridItem {
 final class ChatMediaInputStickerGridItemNode: GridItemNode {
     private var currentState: (Account, StickerPackItem, CGSize)?
     private var currentSize: CGSize?
-    private let imageNode: TransformImageNode
-    private var animationNode: AnimatedStickerNode?
+    let imageNode: TransformImageNode
+    var animationNode: AnimatedStickerNode?
     private var placeholderNode: ShimmerEffectNode?
     private var didSetUpAnimationNode = false
     private var item: ChatMediaInputStickerGridItem?

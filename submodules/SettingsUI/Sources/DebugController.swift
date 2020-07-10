@@ -629,7 +629,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
     entries.append(.alternativeFolderTabs(experimentalSettings.foldersTabAtBottom))
     entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
-    //entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
+    entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
     entries.append(.videoCalls(experimentalSettings.videoCalls))
     entries.append(.videoCallsInfo(presentationData.theme, "Enables experimental transmission of electromagnetic radiation synchronized with pressure waves. Needs to be enabled on both sides."))
 

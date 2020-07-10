@@ -1706,35 +1706,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             if controllerInteraction.pollActionState.pollMessageIdsInProgress[id] == nil {
-                #if DEBUG
-                if false {
-                    var found = false
-                    strongSelf.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
-                        if !found, let itemNode = itemNode as? ChatMessageBubbleItemNode, itemNode.item?.message.id == id {
-                            found = true
-                            if strongSelf.selectPollOptionFeedback == nil {
-                                strongSelf.selectPollOptionFeedback = HapticFeedback()
-                            }
-                            strongSelf.selectPollOptionFeedback?.error()
-                            itemNode.animateQuizInvalidOptionSelected()
-                        }
-                    }
-                    return;
-                }
-                if false {
-                    if strongSelf.selectPollOptionFeedback == nil {
-                        strongSelf.selectPollOptionFeedback = HapticFeedback()
-                    }
-                    strongSelf.selectPollOptionFeedback?.success()
-                    strongSelf.chatDisplayNode.animateQuizCorrectOptionSelected()
-                    return;
-                }
-                if false {
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(text: "controllerInteraction.pollActionState.pollMessageIdsInProgress[id] = opaqueIdentifiers"), elevatedLayout: true, action: { _ in return false }), in: .window(.root))
-                    return;
-                }
-                #endif
-                
                 controllerInteraction.pollActionState.pollMessageIdsInProgress[id] = opaqueIdentifiers
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
                 let disposables: DisposableDict<MessageId>
@@ -2048,6 +2019,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self?.displayDiceTooltip(dice: dice)
         }, animateDiceSuccess: { [weak self] in
             self?.chatDisplayNode.animateQuizCorrectOptionSelected()
+        }, greetingStickerNode: { [weak self] in
+            return self?.chatDisplayNode.greetingStickerNode
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -2520,11 +2493,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                         $0.updatedInputTextPanelState { panelState in
+                            let isLocked = strongSelf.lockMediaRecordingRequestId == strongSelf.beginMediaRecordingRequestId
                             if let audioRecorder = audioRecorder {
                                 if panelState.mediaRecordingState == nil {
-                                    return panelState.withUpdatedMediaRecordingState(.audio(recorder: audioRecorder, isLocked: strongSelf.lockMediaRecordingRequestId == strongSelf.beginMediaRecordingRequestId))
+                                    return panelState.withUpdatedMediaRecordingState(.audio(recorder: audioRecorder, isLocked: isLocked))
                                 }
                             } else {
+                                if case .waitingForPreview = panelState.mediaRecordingState {
+                                    return panelState
+                                }
                                 return panelState.withUpdatedMediaRecordingState(nil)
                             }
                             return panelState
@@ -5724,7 +5701,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         statusText = strongSelf.presentationData.strings.Undo_ChatCleared
                     }
                     
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: statusText), elevatedLayout: true, action: { value in
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: statusText), elevatedLayout: false, action: { value in
                         if value == .commit {
                             let _ = clearHistoryInteractively(postbox: account.postbox, peerId: peerId, type: type).start(completed: {
                                 self?.chatDisplayNode.historyNode.historyAppearsCleared = false
@@ -7028,13 +7005,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
         
         let value: String?
-        switch dice.emoji {
+        let emoji = dice.emoji.strippedEmoji
+        switch emoji {
             case "🎲":
                 value = self.presentationData.strings.Conversation_Dice_u1F3B2
             case "🎯":
                 value = self.presentationData.strings.Conversation_Dice_u1F3AF
+            case "🏀":
+                value = self.presentationData.strings.Conversation_Dice_u1F3C0
+            case "⚽️":
+                value = self.presentationData.strings.Conversation_Dice_u26BD
             default:
-                let emojiHex = dice.emoji.unicodeScalars.map({ String(format:"%02x", $0.value) }).joined().uppercased()
+                let emojiHex = emoji.unicodeScalars.map({ String(format:"%02x", $0.value) }).joined().uppercased()
                 let key = "Conversation.Dice.u\(emojiHex)"
                 if let string = self.presentationData.strings.primaryComponent.dict[key] {
                     value = string
@@ -7338,18 +7320,30 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self.chatDisplayNode.updateRecordedMediaDeleted(true)
                     break
                 case .preview:
+                    self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                        $0.updatedInputTextPanelState { panelState in
+                            return panelState.withUpdatedMediaRecordingState(.waitingForPreview)
+                        }
+                    })
                     let _ = (audioRecorderValue.takenRecordedData() |> deliverOnMainQueue).start(next: { [weak self] data in
                         if let strongSelf = self, let data = data {
                             if data.duration < 0.5 {
                                 strongSelf.recorderFeedback?.error()
                                 strongSelf.recorderFeedback = nil
+                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                    $0.updatedInputTextPanelState { panelState in
+                                        return panelState.withUpdatedMediaRecordingState(nil)
+                                    }
+                                })
                             } else if let waveform = data.waveform {
                                 let resource = LocalFileMediaResource(fileId: arc4random64(), size: data.compressedData.count)
                                 
                                 strongSelf.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data.compressedData)
                                 
                                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                    $0.updatedRecordedMediaPreview(ChatRecordedMediaPreview(resource: resource, duration: Int32(data.duration), fileSize: Int32(data.compressedData.count), waveform: AudioWaveform(bitstream: waveform, bitsPerSample: 5)))
+                                    $0.updatedRecordedMediaPreview(ChatRecordedMediaPreview(resource: resource, duration: Int32(data.duration), fileSize: Int32(data.compressedData.count), waveform: AudioWaveform(bitstream: waveform, bitsPerSample: 5))).updatedInputTextPanelState { panelState in
+                                        return panelState.withUpdatedMediaRecordingState(nil)
+                                    }
                                 })
                                 strongSelf.recorderFeedback = nil
                             }
@@ -7447,12 +7441,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func deleteMediaRecording() {
+        self.chatDisplayNode.updateRecordedMediaDeleted(true)
         self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
             $0.updatedRecordedMediaPreview(nil)
         })
     }
     
     private func sendMediaRecording() {
+        self.chatDisplayNode.updateRecordedMediaDeleted(false)
         if let recordedMediaPreview = self.presentationInterfaceState.recordedMediaPreview {
             if let _ = self.presentationInterfaceState.slowmodeState, !self.presentationInterfaceState.isScheduledMessages {
                 if let rect = self.chatDisplayNode.frameForInputActionButton() {

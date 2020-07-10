@@ -417,12 +417,6 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
                 }
             }
             
-            if velocity.y > 0.0 || distanceFromEquilibrium > 0.0, let centralItemNode = self.pager.centralItemNode() {
-                if centralItemNode.alternativeDismiss() {
-                    return
-                }
-            }
-                        
             if let centralItemNode = self.pager.centralItemNode(), let (transitionNodeForCentralItem, addToTransitionSurface) = self.transitionDataForCentralItem?(), let node = transitionNodeForCentralItem {
                 contentAnimationCompleted = false
                 centralItemNode.animateOut(to: node, addToTransitionSurface: addToTransitionSurface, completion: {

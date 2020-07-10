@@ -676,9 +676,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             
             mainWindow.inCallNavigate = { [weak self] in
                 if let strongSelf = self, let callController = strongSelf.callController {
-                    if callController.isNodeLoaded && callController.view.superview == nil {
+                    if callController.isNodeLoaded {
                         mainWindow.hostView.containerView.endEditing(true)
-                        mainWindow.present(callController, on: .calls)
+                        if callController.view.superview == nil {
+                            mainWindow.present(callController, on: .calls)
+                        } else {
+                            callController.expandFromPipIfPossible()
+                        }
                     }
                 }
             }
@@ -1092,8 +1096,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return peerSharedMediaControllerImpl(context: context, peerId: peerId)
     }
     
-    public func makeChatRecentActionsController(context: AccountContext, peer: Peer) -> ViewController {
-        return ChatRecentActionsController(context: context, peer: peer)
+    public func makeChatRecentActionsController(context: AccountContext, peer: Peer, adminPeerId: PeerId?) -> ViewController {
+        return ChatRecentActionsController(context: context, peer: peer, adminPeerId: adminPeerId)
     }
     
     public func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void) {
@@ -1183,6 +1187,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }, displayPsa: { _, _ in
             }, displayDiceTooltip: { _ in
             }, animateDiceSuccess: {
+            }, greetingStickerNode: {
+                return nil
             }, requestMessageUpdate: { _ in
             }, cancelInteractiveKeyboardGestures: {
             }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

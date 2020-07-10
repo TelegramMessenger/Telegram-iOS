@@ -95,21 +95,33 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             case let .photoUpdated(image):
                 if authorName.isEmpty || isChannel {
                     if isChannel {
-                        if image != nil {
-                            attributedString = NSAttributedString(string: strings.Channel_MessagePhotoUpdated, font: titleFont, textColor: primaryTextColor)
+                        if let image = image {
+                            if !image.videoRepresentations.isEmpty {
+                                attributedString = NSAttributedString(string: strings.Channel_MessageVideoUpdated, font: titleFont, textColor: primaryTextColor)
+                            } else {
+                                attributedString = NSAttributedString(string: strings.Channel_MessagePhotoUpdated, font: titleFont, textColor: primaryTextColor)
+                            }
                         } else {
                             attributedString = NSAttributedString(string: strings.Channel_MessagePhotoRemoved, font: titleFont, textColor: primaryTextColor)
                         }
                     } else {
-                        if image != nil {
-                            attributedString = NSAttributedString(string: strings.Group_MessagePhotoUpdated, font: titleFont, textColor: primaryTextColor)
+                        if let image = image {
+                            if !image.videoRepresentations.isEmpty {
+                                attributedString = NSAttributedString(string: strings.Group_MessageVideoUpdated, font: titleFont, textColor: primaryTextColor)
+                            } else {
+                                attributedString = NSAttributedString(string: strings.Group_MessagePhotoUpdated, font: titleFont, textColor: primaryTextColor)
+                            }
                         } else {
                             attributedString = NSAttributedString(string: strings.Group_MessagePhotoRemoved, font: titleFont, textColor: primaryTextColor)
                         }
                     }
                 } else {
-                    if image != nil {
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_ChangedGroupPhoto(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                    if let image = image {
+                        if !image.videoRepresentations.isEmpty {
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_ChangedGroupVideo(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        } else {
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_ChangedGroupPhoto(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                        }
                     } else {
                         attributedString = addAttributesToStringWithRanges(strings.Notification_RemovedGroupPhoto(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                     }

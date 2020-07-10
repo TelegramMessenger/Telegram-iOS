@@ -106,7 +106,7 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
     private var outgoingVideoViewRequested: Bool = false
     private let backButtonArrowNode: ASImageNode
     private let backButtonNode: HighlightableButtonNode
-    private let statusNode: CallControllerStatusNode
+    private let statusNode: LegacyCallControllerStatusNode
     private let videoPausedNode: ImmediateTextNode
     private let buttonsNode: LegacyCallControllerButtonsNode
     private var keyPreviewNode: CallControllerKeyPreviewNode?
@@ -168,7 +168,7 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
         self.backButtonArrowNode.image = NavigationBarTheme.generateBackArrowImage(color: .white)
         self.backButtonNode = HighlightableButtonNode()
         
-        self.statusNode = CallControllerStatusNode()
+        self.statusNode = LegacyCallControllerStatusNode()
         
         self.videoPausedNode = ImmediateTextNode()
         self.videoPausedNode.alpha = 0.0
@@ -229,10 +229,6 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
             self?.acceptCall?()
         }
         
-        self.buttonsNode.toggleVideo = { [weak self] in
-            self?.toggleVideo?()
-        }
-        
         self.buttonsNode.rotateCamera = { [weak self] in
             self?.call.switchVideoCamera()
         }
@@ -291,7 +287,7 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
     func updateCallState(_ callState: PresentationCallState) {
         self.callState = callState
         
-        let statusValue: CallControllerStatusValue
+        let statusValue: LegacyCallControllerStatusValue
         var statusReception: Int32?
         
         switch callState.videoState {
@@ -304,7 +300,7 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
                     }
                     if let incomingVideoView = incomingVideoView {
                         strongSelf.setCurrentAudioOutput?(.speaker)
-                        let incomingVideoNode = IncomingVideoNode(videoView: incomingVideoView)
+                        let incomingVideoNode = IncomingVideoNode(videoView: incomingVideoView.view)
                         strongSelf.incomingVideoNode = incomingVideoNode
                         strongSelf.containerNode.insertSubnode(incomingVideoNode, aboveSubnode: strongSelf.dimNode)
                         strongSelf.statusNode.isHidden = true
@@ -314,42 +310,18 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
                     }
                 })
             }
+        default:
+            break
+        }
+        switch callState.videoState {
+        case .active, .outgoingRequested:
             if !self.outgoingVideoViewRequested {
                 self.outgoingVideoViewRequested = true
                 self.call.makeOutgoingVideoView(completion: { [weak self] outgoingVideoView in
                     guard let strongSelf = self else {
                         return
                     }
-                    if let outgoingVideoView = outgoingVideoView {
-                        outgoingVideoView.backgroundColor = .black
-                        outgoingVideoView.clipsToBounds = true
-                        strongSelf.setCurrentAudioOutput?(.speaker)
-                        let outgoingVideoNode = OutgoingVideoNode(videoView: outgoingVideoView, switchCamera: {
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            strongSelf.call.switchVideoCamera()
-                        })
-                        strongSelf.outgoingVideoNode = outgoingVideoNode
-                        if let incomingVideoNode = strongSelf.incomingVideoNode {
-                            strongSelf.containerNode.insertSubnode(outgoingVideoNode, aboveSubnode: incomingVideoNode)
-                        } else {
-                            strongSelf.containerNode.insertSubnode(outgoingVideoNode, aboveSubnode: strongSelf.dimNode)
-                        }
-                        if let (layout, navigationBarHeight) = strongSelf.validLayout {
-                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-                        }
-                    }
-                })
-            }
-        case .activeOutgoing:
-            if !self.outgoingVideoViewRequested {
-                self.outgoingVideoViewRequested = true
-                self.call.makeOutgoingVideoView(completion: { [weak self] outgoingVideoView in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    if let outgoingVideoView = outgoingVideoView {
+                    if let outgoingVideoView = outgoingVideoView?.view {
                         outgoingVideoView.backgroundColor = .black
                         outgoingVideoView.clipsToBounds = true
                         outgoingVideoView.layer.cornerRadius = 16.0
@@ -527,18 +499,7 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
                         mode = .none
                     }
                 }
-                let mappedVideoState: LegacyCallControllerButtonsMode.VideoState
-                switch callState.videoState {
-                case .notAvailable:
-                    mappedVideoState = .notAvailable
-                case .available:
-                    mappedVideoState = .available(true)
-                case .active:
-                    mappedVideoState = .active
-                case .activeOutgoing:
-                    mappedVideoState = .active
-                }
-                self.buttonsNode.updateMode(.active(speakerMode: mode, videoState: mappedVideoState))
+                self.buttonsNode.updateMode(.active(speakerMode: mode))
         }
     }
     
@@ -567,6 +528,9 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
         } else {
             completion()
         }
+    }
+    
+    func expandFromPipIfPossible() {
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

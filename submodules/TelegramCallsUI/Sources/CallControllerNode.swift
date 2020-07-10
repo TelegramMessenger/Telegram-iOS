@@ -14,83 +14,69 @@ import LocalizedPeerData
 import PhotoResources
 import CallsEmoji
 
-private final class IncomingVideoNode: ASDisplayNode {
-    private let videoView: UIView
-    private var effectView: UIVisualEffectView?
-    private var isBlurred: Bool = false
-    
-    init(videoView: UIView) {
-        self.videoView = videoView
-        
-        super.init()
-        
-        self.view.addSubview(self.videoView)
-    }
-    
-    func updateLayout(size: CGSize) {
-        self.videoView.frame = CGRect(origin: CGPoint(), size: size)
-    }
-    
-    func updateIsBlurred(isBlurred: Bool) {
-        if self.isBlurred == isBlurred {
-            return
-        }
-        self.isBlurred = isBlurred
-        
-        if isBlurred {
-            if self.effectView == nil {
-                let effectView = UIVisualEffectView()
-                self.effectView = effectView
-                effectView.frame = self.videoView.frame
-                self.view.addSubview(effectView)
-            }
-            UIView.animate(withDuration: 0.3, animations: {
-                self.effectView?.effect = UIBlurEffect(style: .dark)
-            })
-        } else if let effectView = self.effectView {
-            UIView.animate(withDuration: 0.3, animations: {
-                effectView.effect = nil
-            })
-        }
-    }
+private func interpolateFrame(from fromValue: CGRect, to toValue: CGRect, t: CGFloat) -> CGRect {
+    return CGRect(x: floorToScreenPixels(toValue.origin.x * t + fromValue.origin.x * (1.0 - t)), y: floorToScreenPixels(toValue.origin.y * t + fromValue.origin.y * (1.0 - t)), width: floorToScreenPixels(toValue.size.width * t + fromValue.size.width * (1.0 - t)), height: floorToScreenPixels(toValue.size.height * t + fromValue.size.height * (1.0 - t)))
 }
 
-private final class OutgoingVideoNode: ASDisplayNode {
+private func interpolate(from: CGFloat, to: CGFloat, value: CGFloat) -> CGFloat {
+    return (1.0 - value) * from + value * to
+}
+
+private final class CallVideoNode: ASDisplayNode {
     private let videoTransformContainer: ASDisplayNode
-    private let videoView: UIView
-    private let buttonNode: HighlightTrackingButtonNode
+    private let videoView: PresentationCallVideoView
     
     private var effectView: UIVisualEffectView?
     private var isBlurred: Bool = false
-    private var isExpanded: Bool = false
+    private var currentCornerRadius: CGFloat = 0.0
     
-    var tapped: (() -> Void)?
+    private let isReadyUpdated: () -> Void
+    private(set) var isReady: Bool = false
+    private var isReadyTimer: SwiftSignalKit.Timer?
     
-    init(videoView: UIView) {
+    init(videoView: PresentationCallVideoView, isReadyUpdated: @escaping () -> Void) {
+        self.isReadyUpdated = isReadyUpdated
+        
         self.videoTransformContainer = ASDisplayNode()
         self.videoTransformContainer.clipsToBounds = true
         self.videoView = videoView
-        self.videoView.layer.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
-        
-        self.buttonNode = HighlightTrackingButtonNode()
+        self.videoView.view.layer.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
         
         super.init()
         
-        self.videoTransformContainer.view.addSubview(self.videoView)
+        self.videoTransformContainer.view.addSubview(self.videoView.view)
         self.addSubnode(self.videoTransformContainer)
-        //self.addSubnode(self.buttonNode)
         
-        self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+        self.videoView.setOnFirstFrameReceived { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            if !strongSelf.isReady {
+                strongSelf.isReady = true
+                strongSelf.isReadyTimer?.invalidate()
+                strongSelf.isReadyUpdated()
+            }
+        }
+        
+        self.isReadyTimer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            if !strongSelf.isReady {
+                strongSelf.isReady = true
+                strongSelf.isReadyUpdated()
+            }
+        }, queue: .mainQueue())
+        self.isReadyTimer?.start()
     }
     
-    @objc func buttonPressed() {
-        self.tapped?()
+    deinit {
+        self.isReadyTimer?.invalidate()
     }
     
-    func updateLayout(size: CGSize, isExpanded: Bool, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, cornerRadius: CGFloat, transition: ContainedViewLayoutTransition) {
         let videoFrame = CGRect(origin: CGPoint(), size: size)
-        self.buttonNode.frame = videoFrame
-        self.isExpanded = isExpanded
+        self.currentCornerRadius = cornerRadius
         
         let previousVideoFrame = self.videoTransformContainer.frame
         self.videoTransformContainer.frame = videoFrame
@@ -99,11 +85,11 @@ private final class OutgoingVideoNode: ASDisplayNode {
             transition.animateTransformScale(node: self.videoTransformContainer, from: previousVideoFrame.height / videoFrame.height)
         }
         
-        self.videoView.frame = videoFrame
+        self.videoView.view.frame = videoFrame
         
-        transition.updateCornerRadius(layer: self.videoTransformContainer.layer, cornerRadius: isExpanded ? 0.0 : 16.0)
+        transition.updateCornerRadius(layer: self.videoTransformContainer.layer, cornerRadius: self.currentCornerRadius)
         if let effectView = self.effectView {
-            transition.updateCornerRadius(layer: effectView.layer, cornerRadius: isExpanded ? 0.0 : 16.0)
+            transition.updateCornerRadius(layer: effectView.layer, cornerRadius: self.currentCornerRadius)
         }
     }
     
@@ -117,23 +103,26 @@ private final class OutgoingVideoNode: ASDisplayNode {
             if self.effectView == nil {
                 let effectView = UIVisualEffectView()
                 effectView.clipsToBounds = true
-                effectView.layer.cornerRadius = self.isExpanded ? 0.0 : 16.0
+                effectView.layer.cornerRadius = self.currentCornerRadius
                 self.effectView = effectView
-                effectView.frame = self.videoView.frame
+                effectView.frame = self.videoView.view.frame
                 self.view.addSubview(effectView)
             }
             UIView.animate(withDuration: 0.3, animations: {
                 self.effectView?.effect = UIBlurEffect(style: .dark)
             })
         } else if let effectView = self.effectView {
+            self.effectView = nil
             UIView.animate(withDuration: 0.3, animations: {
                 effectView.effect = nil
+            }, completion: { [weak effectView] _ in
+                effectView?.removeFromSuperview()
             })
         }
     }
 }
 
-final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
+final class CallControllerNode: ViewControllerTracingNode, CallControllerNodeProtocol {
     private enum VideoNodeCorner {
         case topLeft
         case topRight
@@ -153,15 +142,22 @@ final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
     private let easyDebugAccess: Bool
     private let call: PresentationCall
     
+    private let containerTransformationNode: ASDisplayNode
     private let containerNode: ASDisplayNode
     
     private let imageNode: TransformImageNode
     private let dimNode: ASDisplayNode
-    private var incomingVideoNode: IncomingVideoNode?
+    
+    private var incomingVideoNodeValue: CallVideoNode?
     private var incomingVideoViewRequested: Bool = false
-    private var outgoingVideoNode: OutgoingVideoNode?
+    private var outgoingVideoNodeValue: CallVideoNode?
     private var outgoingVideoViewRequested: Bool = false
-    private var outgoingVideoExplicitelyFullscreen: Bool = false
+    
+    private var expandedVideoNode: CallVideoNode?
+    private var minimizedVideoNode: CallVideoNode?
+    private var disableAnimationForExpandedVideoOnce: Bool = false
+    private var animationForExpandedVideoSnapshotView: UIView? = nil
+    
     private var outgoingVideoNodeCorner: VideoNodeCorner = .bottomRight
     private let backButtonArrowNode: ASImageNode
     private let backButtonNode: HighlightableButtonNode
@@ -202,8 +198,20 @@ final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
     var callEnded: ((Bool) -> Void)?
     var dismissedInteractively: (() -> Void)?
     
+    private var buttonsMode: CallControllerButtonsMode?
+    
     private var isUIHidden: Bool = false
     private var isVideoPaused: Bool = false
+    
+    private enum PictureInPictureGestureState {
+        case none
+        case collapsing(didSelectCorner: Bool)
+        case dragging(initialPosition: CGPoint, draggingPosition: CGPoint)
+    }
+    
+    private var pictureInPictureGestureState: PictureInPictureGestureState = .none
+    private var pictureInPictureCorner: VideoNodeCorner = .topRight
+    private var pictureInPictureTransitionFraction: CGFloat = 0.0
     
     init(sharedContext: SharedAccountContext, account: Account, presentationData: PresentationData, statusBar: StatusBar, debugInfo: Signal<(String, String), NoError>, shouldStayHiddenUntilConnection: Bool = false, easyDebugAccess: Bool, call: PresentationCall) {
         self.sharedContext = sharedContext
@@ -214,6 +222,9 @@ final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
         self.shouldStayHiddenUntilConnection = shouldStayHiddenUntilConnection
         self.easyDebugAccess = easyDebugAccess
         self.call = call
+        
+        self.containerTransformationNode = ASDisplayNode()
+        self.containerTransformationNode.clipsToBounds = true
         
         self.containerNode = ASDisplayNode()
         if self.shouldStayHiddenUntilConnection {
@@ -242,13 +253,10 @@ final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
         
         super.init()
         
-        self.setViewBlock({
-            return UITracingLayerView()
-        })
-        
         self.containerNode.backgroundColor = .black
         
-        self.addSubnode(self.containerNode)
+        self.addSubnode(self.containerTransformationNode)
+        self.containerTransformationNode.addSubnode(self.containerNode)
         
         self.backButtonNode.setTitle(presentationData.strings.Common_Back, with: Font.regular(17.0), with: .white, for: [])
         self.backButtonNode.hitTestSlop = UIEdgeInsets(top: -8.0, left: -20.0, bottom: -8.0, right: -8.0)
@@ -290,20 +298,34 @@ final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
         }
         
         self.buttonsNode.accept = { [weak self] in
-            self?.acceptCall?()
+            guard let strongSelf = self, let callState = strongSelf.callState else {
+                return
+            }
+            switch callState.state {
+            case .active, .connecting, .reconnecting:
+                strongSelf.call.acceptVideo()
+            case .ringing:
+                strongSelf.acceptCall?()
+            default:
+                break
+            }
         }
         
         self.buttonsNode.toggleVideo = { [weak self] in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.isVideoPaused = !strongSelf.isVideoPaused
-            strongSelf.outgoingVideoNode?.updateIsBlurred(isBlurred: strongSelf.isVideoPaused)
-            strongSelf.buttonsNode.isCameraPaused = strongSelf.isVideoPaused
-            strongSelf.setIsVideoPaused?(strongSelf.isVideoPaused)
-            
-            if let (layout, navigationBarHeight) = strongSelf.validLayout {
-                strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+            if strongSelf.outgoingVideoNodeValue == nil {
+                strongSelf.call.requestVideo()
+            } else {
+                strongSelf.isVideoPaused = !strongSelf.isVideoPaused
+                strongSelf.outgoingVideoNodeValue?.updateIsBlurred(isBlurred: strongSelf.isVideoPaused)
+                strongSelf.buttonsNode.isCameraPaused = strongSelf.isVideoPaused
+                strongSelf.setIsVideoPaused?(strongSelf.isVideoPaused)
+                
+                if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                }
             }
         }
         
@@ -377,8 +399,16 @@ final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
                         return
                     }
                     if let incomingVideoView = incomingVideoView {
-                        let incomingVideoNode = IncomingVideoNode(videoView: incomingVideoView)
-                        strongSelf.incomingVideoNode = incomingVideoNode
+                        let incomingVideoNode = CallVideoNode(videoView: incomingVideoView, isReadyUpdated: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                                strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.5, curve: .spring))
+                            }
+                        })
+                        strongSelf.incomingVideoNodeValue = incomingVideoNode
+                        strongSelf.expandedVideoNode = incomingVideoNode
                         strongSelf.containerNode.insertSubnode(incomingVideoNode, aboveSubnode: strongSelf.dimNode)
                         if let (layout, navigationBarHeight) = strongSelf.validLayout {
                             strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.5, curve: .spring))
@@ -391,7 +421,7 @@ final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
         }
         
         switch callState.videoState {
-        case .active, .activeOutgoing:
+        case .active, .outgoingRequested, .incomingRequested:
             if !self.outgoingVideoViewRequested {
                 self.outgoingVideoViewRequested = true
                 self.call.makeOutgoingVideoView(completion: { [weak self] outgoingVideoView in
@@ -399,8 +429,8 @@ final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
                         return
                     }
                     if let outgoingVideoView = outgoingVideoView {
-                        outgoingVideoView.backgroundColor = .black
-                        outgoingVideoView.clipsToBounds = true
+                        outgoingVideoView.view.backgroundColor = .black
+                        outgoingVideoView.view.clipsToBounds = true
                         if let audioOutputState = strongSelf.audioOutputState, let currentOutput = audioOutputState.currentOutput {
                             switch currentOutput {
                             case .speaker, .builtin:
@@ -409,25 +439,17 @@ final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
                                 strongSelf.setCurrentAudioOutput?(.speaker)
                             }
                         }
-                        let outgoingVideoNode = OutgoingVideoNode(videoView: outgoingVideoView)
-                        strongSelf.outgoingVideoNode = outgoingVideoNode
-                        if let incomingVideoNode = strongSelf.incomingVideoNode {
-                            strongSelf.containerNode.insertSubnode(outgoingVideoNode, aboveSubnode: incomingVideoNode)
+                        let outgoingVideoNode = CallVideoNode(videoView: outgoingVideoView, isReadyUpdated: {})
+                        strongSelf.outgoingVideoNodeValue = outgoingVideoNode
+                        strongSelf.minimizedVideoNode = outgoingVideoNode
+                        if let expandedVideoNode = strongSelf.expandedVideoNode {
+                            strongSelf.containerNode.insertSubnode(outgoingVideoNode, aboveSubnode: expandedVideoNode)
                         } else {
                             strongSelf.containerNode.insertSubnode(outgoingVideoNode, aboveSubnode: strongSelf.dimNode)
                         }
                         if let (layout, navigationBarHeight) = strongSelf.validLayout {
                             strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.4, curve: .spring))
                         }
-                        /*outgoingVideoNode.tapped = {
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            strongSelf.outgoingVideoExplicitelyFullscreen = !strongSelf.outgoingVideoExplicitelyFullscreen
-                            if let (layout, navigationBarHeight) = strongSelf.validLayout {
-                                strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.4, curve: .spring))
-                            }
-                        }*/
                     }
                 })
             }
@@ -435,72 +457,75 @@ final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
             break
         }
         
-        if let incomingVideoNode = self.incomingVideoNode {
-            let isActive: Bool
-            switch callState.remoteVideoState {
-            case .inactive:
-                isActive = false
-            case .active:
-                isActive = true
-            }
-            incomingVideoNode.updateIsBlurred(isBlurred: !isActive)
-            if isActive != self.videoPausedNode.alpha.isZero {
-                if isActive {
-                    self.videoPausedNode.alpha = 0.0
-                    self.videoPausedNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
-                } else {
-                    self.videoPausedNode.alpha = 1.0
-                    self.videoPausedNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        if let incomingVideoNode = self.incomingVideoNodeValue {
+            switch callState.state {
+            case .terminating, .terminated:
+                break
+            default:
+                let isActive: Bool
+                switch callState.remoteVideoState {
+                case .inactive:
+                    isActive = false
+                case .active:
+                    isActive = true
+                }
+                incomingVideoNode.updateIsBlurred(isBlurred: !isActive)
+                if isActive != self.videoPausedNode.alpha.isZero {
+                    if isActive {
+                        self.videoPausedNode.alpha = 0.0
+                        self.videoPausedNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                    } else {
+                        self.videoPausedNode.alpha = 1.0
+                        self.videoPausedNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                    }
                 }
             }
         }
         
         switch callState.state {
             case .waiting, .connecting:
-                statusValue = .text(self.presentationData.strings.Call_StatusConnecting)
+                statusValue = .text(string: self.presentationData.strings.Call_StatusConnecting, displayLogo: false)
             case let .requesting(ringing):
                 if ringing {
-                    statusValue = .text(self.presentationData.strings.Call_StatusRinging)
+                    statusValue = .text(string: self.presentationData.strings.Call_StatusRinging, displayLogo: false)
                 } else {
-                    statusValue = .text(self.presentationData.strings.Call_StatusRequesting)
+                    statusValue = .text(string: self.presentationData.strings.Call_StatusRequesting, displayLogo: false)
                 }
             case .terminating:
-                statusValue = .text(self.presentationData.strings.Call_StatusEnded)
+                statusValue = .text(string: self.presentationData.strings.Call_StatusEnded, displayLogo: false)
             case let .terminated(_, reason, _):
                 if let reason = reason {
                     switch reason {
                         case let .ended(type):
                             switch type {
                                 case .busy:
-                                    statusValue = .text(self.presentationData.strings.Call_StatusBusy)
+                                    statusValue = .text(string: self.presentationData.strings.Call_StatusBusy, displayLogo: false)
                                 case .hungUp, .missed:
-                                    statusValue = .text(self.presentationData.strings.Call_StatusEnded)
+                                    statusValue = .text(string: self.presentationData.strings.Call_StatusEnded, displayLogo: false)
                             }
                         case .error:
-                            statusValue = .text(self.presentationData.strings.Call_StatusFailed)
+                            statusValue = .text(string: self.presentationData.strings.Call_StatusFailed, displayLogo: false)
                     }
                 } else {
-                    statusValue = .text(self.presentationData.strings.Call_StatusEnded)
+                    statusValue = .text(string: self.presentationData.strings.Call_StatusEnded, displayLogo: false)
                 }
             case .ringing:
-                var text = self.presentationData.strings.Call_StatusIncoming
+                var text: String
+                if self.call.isVideo {
+                    text = self.presentationData.strings.Call_IncomingVideoCall
+                } else {
+                    text = self.presentationData.strings.Call_IncomingVoiceCall
+                }
                 if !self.statusNode.subtitle.isEmpty {
                     text += "\n\(self.statusNode.subtitle)"
                 }
-                statusValue = .text(text)
+                statusValue = .text(string: text, displayLogo: true)
             case .active(let timestamp, let reception, let keyVisualHash), .reconnecting(let timestamp, let reception, let keyVisualHash):
                 let strings = self.presentationData.strings
                 var isReconnecting = false
                 if case .reconnecting = callState.state {
                     isReconnecting = true
                 }
-                statusValue = .timer({ value in
-                    if isReconnecting {
-                        return strings.Call_StatusConnecting
-                    } else {
-                        return value
-                    }
-                }, timestamp)
                 if self.keyTextData?.0 != keyVisualHash {
                     let text = stringForEmojiHashOfData(keyVisualHash, 4)!
                     self.keyTextData = (keyVisualHash, text)
@@ -515,28 +540,25 @@ final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
                         self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                     }
                 }
-                statusReception = reception
-        }
-        switch callState.state {
-            case .terminated, .terminating:
-                if !self.statusNode.alpha.isEqual(to: 0.5) {
-                    self.statusNode.alpha = 0.5
-                    self.buttonsNode.alpha = 0.5
-                    self.keyButtonNode.alpha = 0.5
-                    self.backButtonArrowNode.alpha = 0.5
-                    self.backButtonNode.alpha = 0.5
-                    
-                    self.statusNode.layer.animateAlpha(from: 1.0, to: 0.5, duration: 0.25)
-                    self.buttonsNode.layer.animateAlpha(from: 1.0, to: 0.5, duration: 0.25)
-                    self.keyButtonNode.layer.animateAlpha(from: 1.0, to: 0.5, duration: 0.25)
-                }
-            default:
-                if !self.statusNode.alpha.isEqual(to: 1.0) {
-                    self.statusNode.alpha = 1.0
-                    self.buttonsNode.alpha = 1.0
-                    self.keyButtonNode.alpha = 1.0
-                    self.backButtonArrowNode.alpha = 1.0
-                    self.backButtonNode.alpha = 1.0
+                switch callState.videoState {
+                case .notAvailable, .active, .possible:
+                    statusValue = .timer({ value in
+                        if isReconnecting {
+                            return strings.Call_StatusConnecting
+                        } else {
+                            return value
+                        }
+                    }, timestamp)
+                    statusReception = reception
+                case .incomingRequested:
+                    var text: String
+                    text = self.presentationData.strings.Call_IncomingVideoCall
+                    if !self.statusNode.subtitle.isEmpty {
+                        text += "\n\(self.statusNode.subtitle)"
+                    }
+                    statusValue = .text(string: text, displayLogo: true)
+                case .outgoingRequested:
+                    statusValue = .text(string: self.presentationData.strings.Call_StatusRequesting, displayLogo: false)
                 }
         }
         if self.shouldStayHiddenUntilConnection {
@@ -549,6 +571,15 @@ final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
         }
         self.statusNode.status = statusValue
         self.statusNode.reception = statusReception
+        
+        if let callState = self.callState {
+            switch callState.state {
+            case .active, .connecting, .reconnecting:
+                break
+            default:
+                self.isUIHidden = false
+            }
+        }
         
         self.updateButtonsMode()
         
@@ -588,33 +619,38 @@ final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
         switch callState.videoState {
         case .notAvailable:
             mappedVideoState = .notAvailable
-        case .available:
-            mappedVideoState = .available(true)
+        case .possible:
+            mappedVideoState = .possible
+        case .outgoingRequested:
+            mappedVideoState = .outgoingRequested
+        case .incomingRequested:
+            mappedVideoState = .incomingRequested
         case .active:
-            mappedVideoState = .active
-        case .activeOutgoing:
             mappedVideoState = .active
         }
         
         switch callState.state {
         case .ringing:
-            let buttonsMode: CallControllerButtonsMode = .incoming(speakerMode: mode, videoState: mappedVideoState)
-            self.buttonsNode.updateMode(strings: self.presentationData.strings, mode: buttonsMode)
+            self.buttonsMode = .incoming(speakerMode: mode, videoState: mappedVideoState)
             self.buttonsTerminationMode = buttonsMode
         case .waiting, .requesting:
-            let buttonsMode: CallControllerButtonsMode = .outgoingRinging(speakerMode: mode, videoState: mappedVideoState)
-            self.buttonsNode.updateMode(strings: self.presentationData.strings, mode: buttonsMode)
+            self.buttonsMode = .outgoingRinging(speakerMode: mode, videoState: mappedVideoState)
             self.buttonsTerminationMode = buttonsMode
         case .active, .connecting, .reconnecting:
-            let buttonsMode: CallControllerButtonsMode = .active(speakerMode: mode, videoState: mappedVideoState)
-            self.buttonsNode.updateMode(strings: self.presentationData.strings, mode: buttonsMode)
+            self.buttonsMode = .active(speakerMode: mode, videoState: mappedVideoState)
             self.buttonsTerminationMode = buttonsMode
         case .terminating, .terminated:
             if let buttonsTerminationMode = self.buttonsTerminationMode {
-                self.buttonsNode.updateMode(strings: self.presentationData.strings, mode: buttonsTerminationMode)
+                self.buttonsMode = buttonsTerminationMode
             } else {
-                self.buttonsNode.updateMode(strings: self.presentationData.strings, mode: .active(speakerMode: mode, videoState: mappedVideoState))
+                self.buttonsMode = .active(speakerMode: mode, videoState: mappedVideoState)
             }
+        }
+        
+        if let (layout, navigationHeight) = self.validLayout {
+            self.pictureInPictureTransitionFraction = 0.0
+            
+            self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
         }
     }
     
@@ -645,70 +681,118 @@ final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
         }
     }
     
+    func expandFromPipIfPossible() {
+        if self.pictureInPictureTransitionFraction.isEqual(to: 1.0), let (layout, navigationHeight) = self.validLayout {
+            self.pictureInPictureTransitionFraction = 0.0
+            
+            self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring))
+        }
+    }
+    
     private func calculatePreviewVideoRect(layout: ContainerViewLayout, navigationHeight: CGFloat) -> CGRect {
-        let buttonsHeight: CGFloat = 190.0
-        let buttonsOffset: CGFloat
-        if layout.size.width.isEqual(to: 320.0) {
-            if layout.size.height.isEqual(to: 480.0) {
-                buttonsOffset = 60.0
-            } else {
-                buttonsOffset = 73.0
-            }
-        } else {
-            buttonsOffset = 83.0
-        }
+        var uiDisplayTransition: CGFloat = self.isUIHidden ? 0.0 : 1.0
+        uiDisplayTransition *= 1.0 - self.pictureInPictureTransitionFraction
         
-        let buttonsOriginY: CGFloat
-        if self.isUIHidden {
-            buttonsOriginY = layout.size.height + 40.0 - 80.0
-        } else {
-            buttonsOriginY = layout.size.height - (buttonsOffset - 40.0) - buttonsHeight - layout.intrinsicInsets.bottom
-        }
+        let buttonsHeight: CGFloat = self.buttonsNode.bounds.height
         
-        let previewVideoSize = layout.size.aspectFitted(CGSize(width: 200.0, height: 200.0))
+        var fullInsets = layout.insets(options: .statusBar)
+        
+        var cleanInsets = fullInsets
+        cleanInsets.bottom = layout.intrinsicInsets.bottom
+        cleanInsets.left = 20.0
+        cleanInsets.right = 20.0
+        
+        fullInsets.top += 44.0 + 8.0
+        fullInsets.bottom = buttonsHeight + 27.0
+        fullInsets.left = 20.0
+        fullInsets.right = 20.0
+        
+        var insets: UIEdgeInsets = self.isUIHidden ? cleanInsets : fullInsets
+        
+        let expandedInset: CGFloat = 16.0
+        
+        insets.top = interpolate(from: expandedInset, to: insets.top, value: 1.0 - self.pictureInPictureTransitionFraction)
+        insets.bottom = interpolate(from: expandedInset, to: insets.bottom, value: 1.0 - self.pictureInPictureTransitionFraction)
+        insets.left = interpolate(from: expandedInset, to: insets.left, value: 1.0 - self.pictureInPictureTransitionFraction)
+        insets.right = interpolate(from: expandedInset, to: insets.right, value: 1.0 - self.pictureInPictureTransitionFraction)
+        
+        let previewVideoSide = interpolate(from: 350.0, to: 200.0, value: 1.0 - self.pictureInPictureTransitionFraction)
+        let previewVideoSize = layout.size.aspectFitted(CGSize(width: previewVideoSide, height: previewVideoSide))
         let previewVideoY: CGFloat
         let previewVideoX: CGFloat
         
         switch self.outgoingVideoNodeCorner {
         case .topLeft:
-            previewVideoX = 20.0
-            if self.isUIHidden {
-                previewVideoY = layout.insets(options: .statusBar).top + 8.0
-            } else {
-                previewVideoY = layout.insets(options: .statusBar).top + 44.0 + 8.0
-            }
+            previewVideoX = insets.left
+            previewVideoY = insets.top
         case .topRight:
-            previewVideoX = layout.size.width - previewVideoSize.width - 20.0
-            if self.isUIHidden {
-                previewVideoY = layout.insets(options: .statusBar).top + 8.0
-            } else {
-                previewVideoY = layout.insets(options: .statusBar).top + 44.0 + 8.0
-            }
+            previewVideoX = layout.size.width - previewVideoSize.width - insets.right
+            previewVideoY = insets.top
         case .bottomLeft:
-            previewVideoX = 20.0
-            if self.isUIHidden {
-                previewVideoY = layout.size.height - layout.intrinsicInsets.bottom - 8.0 - previewVideoSize.height
-            } else {
-                previewVideoY = buttonsOriginY + 100.0 - previewVideoSize.height
-            }
+            previewVideoX = insets.left
+            previewVideoY = layout.size.height - insets.bottom - previewVideoSize.height
         case .bottomRight:
-            previewVideoX = layout.size.width - previewVideoSize.width - 20.0
-            if self.isUIHidden {
-                previewVideoY = layout.size.height - layout.intrinsicInsets.bottom - 8.0 - previewVideoSize.height
-            } else {
-                previewVideoY = buttonsOriginY + 100.0 - previewVideoSize.height
-            }
+            previewVideoX = layout.size.width - previewVideoSize.width - insets.right
+            previewVideoY = layout.size.height - insets.bottom - previewVideoSize.height
         }
         
         return CGRect(origin: CGPoint(x: previewVideoX, y: previewVideoY), size: previewVideoSize)
     }
     
+    private func calculatePictureInPictureContainerRect(layout: ContainerViewLayout, navigationHeight: CGFloat) -> CGRect {
+        let pictureInPictureTopInset: CGFloat = layout.insets(options: .statusBar).top + 44.0 + 8.0
+        let pictureInPictureSideInset: CGFloat = 8.0
+        let pictureInPictureSize = layout.size.fitted(CGSize(width: 240.0, height: 240.0))
+        let pictureInPictureBottomInset: CGFloat = layout.insets(options: .input).bottom + 44.0 + 8.0
+        
+        let containerPictureInPictureFrame: CGRect
+        switch self.pictureInPictureCorner {
+        case .topLeft:
+            containerPictureInPictureFrame = CGRect(origin: CGPoint(x: pictureInPictureSideInset, y: pictureInPictureTopInset), size: pictureInPictureSize)
+        case .topRight:
+            containerPictureInPictureFrame = CGRect(origin: CGPoint(x: layout.size.width -  pictureInPictureSideInset - pictureInPictureSize.width, y: pictureInPictureTopInset), size: pictureInPictureSize)
+        case .bottomLeft:
+            containerPictureInPictureFrame = CGRect(origin: CGPoint(x: pictureInPictureSideInset, y: layout.size.height - pictureInPictureBottomInset - pictureInPictureSize.height), size: pictureInPictureSize)
+        case .bottomRight:
+            containerPictureInPictureFrame = CGRect(origin: CGPoint(x: layout.size.width -  pictureInPictureSideInset - pictureInPictureSize.width, y: layout.size.height - pictureInPictureBottomInset - pictureInPictureSize.height), size: pictureInPictureSize)
+        }
+        return containerPictureInPictureFrame
+    }
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationBarHeight)
         
-        let overlayAlpha: CGFloat = self.isUIHidden ? 0.0 : 1.0
+        var uiDisplayTransition: CGFloat = self.isUIHidden ? 0.0 : 1.0
+        uiDisplayTransition *= 1.0 - self.pictureInPictureTransitionFraction
         
-        transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        let buttonsHeight: CGFloat
+        if let buttonsMode = self.buttonsMode {
+            buttonsHeight = self.buttonsNode.updateLayout(strings: self.presentationData.strings, mode: buttonsMode, constrainedWidth: layout.size.width, bottomInset: layout.intrinsicInsets.bottom, transition: transition)
+        } else {
+            buttonsHeight = 0.0
+        }
+        let defaultButtonsOriginY = layout.size.height - buttonsHeight
+        let buttonsOriginY = interpolate(from: layout.size.height + 10.0, to: defaultButtonsOriginY, value: uiDisplayTransition)
+        
+        var overlayAlpha: CGFloat = uiDisplayTransition
+        
+        switch self.callState?.state {
+        case .terminated, .terminating:
+            overlayAlpha *= 0.5
+        default:
+            break
+        }
+        
+        let containerFullScreenFrame = CGRect(origin: CGPoint(), size: layout.size)
+        let containerPictureInPictureFrame = self.calculatePictureInPictureContainerRect(layout: layout, navigationHeight: navigationBarHeight)
+        
+        let containerFrame = interpolateFrame(from: containerFullScreenFrame, to: containerPictureInPictureFrame, t: self.pictureInPictureTransitionFraction)
+        
+        transition.updateFrame(node: self.containerTransformationNode, frame: containerFrame)
+        transition.updateSublayerTransformScale(node: self.containerTransformationNode, scale: min(1.0, containerFrame.width / layout.size.width * 1.01))
+        transition.updateCornerRadius(layer: self.containerTransformationNode.layer, cornerRadius: self.pictureInPictureTransitionFraction * 10.0)
+        
+        transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(x: (containerFrame.width - layout.size.width) / 2.0, y: floor(containerFrame.height - layout.size.height) / 2.0), size: layout.size))
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         if let keyPreviewNode = self.keyPreviewNode {
@@ -751,18 +835,6 @@ final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
         
         statusOffset += layout.safeInsets.top
         
-        let buttonsHeight: CGFloat = 190.0
-        let buttonsOffset: CGFloat
-        if layout.size.width.isEqual(to: 320.0) {
-            if layout.size.height.isEqual(to: 480.0) {
-                buttonsOffset = 60.0
-            } else {
-                buttonsOffset = 73.0
-            }
-        } else {
-            buttonsOffset = 83.0
-        }
-        
         let statusHeight = self.statusNode.updateLayout(constrainedWidth: layout.size.width, transition: transition)
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: 0.0, y: statusOffset), size: CGSize(width: layout.size.width, height: statusHeight)))
         transition.updateAlpha(node: self.statusNode, alpha: overlayAlpha)
@@ -770,50 +842,46 @@ final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
         let videoPausedSize = self.videoPausedNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: 100.0))
         transition.updateFrame(node: self.videoPausedNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - videoPausedSize.width) / 2.0), y: floor((layout.size.height - videoPausedSize.height) / 2.0)), size: videoPausedSize))
         
-        self.buttonsNode.updateLayout(strings: self.presentationData.strings, constrainedWidth: layout.size.width, transition: transition)
-        let buttonsOriginY: CGFloat
-        if self.isUIHidden {
-            buttonsOriginY = layout.size.height + 40.0 - 80.0
-        } else {
-            buttonsOriginY = layout.size.height - (buttonsOffset - 40.0) - buttonsHeight - layout.intrinsicInsets.bottom
-        }
         transition.updateFrame(node: self.buttonsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: buttonsOriginY), size: CGSize(width: layout.size.width, height: buttonsHeight)))
         transition.updateAlpha(node: self.buttonsNode, alpha: overlayAlpha)
         
         let fullscreenVideoFrame = CGRect(origin: CGPoint(), size: layout.size)
-        
         let previewVideoFrame = self.calculatePreviewVideoRect(layout: layout, navigationHeight: navigationBarHeight)
         
-        if let incomingVideoNode = self.incomingVideoNode {
-            var incomingVideoTransition = transition
-            if incomingVideoNode.frame.isEmpty {
-                incomingVideoTransition = .immediate
+        if let expandedVideoNode = self.expandedVideoNode {
+            var expandedVideoTransition = transition
+            if expandedVideoNode.frame.isEmpty || self.disableAnimationForExpandedVideoOnce {
+                expandedVideoTransition = .immediate
+                self.disableAnimationForExpandedVideoOnce = false
             }
-            if self.outgoingVideoExplicitelyFullscreen {
-                incomingVideoTransition.updateFrame(node: incomingVideoNode, frame: previewVideoFrame)
-            } else {
-                incomingVideoTransition.updateFrame(node: incomingVideoNode, frame: fullscreenVideoFrame)
-            }
-            incomingVideoNode.updateLayout(size: incomingVideoNode.frame.size)
+            expandedVideoTransition.updateFrame(node: expandedVideoNode, frame: fullscreenVideoFrame)
+            expandedVideoNode.updateLayout(size: expandedVideoNode.frame.size, cornerRadius: 0.0, transition: expandedVideoTransition)
         }
-        if let outgoingVideoNode = self.outgoingVideoNode {
-            var outgoingVideoTransition = transition
-            if outgoingVideoNode.frame.isEmpty {
-                outgoingVideoTransition = .immediate
+        if let minimizedVideoNode = self.minimizedVideoNode {
+            var minimizedVideoTransition = transition
+            if minimizedVideoNode.frame.isEmpty {
+                minimizedVideoTransition = .immediate
             }
-            if self.incomingVideoNode == nil {
-                outgoingVideoNode.frame = fullscreenVideoFrame
-                outgoingVideoNode.updateLayout(size: layout.size, isExpanded: true, transition: outgoingVideoTransition)
-            } else {
+            if let expandedVideoNode = self.expandedVideoNode, expandedVideoNode.isReady {
                 if self.minimizedVideoDraggingPosition == nil {
-                    if self.outgoingVideoExplicitelyFullscreen {
-                        outgoingVideoTransition.updateFrame(node: outgoingVideoNode, frame: fullscreenVideoFrame)
-                    } else {
-                        outgoingVideoTransition.updateFrame(node: outgoingVideoNode, frame: previewVideoFrame)
+                    if let animationForExpandedVideoSnapshotView = self.animationForExpandedVideoSnapshotView {
+                        self.containerNode.view.addSubview(animationForExpandedVideoSnapshotView)
+                        transition.updateAlpha(layer: animationForExpandedVideoSnapshotView.layer, alpha: 0.0, completion: { [weak animationForExpandedVideoSnapshotView] _ in
+                            animationForExpandedVideoSnapshotView?.removeFromSuperview()
+                        })
+                        transition.updateTransformScale(layer: animationForExpandedVideoSnapshotView.layer, scale: previewVideoFrame.width / fullscreenVideoFrame.width)
+                        
+                        transition.updatePosition(layer: animationForExpandedVideoSnapshotView.layer, position: CGPoint(x: previewVideoFrame.minX + previewVideoFrame.center.x /  fullscreenVideoFrame.width * previewVideoFrame.width, y: previewVideoFrame.minY + previewVideoFrame.center.y / fullscreenVideoFrame.height * previewVideoFrame.height))
+                        self.animationForExpandedVideoSnapshotView = nil
                     }
-                    outgoingVideoNode.updateLayout(size: outgoingVideoNode.frame.size, isExpanded: self.outgoingVideoExplicitelyFullscreen, transition: outgoingVideoTransition)
+                    minimizedVideoTransition.updateFrame(node: minimizedVideoNode, frame: previewVideoFrame)
+                    minimizedVideoNode.updateLayout(size: minimizedVideoNode.frame.size, cornerRadius: interpolate(from: 14.0, to: 24.0, value: self.pictureInPictureTransitionFraction), transition: minimizedVideoTransition)
                 }
+            } else {
+                minimizedVideoNode.frame = fullscreenVideoFrame
+                minimizedVideoNode.updateLayout(size: layout.size, cornerRadius: 0.0, transition: minimizedVideoTransition)
             }
+            self.animationForExpandedVideoSnapshotView = nil
         }
         
         let keyTextSize = self.keyButtonNode.frame.size
@@ -861,13 +929,44 @@ final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
     
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            if let _ = self.keyPreviewNode {
+            if !self.pictureInPictureTransitionFraction.isZero {
+                if let (layout, navigationHeight) = self.validLayout {
+                    self.pictureInPictureTransitionFraction = 0.0
+                    
+                    self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring))
+                }
+            } else if let _ = self.keyPreviewNode {
                 self.backPressed()
             } else {
-                if self.incomingVideoNode != nil || self.outgoingVideoNode != nil {
-                    self.isUIHidden = !self.isUIHidden
-                    if let (layout, navigationBarHeight) = self.validLayout {
-                        self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                if let expandedVideoNode = self.expandedVideoNode, let minimizedVideoNode = self.minimizedVideoNode {
+                    let point = recognizer.location(in: recognizer.view)
+                    if minimizedVideoNode.frame.contains(point) {
+                        let copyView = minimizedVideoNode.view.snapshotView(afterScreenUpdates: false)
+                        copyView?.frame = minimizedVideoNode.frame
+                        self.expandedVideoNode = minimizedVideoNode
+                        self.minimizedVideoNode = expandedVideoNode
+                        if let supernode = expandedVideoNode.supernode {
+                            supernode.insertSubnode(expandedVideoNode, aboveSubnode: minimizedVideoNode)
+                        }
+                        if let (layout, navigationBarHeight) = self.validLayout {
+                            self.disableAnimationForExpandedVideoOnce = true
+                            self.animationForExpandedVideoSnapshotView = copyView
+                            self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                        }
+                    } else {
+                        var updated = false
+                        if let callState = self.callState {
+                            switch callState.state {
+                            case .active, .connecting, .reconnecting:
+                                self.isUIHidden = !self.isUIHidden
+                                updated = true
+                            default:
+                                break
+                            }
+                        }
+                        if updated, let (layout, navigationBarHeight) = self.validLayout {
+                            self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                        }
                     }
                 } else {
                     let point = recognizer.location(in: recognizer.view)
@@ -1034,28 +1133,63 @@ final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
         switch recognizer.state {
             case .began:
                 let location = recognizer.location(in: self.view)
-                //let translation = recognizer.translation(in: self.view)
-                //location.x += translation.x
-                //location.y += translation.y
-                if let _ = self.incomingVideoNode, let outgoingVideoNode = self.outgoingVideoNode, outgoingVideoNode.frame.contains(location) {
-                    self.minimizedVideoInitialPosition = outgoingVideoNode.position
+                if self.self.pictureInPictureTransitionFraction.isZero, let _ = self.expandedVideoNode, let minimizedVideoNode = self.minimizedVideoNode, minimizedVideoNode.frame.contains(location) {
+                    self.minimizedVideoInitialPosition = minimizedVideoNode.position
                 } else {
                     self.minimizedVideoInitialPosition = nil
+                    if !self.pictureInPictureTransitionFraction.isZero {
+                        self.pictureInPictureGestureState = .dragging(initialPosition: self.containerTransformationNode.position, draggingPosition: self.containerTransformationNode.position)
+                    } else {
+                        self.pictureInPictureGestureState = .collapsing(didSelectCorner: false)
+                    }
                 }
             case .changed:
-                if let outgoingVideoNode = self.outgoingVideoNode, let minimizedVideoInitialPosition = self.minimizedVideoInitialPosition {
+                if let minimizedVideoNode = self.minimizedVideoNode, let minimizedVideoInitialPosition = self.minimizedVideoInitialPosition {
                     let translation = recognizer.translation(in: self.view)
                     let minimizedVideoDraggingPosition = CGPoint(x: minimizedVideoInitialPosition.x + translation.x, y: minimizedVideoInitialPosition.y + translation.y)
                     self.minimizedVideoDraggingPosition = minimizedVideoDraggingPosition
-                    outgoingVideoNode.position = minimizedVideoDraggingPosition
+                    minimizedVideoNode.position = minimizedVideoDraggingPosition
                 } else {
-                    let offset = recognizer.translation(in: self.view).y
-                    var bounds = self.bounds
-                    bounds.origin.y = -offset
-                    self.bounds = bounds
+                    switch self.pictureInPictureGestureState {
+                    case .none:
+                        let offset = recognizer.translation(in: self.view).y
+                        var bounds = self.bounds
+                        bounds.origin.y = -offset
+                        self.bounds = bounds
+                    case let .collapsing(didSelectCorner):
+                        if let (layout, navigationHeight) = self.validLayout {
+                            let offset = recognizer.translation(in: self.view)
+                            if !didSelectCorner {
+                                self.pictureInPictureGestureState = .collapsing(didSelectCorner: true)
+                                if offset.x < 0.0 {
+                                    self.pictureInPictureCorner = .topLeft
+                                } else {
+                                    self.pictureInPictureCorner = .topRight
+                                }
+                            }
+                            let maxOffset: CGFloat = min(300.0, layout.size.height / 2.0)
+                            
+                            let offsetTransition = max(0.0, min(1.0, abs(offset.y) / maxOffset))
+                            self.pictureInPictureTransitionFraction = offsetTransition
+                            switch self.pictureInPictureCorner {
+                            case .topRight, .bottomRight:
+                                self.pictureInPictureCorner = offset.y < 0.0 ? .topRight : .bottomRight
+                            case .topLeft, .bottomLeft:
+                                self.pictureInPictureCorner = offset.y < 0.0 ? .topLeft : .bottomLeft
+                            }
+                            
+                            self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
+                        }
+                    case .dragging(let initialPosition, var draggingPosition):
+                        let translation = recognizer.translation(in: self.view)
+                        draggingPosition.x = initialPosition.x + translation.x
+                        draggingPosition.y = initialPosition.y + translation.y
+                        self.pictureInPictureGestureState = .dragging(initialPosition: initialPosition, draggingPosition: draggingPosition)
+                        self.containerTransformationNode.position = draggingPosition
+                    }
                 }
             case .cancelled, .ended:
-                if let outgoingVideoNode = self.outgoingVideoNode, let _ = self.minimizedVideoInitialPosition, let minimizedVideoDraggingPosition = self.minimizedVideoDraggingPosition {
+                if let minimizedVideoNode = self.minimizedVideoNode, let _ = self.minimizedVideoInitialPosition, let minimizedVideoDraggingPosition = self.minimizedVideoDraggingPosition {
                     self.minimizedVideoInitialPosition = nil
                     self.minimizedVideoDraggingPosition = nil
                     
@@ -1063,29 +1197,66 @@ final class CallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
                         self.outgoingVideoNodeCorner = self.nodeLocationForPosition(layout: layout, position: minimizedVideoDraggingPosition, velocity: recognizer.velocity(in: self.view))
                         
                         let videoFrame = self.calculatePreviewVideoRect(layout: layout, navigationHeight: navigationHeight)
-                        outgoingVideoNode.frame = videoFrame
-                        outgoingVideoNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: minimizedVideoDraggingPosition.x - videoFrame.midX, y: minimizedVideoDraggingPosition.y - videoFrame.midY)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.5, delay: 0.0, initialVelocity: 0.0, damping: 110.0, removeOnCompletion: true, additive: true, completion: nil)
+                        minimizedVideoNode.frame = videoFrame
+                        minimizedVideoNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: minimizedVideoDraggingPosition.x - videoFrame.midX, y: minimizedVideoDraggingPosition.y - videoFrame.midY)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.5, delay: 0.0, initialVelocity: 0.0, damping: 110.0, removeOnCompletion: true, additive: true, completion: nil)
                     }
                 } else {
-                    let velocity = recognizer.velocity(in: self.view).y
-                    if abs(velocity) < 100.0 {
-                        var bounds = self.bounds
-                        let previous = bounds
-                        bounds.origin = CGPoint()
-                        self.bounds = bounds
-                        self.layer.animateBounds(from: previous, to: bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-                    } else {
-                        var bounds = self.bounds
-                        let previous = bounds
-                        bounds.origin = CGPoint(x: 0.0, y: velocity > 0.0 ? -bounds.height: bounds.height)
-                        self.bounds = bounds
-                        self.layer.animateBounds(from: previous, to: bounds, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, completion: { [weak self] _ in
-                            self?.dismissedInteractively?()
-                        })
+                    switch self.pictureInPictureGestureState {
+                    case .none:
+                        let velocity = recognizer.velocity(in: self.view).y
+                        if abs(velocity) < 100.0 {
+                            var bounds = self.bounds
+                            let previous = bounds
+                            bounds.origin = CGPoint()
+                            self.bounds = bounds
+                            self.layer.animateBounds(from: previous, to: bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                        } else {
+                            var bounds = self.bounds
+                            let previous = bounds
+                            bounds.origin = CGPoint(x: 0.0, y: velocity > 0.0 ? -bounds.height: bounds.height)
+                            self.bounds = bounds
+                            self.layer.animateBounds(from: previous, to: bounds, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, completion: { [weak self] _ in
+                                self?.dismissedInteractively?()
+                            })
+                        }
+                    case .collapsing:
+                        self.pictureInPictureGestureState = .none
+                        let velocity = recognizer.velocity(in: self.view).y
+                        if abs(velocity) < 100.0 {
+                            if let (layout, navigationHeight) = self.validLayout {
+                                self.pictureInPictureTransitionFraction = 0.0
+                                
+                                self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring))
+                            }
+                        } else {
+                            if let (layout, navigationHeight) = self.validLayout {
+                                self.pictureInPictureTransitionFraction = 1.0
+                                
+                                self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .animated(duration: 0.4, curve: .spring))
+                            }
+                        }
+                    case let .dragging(initialPosition, _):
+                        self.pictureInPictureGestureState = .none
+                        if let (layout, navigationHeight) = self.validLayout {
+                            let translation = recognizer.translation(in: self.view)
+                            let draggingPosition = CGPoint(x: initialPosition.x + translation.x, y: initialPosition.y + translation.y)
+                            self.pictureInPictureCorner = self.nodeLocationForPosition(layout: layout, position: draggingPosition, velocity: recognizer.velocity(in: self.view))
+                            
+                            let containerFrame = self.calculatePictureInPictureContainerRect(layout: layout, navigationHeight: navigationHeight)
+                            self.containerTransformationNode.frame = containerFrame
+                            containerTransformationNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: draggingPosition.x - containerFrame.midX, y: draggingPosition.y - containerFrame.midY)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.5, delay: 0.0, initialVelocity: 0.0, damping: 110.0, removeOnCompletion: true, additive: true, completion: nil)
+                        }
                     }
                 }
             default:
                 break
         }
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.containerTransformationNode.frame.contains(point) {
+            return self.containerTransformationNode.view.hitTest(self.view.convert(point, to: self.containerTransformationNode.view), with: event)
+        }
+        return nil
     }
 }

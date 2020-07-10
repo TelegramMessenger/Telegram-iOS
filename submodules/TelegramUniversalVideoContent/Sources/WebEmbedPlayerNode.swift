@@ -40,7 +40,7 @@ public func webEmbedType(content: TelegramMediaWebpageLoadedContent, forcedTimes
         return .youtube(videoId: videoId, timestamp: forcedTimestamp ?? timestamp)
     } else if let (videoId, timestamp) = extractVimeoVideoIdAndTimestamp(url: content.url) {
         return .vimeo(videoId: videoId, timestamp: forcedTimestamp ?? timestamp)
-    } else if let embedUrl = content.embedUrl, isTwitchVideoUrl(embedUrl) {
+    } else if let embedUrl = content.embedUrl, isTwitchVideoUrl(embedUrl) && false {
         return .twitch(url: embedUrl)
     } else {
         return .iframe(url: content.embedUrl ?? content.url)

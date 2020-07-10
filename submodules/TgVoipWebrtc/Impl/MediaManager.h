@@ -70,7 +70,7 @@ public:
     void setIsConnected(bool isConnected);
     void receivePacket(const rtc::CopyOnWriteBuffer &packet);
     void notifyPacketSent(const rtc::SentPacket &sentPacket);
-    void setSendVideo(bool sendVideo);
+    void setSendVideo(std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture);
     void setMuteOutgoingAudio(bool mute);
     void setIncomingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink);
     

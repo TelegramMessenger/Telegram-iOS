@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 
 public enum ContainedViewLayoutTransitionCurve {
+    case linear
     case easeInOut
     case spring
     case custom(Float, Float, Float, Float)
@@ -15,6 +16,8 @@ public enum ContainedViewLayoutTransitionCurve {
 public extension ContainedViewLayoutTransitionCurve {
     var timingFunction: String {
         switch self {
+            case .linear:
+                return CAMediaTimingFunctionName.linear.rawValue
             case .easeInOut:
                 return CAMediaTimingFunctionName.easeInEaseOut.rawValue
             case .spring:
@@ -26,6 +29,8 @@ public extension ContainedViewLayoutTransitionCurve {
     
     var mediaTimingFunction: CAMediaTimingFunction? {
         switch self {
+            case .linear:
+                return nil
             case .easeInOut:
                 return nil
             case .spring:
@@ -38,6 +43,8 @@ public extension ContainedViewLayoutTransitionCurve {
     #if os(iOS)
     var viewAnimationOptions: UIView.AnimationOptions {
         switch self {
+            case .linear:
+                return [.curveLinear]
             case .easeInOut:
                 return [.curveEaseInOut]
             case .spring:

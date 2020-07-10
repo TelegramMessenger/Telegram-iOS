@@ -44,6 +44,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private var controllerInteraction: ChatControllerInteraction!
     
     private let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
+    private let temporaryHiddenGalleryMediaDisposable = MetaDisposable()
     
     private var chatPresentationDataPromise: Promise<ChatPresentationData>
     private var presentationDataDisposable: Disposable?
@@ -183,7 +184,27 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }, callPeer: { peerId, isVideo in
                     self?.controllerInteraction?.callPeer(peerId, isVideo)
                 }, enqueueMessage: { _ in
-                }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }))
+                }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: {  signal, media in
+                    if let strongSelf = self {
+                        strongSelf.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).start(next: { messageId in
+                            if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
+                                var messageIdAndMedia: [MessageId: [Media]] = [:]
+                                
+                                if let messageId = messageId {
+                                    messageIdAndMedia[messageId] = [media]
+                                }
+                                
+                                controllerInteraction.hiddenMedia = messageIdAndMedia
+                                
+                                strongSelf.listNode.forEachItemNode { itemNode in
+                                    if let itemNode = itemNode as? ChatMessageItemView {
+                                        itemNode.updateHiddenMedia()
+                                    }
+                                }
+                            }
+                        }))
+                    }
+                }))
             }
             return false
         }, openPeer: { [weak self] peerId, _, message in
@@ -427,6 +448,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, displayPsa: { _, _ in
         }, displayDiceTooltip: { _ in
         }, animateDiceSuccess: {  
+        }, greetingStickerNode: {
+            return nil
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
@@ -514,6 +537,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.historyDisposable?.dispose()
         self.navigationActionDisposable.dispose()
         self.galleryHiddenMesageAndMediaDisposable.dispose()
+        self.temporaryHiddenGalleryMediaDisposable.dispose()
         self.resolvePeerByNameDisposable.dispose()
         self.adminsDisposable?.dispose()
         self.banDisposables.dispose()

@@ -43,8 +43,12 @@ final class GenericEmbedImplementation: WebEmbedImplementation {
         self.onPlaybackStarted = onPlaybackStarted
         updateStatus(self.status)
         
-        let html = String(format: htmlTemplate, self.url)
-        webView.loadHTMLString(html, baseURL: URL(string: "about:blank"))
+        if self.url.contains("player.twitch.tv/"), let url = URL(string: self.url) {
+            webView.load(URLRequest(url: url))
+        } else {
+            let html = String(format: htmlTemplate, self.url)
+            webView.loadHTMLString(html, baseURL: URL(string: "about:blank"))
+        }
         
         userContentController.addUserScript(WKUserScript(source: userScript, injectionTime: .atDocumentEnd, forMainFrameOnly: false))
         

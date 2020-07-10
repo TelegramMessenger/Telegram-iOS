@@ -147,6 +147,13 @@ protected:
     TgVoip() = default;
 
 public:
+    enum class VideoState {
+        possible,
+        outgoingRequested,
+        incomingRequested,
+        active
+    };
+    
     static void setLoggingFunction(std::function<void(std::string const &)> loggingFunction);
     static void setGlobalServerConfig(std::string const &serverConfig);
     static int getConnectionMaxLayer();
@@ -160,8 +167,7 @@ public:
             TgVoipNetworkType initialNetworkType,
             TgVoipEncryptionKey const &encryptionKey,
             std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture,
-            std::function<void(TgVoipState)> stateUpdated,
-            std::function<void(bool)> videoStateUpdated,
+            std::function<void(TgVoipState, VideoState)> stateUpdated,
             std::function<void(bool)> remoteVideoIsActiveUpdated,
             std::function<void(const std::vector<uint8_t> &)> signalingDataEmitted
     );
@@ -182,7 +188,8 @@ public:
     virtual TgVoipPersistentState getPersistentState() = 0;
     
     virtual void receiveSignalingData(const std::vector<uint8_t> &data) = 0;
-    virtual void setSendVideo(bool sendVideo) = 0;
+    virtual void requestVideo(std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture) = 0;
+    virtual void acceptVideo(std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture) = 0;
 
     virtual TgVoipFinalState stop() = 0;
 };
