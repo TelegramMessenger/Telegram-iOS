@@ -1320,8 +1320,9 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
                     overlayHidden = true
                 }
                 
-                let targetAlpha: CGFloat = overlayHidden ? 0.0 : 1.0
-                if self.updatingAvatarOverlay.alpha != targetAlpha {
+                let targetIconAlpha: CGFloat = iconHidden ? 0.0 : 1.0
+                let targetOverlayAlpha: CGFloat = overlayHidden ? 0.0 : 1.0
+                if self.updatingAvatarOverlay.alpha != targetOverlayAlpha || self.iconNode.alpha != targetIconAlpha {
                     let update = {
                         self.statusNode.transitionToState(.none)
                         self.currentRepresentation = nil

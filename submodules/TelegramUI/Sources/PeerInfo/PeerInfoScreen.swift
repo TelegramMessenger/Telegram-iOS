@@ -48,6 +48,7 @@ import DeviceAccess
 import LegacyMediaPickerUI
 import TelegramNotices
 import SaveToCameraRoll
+import PeerInfoUI
 
 protocol PeerInfoScreenItem: class {
     var id: AnyHashable { get }
@@ -3545,7 +3546,18 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         guard let data = self.data, let peer = data.peer else {
             return
         }
-        self.controller?.push(groupPreHistorySetupController(context: self.context, peerId: peer.id, upgradedToSupergroup: { _, f in f() }))
+        var upgradedToSupergroupImpl: (() -> Void)?
+        let controller = groupPreHistorySetupController(context: self.context, peerId: peer.id, upgradedToSupergroup: { _, f in
+            upgradedToSupergroupImpl?()
+            f()
+        })
+        self.controller?.push(controller)
+        
+        upgradedToSupergroupImpl = { [weak controller] in
+            if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
+                rebuildControllerStackAfterSupergroupUpgrade(controller: controller, navigationController: navigationController)
+            }
+        }
     }
     
     private func openPermissions() {

@@ -846,7 +846,7 @@ public func channelAdminsController(context: AccountContext, peerId initialPeerI
     return controller
 }
 
-func rebuildControllerStackAfterSupergroupUpgrade(controller: ViewController, navigationController: NavigationController, replace: ((UIViewController) -> UIViewController)? = nil) {
+public func rebuildControllerStackAfterSupergroupUpgrade(controller: ViewController, navigationController: NavigationController, replace: ((UIViewController) -> UIViewController)? = nil) {
     var controllers = navigationController.viewControllers
     for i in 0 ..< controllers.count {
         if controllers[i] === controller {
