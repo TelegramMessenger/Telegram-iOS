@@ -47,13 +47,23 @@ public func uploadedPeerPhoto(postbox: Postbox, network: Network, resource: Medi
     }
 }
 
-public func uploadedPeerVideo(postbox: Postbox, network: Network, messageMediaPreuploadManager: MessageMediaPreuploadManager, resource: MediaResource) -> Signal<UploadedPeerPhotoData, NoError> {
-    return messageMediaPreuploadManager.upload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .video), hintFileSize: nil, hintFileIsLarge: false)
-    |> map { result -> UploadedPeerPhotoData in
-        return UploadedPeerPhotoData(resource: resource, content: .result(result))
-    }
-    |> `catch` { _ -> Signal<UploadedPeerPhotoData, NoError> in
-        return .single(UploadedPeerPhotoData(resource: resource, content: .error))
+public func uploadedPeerVideo(postbox: Postbox, network: Network, messageMediaPreuploadManager: MessageMediaPreuploadManager?, resource: MediaResource) -> Signal<UploadedPeerPhotoData, NoError> {
+    if let messageMediaPreuploadManager = messageMediaPreuploadManager {
+        return messageMediaPreuploadManager.upload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .video), hintFileSize: nil, hintFileIsLarge: false)
+        |> map { result -> UploadedPeerPhotoData in
+            return UploadedPeerPhotoData(resource: resource, content: .result(result))
+        }
+        |> `catch` { _ -> Signal<UploadedPeerPhotoData, NoError> in
+            return .single(UploadedPeerPhotoData(resource: resource, content: .error))
+        }
+    } else {
+        return multipartUpload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .video), hintFileSize: nil, hintFileIsLarge: false)
+       |> map { result -> UploadedPeerPhotoData in
+           return UploadedPeerPhotoData(resource: resource, content: .result(result))
+       }
+       |> `catch` { _ -> Signal<UploadedPeerPhotoData, NoError> in
+           return .single(UploadedPeerPhotoData(resource: resource, content: .error))
+       }
     }
 }
 

@@ -1310,22 +1310,32 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
                 transition.updateAlpha(node: self.iconNode, alpha: iconHidden ? 0.0 : 1.0)
                 transition.updateAlpha(node: self.updatingAvatarOverlay, alpha: overlayHidden ? 0.0 : 1.0)
             } else {
+                var immediately = self.currentRepresentation == nil
                 if isEditing {
+                    immediately = immediately || peer.profileImageRepresentations.isEmpty
                     iconHidden = peer.profileImageRepresentations.isEmpty
                     overlayHidden = peer.profileImageRepresentations.isEmpty
                 } else {
                     iconHidden = true
                     overlayHidden = true
                 }
-                Queue.mainQueue().after(0.3) { [weak self] in
-                    guard let strongSelf = self else {
-                        return
+                
+                let targetAlpha: CGFloat = overlayHidden ? 0.0 : 1.0
+                if self.updatingAvatarOverlay.alpha != targetAlpha {
+                    let update = {
+                        self.statusNode.transitionToState(.none)
+                        self.currentRepresentation = nil
+                        self.imageNode.setSignal(.single(nil))
+                        transition.updateAlpha(node: self.iconNode, alpha: iconHidden ? 0.0 : 1.0)
+                        transition.updateAlpha(node: self.updatingAvatarOverlay, alpha: overlayHidden ? 0.0 : 1.0)
                     }
-                    strongSelf.statusNode.transitionToState(.none)
-                    strongSelf.currentRepresentation = nil
-                    strongSelf.imageNode.setSignal(.single(nil))
-                    transition.updateAlpha(node: strongSelf.iconNode, alpha: iconHidden ? 0.0 : 1.0)
-                    transition.updateAlpha(node: strongSelf.updatingAvatarOverlay, alpha: overlayHidden ? 0.0 : 1.0)
+                    if immediately {
+                        update()
+                    } else {
+                        Queue.mainQueue().after(0.3) {
+                            update()
+                        }
+                    }
                 }
             }
             if !overlayHidden && self.updatingAvatarOverlay.image == nil {
@@ -2310,6 +2320,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var performButtonAction: ((PeerInfoHeaderButtonKey) -> Void)?
     var requestAvatarExpansion: ((Bool, [AvatarGalleryEntry], AvatarGalleryEntry?, (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?) -> Void)?
     var requestOpenAvatarForEditing: ((Bool) -> Void)?
+    var cancelUpload: (() -> Void)?
     var requestUpdateLayout: (() -> Void)?
     
     var displayCopyContextMenu: ((ASDisplayNode, Bool, Bool) -> Void)?
@@ -2358,6 +2369,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.editingContentNode.alpha = 0.0
         
         self.avatarOverlayNode = PeerInfoEditingAvatarOverlayNode(context: context)
+        self.avatarOverlayNode.isUserInteractionEnabled = false
         
         self.navigationBackgroundNode = ASDisplayNode()
         self.navigationBackgroundNode.isUserInteractionEnabled = false
@@ -2445,9 +2457,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if let currentEntry = self.avatarListNode.listContainerNode.currentEntry {
                 self.requestAvatarExpansion?(true, self.avatarListNode.listContainerNode.galleryEntries, self.avatarListNode.listContainerNode.currentEntry, self.avatarTransitionArguments(entry: currentEntry))
             }
-        } else if let entry = self.avatarListNode.listContainerNode.galleryEntries.first{
+        } else if let entry = self.avatarListNode.listContainerNode.galleryEntries.first {
             let _ = self.avatarListNode.avatarContainerNode.avatarNode
             self.requestAvatarExpansion?(false, self.avatarListNode.listContainerNode.galleryEntries, nil, self.avatarTransitionArguments(entry: entry))
+        } else {
+            self.cancelUpload?()
         }
     }
     

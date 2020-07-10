@@ -2062,6 +2062,19 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             self?.performButtonAction(key: key)
         }
         
+        self.headerNode.cancelUpload = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.state.updatingAvatar != nil {
+                strongSelf.updateAvatarDisposable.set(nil)
+                strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
+                if let (layout, navigationHeight) = strongSelf.validLayout {
+                    strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                }
+            }
+        }
+        
         self.headerNode.requestAvatarExpansion = { [weak self] gallery, entries, centralEntry, _ in
             guard let strongSelf = self, let peer = strongSelf.data?.peer, peer.smallProfileImage != nil else {
                 return
