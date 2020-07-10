@@ -175,9 +175,11 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         
         let itemHeight: ItemListPeerItemHeight
         let itemText: ItemListPeerItemText
+        var synchronousLoads = false
         if case .account = item.member {
             itemHeight = .generic
             itemText = .none
+            synchronousLoads = true
         } else {
             itemHeight = .peerList
             itemText = .presence
@@ -207,7 +209,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
             })
         } else {
             var itemNodeValue: ListViewItemNode?
-            peerItem.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
+            peerItem.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: synchronousLoads, previousItem: nil, nextItem: nil, completion: { node, apply in
                 itemNodeValue = node
                 apply().1(ListViewItemApply(isOnScreen: true))
             })

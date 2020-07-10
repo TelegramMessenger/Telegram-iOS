@@ -384,7 +384,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
     let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
     
     let uploadedAvatar = Promise<UploadedPeerPhotoData>()
-    var uploadedVideoAvatar: Promise<UploadedPeerPhotoData?>? = nil
+    var uploadedVideoAvatar: (Promise<UploadedPeerPhotoData?>, Double?)? = nil
     
     let addressPromise = Promise<String?>(nil)
     let venuesPromise = Promise<[TelegramMediaMap]?>(nil)
@@ -482,7 +482,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                     return $0.avatar
                 }
                 if let _ = updatingAvatar {
-                    return updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: uploadedAvatar.get(), video: uploadedVideoAvatar?.get(), mapResourceToAvatarSizes: { resource, representations in
+                    return updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: uploadedAvatar.get(), video: uploadedVideoAvatar?.0.get(), videoStartTimestamp: uploadedVideoAvatar?.1, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                     })
                     |> ignoreValues
@@ -602,7 +602,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                         videoStartTimestamp = adjustments.videoStartValue - adjustments.trimStartValue
                     }
                     
-                    let signal = Signal<TelegramMediaResource, UploadPeerPhotoError> { subscriber in
+                    let signal = Signal<TelegramMediaResource?, UploadPeerPhotoError> { subscriber in
                         var filteredPath = url.path
                         if filteredPath.hasPrefix("file://") {
                             filteredPath = String(filteredPath[filteredPath.index(filteredPath.startIndex, offsetBy: "file://".count)])
@@ -623,6 +623,12 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                             if let result = next as? TGMediaVideoConversionResult {
                                 if let image = result.coverImage, let data = image.jpegData(compressionQuality: 0.7) {
                                     context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
+                                }
+                                
+                                updateState { state in
+                                    var state = state
+                                    state.avatar = .image(representation, false)
+                                    return state
                                 }
                                 
                                 var value = stat()
@@ -652,14 +658,21 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                         }
                     }
                     
-//                    let promise = Promise<UploadedPeerPhotoData?>()
-//                    promise.set(signal |> mapToSignal { resource in
-//                        return uploadedPeerVideo(postbox: context.account.postbox, network: context.account.network, messageMediaPreuploadManager: context.account.messageMediaPreuploadManager, resource: resource) |> map(Optional.init)
-//                        |> `catch` { _ -> Signal<UploadedPeerPhotoData?, NoError> in
-//                            return .single(nil)
-//                        }
-//                    })
-//                    uploadedVideoAvatar = promise
+                    uploadedAvatar.set(uploadedPeerPhoto(postbox: context.account.postbox, network: context.account.network, resource: photoResource))
+                    
+                    let promise = Promise<UploadedPeerPhotoData?>()
+                    promise.set(signal
+                    |> `catch` { _ -> Signal<TelegramMediaResource?, NoError> in
+                        return .single(nil)
+                    }
+                    |> mapToSignal { resource -> Signal<UploadedPeerPhotoData?, NoError> in
+                        if let resource = resource {
+                            return uploadedPeerVideo(postbox: context.account.postbox, network: context.account.network, messageMediaPreuploadManager: context.account.messageMediaPreuploadManager, resource: resource) |> map(Optional.init)
+                        } else {
+                            return .single(nil)
+                        }
+                    })
+                    uploadedVideoAvatar = (promise, videoStartTimestamp)
                 }
             }
             
@@ -677,8 +690,10 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                     completedGroupPhotoImpl(image)
                 }
             }
-            mixin.didFinishWithVideo = { _, _, _ in
-                
+            mixin.didFinishWithVideo = { image, url, adjustments in
+                if let image = image, let url = url {
+                    completedGroupVideoImpl(image, url, adjustments)
+                }
             }
             if stateValue.with({ $0.avatar }) != nil {
                 mixin.didFinishWithDelete = {
