@@ -104,7 +104,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
     func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
         let content: [ImageRepresentationWithReference]
         switch self.entry {
-            case let .topImage(representations, _, _, _):
+            case let .topImage(representations, _, _, _, _):
                 content = representations
             case let .image(_, _, representations, _, _, _, _, _, _, _):
                 content = representations
@@ -256,6 +256,8 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 if case let .image(image) = entry {
                     id = image.0.id
                     category = image.9
+                } else {
+                    id = 1
                 }
                 if let video = entry.videoRepresentations.last, let id = id {
                     if video != previousVideoRepresentations?.last {
@@ -551,7 +553,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 case .Remote:
                     let representations: [ImageRepresentationWithReference]
                     switch entry {
-                        case let .topImage(topRepresentations, _, _, _):
+                        case let .topImage(topRepresentations, _, _, _, _):
                             representations = topRepresentations
                         case let .image(_, _, imageRepresentations, _, _, _, _, _, _, _):
                             representations = imageRepresentations
