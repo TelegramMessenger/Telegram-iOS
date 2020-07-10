@@ -46,9 +46,10 @@ public struct PresentationCallState: Equatable {
     
     public enum VideoState: Equatable {
         case notAvailable
-        case available(Bool)
+        case possible
+        case outgoingRequested
+        case incomingRequested
         case active
-        case activeOutgoing
     }
     
     public enum RemoteVideoState: Equatable {
@@ -87,6 +88,7 @@ public protocol PresentationCall: class {
     var peerId: PeerId { get }
     var isOutgoing: Bool { get }
     var isVideo: Bool { get }
+    var isVideoPossible: Bool { get }
     var peer: Peer? { get }
     
     var state: Signal<PresentationCallState, NoError> { get }
@@ -103,7 +105,7 @@ public protocol PresentationCall: class {
     
     func toggleIsMuted()
     func setIsMuted(_ value: Bool)
-    func setEnableVideo(_ value: Bool)
+    func requestVideo()
     func setOutgoingVideoIsPaused(_ isPaused: Bool)
     func switchVideoCamera()
     func setCurrentAudioOutput(_ output: AudioSessionOutput)

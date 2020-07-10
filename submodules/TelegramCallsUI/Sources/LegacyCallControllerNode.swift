@@ -229,10 +229,6 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
             self?.acceptCall?()
         }
         
-        self.buttonsNode.toggleVideo = { [weak self] in
-            self?.toggleVideo?()
-        }
-        
         self.buttonsNode.rotateCamera = { [weak self] in
             self?.call.switchVideoCamera()
         }
@@ -314,35 +310,11 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
                     }
                 })
             }
-            if !self.outgoingVideoViewRequested {
-                self.outgoingVideoViewRequested = true
-                self.call.makeOutgoingVideoView(completion: { [weak self] outgoingVideoView in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    if let outgoingVideoView = outgoingVideoView?.view {
-                        outgoingVideoView.backgroundColor = .black
-                        outgoingVideoView.clipsToBounds = true
-                        strongSelf.setCurrentAudioOutput?(.speaker)
-                        let outgoingVideoNode = OutgoingVideoNode(videoView: outgoingVideoView, switchCamera: {
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            strongSelf.call.switchVideoCamera()
-                        })
-                        strongSelf.outgoingVideoNode = outgoingVideoNode
-                        if let incomingVideoNode = strongSelf.incomingVideoNode {
-                            strongSelf.containerNode.insertSubnode(outgoingVideoNode, aboveSubnode: incomingVideoNode)
-                        } else {
-                            strongSelf.containerNode.insertSubnode(outgoingVideoNode, aboveSubnode: strongSelf.dimNode)
-                        }
-                        if let (layout, navigationBarHeight) = strongSelf.validLayout {
-                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-                        }
-                    }
-                })
-            }
-        case .activeOutgoing:
+        default:
+            break
+        }
+        switch callState.videoState {
+        case .active, .outgoingRequested:
             if !self.outgoingVideoViewRequested {
                 self.outgoingVideoViewRequested = true
                 self.call.makeOutgoingVideoView(completion: { [weak self] outgoingVideoView in
@@ -527,18 +499,7 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
                         mode = .none
                     }
                 }
-                let mappedVideoState: LegacyCallControllerButtonsMode.VideoState
-                switch callState.videoState {
-                case .notAvailable:
-                    mappedVideoState = .notAvailable
-                case .available:
-                    mappedVideoState = .available(true)
-                case .active:
-                    mappedVideoState = .active
-                case .activeOutgoing:
-                    mappedVideoState = .active
-                }
-                self.buttonsNode.updateMode(.active(speakerMode: mode, videoState: mappedVideoState))
+                self.buttonsNode.updateMode(.active(speakerMode: mode))
         }
     }
     

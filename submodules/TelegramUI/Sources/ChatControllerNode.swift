@@ -68,12 +68,13 @@ private struct ChatControllerNodeDerivedLayoutState {
 private final class ChatEmbeddedTitleContentNode: ASDisplayNode {
     private let context: AccountContext
     private let backgroundNode: ASDisplayNode
+    private let statusBarBackgroundNode: ASDisplayNode
     private let videoNode: OverlayUniversalVideoNode
     private let disableInternalAnimationIn: Bool
     private let isUIHiddenUpdated: () -> Void
     private let unembedWhenPortrait: (OverlayMediaItemNode) -> Bool
     
-    private var validLayout: (CGSize, CGFloat, CGFloat)?
+    private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
     
     private let dismissed: () -> Void
     private let interactiveExtensionUpdated: (ContainedViewLayoutTransition) -> Void
@@ -82,6 +83,8 @@ private final class ChatEmbeddedTitleContentNode: ASDisplayNode {
     private var freezeInteractiveExtension = false
     
     private(set) var isUIHidden: Bool = false
+    
+    var unembedOnLeave: Bool = true
     
     init(context: AccountContext, videoNode: OverlayUniversalVideoNode, disableInternalAnimationIn: Bool, interactiveExtensionUpdated: @escaping (ContainedViewLayoutTransition) -> Void, dismissed: @escaping () -> Void, isUIHiddenUpdated: @escaping () -> Void, unembedWhenPortrait: @escaping (OverlayMediaItemNode) -> Bool) {
         self.dismissed = dismissed
@@ -95,6 +98,9 @@ private final class ChatEmbeddedTitleContentNode: ASDisplayNode {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = .black
         
+        self.statusBarBackgroundNode = ASDisplayNode()
+        self.statusBarBackgroundNode.backgroundColor = .black
+        
         self.videoNode = videoNode
         
         super.init()
@@ -102,6 +108,7 @@ private final class ChatEmbeddedTitleContentNode: ASDisplayNode {
         self.clipsToBounds = true
         
         self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.statusBarBackgroundNode)
         
         self.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
         
@@ -151,12 +158,13 @@ private final class ChatEmbeddedTitleContentNode: ASDisplayNode {
         return self.videoNode.content.dimensions.aspectFilled(CGSize(width: width, height: 16.0)).height
     }
     
-    func updateLayout(size: CGSize, topInset: CGFloat, interactiveExtension: CGFloat, transition: ContainedViewLayoutTransition, transitionSurface: ASDisplayNode?, navigationBar: NavigationBar?) {
+    func updateLayout(size: CGSize, actualHeight: CGFloat, topInset: CGFloat, interactiveExtension: CGFloat, transition: ContainedViewLayoutTransition, transitionSurface: ASDisplayNode?, navigationBar: NavigationBar?) {
         let isFirstTime = self.validLayout == nil
         
-        self.validLayout = (size, topInset, interactiveExtension)
+        self.validLayout = (size, actualHeight, topInset, interactiveExtension)
+        let videoSize = CGSize(width: size.width, height: actualHeight)
         
-        let videoFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset + interactiveExtension), size: CGSize(width: size.width, height: size.height - topInset - interactiveExtension))
+        let videoFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset + interactiveExtension + floor((size.height - actualHeight) / 2.0)), size: CGSize(width: videoSize.width, height: videoSize.height - topInset - interactiveExtension))
         
         if isFirstTime, let transitionSurface = transitionSurface {
             let sourceFrame = self.videoNode.view.convert(self.videoNode.bounds, to: transitionSurface.view)
@@ -204,16 +212,16 @@ private final class ChatEmbeddedTitleContentNode: ASDisplayNode {
             self.videoNode.updateLayout(targetFrame.size, transition: nodeTransition)
             self.videoNode.frame = targetFrame
             if self.disableInternalAnimationIn {
-                self.addSubnode(self.videoNode)
+                self.insertSubnode(self.videoNode, belowSubnode: self.statusBarBackgroundNode)
             } else {
                 self.videoNode.layer.animateFrame(from: sourceFrame, to: targetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak self] _ in
                     guard let strongSelf = self else {
                         return
                     }
                     navigationBarContainer?.removeFromSuperview()
-                    strongSelf.addSubnode(strongSelf.videoNode)
-                    if let (size, topInset, interactiveExtension) = strongSelf.validLayout {
-                        strongSelf.updateLayout(size: size, topInset: topInset, interactiveExtension: interactiveExtension, transition: .immediate, transitionSurface: nil, navigationBar: nil)
+                    strongSelf.insertSubnode(strongSelf.videoNode, belowSubnode: strongSelf.statusBarBackgroundNode)
+                    if let (size, actualHeight, topInset, interactiveExtension) = strongSelf.validLayout {
+                        strongSelf.updateLayout(size: size, actualHeight: actualHeight, topInset: topInset, interactiveExtension: interactiveExtension, transition: .immediate, transitionSurface: nil, navigationBar: nil)
                     }
                 })
                 self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -228,6 +236,7 @@ private final class ChatEmbeddedTitleContentNode: ASDisplayNode {
             }
         }
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+        transition.updateFrame(node: self.statusBarBackgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: topInset)))
         
         if self.videoNode.supernode == self {
             self.videoNode.layer.transform = CATransform3DIdentity
@@ -430,6 +439,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var hasEmbeddedTitleContent: Bool {
         return self.embeddedTitleContentNode != nil
     }
+    private var didProcessExperimentalEmbedUrl: String?
     
     init(context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: MediaAutoDownloadSettings, navigationBar: NavigationBar?, controller: ChatControllerImpl?) {
         self.context = context
@@ -953,6 +963,64 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         let statusBarHeight = layout.insets(options: [.statusBar]).top
         
+        func extractExperimentalPlaylistUrl(_ text: String) -> String? {
+            let prefix = "stream: "
+            if text.hasPrefix(prefix) {
+                if let url = URL(string: String(text[text.index(text.startIndex, offsetBy: prefix.count)...])), url.absoluteString.hasSuffix(".m3u8") {
+                    return url.absoluteString
+                } else {
+                    return nil
+                }
+            } else {
+                return nil
+            }
+        }
+        
+        if let pinnedMessage = self.chatPresentationInterfaceState.pinnedMessage, self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding, self.context.sharedContext.immediateExperimentalUISettings.playlistPlayback, self.embeddedTitleContentNode == nil, let url = extractExperimentalPlaylistUrl(pinnedMessage.text), self.didProcessExperimentalEmbedUrl != url {
+            self.didProcessExperimentalEmbedUrl = url
+            let context = self.context
+            let baseNavigationController = self.controller?.navigationController as? NavigationController
+            let mediaManager = self.context.sharedContext.mediaManager
+            var expandImpl: (() -> Void)?
+            let content = PlatformVideoContent(id: .instantPage(MediaId(namespace: 0, id: 0), MediaId(namespace: 0, id: 0)), content: .url(url), streamVideo: true, loopVideo: false)
+            let overlayNode = OverlayUniversalVideoNode(postbox: self.context.account.postbox, audioSession: self.context.sharedContext.mediaManager.audioSession, manager: self.context.sharedContext.mediaManager.universalVideoManager, content: content, expand: {
+                expandImpl?()
+            }, close: { [weak mediaManager] in
+                mediaManager?.setOverlayVideoNode(nil)
+            })
+            self.embeddedTitleContentNode = ChatEmbeddedTitleContentNode(context: self.context, videoNode: overlayNode, disableInternalAnimationIn: true, interactiveExtensionUpdated: { [weak self] transition in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.requestLayout(transition)
+            }, dismissed: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let embeddedTitleContentNode = strongSelf.embeddedTitleContentNode {
+                    strongSelf.embeddedTitleContentNode = nil
+                    strongSelf.dismissedEmbeddedTitleContentNode = embeddedTitleContentNode
+                    strongSelf.requestLayout(.animated(duration: 0.25, curve: .spring))
+                    strongSelf.updateHasEmbeddedTitleContent?()
+                }
+            }, isUIHiddenUpdated: { [weak self] in
+                self?.updateHasEmbeddedTitleContent?()
+            }, unembedWhenPortrait: { [weak self] itemNode in
+                guard let strongSelf = self, let itemNode = itemNode as? OverlayUniversalVideoNode else {
+                    return false
+                }
+                strongSelf.unembedWhenPortrait(contentNode: itemNode)
+                return true
+            })
+            self.embeddedTitleContentNode?.unembedOnLeave = false
+            self.updateHasEmbeddedTitleContent?()
+            overlayNode.controlPlay()
+        }
+        
+        if self.chatPresentationInterfaceState.pinnedMessage == nil {
+            self.didProcessExperimentalEmbedUrl = nil
+        }
+        
         if let embeddedTitleContentNode = self.embeddedTitleContentNode, embeddedTitleContentNode.supernode != nil {
             if layout.size.width > layout.size.height {
                 self.embeddedTitleContentNode = nil
@@ -963,7 +1031,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let embeddedTitleContentNode = self.embeddedTitleContentNode {
-            let embeddedSize = CGSize(width: layout.size.width, height: min(400.0, embeddedTitleContentNode.calculateHeight(width: layout.size.width)) + statusBarHeight + embeddedTitleContentNode.interactiveExtension)
+            let defaultEmbeddedSize = CGSize(width: layout.size.width, height: min(400.0, embeddedTitleContentNode.calculateHeight(width: layout.size.width)) + statusBarHeight + embeddedTitleContentNode.interactiveExtension)
+            
+            let embeddedSize: CGSize
+            if let inputHeight = layout.inputHeight, inputHeight > 100.0 {
+                embeddedSize = CGSize(width: defaultEmbeddedSize.width, height: floor(defaultEmbeddedSize.height * 0.6))
+            } else {
+                embeddedSize = defaultEmbeddedSize
+            }
+            
             if embeddedTitleContentNode.supernode == nil {
                 self.insertSubnode(embeddedTitleContentNode, aboveSubnode: self.navigationBarBackroundNode)
                 
@@ -980,10 +1056,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 embeddedTitleContentNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: previousTopInset))
                 transition.updateFrame(node: embeddedTitleContentNode, frame: CGRect(origin: CGPoint(), size: embeddedSize))
-                embeddedTitleContentNode.updateLayout(size: embeddedSize, topInset: statusBarHeight, interactiveExtension: embeddedTitleContentNode.interactiveExtension, transition: .immediate, transitionSurface: self, navigationBar: self.navigationBar)
+                embeddedTitleContentNode.updateLayout(size: embeddedSize, actualHeight: defaultEmbeddedSize.height, topInset: statusBarHeight, interactiveExtension: embeddedTitleContentNode.interactiveExtension, transition: .immediate, transitionSurface: self, navigationBar: self.navigationBar)
             } else {
                 transition.updateFrame(node: embeddedTitleContentNode, frame: CGRect(origin: CGPoint(), size: embeddedSize))
-                embeddedTitleContentNode.updateLayout(size: embeddedSize, topInset: statusBarHeight, interactiveExtension: embeddedTitleContentNode.interactiveExtension, transition: transition, transitionSurface: self, navigationBar: self.navigationBar)
+                embeddedTitleContentNode.updateLayout(size: embeddedSize, actualHeight: defaultEmbeddedSize.height, topInset: statusBarHeight, interactiveExtension: embeddedTitleContentNode.interactiveExtension, transition: transition, transitionSurface: self, navigationBar: self.navigationBar)
             }
             
             insets.top += embeddedSize.height
@@ -2817,7 +2893,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func willNavigateAway() {
-        if let embeddedTitleContentNode = self.embeddedTitleContentNode {
+        if let embeddedTitleContentNode = self.embeddedTitleContentNode, embeddedTitleContentNode.unembedOnLeave {
             self.embeddedTitleContentNode = nil
             self.dismissedEmbeddedTitleContentNode = embeddedTitleContentNode
             embeddedTitleContentNode.expandIntoPiP()
