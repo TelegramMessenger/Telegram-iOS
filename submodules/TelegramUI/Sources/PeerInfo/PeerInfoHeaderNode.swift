@@ -2290,6 +2290,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     private(set) var isAvatarExpanded: Bool
     private(set) var twoLineInfo = false
+    var skipCollapseCompletion = false
     
     let avatarListNode: PeerInfoAvatarListNode
     
@@ -2753,8 +2754,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }
                 strongSelf.avatarListNode.avatarContainerNode.canAttachVideo = true
                 strongSelf.avatarListNode.listContainerNode.isHidden = true
-                DispatchQueue.main.async {
-                    strongSelf.avatarListNode.listContainerNode.isCollapsing = false
+                if !strongSelf.skipCollapseCompletion {
+                    DispatchQueue.main.async {
+                        strongSelf.avatarListNode.listContainerNode.isCollapsing = false
+                    }
                 }
             })
         }
