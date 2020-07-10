@@ -106,6 +106,7 @@ public protocol PresentationCall: class {
     func toggleIsMuted()
     func setIsMuted(_ value: Bool)
     func requestVideo()
+    func acceptVideo()
     func setOutgoingVideoIsPaused(_ isPaused: Bool)
     func switchVideoCamera()
     func setCurrentAudioOutput(_ output: AudioSessionOutput)

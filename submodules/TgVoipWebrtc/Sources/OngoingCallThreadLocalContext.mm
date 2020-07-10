@@ -491,6 +491,13 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
+- (void)acceptVideo:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer {
+    if (_tgVoip && _videoCapturer == nil) {
+        _videoCapturer = videoCapturer;
+        _tgVoip->acceptVideo([_videoCapturer getInterface]);
+    }
+}
+
 @end
 
 @implementation OngoingCallThreadLocalContextWebrtcVideoView : UIView

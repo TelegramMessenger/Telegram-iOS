@@ -287,9 +287,7 @@ _videoCapture(videoCapture) {
     _videoChannel->SetInterface(_videoNetworkInterface.get(), webrtc::MediaTransportConfig());
     
     if (_videoCapture != nullptr) {
-        ((TgVoipVideoCaptureInterfaceImpl *)_videoCapture.get())->_impl->getSyncAssumingSameThread()->setIsActiveUpdated(this->_localVideoCaptureActiveUpdated);
-        
-        setSendVideo(true);
+        setSendVideo(_videoCapture);
     }
 }
 
@@ -310,7 +308,7 @@ MediaManager::~MediaManager() {
     
     _audioChannel->SetInterface(nullptr, webrtc::MediaTransportConfig());
     
-    setSendVideo(false);
+    setSendVideo(nullptr);
 }
 
 void MediaManager::setIsConnected(bool isConnected) {
@@ -360,11 +358,16 @@ void MediaManager::notifyPacketSent(const rtc::SentPacket &sentPacket) {
     _call->OnSentPacket(sentPacket);
 }
 
-void MediaManager::setSendVideo(bool sendVideo) {
-    if (_isSendingVideo == sendVideo) {
+void MediaManager::setSendVideo(std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture) {
+    if (_isSendingVideo == (videoCapture != nullptr)) {
         return;
     }
-    _isSendingVideo = sendVideo;
+    _isSendingVideo = videoCapture != nullptr;
+    _videoCapture = videoCapture;
+    
+    if (_videoCapture != nullptr) {
+        ((TgVoipVideoCaptureInterfaceImpl *)_videoCapture.get())->_impl->getSyncAssumingSameThread()->setIsActiveUpdated(this->_localVideoCaptureActiveUpdated);
+    }
     
     if (_isSendingVideo) {
         auto videoCodec = selectVideoCodec(_videoCodecs);

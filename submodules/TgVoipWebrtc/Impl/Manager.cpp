@@ -171,6 +171,14 @@ void Manager::receiveSignalingData(const std::vector<uint8_t> &data) {
             _stateUpdated(_state, _videoState);
         }
     } else if (mode == 2) {
+        if (_videoState == VideoState::outgoingRequested) {
+            _videoState = VideoState::active;
+            _stateUpdated(_state, _videoState);
+            
+            _mediaManager->perform([videoCapture = _videoCapture](MediaManager *mediaManager) {
+                mediaManager->setSendVideo(videoCapture);
+            });
+        }
     } else if (mode == 3) {
         auto candidatesData = buffer.Slice(1, buffer.size() - 1);
         _networkManager->perform([candidatesData](NetworkManager *networkManager) {
@@ -186,6 +194,7 @@ void Manager::receiveSignalingData(const std::vector<uint8_t> &data) {
 
 void Manager::requestVideo(std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture) {
     if (videoCapture != nullptr) {
+        _videoCapture = videoCapture;
         if (_videoState == VideoState::possible) {
             _videoState = VideoState::outgoingRequested;
             
@@ -198,12 +207,31 @@ void Manager::requestVideo(std::shared_ptr<TgVoipVideoCaptureInterface> videoCap
             memcpy(data.data(), buffer.data(), buffer.size());
             
             _signalingDataEmitted(data);
-            
-            /*_mediaManager->perform([](MediaManager *mediaManager) {
-                mediaManager->setSendVideo(true);
-            });*/
-            
             _stateUpdated(_state, _videoState);
+        }
+    }
+}
+
+void Manager::acceptVideo(std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture) {
+    if (videoCapture != nullptr) {
+        _videoCapture = videoCapture;
+        if (_videoState == VideoState::incomingRequested) {
+            _videoState = VideoState::active;
+            
+            rtc::CopyOnWriteBuffer buffer;
+            uint8_t mode = 2;
+            buffer.AppendData(&mode, 1);
+            
+            std::vector<uint8_t> data;
+            data.resize(buffer.size());
+            memcpy(data.data(), buffer.data(), buffer.size());
+            
+            _signalingDataEmitted(data);
+            _stateUpdated(_state, _videoState);
+            
+            _mediaManager->perform([videoCapture](MediaManager *mediaManager) {
+                mediaManager->setSendVideo(videoCapture);
+            });
         }
     }
 }
