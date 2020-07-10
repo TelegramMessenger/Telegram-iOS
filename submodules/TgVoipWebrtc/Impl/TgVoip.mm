@@ -155,8 +155,7 @@ public:
             TgVoipEncryptionKey const &encryptionKey,
             std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture,
             TgVoipNetworkType initialNetworkType,
-            std::function<void(TgVoipState)> stateUpdated,
-            std::function<void(bool)> videoStateUpdated,
+            std::function<void(TgVoipState, TgVoip::VideoState)> stateUpdated,
             std::function<void(bool)> remoteVideoIsActiveUpdated,
             std::function<void(const std::vector<uint8_t> &)> signalingDataEmitted
     ) :
@@ -171,18 +170,30 @@ public:
         
         bool enableP2P = config.enableP2P;
         
-        _manager.reset(new ThreadLocalObject<Manager>(getManagerThread(), [encryptionKey = encryptionKey, enableP2P = enableP2P, stateUpdated, videoStateUpdated, remoteVideoIsActiveUpdated, signalingDataEmitted, rtcServers, videoCapture](){
+        _manager.reset(new ThreadLocalObject<Manager>(getManagerThread(), [encryptionKey = encryptionKey, enableP2P = enableP2P, stateUpdated, remoteVideoIsActiveUpdated, signalingDataEmitted, rtcServers, videoCapture](){
             return new Manager(
                 getManagerThread(),
                 encryptionKey,
                 enableP2P,
                 rtcServers,
                 videoCapture,
-                [stateUpdated](const TgVoipState &state) {
-                    stateUpdated(state);
-                },
-                [videoStateUpdated](bool isActive) {
-                    videoStateUpdated(isActive);
+                [stateUpdated](const TgVoipState &state, Manager::VideoState videoState) {
+                    TgVoip::VideoState mappedVideoState;
+                    switch (videoState) {
+                        case Manager::VideoState::possible:
+                            mappedVideoState = TgVoip::VideoState::possible;
+                            break;
+                        case Manager::VideoState::outgoingRequested:
+                            mappedVideoState = TgVoip::VideoState::outgoingRequested;
+                            break;
+                        case Manager::VideoState::incomingRequested:
+                            mappedVideoState = TgVoip::VideoState::incomingRequested;
+                            break;
+                        case Manager::VideoState::active:
+                            mappedVideoState = TgVoip::VideoState::active;
+                            break;
+                    }
+                    stateUpdated(state, mappedVideoState);
                 },
                 [remoteVideoIsActiveUpdated](bool isActive) {
                     remoteVideoIsActiveUpdated(isActive);
@@ -207,11 +218,11 @@ public:
         });
     };
     
-    void setSendVideo(bool sendVideo) override {
-        _manager->perform([sendVideo](Manager *manager) {
-            manager->setSendVideo(sendVideo);
+    virtual void requestVideo(std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture) override {
+        _manager->perform([videoCapture](Manager *manager) {
+            manager->requestVideo(videoCapture);
         });
-    };
+    }
 
     void setNetworkType(TgVoipNetworkType networkType) override {
         /*message::NetworkType mappedType;
@@ -307,37 +318,9 @@ public:
         return finalState;
     }
 
-    /*void controllerStateCallback(Controller::State state) {
-        if (onStateUpdated_) {
-            TgVoipState mappedState;
-            switch (state) {
-                case Controller::State::WaitInit:
-                    mappedState = TgVoipState::WaitInit;
-                    break;
-                case Controller::State::WaitInitAck:
-                    mappedState = TgVoipState::WaitInitAck;
-                    break;
-                case Controller::State::Established:
-                    mappedState = TgVoipState::Estabilished;
-                    break;
-                case Controller::State::Failed:
-                    mappedState = TgVoipState::Failed;
-                    break;
-                case Controller::State::Reconnecting:
-                    mappedState = TgVoipState::Reconnecting;
-                    break;
-                default:
-                    mappedState = TgVoipState::Estabilished;
-                    break;
-            }
-
-            onStateUpdated_(mappedState);
-        }
-    }*/
-
 private:
     std::unique_ptr<ThreadLocalObject<Manager>> _manager;
-    std::function<void(TgVoipState)> _stateUpdated;
+    std::function<void(TgVoipState, TgVoip::VideoState)> _stateUpdated;
     std::function<void(const std::vector<uint8_t> &)> _signalingDataEmitted;
     
     LogSinkImpl _logSink;
@@ -371,11 +354,11 @@ void TgVoip::setGlobalServerConfig(const std::string &serverConfig) {
 }
 
 int TgVoip::getConnectionMaxLayer() {
-    return 92;  // TODO: retrieve from LayerBase
+    return 92;
 }
 
 std::string TgVoip::getVersion() {
-    return "";  // TODO: version not known while not released
+    return "";
 }
 
 TgVoip *TgVoip::makeInstance(
@@ -387,8 +370,7 @@ TgVoip *TgVoip::makeInstance(
         TgVoipNetworkType initialNetworkType,
         TgVoipEncryptionKey const &encryptionKey,
         std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture,
-        std::function<void(TgVoipState)> stateUpdated,
-        std::function<void(bool)> videoStateUpdated,
+        std::function<void(TgVoipState, TgVoip::VideoState)> stateUpdated,
         std::function<void(bool)> remoteVideoIsActiveUpdated,
         std::function<void(const std::vector<uint8_t> &)> signalingDataEmitted
 ) {
@@ -402,7 +384,6 @@ TgVoip *TgVoip::makeInstance(
             videoCapture,
             initialNetworkType,
             stateUpdated,
-            videoStateUpdated,
             remoteVideoIsActiveUpdated,
             signalingDataEmitted
     );

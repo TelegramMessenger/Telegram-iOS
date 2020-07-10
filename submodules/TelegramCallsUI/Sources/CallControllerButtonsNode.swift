@@ -17,7 +17,9 @@ enum CallControllerButtonsSpeakerMode {
 enum CallControllerButtonsMode: Equatable {
     enum VideoState: Equatable {
         case notAvailable
-        case available(Bool)
+        case possible
+        case outgoingRequested
+        case incomingRequested
         case active
     }
     
@@ -147,9 +149,42 @@ final class CallControllerButtonsNode: ASDisplayNode {
         
         let height: CGFloat
         
-        var buttons: [PlacedButton] = []
+        let speakerMode: CallControllerButtonsSpeakerMode
+        var videoState: CallControllerButtonsMode.VideoState
         switch mode {
-        case .incoming(let speakerMode, let videoState), .outgoingRinging(let speakerMode, let videoState):
+        case .incoming(let speakerModeValue, let videoStateValue), .outgoingRinging(let speakerModeValue, let videoStateValue), .active(let speakerModeValue, let videoStateValue):
+            speakerMode = speakerModeValue
+            videoState = videoStateValue
+        }
+        
+        enum MappedState {
+            case incomingRinging
+            case outgoingRinging
+            case active
+        }
+        
+        let mappedState: MappedState
+        switch mode {
+        case .incoming:
+            mappedState = .incomingRinging
+        case .outgoingRinging:
+            mappedState = .outgoingRinging
+        case let .active(_, videoStateValue):
+            switch videoStateValue {
+            case .incomingRequested:
+                mappedState = .incomingRinging
+                videoState = .outgoingRequested
+            case .outgoingRequested:
+                mappedState = .outgoingRinging
+                videoState = .outgoingRequested
+            case .active, .possible, .notAvailable:
+                mappedState = .active
+            }
+        }
+        
+        var buttons: [PlacedButton] = []
+        switch mappedState {
+        case .incomingRinging, .outgoingRinging:
             var topButtons: [ButtonDescription] = []
             var bottomButtons: [ButtonDescription] = []
             
@@ -166,8 +201,14 @@ final class CallControllerButtonsNode: ASDisplayNode {
             }
             
             switch videoState {
-            case .active, .available:
-                topButtons.append(.enableCamera(!self.isCameraPaused))
+            case .active, .possible, .incomingRequested, .outgoingRequested:
+                let isCameraActive: Bool
+                if case .possible = videoState {
+                    isCameraActive = false
+                } else {
+                    isCameraActive = !self.isCameraPaused
+                }
+                topButtons.append(.enableCamera(isCameraActive))
                 topButtons.append(.mute(self.isMuted))
                 topButtons.append(.switchCamera)
             case .notAvailable:
@@ -185,7 +226,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 topButtonsLeftOffset += smallButtonSize + topButtonsSpacing
             }
             
-            if case .incoming = mode {
+            if case .incomingRinging = mappedState {
                 bottomButtons.append(.end(.decline))
                 bottomButtons.append(.accept)
             } else {
@@ -203,7 +244,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
             }
             
             height = smallButtonSize + topBottomSpacing + largeButtonSize + max(bottomInset + 32.0, 46.0)
-        case let .active(speakerMode, videoState):
+        case .active:
             var topButtons: [ButtonDescription] = []
             
             let soundOutput: ButtonDescription.SoundOutput
@@ -219,8 +260,14 @@ final class CallControllerButtonsNode: ASDisplayNode {
             }
             
             switch videoState {
-            case .active, .available:
-                topButtons.append(.enableCamera(!self.isCameraPaused))
+            case .active, .incomingRequested, .outgoingRequested, .possible:
+                let isCameraActive: Bool
+                if case .possible = videoState {
+                    isCameraActive = false
+                } else {
+                    isCameraActive = !self.isCameraPaused
+                }
+                topButtons.append(.enableCamera(isCameraActive))
                 topButtons.append(.mute(isMuted))
                 topButtons.append(.switchCamera)
             case .notAvailable:

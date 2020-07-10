@@ -78,6 +78,16 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
         bigBlob.level = normalizedLevel
     }
     
+    func startAnimating() {
+        mediumBlob.layer.animateScale(from: 0.5, to: 1, duration: 0.1, removeOnCompletion: false)
+        bigBlob.layer.animateScale(from: 0.5, to: 1, duration: 0.1, removeOnCompletion: false)
+    }
+    
+    func stopAnimating() {
+        mediumBlob.layer.animateScale(from: 1.0, to: 0.5, duration: 0.1, removeOnCompletion: false)
+        bigBlob.layer.animateScale(from: 1.0, to: 0.5, duration: 0.1, removeOnCompletion: false)
+    }
+    
     override func layoutSubviews() {
         super.layoutSubviews()
         

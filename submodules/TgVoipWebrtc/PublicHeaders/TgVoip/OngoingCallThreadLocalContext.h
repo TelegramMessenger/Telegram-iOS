@@ -24,8 +24,9 @@ typedef NS_ENUM(int32_t, OngoingCallStateWebrtc) {
 };
 
 typedef NS_ENUM(int32_t, OngoingCallVideoStateWebrtc) {
-    OngoingCallVideoStateInactive,
-    OngoingCallVideoStateActiveOutgoing,
+    OngoingCallVideoStatePossible,
+    OngoingCallVideoStateOutgoingRequested,
+    OngoingCallVideoStateIncomingRequested,
     OngoingCallVideoStateActive
 };
 
@@ -115,9 +116,9 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (NSData * _Nonnull)getDerivedState;
 
 - (void)setIsMuted:(bool)isMuted;
-- (void)setVideoEnabled:(bool)videoEnabled;
 - (void)setNetworkType:(OngoingCallNetworkTypeWebrtc)networkType;
 - (void)makeIncomingVideoView:(void (^_Nonnull)(OngoingCallThreadLocalContextWebrtcVideoView * _Nullable))completion;
+- (void)requestVideo:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer;
 - (void)addSignalingData:(NSData * _Nonnull)data;
 
 @end

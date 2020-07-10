@@ -37,8 +37,7 @@ Manager::Manager(
     bool enableP2P,
     std::vector<TgVoipRtcServer> const &rtcServers,
     std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture,
-    std::function<void (const TgVoipState &)> stateUpdated,
-    std::function<void (bool)> videoStateUpdated,
+    std::function<void (const TgVoipState &, VideoState)> stateUpdated,
     std::function<void (bool)> remoteVideoIsActiveUpdated,
     std::function<void (const std::vector<uint8_t> &)> signalingDataEmitted
 ) :
@@ -48,11 +47,14 @@ _enableP2P(enableP2P),
 _rtcServers(rtcServers),
 _videoCapture(videoCapture),
 _stateUpdated(stateUpdated),
-_videoStateUpdated(videoStateUpdated),
 _remoteVideoIsActiveUpdated(remoteVideoIsActiveUpdated),
 _signalingDataEmitted(signalingDataEmitted),
-_isVideoRequested(false) {
+_state(TgVoipState::Reconnecting),
+_videoState(VideoState::possible) {
     assert(_thread->IsCurrent());
+    if (videoCapture != nullptr) {
+        _videoState = VideoState::outgoingRequested;
+    }
 }
 
 Manager::~Manager() {
@@ -60,6 +62,9 @@ Manager::~Manager() {
 }
 
 void Manager::start() {
+    if (_videoCapture != nullptr) {
+        _videoState = VideoState::active;
+    }
     auto weakThis = std::weak_ptr<Manager>(shared_from_this());
     _networkManager.reset(new ThreadLocalObject<NetworkManager>(getNetworkThread(), [encryptionKey = _encryptionKey, enableP2P = _enableP2P, rtcServers = _rtcServers, thread = _thread, weakThis, signalingDataEmitted = _signalingDataEmitted]() {
         return new NetworkManager(
@@ -76,10 +81,17 @@ void Manager::start() {
                     TgVoipState mappedState;
                     if (state.isReadyToSendData) {
                         mappedState = TgVoipState::Estabilished;
+                        if (!strongThis->_didConnectOnce) {
+                            strongThis->_didConnectOnce = true;
+                            if (strongThis->_videoState == VideoState::outgoingRequested) {
+                                strongThis->_videoState = VideoState::active;
+                            }
+                        }
                     } else {
                         mappedState = TgVoipState::Reconnecting;
                     }
-                    strongThis->_stateUpdated(mappedState);
+                    strongThis->_state = mappedState;
+                    strongThis->_stateUpdated(mappedState, strongThis->_videoState);
                     
                     strongThis->_mediaManager->perform([state](MediaManager *mediaManager) {
                         mediaManager->setIsConnected(state.isReadyToSendData);
@@ -154,10 +166,10 @@ void Manager::receiveSignalingData(const std::vector<uint8_t> &data) {
     }
     
     if (mode == 1) {
-        _mediaManager->perform([](MediaManager *mediaManager) {
-            mediaManager->setSendVideo(true);
-        });
-        _videoStateUpdated(true);
+        if (_videoState == VideoState::possible) {
+            _videoState = VideoState::incomingRequested;
+            _stateUpdated(_state, _videoState);
+        }
     } else if (mode == 2) {
     } else if (mode == 3) {
         auto candidatesData = buffer.Slice(1, buffer.size() - 1);
@@ -172,10 +184,10 @@ void Manager::receiveSignalingData(const std::vector<uint8_t> &data) {
     }
 }
 
-void Manager::setSendVideo(bool sendVideo) {
-    if (sendVideo) {
-        if (!_isVideoRequested) {
-            _isVideoRequested = true;
+void Manager::requestVideo(std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture) {
+    if (videoCapture != nullptr) {
+        if (_videoState == VideoState::possible) {
+            _videoState = VideoState::outgoingRequested;
             
             rtc::CopyOnWriteBuffer buffer;
             uint8_t mode = 1;
@@ -187,11 +199,11 @@ void Manager::setSendVideo(bool sendVideo) {
             
             _signalingDataEmitted(data);
             
-            _mediaManager->perform([](MediaManager *mediaManager) {
+            /*_mediaManager->perform([](MediaManager *mediaManager) {
                 mediaManager->setSendVideo(true);
-            });
+            });*/
             
-            _videoStateUpdated(true);
+            _stateUpdated(_state, _videoState);
         }
     }
 }

@@ -609,8 +609,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 } else {
                                     waveformColor = messageTheme.mediaInactiveControlColor
                                 }
-                                strongSelf.waveformNode.setup(color: waveformColor, waveform: audioWaveform)
-                                strongSelf.waveformForegroundNode.setup(color: messageTheme.mediaActiveControlColor, waveform: audioWaveform)
+                                strongSelf.waveformNode.setup(color: waveformColor, gravity: .bottom, waveform: audioWaveform)
+                                strongSelf.waveformForegroundNode.setup(color: messageTheme.mediaActiveControlColor, gravity: .bottom, waveform: audioWaveform)
                             } else if let waveformScrubbingNode = strongSelf.waveformScrubbingNode {
                                 strongSelf.waveformScrubbingNode = nil
                                 waveformScrubbingNode.removeFromSupernode()
