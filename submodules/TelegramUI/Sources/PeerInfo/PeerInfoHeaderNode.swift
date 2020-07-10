@@ -1320,8 +1320,9 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
                     overlayHidden = true
                 }
                 
-                let targetAlpha: CGFloat = overlayHidden ? 0.0 : 1.0
-                if self.updatingAvatarOverlay.alpha != targetAlpha {
+                let targetIconAlpha: CGFloat = iconHidden ? 0.0 : 1.0
+                let targetOverlayAlpha: CGFloat = overlayHidden ? 0.0 : 1.0
+                if self.updatingAvatarOverlay.alpha != targetOverlayAlpha || self.iconNode.alpha != targetIconAlpha {
                     let update = {
                         self.statusNode.transitionToState(.none)
                         self.currentRepresentation = nil
@@ -2290,6 +2291,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     private(set) var isAvatarExpanded: Bool
     private(set) var twoLineInfo = false
+    var skipCollapseCompletion = false
     
     let avatarListNode: PeerInfoAvatarListNode
     
@@ -2753,8 +2755,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }
                 strongSelf.avatarListNode.avatarContainerNode.canAttachVideo = true
                 strongSelf.avatarListNode.listContainerNode.isHidden = true
-                DispatchQueue.main.async {
-                    strongSelf.avatarListNode.listContainerNode.isCollapsing = false
+                if !strongSelf.skipCollapseCompletion {
+                    DispatchQueue.main.async {
+                        strongSelf.avatarListNode.listContainerNode.isCollapsing = false
+                    }
                 }
             })
         }

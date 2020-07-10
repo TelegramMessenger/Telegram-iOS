@@ -130,9 +130,8 @@ public func initialAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<
                 initialPhoto = photo
             }
             
-            if let photo = initialPhoto {
+            if let photo = initialPhoto, !photo.videoRepresentations.isEmpty {
                 return [.topImage(photo.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.standalone(resource: $0.resource)) }), photo.videoRepresentations, nil, nil, nil)]
-//                 return [.image(photo.imageId, photo.reference, photo.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.standalone(resource: $0.resource)) }), photo.videoRepresentations, peer, 0, nil, nil, photo.immediateThumbnailData, nil)]
             } else {
                 return initialEntries
             }
