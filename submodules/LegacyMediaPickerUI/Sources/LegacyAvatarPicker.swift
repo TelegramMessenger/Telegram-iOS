@@ -32,7 +32,7 @@ public func presentLegacyAvatarEditor(theme: PresentationTheme, image: UIImage?,
     })
 }
 
-public func presentLegacyAvatarPicker(holder: Atomic<NSObject?>, signup: Bool, theme: PresentationTheme, present: (ViewController, Any?) -> Void, openCurrent: (() -> Void)?, completion: @escaping (UIImage) -> Void) {
+public func presentLegacyAvatarPicker(holder: Atomic<NSObject?>, signup: Bool, theme: PresentationTheme, present: (ViewController, Any?) -> Void, openCurrent: (() -> Void)?, completion: @escaping (UIImage) -> Void, videoCompletion: @escaping (UIImage, URL, TGVideoEditAdjustments?) -> Void = { _, _, _ in}) {
     let legacyController = LegacyController(presentation: .custom, theme: theme)
     legacyController.statusBar.statusBarStyle = .Ignore
     
