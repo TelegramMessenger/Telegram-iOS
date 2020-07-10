@@ -449,7 +449,10 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         var copyCompleted = false
         var surfaceCopyCompleted = false
         
-        let copyView = node.2().0!
+        let (maybeCopyView, copyViewBackground) = node.2()
+        copyViewBackground?.alpha = 1.0
+        
+        let copyView = maybeCopyView!
         
         if self.sourceHasRoundCorners {
             self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)

@@ -112,39 +112,53 @@ public func normalizeEntries(_ entries: [AvatarGalleryEntry]) -> [AvatarGalleryE
        return updatedEntries
    }
 
-public func initialAvatarGalleryEntries(peer: Peer) -> [AvatarGalleryEntry] {
+public func initialAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<[AvatarGalleryEntry], NoError> {
     var initialEntries: [AvatarGalleryEntry] = []
     if !peer.profileImageRepresentations.isEmpty, let peerReference = PeerReference(peer) {
         initialEntries.append(.topImage(peer.profileImageRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), nil, nil, nil))
     }
-    return initialEntries
+    
+    if let peer = peer as? TelegramChannel {
+        return account.postbox.transaction { transaction in
+            return transaction.getPeerCachedData(peerId: peer.id)
+        } |> map { cachedData in
+            if let cachedData = cachedData as? CachedChannelData, let photo = cachedData.photo {
+                return [.image(photo.imageId, photo.reference, photo.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.standalone(resource: $0.resource)) }), photo.videoRepresentations, peer, 0, nil, nil, photo.immediateThumbnailData, nil)]
+            } else {
+                return initialEntries
+            }
+        }
+    } else {
+        return .single(initialEntries)
+    }
 }
 
 public func fetchedAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<[AvatarGalleryEntry], NoError> {
-    let initialEntries = initialAvatarGalleryEntries(peer: peer)
-    return Signal<[AvatarGalleryEntry], NoError>.single(initialEntries)
-    |> then(
-        requestPeerPhotos(account: account, peerId: peer.id)
-        |> map { photos -> [AvatarGalleryEntry] in
-            var result: [AvatarGalleryEntry] = []
-            let initialEntries = initialAvatarGalleryEntries(peer: peer)
-            if photos.isEmpty {
-                result = initialEntries
-            } else {
-                var index: Int32 = 0
-                for photo in photos {
-                    let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
-                    if result.isEmpty, let first = initialEntries.first {
-                        result.append(.image(photo.image.imageId, photo.image.reference, first.representations, photo.image.videoRepresentations, peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil))
-                    } else {
-                        result.append(.image(photo.image.imageId, photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.standalone(resource: $0.resource)) }), photo.image.videoRepresentations, peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil))
+    return initialAvatarGalleryEntries(account: account, peer: peer)
+    |> mapToSignal { initialEntries in
+        return .single(initialEntries)
+        |> then(
+            requestPeerPhotos(account: account, peerId: peer.id)
+            |> map { photos -> [AvatarGalleryEntry] in
+                var result: [AvatarGalleryEntry] = []
+                if photos.isEmpty {
+                    result = initialEntries
+                } else {
+                    var index: Int32 = 0
+                    for photo in photos {
+                        let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
+                        if result.isEmpty, let first = initialEntries.first {
+                            result.append(.image(photo.image.imageId, photo.image.reference, first.representations, photo.image.videoRepresentations, peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil))
+                        } else {
+                            result.append(.image(photo.image.imageId, photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.standalone(resource: $0.resource)) }), photo.image.videoRepresentations, peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil))
+                        }
+                        index += 1
                     }
-                    index += 1
                 }
+                return result
             }
-            return result
-        }
-    )
+        )
+    }
 }
 
 public func fetchedAvatarGalleryEntries(account: Account, peer: Peer, firstEntry: AvatarGalleryEntry) -> Signal<[AvatarGalleryEntry], NoError> {
@@ -242,7 +256,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             remoteEntriesSignal = fetchedAvatarGalleryEntries(account: context.account, peer: peer)
         }
         
-        let entriesSignal: Signal<[AvatarGalleryEntry], NoError> = .single(initialAvatarGalleryEntries(peer: peer)) |> then(remoteEntriesSignal)
+        let entriesSignal: Signal<[AvatarGalleryEntry], NoError> = initialAvatarGalleryEntries(account: context.account, peer: peer) |> then(remoteEntriesSignal)
         
         let presentationData = self.presentationData
         

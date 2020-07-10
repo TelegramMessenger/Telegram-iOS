@@ -5415,11 +5415,19 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         guard let (_, navigationHeight) = self.validLayout else {
             return
         }
-        var height: CGFloat = self.isSettings ? 140.0 : 212.0
-        if self.headerNode.twoLineInfo {
-            height += 17.0
-        }
-        if !self.state.isEditing {
+        if self.state.isEditing && self.isSettings {
+            if targetContentOffset.pointee.y < navigationHeight {
+                if targetContentOffset.pointee.y < navigationHeight / 2.0 {
+                    targetContentOffset.pointee.y = 0.0
+                } else {
+                    targetContentOffset.pointee.y = navigationHeight
+                }
+            }
+        } else {
+            var height: CGFloat = self.isSettings ? 140.0 : 212.0
+            if self.headerNode.twoLineInfo {
+                height += 17.0
+            }
             if targetContentOffset.pointee.y < height {
                 if targetContentOffset.pointee.y < height / 2.0 {
                     targetContentOffset.pointee.y = 0.0

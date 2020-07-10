@@ -273,7 +273,7 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
             videoNode.isUserInteractionEnabled = false
             videoNode.isHidden = true
             
-            if let _ = video.startTimestamp {
+            if let startTimestamp = video.startTimestamp {
                 self.playbackStatusDisposable.set((videoNode.status
                 |> map { status -> Bool in
                     if let status = status, case .playing = status.status {
@@ -288,20 +288,17 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
                 |> take(1)
                 |> deliverOnMainQueue).start(completed: { [weak self] in
                     if let strongSelf = self {
-                        Queue.mainQueue().after(0.1) {
+                        Queue.mainQueue().after(0.15) {
                             strongSelf.videoNode?.isHidden = false
                         }
                     }
                 }))
+                videoNode.seek(startTimestamp)
             } else {
                 self.playbackStatusDisposable.set(nil)
                 videoNode.isHidden = false
             }
-            
-            if let startTimestamp = video.startTimestamp {
-                videoNode.seek(startTimestamp)
-            }
-            
+                        
             self.videoContent = videoContent
             self.videoNode = videoNode
             self.statusPromise.set(videoNode.status |> map { ($0, video.startTimestamp) })
@@ -1035,6 +1032,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     var tapped: (() -> Void)?
     
     private var isFirstAvatarLoading = true
+    var item: PeerInfoAvatarListItem?
     
     private let playbackStatusDisposable = MetaDisposable()
     
@@ -1090,11 +1088,22 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
         }
     }
     
+    var removedPhotoResourceIds = Set<String>()
     func update(peer: Peer?, item: PeerInfoAvatarListItem?, theme: PresentationTheme, avatarSize: CGFloat, isExpanded: Bool) {
         if let peer = peer {
+            let previousItem = self.item
+            self.item = item
+            
             var overrideImage: AvatarNodeImageOverride?
             if peer.isDeleted {
                 overrideImage = .deletedIcon
+            } else if let previousItem = previousItem, item == nil {
+                if case let .image(image) = previousItem, let rep = image.1.last {
+                    self.removedPhotoResourceIds.insert(rep.representation.resource.id.uniqueId)
+                }
+                overrideImage = AvatarNodeImageOverride.none
+            } else if let rep = peer.profileImageRepresentations.last, self.removedPhotoResourceIds.contains(rep.resource.id.uniqueId) {
+                overrideImage = AvatarNodeImageOverride.none
             }
             self.avatarNode.setPeer(context: self.context, theme: theme, peer: peer, overrideImage: overrideImage, synchronousLoad: self.isFirstAvatarLoading, displayDimensions: CGSize(width: avatarSize, height: avatarSize), storeUnrounded: true)
             self.isFirstAvatarLoading = false
@@ -1128,7 +1137,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                         |> take(1)
                         |> deliverOnMainQueue).start(completed: { [weak self] in
                             if let strongSelf = self {
-                                Queue.mainQueue().after(0.1) {
+                                Queue.mainQueue().after(0.15) {
                                     strongSelf.videoNode?.isHidden = false
                                 }
                             }
@@ -1213,6 +1222,7 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
         
         self.iconNode = ASImageNode()
         self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Avatar/EditAvatarIconLarge"), color: .white)
+        self.iconNode.isHidden = true
         
         super.init()
         
@@ -1248,7 +1258,7 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
                 overlayHidden = false
                 iconHidden = true
                 
-                self.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: uploadProgress ?? 0.0, cancelEnabled: true))
+                self.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: max(0.027, uploadProgress ?? 0.0), cancelEnabled: true))
                 
                 if case let .image(representation) = updatingAvatar {
                     if representation != self.currentRepresentation {
@@ -1262,12 +1272,13 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
                 self.updatingAvatarOverlay.isHidden = overlayHidden
             } else {
                 if isEditing {
-                    iconHidden = false
+                    iconHidden = peer.profileImageRepresentations.isEmpty
+                    overlayHidden = peer.profileImageRepresentations.isEmpty
                 } else {
                     iconHidden = true
                     overlayHidden = true
                 }
-                Queue.mainQueue().after(0.1) { [weak self] in
+                Queue.mainQueue().after(0.15) { [weak self] in
                     self?.statusNode.transitionToState(.none)
                     self?.currentRepresentation = nil
                     self?.imageNode.setSignal(.single(nil))
@@ -1283,7 +1294,6 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
             self.iconNode.isHidden = true
             self.updatingAvatarOverlay.isHidden = true
             self.currentRepresentation = nil
-
         }
     }
 }
@@ -1296,7 +1306,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
     private var videoStartTimestamp: Double?
     
     var tapped: ((Bool) -> Void)?
-    
+        
     var canAttachVideo: Bool = true
     
     init(context: AccountContext) {
@@ -1322,7 +1332,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         guard let peer = peer else {
             return
         }
-        
+                
         let overrideImage: AvatarNodeImageOverride?
         if canEditPeerInfo(context: self.context, peer: peer), peer.profileImageRepresentations.isEmpty {
             overrideImage = .editAvatarIcon
@@ -1393,6 +1403,8 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
     var arguments: (Peer?, PresentationTheme, CGFloat, Bool)?
     var item: PeerInfoAvatarListItem?
     
+    var itemsUpdated: (([PeerInfoAvatarListItem]) -> Void)?
+    
     init(context: AccountContext, readyWhenGalleryLoads: Bool) {
         self.avatarContainerNode = PeerInfoAvatarTransformContainerNode(context: context)
         self.listContainerTransformNode = ASDisplayNode()
@@ -1440,6 +1452,7 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
         self.listContainerNode.itemsUpdated = { [weak self] items in
             if let strongSelf = self {
                 strongSelf.item = items.first
+                strongSelf.itemsUpdated?(items)
                 if let (peer, theme, avatarSize, isExpanded) = strongSelf.arguments {
                     strongSelf.avatarContainerNode.update(peer: peer, item: strongSelf.item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded)
                 }
@@ -2190,6 +2203,9 @@ private let TitleNodeStateExpanded = 1
 final class PeerInfoHeaderNode: ASDisplayNode {
     private var context: AccountContext
     private var presentationData: PresentationData?
+    private var state: PeerInfoState?
+    private var peer: Peer?
+    private var avatarSize: CGFloat?
     
     private let isOpenedFromChat: Bool
     private let isSettings: Bool
@@ -2218,6 +2234,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     private let backgroundNode: ASDisplayNode
     private let expandedBackgroundNode: ASDisplayNode
     let separatorNode: ASDisplayNode
+    let navigationBackgroundNode: ASDisplayNode
+    var navigationTitle: String?
+    let navigationTitleNode: ImmediateTextNode
+    let navigationSeparatorNode: ASDisplayNode
     let navigationButtonContainer: PeerInfoHeaderNavigationButtonContainerNode
     
     var performButtonAction: ((PeerInfoHeaderButtonKey) -> Void)?
@@ -2272,6 +2292,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         self.avatarOverlayNode = PeerInfoEditingAvatarOverlayNode(context: context)
         
+        self.navigationBackgroundNode = ASDisplayNode()
+        self.navigationBackgroundNode.isUserInteractionEnabled = false
+        
+        self.navigationTitleNode = ImmediateTextNode()
+        
+        self.navigationSeparatorNode = ASDisplayNode()
+        
         self.navigationButtonContainer = PeerInfoHeaderNavigationButtonContainerNode()
         
         self.backgroundNode = ASDisplayNode()
@@ -2303,6 +2330,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.addSubnode(self.regularContentNode)
         self.addSubnode(self.editingContentNode)
         self.addSubnode(self.avatarOverlayNode)
+        self.addSubnode(self.navigationBackgroundNode)
+        self.navigationBackgroundNode.addSubnode(self.navigationTitleNode)
+        self.navigationBackgroundNode.addSubnode(self.navigationSeparatorNode)
         self.addSubnode(self.navigationButtonContainer)
         self.addSubnode(self.separatorNode)
         
@@ -2310,10 +2340,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self?.initiateAvatarExpansion()
         }
         self.editingContentNode.avatarNode.tapped = { [weak self] confirm in
-            guard let strongSelf = self else {
+            self?.requestOpenAvatarForEditing?(confirm)
+        }
+        
+        self.avatarListNode.itemsUpdated = { [weak self] items in
+            guard let strongSelf = self, let state = strongSelf.state, let peer = strongSelf.peer, let presentationData = strongSelf.presentationData, let avatarSize = strongSelf.avatarSize else {
                 return
             }
-            strongSelf.requestOpenAvatarForEditing?(confirm)
+            strongSelf.editingContentNode.avatarNode.update(peer: peer, item: strongSelf.avatarListNode.item, updatingAvatar: state.updatingAvatar, uploadProgress: state.avatarUploadProgress, theme: presentationData.theme, avatarSize: avatarSize, isEditing: state.isEditing)
         }
     }
     
@@ -2387,6 +2421,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     }
     
     func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, notificationSettings: TelegramPeerNotificationSettings?, statusData: PeerInfoStatusData?, isContact: Bool, isSettings: Bool, state: PeerInfoState, transition: ContainedViewLayoutTransition, additive: Bool) -> CGFloat {
+        self.state = state
+        self.peer = peer
+        
+        let avatarSize: CGFloat = isModalOverlay ? 200.0 : 100.0
+        self.avatarSize = avatarSize
+        
         var contentOffset = contentOffset
         
         if isMediaOnly {
@@ -2446,7 +2486,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 self.avatarListNode.animateAvatarCollapse(transition: transition)
             }
         } else {
-            let avatarSize: CGFloat = isModalOverlay ? 200.0 : 100.0
             let backgroundTransitionFraction: CGFloat = max(0.0, min(1.0, contentOffset / (112.0 + avatarSize)))
             transition.updateAlpha(node: self.expandedBackgroundNode, alpha: backgroundTransitionFraction)
         }
@@ -2454,6 +2493,18 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarListNode.avatarContainerNode.updateTransitionFraction(transitionFraction, transition: transition)
         self.avatarListNode.listContainerNode.currentItemNode?.updateTransitionFraction(transitionFraction, transition: transition)
         
+        if self.navigationTitle != presentationData.strings.EditProfile_Title || themeUpdated {
+            self.navigationTitleNode.attributedText = NSAttributedString(string: presentationData.strings.EditProfile_Title, font: Font.bold(17.0), textColor: presentationData.theme.rootController.navigationBar.primaryTextColor)
+        }
+        
+        let navigationTitleSize = self.navigationTitleNode.updateLayout(CGSize(width: width, height: navigationHeight))
+        self.navigationTitleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - navigationTitleSize.width) / 2.0), y: navigationHeight - 44.0 + floorToScreenPixels((44.0 - navigationTitleSize.height) / 2.0)), size: navigationTitleSize)
+        
+        self.navigationBackgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: navigationHeight))
+        self.navigationSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: CGSize(width: width, height: UIScreenPixel))
+        self.navigationBackgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.backgroundColor
+        self.navigationSeparatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
+        transition.updateAlpha(node: self.navigationBackgroundNode, alpha: state.isEditing && self.isSettings ? min(1.0, contentOffset / (navigationHeight * 0.5)) : 0.0)
         self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
         let defaultButtonSize: CGFloat = 40.0
@@ -2521,7 +2572,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             TitleNodeStateExpanded: MultiScaleTextState(attributedText: usernameString, constrainedSize: CGSize(width: width - titleNodeLayout[TitleNodeStateExpanded]!.size.width - 8.0, height: titleConstrainedSize.height))
         ], mainState: TitleNodeStateRegular)
                 
-        let avatarSize: CGFloat = isModalOverlay ? 200.0 : 100.0
         let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 10.0), size: CGSize(width: avatarSize, height: avatarSize))
         let avatarCenter = CGPoint(x: (1.0 - transitionFraction) * avatarFrame.midX + transitionFraction * transitionSourceAvatarFrame.midX, y: (1.0 - transitionFraction) * avatarFrame.midY + transitionFraction * transitionSourceAvatarFrame.midY)
         
