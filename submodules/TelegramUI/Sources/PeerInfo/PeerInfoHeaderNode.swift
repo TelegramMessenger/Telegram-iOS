@@ -2310,6 +2310,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var performButtonAction: ((PeerInfoHeaderButtonKey) -> Void)?
     var requestAvatarExpansion: ((Bool, [AvatarGalleryEntry], AvatarGalleryEntry?, (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?) -> Void)?
     var requestOpenAvatarForEditing: ((Bool) -> Void)?
+    var cancelUpload: (() -> Void)?
     var requestUpdateLayout: (() -> Void)?
     
     var displayCopyContextMenu: ((ASDisplayNode, Bool, Bool) -> Void)?
@@ -2358,6 +2359,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.editingContentNode.alpha = 0.0
         
         self.avatarOverlayNode = PeerInfoEditingAvatarOverlayNode(context: context)
+        self.avatarOverlayNode.isUserInteractionEnabled = false
         
         self.navigationBackgroundNode = ASDisplayNode()
         self.navigationBackgroundNode.isUserInteractionEnabled = false
@@ -2445,9 +2447,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if let currentEntry = self.avatarListNode.listContainerNode.currentEntry {
                 self.requestAvatarExpansion?(true, self.avatarListNode.listContainerNode.galleryEntries, self.avatarListNode.listContainerNode.currentEntry, self.avatarTransitionArguments(entry: currentEntry))
             }
-        } else if let entry = self.avatarListNode.listContainerNode.galleryEntries.first{
+        } else if let entry = self.avatarListNode.listContainerNode.galleryEntries.first {
             let _ = self.avatarListNode.avatarContainerNode.avatarNode
             self.requestAvatarExpansion?(false, self.avatarListNode.listContainerNode.galleryEntries, nil, self.avatarTransitionArguments(entry: entry))
+        } else {
+            self.cancelUpload?()
         }
     }
     
