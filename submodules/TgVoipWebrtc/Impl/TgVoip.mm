@@ -223,6 +223,12 @@ public:
             manager->requestVideo(videoCapture);
         });
     }
+    
+    virtual void acceptVideo(std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture) override {
+        _manager->perform([videoCapture](Manager *manager) {
+            manager->acceptVideo(videoCapture);
+        });
+    }
 
     void setNetworkType(TgVoipNetworkType networkType) override {
         /*message::NetworkType mappedType;

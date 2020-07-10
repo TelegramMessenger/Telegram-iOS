@@ -246,6 +246,7 @@ private protocol OngoingCallThreadLocalContextProtocol: class {
     func nativeSetNetworkType(_ type: NetworkType)
     func nativeSetIsMuted(_ value: Bool)
     func nativeRequestVideo(_ capturer: OngoingCallVideoCapturer)
+    func nativeAcceptVideo(_ capturer: OngoingCallVideoCapturer)
     func nativeStop(_ completion: @escaping (String?, Int64, Int64, Int64, Int64) -> Void)
     func nativeDebugInfo() -> String
     func nativeVersion() -> String
@@ -274,6 +275,9 @@ extension OngoingCallThreadLocalContext: OngoingCallThreadLocalContextProtocol {
     }
     
     func nativeRequestVideo(_ capturer: OngoingCallVideoCapturer) {
+    }
+    
+    func nativeAcceptVideo(_ capturer: OngoingCallVideoCapturer) {
     }
     
     func nativeSwitchVideoCamera() {
@@ -327,6 +331,10 @@ extension OngoingCallThreadLocalContextWebrtc: OngoingCallThreadLocalContextProt
     
     func nativeRequestVideo(_ capturer: OngoingCallVideoCapturer) {
         self.requestVideo(capturer.impl)
+    }
+    
+    func nativeAcceptVideo(_ capturer: OngoingCallVideoCapturer) {
+        self.acceptVideo(capturer.impl)
     }
     
     func nativeDebugInfo() -> String {
@@ -643,6 +651,12 @@ public final class OngoingCallContext {
     public func requestVideo(_ capturer: OngoingCallVideoCapturer) {
         self.withContext { context in
             context.nativeRequestVideo(capturer)
+        }
+    }
+    
+    public func acceptVideo(_ capturer: OngoingCallVideoCapturer) {
+        self.withContext { context in
+            context.nativeAcceptVideo(capturer)
         }
     }
     

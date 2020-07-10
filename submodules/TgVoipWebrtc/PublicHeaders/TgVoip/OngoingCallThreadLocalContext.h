@@ -119,6 +119,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)setNetworkType:(OngoingCallNetworkTypeWebrtc)networkType;
 - (void)makeIncomingVideoView:(void (^_Nonnull)(OngoingCallThreadLocalContextWebrtcVideoView * _Nullable))completion;
 - (void)requestVideo:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer;
+- (void)acceptVideo:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer;
 - (void)addSignalingData:(NSData * _Nonnull)data;
 
 @end

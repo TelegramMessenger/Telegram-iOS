@@ -189,6 +189,7 @@ public:
     
     virtual void receiveSignalingData(const std::vector<uint8_t> &data) = 0;
     virtual void requestVideo(std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture) = 0;
+    virtual void acceptVideo(std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture) = 0;
 
     virtual TgVoipFinalState stop() = 0;
 };

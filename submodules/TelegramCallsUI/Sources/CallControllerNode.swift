@@ -156,6 +156,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     private var expandedVideoNode: CallVideoNode?
     private var minimizedVideoNode: CallVideoNode?
     private var disableAnimationForExpandedVideoOnce: Bool = false
+    private var animationForExpandedVideoSnapshotView: UIView? = nil
     
     private var outgoingVideoNodeCorner: VideoNodeCorner = .bottomRight
     private let backButtonArrowNode: ASImageNode
@@ -297,7 +298,17 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         }
         
         self.buttonsNode.accept = { [weak self] in
-            self?.acceptCall?()
+            guard let strongSelf = self, let callState = strongSelf.callState else {
+                return
+            }
+            switch callState.state {
+            case .active, .connecting, .reconnecting:
+                strongSelf.call.acceptVideo()
+            case .ringing:
+                strongSelf.acceptCall?()
+            default:
+                break
+            }
         }
         
         self.buttonsNode.toggleVideo = { [weak self] in
@@ -447,21 +458,26 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         }
         
         if let incomingVideoNode = self.incomingVideoNodeValue {
-            let isActive: Bool
-            switch callState.remoteVideoState {
-            case .inactive:
-                isActive = false
-            case .active:
-                isActive = true
-            }
-            incomingVideoNode.updateIsBlurred(isBlurred: !isActive)
-            if isActive != self.videoPausedNode.alpha.isZero {
-                if isActive {
-                    self.videoPausedNode.alpha = 0.0
-                    self.videoPausedNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
-                } else {
-                    self.videoPausedNode.alpha = 1.0
-                    self.videoPausedNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            switch callState.state {
+            case .terminating, .terminated:
+                break
+            default:
+                let isActive: Bool
+                switch callState.remoteVideoState {
+                case .inactive:
+                    isActive = false
+                case .active:
+                    isActive = true
+                }
+                incomingVideoNode.updateIsBlurred(isBlurred: !isActive)
+                if isActive != self.videoPausedNode.alpha.isZero {
+                    if isActive {
+                        self.videoPausedNode.alpha = 0.0
+                        self.videoPausedNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                    } else {
+                        self.videoPausedNode.alpha = 1.0
+                        self.videoPausedNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                    }
                 }
             }
         }
@@ -510,13 +526,6 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 if case .reconnecting = callState.state {
                     isReconnecting = true
                 }
-                statusValue = .timer({ value in
-                    if isReconnecting {
-                        return strings.Call_StatusConnecting
-                    } else {
-                        return value
-                    }
-                }, timestamp)
                 if self.keyTextData?.0 != keyVisualHash {
                     let text = stringForEmojiHashOfData(keyVisualHash, 4)!
                     self.keyTextData = (keyVisualHash, text)
@@ -531,7 +540,26 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                         self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                     }
                 }
-                statusReception = reception
+                switch callState.videoState {
+                case .notAvailable, .active, .possible:
+                    statusValue = .timer({ value in
+                        if isReconnecting {
+                            return strings.Call_StatusConnecting
+                        } else {
+                            return value
+                        }
+                    }, timestamp)
+                    statusReception = reception
+                case .incomingRequested:
+                    var text: String
+                    text = self.presentationData.strings.Call_IncomingVideoCall
+                    if !self.statusNode.subtitle.isEmpty {
+                        text += "\n\(self.statusNode.subtitle)"
+                    }
+                    statusValue = .text(string: text, displayLogo: true)
+                case .outgoingRequested:
+                    statusValue = .text(string: self.presentationData.strings.Call_StatusRequesting, displayLogo: false)
+                }
         }
         if self.shouldStayHiddenUntilConnection {
             switch callState.state {
@@ -836,6 +864,16 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
             }
             if let expandedVideoNode = self.expandedVideoNode, expandedVideoNode.isReady {
                 if self.minimizedVideoDraggingPosition == nil {
+                    if let animationForExpandedVideoSnapshotView = self.animationForExpandedVideoSnapshotView {
+                        self.containerNode.view.addSubview(animationForExpandedVideoSnapshotView)
+                        transition.updateAlpha(layer: animationForExpandedVideoSnapshotView.layer, alpha: 0.0, completion: { [weak animationForExpandedVideoSnapshotView] _ in
+                            animationForExpandedVideoSnapshotView?.removeFromSuperview()
+                        })
+                        transition.updateTransformScale(layer: animationForExpandedVideoSnapshotView.layer, scale: previewVideoFrame.width / fullscreenVideoFrame.width)
+                        
+                        transition.updatePosition(layer: animationForExpandedVideoSnapshotView.layer, position: CGPoint(x: previewVideoFrame.minX + previewVideoFrame.center.x /  fullscreenVideoFrame.width * previewVideoFrame.width, y: previewVideoFrame.minY + previewVideoFrame.center.y / fullscreenVideoFrame.height * previewVideoFrame.height))
+                        self.animationForExpandedVideoSnapshotView = nil
+                    }
                     minimizedVideoTransition.updateFrame(node: minimizedVideoNode, frame: previewVideoFrame)
                     minimizedVideoNode.updateLayout(size: minimizedVideoNode.frame.size, cornerRadius: interpolate(from: 14.0, to: 24.0, value: self.pictureInPictureTransitionFraction), transition: minimizedVideoTransition)
                 }
@@ -843,6 +881,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 minimizedVideoNode.frame = fullscreenVideoFrame
                 minimizedVideoNode.updateLayout(size: layout.size, cornerRadius: 0.0, transition: minimizedVideoTransition)
             }
+            self.animationForExpandedVideoSnapshotView = nil
         }
         
         let keyTextSize = self.keyButtonNode.frame.size
@@ -902,6 +941,8 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 if let expandedVideoNode = self.expandedVideoNode, let minimizedVideoNode = self.minimizedVideoNode {
                     let point = recognizer.location(in: recognizer.view)
                     if minimizedVideoNode.frame.contains(point) {
+                        let copyView = minimizedVideoNode.view.snapshotView(afterScreenUpdates: false)
+                        copyView?.frame = minimizedVideoNode.frame
                         self.expandedVideoNode = minimizedVideoNode
                         self.minimizedVideoNode = expandedVideoNode
                         if let supernode = expandedVideoNode.supernode {
@@ -909,6 +950,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                         }
                         if let (layout, navigationBarHeight) = self.validLayout {
                             self.disableAnimationForExpandedVideoOnce = true
+                            self.animationForExpandedVideoSnapshotView = copyView
                             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
                         }
                     } else {

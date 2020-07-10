@@ -245,49 +245,89 @@ final class CallControllerButtonsNode: ASDisplayNode {
             
             height = smallButtonSize + topBottomSpacing + largeButtonSize + max(bottomInset + 32.0, 46.0)
         case .active:
-            var topButtons: [ButtonDescription] = []
-            
-            let soundOutput: ButtonDescription.SoundOutput
-            switch speakerMode {
-            case .none, .builtin:
-                soundOutput = .builtin
-            case .speaker:
-                soundOutput = .speaker
-            case .headphones:
-                soundOutput = .builtin
-            case .bluetooth:
-                soundOutput = .bluetooth
-            }
-            
             switch videoState {
-            case .active, .incomingRequested, .outgoingRequested, .possible:
+            case .active, .incomingRequested, .outgoingRequested:
                 let isCameraActive: Bool
                 if case .possible = videoState {
                     isCameraActive = false
                 } else {
                     isCameraActive = !self.isCameraPaused
                 }
+                
+                var topButtons: [ButtonDescription] = []
+                
+                let soundOutput: ButtonDescription.SoundOutput
+                switch speakerMode {
+                case .none, .builtin:
+                    soundOutput = .builtin
+                case .speaker:
+                    soundOutput = .speaker
+                case .headphones:
+                    soundOutput = .builtin
+                case .bluetooth:
+                    soundOutput = .bluetooth
+                }
+                
                 topButtons.append(.enableCamera(isCameraActive))
                 topButtons.append(.mute(isMuted))
                 topButtons.append(.switchCamera)
-            case .notAvailable:
-                topButtons.append(.mute(isMuted))
-                topButtons.append(.soundOutput(soundOutput))
+                topButtons.append(.end(.end))
+                
+                let topButtonsContentWidth = CGFloat(topButtons.count) * smallButtonSize
+                let topButtonsAvailableSpacingWidth = width - topButtonsContentWidth - minSmallButtonSideInset * 2.0
+                let topButtonsSpacing = min(maxSmallButtonSpacing, topButtonsAvailableSpacingWidth / CGFloat(topButtons.count - 1))
+                let topButtonsWidth = CGFloat(topButtons.count) * smallButtonSize + CGFloat(topButtons.count - 1) * topButtonsSpacing
+                var topButtonsLeftOffset = floor((width - topButtonsWidth) / 2.0)
+                for button in topButtons {
+                    buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: topButtonsLeftOffset, y: 0.0), size: CGSize(width: smallButtonSize, height: smallButtonSize))))
+                    topButtonsLeftOffset += smallButtonSize + topButtonsSpacing
+                }
+                
+                height = smallButtonSize + max(bottomInset + 19.0, 46.0)
+            case .notAvailable, .possible:
+                var topButtons: [ButtonDescription] = []
+                var bottomButtons: [ButtonDescription] = []
+                
+                let soundOutput: ButtonDescription.SoundOutput
+                switch speakerMode {
+                case .none, .builtin:
+                    soundOutput = .builtin
+                case .speaker:
+                    soundOutput = .speaker
+                case .headphones:
+                    soundOutput = .bluetooth
+                case .bluetooth:
+                    soundOutput = .bluetooth
+                }
+                
+                topButtons.append(.enableCamera(false))
+                topButtons.append(.mute(self.isMuted))
+                topButtons.append(.switchCamera)
+                
+                let topButtonsContentWidth = CGFloat(topButtons.count) * smallButtonSize
+                let topButtonsAvailableSpacingWidth = width - topButtonsContentWidth - minSmallButtonSideInset * 2.0
+                let topButtonsSpacing = min(maxSmallButtonSpacing, topButtonsAvailableSpacingWidth / CGFloat(topButtons.count - 1))
+                let topButtonsWidth = CGFloat(topButtons.count) * smallButtonSize + CGFloat(topButtons.count - 1) * topButtonsSpacing
+                var topButtonsLeftOffset = floor((width - topButtonsWidth) / 2.0)
+                for button in topButtons {
+                    buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: topButtonsLeftOffset, y: 0.0), size: CGSize(width: smallButtonSize, height: smallButtonSize))))
+                    topButtonsLeftOffset += smallButtonSize + topButtonsSpacing
+                }
+                
+                bottomButtons.append(.end(.outgoing))
+                
+                let bottomButtonsContentWidth = CGFloat(bottomButtons.count) * largeButtonSize
+                let bottomButtonsAvailableSpacingWidth = width - bottomButtonsContentWidth - minLargeButtonSideInset * 2.0
+                let bottomButtonsSpacing = min(maxLargeButtonSpacing, bottomButtonsAvailableSpacingWidth / CGFloat(bottomButtons.count - 1))
+                let bottomButtonsWidth = CGFloat(bottomButtons.count) * largeButtonSize + CGFloat(bottomButtons.count - 1) * bottomButtonsSpacing
+                var bottomButtonsLeftOffset = floor((width - bottomButtonsWidth) / 2.0)
+                for button in bottomButtons {
+                    buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: bottomButtonsLeftOffset, y: smallButtonSize + topBottomSpacing), size: CGSize(width: largeButtonSize, height: largeButtonSize))))
+                    bottomButtonsLeftOffset += largeButtonSize + bottomButtonsSpacing
+                }
+                
+                height = smallButtonSize + topBottomSpacing + largeButtonSize + max(bottomInset + 32.0, 46.0)
             }
-            
-            topButtons.append(.end(.end))
-            
-            let topButtonsContentWidth = CGFloat(topButtons.count) * smallButtonSize
-            let topButtonsAvailableSpacingWidth = width - topButtonsContentWidth - minSmallButtonSideInset * 2.0
-            let topButtonsSpacing = min(maxSmallButtonSpacing, topButtonsAvailableSpacingWidth / CGFloat(topButtons.count - 1))
-            let topButtonsWidth = CGFloat(topButtons.count) * smallButtonSize + CGFloat(topButtons.count - 1) * topButtonsSpacing
-            var topButtonsLeftOffset = floor((width - topButtonsWidth) / 2.0)
-            for button in topButtons {
-                buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: topButtonsLeftOffset, y: 0.0), size: CGSize(width: smallButtonSize, height: smallButtonSize))))
-                topButtonsLeftOffset += smallButtonSize + topButtonsSpacing
-            }
-            
-            height = smallButtonSize + max(bottomInset + 19.0, 46.0)
         }
         
         let delayIncrement = 0.015

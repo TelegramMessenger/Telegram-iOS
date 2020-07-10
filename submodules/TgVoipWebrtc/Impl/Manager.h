@@ -36,6 +36,7 @@ public:
     void start();
     void receiveSignalingData(const std::vector<uint8_t> &data);
     void requestVideo(std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture);
+    void acceptVideo(std::shared_ptr<TgVoipVideoCaptureInterface> videoCapture);
     void setMuteOutgoingAudio(bool mute);
     void notifyIsLocalVideoActive(bool isActive);
     void setIncomingVideoOutput(std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink);

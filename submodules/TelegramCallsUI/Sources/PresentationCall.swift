@@ -189,6 +189,7 @@ public final class PresentationCallImpl: PresentationCall {
     
     private var callWasActive = false
     private var shouldPresentCallRating = false
+    private var videoWasActive = false
     
     private var sessionStateDisposable: Disposable?
     
@@ -269,7 +270,7 @@ public final class PresentationCallImpl: PresentationCall {
             self.videoCapturer = OngoingCallVideoCapturer()
             self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: .outgoingRequested, remoteVideoState: .inactive))
         } else {
-            self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: .notAvailable, remoteVideoState: .inactive))
+            self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: self.isVideoPossible ? .possible : .notAvailable, remoteVideoState: .inactive))
         }
         
         self.serializedData = serializedData
@@ -446,6 +447,7 @@ public final class PresentationCallImpl: PresentationCall {
                 mappedVideoState = .incomingRequested
             case .active:
                 mappedVideoState = .active
+                self.videoWasActive = true
             }
             switch callContextState.remoteVideoState {
             case .inactive:
@@ -461,7 +463,11 @@ public final class PresentationCallImpl: PresentationCall {
             } else {
                 mappedVideoState = .notAvailable
             }
-            mappedRemoteVideoState = .inactive
+            if videoWasActive {
+                mappedRemoteVideoState = .active
+            } else {
+                mappedRemoteVideoState = .inactive
+            }
         }
         
         switch sessionState.state {
@@ -739,7 +745,19 @@ public final class PresentationCallImpl: PresentationCall {
         if self.videoCapturer == nil {
             let videoCapturer = OngoingCallVideoCapturer()
             self.videoCapturer = videoCapturer
+        }
+        if let videoCapturer = self.videoCapturer {
             self.ongoingContext?.requestVideo(videoCapturer)
+        }
+    }
+    
+    public func acceptVideo() {
+        if self.videoCapturer == nil {
+            let videoCapturer = OngoingCallVideoCapturer()
+            self.videoCapturer = videoCapturer
+        }
+        if let videoCapturer = self.videoCapturer {
+            self.ongoingContext?.acceptVideo(videoCapturer)
         }
     }
     
@@ -784,6 +802,11 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     public func makeOutgoingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void) {
+        if self.videoCapturer == nil {
+            let videoCapturer = OngoingCallVideoCapturer()
+            self.videoCapturer = videoCapturer
+        }
+        
         self.videoCapturer?.makeOutgoingVideoView(completion: { view in
             if let view = view {
                 completion(PresentationCallVideoView(
