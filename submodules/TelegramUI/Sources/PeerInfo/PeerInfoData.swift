@@ -94,9 +94,9 @@ final class PeerInfoState {
 final class TelegramGlobalSettings {
     let suggestPhoneNumberConfirmation: Bool
     let accountsAndPeers: [(Account, Peer, Int32)]
-    let activeSessionsContext: ActiveSessionsContext
-    let webSessionsContext: WebSessionsContext
-    let otherSessionsCount: Int
+    let activeSessionsContext: ActiveSessionsContext?
+    let webSessionsContext: WebSessionsContext?
+    let otherSessionsCount: Int?
     let proxySettings: ProxySettings
     let notificationAuthorizationStatus: AccessType
     let notificationWarningSuppressed: Bool
@@ -112,9 +112,9 @@ final class TelegramGlobalSettings {
     init(
         suggestPhoneNumberConfirmation: Bool,
         accountsAndPeers: [(Account, Peer, Int32)],
-        activeSessionsContext: ActiveSessionsContext,
-        webSessionsContext: WebSessionsContext,
-        otherSessionsCount: Int,
+        activeSessionsContext: ActiveSessionsContext?,
+        webSessionsContext: WebSessionsContext?,
+        otherSessionsCount: Int?,
         proxySettings: ProxySettings,
         notificationAuthorizationStatus: AccessType,
         notificationWarningSuppressed: Bool,
@@ -366,7 +366,7 @@ func keepPeerInfoScreenDataHot(context: AccountContext, peerId: PeerId) -> Signa
     }
 }
 
-func peerInfoScreenSettingsData(context: AccountContext, peerId: PeerId, accountsAndPeers: Signal<[(Account, Peer, Int32)], NoError>, activeSessionsContextAndCount: Signal<(ActiveSessionsContext, Int, WebSessionsContext), NoError>, notificationExceptions: Signal<NotificationExceptionsList?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, hasPassport: Signal<Bool, NoError>) -> Signal<PeerInfoScreenData, NoError> {
+func peerInfoScreenSettingsData(context: AccountContext, peerId: PeerId, accountsAndPeers: Signal<[(Account, Peer, Int32)], NoError>, activeSessionsContextAndCount: Signal<(ActiveSessionsContext, Int, WebSessionsContext)?, NoError>, notificationExceptions: Signal<NotificationExceptionsList?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, hasPassport: Signal<Bool, NoError>) -> Signal<PeerInfoScreenData, NoError> {
     let preferences = context.sharedContext.accountManager.sharedData(keys: [
         SharedDataKeys.proxySettings,
         ApplicationSpecificSharedDataKeys.inAppNotificationSettings,
@@ -428,7 +428,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: PeerId, account
                 enableQRLogin = true
             }
             
-            let globalSettings = TelegramGlobalSettings(suggestPhoneNumberConfirmation: false, accountsAndPeers: accountsAndPeers, activeSessionsContext: accountSessions.0, webSessionsContext: accountSessions.2, otherSessionsCount: accountSessions.1, proxySettings: proxySettings, notificationAuthorizationStatus: notificationsAuthorizationStatus, notificationWarningSuppressed: notificationsWarningSuppressed, notificationExceptions: notificationExceptions, inAppNotificationSettings: inAppNotificationSettings, privacySettings: privacySettings, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedStickerPacks: archivedStickerPacks, hasPassport: hasPassport, hasWatchApp: hasWatchApp, enableQRLogin: enableQRLogin)
+            let globalSettings = TelegramGlobalSettings(suggestPhoneNumberConfirmation: false, accountsAndPeers: accountsAndPeers, activeSessionsContext: accountSessions?.0, webSessionsContext: accountSessions?.2, otherSessionsCount: accountSessions?.1, proxySettings: proxySettings, notificationAuthorizationStatus: notificationsAuthorizationStatus, notificationWarningSuppressed: notificationsWarningSuppressed, notificationExceptions: notificationExceptions, inAppNotificationSettings: inAppNotificationSettings, privacySettings: privacySettings, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedStickerPacks: archivedStickerPacks, hasPassport: hasPassport, hasWatchApp: hasWatchApp, enableQRLogin: enableQRLogin)
             
             return PeerInfoScreenData(
                 peer: peerView.peers[peerId],

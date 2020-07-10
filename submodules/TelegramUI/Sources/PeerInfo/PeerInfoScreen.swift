@@ -712,11 +712,11 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     }))
     
     let devicesLabel: String
-    if let settings = data.globalSettings {
+    if let settings = data.globalSettings, let otherSessionsCount = settings.otherSessionsCount {
         if settings.enableQRLogin {
-            devicesLabel = settings.otherSessionsCount == 0 ? presentationData.strings.Settings_AddDevice : "\(settings.otherSessionsCount + 1)"
+            devicesLabel = otherSessionsCount == 0 ? presentationData.strings.Settings_AddDevice : "\(otherSessionsCount + 1)"
         } else {
-            devicesLabel = settings.otherSessionsCount == 0 ? "" : "\(settings.otherSessionsCount + 1)"
+            devicesLabel = otherSessionsCount == 0 ? "" : "\(otherSessionsCount + 1)"
         }
     } else {
         devicesLabel = ""
@@ -1392,7 +1392,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     private let preloadStickerDisposable = MetaDisposable()
     
     fileprivate let accountsAndPeers = Promise<[(Account, Peer, Int32)]>()
-    private let activeSessionsContextAndCount = Promise<(ActiveSessionsContext, Int, WebSessionsContext)>()
+    fileprivate let activeSessionsContextAndCount = Promise<(ActiveSessionsContext, Int, WebSessionsContext)?>()
     private let notificationExceptions = Promise<NotificationExceptionsList?>()
     private let privacySettings = Promise<AccountPrivacySettings?>()
     private let archivedPacks = Promise<[ArchivedStickerPackItem]?>()
@@ -2489,20 +2489,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         let screenData: Signal<PeerInfoScreenData, NoError>
         if self.isSettings {
-            let activeSessionsContextAndCountSignal = deferred { () -> Signal<(ActiveSessionsContext, Int, WebSessionsContext), NoError> in
-                let activeSessionsContext = ActiveSessionsContext(account: context.account)
-                let webSessionsContext = WebSessionsContext(account: context.account)
-                let otherSessionCount = activeSessionsContext.state
-                |> map { state -> Int in
-                    return state.sessions.filter({ !$0.isCurrent }).count
-                }
-                |> distinctUntilChanged
-                return otherSessionCount
-                |> map { value in
-                    return (activeSessionsContext, value, webSessionsContext)
-                }
-            }
-            self.activeSessionsContextAndCount.set(activeSessionsContextAndCountSignal)
             self.notificationExceptions.set(.single(NotificationExceptionsList(peers: [:], settings: [:]))
             |> then(
                 notificationExceptionsList(postbox: context.account.postbox, network: context.account.network)
@@ -4551,7 +4537,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     let _ = (self.activeSessionsContextAndCount.get()
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak self] activeSessionsContextAndCount in
-                        if let strongSelf = self {
+                        if let strongSelf = self, let activeSessionsContextAndCount = activeSessionsContextAndCount {
                             let (activeSessionsContext, count, webSessionsContext) = activeSessionsContextAndCount
                             if count == 0 && settings.enableQRLogin {
                                 strongSelf.controller?.push(AuthDataTransferSplashScreen(context: strongSelf.context, activeSessionsContext: activeSessionsContext))
@@ -4902,7 +4888,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             }
                         })
                     }
-                    }, exceptionsList: .single(settings.notificationExceptions), archivedStickerPacks: .single(settings.archivedStickerPacks), privacySettings: .single(settings.privacySettings), hasWallet: .single(false), activeSessionsContext: self.activeSessionsContextAndCount.get() |> map { $0.0 }, webSessionsContext: self.activeSessionsContextAndCount.get() |> map { $0.2 }), cancel: { [weak self] in
+                    }, exceptionsList: .single(settings.notificationExceptions), archivedStickerPacks: .single(settings.archivedStickerPacks), privacySettings: .single(settings.privacySettings), hasWallet: .single(false), activeSessionsContext: self.activeSessionsContextAndCount.get() |> map { $0?.0 }, webSessionsContext: self.activeSessionsContextAndCount.get() |> map { $0?.2 }), cancel: { [weak self] in
                     self?.deactivateSearch()
                 })
             }
@@ -5518,6 +5504,8 @@ public final class PeerInfoScreen: ViewController {
     private let accountsAndPeers = Promise<((Account, Peer)?, [(Account, Peer, Int32)])>()
     private var accountsAndPeersValue: ((Account, Peer)?, [(Account, Peer, Int32)])?
     private var accountsAndPeersDisposable: Disposable?
+    
+    private let activeSessionsContextAndCount = Promise<(ActiveSessionsContext, Int, WebSessionsContext)?>(nil)
 
     private var tabBarItemDisposable: Disposable?
     
@@ -5558,8 +5546,22 @@ public final class PeerInfoScreen: ViewController {
         ), strings: baseNavigationBarPresentationData.strings))
                 
         if isSettings {
+            let activeSessionsContextAndCountSignal = deferred { () -> Signal<(ActiveSessionsContext, Int, WebSessionsContext)?, NoError> in
+                let activeSessionsContext = ActiveSessionsContext(account: context.account)
+                let webSessionsContext = WebSessionsContext(account: context.account)
+                let otherSessionCount = activeSessionsContext.state
+                |> map { state -> Int in
+                    return state.sessions.filter({ !$0.isCurrent }).count
+                }
+                |> distinctUntilChanged
+                return otherSessionCount
+                |> map { value in
+                    return (activeSessionsContext, value, webSessionsContext)
+                }
+            }
+            self.activeSessionsContextAndCount.set(activeSessionsContextAndCountSignal)
+            
             self.accountsAndPeers.set(activeAccountsAndPeers(context: context))
-
             self.accountsAndPeersDisposable = (self.accountsAndPeers.get()
             |> deliverOnMainQueue).start(next: { [weak self] value in
                 self?.accountsAndPeersValue = value
@@ -5784,6 +5786,7 @@ public final class PeerInfoScreen: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, isOpenedFromChat: self.isOpenedFromChat, nearbyPeerDistance: self.nearbyPeerDistance, callMessages: self.callMessages, isSettings: self.isSettings, ignoreGroupInCommon: self.ignoreGroupInCommon)
         self.controllerNode.accountsAndPeers.set(self.accountsAndPeers.get() |> map { $0.1 })
+        self.controllerNode.activeSessionsContextAndCount.set(self.activeSessionsContextAndCount.get())
         self._ready.set(self.controllerNode.ready.get())
         
         super.displayNodeDidLoad()
