@@ -53,6 +53,12 @@ public func presentLegacyAvatarPicker(holder: Atomic<NSObject?>, signup: Bool, t
         }
         completion(image)
     }
+    mixin.didFinishWithVideo = { image, url, adjustments in
+        guard let image = image, let url = url else {
+            return
+        }
+        videoCompletion(image, url, adjustments)
+    }
     mixin.didFinishWithView = {
         openCurrent?()
     }
