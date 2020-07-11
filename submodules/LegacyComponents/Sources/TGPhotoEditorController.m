@@ -1274,6 +1274,12 @@
                         [strongSelf stopVideoPlayback:false];
                     }
                 };
+                cropController.isVideoPlaying = ^bool{
+                    __strong TGPhotoEditorController *strongSelf = weakSelf;
+                    if (strongSelf == nil)
+                        return false;
+                    return strongSelf->_isPlaying;
+                };
                 cropController.togglePlayback = ^{
                     __strong TGPhotoEditorController *strongSelf = weakSelf;
                     if (strongSelf == nil || !strongSelf->_item.isVideo)
@@ -2901,6 +2907,5 @@
     
     return self.item.originalSize;
 }
-
 
 @end

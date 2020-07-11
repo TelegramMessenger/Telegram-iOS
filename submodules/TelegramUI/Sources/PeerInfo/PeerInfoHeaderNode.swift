@@ -445,7 +445,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 playerPosition = playerStatus.timestamp
             }
             
-            if let videoStartTimestamp = videoStartTimestamp {
+            if let videoStartTimestamp = videoStartTimestamp, false {
                 playerPosition -= videoStartTimestamp
                 if playerPosition < 0.0 {
                     playerPosition = playerStatus.duration + playerPosition
