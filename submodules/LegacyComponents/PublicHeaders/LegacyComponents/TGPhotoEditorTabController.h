@@ -29,6 +29,7 @@
 
 @property (nonatomic, copy) void (^tabsChanged)(void);
 
+@property (nonatomic, copy) bool (^isVideoPlaying)();
 @property (nonatomic, copy) void (^controlVideoPlayback)(bool);
 @property (nonatomic, copy) void (^controlVideoSeek)(NSTimeInterval);
 @property (nonatomic, copy) void (^controlVideoEndTime)(NSTimeInterval);

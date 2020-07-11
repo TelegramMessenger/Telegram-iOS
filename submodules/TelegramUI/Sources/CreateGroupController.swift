@@ -626,7 +626,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                                 }
                                 
                                 if let timestamp = videoStartTimestamp {
-                                    videoStartTimestamp = max(0.0, min(timestamp, result.duration))
+                                    videoStartTimestamp = max(0.0, min(timestamp, result.duration - 0.05))
                                 }
                                                                 
                                 var value = stat()

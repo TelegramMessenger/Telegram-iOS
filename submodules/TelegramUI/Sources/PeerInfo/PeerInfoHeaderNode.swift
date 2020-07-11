@@ -445,7 +445,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 playerPosition = playerStatus.timestamp
             }
             
-            if let videoStartTimestamp = videoStartTimestamp {
+            if let videoStartTimestamp = videoStartTimestamp, false {
                 playerPosition -= videoStartTimestamp
                 if playerPosition < 0.0 {
                     playerPosition = playerStatus.duration + playerPosition
@@ -1069,22 +1069,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             self.tapped?()
         }
     }
-    
-    func reattachVideoNode() {
-        if let videoNode = self.videoNode {
-            let maskPath = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: self.avatarNode.frame.size))
-            let shape = CAShapeLayer()
-            shape.path = maskPath.cgPath
-            videoNode.layer.mask = shape
-            
-            videoNode.transform = CATransform3DIdentity
-            videoNode.updateLayout(size: self.avatarNode.frame.size, transition: .immediate)
-            videoNode.frame = self.avatarNode.frame
-            
-            self.addSubnode(videoNode)
-        }
-    }
-    
+        
     func updateTransitionFraction(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
         if let videoNode = self.videoNode {
             if case .immediate = transition, fraction == 1.0 {
@@ -1212,11 +1197,6 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                     let update = {
                         videoNode.canAttachContent = !self.isExpanded && self.canAttachVideo
                         if videoNode.canAttachContent {
-//                            if let videoStartTimestamp = self.videoStartTimestamp {
-//                                videoNode.seek(videoStartTimestamp)
-//                            } else {
-//                                videoNode.seek(0.0)
-//                            }
                             videoNode.play()
                         }
                     }
@@ -2292,6 +2272,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     private(set) var isAvatarExpanded: Bool
     private(set) var twoLineInfo = false
     var skipCollapseCompletion = false
+    var ignoreCollapse = false
     
     let avatarListNode: PeerInfoAvatarListNode
     
@@ -2842,7 +2823,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         self.avatarListNode.listContainerNode.update(size: expandedAvatarListSize, peer: peer, isExpanded: self.isAvatarExpanded, transition: transition)
-        if self.avatarListNode.listContainerNode.isCollapsing {
+        if self.avatarListNode.listContainerNode.isCollapsing && !self.ignoreCollapse {
             self.avatarListNode.avatarContainerNode.canAttachVideo = false
         }
         
