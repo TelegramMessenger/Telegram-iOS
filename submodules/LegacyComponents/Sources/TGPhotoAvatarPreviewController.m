@@ -43,6 +43,8 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     UIView *_landscapeToolControlView;
     UILabel *_coverLabel;
     
+    bool _wasPlayingBeforeCropping;
+    
     bool _scheduledTransitionIn;
 }
 
@@ -80,6 +82,10 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         if (strongSelf == nil)
             return;
         
+        if (strongSelf.isVideoPlaying != nil) {
+            strongSelf->_wasPlayingBeforeCropping = strongSelf.isVideoPlaying();
+        }
+            
         strongSelf.controlVideoPlayback(false);
     };
     void(^interactionEnded)(void) = ^
@@ -91,7 +97,9 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         if ([strongSelf shouldAutorotate])
             [TGViewController attemptAutorotation];
         
-        strongSelf.controlVideoPlayback(true);
+        if (strongSelf->_wasPlayingBeforeCropping) {
+            strongSelf.controlVideoPlayback(true);
+        }
     };
     
     PGPhotoEditor *photoEditor = self.photoEditor;

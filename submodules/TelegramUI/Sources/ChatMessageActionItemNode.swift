@@ -75,7 +75,6 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     let backgroundContainer = UIView()
                     
                     backgroundContainer.addSubview(backgroundView)
-                    let backgroundFrame = strongSelf.mediaBackgroundNode.layer.convert(strongSelf.mediaBackgroundNode.bounds, to: resultView.layer)
                     backgroundContainer.frame = CGRect(origin: CGPoint(x: -2.0, y: -2.0), size: CGSize(width: resultView.frame.width + 4.0, height: resultView.frame.height + 4.0))
                     backgroundView.frame = backgroundContainer.bounds
                     let viewWithBackground = UIView()
@@ -131,7 +130,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         return { item, layoutConstants, _, _, _ in
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .always, forceFullCorners: false, forceAlignment: .center)
             
-            let instantVideoBackgroundImage = PresentationResourcesChat.chatInstantVideoBackgroundImage(item.presentationData.theme.theme, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
+            let backgroundImage = PresentationResourcesChat.chatActionPhotoBackgroundImage(item.presentationData.theme.theme, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, message: item.message, accountPeerId: item.context.account.peerId)
@@ -173,12 +172,10 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     labelRects[i].origin.x = floor((labelLayout.size.width - labelRects[i].width) / 2.0)
                 }
             
-                
                 let serviceColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                 let backgroundApply = backgroundLayout(serviceColor.fill, labelRects, 10.0, 10.0, 0.0)
             
                 var backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
-                let layoutInsets = UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)
                 
                 if let _ = image {
                     backgroundSize.height += imageSize.height + 10
@@ -189,7 +186,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                         if let strongSelf = self {
                             strongSelf.item = item
                             
-                            let maskPath = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: imageSize))
+                            let maskPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: imageSize), cornerRadius: 15.5)
 
                             let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - imageSize.width) / 2.0), y: labelLayout.size.height + 10 + 2), size: imageSize)
                             if let image = image {
@@ -221,7 +218,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                 imageNode.removeFromSupernode()
                                 strongSelf.imageNode = nil
                             }
-                            strongSelf.mediaBackgroundNode.image = instantVideoBackgroundImage
+                            strongSelf.mediaBackgroundNode.image = backgroundImage
                             
                             if let image = image, let video = image.videoRepresentations.last, let id = image.id?.id {
                                 let videoFileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: image.representations, videoThumbnails: [], immediateThumbnailData: image.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))

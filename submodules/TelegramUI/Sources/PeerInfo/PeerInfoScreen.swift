@@ -2200,6 +2200,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         strongSelf.headerNode.avatarListNode.listContainerNode.isCollapsing = false
                         strongSelf.headerNode.avatarListNode.avatarContainerNode.canAttachVideo = true
                         strongSelf.headerNode.editingContentNode.avatarNode.canAttachVideo = true
+                        strongSelf.headerNode.editingContentNode.avatarNode.reset()
                         if let (layout, navigationHeight) = strongSelf.validLayout {
                             strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
                         }
@@ -2587,6 +2588,18 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.addMemberDisposable.dispose()
         self.preloadHistoryDisposable.dispose()
         self.preloadStickerDisposable.dispose()
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.view.disablesInteractiveTransitionGestureRecognizerNow = { [weak self] in
+            if let strongSelf = self {
+                return strongSelf.state.isEditing
+            } else {
+                return false
+            }
+        }
     }
     
     var canAttachVideo: Bool?
@@ -3990,13 +4003,11 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         
         if self.headerNode.isAvatarExpanded {
+            self.headerNode.ignoreCollapse = true
             self.headerNode.updateIsAvatarExpanded(false, transition: .immediate)
             self.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
         }
-        if let (layout, navigationHeight) = self.validLayout {
-            self.scrollNode.view.setContentOffset(CGPoint(), animated: false)
-            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
-        }
+        self.scrollNode.view.setContentOffset(CGPoint(), animated: false)
         
         let resource = LocalFileMediaResource(fileId: arc4random64())
         self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
@@ -4006,6 +4017,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         if let (layout, navigationHeight) = self.validLayout {
             self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
         }
+        self.headerNode.ignoreCollapse = false
         
         let postbox = self.context.account.postbox
         let signal = self.isSettings ? updateAccountPhoto(account: self.context.account, resource: resource, videoResource: nil, videoStartTimestamp: nil, mapResourceToAvatarSizes: { resource, representations in
@@ -4036,13 +4048,11 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         
         if self.headerNode.isAvatarExpanded {
+            self.headerNode.ignoreCollapse = true
             self.headerNode.updateIsAvatarExpanded(false, transition: .immediate)
             self.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
         }
-        if let (layout, navigationHeight) = self.validLayout {
-            self.scrollNode.view.setContentOffset(CGPoint(), animated: false)
-            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
-        }
+        self.scrollNode.view.setContentOffset(CGPoint(), animated: false)
         
         let photoResource = LocalFileMediaResource(fileId: arc4random64())
         self.context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
@@ -4052,6 +4062,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         if let (layout, navigationHeight) = self.validLayout {
             self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
         }
+        self.headerNode.ignoreCollapse = false
         
         var videoStartTimestamp: Double? = nil
         if let adjustments = adjustments, adjustments.videoStartValue > 0.0 {
@@ -4083,7 +4094,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                     
                     if let timestamp = videoStartTimestamp {
-                        videoStartTimestamp = max(0.0, min(timestamp, result.duration))
+                        videoStartTimestamp = max(0.0, min(timestamp, result.duration - 0.05))
                     }
                     
                     var value = stat()

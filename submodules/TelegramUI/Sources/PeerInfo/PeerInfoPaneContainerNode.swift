@@ -547,6 +547,21 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
     
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
         switch recognizer.state {
+        case .began:
+            func cancelContextGestures(view: UIView) {
+                if let gestureRecognizers = view.gestureRecognizers {
+                    for gesture in gestureRecognizers {
+                        if let gesture = gesture as? ContextGesture {
+                            gesture.cancel()
+                        }
+                    }
+                }
+                for subview in view.subviews {
+                    cancelContextGestures(view: subview)
+                }
+            }
+            
+            cancelContextGestures(view: self.view)
         case .changed:
             if let (size, sideInset, bottomInset, visibleHeight, expansionFraction, presentationData, data) = self.currentParams, let availablePanes = data?.availablePanes, availablePanes.count > 1, let currentPaneKey = self.currentPaneKey, let currentIndex = availablePanes.index(of: currentPaneKey) {
                 let translation = recognizer.translation(in: self.view)
