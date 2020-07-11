@@ -377,7 +377,11 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
                 }
             }
         } else if let file = self.media as? TelegramMediaFile {
-            self.playIcon.isHidden = false
+            if file.isAnimated {
+                self.playIcon.isHidden = true
+            } else {
+                self.playIcon.isHidden = false
+            }
             if let mediaDimensions = file.dimensions {
                 dimensions = mediaDimensions.cgSize
                 if !self.requestedImage {
