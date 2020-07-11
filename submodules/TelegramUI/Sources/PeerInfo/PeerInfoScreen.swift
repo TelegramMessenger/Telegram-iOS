@@ -2200,6 +2200,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         strongSelf.headerNode.avatarListNode.listContainerNode.isCollapsing = false
                         strongSelf.headerNode.avatarListNode.avatarContainerNode.canAttachVideo = true
                         strongSelf.headerNode.editingContentNode.avatarNode.canAttachVideo = true
+                        strongSelf.headerNode.editingContentNode.avatarNode.reset()
                         if let (layout, navigationHeight) = strongSelf.validLayout {
                             strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
                         }
@@ -2587,6 +2588,18 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.addMemberDisposable.dispose()
         self.preloadHistoryDisposable.dispose()
         self.preloadStickerDisposable.dispose()
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.view.disablesInteractiveTransitionGestureRecognizerNow = { [weak self] in
+            if let strongSelf = self {
+                return strongSelf.state.isEditing
+            } else {
+                return false
+            }
+        }
     }
     
     var canAttachVideo: Bool?

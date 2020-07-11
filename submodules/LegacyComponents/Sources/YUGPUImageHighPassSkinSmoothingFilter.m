@@ -1,6 +1,5 @@
 #import "YUGPUImageHighPassSkinSmoothingFilter.h"
 
-#import "GPUImageExposureFilter.h"
 #import "GPUImageDissolveBlendFilter.h"
 #import "GPUImageSharpenFilter.h"
 #import "GPUImageToneCurveFilter.h"
@@ -19,9 +18,9 @@ SHADER_STRING
      for (int i = 0; i < 3; ++i)
      {
          if (hardLightColor < 0.5) {
-             hardLightColor = hardLightColor  * hardLightColor * 2.;
+             hardLightColor = hardLightColor  * hardLightColor * 2.0;
          } else {
-             hardLightColor = 1. - (1. - hardLightColor) * (1. - hardLightColor) * 2.;
+             hardLightColor = 1.0 - (1.0 - hardLightColor) * (1.0 - hardLightColor) * 2.0;
          }
      }
      
@@ -40,7 +39,8 @@ SHADER_STRING
  uniform sampler2D sourceImage;
  
  void main() {
-     vec4 image = texture2D(sourceImage, texCoord);
+     vec4 source = texture2D(sourceImage, texCoord);
+     vec4 image = vec4(source.rgb * pow(2.0, -1.0), source.w);
      vec4 base = vec4(image.g,image.g,image.g,1.0);
      vec4 overlay = vec4(image.b,image.b,image.b,1.0);
      float ba = 2.0 * overlay.b * base.b + overlay.b * (1.0 - base.a) + base.b * (1.0 - overlay.a);
@@ -67,7 +67,6 @@ SHADER_STRING
 
 @interface YUGPUImageStillImageHighPassFilter : GPUImageFilterGroup
 
-@property (nonatomic) CGFloat radiusInPixels;
 @property (nonatomic, weak) GPUImageGaussianBlurFilter *blurFilter;
 
 @end
@@ -93,10 +92,6 @@ SHADER_STRING
 
 - (void)setRadiusInPixels:(CGFloat)radiusInPixels {
     self.blurFilter.blurRadiusInPixels = radiusInPixels;
-}
-
-- (CGFloat)radiusInPixels {
-    return self.blurFilter.blurRadiusInPixels;
 }
 
 @end
@@ -136,56 +131,6 @@ SHADER_STRING
     self.highPassFilter.radiusInPixels = highPassRadiusInPixels;
 }
 
-- (CGFloat)highPassRadiusInPixels {
-    return self.highPassFilter.radiusInPixels;
-}
-
-@end
-
-@interface YUGPUImageHighPassSkinSmoothingRadius ()
-
-@property (nonatomic) CGFloat value;
-@property (nonatomic) YUGPUImageHighPassSkinSmoothingRadiusUnit unit;
-
-@end
-
-@implementation YUGPUImageHighPassSkinSmoothingRadius
-
-+ (instancetype)radiusInPixels:(CGFloat)pixels {
-    YUGPUImageHighPassSkinSmoothingRadius *radius = [YUGPUImageHighPassSkinSmoothingRadius new];
-    radius.unit = YUGPUImageHighPassSkinSmoothingRadiusUnitPixel;
-    radius.value = pixels;
-    return radius;
-}
-
-+ (instancetype)radiusAsFractionOfImageWidth:(CGFloat)fraction {
-    YUGPUImageHighPassSkinSmoothingRadius *radius = [YUGPUImageHighPassSkinSmoothingRadius new];
-    radius.unit = YUGPUImageHighPassSkinSmoothingRadiusUnitFractionOfImageWidth;
-    radius.value = fraction;
-    return radius;
-}
-
-- (id)copyWithZone:(NSZone *)zone {
-    return self;
-}
-
-- (instancetype)initWithCoder:(NSCoder *)aDecoder {
-    if (self = [super init]) {
-        self.value = [[aDecoder decodeObjectOfClass:[NSNumber class] forKey:NSStringFromSelector(@selector(value))] floatValue];
-        self.unit = [[aDecoder decodeObjectOfClass:[NSNumber class] forKey:NSStringFromSelector(@selector(unit))] integerValue];
-    }
-    return self;
-}
-
-- (void)encodeWithCoder:(NSCoder *)aCoder {
-    [aCoder encodeObject:@(self.value) forKey:NSStringFromSelector(@selector(value))];
-    [aCoder encodeObject:@(self.unit) forKey:NSStringFromSelector(@selector(unit))];
-}
-
-+ (BOOL)supportsSecureCoding {
-    return YES;
-}
-
 @end
 
 NSString * const YUGPUImageHighpassSkinSmoothingCompositingFilterFragmentShaderString =
@@ -204,18 +149,15 @@ SHADER_STRING
      vec4 image = texture2D(sourceImage, texCoord);
      vec4 toneCurvedImage = texture2D(inputImageTexture2, texCoord2);
      vec4 mask = texture2D(inputImageTexture3, texCoord3);
-     gl_FragColor = vec4(mix(image.rgb,toneCurvedImage.rgb,1.0 - mask.b),1.0);
+     gl_FragColor = vec4(mix(image.rgb, toneCurvedImage.rgb, 1.0 - mask.b), 1.0);
  }
 );
 
 @interface YUGPUImageHighPassSkinSmoothingFilter ()
 
 @property (nonatomic,weak) YUCIHighPassSkinSmoothingMaskGenerator *maskGenerator;
-
 @property (nonatomic,weak) GPUImageDissolveBlendFilter *dissolveFilter;
-
 @property (nonatomic,weak) GPUImageSharpenFilter *sharpenFilter;
-
 @property (nonatomic,weak) GPUImageToneCurveFilter *skinToneCurveFilter;
 
 @property (nonatomic) CGSize currentInputSize;
@@ -226,14 +168,9 @@ SHADER_STRING
 
 - (instancetype)init {
     if (self = [super init]) {
-        GPUImageExposureFilter *exposureFilter = [[GPUImageExposureFilter alloc] init];
-        exposureFilter.exposure = -1.0;
-        [self addFilter:exposureFilter];
-        
         YUCIHighPassSkinSmoothingMaskGenerator *maskGenerator = [[YUCIHighPassSkinSmoothingMaskGenerator alloc] init];
         [self addFilter:maskGenerator];
         self.maskGenerator = maskGenerator;
-        [exposureFilter addTarget:maskGenerator];
         
         GPUImageToneCurveFilter *skinToneCurveFilter = [[GPUImageToneCurveFilter alloc] init];
         [self addFilter:skinToneCurveFilter];
@@ -258,21 +195,14 @@ SHADER_STRING
         [composeFilter addTarget:sharpen];
         self.sharpenFilter = sharpen;
         
-        self.initialFilters = @[exposureFilter,skinToneCurveFilter,dissolveFilter,composeFilter];
+        self.initialFilters = @[maskGenerator,skinToneCurveFilter,dissolveFilter,composeFilter];
         self.terminalFilter = sharpen;
         
-        //set defaults
-        self.amount = 0.75;
-        self.radius = [YUGPUImageHighPassSkinSmoothingRadius radiusAsFractionOfImageWidth:4.5/750.0];
-        self.sharpnessFactor = 0.4;
-        
-        CGPoint controlPoint0 = CGPointMake(0, 0);
-        CGPoint controlPoint1 = CGPointMake(120/255.0, 146/255.0);
-        CGPoint controlPoint2 = CGPointMake(1.0, 1.0);
-        
-        self.controlPoints = @[[NSValue valueWithCGPoint:controlPoint0],
-                               [NSValue valueWithCGPoint:controlPoint1],
-                               [NSValue valueWithCGPoint:controlPoint2]];
+        self.skinToneCurveFilter.rgbCompositeControlPoints = @[
+            [NSValue valueWithCGPoint:CGPointMake(0.0, 0.0)],
+            [NSValue valueWithCGPoint:CGPointMake(0.47, 0.57)],
+            [NSValue valueWithCGPoint:CGPointMake(1.0, 1.0)]
+        ];
     }
     return self;
 }
@@ -290,45 +220,17 @@ SHADER_STRING
 - (void)updateHighPassRadius {
     CGSize inputSize = self.currentInputSize;
     if (inputSize.width * inputSize.height > 0) {
-        CGFloat radiusInPixels = 0;
-        switch (self.radius.unit) {
-            case YUGPUImageHighPassSkinSmoothingRadiusUnitPixel:
-                radiusInPixels = self.radius.value;
-                break;
-            case YUGPUImageHighPassSkinSmoothingRadiusUnitFractionOfImageWidth:
-                radiusInPixels = ceil(inputSize.width * self.radius.value);
-                break;
-            default:
-                break;
-        }
+        CGFloat radiusInPixels = inputSize.width * 0.006;
         if (radiusInPixels != self.maskGenerator.highPassRadiusInPixels) {
             self.maskGenerator.highPassRadiusInPixels = radiusInPixels;
         }
     }
 }
 
-- (void)setRadius:(YUGPUImageHighPassSkinSmoothingRadius *)radius {
-    _radius = radius.copy;
-    [self updateHighPassRadius];
-}
-
-- (void)setControlPoints:(NSArray<NSValue *> *)controlPoints {
-    self.skinToneCurveFilter.rgbCompositeControlPoints = controlPoints;
-}
-
-- (NSArray<NSValue *> *)controlPoints {
-    return self.skinToneCurveFilter.rgbCompositeControlPoints;
-}
-
 - (void)setAmount:(CGFloat)amount {
     _amount = amount;
     self.dissolveFilter.mix = amount;
-    self.sharpenFilter.sharpness = self.sharpnessFactor * amount;
-}
-
-- (void)setSharpnessFactor:(CGFloat)sharpnessFactor {
-    _sharpnessFactor = sharpnessFactor;
-    self.sharpenFilter.sharpness = sharpnessFactor * self.amount;
+    self.sharpenFilter.sharpness = 0.4 * amount;
 }
 
 @end
