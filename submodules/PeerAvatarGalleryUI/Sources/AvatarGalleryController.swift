@@ -50,6 +50,15 @@ public enum AvatarGalleryEntry: Equatable {
         }
     }
     
+    public var immediateThumbnailData: Data? {
+        switch self {
+            case let .topImage(_, _, _, immediateThumbnailData, _):
+                return immediateThumbnailData
+            case let .image(_, _, _, _, _, _, _, _, immediateThumbnailData, _):
+                return immediateThumbnailData
+        }
+    }
+    
     public var videoRepresentations: [TelegramMediaImage.VideoRepresentation] {
         switch self {
             case let .topImage(_, videoRepresentations, _, _, _):

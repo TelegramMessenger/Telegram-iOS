@@ -263,7 +263,7 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
                 id = imageId
             }
         }
-        self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, autoFetchFullSize: true, attemptSynchronously: synchronous), attemptSynchronously: synchronous, dispatchOnDisplayLink: false)
+        self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, immediateThumbnailData: immediateThumbnailData, autoFetchFullSize: true, attemptSynchronously: synchronous), attemptSynchronously: synchronous, dispatchOnDisplayLink: false)
         
         if let video = videoRepresentations.last, let id = id {
             let mediaManager = self.context.sharedContext.mediaManager
@@ -1066,6 +1066,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     func update(peer: Peer?, item: PeerInfoAvatarListItem?, theme: PresentationTheme, avatarSize: CGFloat, isExpanded: Bool) {
         if let peer = peer {
             let previousItem = self.item
+            var item = item
             self.item = item
             
             var overrideImage: AvatarNodeImageOverride?
@@ -1076,8 +1077,10 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                     self.removedPhotoResourceIds.insert(rep.representation.resource.id.uniqueId)
                 }
                 overrideImage = AvatarNodeImageOverride.none
+                item = nil
             } else if let rep = peer.profileImageRepresentations.last, self.removedPhotoResourceIds.contains(rep.resource.id.uniqueId) {
                 overrideImage = AvatarNodeImageOverride.none
+                item = nil
             }
             self.avatarNode.setPeer(context: self.context, theme: theme, peer: peer, overrideImage: overrideImage, synchronousLoad: self.isFirstAvatarLoading, displayDimensions: CGSize(width: avatarSize, height: avatarSize), storeUnrounded: true)
             self.isFirstAvatarLoading = false
@@ -1319,6 +1322,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
     fileprivate var videoNode: UniversalVideoNode?
     private var videoContent: NativeVideoContent?
     private var videoStartTimestamp: Double?
+    var item: PeerInfoAvatarListItem?
     
     var tapped: ((Bool) -> Void)?
         
@@ -1354,14 +1358,28 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         }
     }
     
+    var removedPhotoResourceIds = Set<String>()
     func update(peer: Peer?, item: PeerInfoAvatarListItem?, updatingAvatar: PeerInfoUpdatingAvatar?, uploadProgress: CGFloat?, theme: PresentationTheme, avatarSize: CGFloat, isEditing: Bool) {
         guard let peer = peer else {
             return
         }
+        
+        let previousItem = self.item
+        var item = item
+        self.item = item
                 
         let overrideImage: AvatarNodeImageOverride?
         if canEditPeerInfo(context: self.context, peer: peer), peer.profileImageRepresentations.isEmpty {
             overrideImage = .editAvatarIcon
+        } else if let previousItem = previousItem, item == nil {
+            if case let .image(image) = previousItem, let rep = image.1.last {
+                self.removedPhotoResourceIds.insert(rep.representation.resource.id.uniqueId)
+            }
+            overrideImage = AvatarNodeImageOverride.none
+            item = nil
+        } else if let rep = peer.profileImageRepresentations.last, self.removedPhotoResourceIds.contains(rep.resource.id.uniqueId) {
+            overrideImage = AvatarNodeImageOverride.none
+            item = nil
         } else {
             overrideImage = nil
         }
@@ -1415,7 +1433,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
                 videoNode.removeFromSupernode()
             }
         } else if let videoNode = self.videoNode {
-            
+            self.videoStartTimestamp = nil
             self.videoContent = nil
             self.videoNode = nil
             

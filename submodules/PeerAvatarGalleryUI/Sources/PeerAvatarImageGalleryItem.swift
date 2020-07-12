@@ -237,7 +237,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
                 let representations = entry.representations
                 if representations.last != previousRepresentations?.last {
-                    self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, attemptSynchronously: synchronous), attemptSynchronously: synchronous, dispatchOnDisplayLink: false)
+                    self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, immediateThumbnailData: entry.immediateThumbnailData, attemptSynchronously: synchronous), attemptSynchronously: synchronous, dispatchOnDisplayLink: false)
                     if entry.videoRepresentations.isEmpty {
                         self.imageNode.imageUpdated = { [weak self] _ in
                             self?._ready.set(.single(Void()))

@@ -4230,6 +4230,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     return
                 }
                 
+                if let item = item {
+                    strongSelf.deleteAvatar(item)
+                }
+                
                 let _ = strongSelf.currentAvatarMixin.swap(nil)
                 if let _ = peer.smallProfileImage {
                     strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)

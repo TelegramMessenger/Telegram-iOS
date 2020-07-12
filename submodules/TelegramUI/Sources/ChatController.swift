@@ -2018,7 +2018,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, displayDiceTooltip: { [weak self] dice in
             self?.displayDiceTooltip(dice: dice)
         }, animateDiceSuccess: { [weak self] in
-            self?.chatDisplayNode.animateQuizCorrectOptionSelected()
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.selectPollOptionFeedback == nil {
+                strongSelf.selectPollOptionFeedback = HapticFeedback()
+            }
+            strongSelf.selectPollOptionFeedback?.success()
+            strongSelf.chatDisplayNode.animateQuizCorrectOptionSelected()
         }, greetingStickerNode: { [weak self] in
             return self?.chatDisplayNode.greetingStickerNode
         }, requestMessageUpdate: { [weak self] id in
