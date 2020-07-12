@@ -238,7 +238,27 @@ public final class PresentationCallImpl: PresentationCall {
     
     private var videoCapturer: OngoingCallVideoCapturer?
     
-    init(account: Account, audioSession: ManagedAudioSession, callSessionManager: CallSessionManager, callKitIntegration: CallKitIntegration?, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), initialState: CallSession?, internalId: CallSessionInternalId, peerId: PeerId, isOutgoing: Bool, peer: Peer?, proxyServer: ProxyServerSettings?, auxiliaryServers: [CallAuxiliaryServer], currentNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, startWithVideo: Bool, isVideoPossible: Bool) {
+    init(
+        account: Account,
+        audioSession: ManagedAudioSession,
+        callSessionManager: CallSessionManager,
+        callKitIntegration: CallKitIntegration?,
+        serializedData: String?,
+        dataSaving: VoiceCallDataSaving,
+        derivedState: VoipDerivedState,
+        getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void),
+        initialState: CallSession?,
+        internalId: CallSessionInternalId,
+        peerId: PeerId,
+        isOutgoing: Bool,
+        peer: Peer?,
+        proxyServer: ProxyServerSettings?,
+        auxiliaryServers: [CallAuxiliaryServer],
+        currentNetworkType: NetworkType,
+        updatedNetworkType: Signal<NetworkType, NoError>,
+        startWithVideo: Bool,
+        isVideoPossible: Bool
+    ) {
         self.account = account
         self.audioSession = audioSession
         self.callSessionManager = callSessionManager

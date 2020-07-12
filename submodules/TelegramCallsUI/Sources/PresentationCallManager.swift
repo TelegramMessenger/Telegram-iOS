@@ -294,7 +294,27 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     let autodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings ?? .defaultSettings
                     let appConfiguration = preferences.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? AppConfiguration.defaultValue
                     
-                    let call = PresentationCallImpl(account: firstState.0, audioSession: strongSelf.audioSession, callSessionManager: firstState.0.callSessionManager, callKitIntegration: enableCallKit ? callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings) : nil, serializedData: configuration.serializedData, dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings), derivedState: derivedState, getDeviceAccessData: strongSelf.getDeviceAccessData, initialState: nil, internalId: firstState.2.id, peerId: firstState.2.peerId, isOutgoing: false, peer: firstState.1, proxyServer: strongSelf.proxyServer, auxiliaryServers: auxiliaryServers(appConfiguration: appConfiguration), currentNetworkType: firstState.4, updatedNetworkType: firstState.0.networkType, startWithVideo: firstState.2.isVideo, isVideoPossible: strongSelf.isVideoPossible)
+                    let call = PresentationCallImpl(
+                        account: firstState.0,
+                        audioSession: strongSelf.audioSession,
+                        callSessionManager: firstState.0.callSessionManager,
+                        callKitIntegration: enableCallKit ? callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings) : nil,
+                        serializedData: configuration.serializedData,
+                        dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings),
+                        derivedState: derivedState,
+                        getDeviceAccessData: strongSelf.getDeviceAccessData,
+                        initialState: nil,
+                        internalId: firstState.2.id,
+                        peerId: firstState.2.peerId,
+                        isOutgoing: false,
+                        peer: firstState.1,
+                        proxyServer: strongSelf.proxyServer,
+                        auxiliaryServers: auxiliaryServers(appConfiguration: appConfiguration),
+                        currentNetworkType: firstState.4,
+                        updatedNetworkType: firstState.0.networkType,
+                        startWithVideo: firstState.2.isVideo,
+                        isVideoPossible: strongSelf.isVideoPossible
+                    )
                     strongSelf.updateCurrentCall(call)
                     strongSelf.currentCallPromise.set(.single(call))
                     strongSelf.hasActiveCallsPromise.set(true)
@@ -399,7 +419,13 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         return .requested
     }
     
-    private func startCall(account: Account, peerId: PeerId, isVideo: Bool, isVideoPossible: Bool, internalId: CallSessionInternalId = CallSessionInternalId()) -> Signal<Bool, NoError> {
+    private func startCall(
+        account: Account,
+        peerId: PeerId,
+        isVideo: Bool,
+        isVideoPossible: Bool,
+        internalId: CallSessionInternalId = CallSessionInternalId()
+    ) -> Signal<Bool, NoError> {
         let (presentationData, present, openSettings) = self.getDeviceAccessData()
         
         let accessEnabledSignal: Signal<Bool, NoError> = Signal { subscriber in
@@ -448,7 +474,30 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     let autodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings ?? .defaultSettings
                     let appConfiguration = preferences.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? AppConfiguration.defaultValue
                     
-                    let call = PresentationCallImpl(account: account, audioSession: strongSelf.audioSession, callSessionManager: account.callSessionManager, callKitIntegration: callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings), serializedData: configuration.serializedData, dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings), derivedState: derivedState, getDeviceAccessData: strongSelf.getDeviceAccessData, initialState: nil, internalId: internalId, peerId: peerId, isOutgoing: true, peer: nil, proxyServer: strongSelf.proxyServer, auxiliaryServers: auxiliaryServers(appConfiguration: appConfiguration), currentNetworkType: currentNetworkType, updatedNetworkType: account.networkType, startWithVideo: isVideo, isVideoPossible: isVideoPossible)
+                    let call = PresentationCallImpl(
+                        account: account,
+                        audioSession: strongSelf.audioSession,
+                        callSessionManager: account.callSessionManager,
+                        callKitIntegration: callKitIntegrationIfEnabled(
+                            strongSelf.callKitIntegration,
+                            settings: strongSelf.callSettings
+                        ),
+                        serializedData: configuration.serializedData,
+                        dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings),
+                        derivedState: derivedState,
+                        getDeviceAccessData: strongSelf.getDeviceAccessData,
+                        initialState: nil,
+                        internalId: internalId,
+                        peerId: peerId,
+                        isOutgoing: true,
+                        peer: nil,
+                        proxyServer: strongSelf.proxyServer,
+                        auxiliaryServers: auxiliaryServers(appConfiguration: appConfiguration),
+                        currentNetworkType: currentNetworkType,
+                        updatedNetworkType: account.networkType,
+                        startWithVideo: isVideo,
+                        isVideoPossible: isVideoPossible
+                    )
                     strongSelf.updateCurrentCall(call)
                     strongSelf.currentCallPromise.set(.single(call))
                     strongSelf.hasActiveCallsPromise.set(true)
