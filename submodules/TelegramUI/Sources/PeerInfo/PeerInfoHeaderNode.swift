@@ -184,6 +184,7 @@ enum PeerInfoAvatarListItem: Equatable {
 
 final class PeerInfoAvatarListItemNode: ASDisplayNode {
     private let context: AccountContext
+    private let peerId: PeerId?
     let imageNode: TransformImageNode
     private var videoNode: UniversalVideoNode?
     private var videoContent: NativeVideoContent?
@@ -203,8 +204,9 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
     
     var isCentral: Bool = false
     
-    init(context: AccountContext) {
+    init(context: AccountContext, peerId: PeerId?) {
         self.context = context
+        self.peerId = peerId
         self.imageNode = TransformImageNode()
         
         super.init()
@@ -250,7 +252,9 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
             representations = topRepresentations
             videoRepresentations = videoRepresentationsValue
             immediateThumbnailData = immediateThumbnail
-            id = 1
+            if let peerId = self.peerId {
+                id = Int64(peerId.id)
+            }
         case let .image(reference, imageRepresentations, videoRepresentationsValue, immediateThumbnail):
             representations = imageRepresentations
             videoRepresentations = videoRepresentationsValue
@@ -333,6 +337,7 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
 
 final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     private let context: AccountContext
+    var peerId: PeerId?
     
     let controlsContainerNode: ASDisplayNode
     let controlsClippingNode: ASDisplayNode
@@ -885,7 +890,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     }
                 } else {
                     wasAdded = true
-                    itemNode = PeerInfoAvatarListItemNode(context: self.context)
+                    itemNode = PeerInfoAvatarListItemNode(context: self.context, peerId: self.peerId)
                     itemNode.setup(item: self.items[i], synchronous: synchronous && i == self.currentIndex)
                     self.itemNodes[self.items[i].id] = itemNode
                     self.contentNode.addSubnode(itemNode)
@@ -1090,7 +1095,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                     representations = topRepresentations
                     videoRepresentations = videoRepresentationsValue
                     immediateThumbnailData = immediateThumbnail
-                    id = 1
+                    id = Int64(peer.id.id)
                 case let .image(reference, imageRepresentations, videoRepresentationsValue, immediateThumbnail):
                     representations = imageRepresentations
                     videoRepresentations = videoRepresentationsValue
@@ -1232,6 +1237,10 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
         self.addSubnode(self.iconNode)
     }
     
+    func updateTransitionFraction(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
+        transition.updateAlpha(node: self, alpha: 1.0 - fraction)
+    }
+    
     func update(peer: Peer?, item: PeerInfoAvatarListItem?, updatingAvatar: PeerInfoUpdatingAvatar?, uploadProgress: CGFloat?, theme: PresentationTheme, avatarSize: CGFloat, isEditing: Bool) {
         guard let peer = peer else {
             return
@@ -1370,7 +1379,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
                     representations = topRepresentations
                     videoRepresentations = videoRepresentationsValue
                     immediateThumbnailData = immediateThumbnail
-                    id = 1
+                    id = Int64(peer.id.id)
                 case let .image(reference, imageRepresentations, videoRepresentationsValue, immediateThumbnail):
                     representations = imageRepresentations
                     videoRepresentations = videoRepresentationsValue
@@ -1445,7 +1454,7 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
     
     var itemsUpdated: (([PeerInfoAvatarListItem]) -> Void)?
     
-    init(context: AccountContext, readyWhenGalleryLoads: Bool) {
+    init(context: AccountContext,  readyWhenGalleryLoads: Bool) {
         self.avatarContainerNode = PeerInfoAvatarTransformContainerNode(context: context)
         self.listContainerTransformNode = ASDisplayNode()
         self.listContainerNode = PeerInfoAvatarListContainerNode(context: context)
@@ -2469,6 +2478,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, notificationSettings: TelegramPeerNotificationSettings?, statusData: PeerInfoStatusData?, isContact: Bool, isSettings: Bool, state: PeerInfoState, transition: ContainedViewLayoutTransition, additive: Bool) -> CGFloat {
         self.state = state
         self.peer = peer
+        self.avatarListNode.listContainerNode.peerId = peer?.id
         
         let avatarSize: CGFloat = isModalOverlay ? 200.0 : 100.0
         self.avatarSize = avatarSize
@@ -2538,6 +2548,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         self.avatarListNode.avatarContainerNode.updateTransitionFraction(transitionFraction, transition: transition)
         self.avatarListNode.listContainerNode.currentItemNode?.updateTransitionFraction(transitionFraction, transition: transition)
+        self.avatarOverlayNode.updateTransitionFraction(transitionFraction, transition: transition)
         
         if self.navigationTitle != presentationData.strings.EditProfile_Title || themeUpdated {
             self.navigationTitleNode.attributedText = NSAttributedString(string: presentationData.strings.EditProfile_Title, font: Font.bold(17.0), textColor: presentationData.theme.rootController.navigationBar.primaryTextColor)
@@ -2731,8 +2742,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarOverlayNode.update(peer: peer, item: self.avatarListNode.item, updatingAvatar: state.updatingAvatar, uploadProgress: state.avatarUploadProgress, theme: presentationData.theme, avatarSize: avatarSize, isEditing: state.isEditing)
         if additive {
             transition.updateSublayerTransformScaleAdditive(node: self.avatarListNode.avatarContainerNode, scale: avatarScale)
+            transition.updateSublayerTransformScaleAdditive(node: self.avatarOverlayNode, scale: avatarScale)
         } else {
             transition.updateSublayerTransformScale(node: self.avatarListNode.avatarContainerNode, scale: avatarScale)
+            transition.updateSublayerTransformScale(node: self.avatarOverlayNode, scale: avatarScale)
         }
         let apparentAvatarFrame: CGRect
         let controlsClippingFrame: CGRect

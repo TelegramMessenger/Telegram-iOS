@@ -2583,7 +2583,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.hiddenAvatarRepresentationDisposable.dispose()
         self.toggleShouldChannelMessagesSignaturesDisposable.dispose()
         self.editAvatarDisposable.dispose()
-        self.updateAvatarDisposable.dispose()
         self.selectAddMemberDisposable.dispose()
         self.addMemberDisposable.dispose()
         self.preloadHistoryDisposable.dispose()

@@ -7013,7 +7013,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 value = self.presentationData.strings.Conversation_Dice_u1F3AF
             case "🏀":
                 value = self.presentationData.strings.Conversation_Dice_u1F3C0
-            case "⚽️":
+            case "⚽":
                 value = self.presentationData.strings.Conversation_Dice_u26BD
             default:
                 let emojiHex = emoji.unicodeScalars.map({ String(format:"%02x", $0.value) }).joined().uppercased()

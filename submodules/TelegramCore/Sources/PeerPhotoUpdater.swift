@@ -263,7 +263,7 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                 }
             }
             |> mapToSignal { result, resource, videoResource -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
-                if let videoResource = videoResource {
+                if case .complete = result, let videoResource = videoResource {
                     return fetchAndUpdateCachedPeerData(accountPeerId: accountPeerId, peerId: peer.id, network: network, postbox: postbox)
                     |> castError(UploadPeerPhotoError.self)
                     |> mapToSignal { status -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
