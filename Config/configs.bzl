@@ -34,6 +34,7 @@ def app_binary_configs():
         "APP_NAME": "Telegram",
         "PRODUCT_NAME": "Telegram",
         "TARGETED_DEVICE_FAMILY": "1,2",
+        "DEAD_CODE_STRIPPING": "YES",
     }
     config = merge_dict(SHARED_CONFIGS, config)
     config = merge_dict(config, optimization_config())
