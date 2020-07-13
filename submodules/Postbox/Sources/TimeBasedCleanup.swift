@@ -114,11 +114,13 @@ private final class TimeBasedCleanupImpl {
                     })
                 }
                 
-                for item in checkFiles.sorted(by: <) {
+                clear: for item in checkFiles.sorted(by: <) {
                     if totalLimitSize > bytesLimit {
                         unlink(item.file)
                         removedGeneralLimitCount += 1
                         totalLimitSize -= item.size
+                    } else {
+                        break clear
                     }
                 }
                 
