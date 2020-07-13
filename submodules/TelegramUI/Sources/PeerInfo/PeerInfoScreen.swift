@@ -5282,20 +5282,21 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: layout.safeInsets.left, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, notificationSettings: self.data?.notificationSettings, statusData: self.data?.status, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, transition: transition, additive: additive)
             }
             
-            let paneAreaExpansionDistance: CGFloat = 32.0
-            var paneAreaExpansionDelta = (self.paneContainerNode.frame.minY - navigationHeight) - self.scrollNode.view.contentOffset.y
-            paneAreaExpansionDelta = max(0.0, min(paneAreaExpansionDelta, paneAreaExpansionDistance))
-            
-            let paneAreaExpansionFraction: CGFloat = 1.0 - paneAreaExpansionDelta / paneAreaExpansionDistance
-            
             let effectiveAreaExpansionFraction: CGFloat
             if self.isSettings {
-                effectiveAreaExpansionFraction = 0.0
-//                effectiveAreaExpansionFraction = self.headerNode.isAvatarExpanded ? 1.0 : 0.0
+                let paneAreaExpansionDistance: CGFloat = 32.0
+                var paneAreaExpansionDelta = (self.headerNode.frame.maxY - navigationHeight) - self.scrollNode.view.contentOffset.y
+                paneAreaExpansionDelta = max(0.0, min(paneAreaExpansionDelta, paneAreaExpansionDistance))
+                
+                effectiveAreaExpansionFraction = 1.0 - paneAreaExpansionDelta / paneAreaExpansionDistance
             } else if self.state.isEditing {
                 effectiveAreaExpansionFraction = 0.0
             } else {
-                effectiveAreaExpansionFraction = paneAreaExpansionFraction
+                let paneAreaExpansionDistance: CGFloat = 32.0
+                var paneAreaExpansionDelta = (self.paneContainerNode.frame.minY - navigationHeight) - self.scrollNode.view.contentOffset.y
+                paneAreaExpansionDelta = max(0.0, min(paneAreaExpansionDelta, paneAreaExpansionDistance))
+            
+                effectiveAreaExpansionFraction = 1.0 - paneAreaExpansionDelta / paneAreaExpansionDistance
             }
             
             if !self.isSettings {
@@ -5310,7 +5311,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
                         
             let navigationBarHeight: CGFloat = layout.isModalOverlay ? 56.0 : 44.0
-            self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: paneAreaExpansionFraction, presentationData: self.presentationData, data: self.data, transition: transition)
+            self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: effectiveAreaExpansionFraction, presentationData: self.presentationData, data: self.data, transition: transition)
             self.headerNode.navigationButtonContainer.frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: layout.statusBarHeight ?? 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight))
             self.headerNode.navigationButtonContainer.isWhite = self.headerNode.isAvatarExpanded
             
