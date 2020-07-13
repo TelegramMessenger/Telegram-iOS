@@ -188,8 +188,8 @@ public final class MediaBox {
         let _ = self.ensureDirectoryCreated
     }
     
-    public func setMaxStoreTimes(general: Int32, shortLived: Int32) {
-        self.timeBasedCleanup.setMaxStoreTimes(general: general, shortLived: shortLived)
+    public func setMaxStoreTimes(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
+        self.timeBasedCleanup.setMaxStoreTimes(general: general, shortLived: shortLived, gigabytesLimit: gigabytesLimit)
     }
     
     private func fileNameForId(_ id: MediaResourceId) -> String {
