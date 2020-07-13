@@ -633,20 +633,17 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         items[section] = []
     }
     
-    if let peer = data.peer {
-        if peer.smallProfileImage == nil {
-            items[.edit]!.append(PeerInfoScreenActionItem(id: 0, text: presentationData.strings.Settings_SetProfilePhotoOrVideo, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
-                interaction.openSettings(.avatar)
-            }))
-        } else if peer.addressName == nil {
-            items[.edit]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.Settings_SetUsername, icon: UIImage(bundleImageName: "Settings/SetUsername"), action: {
-                interaction.openSettings(.username)
-            }))
-        }
-    }
-    items[.edit]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_EditAccount, icon: UIImage(bundleImageName: "Settings/EditAccount"), action: {
-        interaction.openSettings(.edit)
+    items[.edit]!.append(PeerInfoScreenActionItem(id: 0, text: presentationData.strings.Settings_SetProfilePhotoOrVideo, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
+        interaction.openSettings(.avatar)
     }))
+    if let peer = data.peer, peer.addressName == nil {
+        items[.edit]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.Settings_SetUsername, icon: UIImage(bundleImageName: "Settings/SetUsername"), action: {
+            interaction.openSettings(.username)
+        }))
+    }
+//    items[.edit]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_EditAccount, icon: UIImage(bundleImageName: "Settings/EditAccount"), action: {
+//        interaction.openSettings(.edit)
+//    }))
     
     
     if let settings = data.globalSettings {
@@ -4211,7 +4208,20 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 hasPhotos = true
             }
             
+            let paintStickersContext = LegacyPaintStickersContext(context: strongSelf.context)
+            paintStickersContext.presentStickersController = { completion in
+                let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
+                    let coder = PostboxEncoder()
+                    coder.encodeRootObject(fileReference.media)
+                    completion?(coder.makeData(), fileReference.media.isAnimatedSticker, node.view, rect)
+                    return true
+                })
+                strongSelf.controller?.present(controller, in: .window(.root))
+                return controller
+            }
+            
             let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos && hasRemove, hasViewButton: false, personalPhoto: strongSelf.isSettings, isVideo: currentIsVideo, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
+            mixin.stickersContext = paintStickersContext
             let _ = strongSelf.currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { [weak self] assetsController in
                 guard let strongSelf = self else {
@@ -5280,7 +5290,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             
             let effectiveAreaExpansionFraction: CGFloat
             if self.isSettings {
-                effectiveAreaExpansionFraction = self.headerNode.isAvatarExpanded ? 1.0 : 0.0
+                effectiveAreaExpansionFraction = 0.0
+//                effectiveAreaExpansionFraction = self.headerNode.isAvatarExpanded ? 1.0 : 0.0
             } else if self.state.isEditing {
                 effectiveAreaExpansionFraction = 0.0
             } else {
@@ -5308,12 +5319,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .done, isForExpandedView: false))
             } else {
                 if self.isSettings {
-                    navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .search, isForExpandedView: false))
-                    if let item = self.headerNode.avatarListNode.listContainerNode.currentItemNode?.item, case let .image(image) = item, !image.2.isEmpty {
-                        navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .editVideo, isForExpandedView: true))
-                    } else {
-                        navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .editPhoto, isForExpandedView: true))
-                    }
+                    navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
+                    navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .search, isForExpandedView: true))
                 } else if peerInfoCanEdit(peer: self.data?.peer, cachedData: self.data?.cachedData) {
                     navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
                 }
@@ -5839,7 +5846,9 @@ public final class PeerInfoScreen: ViewController {
         super.didMove(toParent: viewController)
         
         if self.isSettings && viewController == nil {
-            self.controllerNode.resetHeaderExpansion()
+            Queue.mainQueue().after(0.1) {
+                self.controllerNode.resetHeaderExpansion()
+            }
         }
     }
     
