@@ -2613,7 +2613,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if self.isSettings, let user = peer as? TelegramUser {
                 let formattedPhone = formatPhoneNumber(user.phone ?? "")
                 subtitleString = NSAttributedString(string: formattedPhone, font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
-                usernameString = NSAttributedString(string: user.addressName.flatMap { "@\($0)" } ?? "", font: Font.regular(15.0), textColor: presentationData.theme.list.itemAccentColor)
+                usernameString = NSAttributedString(string: user.addressName.flatMap { "@\($0)" } ?? "", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
             } else if let statusData = statusData {
                 let subtitleColor: UIColor
                 if statusData.isActivity {
