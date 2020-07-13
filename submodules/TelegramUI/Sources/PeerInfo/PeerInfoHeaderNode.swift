@@ -1226,7 +1226,7 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
         self.imageNode.frame = CGRect(origin: CGPoint(x: -50.0, y: -50.0), size: CGSize(width: 100.0, height: 100.0))
         self.updatingAvatarOverlay.frame = self.imageNode.frame
         
-        let radialStatusSize: CGFloat = 32.0
+        let radialStatusSize: CGFloat = 50.0
         let imagePosition = self.imageNode.position
         self.statusNode.frame = CGRect(origin: CGPoint(x: floor(imagePosition.x - radialStatusSize / 2.0), y: floor(imagePosition.y - radialStatusSize / 2.0)), size: CGSize(width: radialStatusSize, height: radialStatusSize))
         
@@ -2684,7 +2684,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             titleFrame = CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: avatarFrame.maxY + 10.0 + (subtitleSize.height.isZero ? 11.0 : 0.0)), size: titleSize)
             
             let totalSubtitleWidth = subtitleSize.width + usernameSpacing + usernameSize.width
-            twoLineInfo = totalSubtitleWidth > width - textSideInset * 2.0
+            twoLineInfo = true // totalSubtitleWidth > width - textSideInset * 2.0
             if usernameSize.width == 0.0 || twoLineInfo {
                 subtitleFrame = CGRect(origin: CGPoint(x: floor((width - subtitleSize.width) / 2.0), y: titleFrame.maxY + 1.0), size: subtitleSize)
                 usernameFrame = CGRect(origin: CGPoint(x: floor((width - usernameSize.width) / 2.0), y: subtitleFrame.maxY + 1.0), size: usernameSize)
