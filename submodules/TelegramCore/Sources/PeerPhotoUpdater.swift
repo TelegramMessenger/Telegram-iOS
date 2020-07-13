@@ -272,13 +272,13 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                             if let cachedData = cachedData as? CachedChannelData {
                                 if let photo = cachedData.photo {
                                     for representation in photo.videoRepresentations {
-                                        postbox.mediaBox.copyResourceData(from: videoResource.id, to: representation.resource.id)
+                                        postbox.mediaBox.copyResourceData(from: videoResource.id, to: representation.resource.id, synchronous: true)
                                     }
                                 }
                             } else if let cachedData = cachedData as? CachedGroupData {
                                 if let photo = cachedData.photo {
                                     for representation in photo.videoRepresentations {
-                                        postbox.mediaBox.copyResourceData(from: videoResource.id, to: representation.resource.id)
+                                        postbox.mediaBox.copyResourceData(from: videoResource.id, to: representation.resource.id, synchronous: true)
                                     }
                                 }
                             }

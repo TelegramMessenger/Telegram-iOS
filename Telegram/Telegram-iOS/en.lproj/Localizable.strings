@@ -5678,8 +5678,8 @@ Any member of this group will be able to see messages in the channel.";
 "ProfilePhoto.OpenInEditor" = "Open in Editor";
 
 "Settings.EditAccount" = "Edit Account";
-"Settings.EditPhoto" = "Edit Photo";
-"Settings.EditVideo" = "Edit Video";
+"Settings.EditPhoto" = "Edit";
+"Settings.EditVideo" = "Edit";
 "Settings.CancelUpload" = "Cancel Upload";
 
 "Settings.FrequentlyAskedQuestions" = "Frequently Asked Questions";

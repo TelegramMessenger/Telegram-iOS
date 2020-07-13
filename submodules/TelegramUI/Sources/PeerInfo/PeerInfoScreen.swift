@@ -2100,7 +2100,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             
             let entriesPromise = Promise<[AvatarGalleryEntry]>(entries)
-            let galleryController = AvatarGalleryController(context: strongSelf.context, peer: peer, sourceHasRoundCorners: !strongSelf.headerNode.isAvatarExpanded, remoteEntries: entriesPromise, skipInitial: true, centralEntryIndex: centralEntry.flatMap { entries.firstIndex(of: $0) }, replaceRootController: { controller, ready in
+            let galleryController = AvatarGalleryController(context: strongSelf.context, peer: peer, sourceCorners: !strongSelf.headerNode.isAvatarExpanded ? .round : .none, remoteEntries: entriesPromise, skipInitial: true, centralEntryIndex: centralEntry.flatMap { entries.firstIndex(of: $0) }, replaceRootController: { controller, ready in
             })
             galleryController.openAvatarSetup = { [weak self] completion in
                 self?.openAvatarForEditing(hasRemove: false, completion: completion)
@@ -3971,11 +3971,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 }))
             }
         
-            items.append(ActionSheetButtonItem(title: self.presentationData.strings.ProfilePhoto_OpenInEditor, color: .accent, action: { [weak self] in
-                dismissAction()
-                self?.editAvatarItem(item)
-            }))
-        
+//            items.append(ActionSheetButtonItem(title: self.presentationData.strings.ProfilePhoto_OpenInEditor, color: .accent, action: { [weak self] in
+//                dismissAction()
+//                self?.editAvatarItem(item)
+//            }))
             
             let deleteTitle: String
             if image.2.isEmpty {
@@ -4039,6 +4038,18 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
             }
         }))
+    }
+    
+    fileprivate func resetHeaderExpansion() {
+        if self.headerNode.isAvatarExpanded {
+            self.headerNode.ignoreCollapse = true
+            self.headerNode.updateIsAvatarExpanded(false, transition: .immediate)
+            self.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
+            if let (layout, navigationHeight) = self.validLayout {
+                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+            }
+            self.headerNode.ignoreCollapse = false
+        }
     }
               
     private func updateProfileVideo(_ image: UIImage, url: URL, adjustments: TGVideoEditAdjustments?) {
@@ -5823,7 +5834,15 @@ public final class PeerInfoScreen: ViewController {
         
         super.displayNodeDidLoad()
     }
+    
+    public override func didMove(toParent viewController: UIViewController?) {
+        super.didMove(toParent: viewController)
         
+        if self.isSettings && viewController == nil {
+            self.controllerNode.resetHeaderExpansion()
+        }
+    }
+    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         

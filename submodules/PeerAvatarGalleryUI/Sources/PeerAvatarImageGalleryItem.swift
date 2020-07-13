@@ -43,6 +43,8 @@ private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
 }
 
 class PeerAvatarImageGalleryItem: GalleryItem {
+
+    
     var id: AnyHashable {
         return self.entry.id
     }
@@ -51,24 +53,24 @@ class PeerAvatarImageGalleryItem: GalleryItem {
     let peer: Peer
     let presentationData: PresentationData
     let entry: AvatarGalleryEntry
-    let sourceHasRoundCorners: Bool
+    let sourceCorners: AvatarGalleryController.SourceCorners
     let delete: (() -> Void)?
     let setMain: (() -> Void)?
     let edit: (() -> Void)?
     
-    init(context: AccountContext, peer: Peer, presentationData: PresentationData, entry: AvatarGalleryEntry, sourceHasRoundCorners: Bool, delete: (() -> Void)?, setMain: (() -> Void)?, edit: (() -> Void)?) {
+    init(context: AccountContext, peer: Peer, presentationData: PresentationData, entry: AvatarGalleryEntry, sourceCorners: AvatarGalleryController.SourceCorners, delete: (() -> Void)?, setMain: (() -> Void)?, edit: (() -> Void)?) {
         self.context = context
         self.peer = peer
         self.presentationData = presentationData
         self.entry = entry
-        self.sourceHasRoundCorners = sourceHasRoundCorners
+        self.sourceCorners = sourceCorners
         self.delete = delete
         self.setMain = setMain
         self.edit = edit
     }
         
     func node(synchronous: Bool) -> GalleryItemNode {
-        let node = PeerAvatarImageGalleryItemNode(context: self.context, presentationData: self.presentationData, peer: self.peer, sourceHasRoundCorners: self.sourceHasRoundCorners)
+        let node = PeerAvatarImageGalleryItemNode(context: self.context, presentationData: self.presentationData, peer: self.peer, sourceCorners: self.sourceCorners)
         
         if let indexData = self.entry.indexData {
             node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
@@ -130,7 +132,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let context: AccountContext
     private let presentationData: PresentationData
     private let peer: Peer
-    private let sourceHasRoundCorners: Bool
+    private let sourceCorners: AvatarGalleryController.SourceCorners
     
     private var entry: AvatarGalleryEntry?
     
@@ -155,11 +157,11 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     fileprivate var edit: (() -> Void)?
     
-    init(context: AccountContext, presentationData: PresentationData, peer: Peer, sourceHasRoundCorners: Bool) {
+    init(context: AccountContext, presentationData: PresentationData, peer: Peer, sourceCorners: AvatarGalleryController.SourceCorners) {
         self.context = context
         self.presentationData = presentationData
         self.peer = peer
-        self.sourceHasRoundCorners = sourceHasRoundCorners
+        self.sourceCorners = sourceCorners
         
         self.contentNode = PeerAvatarImageGalleryContentNode()
         self.imageNode = TransformImageNode()
@@ -397,7 +399,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             })
         }
         
-        if self.sourceHasRoundCorners {
+        if case .round = self.sourceCorners {
             self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         }
         copyView.frame = transformedSelfFrame
@@ -427,8 +429,15 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.contentNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: self.contentNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
         
         self.contentNode.clipsToBounds = true
-        if self.sourceHasRoundCorners {
+        if case .round = self.sourceCorners {
             self.contentNode.layer.animate(from: (self.contentNode.frame.width / 2.0) as NSNumber, to: 0.0 as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18, removeOnCompletion: false, completion: { [weak self] value in
+                if value {
+                    self?.contentNode.clipsToBounds = false
+                }
+            })
+        } else if case let .roundRect(cornerRadius) = self.sourceCorners {
+            let scale = scaledLocalImageViewBounds.width / transformedCopyViewFinalFrame.width
+            self.contentNode.layer.animate(from: (cornerRadius * scale) as NSNumber, to: 0.0 as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18, removeOnCompletion: false, completion: { [weak self] value in
                 if value {
                     self?.contentNode.clipsToBounds = false
                 }
@@ -445,6 +454,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.contentNode.view.superview)
         let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
         let transformedCopyViewInitialFrame = self.contentNode.view.convert(self.contentNode.view.bounds, to: self.view)
+        let scaledLocalImageViewBounds = self.contentNode.view.bounds
         
         var positionCompleted = false
         var boundsCompleted = false
@@ -456,13 +466,13 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         let copyView = maybeCopyView!
         
-        if self.sourceHasRoundCorners {
+        if case .round = self.sourceCorners {
             self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         }
         copyView.frame = transformedSelfFrame
         
         let surfaceCopyView = node.2().0!
-        if !self.sourceHasRoundCorners {
+        if case .none = self.sourceCorners {
             addToTransitionSurface(surfaceCopyView)
         }
         
@@ -525,8 +535,11 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         })
         
         self.contentNode.clipsToBounds = true
-        if self.sourceHasRoundCorners {
+        if case .round = self.sourceCorners {
             self.contentNode.layer.animate(from: 0.0 as NSNumber, to: (self.contentNode.frame.width / 2.0) as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18 * durationFactor, removeOnCompletion: false)
+        } else if case let .roundRect(cornerRadius) = self.sourceCorners {
+            let scale = scaledLocalImageViewBounds.width / transformedCopyViewInitialFrame.width
+            self.contentNode.layer.animate(from: 0.0 as NSNumber, to: (cornerRadius * scale) as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18 * durationFactor, removeOnCompletion: false)
         }
         
         self.statusNodeContainer.layer.animatePosition(from: self.statusNodeContainer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)

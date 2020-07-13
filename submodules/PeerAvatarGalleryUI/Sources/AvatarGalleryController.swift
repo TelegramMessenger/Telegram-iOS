@@ -206,13 +206,19 @@ public func fetchedAvatarGalleryEntries(account: Account, peer: Peer, firstEntry
 }
 
 public class AvatarGalleryController: ViewController, StandalonePresentableController {
+    public enum SourceCorners {
+        case none
+        case round
+        case roundRect(CGFloat)
+    }
+    
     private var galleryNode: GalleryControllerNode {
         return self.displayNode as! GalleryControllerNode
     }
     
     private let context: AccountContext
     private let peer: Peer
-    private let sourceHasRoundCorners: Bool
+    private let sourceCorners: SourceCorners
     
     private var presentationData: PresentationData
     
@@ -250,10 +256,10 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     
     private let editDisposable = MetaDisposable ()
     
-    public init(context: AccountContext, peer: Peer, sourceHasRoundCorners: Bool = true, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, skipInitial: Bool = false, centralEntryIndex: Int? = nil, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, synchronousLoad: Bool = false) {
+    public init(context: AccountContext, peer: Peer, sourceCorners: SourceCorners = .round, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, skipInitial: Bool = false, centralEntryIndex: Int? = nil, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, synchronousLoad: Bool = false) {
         self.context = context
         self.peer = peer
-        self.sourceHasRoundCorners = sourceHasRoundCorners
+        self.sourceCorners = sourceCorners
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.replaceRootController = replaceRootController
         
@@ -319,7 +325,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                             canDelete = false
                         }
    
-                        strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ entry in PeerAvatarImageGalleryItem(context: context, peer: peer, presentationData: presentationData, entry: entry, sourceHasRoundCorners: sourceHasRoundCorners, delete: canDelete ? {
+                        strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ entry in PeerAvatarImageGalleryItem(context: context, peer: peer, presentationData: presentationData, entry: entry, sourceCorners: sourceCorners, delete: canDelete ? {
                             self?.deleteEntry(entry)
                             } : nil, setMain: { [weak self] in
                                 self?.setMainEntry(entry)
@@ -419,7 +425,11 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         
         if let centralItemNode = self.galleryNode.pager.centralItemNode(), let presentationArguments = self.presentationArguments as? AvatarGalleryControllerPresentationArguments {
             if !self.entries.isEmpty {
-                if (centralItemNode.index == 0 || !self.sourceHasRoundCorners), let transitionArguments = presentationArguments.transitionArguments(self.entries[centralItemNode.index]), !forceAway {
+                var sourceHasRoundCorners = false
+                if case .round = self.sourceCorners {
+                    sourceHasRoundCorners = true
+                }
+                if (centralItemNode.index == 0 || !sourceHasRoundCorners), let transitionArguments = presentationArguments.transitionArguments(self.entries[centralItemNode.index]), !forceAway {
                     animatedOutNode = false
                     centralItemNode.animateOut(to: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface, completion: {
                         animatedOutNode = true
@@ -457,7 +467,11 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         self.galleryNode.transitionDataForCentralItem = { [weak self] in
             if let strongSelf = self {
                 if let centralItemNode = strongSelf.galleryNode.pager.centralItemNode(), let presentationArguments = strongSelf.presentationArguments as? AvatarGalleryControllerPresentationArguments {
-                    if centralItemNode.index != 0 && strongSelf.sourceHasRoundCorners {
+                    var sourceHasRoundCorners = false
+                    if case .round = strongSelf.sourceCorners {
+                        sourceHasRoundCorners = true
+                    }
+                    if centralItemNode.index != 0 && sourceHasRoundCorners {
                         return nil
                     }
                     if let transitionArguments = presentationArguments.transitionArguments(strongSelf.entries[centralItemNode.index]) {
@@ -489,7 +503,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         }
         
         let presentationData = self.presentationData
-        self.galleryNode.pager.replaceItems(self.entries.map({ entry in PeerAvatarImageGalleryItem(context: self.context, peer: peer, presentationData: presentationData, entry: entry, sourceHasRoundCorners: self.sourceHasRoundCorners, delete: canDelete ? { [weak self] in
+        self.galleryNode.pager.replaceItems(self.entries.map({ entry in PeerAvatarImageGalleryItem(context: self.context, peer: peer, presentationData: presentationData, entry: entry, sourceCorners: self.sourceCorners, delete: canDelete ? { [weak self] in
             self?.deleteEntry(entry)
         } : nil, setMain: { [weak self] in
             self?.setMainEntry(entry)
@@ -598,7 +612,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                 if self.peer.id == self.context.account.peerId {
                 } else {
                 }
-            case let .image(_, reference, _, _, _, _, _, messageId, _, _):
+            case let .image(_, reference, _, _, _, _, _, _, _, _):
                 if self.peer.id == self.context.account.peerId {
                     if let reference = reference {
                         let _ = updatePeerPhotoExisting(network: self.context.account.network, reference: reference).start()
@@ -633,7 +647,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                         
                         entries = normalizeEntries(entries)
                         
-                        self.galleryNode.pager.replaceItems(entries.map({ entry in PeerAvatarImageGalleryItem(context: self.context, peer: peer, presentationData: presentationData, entry: entry, sourceHasRoundCorners: self.sourceHasRoundCorners, delete: canDelete ? { [weak self] in
+                        self.galleryNode.pager.replaceItems(entries.map({ entry in PeerAvatarImageGalleryItem(context: self.context, peer: peer, presentationData: presentationData, entry: entry, sourceCorners: self.sourceCorners, delete: canDelete ? { [weak self] in
                             self?.deleteEntry(entry)
                         } : nil, setMain: { [weak self] in
                             self?.setMainEntry(entry)
@@ -751,10 +765,10 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             }))
         }
         
-        items.append(ActionSheetButtonItem(title: self.presentationData.strings.ProfilePhoto_OpenInEditor, color: .accent, action: { [weak self] in
-            dismissAction()
-            self?.openEntryEdit(rawEntry)
-        }))
+//        items.append(ActionSheetButtonItem(title: self.presentationData.strings.ProfilePhoto_OpenInEditor, color: .accent, action: { [weak self] in
+//            dismissAction()
+//            self?.openEntryEdit(rawEntry)
+//        }))
         
         items.append(ActionSheetButtonItem(title: self.presentationData.strings.GroupInfo_SetGroupPhotoDelete, color: .destructive, action: { [weak self] in
             dismissAction()

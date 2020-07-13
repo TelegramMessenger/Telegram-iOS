@@ -266,15 +266,20 @@ public final class MediaBox {
         }
     }
     
-    public func copyResourceData(from: MediaResourceId, to: MediaResourceId) {
+    public func copyResourceData(from: MediaResourceId, to: MediaResourceId, synchronous: Bool = false) {
         if from.isEqual(to: to) {
             return
         }
-        self.dataQueue.async {
+        let begin = {
             let pathsFrom = self.storePathsForId(from)
             let pathsTo = self.storePathsForId(to)
             let _ = try? FileManager.default.copyItem(atPath: pathsFrom.partial, toPath: pathsTo.partial)
             let _ = try? FileManager.default.copyItem(atPath: pathsFrom.complete, toPath: pathsTo.complete)
+        }
+        if synchronous {
+            begin()
+        } else {
+            self.dataQueue.async(begin)
         }
     }
     

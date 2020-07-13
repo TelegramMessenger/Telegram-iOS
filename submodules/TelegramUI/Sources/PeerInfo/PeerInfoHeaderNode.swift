@@ -1549,7 +1549,13 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
     func animateAvatarCollapse(transition: ContainedViewLayoutTransition) {
         if let currentItemNode = self.listContainerNode.currentItemNode, case .animated = transition {
             if let _ = self.avatarContainerNode.videoNode {
-
+//                if self.listContainerNode.currentIndex > 0 {
+//                    transition.updateAlpha(node: currentItemNode, alpha: 0.0, completion: { _ in
+//                        Queue.mainQueue().after(0.1, {
+//                            currentItemNode.alpha = 1.0
+//                        })
+//                    })
+//                }
             } else if let unroundedImage = self.avatarContainerNode.avatarNode.unroundedImage {
                 let avatarCopyView = UIImageView()
                 avatarCopyView.image = unroundedImage
@@ -2781,6 +2787,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             controlsClippingFrame = apparentAvatarFrame
         }
         transition.updateFrameAdditive(node: self.avatarListNode, frame: CGRect(origin: apparentAvatarFrame.center, size: CGSize()))
+        transition.updateFrameAdditive(node: self.avatarOverlayNode, frame: CGRect(origin: apparentAvatarFrame.center, size: CGSize()))
         
         let avatarListContainerFrame: CGRect
         let avatarListContainerScale: CGFloat
