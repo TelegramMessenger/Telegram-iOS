@@ -188,7 +188,9 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
     let imageNode: TransformImageNode
     private var videoNode: UniversalVideoNode?
     private var videoContent: NativeVideoContent?
+    private var videoStartTimestamp: Double?
     private let playbackStatusDisposable = MetaDisposable()
+    private let preloadDisposable = MetaDisposable()
     
     let isReady = Promise<Bool>()
     private var didSetReady: Bool = false
@@ -202,7 +204,15 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
         }
     }
     
-    var isCentral: Bool = false
+    var isCentral: Bool = false {
+        didSet {
+            if self.isCentral {
+                self.setupVideoPlayback()
+            } else {
+//                self.preloadDisposable.set(preloadVideoResource(postbox: self.context.account.postbox, resourceReference: ))
+            }
+        }
+    }
     
     init(context: AccountContext, peerId: PeerId?) {
         self.context = context
@@ -215,16 +225,6 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
         
         self.imageNode.contentAnimations = [.firstUpdate, .subsequentUpdates]
         self.addSubnode(self.imageNode)
-        
-        self.imageNode.imageUpdated = { [weak self] _ in
-            guard let strongSelf = self else {
-                return
-            }
-            if !strongSelf.didSetReady {
-                strongSelf.didSetReady = true
-                strongSelf.isReady.set(.single(true))
-            }
-        }
     }
     
     deinit {
@@ -238,6 +238,52 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
             }
             transition.updateAlpha(node: videoNode, alpha: 1.0 - fraction)
         }
+    }
+    
+    private func setupVideoPlayback() {
+        guard let videoContent = self.videoContent, self.isCentral, self.videoNode == nil else {
+            return
+        }
+        
+        let mediaManager = self.context.sharedContext.mediaManager
+        let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .secondaryOverlay)
+        videoNode.isUserInteractionEnabled = false
+        videoNode.canAttachContent = true
+        videoNode.isHidden = true
+        
+        if let _ = self.videoStartTimestamp {
+            self.playbackStatusDisposable.set((videoNode.status
+            |> map { status -> Bool in
+                if let status = status, case .playing = status.status {
+                    return true
+                } else {
+                    return false
+                }
+            }
+            |> filter { playing in
+                return playing
+            }
+            |> take(1)
+            |> deliverOnMainQueue).start(completed: { [weak self] in
+                if let strongSelf = self {
+                    Queue.mainQueue().after(0.15) {
+                        strongSelf.videoNode?.isHidden = false
+                    }
+                }
+            }))
+        } else {
+            self.playbackStatusDisposable.set(nil)
+            videoNode.isHidden = false
+        }
+        videoNode.play()
+        
+        self.videoNode = videoNode
+        let videoStartTimestamp = self.videoStartTimestamp
+        self.statusPromise.set(videoNode.status |> map { ($0, videoStartTimestamp) })
+        
+        self.addSubnode(videoNode)
+        
+        self.isReady.set(videoNode.ready |> map { return true })
     }
     
     func setup(item: PeerInfoAvatarListItem, synchronous: Bool) {
@@ -266,57 +312,34 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
         self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, immediateThumbnailData: immediateThumbnailData, autoFetchFullSize: true, attemptSynchronously: synchronous), attemptSynchronously: synchronous, dispatchOnDisplayLink: false)
         
         if let video = videoRepresentations.last, let id = id {
-            let mediaManager = self.context.sharedContext.mediaManager
             let videoFileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
             let videoContent = NativeVideoContent(id: .profileVideo(id, nil), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
             
             if videoContent.id != self.videoContent?.id {
-                let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .secondaryOverlay)
-                videoNode.isUserInteractionEnabled = false
-                videoNode.canAttachContent = true
-                videoNode.isHidden = true
-                
-                if let _ = video.startTimestamp {
-                    self.playbackStatusDisposable.set((videoNode.status
-                    |> map { status -> Bool in
-                        if let status = status, case .playing = status.status {
-                            return true
-                        } else {
-                            return false
-                        }
-                    }
-                    |> filter { playing in
-                        return playing
-                    }
-                    |> take(1)
-                    |> deliverOnMainQueue).start(completed: { [weak self] in
-                        if let strongSelf = self {
-                            Queue.mainQueue().after(0.15) {
-                                strongSelf.videoNode?.isHidden = false
-                            }
-                        }
-                    }))
-                } else {
-                    self.playbackStatusDisposable.set(nil)
-                    videoNode.isHidden = false
-                }
-                videoNode.play()
-                
                 self.videoContent = videoContent
-                self.videoNode = videoNode
-                self.statusPromise.set(videoNode.status |> map { ($0, video.startTimestamp) })
-                
-                self.addSubnode(videoNode)
+                self.videoStartTimestamp = video.startTimestamp
+                self.setupVideoPlayback()
             }
         } else {
             if let videoNode = self.videoNode {
                 self.videoContent = nil
+                self.videoStartTimestamp = nil
                 self.videoNode = nil
                           
                 videoNode.removeFromSupernode()
             }
             
             self.statusPromise.set(.single(nil))
+            
+            self.imageNode.imageUpdated = { [weak self] _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                if !strongSelf.didSetReady {
+                    strongSelf.didSetReady = true
+                    strongSelf.isReady.set(.single(true))
+                }
+            }
         }
     }
     
@@ -332,6 +355,67 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
             videoNode.updateLayout(size: imageSize, transition: .immediate)
             videoNode.frame = imageFrame
         }
+    }
+}
+
+private class PeerInfoAvatarListLoadingStripNode: ASImageNode {
+    private var currentInHierarchy = false
+    
+    let imageNode = ASImageNode()
+    
+    override init() {
+        super.init()
+        
+        self.addSubnode(self.imageNode)
+    }
+    
+    override public var isHidden: Bool {
+        didSet {
+            self.updateAnimation()
+        }
+    }
+    private var isAnimating = false {
+        didSet {
+            if self.isAnimating != oldValue {
+                if self.isAnimating {
+                    let basicAnimation = CABasicAnimation(keyPath: "opacity")
+                    basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
+                    basicAnimation.duration = 0.45
+                    basicAnimation.fromValue = 0.1
+                    basicAnimation.toValue = 0.75
+                    basicAnimation.repeatCount = Float.infinity
+                    basicAnimation.autoreverses = true
+                    
+                    self.imageNode.layer.add(basicAnimation, forKey: "loading")
+                } else {
+                    self.imageNode.layer.removeAnimation(forKey: "loading")
+                }
+            }
+        }
+    }
+    
+    private func updateAnimation() {
+        self.isAnimating = !self.isHidden && self.currentInHierarchy
+    }
+    
+    override public func willEnterHierarchy() {
+        super.willEnterHierarchy()
+        
+        self.currentInHierarchy = true
+        self.updateAnimation()
+    }
+    
+    override public func didExitHierarchy() {
+        super.didExitHierarchy()
+        
+        self.currentInHierarchy = false
+        self.updateAnimation()
+    }
+    
+    override func layout() {
+        super.layout()
+        
+        self.imageNode.frame = self.bounds
     }
 }
 
@@ -355,6 +439,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     private var itemNodes: [WrappedMediaResourceId: PeerInfoAvatarListItemNode] = [:]
     private var stripNodes: [ASImageNode] = []
     private var activeStripNode: ASImageNode
+    private var loadingStripNode: PeerInfoAvatarListLoadingStripNode
     private let activeStripImage: UIImage
     private var appliedStripNodeCurrentIndex: Int?
     var currentIndex: Int = 0
@@ -415,10 +500,15 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     }
     
     private var playbackProgress: CGFloat?
+    private var loading: Bool = false
     private func updateStatus() {
         var position: CGFloat = 1.0
+        var loading = false
         if let (status, videoStartTimestamp) = self.playerStatus, let playerStatus = status {
             var playerPosition: Double
+            if case .buffering = playerStatus.status {
+                loading = true
+            }
             if !playerStatus.generationTimestamp.isZero, case .playing = playerStatus.status {
                 playerPosition = playerStatus.timestamp + (CACurrentMediaTime() - playerStatus.generationTimestamp)
             } else {
@@ -443,6 +533,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         
         if let size = self.validLayout {
             self.playbackProgress = position
+            self.loading = loading
             self.updateItems(size: size, transition: .immediate, stripTransition: .animated(duration: 0.3, curve: .spring))
         }
     }
@@ -503,6 +594,9 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         
         self.activeStripNode = ASImageNode()
         self.activeStripNode.image = self.activeStripImage
+        
+        self.loadingStripNode = PeerInfoAvatarListLoadingStripNode()
+        self.loadingStripNode.imageNode.image = self.activeStripImage
         
         self.highlightContainerNode = ASDisplayNode()
         self.highlightContainerNode.addSubnode(self.leftHighlightNode)
@@ -895,6 +989,8 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     self.itemNodes[self.items[i].id] = itemNode
                     self.contentNode.addSubnode(itemNode)
                 }
+                itemNode.isCentral = i == self.currentIndex
+                
                 let indexOffset = CGFloat(i - self.currentIndex)
                 let itemFrame = CGRect(origin: CGPoint(x: indexOffset * size.width + self.transitionFraction * size.width - size.width / 2.0, y: -size.height / 2.0), size: size)
                 
@@ -945,6 +1041,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 }
             }
             self.stripContainerNode.addSubnode(self.activeStripNode)
+            self.stripContainerNode.addSubnode(self.loadingStripNode)
         }
         if self.appliedStripNodeCurrentIndex != self.currentIndex || itemsAdded {
             if !self.itemNodes.isEmpty {
@@ -985,11 +1082,13 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         
         if self.currentIndex >= 0 && self.currentIndex < self.stripNodes.count {
             var frame = self.stripNodes[self.currentIndex].frame
+            stripTransition.updateFrame(node: self.loadingStripNode, frame: frame)
             if let playbackProgress = self.playbackProgress {
-                frame.size.width = max(frame.size.height, frame.size.width * playbackProgress)
+                frame.size.width = max(0.0, frame.size.width * playbackProgress)
             }
             stripTransition.updateFrameAdditive(node: self.activeStripNode, frame: frame)
             self.activeStripNode.isHidden = self.stripNodes.count < 2
+            self.loadingStripNode.isHidden = !self.loading
         }
         
         if let item = self.items.first, let itemNode = self.itemNodes[item.id] {
@@ -2722,7 +2821,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             avatarScale = 1.0 * (1.0 - titleCollapseFraction) + avatarMinScale * titleCollapseFraction
             avatarOffset = apparentTitleLockOffset + 0.0 * (1.0 - titleCollapseFraction) + 10.0 * titleCollapseFraction
         }
-        
+                
         if self.isAvatarExpanded {
             self.avatarListNode.listContainerNode.isHidden = false
             if !transitionSourceAvatarFrame.width.isZero {
@@ -2732,9 +2831,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 transition.updateCornerRadius(node: self.avatarListNode.listContainerNode, cornerRadius: 0.0)
                 transition.updateCornerRadius(node: self.avatarListNode.listContainerNode.controlsClippingNode, cornerRadius: 0.0)
             }
-        } else if self.avatarListNode.listContainerNode.cornerRadius != 50.0 {
-            transition.updateCornerRadius(node: self.avatarListNode.listContainerNode.controlsClippingNode, cornerRadius: 50.0)
-            transition.updateCornerRadius(node: self.avatarListNode.listContainerNode, cornerRadius: 50.0, completion: { [weak self] _ in
+        } else if self.avatarListNode.listContainerNode.cornerRadius != avatarSize / 2.0 {
+            transition.updateCornerRadius(node: self.avatarListNode.listContainerNode.controlsClippingNode, cornerRadius: avatarSize / 2.0)
+            transition.updateCornerRadius(node: self.avatarListNode.listContainerNode, cornerRadius: avatarSize / 2.0, completion: { [weak self] _ in
                 guard let strongSelf = self else {
                     return
                 }

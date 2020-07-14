@@ -139,7 +139,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 @implementation TGPhotoPaintController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView entitiesView:(TGPhotoEntitiesContainerView *)entitiesView
 {
     self = [super initWithContext:context];
     if (self != nil)
@@ -151,6 +151,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         
         self.photoEditor = photoEditor;
         self.previewView = previewView;
+        _entitiesContainerView = entitiesView;
         
         _brushes = @
         [
@@ -238,9 +239,11 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     _contentWrapperView.userInteractionEnabled = false;
     [_contentView addSubview:_contentWrapperView];
     
-    _entitiesContainerView = [[TGPhotoEntitiesContainerView alloc] init];
-    _entitiesContainerView.clipsToBounds = true;
-    _entitiesContainerView.stickersContext = _stickersContext;
+    if (_entitiesContainerView == nil) {
+        _entitiesContainerView = [[TGPhotoEntitiesContainerView alloc] init];
+        _entitiesContainerView.clipsToBounds = true;
+        _entitiesContainerView.stickersContext = _stickersContext;
+    }
     _entitiesContainerView.entitySelected = ^(TGPhotoPaintEntityView *sender)
     {
         __strong TGPhotoPaintController *strongSelf = weakSelf;

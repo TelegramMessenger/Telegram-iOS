@@ -83,7 +83,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
             return;
         
         if (strongSelf.isVideoPlaying != nil) {
-            strongSelf->_wasPlayingBeforeCropping = strongSelf.isVideoPlaying();
+            strongSelf->_wasPlayingBeforeCropping =  strongSelf.isVideoPlaying() || strongSelf->_wasPlayingBeforeCropping;
         }
             
         strongSelf.controlVideoPlayback(false);
@@ -103,7 +103,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     };
     
     PGPhotoEditor *photoEditor = self.photoEditor;
-    TGPhotoAvatarCropView *cropView = [[TGPhotoAvatarCropView alloc] initWithOriginalSize:photoEditor.originalSize screenSize:[self referenceViewSize] fullPreviewView:_fullPreviewView fullPaintingView:_fullPaintingView];
+    TGPhotoAvatarCropView *cropView = [[TGPhotoAvatarCropView alloc] initWithOriginalSize:photoEditor.originalSize screenSize:[self referenceViewSize] fullPreviewView:_fullPreviewView fullPaintingView:_fullPaintingView fullEntitiesView:_fullEntitiesView];
     _cropView = cropView;
     [_cropView setCropRect:photoEditor.cropRect];
     [_cropView setCropOrientation:photoEditor.cropOrientation];

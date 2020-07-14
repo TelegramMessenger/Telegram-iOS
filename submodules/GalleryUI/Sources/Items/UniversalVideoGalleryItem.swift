@@ -455,8 +455,17 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
+    private var controlsTimer: SwiftSignalKit.Timer?
+    private var previousPlaying: Bool?
+    
+    private func setupControlsTimer() {
+        
+    }
+    
     func setupItem(_ item: UniversalVideoGalleryItem) {
         if self.item?.content.id != item.content.id {
+            self.previousPlaying = nil
+            
             if item.hideControls {
                 self.statusButtonNode.isHidden = true
             }
@@ -518,7 +527,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         if let item = strongSelf.item, let _ = item.content as? PlatformVideoContent {
                             strongSelf.videoNode?.play()
                         } else {
-                            strongSelf.videoNode?.playOnceWithSound(playAndRecord: false, actionAtEnd: isAnimated ? .loop : .stop)
+                            strongSelf.videoNode?.playOnceWithSound(playAndRecord: false, actionAtEnd: isAnimated ? .loop : strongSelf.actionAtEnd)
                         }
                     }
                 }
@@ -651,6 +660,19 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         }
                         seekable = value.duration >= 30.0
                     }
+                    
+                    if playing && strongSelf.previousPlaying != true {
+                        let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
+                            self?.updateControlsVisibility(false)
+                            self?.controlsTimer = nil
+                        }, queue: Queue.mainQueue())
+                        timer.start()
+                        strongSelf.controlsTimer = timer
+                    } else if !playing {
+                        strongSelf.controlsTimer?.invalidate()
+                        strongSelf.controlsTimer = nil
+                    }
+                    strongSelf.previousPlaying = playing
                     
                     var fetching = false
                     if initialBuffering {
@@ -806,7 +828,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             videoNode.play()
                         } else if self.shouldAutoplayOnCentrality()  {
                             self.initiallyActivated = true
-                            videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: .stop)
+                            videoNode.playOnceWithSound(playAndRecord: false, actionAtEnd: self.actionAtEnd)
                         }
                     } else {
                         if self.shouldAutoplayOnCentrality()  {
@@ -891,9 +913,18 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             } else {
                 self.hideStatusNodeUntilCentrality = false
                 self.statusButtonNode.isHidden = self.hideStatusNodeUntilCentrality || self.statusNodeShouldBeHidden
-                videoNode.playOnceWithSound(playAndRecord: false, seek: seek, actionAtEnd: .stop)
+                videoNode.playOnceWithSound(playAndRecord: false, seek: seek, actionAtEnd: self.actionAtEnd)
             }
         }
+    }
+    
+    private var actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd {
+        if let item = self.item {
+            if let content = item.content as? NativeVideoContent, content.duration <= 30 {
+                return .loop
+            }
+        }
+        return .stop
     }
     
     override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
@@ -1277,18 +1308,18 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if let fetchStatus = self.fetchStatus {
                 switch fetchStatus {
                     case .Local:
-                        videoNode.playOnceWithSound(playAndRecord: false, seek: .none, actionAtEnd: .stop)
+                        videoNode.playOnceWithSound(playAndRecord: false, seek: .none, actionAtEnd: self.actionAtEnd)
                     case .Remote:
                         if self.requiresDownload {
                             self.fetchControls?.fetch()
                         } else {
-                            videoNode.playOnceWithSound(playAndRecord: false, seek: .none, actionAtEnd: .stop)
+                            videoNode.playOnceWithSound(playAndRecord: false, seek: .none, actionAtEnd: self.actionAtEnd)
                         }
                     case .Fetching:
                         self.fetchControls?.cancel()
                 }
             } else {
-                videoNode.playOnceWithSound(playAndRecord: false, seek: .none, actionAtEnd: .stop)
+                videoNode.playOnceWithSound(playAndRecord: false, seek: .none, actionAtEnd: self.actionAtEnd)
             }
         }
     }

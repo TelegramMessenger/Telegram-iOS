@@ -3,6 +3,7 @@
 @class PGPhotoEditor;
 @class PGPhotoTool;
 @class TGPhotoEditorPreviewView;
+@class TGPhotoEntitiesContainerView;
 @class PGPhotoEditorView;
 @class TGMediaPickerGalleryVideoScrubber;
 
@@ -19,6 +20,7 @@
 @property (nonatomic, weak) UIView *dotMarkerView;
 @property (nonatomic, weak) PGPhotoEditorView *fullPreviewView;
 @property (nonatomic, weak) UIImageView *fullPaintingView;
+@property (nonatomic, weak) TGPhotoEntitiesContainerView *fullEntitiesView;
 @property (nonatomic, weak) TGMediaPickerGalleryVideoScrubber *scrubberView;
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView;

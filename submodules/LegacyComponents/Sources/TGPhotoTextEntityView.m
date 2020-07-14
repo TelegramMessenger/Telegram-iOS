@@ -666,14 +666,16 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
             [self.path appendPath:[UIBezierPath bezierPathWithRoundedRect:cur cornerRadius:_radius]];
             if (i == 0) {
                 last = cur;
-            } else if (i > 0 && fabs(CGRectGetMaxY(last) - CGRectGetMinY(cur)) < 10.0) {
+                
+                //&& fabs(CGRectGetMaxY(last) - CGRectGetMinY(cur)) < 10.0
+            } else if (i > 0) {
                 CGPoint a = cur.origin;
                 CGPoint b = CGPointMake(CGRectGetMaxX(cur), cur.origin.y);
                 CGPoint c = CGPointMake(last.origin.x, CGRectGetMaxY(last));
                 CGPoint d = CGPointMake(CGRectGetMaxX(last), CGRectGetMaxY(last));
                 
                 if (a.x - c.x >= 2 * _radius) {
-                    UIBezierPath * addPath = [UIBezierPath bezierPathWithArcCenter:CGPointMake(a.x - _radius, a.y + _radius) radius:_radius startAngle:M_PI_2 * 3 endAngle:0 clockwise:YES];
+                    UIBezierPath *addPath = [UIBezierPath bezierPathWithArcCenter:CGPointMake(a.x - _radius, a.y + _radius) radius:_radius startAngle:M_PI_2 * 3 endAngle:0 clockwise:YES];
                     
                     [addPath appendPath:[UIBezierPath bezierPathWithArcCenter:CGPointMake(a.x + _radius, a.y + _radius) radius:_radius startAngle:M_PI endAngle:3 * M_PI_2 clockwise:YES]];
                     [addPath addLineToPoint:CGPointMake(a.x - _radius, a.y)];
@@ -686,7 +688,7 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
                     [self.path addArcWithCenter:CGPointMake(a.x + _radius, a.y - _radius) radius:_radius startAngle:M_PI_2 endAngle:M_PI clockwise:YES];
                 }
                 if (d.x - b.x >= 2 * _radius) {
-                    UIBezierPath * addPath = [UIBezierPath bezierPathWithArcCenter:CGPointMake(b.x + _radius, b.y + _radius) radius:_radius startAngle:M_PI_2 * 3 endAngle:M_PI clockwise:NO];
+                    UIBezierPath *addPath = [UIBezierPath bezierPathWithArcCenter:CGPointMake(b.x + _radius, b.y + _radius) radius:_radius startAngle:M_PI_2 * 3 endAngle:M_PI clockwise:NO];
                     [addPath appendPath:[UIBezierPath bezierPathWithArcCenter:CGPointMake(b.x - _radius, b.y + _radius) radius:_radius startAngle:0 endAngle:3 * M_PI_2 clockwise:NO]];
                     [addPath addLineToPoint:CGPointMake(b.x + _radius, b.y)];
                     [self.path appendPath:addPath];
@@ -698,13 +700,13 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
                     [self.path addArcWithCenter:CGPointMake(b.x - _radius, b.y - _radius) radius:_radius startAngle:M_PI_2 endAngle:0 clockwise:NO];
                 }
                 if (c.x - a.x >= 2 * _radius) {
-                    UIBezierPath * addPath = [UIBezierPath bezierPathWithArcCenter:CGPointMake(c.x - _radius, c.y - _radius) radius:_radius startAngle:M_PI_2 endAngle:0 clockwise:NO];
+                    UIBezierPath *addPath = [UIBezierPath bezierPathWithArcCenter:CGPointMake(c.x - _radius, c.y - _radius) radius:_radius startAngle:M_PI_2 endAngle:0 clockwise:NO];
                     [addPath appendPath:[UIBezierPath bezierPathWithArcCenter:CGPointMake(c.x + _radius, c.y - _radius) radius:_radius startAngle:M_PI endAngle:M_PI_2 clockwise:NO]];
                     [addPath addLineToPoint:CGPointMake(c.x - _radius, c.y)];
                     [self.path appendPath:addPath];
                 }
                 if (b.x - d.x >= 2 * _radius) {
-                    UIBezierPath * addPath = [UIBezierPath bezierPathWithArcCenter:CGPointMake(d.x + _radius, d.y - _radius) radius:_radius startAngle:M_PI_2 endAngle:M_PI clockwise:YES];
+                    UIBezierPath *addPath = [UIBezierPath bezierPathWithArcCenter:CGPointMake(d.x + _radius, d.y - _radius) radius:_radius startAngle:M_PI_2 endAngle:M_PI clockwise:YES];
                     [addPath appendPath:[UIBezierPath bezierPathWithArcCenter:CGPointMake(d.x - _radius, d.y - _radius) radius:_radius startAngle:0 endAngle:M_PI_2 clockwise:YES]];
                     [addPath addLineToPoint:CGPointMake(d.x + _radius, d.y)];
                     [self.path appendPath:addPath];

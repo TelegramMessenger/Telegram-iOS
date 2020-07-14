@@ -63,6 +63,12 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
             }
         }
         
+        self.pager.updateControlsVisibility = { [weak self] visible in
+            if let strongSelf = self {
+                strongSelf.setControlsHidden(!visible, animated: true)
+            }
+        }
+        
         self.pager.dismiss = { [weak self] in
             if let strongSelf = self {
                 var interfaceAnimationCompleted = false
@@ -236,6 +242,10 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         
         transition.updateFrame(node: self.footerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
+        if let navigationBar = self.navigationBar {
+            transition.updateFrame(node: navigationBar, frame: CGRect(origin: CGPoint(x: 0.0, y: self.areControlsHidden ? -navigationBarHeight : 0.0), size: CGSize(width: layout.size.width, height: navigationBarHeight)))
+        }
+            
         let displayThumbnailPanel = layout.size.width < layout.size.height
         var thumbnailPanelHeight: CGFloat = 0.0
         if let currentThumbnailContainerNode = self.currentThumbnailContainerNode {
@@ -250,7 +260,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
             self.updateThumbnailContainerNodeAlpha(transition)
         }
         
-        self.footerNode.updateLayout(layout, footerContentNode: self.presentationState.footerContentNode, overlayContentNode: self.presentationState.overlayContentNode, thumbnailPanelHeight: thumbnailPanelHeight, transition: transition)
+        self.footerNode.updateLayout(layout, footerContentNode: self.presentationState.footerContentNode, overlayContentNode: self.presentationState.overlayContentNode, thumbnailPanelHeight: thumbnailPanelHeight, isHidden: self.areControlsHidden, transition: transition)
     
         let previousContentHeight = self.scrollView.contentSize.height
         let previousVerticalOffset = self.scrollView.contentOffset.y
@@ -279,12 +289,20 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
                 self.footerNode.setVisibilityAlpha(alpha)
                 self.updateThumbnailContainerNodeAlpha(.immediate)
             })
+            
+            if let (navigationBarHeight, layout) = self.containerLayout {
+                self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+            }
         } else {
             let alpha: CGFloat = self.areControlsHidden ? 0.0 : 1.0
             self.navigationBar?.alpha = alpha
             self.statusBar?.updateAlpha(alpha, transition: .immediate)
             self.footerNode.setVisibilityAlpha(alpha)
             self.updateThumbnailContainerNodeAlpha(.immediate)
+            
+            if let (navigationBarHeight, layout) = self.containerLayout {
+                self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+            }
         }
     }
 
