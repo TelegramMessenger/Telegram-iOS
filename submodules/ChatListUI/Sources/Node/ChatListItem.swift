@@ -1007,6 +1007,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             let contentImageFillSize = CGSize(width: 8.0, height: contentImageSize.height)
                             _ = contentImageFillSize
                             for message in messages {
+                                if contentImageSpecs.count >= 3 {
+                                    break
+                                }
                                 inner: for media in message.media {
                                     if let image = media as? TelegramMediaImage {
                                         if let _ = largestImageRepresentation(image.representations) {

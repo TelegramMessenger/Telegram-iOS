@@ -195,7 +195,7 @@ SHADER_STRING
         [composeFilter addTarget:sharpen];
         self.sharpenFilter = sharpen;
         
-        self.initialFilters = @[maskGenerator,skinToneCurveFilter,dissolveFilter,composeFilter];
+        self.initialFilters = @[maskGenerator, skinToneCurveFilter, dissolveFilter, composeFilter];
         self.terminalFilter = sharpen;
         
         self.skinToneCurveFilter.rgbCompositeControlPoints = @[

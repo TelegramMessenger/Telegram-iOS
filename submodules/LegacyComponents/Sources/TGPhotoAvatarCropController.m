@@ -88,7 +88,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
     [self.view addSubview:_wrapperView];
     
     PGPhotoEditor *photoEditor = self.photoEditor;
-    _cropView = [[TGPhotoAvatarCropView alloc] initWithOriginalSize:photoEditor.originalSize screenSize:[self referenceViewSize] fullPreviewView:nil fullPaintingView:nil];
+    _cropView = [[TGPhotoAvatarCropView alloc] initWithOriginalSize:photoEditor.originalSize screenSize:[self referenceViewSize] fullPreviewView:nil fullPaintingView:nil fullEntitiesView:nil];
     [_cropView setCropRect:photoEditor.cropRect];
     [_cropView setCropOrientation:photoEditor.cropOrientation];
     [_cropView setCropMirrored:photoEditor.cropMirrored];

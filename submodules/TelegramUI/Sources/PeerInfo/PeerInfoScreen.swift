@@ -633,7 +633,13 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         items[section] = []
     }
     
-    items[.edit]!.append(PeerInfoScreenActionItem(id: 0, text: presentationData.strings.Settings_SetProfilePhotoOrVideo, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
+    let setPhotoTitle: String
+    if let peer = data.peer, !peer.profileImageRepresentations.isEmpty {
+        setPhotoTitle = presentationData.strings.Settings_SetNewProfilePhotoOrVideo
+    } else {
+        setPhotoTitle = presentationData.strings.Settings_SetProfilePhotoOrVideo
+    }
+    items[.edit]!.append(PeerInfoScreenActionItem(id: 0, text: setPhotoTitle, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
         interaction.openSettings(.avatar)
     }))
     if let peer = data.peer, peer.addressName == nil {
@@ -641,10 +647,6 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             interaction.openSettings(.username)
         }))
     }
-//    items[.edit]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_EditAccount, icon: UIImage(bundleImageName: "Settings/EditAccount"), action: {
-//        interaction.openSettings(.edit)
-//    }))
-    
     
     if let settings = data.globalSettings {
         if settings.suggestPhoneNumberConfirmation, let peer = data.peer as? TelegramUser {

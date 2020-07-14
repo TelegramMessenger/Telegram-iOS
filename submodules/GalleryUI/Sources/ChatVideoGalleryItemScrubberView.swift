@@ -120,6 +120,15 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         self.fetchStatusDisposable.dispose()
     }
     
+    func setCollapsed(_ collapsed: Bool, animated: Bool) {
+        let alpha: CGFloat = collapsed ? 0.0 : 1.0
+        
+        self.scrubberNode.setCollapsed(collapsed, animated: animated)
+        self.leftTimestampNode.alpha = alpha
+        self.rightTimestampNode.alpha = alpha
+        self.infoNode.alpha = alpha
+    }
+    
     func setStatusSignal(_ status: Signal<MediaPlayerStatus, NoError>?) {
         let mappedStatus: Signal<MediaPlayerStatus, NoError>?
         if let status = status {

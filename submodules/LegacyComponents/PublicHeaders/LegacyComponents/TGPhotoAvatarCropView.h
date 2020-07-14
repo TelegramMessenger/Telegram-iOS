@@ -1,6 +1,7 @@
 #import <UIKit/UIKit.h>
 
 @class PGPhotoEditorView;
+@class TGPhotoEntitiesContainerView;
 
 @interface TGPhotoAvatarCropView : UIView
 
@@ -20,7 +21,7 @@
 @property (nonatomic, readonly) bool isTracking;
 @property (nonatomic, readonly) bool isAnimating;
 
-- (instancetype)initWithOriginalSize:(CGSize)originalSize screenSize:(CGSize)screenSize fullPreviewView:(PGPhotoEditorView *)fullPreviewView fullPaintingView:(UIImageView *)fullPaintingView;
+- (instancetype)initWithOriginalSize:(CGSize)originalSize screenSize:(CGSize)screenSize fullPreviewView:(PGPhotoEditorView *)fullPreviewView fullPaintingView:(UIImageView *)fullPaintingView fullEntitiesView:(TGPhotoEntitiesContainerView *)fullEntitiesView;
 
 - (void)setSnapshotImage:(UIImage *)image;
 - (void)setSnapshotView:(UIView *)snapshotView;

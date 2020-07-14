@@ -1111,13 +1111,13 @@ public final class AccountViewTracker {
                 let combinedDisposable = MetaDisposable()
                 self.queue.async {
                     var addHole = false
-                    if let context = self.channelPollingContexts[peerId] {
+                    /*if let context = self.channelPollingContexts[peerId] {
                         if context.subscribers.isEmpty {
                             addHole = true
                         }
                     } else {
                         addHole = true
-                    }
+                    }*/
                     if addHole {
                         let _ = self.account?.postbox.transaction({ transaction -> Void in
                             if transaction.getPeerChatListIndex(peerId) == nil {
