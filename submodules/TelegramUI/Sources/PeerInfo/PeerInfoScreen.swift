@@ -2074,7 +2074,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         
         self.headerNode.requestAvatarExpansion = { [weak self] gallery, entries, centralEntry, _ in
-            guard let strongSelf = self, let peer = strongSelf.data?.peer, peer.smallProfileImage != nil else {
+            guard let strongSelf = self, let peer = strongSelf.data?.peer else {
                 return
             }
 
@@ -2085,7 +2085,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
                 }
                 return
-            } else if !gallery {
+            }
+            
+            guard peer.smallProfileImage != nil else {
+                return
+            }
+            
+            if !gallery {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
                 strongSelf.headerNode.updateIsAvatarExpanded(true, transition: transition)
                 strongSelf.updateNavigationExpansionPresentation(isExpanded: true, animated: true)
@@ -5282,20 +5288,17 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 let _ = self.headerNode.update(width: layout.size.width, containerHeight: layout.size.height, containerInset: layout.safeInsets.left, statusBarHeight: layout.statusBarHeight ?? 0.0, navigationHeight: navigationHeight, isModalOverlay: layout.isModalOverlay, isMediaOnly: self.isMediaOnly, contentOffset: self.isMediaOnly ? 212.0 : offsetY, presentationData: self.presentationData, peer: self.data?.peer, cachedData: self.data?.cachedData, notificationSettings: self.data?.notificationSettings, statusData: self.data?.status, isContact: self.data?.isContact ?? false, isSettings: self.isSettings, state: self.state, transition: transition, additive: additive)
             }
             
+            let paneAreaExpansionDistance: CGFloat = 32.0
             let effectiveAreaExpansionFraction: CGFloat
-            if self.isSettings {
-                let paneAreaExpansionDistance: CGFloat = 32.0
+            if self.state.isEditing {
+                effectiveAreaExpansionFraction = 0.0
+            } else if self.isSettings {
                 var paneAreaExpansionDelta = (self.headerNode.frame.maxY - navigationHeight) - self.scrollNode.view.contentOffset.y
                 paneAreaExpansionDelta = max(0.0, min(paneAreaExpansionDelta, paneAreaExpansionDistance))
-                
                 effectiveAreaExpansionFraction = 1.0 - paneAreaExpansionDelta / paneAreaExpansionDistance
-            } else if self.state.isEditing {
-                effectiveAreaExpansionFraction = 0.0
             } else {
-                let paneAreaExpansionDistance: CGFloat = 32.0
                 var paneAreaExpansionDelta = (self.paneContainerNode.frame.minY - navigationHeight) - self.scrollNode.view.contentOffset.y
                 paneAreaExpansionDelta = max(0.0, min(paneAreaExpansionDelta, paneAreaExpansionDistance))
-            
                 effectiveAreaExpansionFraction = 1.0 - paneAreaExpansionDelta / paneAreaExpansionDistance
             }
             
@@ -5396,7 +5399,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         self.canOpenAvatarByDragging = false
                         let contentOffset = scrollView.contentOffset.y
                         scrollView.panGestureRecognizer.isEnabled = false
-                        self.headerNode.initiateAvatarExpansion()
+                        self.headerNode.initiateAvatarExpansion(gallery: true)
                         scrollView.panGestureRecognizer.isEnabled = true
                         scrollView.contentOffset = CGPoint(x: 0.0, y: contentOffset)
                         UIView.animate(withDuration: 0.1) {

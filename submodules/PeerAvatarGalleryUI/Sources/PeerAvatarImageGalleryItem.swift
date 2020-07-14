@@ -437,7 +437,8 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             })
         } else if case let .roundRect(cornerRadius) = self.sourceCorners {
             let scale = scaledLocalImageViewBounds.width / transformedCopyViewFinalFrame.width
-            self.contentNode.layer.animate(from: (cornerRadius * scale) as NSNumber, to: 0.0 as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18, removeOnCompletion: false, completion: { [weak self] value in
+            let selfScale = transformedCopyViewFinalFrame.width / transformedSelfFrame.width
+            self.contentNode.layer.animate(from: (cornerRadius * scale * selfScale) as NSNumber, to: 0.0 as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18, removeOnCompletion: false, completion: { [weak self] value in
                 if value {
                     self?.contentNode.clipsToBounds = false
                 }
@@ -466,13 +467,19 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         let copyView = maybeCopyView!
         
-        if case .round = self.sourceCorners {
+        var sourceHasRoundCorners = false
+        if case .none = self.sourceCorners {
+        } else {
+            sourceHasRoundCorners = true
+        }
+        
+        if sourceHasRoundCorners {
             self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         }
         copyView.frame = transformedSelfFrame
         
         let surfaceCopyView = node.2().0!
-        if case .none = self.sourceCorners {
+        if !sourceHasRoundCorners {
             addToTransitionSurface(surfaceCopyView)
         }
         
@@ -539,7 +546,8 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             self.contentNode.layer.animate(from: 0.0 as NSNumber, to: (self.contentNode.frame.width / 2.0) as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18 * durationFactor, removeOnCompletion: false)
         } else if case let .roundRect(cornerRadius) = self.sourceCorners {
             let scale = scaledLocalImageViewBounds.width / transformedCopyViewInitialFrame.width
-            self.contentNode.layer.animate(from: 0.0 as NSNumber, to: (cornerRadius * scale) as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18 * durationFactor, removeOnCompletion: false)
+            let selfScale = transformedCopyViewInitialFrame.width / transformedSelfFrame.width
+            self.contentNode.layer.animate(from: 0.0 as NSNumber, to: (cornerRadius * scale * selfScale) as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18 * durationFactor, removeOnCompletion: false)
         }
         
         self.statusNodeContainer.layer.animatePosition(from: self.statusNodeContainer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)

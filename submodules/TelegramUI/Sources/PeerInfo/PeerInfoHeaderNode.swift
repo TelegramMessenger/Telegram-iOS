@@ -1237,7 +1237,6 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
         self.addSubnode(self.imageNode)
         self.addSubnode(self.updatingAvatarOverlay)
         self.addSubnode(self.statusNode)
-        self.addSubnode(self.iconNode)
     }
     
     func updateTransitionFraction(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -1255,11 +1254,9 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
         let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
         
         if canEditPeerInfo(context: self.context, peer: peer) {
-            var overlayHidden = false
-            var iconHidden = false
+            var overlayHidden = true
             if let updatingAvatar = updatingAvatar {
                 overlayHidden = false
-                iconHidden = true
                 
                 self.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: max(0.027, uploadProgress ?? 0.0), cancelEnabled: true))
                 
@@ -1272,35 +1269,18 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
                     }
                 }
                 
-                transition.updateAlpha(node: self.iconNode, alpha: iconHidden ? 0.0 : 1.0)
                 transition.updateAlpha(node: self.updatingAvatarOverlay, alpha: overlayHidden ? 0.0 : 1.0)
             } else {
-                var immediately = self.currentRepresentation == nil
-                if isEditing {
-                    immediately = immediately || peer.profileImageRepresentations.isEmpty
-                    iconHidden = peer.profileImageRepresentations.isEmpty
-                    overlayHidden = peer.profileImageRepresentations.isEmpty
-                } else {
-                    iconHidden = true
-                    overlayHidden = true
-                }
-                
-                let targetIconAlpha: CGFloat = iconHidden ? 0.0 : 1.0
                 let targetOverlayAlpha: CGFloat = overlayHidden ? 0.0 : 1.0
-                if self.updatingAvatarOverlay.alpha != targetOverlayAlpha || self.iconNode.alpha != targetIconAlpha {
+                if self.updatingAvatarOverlay.alpha != targetOverlayAlpha {
                     let update = {
                         self.statusNode.transitionToState(.none)
                         self.currentRepresentation = nil
                         self.imageNode.setSignal(.single(nil))
-                        transition.updateAlpha(node: self.iconNode, alpha: iconHidden ? 0.0 : 1.0)
                         transition.updateAlpha(node: self.updatingAvatarOverlay, alpha: overlayHidden ? 0.0 : 1.0)
                     }
-                    if immediately {
+                    Queue.mainQueue().after(0.3) {
                         update()
-                    } else {
-                        Queue.mainQueue().after(0.3) {
-                            update()
-                        }
                     }
                 }
             }
@@ -2121,6 +2101,8 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
     private let context: AccountContext
     private let requestUpdateLayout: () -> Void
     
+    var requestEditing: (() -> Void)?
+    
     let avatarNode: PeerInfoEditingAvatarNode
     let avatarTextNode: ImmediateTextNode
     let avatarButtonNode: HighlightableButtonNode
@@ -2145,7 +2127,7 @@ final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
     }
     
     @objc private func textPressed() {
-        self.avatarNode.tapped?(true)
+        self.requestEditing?()
     }
     
     func editingTextForKey(_ key: PeerInfoHeaderTextFieldNodeKey) -> String? {
@@ -2414,10 +2396,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.addSubnode(self.separatorNode)
         
         self.avatarListNode.avatarContainerNode.tapped = { [weak self] in
-            self?.initiateAvatarExpansion()
+            self?.initiateAvatarExpansion(gallery: false)
         }
         self.editingContentNode.avatarNode.tapped = { [weak self] confirm in
-            self?.requestOpenAvatarForEditing?(confirm)
+            self?.initiateAvatarExpansion(gallery: true)
+        }
+        self.editingContentNode.requestEditing = { [weak self] in
+            self?.requestOpenAvatarForEditing?(true)
         }
         
         self.avatarListNode.itemsUpdated = { [weak self] items in
@@ -2450,8 +2435,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
     }
     
-    func initiateAvatarExpansion() {
-        if self.isAvatarExpanded {
+    func initiateAvatarExpansion(gallery: Bool) {
+        if self.isAvatarExpanded || gallery {
             if let currentEntry = self.avatarListNode.listContainerNode.currentEntry {
                 self.requestAvatarExpansion?(true, self.avatarListNode.listContainerNode.galleryEntries, self.avatarListNode.listContainerNode.currentEntry, self.avatarTransitionArguments(entry: currentEntry))
             }
@@ -2493,8 +2478,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     func updateAvatarIsHidden(entry: AvatarGalleryEntry?) {
         if let entry = entry {
             self.avatarListNode.avatarContainerNode.avatarNode.isHidden = entry == self.avatarListNode.listContainerNode.galleryEntries.first
+            self.editingContentNode.avatarNode.isHidden = entry == self.avatarListNode.listContainerNode.galleryEntries.first
         } else {
             self.avatarListNode.avatarContainerNode.avatarNode.isHidden = false
+            self.editingContentNode.avatarNode.isHidden = false
         }
         self.avatarListNode.listContainerNode.updateEntryIsHidden(entry: entry)
     }
