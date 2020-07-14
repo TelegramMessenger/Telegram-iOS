@@ -666,9 +666,7 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
             [self.path appendPath:[UIBezierPath bezierPathWithRoundedRect:cur cornerRadius:_radius]];
             if (i == 0) {
                 last = cur;
-                
-                //&& fabs(CGRectGetMaxY(last) - CGRectGetMinY(cur)) < 10.0
-            } else if (i > 0) {
+            } else if (i > 0 && fabs(CGRectGetMaxY(last) - CGRectGetMinY(cur)) < 10.0) {
                 CGPoint a = cur.origin;
                 CGPoint b = CGPointMake(CGRectGetMaxX(cur), cur.origin.y);
                 CGPoint c = CGPointMake(last.origin.x, CGRectGetMaxY(last));

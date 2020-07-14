@@ -209,6 +209,12 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
             if self.isCentral {
                 self.setupVideoPlayback()
             } else {
+                if let videoNode = self.videoNode {
+                    self.videoNode = nil
+                    Queue.mainQueue().after(0.5) {
+                        videoNode.removeFromSupernode()
+                    }
+                }
 //                self.preloadDisposable.set(preloadVideoResource(postbox: self.context.account.postbox, resourceReference: ))
             }
         }
