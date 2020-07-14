@@ -18,12 +18,14 @@ private func scanFiles(at path: String, olderThan minTimestamp: Int32, anyway: (
             continue
         }
         if let value = resourceValues[.contentModificationDateKey] as? NSDate {
+            var unlinked = false
             if Int32(value.timeIntervalSince1970) < minTimestamp {
                 if let file = url.path {
                     f(file)
+                    unlinked = true
                 }
             }
-            if let file = url.path {
+            if let file = url.path, !unlinked {
                 if let size = (resourceValues[.fileSizeKey] as? NSNumber)?.intValue {
                     anyway((file, size, Int32(value.timeIntervalSince1970)))
                 }
