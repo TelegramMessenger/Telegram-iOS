@@ -1,9 +1,4 @@
 
-cc_library(
-    name = "webrtc_lib",
-    srcs = ["libwebrtc.a"],
-)
-
 objc_library(
     name = "TgVoipWebrtc",
     enable_modules = True,
@@ -12,21 +7,26 @@ objc_library(
         "Sources/**/*.m",
         "Sources/**/*.mm",
         "Sources/**/*.h",
-        "Impl/**/*.h",
-        "Impl/**/*.cpp",
-        "Impl/**/*.mm",
-        "Impl/**/*.m",
+        "tgcalls/tgcalls/**/*.h",
+        "tgcalls/tgcalls/**/*.cpp",
+        "tgcalls/tgcalls/**/*.mm",
+        "tgcalls/tgcalls/**/*.m",
+    ], exclude = [
+        "tgcalls/tgcalls/legacy/**",
+        "tgcalls/tgcalls/platform/tdesktop/**",
+        "tgcalls/tgcalls/platform/windows/**",
     ]),
     hdrs = glob([
         "PublicHeaders/**/*.h",
     ]),
     copts = [
-        "-I{}/Impl".format(package_name()),
+        "-I{}/tgcalls/tgcalls".format(package_name()),
         "-Ithird-party/webrtc/webrtc-ios/src",
         "-Ithird-party/webrtc/webrtc-ios/src/third_party/abseil-cpp",
         "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc",
         "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc/base",
         "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc/components/renderer/metal",
+        "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc/components/renderer/opengl",
         "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc/components/video_codec",
         "-Ithird-party/webrtc/webrtc-ios/src/third_party/libyuv/include",
         "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc/api/video_codec",
@@ -43,7 +43,6 @@ objc_library(
     deps = [
         "//third-party/webrtc:webrtc_lib",
         "//submodules/MtProtoKit:MtProtoKit",
-        "//submodules/Opus:opus",
         "//submodules/openssl:openssl",
     ],
     sdk_frameworks = [

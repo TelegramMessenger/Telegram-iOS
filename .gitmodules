@@ -23,3 +23,6 @@ url=https://github.com/bazelbuild/rules_apple.git
 [submodule "third-party/webrtc/webrtc-ios"]
 	path = third-party/webrtc/webrtc-ios
 url=https://github.com/ali-fareed/webrtc-ios.git
+[submodule "submodules/TgVoipWebrtc/tgcalls"]
+	path = submodules/TgVoipWebrtc/tgcalls
+url=../tgcalls.git

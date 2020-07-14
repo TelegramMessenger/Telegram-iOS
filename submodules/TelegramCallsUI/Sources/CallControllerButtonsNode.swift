@@ -210,7 +210,11 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 }
                 topButtons.append(.enableCamera(isCameraActive))
                 topButtons.append(.mute(self.isMuted))
-                topButtons.append(.switchCamera)
+                if case .possible = videoState {
+                    topButtons.append(.soundOutput(soundOutput))
+                } else {
+                    topButtons.append(.switchCamera)
+                }
             case .notAvailable:
                 topButtons.append(.mute(self.isMuted))
                 topButtons.append(.soundOutput(soundOutput))
@@ -302,7 +306,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 
                 topButtons.append(.enableCamera(false))
                 topButtons.append(.mute(self.isMuted))
-                topButtons.append(.switchCamera)
+                topButtons.append(.soundOutput(soundOutput))
                 
                 let topButtonsContentWidth = CGFloat(topButtons.count) * smallButtonSize
                 let topButtonsAvailableSpacingWidth = width - topButtonsContentWidth - minSmallButtonSideInset * 2.0

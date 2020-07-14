@@ -79,7 +79,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 
 @end
 
-@interface OngoingCallThreadLocalContextWebrtcVideoView : UIView
+@protocol OngoingCallThreadLocalContextWebrtcVideoView <NSObject>
 
 - (void)setOnFirstFrameReceived:(void (^ _Nullable)())onFirstFrameReceived;
 
@@ -92,7 +92,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)switchVideoCamera;
 - (void)setIsVideoEnabled:(bool)isVideoEnabled;
 
-- (void)makeOutgoingVideoView:(void (^_Nonnull)(OngoingCallThreadLocalContextWebrtcVideoView * _Nullable))completion;
+- (void)makeOutgoingVideoView:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion;
 
 @end
 
@@ -117,7 +117,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 
 - (void)setIsMuted:(bool)isMuted;
 - (void)setNetworkType:(OngoingCallNetworkTypeWebrtc)networkType;
-- (void)makeIncomingVideoView:(void (^_Nonnull)(OngoingCallThreadLocalContextWebrtcVideoView * _Nullable))completion;
+- (void)makeIncomingVideoView:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion;
 - (void)requestVideo:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer;
 - (void)acceptVideo:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer;
 - (void)addSignalingData:(NSData * _Nonnull)data;
