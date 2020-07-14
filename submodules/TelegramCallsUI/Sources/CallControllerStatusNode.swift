@@ -171,8 +171,9 @@ final class CallControllerStatusNode: ASDisplayNode {
         self.statusNode.frame = CGRect(origin: CGPoint(x: floor((constrainedWidth - statusMeasureLayout.size.width) / 2.0) + statusOffset, y: titleLayout.size.height + spacing), size: statusLayout.size)
         self.receptionNode.frame = CGRect(origin: CGPoint(x: self.statusNode.frame.minX - receptionNodeSize.width, y: titleLayout.size.height + spacing + 9.0), size: receptionNodeSize)
         self.logoNode.isHidden = !statusDisplayLogo
-        if let image = self.logoNode.image {
-            self.logoNode.frame = CGRect(origin: CGPoint(x: self.statusNode.frame.minX - image.size.width - 7.0, y: self.statusNode.frame.minY + 5.0), size: image.size)
+        if let image = self.logoNode.image, let firstLineRect = statusMeasureLayout.linesRects().first {
+            let firstLineOffset = floor((statusMeasureLayout.size.width - firstLineRect.width) / 2.0)
+            self.logoNode.frame = CGRect(origin: CGPoint(x: self.statusNode.frame.minX + firstLineOffset - image.size.width - 7.0, y: self.statusNode.frame.minY + 5.0), size: image.size)
         }
         
         return titleLayout.size.height + spacing + statusLayout.size.height
