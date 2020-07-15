@@ -87,6 +87,12 @@ private final class CallVideoNode: ASDisplayNode {
         
         self.videoView.view.frame = videoFrame
         
+        if let effectView = self.effectView {
+            effectView.frame = videoFrame
+            transition.animatePositionAdditive(layer: effectView.layer, offset: CGPoint(x: previousVideoFrame.midX - videoFrame.midX, y: previousVideoFrame.midY - videoFrame.midY))
+            transition.animateTransformScale(view: effectView, from: previousVideoFrame.height / videoFrame.height)
+        }
+        
         transition.updateCornerRadius(layer: self.videoTransformContainer.layer, cornerRadius: self.currentCornerRadius)
         if let effectView = self.effectView {
             transition.updateCornerRadius(layer: effectView.layer, cornerRadius: self.currentCornerRadius)

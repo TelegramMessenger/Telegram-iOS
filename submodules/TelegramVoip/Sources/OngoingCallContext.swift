@@ -308,7 +308,18 @@ public final class OngoingCallVideoCapturer {
     }
     
     public func makeOutgoingVideoView(completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
-        self.impl.makeOutgoingVideoView(completion)
+        self.impl.makeOutgoingVideoView { view in
+            if let view = view {
+                completion(OngoingCallContextPresentationCallVideoView(
+                    view: view,
+                    setOnFirstFrameReceived: { [weak view] f in
+                        view?.setOnFirstFrameReceived(f)
+                    }
+                ))
+            } else {
+                completion(nil)
+            }
+        }
     }
     
     public func setIsVideoEnabled(_ value: Bool) {
@@ -384,8 +395,17 @@ private extension OngoingCallContextState.State {
     }
 }
 
-public protocol OngoingCallContextPresentationCallVideoView: UIView {
-    func setOnFirstFrameReceived(_ onFirstFrameReceived: (() -> Void)?)
+public final class OngoingCallContextPresentationCallVideoView {
+    public let view: UIView
+    public let setOnFirstFrameReceived: ((() -> Void)?) -> Void
+    
+    public init(
+        view: UIView,
+        setOnFirstFrameReceived: @escaping ((() -> Void)?) -> Void
+    ) {
+        self.view = view
+        self.setOnFirstFrameReceived = setOnFirstFrameReceived
+    }
 }
 
 public final class OngoingCallContext {
@@ -423,6 +443,8 @@ public final class OngoingCallContext {
     public var state: Signal<OngoingCallContextState?, NoError> {
         return self.contextState.get()
     }
+    
+    private var didReportCallAsVideo: Bool = false
     
     private var signalingDataDisposable: Disposable?
     
@@ -503,7 +525,7 @@ public final class OngoingCallContext {
                     }, videoCapturer: video?.impl)
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
-                    context.stateChanged = { state, videoState, remoteVideoState in
+                    context.stateChanged = { [weak callSessionManager] state, videoState, remoteVideoState in
                         queue.async {
                             guard let strongSelf = self else {
                                 return
@@ -530,6 +552,10 @@ public final class OngoingCallContext {
                                 mappedRemoteVideoState = .active
                             @unknown default:
                                 mappedRemoteVideoState = .inactive
+                            }
+                            if case .active = mappedVideoState, !strongSelf.didReportCallAsVideo {
+                                strongSelf.didReportCallAsVideo = true
+                                callSessionManager?.updateCallType(internalId: internalId, type: .video)
                             }
                             strongSelf.contextState.set(.single(OngoingCallContextState(state: mappedState, videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState)))
                         }
@@ -677,13 +703,21 @@ public final class OngoingCallContext {
     public func makeIncomingVideoView(completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
         self.withContext { context in
             if let context = context as? OngoingCallThreadLocalContextWebrtc {
-                context.makeIncomingVideoView(completion)
+                context.makeIncomingVideoView { view in
+                    if let view = view {
+                        completion(OngoingCallContextPresentationCallVideoView(
+                            view: view,
+                            setOnFirstFrameReceived: { [weak view] f in
+                                view?.setOnFirstFrameReceived(f)
+                            }
+                        ))
+                    } else {
+                        completion(nil)
+                    }
+                }
             } else {
                 completion(nil)
             }
         }
     }
-}
-
-extension OngoingCallThreadLocalContextWebrtcVideoView: OngoingCallContextPresentationCallVideoView {
 }

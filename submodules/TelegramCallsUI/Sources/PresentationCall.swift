@@ -809,10 +809,11 @@ public final class PresentationCallImpl: PresentationCall {
     public func makeIncomingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void) {
         self.ongoingContext?.makeIncomingVideoView(completion: { view in
             if let view = view {
+                let setOnFirstFrameReceived = view.setOnFirstFrameReceived
                 completion(PresentationCallVideoView(
-                    view: view,
-                    setOnFirstFrameReceived: { [weak view] f in
-                        view?.setOnFirstFrameReceived(f)
+                    view: view.view,
+                    setOnFirstFrameReceived: { f in
+                        setOnFirstFrameReceived(f)
                     }
                 ))
             } else {
@@ -829,10 +830,11 @@ public final class PresentationCallImpl: PresentationCall {
         
         self.videoCapturer?.makeOutgoingVideoView(completion: { view in
             if let view = view {
+                let setOnFirstFrameReceived = view.setOnFirstFrameReceived
                 completion(PresentationCallVideoView(
-                    view: view,
-                    setOnFirstFrameReceived: { [weak view] f in
-                        view?.setOnFirstFrameReceived(f)
+                    view: view.view,
+                    setOnFirstFrameReceived: { f in
+                        setOnFirstFrameReceived(f)
                     }
                 ))
             } else {

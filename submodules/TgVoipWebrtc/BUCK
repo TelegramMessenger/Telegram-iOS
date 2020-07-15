@@ -7,17 +7,21 @@ static_library(
     srcs = glob([
         "Sources/**/*.m",
         "Sources/**/*.mm",
-        "Impl/**/*.cpp",
-        "Impl/**/*.mm",
-        "Impl/**/*.m",
+        "tgcalls/tgcalls/**/*.cpp",
+        "tgcalls/tgcalls/**/*.mm",
+        "tgcalls/tgcalls/**/*.m",
+    ], exclude = [
+        "tgcalls/tgcalls/legacy/**",
+        "tgcalls/tgcalls/platform/tdesktop/**",
+        "tgcalls/tgcalls/platform/windows/**",
     ]),
     has_cpp = True,
     headers = merge_maps([
         glob_sub_map("PublicHeaders/", [
             "PublicHeaders/**/*.h",
         ]),
-        glob_sub_map("Impl/", [
-            "Impl/**/*.h",
+        glob_sub_map("tgcalls/tgcalls/", [
+            "tgcalls/tgcalls/**/*.h",
         ]),
     ]),
     exported_headers = glob([
@@ -29,6 +33,7 @@ static_library(
         webrtc_include_prefix + "third-party/webrtc/webrtc-ios/src/sdk/objc",
         webrtc_include_prefix + "third-party/webrtc/webrtc-ios/src/sdk/objc/base",
         webrtc_include_prefix + "third-party/webrtc/webrtc-ios/src/sdk/objc/components/renderer/metal",
+        webrtc_include_prefix + "third-party/webrtc/webrtc-ios/src/sdk/objc/components/renderer/opengl",
         webrtc_include_prefix + "third-party/webrtc/webrtc-ios/src/sdk/objc/components/video_codec",
         webrtc_include_prefix + "third-party/webrtc/webrtc-ios/src/third_party/libyuv/include",
         webrtc_include_prefix + "third-party/submodules/TgVoipWebrtc/PublicHeaders",
@@ -36,7 +41,6 @@ static_library(
         "-DWEBRTC_MAC",
         "-DWEBRTC_POSIX",
         "-DRTC_ENABLE_VP9",
-        "-DTGVOIP_NAMESPACE=tgvoip_webrtc",
     ],
     deps = [
         "//submodules/MtProtoKit:MtProtoKit#shared",
