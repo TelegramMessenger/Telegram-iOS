@@ -1,11 +1,22 @@
+#if WEBRTC_MAC
+#import "OngoingCallThreadLocalContext.h"
+#else
 #import <TgVoip/OngoingCallThreadLocalContext.h>
+#endif
+
 
 #import "Instance.h"
 #import "InstanceImpl.h"
 #import "VideoCaptureInterface.h"
 
+#if WEBRTC_MAC
+#import "platform/darwin/VideoMetalViewMac.h"
+#define GLVideoView VideoMetalView
+#define UIViewContentModeScaleAspectFill kCAGravityResizeAspectFill
+#else
 #import "platform/darwin/VideoMetalView.h"
 #import "platform/darwin/GLVideoView.h"
+#endif
 
 @implementation OngoingCallConnectionDescriptionWebrtc
 

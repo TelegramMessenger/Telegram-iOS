@@ -2,7 +2,15 @@
 #define OngoingCallContext_h
 
 #import <Foundation/Foundation.h>
+#if WEBRTC_MAC
+#import <AppKit/AppKit.h>
+#else
 #import <UIKit/UIKit.h>
+#endif
+
+#if WEBRTC_MAC
+#define UIView NSView
+#endif
 
 @interface OngoingCallConnectionDescriptionWebrtc : NSObject
 
