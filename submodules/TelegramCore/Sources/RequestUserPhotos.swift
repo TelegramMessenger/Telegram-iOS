@@ -16,13 +16,13 @@ public struct TelegramPeerPhoto {
     public let messageId: MessageId?
 }
 
-public func requestPeerPhotos(account: Account, peerId: PeerId) -> Signal<[TelegramPeerPhoto], NoError> {
-    return account.postbox.transaction{ transaction -> Peer? in
+public func requestPeerPhotos(postbox: Postbox, network: Network, peerId: PeerId) -> Signal<[TelegramPeerPhoto], NoError> {
+    return postbox.transaction{ transaction -> Peer? in
         return transaction.getPeer(peerId)
     }
     |> mapToSignal { peer -> Signal<[TelegramPeerPhoto], NoError> in
         if let peer = peer as? TelegramUser, let inputUser = apiInputUser(peer) {
-            return account.network.request(Api.functions.photos.getUserPhotos(userId: inputUser, offset: 0, maxId: 0, limit: 100))
+            return network.request(Api.functions.photos.getUserPhotos(userId: inputUser, offset: 0, maxId: 0, limit: 100))
             |> map {Optional($0)}
             |> mapError {_ in}
             |> `catch` { _ -> Signal<Api.photos.Photos?, NoError> in
@@ -61,7 +61,7 @@ public func requestPeerPhotos(account: Account, peerId: PeerId) -> Signal<[Teleg
                 }
             }
         } else if let peer = peer, let inputPeer = apiInputPeer(peer) {
-            return account.network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, filter: .inputMessagesFilterChatPhotos, minDate: 0, maxDate: 0, offsetId: 0, addOffset: 0, limit: 1000, maxId: 0, minId: 0, hash: 0))
+            return network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, filter: .inputMessagesFilterChatPhotos, minDate: 0, maxDate: 0, offsetId: 0, addOffset: 0, limit: 1000, maxId: 0, minId: 0, hash: 0))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
                 return .single(nil)
@@ -90,7 +90,7 @@ public func requestPeerPhotos(account: Account, peerId: PeerId) -> Signal<[Teleg
                             users = []
                     }
                     
-                    return account.postbox.transaction { transaction -> [Message] in
+                    return postbox.transaction { transaction -> [Message] in
                         var peers: [PeerId: Peer] = [:]
                         
                         for user in users {
