@@ -250,10 +250,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
     }
     
-    override func setVisibilityAlpha(_ alpha: CGFloat) {
+    override func setVisibilityAlpha(_ alpha: CGFloat, animated: Bool) {
         self.visibilityAlpha = alpha
         self.contentNode.alpha = alpha
-        self.scrubberView?.setCollapsed(alpha < 1.0 ? true : false, animated: true)
+        self.scrubberView?.setCollapsed(alpha < 1.0 ? true : false, animated: animated)
     }
     
     init(context: AccountContext, presentationData: PresentationData, present: @escaping (ViewController, Any?) -> Void = { _, _ in }) {
