@@ -197,13 +197,14 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
     
     var item: PeerInfoAvatarListItem?
         
+    private var statusPromise = Promise<(MediaPlayerStatus?, Double?)?>()
     var mediaStatus: Signal<(MediaPlayerStatus?, Double?)?, NoError> {
         get {
             if let videoNode = self.videoNode {
                 let videoStartTimestamp = self.videoStartTimestamp
                 return videoNode.status |> map { ($0, videoStartTimestamp) }
             } else {
-                return .single(nil)
+                return self.statusPromise.get()
             }
         }
     }
@@ -296,6 +297,9 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
         videoNode.play()
         
         self.videoNode = videoNode
+        let videoStartTimestamp = self.videoStartTimestamp
+        self.statusPromise.set(videoNode.status |> map { ($0, videoStartTimestamp) })
+        
         self.addSubnode(videoNode)
         
         self.isReady.set(videoNode.ready |> map { return true })
@@ -343,6 +347,8 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
                           
                 videoNode.removeFromSupernode()
             }
+            
+            self.statusPromise.set(.single(nil))
             
             self.imageNode.imageUpdated = { [weak self] _ in
                 guard let strongSelf = self else {
