@@ -1002,7 +1002,8 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         var additiveTransitionOffset: CGFloat = 0.0
         var itemsAdded = false
         if self.currentIndex >= 0 && self.currentIndex < self.items.count {
-            for i in max(0, self.currentIndex - 1) ... min(self.currentIndex + 1, self.items.count - 1) {
+            let preloadSpan: Int = 2
+            for i in max(0, self.currentIndex - preloadSpan) ... min(self.currentIndex + preloadSpan, self.items.count - 1) {
                 validIds.append(self.items[i].id)
                 var itemNode: PeerInfoAvatarListItemNode?
                 var wasAdded = false
@@ -2576,8 +2577,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     func initiateAvatarExpansion(gallery: Bool) {
         if self.isAvatarExpanded || gallery {
-            if let currentEntry = self.avatarListNode.listContainerNode.currentEntry {
-                self.requestAvatarExpansion?(true, self.avatarListNode.listContainerNode.galleryEntries, self.avatarListNode.listContainerNode.currentEntry, self.avatarTransitionArguments(entry: currentEntry))
+            if let currentEntry = self.avatarListNode.listContainerNode.currentEntry, let firstEntry = self.avatarListNode.listContainerNode.galleryEntries.first {
+                let entry = gallery ? firstEntry : currentEntry
+                self.requestAvatarExpansion?(true, self.avatarListNode.listContainerNode.galleryEntries, entry, self.avatarTransitionArguments(entry: currentEntry))
             }
         } else if let entry = self.avatarListNode.listContainerNode.galleryEntries.first {
             let _ = self.avatarListNode.avatarContainerNode.avatarNode
