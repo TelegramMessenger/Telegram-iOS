@@ -218,7 +218,7 @@ private func parseConnectionSet(primary: Api.PhoneConnection, alternative: [Api.
 private final class CallSessionContext {
     let peerId: PeerId
     let isOutgoing: Bool
-    let type: CallSession.CallType
+    var type: CallSession.CallType
     var state: CallSessionInternalState
     let subscribers = Bag<(CallSession) -> Void>()
     let signalingSubscribers = Bag<(Data) -> Void>()
@@ -576,6 +576,12 @@ private final class CallSessionManagerContext {
         }
     }
     
+    func updateCallType(internalId: CallSessionInternalId, type: CallSession.CallType) {
+        if let context = self.contexts[internalId] {
+            context.type = type
+        }
+    }
+    
     func updateSession(_ call: Api.PhoneCall, completion: @escaping ((CallSessionRingingState, CallSession)?) -> Void) {
         var resultRingingState: (CallSessionRingingState, CallSession)?
         
@@ -929,6 +935,12 @@ public final class CallSessionManager {
     public func sendSignalingData(internalId: CallSessionInternalId, data: Data) {
         self.withContext { context in
             context.sendSignalingData(internalId: internalId, data: data)
+        }
+    }
+    
+    public func updateCallType(internalId: CallSessionInternalId, type: CallSession.CallType) {
+        self.withContext { context in
+            context.updateCallType(internalId: internalId, type: type)
         }
     }
     

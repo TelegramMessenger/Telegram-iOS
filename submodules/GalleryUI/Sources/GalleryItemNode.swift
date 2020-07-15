@@ -21,6 +21,7 @@ open class GalleryItemNode: ASDisplayNode {
     }
     
     public var toggleControlsVisibility: () -> Void = { }
+    public var updateControlsVisibility: (Bool) -> Void = { _ in }
     public var dismiss: () -> Void = { }
     public var beginCustomDismiss: () -> Void = { }
     public var completeCustomDismiss: () -> Void = { }
@@ -79,6 +80,9 @@ open class GalleryItemNode: ASDisplayNode {
     }
     
     open func visibilityUpdated(isVisible: Bool) {
+    }
+    
+    open func controlsVisibilityUpdated(isVisible: Bool) {
     }
     
     open func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {

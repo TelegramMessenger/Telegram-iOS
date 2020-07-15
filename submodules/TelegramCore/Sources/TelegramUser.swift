@@ -8,6 +8,8 @@ func parsedTelegramProfilePhoto(_ photo: Api.UserProfilePhoto) -> [TelegramMedia
     var representations: [TelegramMediaImageRepresentation] = []
     switch photo {
         case let .userProfilePhoto(flags, _, photoSmall, photoBig, dcId):
+            let hasVideo = (flags & (1 << 0)) != 0
+            
             let smallResource: TelegramMediaResource
             let fullSizeResource: TelegramMediaResource
             switch photoSmall {

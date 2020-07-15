@@ -263,22 +263,24 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                 }
             }
             |> mapToSignal { result, resource, videoResource -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
-                if let videoResource = videoResource {
+                if case .complete = result {
                     return fetchAndUpdateCachedPeerData(accountPeerId: accountPeerId, peerId: peer.id, network: network, postbox: postbox)
                     |> castError(UploadPeerPhotoError.self)
                     |> mapToSignal { status -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
                         return postbox.transaction { transaction in
-                            let cachedData = transaction.getPeerCachedData(peerId: peer.id)
-                            if let cachedData = cachedData as? CachedChannelData {
-                                if let photo = cachedData.photo {
-                                    for representation in photo.videoRepresentations {
-                                        postbox.mediaBox.copyResourceData(from: videoResource.id, to: representation.resource.id)
+                            if let videoResource = videoResource {
+                                let cachedData = transaction.getPeerCachedData(peerId: peer.id)
+                                if let cachedData = cachedData as? CachedChannelData {
+                                    if let photo = cachedData.photo {
+                                        for representation in photo.videoRepresentations {
+                                            postbox.mediaBox.copyResourceData(from: videoResource.id, to: representation.resource.id, synchronous: true)
+                                        }
                                     }
-                                }
-                            } else if let cachedData = cachedData as? CachedGroupData {
-                                if let photo = cachedData.photo {
-                                    for representation in photo.videoRepresentations {
-                                        postbox.mediaBox.copyResourceData(from: videoResource.id, to: representation.resource.id)
+                                } else if let cachedData = cachedData as? CachedGroupData {
+                                    if let photo = cachedData.photo {
+                                        for representation in photo.videoRepresentations {
+                                            postbox.mediaBox.copyResourceData(from: videoResource.id, to: representation.resource.id, synchronous: true)
+                                        }
                                     }
                                 }
                             }

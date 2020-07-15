@@ -43,6 +43,8 @@ private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
 }
 
 class PeerAvatarImageGalleryItem: GalleryItem {
+
+    
     var id: AnyHashable {
         return self.entry.id
     }
@@ -51,24 +53,24 @@ class PeerAvatarImageGalleryItem: GalleryItem {
     let peer: Peer
     let presentationData: PresentationData
     let entry: AvatarGalleryEntry
-    let sourceHasRoundCorners: Bool
+    let sourceCorners: AvatarGalleryController.SourceCorners
     let delete: (() -> Void)?
     let setMain: (() -> Void)?
     let edit: (() -> Void)?
     
-    init(context: AccountContext, peer: Peer, presentationData: PresentationData, entry: AvatarGalleryEntry, sourceHasRoundCorners: Bool, delete: (() -> Void)?, setMain: (() -> Void)?, edit: (() -> Void)?) {
+    init(context: AccountContext, peer: Peer, presentationData: PresentationData, entry: AvatarGalleryEntry, sourceCorners: AvatarGalleryController.SourceCorners, delete: (() -> Void)?, setMain: (() -> Void)?, edit: (() -> Void)?) {
         self.context = context
         self.peer = peer
         self.presentationData = presentationData
         self.entry = entry
-        self.sourceHasRoundCorners = sourceHasRoundCorners
+        self.sourceCorners = sourceCorners
         self.delete = delete
         self.setMain = setMain
         self.edit = edit
     }
         
     func node(synchronous: Bool) -> GalleryItemNode {
-        let node = PeerAvatarImageGalleryItemNode(context: self.context, presentationData: self.presentationData, peer: self.peer, sourceHasRoundCorners: self.sourceHasRoundCorners)
+        let node = PeerAvatarImageGalleryItemNode(context: self.context, presentationData: self.presentationData, peer: self.peer, sourceCorners: self.sourceCorners)
         
         if let indexData = self.entry.indexData {
             node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
@@ -104,7 +106,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
     func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
         let content: [ImageRepresentationWithReference]
         switch self.entry {
-            case let .topImage(representations, _, _, _, _):
+            case let .topImage(representations, _, _, _, _, _):
                 content = representations
             case let .image(_, _, representations, _, _, _, _, _, _, _):
                 content = representations
@@ -130,7 +132,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let context: AccountContext
     private let presentationData: PresentationData
     private let peer: Peer
-    private let sourceHasRoundCorners: Bool
+    private let sourceCorners: AvatarGalleryController.SourceCorners
     
     private var entry: AvatarGalleryEntry?
     
@@ -155,11 +157,11 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     fileprivate var edit: (() -> Void)?
     
-    init(context: AccountContext, presentationData: PresentationData, peer: Peer, sourceHasRoundCorners: Bool) {
+    init(context: AccountContext, presentationData: PresentationData, peer: Peer, sourceCorners: AvatarGalleryController.SourceCorners) {
         self.context = context
         self.presentationData = presentationData
         self.peer = peer
-        self.sourceHasRoundCorners = sourceHasRoundCorners
+        self.sourceCorners = sourceCorners
         
         self.contentNode = PeerAvatarImageGalleryContentNode()
         self.imageNode = TransformImageNode()
@@ -186,8 +188,8 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.footerContentNode.share = { [weak self] interaction in
             if let strongSelf = self, let entry = strongSelf.entry, !entry.representations.isEmpty {
                 let subject: ShareControllerSubject
-                if let video = entry.videoRepresentations.last {
-                    let videoFileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
+                if let video = entry.videoRepresentations.last, let peerReference = PeerReference(peer) {
+                    let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
                     subject = .media(videoFileReference.abstract)
                 } else {
                     subject = .image(entry.representations)
@@ -237,7 +239,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
                 let representations = entry.representations
                 if representations.last != previousRepresentations?.last {
-                    self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, attemptSynchronously: synchronous), attemptSynchronously: synchronous, dispatchOnDisplayLink: false)
+                    self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, immediateThumbnailData: entry.immediateThumbnailData, attemptSynchronously: synchronous), attemptSynchronously: synchronous, dispatchOnDisplayLink: false)
                     if entry.videoRepresentations.isEmpty {
                         self.imageNode.imageUpdated = { [weak self] _ in
                             self?._ready.set(.single(Void()))
@@ -251,23 +253,23 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, reference: representations[largestIndex].reference).start())
                 }
                 
-                var id: Int64?
+                var id: Int64
                 var category: String?
                 if case let .image(image) = entry {
                     id = image.0.id
                     category = image.9
                 } else {
-                    id = 1
+                    id = Int64(entry.peer?.id.id ?? 1)
                 }
-                if let video = entry.videoRepresentations.last, let id = id {
+                if let video = entry.videoRepresentations.last, let peerReference = PeerReference(self.peer) {
                     if video != previousVideoRepresentations?.last {
                         let mediaManager = self.context.sharedContext.mediaManager
-                        let videoFileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
-                        let videoContent = NativeVideoContent(id: .profileVideo(id, category), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
+                        let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: entry.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
+                        let videoContent = NativeVideoContent(id: .profileVideo(id, category), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
                         let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .embedded)
                         videoNode.isUserInteractionEnabled = false
                         videoNode.isHidden = true
-                        self.videoStartTimestamp = video.startTimestamp
+                        self.videoStartTimestamp = video.representation.startTimestamp
                                             
                         self.videoContent = videoContent
                         self.videoNode = videoNode
@@ -397,7 +399,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             })
         }
         
-        if self.sourceHasRoundCorners {
+        if case .round = self.sourceCorners {
             self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         }
         copyView.frame = transformedSelfFrame
@@ -427,8 +429,16 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.contentNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: self.contentNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
         
         self.contentNode.clipsToBounds = true
-        if self.sourceHasRoundCorners {
+        if case .round = self.sourceCorners {
             self.contentNode.layer.animate(from: (self.contentNode.frame.width / 2.0) as NSNumber, to: 0.0 as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18, removeOnCompletion: false, completion: { [weak self] value in
+                if value {
+                    self?.contentNode.clipsToBounds = false
+                }
+            })
+        } else if case let .roundRect(cornerRadius) = self.sourceCorners {
+            let scale = scaledLocalImageViewBounds.width / transformedCopyViewFinalFrame.width
+            let selfScale = transformedCopyViewFinalFrame.width / transformedSelfFrame.width
+            self.contentNode.layer.animate(from: (cornerRadius * scale * selfScale) as NSNumber, to: 0.0 as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18, removeOnCompletion: false, completion: { [weak self] value in
                 if value {
                     self?.contentNode.clipsToBounds = false
                 }
@@ -445,6 +455,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.contentNode.view.superview)
         let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
         let transformedCopyViewInitialFrame = self.contentNode.view.convert(self.contentNode.view.bounds, to: self.view)
+        let scaledLocalImageViewBounds = self.contentNode.view.bounds
         
         var positionCompleted = false
         var boundsCompleted = false
@@ -456,13 +467,19 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         let copyView = maybeCopyView!
         
-        if self.sourceHasRoundCorners {
+        var sourceHasRoundCorners = false
+        if case .none = self.sourceCorners {
+        } else {
+            sourceHasRoundCorners = true
+        }
+        
+        if sourceHasRoundCorners {
             self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         }
         copyView.frame = transformedSelfFrame
         
         let surfaceCopyView = node.2().0!
-        if !self.sourceHasRoundCorners {
+        if !sourceHasRoundCorners {
             addToTransitionSurface(surfaceCopyView)
         }
         
@@ -525,8 +542,12 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         })
         
         self.contentNode.clipsToBounds = true
-        if self.sourceHasRoundCorners {
+        if case .round = self.sourceCorners {
             self.contentNode.layer.animate(from: 0.0 as NSNumber, to: (self.contentNode.frame.width / 2.0) as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18 * durationFactor, removeOnCompletion: false)
+        } else if case let .roundRect(cornerRadius) = self.sourceCorners {
+            let scale = scaledLocalImageViewBounds.width / transformedCopyViewInitialFrame.width
+            let selfScale = transformedCopyViewInitialFrame.width / transformedSelfFrame.width
+            self.contentNode.layer.animate(from: 0.0 as NSNumber, to: (cornerRadius * scale * selfScale) as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18 * durationFactor, removeOnCompletion: false)
         }
         
         self.statusNodeContainer.layer.animatePosition(from: self.statusNodeContainer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
@@ -553,7 +574,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 case .Remote:
                     let representations: [ImageRepresentationWithReference]
                     switch entry {
-                        case let .topImage(topRepresentations, _, _, _, _):
+                        case let .topImage(topRepresentations, _, _, _, _, _):
                             representations = topRepresentations
                         case let .image(_, _, imageRepresentations, _, _, _, _, _, _, _):
                             representations = imageRepresentations

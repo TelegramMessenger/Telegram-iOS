@@ -9,6 +9,7 @@
 #import "TGPhotoEditorInterfaceAssets.h"
 
 #import "PGPhotoEditorView.h"
+#import "TGPhotoEntitiesContainerView.h"
 
 const CGFloat TGPhotoAvatarCropViewOverscreenSize = 1000;
 const CGFloat TGPhotoAvatarCropViewCurtainSize = 300;
@@ -43,12 +44,13 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
     
     __weak PGPhotoEditorView *_fullPreviewView;
     __weak UIImageView *_fullPaintingView;
+    __weak TGPhotoEntitiesContainerView *_fullEntitiesView;
 }
 @end
 
 @implementation TGPhotoAvatarCropView
 
-- (instancetype)initWithOriginalSize:(CGSize)originalSize screenSize:(CGSize)screenSize fullPreviewView:(PGPhotoEditorView *)fullPreviewView fullPaintingView:(UIImageView *)fullPaintingView
+- (instancetype)initWithOriginalSize:(CGSize)originalSize screenSize:(CGSize)screenSize fullPreviewView:(PGPhotoEditorView *)fullPreviewView fullPaintingView:(UIImageView *)fullPaintingView fullEntitiesView:(TGPhotoEntitiesContainerView *)fullEntitiesView
 {
     self = [super initWithFrame:CGRectZero];
     if (self != nil)
@@ -83,11 +85,15 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
         CGFloat scale = _imageView.bounds.size.width / fittedSize.width;
         _fullPreviewView.transform = CGAffineTransformMakeScale(self.cropMirrored ? -scale : scale, scale);
         _fullPreviewView.userInteractionEnabled = false;
+        [_wrapperView addSubview:_fullPreviewView];
         
         _fullPaintingView = fullPaintingView;
         _fullPaintingView.frame = _fullPreviewView.frame;
-        [_wrapperView addSubview:_fullPreviewView];
         [_wrapperView addSubview:_fullPaintingView];
+        
+        _fullEntitiesView = fullEntitiesView;
+        _fullEntitiesView.frame = _fullPreviewView.frame;
+        [_wrapperView addSubview:_fullEntitiesView];
         
         _flashView = [[UIView alloc] init];
         _flashView.alpha = 0.0;

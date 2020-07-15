@@ -935,6 +935,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
         
         self.galleryNode.controlsVisibilityChanged = { [weak self] visible in
             self?.prefersOnScreenNavigationHidden = !visible
+            self?.galleryNode.pager.centralItemNode()?.controlsVisibilityUpdated(isVisible: visible)
         }
         
         let baseNavigationController = self.baseNavigationController

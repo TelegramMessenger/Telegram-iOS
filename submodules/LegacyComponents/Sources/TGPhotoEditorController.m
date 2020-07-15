@@ -29,6 +29,7 @@
 
 #import "TGPhotoToolbarView.h"
 #import "TGPhotoEditorPreviewView.h"
+#import "TGPhotoEntitiesContainerView.h"
 
 #import <LegacyComponents/TGMenuView.h>
 
@@ -69,6 +70,7 @@
     TGPhotoToolbarView *_landscapeToolbarView;
     TGPhotoEditorPreviewView *_previewView;
     PGPhotoEditorView *_fullPreviewView;
+    TGPhotoEntitiesContainerView *_fullEntitiesView;
     UIImageView *_fullPaintingView;
     
     PGPhotoEditor *_photoEditor;
@@ -341,6 +343,9 @@
         
         _fullPaintingView = [[UIImageView alloc] init];
         _fullPaintingView.frame = _fullPreviewView.frame;
+        
+        _fullEntitiesView = [[TGPhotoEntitiesContainerView alloc] init];
+        _fullEntitiesView.frame = _fullPreviewView.frame;
     }
         
     _dotMarkerView = [[UIImageView alloc] initWithImage:TGCircleImage(7.0, [TGPhotoEditorInterfaceAssets accentColor])];
@@ -1246,6 +1251,7 @@
         case TGPhotoEditorCropTab:
         {
             _fullPaintingView.hidden = false;
+            
             [self updatePreviewView:true];
             __block UIView *initialBackgroundView = nil;
             
@@ -1259,6 +1265,7 @@
                 cropController.dotMarkerView = _dotMarkerView;
                 cropController.fullPreviewView = _fullPreviewView;
                 cropController.fullPaintingView = _fullPaintingView;
+                cropController.fullEntitiesView = _fullEntitiesView;
                 cropController.fromCamera = [self presentedFromCamera];
                 cropController.skipTransitionIn = skipInitialTransition;
                 if (snapshotImage != nil)
@@ -1481,7 +1488,7 @@
             
         case TGPhotoEditorPaintTab:
         {
-            TGPhotoPaintController *paintController = [[TGPhotoPaintController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView];
+            TGPhotoPaintController *paintController = [[TGPhotoPaintController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView entitiesView:_fullEntitiesView];
             paintController.stickersContext = _stickersContext;
             paintController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
             paintController.controlVideoPlayback = ^(bool play) {

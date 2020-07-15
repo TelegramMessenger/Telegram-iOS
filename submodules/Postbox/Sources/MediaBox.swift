@@ -188,8 +188,8 @@ public final class MediaBox {
         let _ = self.ensureDirectoryCreated
     }
     
-    public func setMaxStoreTimes(general: Int32, shortLived: Int32) {
-        self.timeBasedCleanup.setMaxStoreTimes(general: general, shortLived: shortLived)
+    public func setMaxStoreTimes(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
+        self.timeBasedCleanup.setMaxStoreTimes(general: general, shortLived: shortLived, gigabytesLimit: gigabytesLimit)
     }
     
     private func fileNameForId(_ id: MediaResourceId) -> String {
@@ -266,15 +266,20 @@ public final class MediaBox {
         }
     }
     
-    public func copyResourceData(from: MediaResourceId, to: MediaResourceId) {
+    public func copyResourceData(from: MediaResourceId, to: MediaResourceId, synchronous: Bool = false) {
         if from.isEqual(to: to) {
             return
         }
-        self.dataQueue.async {
+        let begin = {
             let pathsFrom = self.storePathsForId(from)
             let pathsTo = self.storePathsForId(to)
             let _ = try? FileManager.default.copyItem(atPath: pathsFrom.partial, toPath: pathsTo.partial)
             let _ = try? FileManager.default.copyItem(atPath: pathsFrom.complete, toPath: pathsTo.complete)
+        }
+        if synchronous {
+            begin()
+        } else {
+            self.dataQueue.async(begin)
         }
     }
     

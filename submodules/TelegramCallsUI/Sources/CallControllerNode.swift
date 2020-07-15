@@ -87,6 +87,12 @@ private final class CallVideoNode: ASDisplayNode {
         
         self.videoView.view.frame = videoFrame
         
+        if let effectView = self.effectView {
+            effectView.frame = videoFrame
+            transition.animatePositionAdditive(layer: effectView.layer, offset: CGPoint(x: previousVideoFrame.midX - videoFrame.midX, y: previousVideoFrame.midY - videoFrame.midY))
+            transition.animateTransformScale(view: effectView, from: previousVideoFrame.height / videoFrame.height)
+        }
+        
         transition.updateCornerRadius(layer: self.videoTransformContainer.layer, cornerRadius: self.currentCornerRadius)
         if let effectView = self.effectView {
             transition.updateCornerRadius(layer: effectView.layer, cornerRadius: self.currentCornerRadius)
@@ -353,7 +359,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
             self.peer = peer
             if let peerReference = PeerReference(peer), !peer.profileImageRepresentations.isEmpty {
                 let representations: [ImageRepresentationWithReference] = peer.profileImageRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: .avatar(peer: peerReference, resource: $0.resource)) })
-                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.account, representations: representations, autoFetchFullSize: true))
+                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.account, representations: representations, immediateThumbnailData: nil, autoFetchFullSize: true))
                 self.dimNode.isHidden = false
             } else {
                 self.imageNode.setSignal(callDefaultBackground())

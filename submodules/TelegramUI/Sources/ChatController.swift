@@ -317,6 +317,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var focusOnSearchAfterAppearance: (ChatSearchDomain, String)?
     
     private let keepPeerInfoScreenDataHotDisposable = MetaDisposable()
+    private let preloadAvatarDisposable = MetaDisposable()
     
     private let peekData: ChatPeekTimeout?
     private let peekTimerDisposable = MetaDisposable()
@@ -2018,7 +2019,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, displayDiceTooltip: { [weak self] dice in
             self?.displayDiceTooltip(dice: dice)
         }, animateDiceSuccess: { [weak self] in
-            self?.chatDisplayNode.animateQuizCorrectOptionSelected()
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.selectPollOptionFeedback == nil {
+                strongSelf.selectPollOptionFeedback = HapticFeedback()
+            }
+            strongSelf.selectPollOptionFeedback?.success()
+            strongSelf.chatDisplayNode.animateQuizCorrectOptionSelected()
         }, greetingStickerNode: { [weak self] in
             return self?.chatDisplayNode.greetingStickerNode
         }, requestMessageUpdate: { [weak self] id in
@@ -2231,7 +2239,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(context: strongSelf.context, theme: strongSelf.presentationData.theme, peer: peer, overrideImage: imageOverride)
                                 (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.contextActionIsEnabled =  peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil
                             }
-                            
+                                                    
                             if strongSelf.peerView === peerView && strongSelf.reportIrrelvantGeoNotice == peerReportNotice && strongSelf.hasScheduledMessages == hasScheduledMessages {
                                 return
                             }
@@ -2742,6 +2750,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.reminderActivity?.invalidate()
         self.updateSlowmodeStatusDisposable.dispose()
         self.keepPeerInfoScreenDataHotDisposable.dispose()
+        self.preloadAvatarDisposable.dispose()
         self.peekTimerDisposable.dispose()
     }
     
@@ -5056,7 +5065,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }))
             
             if case let .peer(peerId) = self.chatLocation {
-                self.keepPeerInfoScreenDataHotDisposable.set(keepPeerInfoScreenDataHot(context: self.context, peerId: peerId).start())
+                let context = self.context
+                self.keepPeerInfoScreenDataHotDisposable.set(keepPeerInfoScreenDataHot(context: context, peerId: peerId).start())
+                self.preloadAvatarDisposable.set((peerInfoProfilePhotosWithCache(context: context, peerId: peerId)
+                |> mapToSignal { result -> Signal<Never, NoError> in
+                    var signals: [Signal<Never, NoError>] = [.complete()]
+                    for i in 0 ..< min(5, result.count) {
+                        if let video = result[i].videoRepresentations.first {
+                            let duration: Double = (video.representation.startTimestamp ?? 0.0) + (i == 0 ? 4.0 : 2.0)
+                            signals.append(preloadVideoResource(postbox: context.account.postbox, resourceReference: video.reference, duration: duration))
+                        }
+                    }
+                    return combineLatest(signals) |> mapToSignal { _ in
+                        return .never()
+                    }
+                }).start())
             }
         }
         
@@ -7013,7 +7036,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 value = self.presentationData.strings.Conversation_Dice_u1F3AF
             case "🏀":
                 value = self.presentationData.strings.Conversation_Dice_u1F3C0
-            case "⚽️":
+            case "⚽":
                 value = self.presentationData.strings.Conversation_Dice_u26BD
             default:
                 let emojiHex = emoji.unicodeScalars.map({ String(format:"%02x", $0.value) }).joined().uppercased()

@@ -633,21 +633,20 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         items[section] = []
     }
     
-    if let peer = data.peer {
-        if peer.smallProfileImage == nil {
-            items[.edit]!.append(PeerInfoScreenActionItem(id: 0, text: presentationData.strings.Settings_SetProfilePhotoOrVideo, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
-                interaction.openSettings(.avatar)
-            }))
-        } else if peer.addressName == nil {
-            items[.edit]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.Settings_SetUsername, icon: UIImage(bundleImageName: "Settings/SetUsername"), action: {
-                interaction.openSettings(.username)
-            }))
-        }
+    let setPhotoTitle: String
+    if let peer = data.peer, !peer.profileImageRepresentations.isEmpty {
+        setPhotoTitle = presentationData.strings.Settings_SetNewProfilePhotoOrVideo
+    } else {
+        setPhotoTitle = presentationData.strings.Settings_SetProfilePhotoOrVideo
     }
-    items[.edit]!.append(PeerInfoScreenActionItem(id: 2, text: presentationData.strings.Settings_EditAccount, icon: UIImage(bundleImageName: "Settings/EditAccount"), action: {
-        interaction.openSettings(.edit)
+    items[.edit]!.append(PeerInfoScreenActionItem(id: 0, text: setPhotoTitle, icon: UIImage(bundleImageName: "Settings/SetAvatar"), action: {
+        interaction.openSettings(.avatar)
     }))
-    
+    if let peer = data.peer, peer.addressName == nil {
+        items[.edit]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.Settings_SetUsername, icon: UIImage(bundleImageName: "Settings/SetUsername"), action: {
+            interaction.openSettings(.username)
+        }))
+    }
     
     if let settings = data.globalSettings {
         if settings.suggestPhoneNumberConfirmation, let peer = data.peer as? TelegramUser {
@@ -2077,7 +2076,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         
         self.headerNode.requestAvatarExpansion = { [weak self] gallery, entries, centralEntry, _ in
-            guard let strongSelf = self, let peer = strongSelf.data?.peer, peer.smallProfileImage != nil else {
+            guard let strongSelf = self, let peer = strongSelf.data?.peer else {
                 return
             }
 
@@ -2088,7 +2087,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
                 }
                 return
-            } else if !gallery {
+            }
+            
+            guard peer.smallProfileImage != nil else {
+                return
+            }
+            
+            if !gallery {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
                 strongSelf.headerNode.updateIsAvatarExpanded(true, transition: transition)
                 strongSelf.updateNavigationExpansionPresentation(isExpanded: true, animated: true)
@@ -2100,7 +2105,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             
             let entriesPromise = Promise<[AvatarGalleryEntry]>(entries)
-            let galleryController = AvatarGalleryController(context: strongSelf.context, peer: peer, sourceHasRoundCorners: !strongSelf.headerNode.isAvatarExpanded, remoteEntries: entriesPromise, skipInitial: true, centralEntryIndex: centralEntry.flatMap { entries.firstIndex(of: $0) }, replaceRootController: { controller, ready in
+            let galleryController = AvatarGalleryController(context: strongSelf.context, peer: peer, sourceCorners: !strongSelf.headerNode.isAvatarExpanded ? .round : .none, remoteEntries: entriesPromise, skipInitial: true, centralEntryIndex: centralEntry.flatMap { entries.firstIndex(of: $0) }, replaceRootController: { controller, ready in
             })
             galleryController.openAvatarSetup = { [weak self] completion in
                 self?.openAvatarForEditing(hasRemove: false, completion: completion)
@@ -2583,7 +2588,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.hiddenAvatarRepresentationDisposable.dispose()
         self.toggleShouldChannelMessagesSignaturesDisposable.dispose()
         self.editAvatarDisposable.dispose()
-        self.updateAvatarDisposable.dispose()
         self.selectAddMemberDisposable.dispose()
         self.addMemberDisposable.dispose()
         self.preloadHistoryDisposable.dispose()
@@ -3834,7 +3838,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         let mediaReference: AnyMediaReference
         if let video = videoRepresentations.last {
-            mediaReference = .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
+            mediaReference = .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
         } else {
             let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
             mediaReference = .standalone(media: media)
@@ -3972,11 +3976,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 }))
             }
         
-            items.append(ActionSheetButtonItem(title: self.presentationData.strings.ProfilePhoto_OpenInEditor, color: .accent, action: { [weak self] in
-                dismissAction()
-                self?.editAvatarItem(item)
-            }))
-        
+//            items.append(ActionSheetButtonItem(title: self.presentationData.strings.ProfilePhoto_OpenInEditor, color: .accent, action: { [weak self] in
+//                dismissAction()
+//                self?.editAvatarItem(item)
+//            }))
             
             let deleteTitle: String
             if image.2.isEmpty {
@@ -4040,6 +4043,18 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
             }
         }))
+    }
+    
+    fileprivate func resetHeaderExpansion() {
+        if self.headerNode.isAvatarExpanded {
+            self.headerNode.ignoreCollapse = true
+            self.headerNode.updateIsAvatarExpanded(false, transition: .immediate)
+            self.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
+            if let (layout, navigationHeight) = self.validLayout {
+                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+            }
+            self.headerNode.ignoreCollapse = false
+        }
     }
               
     private func updateProfileVideo(_ image: UIImage, url: URL, adjustments: TGVideoEditAdjustments?) {
@@ -4201,7 +4216,20 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 hasPhotos = true
             }
             
+            let paintStickersContext = LegacyPaintStickersContext(context: strongSelf.context)
+            paintStickersContext.presentStickersController = { completion in
+                let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
+                    let coder = PostboxEncoder()
+                    coder.encodeRootObject(fileReference.media)
+                    completion?(coder.makeData(), fileReference.media.isAnimatedSticker, node.view, rect)
+                    return true
+                })
+                strongSelf.controller?.present(controller, in: .window(.root))
+                return controller
+            }
+            
             let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos && hasRemove, hasViewButton: false, personalPhoto: strongSelf.isSettings, isVideo: currentIsVideo, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
+            mixin.stickersContext = paintStickersContext
             let _ = strongSelf.currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { [weak self] assetsController in
                 guard let strongSelf = self else {
@@ -4229,6 +4257,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             mixin.didFinishWithDelete = {
                 guard let strongSelf = self else {
                     return
+                }
+                
+                if let item = item {
+                    strongSelf.deleteAvatar(item)
                 }
                 
                 let _ = strongSelf.currentAvatarMixin.swap(nil)
@@ -5259,18 +5291,17 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             
             let paneAreaExpansionDistance: CGFloat = 32.0
-            var paneAreaExpansionDelta = (self.paneContainerNode.frame.minY - navigationHeight) - self.scrollNode.view.contentOffset.y
-            paneAreaExpansionDelta = max(0.0, min(paneAreaExpansionDelta, paneAreaExpansionDistance))
-            
-            let paneAreaExpansionFraction: CGFloat = 1.0 - paneAreaExpansionDelta / paneAreaExpansionDistance
-            
             let effectiveAreaExpansionFraction: CGFloat
-            if self.isSettings {
-                effectiveAreaExpansionFraction = self.headerNode.isAvatarExpanded ? 1.0 : 0.0
-            } else if self.state.isEditing {
+            if self.state.isEditing {
                 effectiveAreaExpansionFraction = 0.0
+            } else if self.isSettings {
+                var paneAreaExpansionDelta = (self.headerNode.frame.maxY - navigationHeight) - self.scrollNode.view.contentOffset.y
+                paneAreaExpansionDelta = max(0.0, min(paneAreaExpansionDelta, paneAreaExpansionDistance))
+                effectiveAreaExpansionFraction = 1.0 - paneAreaExpansionDelta / paneAreaExpansionDistance
             } else {
-                effectiveAreaExpansionFraction = paneAreaExpansionFraction
+                var paneAreaExpansionDelta = (self.paneContainerNode.frame.minY - navigationHeight) - self.scrollNode.view.contentOffset.y
+                paneAreaExpansionDelta = max(0.0, min(paneAreaExpansionDelta, paneAreaExpansionDistance))
+                effectiveAreaExpansionFraction = 1.0 - paneAreaExpansionDelta / paneAreaExpansionDistance
             }
             
             if !self.isSettings {
@@ -5285,7 +5316,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
                         
             let navigationBarHeight: CGFloat = layout.isModalOverlay ? 56.0 : 44.0
-            self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: paneAreaExpansionFraction, presentationData: self.presentationData, data: self.data, transition: transition)
+            self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: effectiveAreaExpansionFraction, presentationData: self.presentationData, data: self.data, transition: transition)
             self.headerNode.navigationButtonContainer.frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: layout.statusBarHeight ?? 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight))
             self.headerNode.navigationButtonContainer.isWhite = self.headerNode.isAvatarExpanded
             
@@ -5294,12 +5325,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .done, isForExpandedView: false))
             } else {
                 if self.isSettings {
-                    navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .search, isForExpandedView: false))
-                    if let item = self.headerNode.avatarListNode.listContainerNode.currentItemNode?.item, case let .image(image) = item, !image.2.isEmpty {
-                        navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .editVideo, isForExpandedView: true))
-                    } else {
-                        navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .editPhoto, isForExpandedView: true))
-                    }
+                    navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
+                    navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .search, isForExpandedView: true))
                 } else if peerInfoCanEdit(peer: self.data?.peer, cachedData: self.data?.cachedData) {
                     navigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
                 }
@@ -5374,7 +5401,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         self.canOpenAvatarByDragging = false
                         let contentOffset = scrollView.contentOffset.y
                         scrollView.panGestureRecognizer.isEnabled = false
-                        self.headerNode.initiateAvatarExpansion()
+                        self.headerNode.initiateAvatarExpansion(gallery: true)
                         scrollView.panGestureRecognizer.isEnabled = true
                         scrollView.contentOffset = CGPoint(x: 0.0, y: contentOffset)
                         UIView.animate(withDuration: 0.1) {
@@ -5820,7 +5847,17 @@ public final class PeerInfoScreen: ViewController {
         
         super.displayNodeDidLoad()
     }
+    
+    public override func didMove(toParent viewController: UIViewController?) {
+        super.didMove(toParent: viewController)
         
+        if self.isSettings && viewController == nil {
+            Queue.mainQueue().after(0.1) {
+                self.controllerNode.resetHeaderExpansion()
+            }
+        }
+    }
+    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         

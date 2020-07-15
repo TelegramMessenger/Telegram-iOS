@@ -20,6 +20,12 @@ open class GalleryFooterContentNode: ASDisplayNode {
     public var requestLayout: ((ContainedViewLayoutTransition) -> Void)?
     public var controllerInteraction: GalleryControllerInteraction?
     
+    var visibilityAlpha: CGFloat = 1.0
+    open func setVisibilityAlpha(_ alpha: CGFloat, animated: Bool) {
+        self.visibilityAlpha = alpha
+        self.alpha = alpha
+    }
+    
     open func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         return 0.0
     }

@@ -1050,6 +1050,9 @@
             case TGMediaAssetGifType:
             {
                 TGCameraCapturedVideo *video = (TGCameraCapturedVideo *)item;
+                if ([video isKindOfClass:[TGMediaAsset class]]) {
+                    video = [[TGCameraCapturedVideo alloc] initWithAsset:(TGMediaAsset *)video livePhoto:false];
+                }
                 
                 TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[editingContext adjustmentsForItem:video];
                 NSString *caption = [editingContext captionForItem:video];
@@ -1102,7 +1105,7 @@
                 {
                     NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
                     dict[@"type"] = @"cameraVideo";
-                    dict[@"url"] = ((TGCameraCapturedVideo *)item).immediateAVAsset.URL;
+                    dict[@"url"] = video.immediateAVAsset.URL;
                     dict[@"previewImage"] = image;
                     dict[@"adjustments"] = adjustments;
                     dict[@"dimensions"] = [NSValue valueWithCGSize:dimensions];
