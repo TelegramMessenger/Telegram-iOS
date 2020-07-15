@@ -209,6 +209,7 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
         }
     }
     
+    var delayCentralityLose = false
     var isCentral: Bool? = nil {
         didSet {
             guard self.isCentral != oldValue, let isCentral = self.isCentral else {
@@ -219,8 +220,14 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
                 self.preloadDisposable.set(nil)
             } else {
                 if let videoNode = self.videoNode {
+                    self.playbackStatusDisposable.set(nil)
+                    self.statusPromise.set(.single(nil))
                     self.videoNode = nil
-                    Queue.mainQueue().after(0.5) {
+                    if self.delayCentralityLose {
+                        Queue.mainQueue().after(0.5) {
+                            videoNode.removeFromSupernode()
+                        }
+                    } else {
                         videoNode.removeFromSupernode()
                     }
                 }
@@ -285,7 +292,7 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
             |> take(1)
             |> deliverOnMainQueue).start(completed: { [weak self] in
                 if let strongSelf = self {
-                    Queue.mainQueue().after(0.15) {
+                    Queue.mainQueue().after(0.1) {
                         strongSelf.videoNode?.isHidden = false
                     }
                 }
@@ -332,7 +339,7 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
         
         if let video = videoRepresentations.last, let peerReference = PeerReference(self.peer) {
             let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
-            let videoContent = NativeVideoContent(id: .profileVideo(id, nil), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.representation.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
+            let videoContent = NativeVideoContent(id: .profileVideo(id, nil), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, autoFetchFullSizeThumbnail: true, startTimestamp: video.representation.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
             
             if videoContent.id != self.videoContent?.id {
                 self.videoContent = videoContent
@@ -778,7 +785,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                             if self.currentIndex != previousIndex {
                                 self.currentIndexUpdated?()
                             }
-                            self.updateItems(size: size, transition: .immediate, stripTransition: .animated(duration: 0.3, curve: .spring))
+                            self.updateItems(size: size, transition: .immediate, stripTransition: .animated(duration: 0.3, curve: .spring), synchronous: true)
                         } else if self.items.count > 1 {
                             let previousIndex = self.currentIndex
                             self.currentIndex = self.items.count - 1
@@ -794,7 +801,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                             if self.currentIndex != previousIndex {
                                 self.currentIndexUpdated?()
                             }
-                            self.updateItems(size: size, transition: .immediate, stripTransition: .animated(duration: 0.3, curve: .spring))
+                            self.updateItems(size: size, transition: .immediate, stripTransition: .animated(duration: 0.3, curve: .spring), synchronous: true)
                         } else if self.items.count > 1 {
                             let previousIndex = self.currentIndex
                             self.currentIndex = 0
@@ -811,6 +818,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         }
     }
     
+    private var pageChangedByPan = false
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
         switch recognizer.state {
         case .changed:
@@ -844,11 +852,13 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             let previousIndex = self.currentIndex
             self.currentIndex = updatedIndex
             if self.currentIndex != previousIndex {
+                self.pageChangedByPan = true
                 self.currentIndexUpdated?()
             }
             self.transitionFraction = 0.0
             if let size = self.validLayout {
                 self.updateItems(size: size, transition: .animated(duration: 0.3, curve: .spring), stripTransition: .animated(duration: 0.3, curve: .spring))
+                self.pageChangedByPan = false
             }
         default:
             break
@@ -1004,12 +1014,15 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 } else if let peer = self.peer {
                     wasAdded = true
                     let addedItemNode = PeerInfoAvatarListItemNode(context: self.context, peer: peer)
+                    itemNode = addedItemNode
                     addedItemNode.setup(item: self.items[i], synchronous: synchronous && i == self.currentIndex)
                     self.itemNodes[self.items[i].id] = addedItemNode
                     self.contentNode.addSubnode(addedItemNode)
                 }
                 if let itemNode = itemNode {
+                    itemNode.delayCentralityLose = self.pageChangedByPan
                     itemNode.isCentral = i == self.currentIndex
+                    itemNode.delayCentralityLose = false
                     
                     let indexOffset = CGFloat(i - self.currentIndex)
                     let itemFrame = CGRect(origin: CGPoint(x: indexOffset * size.width + self.transitionFraction * size.width - size.width / 2.0, y: -size.height / 2.0), size: size)
@@ -1023,7 +1036,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     } else {
                         additiveTransitionOffset = itemNode.frame.minX - itemFrame.minX
                         transition.updateFrame(node: itemNode, frame: itemFrame)
-                        itemNode.update(size: size, transition: transition)
+                        itemNode.update(size: size, transition: .immediate)
                     }
                 }
             }
