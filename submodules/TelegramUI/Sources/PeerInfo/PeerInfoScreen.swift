@@ -2105,7 +2105,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             
             let entriesPromise = Promise<[AvatarGalleryEntry]>(entries)
-            let galleryController = AvatarGalleryController(context: strongSelf.context, peer: peer, sourceCorners: !strongSelf.headerNode.isAvatarExpanded ? .round : .none, remoteEntries: entriesPromise, skipInitial: true, centralEntryIndex: centralEntry.flatMap { entries.firstIndex(of: $0) }, replaceRootController: { controller, ready in
+            let galleryController = AvatarGalleryController(context: strongSelf.context, peer: peer, sourceCorners: .round(!strongSelf.headerNode.isAvatarExpanded), remoteEntries: entriesPromise, skipInitial: true, centralEntryIndex: centralEntry.flatMap { entries.firstIndex(of: $0) }, replaceRootController: { controller, ready in
             })
             galleryController.openAvatarSetup = { [weak self] completion in
                 self?.openAvatarForEditing(hasRemove: false, completion: completion)
@@ -2115,6 +2115,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             galleryController.avatarVideoEditCompletion = { [weak self] image, url, adjustments in
                 self?.updateProfileVideo(image, url: url, adjustments: adjustments)
+            }
+            galleryController.removedEntry = { [weak self] entry in
+                self?.headerNode.avatarListNode.listContainerNode.deleteItem(PeerInfoAvatarListItem(entry: entry))
             }
             strongSelf.hiddenAvatarRepresentationDisposable.set((galleryController.hiddenMedia |> deliverOnMainQueue).start(next: { entry in
                 self?.headerNode.updateAvatarIsHidden(entry: entry)
@@ -2129,6 +2132,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     return nil
                 }
             }))
+            
+            Queue.mainQueue().after(0.4) {
+                strongSelf.resetHeaderExpansion()
+            }
         }
         
         self.headerNode.requestOpenAvatarForEditing = { [weak self] confirm in
@@ -5401,7 +5408,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         self.canOpenAvatarByDragging = false
                         let contentOffset = scrollView.contentOffset.y
                         scrollView.panGestureRecognizer.isEnabled = false
-                        self.headerNode.initiateAvatarExpansion(gallery: true)
+                        self.headerNode.initiateAvatarExpansion(gallery: true, first: false)
                         scrollView.panGestureRecognizer.isEnabled = true
                         scrollView.contentOffset = CGPoint(x: 0.0, y: contentOffset)
                         UIView.animate(withDuration: 0.1) {
