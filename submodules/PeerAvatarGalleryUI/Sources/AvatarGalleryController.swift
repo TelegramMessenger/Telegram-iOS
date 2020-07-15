@@ -217,7 +217,7 @@ public func fetchedAvatarGalleryEntries(account: Account, peer: Peer, firstEntry
 public class AvatarGalleryController: ViewController, StandalonePresentableController {
     public enum SourceCorners {
         case none
-        case round
+        case round(Bool)
         case roundRect(CGFloat)
     }
     
@@ -256,6 +256,8 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     public var avatarPhotoEditCompletion: ((UIImage) -> Void)?
     public var avatarVideoEditCompletion: ((UIImage, URL, TGVideoEditAdjustments?) -> Void)?
     
+    public var removedEntry: ((AvatarGalleryEntry) -> Void)?
+    
     private let _hiddenMedia = Promise<AvatarGalleryEntry?>(nil)
     public var hiddenMedia: Signal<AvatarGalleryEntry?, NoError> {
         return self._hiddenMedia.get()
@@ -265,7 +267,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     
     private let editDisposable = MetaDisposable ()
     
-    public init(context: AccountContext, peer: Peer, sourceCorners: SourceCorners = .round, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, skipInitial: Bool = false, centralEntryIndex: Int? = nil, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, synchronousLoad: Bool = false) {
+    public init(context: AccountContext, peer: Peer, sourceCorners: SourceCorners = .round(true), remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, skipInitial: Bool = false, centralEntryIndex: Int? = nil, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, synchronousLoad: Bool = false) {
         self.context = context
         self.peer = peer
         self.sourceCorners = sourceCorners
@@ -318,23 +320,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                         strongSelf.centralEntryIndex = 0
                     }
                     if strongSelf.isViewLoaded {
-                        let canDelete: Bool
-                        if strongSelf.peer.id == strongSelf.context.account.peerId {
-                            canDelete = true
-                        } else if let group = strongSelf.peer as? TelegramGroup {
-                            switch group.role {
-                                case .creator, .admin:
-                                    canDelete = true
-                                case .member:
-                                    canDelete = false
-                            }
-                        } else if let channel = strongSelf.peer as? TelegramChannel {
-                            canDelete = channel.hasPermission(.changeInfo)
-                        } else {
-                            canDelete = false
-                        }
-   
-                        strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ entry in PeerAvatarImageGalleryItem(context: context, peer: peer, presentationData: presentationData, entry: entry, sourceCorners: sourceCorners, delete: canDelete ? {
+                        strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ entry in PeerAvatarImageGalleryItem(context: context, peer: peer, presentationData: presentationData, entry: entry, sourceCorners: sourceCorners, delete: strongSelf.canDelete ? {
                             self?.deleteEntry(entry)
                             } : nil, setMain: { [weak self] in
                                 self?.setMainEntry(entry)
@@ -495,24 +481,8 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
-        let canDelete: Bool
-        if self.peer.id == self.context.account.peerId {
-            canDelete = true
-        } else if let group = self.peer as? TelegramGroup {
-            switch group.role {
-            case .creator, .admin:
-                canDelete = true
-            case .member:
-                canDelete = false
-            }
-        } else if let channel = self.peer as? TelegramChannel {
-            canDelete = channel.hasPermission(.changeInfo)
-        } else {
-            canDelete = false
-        }
-        
         let presentationData = self.presentationData
-        self.galleryNode.pager.replaceItems(self.entries.map({ entry in PeerAvatarImageGalleryItem(context: self.context, peer: peer, presentationData: presentationData, entry: entry, sourceCorners: self.sourceCorners, delete: canDelete ? { [weak self] in
+        self.galleryNode.pager.replaceItems(self.entries.map({ entry in PeerAvatarImageGalleryItem(context: self.context, peer: peer, presentationData: presentationData, entry: entry, sourceCorners: self.sourceCorners, delete: self.canDelete ? { [weak self] in
             self?.deleteEntry(entry)
         } : nil, setMain: { [weak self] in
             self?.setMainEntry(entry)
@@ -610,6 +580,25 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         }
     }
     
+    private var canDelete: Bool {
+        let canDelete: Bool
+        if self.peer.id == self.context.account.peerId {
+            canDelete = true
+        } else if let group = self.peer as? TelegramGroup {
+            switch group.role {
+                case .creator, .admin:
+                    canDelete = true
+                case .member:
+                    canDelete = false
+            }
+        } else if let channel = self.peer as? TelegramChannel {
+            canDelete = channel.hasPermission(.changeInfo)
+        } else {
+            canDelete = false
+        }
+        return canDelete
+    }
+    
     private func setMainEntry(_ rawEntry: AvatarGalleryEntry) {
         var entry = rawEntry
         if case .topImage = entry, !self.entries.isEmpty {
@@ -638,25 +627,10 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                             entries.insert(previousFirstEntry, at: index)
                         }
                                               
-                        let canDelete: Bool
-                        if self.peer.id == self.context.account.peerId {
-                            canDelete = true
-                        } else if let group = self.peer as? TelegramGroup {
-                            switch group.role {
-                            case .creator, .admin:
-                                canDelete = true
-                            case .member:
-                                canDelete = false
-                            }
-                        } else if let channel = self.peer as? TelegramChannel {
-                            canDelete = channel.hasPermission(.changeInfo)
-                        } else {
-                            canDelete = false
-                        }
+                     
                         
                         entries = normalizeEntries(entries)
-                        
-                        self.galleryNode.pager.replaceItems(entries.map({ entry in PeerAvatarImageGalleryItem(context: self.context, peer: peer, presentationData: presentationData, entry: entry, sourceCorners: self.sourceCorners, delete: canDelete ? { [weak self] in
+                        self.galleryNode.pager.replaceItems(entries.map({ entry in PeerAvatarImageGalleryItem(context: self.context, peer: self.peer, presentationData: presentationData, entry: entry, sourceCorners: self.sourceCorners, delete: self.canDelete ? { [weak self] in
                             self?.deleteEntry(entry)
                         } : nil, setMain: { [weak self] in
                             self?.setMainEntry(entry)
@@ -798,11 +772,18 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     }
     
     private func deleteEntry(_ rawEntry: AvatarGalleryEntry) {
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let proceed = {
             var entry = rawEntry
             if case .topImage = entry, !self.entries.isEmpty {
                 entry = self.entries[0]
             }
+            
+            self.removedEntry?(rawEntry)
+            
+            var focusOnItem: Int?
+            var updatedEntries = self.entries
+            var replaceItems = false
             
             switch entry {
                 case .topImage:
@@ -827,8 +808,9 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                             self.dismiss(forceAway: true)
                         } else {
                             if let index = self.entries.firstIndex(of: entry) {
-                                self.entries.remove(at: index)
-                                self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
+                                replaceItems = true
+                                updatedEntries.remove(at: index)
+                                focusOnItem = index - 1
                             }
                         }
                     } else {
@@ -841,14 +823,26 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                             self.dismiss(forceAway: true)
                         } else {
                             if let index = self.entries.firstIndex(of: entry) {
-                                self.entries.remove(at: index)
-                                self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
+                                replaceItems = true
+                                updatedEntries.remove(at: index)
+                                focusOnItem = index - 1
                             }
                         }
                     }
             }
+            
+            if replaceItems {
+                updatedEntries = normalizeEntries(updatedEntries)
+                self.galleryNode.pager.replaceItems(updatedEntries.map({ entry in PeerAvatarImageGalleryItem(context: self.context, peer: self.peer, presentationData: presentationData, entry: entry, sourceCorners: self.sourceCorners, delete: self.canDelete ? { [weak self] in
+                    self?.deleteEntry(entry)
+                } : nil, setMain: { [weak self] in
+                    self?.setMainEntry(entry)
+                }, edit: { [weak self] in
+                    self?.editEntry(entry)
+                }) }), centralItemIndex: focusOnItem, synchronous: true)
+                self.entries = updatedEntries
+            }
         }
-        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationData: presentationData)
         let items: [ActionSheetItem] = [
             ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: { [weak actionSheet] in

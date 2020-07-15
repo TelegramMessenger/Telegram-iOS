@@ -180,6 +180,15 @@ enum PeerInfoAvatarListItem: Equatable {
                 return videoRepresentations
         }
     }
+    
+    init(entry: AvatarGalleryEntry) {
+        switch entry {
+            case let .topImage(representations, videoRepresentations, _, _, immediateThumbnailData, _):
+                self = .topImage(representations, videoRepresentations, immediateThumbnailData)
+            case let .image(_, reference, representations, videoRepresentations, _, _, _, _, immediateThumbnailData, _):
+                self = .image(reference, representations, videoRepresentations, immediateThumbnailData)
+        }
+    }
 }
 
 final class PeerInfoAvatarListItemNode: ASDisplayNode {
@@ -972,12 +981,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 
                 var items: [PeerInfoAvatarListItem] = []
                 for entry in entries {
-                    switch entry {
-                    case let .topImage(representations, videoRepresentations, _, _, immediateThumbnailData, _):
-                        items.append(.topImage(representations, videoRepresentations, immediateThumbnailData))
-                    case let .image(_, reference, representations, videoRepresentations, _, _, _, _, immediateThumbnailData, _):
-                        items.append(.image(reference, representations, videoRepresentations, immediateThumbnailData))
-                    }
+                    items.append(PeerInfoAvatarListItem(entry: entry))
                 }
                 strongSelf.galleryEntries = entries
                 strongSelf.items = items
@@ -1532,7 +1536,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
                 let videoContent = NativeVideoContent(id: .profileVideo(id, nil), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, autoFetchFullSizeThumbnail: true, startTimestamp: video.representation.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
                 if videoContent.id != self.videoContent?.id {
                     let mediaManager = self.context.sharedContext.mediaManager
-                    let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .overlay)
+                    let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .gallery)
                     videoNode.isUserInteractionEnabled = false
                     self.videoStartTimestamp = video.representation.startTimestamp
                     self.videoContent = videoContent
@@ -2536,10 +2540,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.addSubnode(self.separatorNode)
         
         self.avatarListNode.avatarContainerNode.tapped = { [weak self] in
-            self?.initiateAvatarExpansion(gallery: false)
+            self?.initiateAvatarExpansion(gallery: false, first: false)
         }
         self.editingContentNode.avatarNode.tapped = { [weak self] confirm in
-            self?.initiateAvatarExpansion(gallery: true)
+            self?.initiateAvatarExpansion(gallery: true, first: true)
         }
         self.editingContentNode.requestEditing = { [weak self] in
             self?.requestOpenAvatarForEditing?(true)
@@ -2575,10 +2579,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
     }
     
-    func initiateAvatarExpansion(gallery: Bool) {
+    func initiateAvatarExpansion(gallery: Bool, first: Bool) {
         if self.isAvatarExpanded || gallery {
             if let currentEntry = self.avatarListNode.listContainerNode.currentEntry, let firstEntry = self.avatarListNode.listContainerNode.galleryEntries.first {
-                let entry = gallery ? firstEntry : currentEntry
+                let entry = first ? firstEntry : currentEntry
                 self.requestAvatarExpansion?(true, self.avatarListNode.listContainerNode.galleryEntries, entry, self.avatarTransitionArguments(entry: currentEntry))
             }
         } else if let entry = self.avatarListNode.listContainerNode.galleryEntries.first {
