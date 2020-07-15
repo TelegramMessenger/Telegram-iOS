@@ -1157,7 +1157,11 @@ public func avatarGalleryThumbnailPhoto(account: Account, representations: [Imag
 
 public func mediaGridMessagePhoto(account: Account, photoReference: ImageMediaReference, fullRepresentationSize: CGSize = CGSize(width: 127.0, height: 127.0), synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let useMiniThumbnailIfAvailable: Bool = fullRepresentationSize.width < 40.0
-    let signal = chatMessagePhotoDatas(postbox: account.postbox, photoReference: photoReference, fullRepresentationSize: fullRepresentationSize, autoFetchFullSize: true, tryAdditionalRepresentations: useMiniThumbnailIfAvailable, synchronousLoad: synchronousLoad, useMiniThumbnailIfAvailable: useMiniThumbnailIfAvailable)
+    var updatedFullRepresentationSize = fullRepresentationSize
+    if useMiniThumbnailIfAvailable, let largest = largestImageRepresentation(photoReference.media.representations) {
+        updatedFullRepresentationSize = largest.dimensions.cgSize
+    }
+    let signal = chatMessagePhotoDatas(postbox: account.postbox, photoReference: photoReference, fullRepresentationSize: updatedFullRepresentationSize, autoFetchFullSize: true, tryAdditionalRepresentations: useMiniThumbnailIfAvailable, synchronousLoad: synchronousLoad, useMiniThumbnailIfAvailable: useMiniThumbnailIfAvailable)
     
     return signal
     |> map { value in
