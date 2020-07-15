@@ -21,7 +21,7 @@ open class GalleryFooterContentNode: ASDisplayNode {
     public var controllerInteraction: GalleryControllerInteraction?
     
     var visibilityAlpha: CGFloat = 1.0
-    open func setVisibilityAlpha(_ alpha: CGFloat) {
+    open func setVisibilityAlpha(_ alpha: CGFloat, animated: Bool) {
         self.visibilityAlpha = alpha
         self.alpha = alpha
     }

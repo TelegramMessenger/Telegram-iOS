@@ -661,7 +661,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         seekable = value.duration >= 30.0
                     }
                     
-                    if playing && strongSelf.previousPlaying != true {
+                    if strongSelf.isCentral && playing && strongSelf.previousPlaying != true && !disablePlayerControls {
+                        strongSelf.controlsTimer?.invalidate()
+                        
                         let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
                             self?.updateControlsVisibility(false)
                             self?.controlsTimer = nil
@@ -760,6 +762,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
         }
         self.footerContentNode.setup(origin: item.originData, caption: item.caption)
+    }
+    
+    override func controlsVisibilityUpdated(isVisible: Bool) {
+        self.controlsTimer?.invalidate()
+        self.controlsTimer = nil
     }
     
     private func updateDisplayPlaceholder(_ displayPlaceholder: Bool) {

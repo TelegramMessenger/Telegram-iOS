@@ -76,6 +76,11 @@ private func findMediaResource(media: Media, previousMedia: Media?, resource: Me
                 return representation.resource
             }
         }
+        for representation in image.videoRepresentations {
+            if representation.resource.id.isEqual(to: resource.id) {
+                return representation.resource
+            }
+        }
         if let legacyResource = resource as? CloudFileMediaResource {
             for representation in image.representations {
                 if let updatedResource = representation.resource as? CloudPhotoSizeMediaResource {
@@ -155,6 +160,7 @@ private enum MediaReferenceRevalidationKey: Hashable {
     case wallpaper(wallpaper: WallpaperReference)
     case wallpapers
     case themes
+    case peerAvatars(peer: PeerReference)
 }
 
 private final class MediaReferenceRevalidationItemContext {
@@ -447,6 +453,25 @@ final class MediaReferenceRevalidationContext {
             }
         }
     }
+    
+    func peerAvatars(postbox: Postbox, network: Network, background: Bool, peer: PeerReference) -> Signal<[TelegramPeerPhoto], RevalidateMediaReferenceError> {
+        return self.genericItem(key: .peerAvatars(peer: peer), background: background, request: { next, error in
+            return (requestPeerPhotos(postbox: postbox, network: network, peerId: peer.id)
+            |> mapError { _ -> RevalidateMediaReferenceError in
+                return .generic
+            }).start(next: { value in
+                next(value)
+            }, error: { _ in
+                error(.generic)
+            })
+        }) |> mapToSignal { next -> Signal<[TelegramPeerPhoto], RevalidateMediaReferenceError> in
+            if let next = next as? [TelegramPeerPhoto] {
+                return .single(next)
+            } else {
+                return .fail(.generic)
+            }
+        }
+    }
 }
 
 struct RevalidatedMediaResource {
@@ -546,6 +571,16 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                         }
                         return .fail(.generic)
                     }
+                case let .avatarList(peer, media):
+                    return revalidationContext.peerAvatars(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, peer: peer)
+                    |> mapToSignal { result -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
+                        for photo in result {
+                            if let updatedResource = findUpdatedMediaResource(media: photo.image, previousMedia: media, resource: resource) {
+                                return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
+                            }
+                        }
+                        return .fail(.generic)
+                    }
                 case let .standalone(media):
                     if let file = media as? TelegramMediaFile {
                         for attribute in file.attributes {
@@ -583,6 +618,16 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                                 return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
                             }
                         }
+                    }
+                }
+                return .fail(.generic)
+            }
+        case let .avatarList(peer, _):
+            return revalidationContext.peerAvatars(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, peer: peer)
+            |> mapToSignal { updatedPeerAvatars -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
+                for photo in updatedPeerAvatars {
+                    if let updatedResource = findUpdatedMediaResource(media: photo.image, previousMedia: nil, resource: resource) {
+                        return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
                     }
                 }
                 return .fail(.generic)
@@ -647,7 +692,7 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                 }
                 return .fail(.generic)
             }
-        case let .theme(themeReference, resource):
+        case let .theme(_, resource):
             return revalidationContext.themes(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation)
             |> mapToSignal { themes -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
                 for theme in themes {

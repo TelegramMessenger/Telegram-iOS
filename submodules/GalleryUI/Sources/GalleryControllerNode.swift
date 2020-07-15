@@ -253,7 +253,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
             if displayThumbnailPanel {
                 thumbnailPanelHeight = 52.0
             }
-            let thumbnailsFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - 40.0 - panelHeight + 4.0 - layout.intrinsicInsets.bottom), size: CGSize(width: layout.size.width, height: panelHeight - 4.0))
+            let thumbnailsFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - 40.0 - panelHeight + 4.0 - layout.intrinsicInsets.bottom + (self.areControlsHidden ? 106.0 : 0.0)), size: CGSize(width: layout.size.width, height: panelHeight - 4.0))
             transition.updateFrame(node: currentThumbnailContainerNode, frame: thumbnailsFrame)
             currentThumbnailContainerNode.updateLayout(size: thumbnailsFrame.size, transition: transition)
             
@@ -279,6 +279,9 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
     }
     
     open func setControlsHidden(_ hidden: Bool, animated: Bool) {
+        guard self.areControlsHidden != hidden else {
+            return
+        }
         self.areControlsHidden = hidden
         self.controlsVisibilityChanged?(!hidden)
         if animated {
@@ -286,7 +289,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
                 let alpha: CGFloat = self.areControlsHidden ? 0.0 : 1.0
                 self.navigationBar?.alpha = alpha
                 self.statusBar?.updateAlpha(alpha, transition: .animated(duration: 0.3, curve: .easeInOut))
-                self.footerNode.setVisibilityAlpha(alpha)
+                self.footerNode.setVisibilityAlpha(alpha, animated: animated)
                 self.updateThumbnailContainerNodeAlpha(.immediate)
             })
             
@@ -297,7 +300,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
             let alpha: CGFloat = self.areControlsHidden ? 0.0 : 1.0
             self.navigationBar?.alpha = alpha
             self.statusBar?.updateAlpha(alpha, transition: .immediate)
-            self.footerNode.setVisibilityAlpha(alpha)
+            self.footerNode.setVisibilityAlpha(alpha, animated: animated)
             self.updateThumbnailContainerNodeAlpha(.immediate)
             
             if let (navigationBarHeight, layout) = self.containerLayout {

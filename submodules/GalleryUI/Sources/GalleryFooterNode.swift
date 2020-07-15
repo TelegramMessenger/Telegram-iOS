@@ -24,10 +24,10 @@ public final class GalleryFooterNode: ASDisplayNode {
     }
     
     private var visibilityAlpha: CGFloat = 1.0
-    public func setVisibilityAlpha(_ alpha: CGFloat) {
+    public func setVisibilityAlpha(_ alpha: CGFloat, animated: Bool) {
         self.visibilityAlpha = alpha
         self.backgroundNode.alpha = alpha
-        self.currentFooterContentNode?.setVisibilityAlpha(alpha)
+        self.currentFooterContentNode?.setVisibilityAlpha(alpha, animated: true)
         self.currentOverlayContentNode?.setVisibilityAlpha(alpha)
     }
     
@@ -43,7 +43,7 @@ public final class GalleryFooterNode: ASDisplayNode {
             }
             self.currentFooterContentNode = footerContentNode
             if let footerContentNode = footerContentNode {
-                footerContentNode.setVisibilityAlpha(self.visibilityAlpha)
+                footerContentNode.setVisibilityAlpha(self.visibilityAlpha, animated: transition.isAnimated)
                 footerContentNode.controllerInteraction = self.controllerInteraction
                 footerContentNode.requestLayout = { [weak self] transition in
                     if let strongSelf = self, let (currentLayout, currentThumbnailPanelHeight, isHidden) = strongSelf.currentLayout {
@@ -67,7 +67,7 @@ public final class GalleryFooterNode: ASDisplayNode {
         }
         
         var backgroundHeight: CGFloat = 0.0
-        let verticalOffset: CGFloat = isHidden ? (layout.size.width > layout.size.height ? 44.0 : 54.0) : 0.0
+        let verticalOffset: CGFloat = isHidden ? (layout.size.width > layout.size.height ? 44.0 : (thumbnailPanelHeight > 0.0 ? 106.0 : 54.0)) : 0.0
         if let footerContentNode = self.currentFooterContentNode {
             backgroundHeight = footerContentNode.updateLayout(size: layout.size, metrics: layout.metrics, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, contentInset: thumbnailPanelHeight, transition: transition)
             transition.updateFrame(node: footerContentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - backgroundHeight + verticalOffset), size: CGSize(width: layout.size.width, height: backgroundHeight)))
