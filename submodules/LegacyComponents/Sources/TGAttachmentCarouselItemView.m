@@ -445,7 +445,12 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     TGMediaAssetImageType screenImageType = refresh ? TGMediaAssetImageTypeLargeThumbnail : TGMediaAssetImageTypeFastLargeThumbnail;
     TGMediaAssetImageType imageType = thumbnail ? TGMediaAssetImageTypeAspectRatioThumbnail : screenImageType;
     
-    SSignal *assetSignal = [TGMediaAssetImageSignals imageForAsset:asset imageType:imageType size:imageSize];
+    TGMediaAsset *concreteAsset = asset;
+    if ([concreteAsset isKindOfClass:[TGCameraCapturedVideo class]]) {
+        concreteAsset = [(TGCameraCapturedVideo *)asset originalAsset];
+    }
+    
+    SSignal *assetSignal = [TGMediaAssetImageSignals imageForAsset:concreteAsset imageType:imageType size:imageSize];
     if (_editingContext == nil)
         return assetSignal;
     

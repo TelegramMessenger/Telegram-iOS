@@ -1027,7 +1027,6 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     let indexOffset = CGFloat(i - self.currentIndex)
                     let itemFrame = CGRect(origin: CGPoint(x: indexOffset * size.width + self.transitionFraction * size.width - size.width / 2.0, y: -size.height / 2.0), size: size)
                     
-                    
                     if wasAdded {
                         itemsAdded = true
                         addedItemNodesForAdditiveTransition.append(itemNode)
