@@ -2,13 +2,13 @@
 #define OngoingCallContext_h
 
 #import <Foundation/Foundation.h>
-#if WEBRTC_MAC
+#ifndef WEBRTC_IOS
 #import <AppKit/AppKit.h>
 #else
 #import <UIKit/UIKit.h>
 #endif
 
-#if WEBRTC_MAC
+#ifndef WEBRTC_IOS
 #define UIView NSView
 #endif
 
