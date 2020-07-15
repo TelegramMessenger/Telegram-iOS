@@ -82,6 +82,9 @@ open class GalleryItemNode: ASDisplayNode {
     open func visibilityUpdated(isVisible: Bool) {
     }
     
+    open func controlsVisibilityUpdated(isVisible: Bool) {
+    }
+    
     open func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
     }
     
