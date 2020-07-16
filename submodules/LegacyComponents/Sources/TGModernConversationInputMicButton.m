@@ -846,7 +846,6 @@ static const CGFloat outerCircleMinScale = innerCircleRadius / outerCircleRadius
     NSTimeInterval t = CACurrentMediaTime();
     
     _currentLevel = _currentLevel * 0.9f + _inputLevel * 0.1f;
-    [_decoration tick:_currentLevel];
     
     _currentTranslation = MIN(0.0, _currentTranslation * 0.7f + _targetTranslation * 0.3f);
     _cancelTranslation = MIN(0.0, _cancelTranslation * 0.7f + _cancelTargetTranslation * 0.3f);
