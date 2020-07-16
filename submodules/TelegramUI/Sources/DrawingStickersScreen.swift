@@ -1307,6 +1307,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
                 strongSelf.hiddenPane?.removeFromSupernode()
                 strongSelf.hiddenListView?.removeFromSupernode()
                 strongSelf.isHidden = true
+                strongSelf.dismiss?()
             }
         })
     }
