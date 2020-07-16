@@ -58,13 +58,16 @@ public final class PasscodeEntryController: ViewController {
     private var inBackground: Bool = false
     private var inBackgroundDisposable: Disposable?
     
-    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, appLockContext: AppLockContext, presentationData: PresentationData, presentationDataSignal: Signal<PresentationData, NoError>, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments) {
+    private let hiddenAccountsAccessChallengeData: [AccountRecordId:PostboxAccessChallengeData]
+    
+    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, appLockContext: AppLockContext, presentationData: PresentationData, presentationDataSignal: Signal<PresentationData, NoError>, challengeData: PostboxAccessChallengeData, hiddenAccountsAccessChallengeData: [AccountRecordId:PostboxAccessChallengeData], biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments) {
         self.applicationBindings = applicationBindings
         self.accountManager = accountManager
         self.appLockContext = appLockContext
         self.presentationData = presentationData
         self.presentationDataSignal = presentationDataSignal
         self.challengeData = challengeData
+        self.hiddenAccountsAccessChallengeData = hiddenAccountsAccessChallengeData
         self.biometrics = biometrics
         self.arguments = arguments
         
@@ -144,14 +147,27 @@ public final class PasscodeEntryController: ViewController {
                 return
             }
     
-            var succeed = false
-            switch strongSelf.challengeData {
+            func check(challengeData: PostboxAccessChallengeData) -> Bool {
+                switch challengeData {
                 case .none:
-                    succeed = true
+                    return true
                 case let .numericalPassword(code):
-                    succeed = passcode == normalizeArabicNumeralString(code, type: .western)
+                    return passcode == normalizeArabicNumeralString(code, type: .western)
                 case let .plaintextPassword(code):
-                    succeed = passcode == code
+                    return passcode == code
+                }
+            }
+            
+            var succeed = check(challengeData: strongSelf.challengeData)
+            
+            if !succeed {
+                for (id, challengeData) in strongSelf.hiddenAccountsAccessChallengeData {
+                    if check(challengeData: challengeData) {
+                        strongSelf.appLockContext.unlockedHiddenAccountRecordId.set(id)
+                        succeed = true
+                        break
+                    }
+                }
             }
             
             if succeed {
