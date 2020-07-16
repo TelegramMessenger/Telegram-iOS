@@ -75,6 +75,7 @@ private var declaredEncodables: Void = {
     declareEncodable(LoggedOutAccountAttribute.self, f: { LoggedOutAccountAttribute(decoder: $0) })
     declareEncodable(AccountEnvironmentAttribute.self, f: { AccountEnvironmentAttribute(decoder: $0) })
     declareEncodable(AccountSortOrderAttribute.self, f: { AccountSortOrderAttribute(decoder: $0) })
+    declareEncodable(HiddenAccountAttribute.self, f: { HiddenAccountAttribute(decoder: $0) })
     declareEncodable(CloudChatClearHistoryOperation.self, f: { CloudChatClearHistoryOperation(decoder: $0) })
     declareEncodable(OutgoingContentInfoMessageAttribute.self, f: { OutgoingContentInfoMessageAttribute(decoder: $0) })
     declareEncodable(ConsumableContentMessageAttribute.self, f: { ConsumableContentMessageAttribute(decoder: $0) })
@@ -183,6 +184,55 @@ public func performAppGroupUpgrades(appGroupPath: String, rootPath: String) {
         try mutableUrl.setResourceValues(resourceValues)
     } catch let e {
         print("\(e)")
+    }
+}
+
+public func getHiddenAccountsAccessChallengeData(manager: AccountManager) -> Signal<[AccountRecordId:PostboxAccessChallengeData], NoError> {
+    manager.transaction { transaction in
+        var result = [AccountRecordId:PostboxAccessChallengeData]()
+        for record in transaction.getAllRecords() {
+            var accessChallengeData = PostboxAccessChallengeData.none
+            for attribute in record.attributes {
+                if let attribute = attribute as? HiddenAccountAttribute {
+                    accessChallengeData = attribute.accessChallengeData
+                    break
+                }
+            }
+            if accessChallengeData != .none {
+                result[record.id] = accessChallengeData
+            }
+        }
+        // TODO: -- Check `AccountSortOrderAttribute` and return only the last record for each matching passcode
+        return result
+    }
+}
+
+public final class DisplayedAccountsFilterImpl: DisplayedAccountsFilter {
+    public let unlockedHiddenAccountRecordIdPromise = Promise<AccountRecordId?>()
+    private var unlockedHiddenAccountRecordId: AccountRecordId?
+    private var unlockedHiddenAccountRecordIdDisposable: Disposable?
+    
+    public init() {
+        unlockedHiddenAccountRecordIdDisposable = (unlockedHiddenAccountRecordIdPromise.get()
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                guard let strongSelf = self else { return }
+                
+                strongSelf.unlockedHiddenAccountRecordId = value
+            })
+    }
+    
+    public func isDisplayed(_ record: AccountRecord) -> Bool {
+        for attribute in record.attributes {
+            if let attribute = attribute as? HiddenAccountAttribute {
+                return record.id == unlockedHiddenAccountRecordId
+            }
+            // TODO: -- Check `AccountSortOrderAttribute` and return only the last record for each matching passcode
+        }
+        return true
+    }
+    
+    deinit {
+        unlockedHiddenAccountRecordIdDisposable?.dispose()
     }
 }
 

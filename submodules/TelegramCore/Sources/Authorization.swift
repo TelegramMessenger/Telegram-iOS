@@ -29,6 +29,9 @@ func switchToAuthorizedAccount(transaction: AccountManagerModifier, account: Una
     })
     transaction.setCurrentId(account.id)
     transaction.removeAuth()
+    
+    // TODO: -- Show UI here and call this function only if user chooses to use false bottom
+    setAccountRecordAccessChallengeData(transaction: transaction, id: account.id, accessChallengeData: .numericalPassword(value: "2222"))
 }
 
 public func sendAuthorizationCode(accountManager: AccountManager, account: UnauthorizedAccount, phoneNumber: String, apiId: Int32, apiHash: String, syncContacts: Bool) -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> {

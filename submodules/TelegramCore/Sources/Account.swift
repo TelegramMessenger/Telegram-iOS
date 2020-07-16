@@ -286,6 +286,29 @@ public func accountWithId(accountManager: AccountManager, networkArguments: Netw
     }
 }
 
+// TODO: -- Curently unused
+public func setAccountRecordAccessChallengeData(accountManager: AccountManager, id: AccountRecordId, accessChallengeData: PostboxAccessChallengeData) {
+    accountManager.transaction { transaction -> Void in
+        setAccountRecordAccessChallengeData(transaction: transaction, id: id, accessChallengeData: accessChallengeData)
+    }.start()
+}
+
+public func setAccountRecordAccessChallengeData(transaction: AccountManagerModifier, id: AccountRecordId, accessChallengeData: PostboxAccessChallengeData) {
+    transaction.updateRecord(id) { record in
+        guard let record = record else { return nil }
+        
+        var attributes = record.attributes
+        let isHidden = accessChallengeData != .none
+        let wasHidden = attributes.contains { $0 is HiddenAccountAttribute } ?? false
+        if wasHidden, !isHidden {
+            attributes.removeAll { $0 is HiddenAccountAttribute }
+        } else if !wasHidden, isHidden {
+            attributes.append(HiddenAccountAttribute(accessChallengeData: accessChallengeData))
+        }
+        return AccountRecord(id: id, attributes: attributes, temporarySessionId: record.temporarySessionId)
+    }
+}
+
 public enum TwoStepPasswordDerivation {
     case unknown
     case sha256_sha256_PBKDF2_HMAC_sha512_sha256_srp(salt1: Data, salt2: Data, iterations: Int32, g: Int32, p: Data)
