@@ -19,7 +19,7 @@ public final class PasscodeSetupController: ViewController {
         return self.displayNode as! PasscodeSetupControllerNode
     }
     
-    private let context: AccountContext
+    private let context: SharedAccountContext
     private var mode: PasscodeSetupControllerMode
     
     public var complete: ((String, Bool) -> Void)?
@@ -31,10 +31,10 @@ public final class PasscodeSetupController: ViewController {
     
     private var nextAction: UIBarButtonItem?
     
-    public init(context: AccountContext, mode: PasscodeSetupControllerMode) {
+    public init(context: SharedAccountContext, mode: PasscodeSetupControllerMode) {
         self.context = context
         self.mode = mode
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
