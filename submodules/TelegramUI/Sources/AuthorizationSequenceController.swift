@@ -162,6 +162,15 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 }
                 strongSelf.account = updatedAccount
             }
+            
+            controller.enabledFalseBottom = { [weak self] in
+                // TODO: -- Show passcode screen
+            }
+            
+            controller.enabledFalseBottom = { [weak self] in
+                // TODO: delete passcode from auth record
+            }
+            
             controller.loginWithNumber = { [weak self, weak controller] number, syncContacts in
                 if let strongSelf = self {
                     controller?.inProgress = true
