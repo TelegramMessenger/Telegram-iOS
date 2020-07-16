@@ -34,7 +34,7 @@ private let textFont = Font.regular(14.0)
 private let buttonFont = Font.regular(17.0)
 
 final class PrivacyIntroControllerNode: ViewControllerTracingNode {
-    private let context: AccountContext
+    private let context: SharedAccountContext
     private let mode: PrivacyIntroControllerMode
     private var presentationData: PresentationData?
     private let proceedAction: () -> Void
@@ -50,7 +50,7 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
-    init(context: AccountContext, mode: PrivacyIntroControllerMode, proceedAction: @escaping () -> Void) {
+    init(context: SharedAccountContext, mode: PrivacyIntroControllerMode, proceedAction: @escaping () -> Void) {
         self.context = context
         self.mode = mode
         self.proceedAction = proceedAction
@@ -92,7 +92,7 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         
-        self.updatePresentationData(context.sharedContext.currentPresentationData.with { $0 })
+        self.updatePresentationData(context.currentPresentationData.with { $0 })
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {

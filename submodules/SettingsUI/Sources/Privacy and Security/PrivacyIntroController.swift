@@ -10,7 +10,7 @@ import TelegramPresentationData
 import AccountContext
 import AppBundle
 
-enum PrivacyIntroControllerMode {
+public enum PrivacyIntroControllerMode {
     case passcode
     case twoStepVerification
     
@@ -79,8 +79,8 @@ public final class PrivacyIntroControllerPresentationArguments {
     }
 }
 
-final class PrivacyIntroController: ViewController {
-    private let context: AccountContext
+public final class PrivacyIntroController: ViewController {
+    private let context: SharedAccountContext
     private let mode: PrivacyIntroControllerMode
     private let arguments: PrivacyIntroControllerPresentationArguments
     private let proceedAction: () -> Void
@@ -94,13 +94,13 @@ final class PrivacyIntroController: ViewController {
     
     private var isDismissed: Bool = false
     
-    init(context: AccountContext, mode: PrivacyIntroControllerMode, arguments: PrivacyIntroControllerPresentationArguments = PrivacyIntroControllerPresentationArguments(), proceedAction: @escaping () -> Void) {
+    public init(context: SharedAccountContext, mode: PrivacyIntroControllerMode, arguments: PrivacyIntroControllerPresentationArguments = PrivacyIntroControllerPresentationArguments(), proceedAction: @escaping () -> Void) {
         self.context = context
         self.mode = mode
         self.arguments = arguments
         self.proceedAction = proceedAction
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = context.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -112,7 +112,7 @@ final class PrivacyIntroController: ViewController {
             self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
         }
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
+        self.presentationDataDisposable = (context.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -151,7 +151,7 @@ final class PrivacyIntroController: ViewController {
         self.displayNodeDidLoad()
     }
     
-    override func viewDidAppear(_ animated: Bool) {
+    override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         if self.arguments.animateIn {
             self.controllerNode.animateIn(slide: true)
@@ -160,7 +160,7 @@ final class PrivacyIntroController: ViewController {
         }
     }
     
-    override func dismiss(completion: (() -> Void)? = nil) {
+    override public func dismiss(completion: (() -> Void)? = nil) {
         if !self.isDismissed {
             self.isDismissed = true
             if self.arguments.animateIn {

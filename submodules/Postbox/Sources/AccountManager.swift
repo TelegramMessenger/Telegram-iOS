@@ -8,6 +8,7 @@ public struct AccountManagerModifier {
     public let getCurrent: () -> (AccountRecordId, [AccountRecordAttribute])?
     public let setCurrentId: (AccountRecordId) -> Void
     public let getCurrentAuth: () -> AuthAccountRecord?
+    public let setCurrentAuthAttributes: ([AccountRecordAttribute]) -> Void
     public let createAuth: ([AccountRecordAttribute]) -> AuthAccountRecord?
     public let removeAuth: () -> Void
     public let createRecord: ([AccountRecordAttribute]) -> AccountRecordId
@@ -173,6 +174,13 @@ final class AccountManagerImpl {
                         return record
                     } else {
                         return nil
+                    }
+                }, setCurrentAuthAttributes: { attributes in
+                    if let record = self.currentAtomicState.currentAuthRecord {
+                        let updatedRecord =  AuthAccountRecord(id: record.id, attributes: attributes)
+                        self.currentAtomicState.currentAuthRecord = updatedRecord
+                        self.currentAtomicStateUpdated = true
+                        self.currentMetadataOperations.append(.updateCurrentAuthAccountRecord(updatedRecord))
                     }
                 }, createAuth: { attributes in
                     let record = AuthAccountRecord(id: generateAccountRecordId(), attributes: attributes)
