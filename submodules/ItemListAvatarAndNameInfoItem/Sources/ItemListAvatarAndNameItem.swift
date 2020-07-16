@@ -296,11 +296,13 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
         self.avatarNode = AvatarNode(font: avatarFont)
         
         self.updatingAvatarOverlay = ASImageNode()
+        self.updatingAvatarOverlay.isUserInteractionEnabled = false
         self.updatingAvatarOverlay.displayWithoutProcessing = true
         self.updatingAvatarOverlay.displaysAsynchronously = false
         
         self.activityIndicator = ActivityIndicator(type: .custom(.white, 22.0, 1.0, false))
         self.activityIndicator.isHidden = true
+        self.activityIndicator.isUserInteractionEnabled = false
         
         self.nameNode = TextNode()
         self.nameNode.isUserInteractionEnabled = false
