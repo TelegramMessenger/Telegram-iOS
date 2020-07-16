@@ -1993,8 +1993,10 @@
                     preset = TGMediaVideoConversionPresetProfileVeryHigh;
                 } else if (duration <= 5.0) {
                     preset = TGMediaVideoConversionPresetProfileHigh;
-                } else {
+                } else if (duration <= 8.0) {
                     preset = TGMediaVideoConversionPresetProfile;
+                } else {
+                    preset = TGMediaVideoConversionPresetProfileLow;
                 }
                 
                 TGDispatchOnMainThread(^{
