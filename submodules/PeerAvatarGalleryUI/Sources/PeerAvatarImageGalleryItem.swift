@@ -43,8 +43,6 @@ private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
 }
 
 class PeerAvatarImageGalleryItem: GalleryItem {
-
-    
     var id: AnyHashable {
         return self.entry.id
     }

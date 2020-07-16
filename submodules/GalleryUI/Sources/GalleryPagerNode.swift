@@ -343,6 +343,10 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         }
         
         self.transaction(GalleryPagerTransaction(deleteItems: deleteItems, insertItems: insertItems, updateItems: updateItems, focusOnItem: centralItemIndex, synchronous: synchronous))
+        
+        if self.updateOnReplacement {
+            self.items = items
+        }
     }
     
     public func transaction(_ transaction: GalleryPagerTransaction) {
