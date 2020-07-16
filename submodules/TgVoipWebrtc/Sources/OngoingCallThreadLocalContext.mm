@@ -61,7 +61,7 @@
 - (instancetype _Nonnull)init {
     self = [super init];
     if (self != nil) {
-        _interface = tgcalls::CreateVideoCapture();
+        _interface = tgcalls::VideoCaptureInterface::Create();
     }
     return self;
 }
@@ -541,7 +541,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 - (void)acceptVideo:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer {
     if (_tgVoip && _videoCapturer == nil) {
         _videoCapturer = videoCapturer;
-        _tgVoip->acceptVideo([_videoCapturer getInterface]);
+        _tgVoip->requestVideo([_videoCapturer getInterface]);
     }
 }
 
