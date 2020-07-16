@@ -256,6 +256,7 @@ public final class AvatarNode: ASDisplayNode {
         var iconColor = theme.chatList.unpinnedArchiveAvatarColor.foregroundColor
         var backgroundColor = theme.chatList.unpinnedArchiveAvatarColor.backgroundColors.topColor
         let animationBackgroundNode = ASImageNode()
+        animationBackgroundNode.isUserInteractionEnabled = false
         animationBackgroundNode.frame = self.imageNode.frame
         if let overrideImage = self.overrideImage, case let .archivedChatsIcon(hiddenByDefault) = overrideImage {
             let backgroundColors: (UIColor, UIColor)
@@ -274,6 +275,7 @@ public final class AvatarNode: ASDisplayNode {
         self.addSubnode(animationBackgroundNode)
         
         let animationNode = AnimationNode(animation: "anim_archiveAvatar", colors: ["box1.box1.Fill 1": iconColor, "box3.box3.Fill 1": iconColor, "box2.box2.Fill 1": backgroundColor], scale: 0.1653828)
+        animationNode.isUserInteractionEnabled = false
         animationNode.completion = { [weak animationBackgroundNode, weak self] in
             self?.imageNode.isHidden = false
             animationBackgroundNode?.removeFromSupernode()
@@ -344,6 +346,7 @@ public final class AvatarNode: ASDisplayNode {
                     if self.editOverlayNode == nil {
                         let editOverlayNode = AvatarEditOverlayNode()
                         editOverlayNode.frame = self.imageNode.frame
+                        editOverlayNode.isUserInteractionEnabled = false
                         self.addSubnode(editOverlayNode)
                         
                         self.editOverlayNode = editOverlayNode

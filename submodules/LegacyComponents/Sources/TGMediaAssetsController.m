@@ -566,10 +566,10 @@
         self.avatarCompletionBlock(image);
 }
 
-- (void)completeWithAvatarVideo:(NSURL *)url adjustments:(TGVideoEditAdjustments *)adjustments image:(UIImage *)image
+- (void)completeWithAvatarVideo:(AVAsset *)asset adjustments:(TGVideoEditAdjustments *)adjustments image:(UIImage *)image
 {
     if (self.avatarVideoCompletionBlock != nil)
-        self.avatarVideoCompletionBlock(image, url, adjustments);
+        self.avatarVideoCompletionBlock(image, asset, adjustments);
 }
 
 - (void)completeWithCurrentItem:(TGMediaAsset *)currentItem silentPosting:(bool)silentPosting scheduleTime:(int32_t)scheduleTime
@@ -904,7 +904,7 @@
                             if (animated) {
                                 dict[@"isAnimation"] = @true;
                                 if ([adjustments isKindOfClass:[PGPhotoEditorValues class]]) {
-                                    dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)adjustments];
+                                    dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)adjustments preset:TGMediaVideoConversionPresetAnimation];
                                 } else {
                                     dict[@"adjustments"] = adjustments;
                                 }

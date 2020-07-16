@@ -345,7 +345,9 @@
         _fullPaintingView.frame = _fullPreviewView.frame;
         
         _fullEntitiesView = [[TGPhotoEntitiesContainerView alloc] init];
-        _fullEntitiesView.frame = _fullPreviewView.frame;
+        _fullEntitiesView.userInteractionEnabled = false;
+        CGRect rect = [TGPhotoPaintController fittedCropRect:_photoEditor.cropRect originalSize:_photoEditor.originalSize keepOriginalSize:true];
+        _fullEntitiesView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
     }
         
     _dotMarkerView = [[UIImageView alloc] initWithImage:TGCircleImage(7.0, [TGPhotoEditorInterfaceAssets accentColor])];
@@ -1060,8 +1062,13 @@
             UIImage *image = result[@"image"];
             UIImage *thumbnailImage = result[@"thumbnail"];
             
-            if (avatar && completion != nil)
+            if (avatar && image.size.width < 150.0) {
+                image = TGScaleImageToPixelSize(image, CGSizeMake(150.0, 150.0));
+            }
+            
+            if (avatar && completion != nil) {
                 completion(image);
+            }
             
             if (!saveOnly && didFinishEditing != nil)
                 didFinishEditing(editorValues, image, thumbnailImage, true);
@@ -1266,6 +1273,7 @@
                 cropController.fullPreviewView = _fullPreviewView;
                 cropController.fullPaintingView = _fullPaintingView;
                 cropController.fullEntitiesView = _fullEntitiesView;
+                cropController.fullEntitiesView.userInteractionEnabled = false;
                 cropController.fromCamera = [self presentedFromCamera];
                 cropController.skipTransitionIn = skipInitialTransition;
                 if (snapshotImage != nil)
@@ -1534,7 +1542,7 @@
             
         case TGPhotoEditorToolsTab:
         {
-            TGPhotoToolsController *toolsController = [[TGPhotoToolsController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView];
+            TGPhotoToolsController *toolsController = [[TGPhotoToolsController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView entitiesView:_fullEntitiesView];
             toolsController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
             toolsController.beginTransitionIn = ^UIView *(CGRect *referenceFrame, UIView **parentView, bool *noTransitionView)
             {
@@ -1981,7 +1989,7 @@
                 
                 TGDispatchOnMainThread(^{
                     if (self.didFinishEditingVideo != nil)
-                        self.didFinishEditingVideo(asset.URL, [adjustments editAdjustmentsWithPreset:preset videoStartValue:videoStartValue trimStartValue:trimStartValue trimEndValue:trimEndValue], fullImage, nil, true);
+                        self.didFinishEditingVideo(asset, [adjustments editAdjustmentsWithPreset:preset videoStartValue:videoStartValue trimStartValue:trimStartValue trimEndValue:trimEndValue], fullImage, nil, true);
                     
                     [self dismissAnimated:true];
                 });

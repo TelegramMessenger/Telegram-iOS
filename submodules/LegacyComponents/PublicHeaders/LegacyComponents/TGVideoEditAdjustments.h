@@ -37,7 +37,7 @@ typedef enum
 - (instancetype)editAdjustmentsWithPreset:(TGMediaVideoConversionPreset)preset maxDuration:(NSTimeInterval)maxDuration;
 - (instancetype)editAdjustmentsWithPreset:(TGMediaVideoConversionPreset)preset videoStartValue:(NSTimeInterval)videoStartValue trimStartValue:(NSTimeInterval)trimStartValue trimEndValue:(NSTimeInterval)trimEndValue;
 + (instancetype)editAdjustmentsWithOriginalSize:(CGSize)originalSize preset:(TGMediaVideoConversionPreset)preset;
-+ (instancetype)editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)values;
++ (instancetype)editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)values preset:(TGMediaVideoConversionPreset)preset;
 + (instancetype)editAdjustmentsWithDictionary:(NSDictionary *)dictionary;
 
 + (instancetype)editAdjustmentsWithOriginalSize:(CGSize)originalSize

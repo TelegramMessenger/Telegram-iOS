@@ -240,6 +240,9 @@
                     return;
                 
                 TGMediaVideoConversionPreset preset = TGMediaVideoConversionPresetAnimation;
+                if (adjustments.preset == TGMediaVideoConversionPresetProfile || adjustments.preset == TGMediaVideoConversionPresetProfileHigh || adjustments.preset == TGMediaVideoConversionPresetProfileVeryHigh) {
+                    preset = adjustments.preset;
+                }
                 
                 NSError *error = nil;
                 
@@ -283,7 +286,8 @@
                             if (watcher != nil)
                                 liveUploadData = [watcher fileUpdated:true];
                             
-                            contextResult = [TGMediaVideoConversionResult resultWithFileURL:outputUrl fileSize:0 duration:CMTimeGetSeconds(resultContext.timeRange.duration) dimensions:resultContext.dimensions coverImage:coverImage liveUploadData:liveUploadData];
+                            NSUInteger fileSize = [[[NSFileManager defaultManager] attributesOfItemAtPath:outputUrl.path error:nil] fileSize];
+                            contextResult = [TGMediaVideoConversionResult resultWithFileURL:outputUrl fileSize:fileSize duration:CMTimeGetSeconds(resultContext.timeRange.duration) dimensions:resultContext.dimensions coverImage:coverImage liveUploadData:liveUploadData];
                             return [resultContext finishedContext];
                         }];
                         

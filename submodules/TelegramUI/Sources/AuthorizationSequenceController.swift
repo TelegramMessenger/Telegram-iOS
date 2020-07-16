@@ -686,7 +686,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: "")))
                 }).start()
             }, displayCancel: displayCancel)
-            controller.signUpWithName = { [weak self, weak controller] firstName, lastName, avatarData, avatarUrl, avatarAdjustments in
+            controller.signUpWithName = { [weak self, weak controller] firstName, lastName, avatarData, avatarAsset, avatarAdjustments in
                 if let strongSelf = self {
                     controller?.inProgress = true
                     
@@ -696,15 +696,9 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     }
                     
                     let avatarVideo: Signal<UploadedPeerPhotoData?, NoError>?
-                    if let avatarUrl = avatarUrl {
+                    if let avatarAsset = avatarAsset as? AVAsset {
                         let account = strongSelf.account
                         avatarVideo = Signal<TelegramMediaResource?, NoError> { subscriber in
-                            var filteredPath = avatarUrl.path
-                            if filteredPath.hasPrefix("file://") {
-                                filteredPath = String(filteredPath[filteredPath.index(filteredPath.startIndex, offsetBy: "file://".count)])
-                            }
-                            
-                            let avAsset = AVURLAsset(url: URL(fileURLWithPath: filteredPath))
                             let entityRenderer: LegacyPaintEntityRenderer? = avatarAdjustments.flatMap { adjustments in
                                 if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
                                     return LegacyPaintEntityRenderer(account: nil, adjustments: adjustments)
@@ -713,7 +707,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                 }
                             }
                             
-                            let signal = TGMediaVideoConverter.convert(avAsset, adjustments: avatarAdjustments, watcher: nil, entityRenderer: entityRenderer)!
+                            let signal = TGMediaVideoConverter.convert(avatarAsset, adjustments: avatarAdjustments, watcher: nil, entityRenderer: entityRenderer)!
                             
                             let signalDisposable = signal.start(next: { next in
                                 if let result = next as? TGMediaVideoConversionResult {

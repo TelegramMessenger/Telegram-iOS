@@ -1768,7 +1768,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         });
     };
     
-    controller.didFinishEditingVideo = ^(NSURL *url, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
+    controller.didFinishEditingVideo = ^(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
         if (!hasChanges)
             return;
         
@@ -1779,7 +1779,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         TGDispatchOnMainThread(^
         {
             if (strongSelf.finishedWithVideo != nil)
-                strongSelf.finishedWithVideo(nil, url, resultImage, 0, CGSizeZero, adjustments, nil, nil, nil, nil);
+                strongSelf.finishedWithVideo(nil, [(AVURLAsset *)asset URL], resultImage, 0, CGSizeZero, adjustments, nil, nil, nil, nil);
         
             __strong TGPhotoEditorController *strongController = weakController;
             if (strongController != nil)
@@ -2592,7 +2592,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 if (animated) {
                     dict[@"isAnimation"] = @true;
                     if ([adjustments isKindOfClass:[PGPhotoEditorValues class]]) {
-                        dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)adjustments];
+                        dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)adjustments preset:TGMediaVideoConversionPresetAnimation];
                     } else {
                         dict[@"adjustments"] = adjustments;
                     }
