@@ -330,6 +330,8 @@ public final class AppLockContextImpl: AppLockContext {
     }
     
     public func lock() {
+        self.unlockedHiddenAccountRecordId.set(nil)
+        
         self.updateLockState { state in
             var state = state
             state.isManuallyLocked = true

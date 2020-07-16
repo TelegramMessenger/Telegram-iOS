@@ -23,6 +23,8 @@ public struct AccountManagerModifier {
 }
 
 public protocol DisplayedAccountsFilter {
+    var unlockedHiddenAccountRecordIdPromise: Promise<AccountRecordId?> { get }
+    
     func isDisplayed(_ record: AccountRecord) -> Bool
 }
 
@@ -58,6 +60,8 @@ final class AccountManagerImpl {
     private var noticeEntryViews = Bag<(MutableNoticeEntryView, ValuePipe<NoticeEntryView>)>()
     private var accessChallengeDataViews = Bag<(MutableAccessChallengeDataView, ValuePipe<AccessChallengeDataView>)>()
     private let displayedAccountsFilter: DisplayedAccountsFilter
+    
+    private var unlockedHiddenAccountRecordIdDisposable: Disposable?
     
     fileprivate init(queue: Queue, basePath: String, temporarySessionId: Int64, displayedAccountsFilter: DisplayedAccountsFilter) {
         let startTime = CFAbsoluteTimeGetCurrent()
@@ -97,6 +101,26 @@ final class AccountManagerImpl {
             self.syncAtomicStateToFile()
         }
         
+        self.unlockedHiddenAccountRecordIdDisposable = displayedAccountsFilter.unlockedHiddenAccountRecordIdPromise.get().start(next: { [weak self] id in
+            guard let strongSelf = self else { return }
+            
+            var operations = [AccountManagerRecordOperation]()
+            
+            if let id = id {
+                operations.append(.set(id: id, record: strongSelf.currentAtomicState.records[id]))
+            } else {
+                for (id, _) in strongSelf.currentAtomicState.records.filter({ !displayedAccountsFilter.isDisplayed($0.value) }) {
+                    operations.append(.set(id: id, record: nil))
+                }
+            }
+            
+            for (view, pipe) in strongSelf.recordsViews.copyItems() {
+                if view.replay(operations: operations, metadataOperations: []) {
+                    pipe.putNext(AccountRecordsView(view))
+                }
+            }
+        })
+        
         postboxLog("AccountManager: currentAccountId = \(String(describing: currentAtomicState.currentRecordId))")
         
         self.tables.append(self.legacyMetadataTable)
@@ -109,6 +133,7 @@ final class AccountManagerImpl {
     
     deinit {
         assert(self.queue.isCurrent())
+        unlockedHiddenAccountRecordIdDisposable?.dispose()
     }
     
     fileprivate func transaction<T>(ignoreDisabled: Bool, _ f: @escaping (AccountManagerModifier) -> T) -> Signal<T, NoError> {

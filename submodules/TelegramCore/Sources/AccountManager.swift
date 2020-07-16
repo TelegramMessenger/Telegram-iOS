@@ -218,8 +218,6 @@ public final class DisplayedAccountsFilterImpl: DisplayedAccountsFilter {
                 guard let strongSelf = self else { return }
                 
                 strongSelf.unlockedHiddenAccountRecordId = value
-                
-                // TODO: -- Update UI and switch to account if value != nil
             })
     }
     
