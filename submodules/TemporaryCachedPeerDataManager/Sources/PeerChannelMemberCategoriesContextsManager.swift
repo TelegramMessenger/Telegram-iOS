@@ -43,7 +43,6 @@ private final class ProfileDataPhotoPreloadContext {
     
     let disposable: Disposable
     var value: Any?
-    var skipNext = false
     var emptyTimer: SwiftSignalKit.Timer?
     
     init(disposable: Disposable) {
@@ -211,9 +210,6 @@ private final class PeerChannelMemberCategoriesContextsManagerImpl {
         let context: ProfileDataPhotoPreloadContext
         if let current = self.profileDataPhotoPreloadContexts[peerId] {
             context = current
-            if let _ = context.value {
-                context.skipNext = true
-            }
         } else {
             let disposable = MetaDisposable()
             context = ProfileDataPhotoPreloadContext(disposable: disposable)
@@ -221,10 +217,6 @@ private final class PeerChannelMemberCategoriesContextsManagerImpl {
             
             disposable.set(fetch.start(next: { [weak context] value in
                 guard let context = context else {
-                    return
-                }
-                if context.skipNext {
-                    context.skipNext = false
                     return
                 }
                 context.value = value

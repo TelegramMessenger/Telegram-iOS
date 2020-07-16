@@ -35,6 +35,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     bool _appeared;
     bool _scheduledTransitionIn;
     CGFloat _cellWidth;
+    int _entitiesReady;
     
     NSArray *_allTools;
     NSArray *_simpleTools;
@@ -107,26 +108,27 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 }
 
 - (void)layoutEntitiesView {
-    CGSize fittedContentSize = [TGPhotoPaintController fittedContentSize:_photoEditor.cropRect orientation:_photoEditor.cropOrientation originalSize:_photoEditor.originalSize];
-    CGRect fittedCropRect = [TGPhotoPaintController fittedCropRect:_photoEditor.cropRect originalSize:_photoEditor.originalSize keepOriginalSize:false];
-    _entitiesWrapperView.frame = CGRectMake(0.0f, 0.0f, fittedContentSize.width, fittedContentSize.height);
+    if (_entitiesReady < 2 || _dismissing)
+        return;
     
-    CGRect rect = [TGPhotoPaintController fittedCropRect:self.photoEditor.cropRect originalSize:self.photoEditor.originalSize keepOriginalSize:true];
-    _entitiesView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
-    _entitiesView.transform = CGAffineTransformMakeRotation(_photoEditor.cropRotation);
+    _entitiesWrapperView.transform = CGAffineTransformIdentity;
+    _entitiesWrapperView.frame = CGRectMake(0.0, 0.0, _entitiesView.frame.size.width, _entitiesView.frame.size.height);
+    [_entitiesWrapperView addSubview:_entitiesView];
     
-    CGSize fittedOriginalSize = TGScaleToSize(_photoEditor.originalSize, [TGPhotoPaintController maximumPaintingSize]);
-    CGSize rotatedSize = TGRotatedContentSize(fittedOriginalSize, _photoEditor.cropRotation);
-    CGPoint centerPoint = CGPointMake(rotatedSize.width / 2.0f, rotatedSize.height / 2.0f);
+    CGFloat paintingScale = _entitiesView.frame.size.width / _photoEditor.originalSize.width;
+    _entitiesView.frame = CGRectMake(-_photoEditor.cropRect.origin.x * paintingScale, -_photoEditor.cropRect.origin.y * paintingScale, _entitiesView.frame.size.width, _entitiesView.frame.size.height);
     
-    CGFloat scale = fittedOriginalSize.width / _photoEditor.originalSize.width;
-    CGPoint offset = TGPaintSubtractPoints(centerPoint, [TGPhotoPaintController fittedCropRect:_photoEditor.cropRect centerScale:scale]);
-    
-    CGPoint boundsCenter = TGPaintCenterOfRect(_entitiesWrapperView.bounds);
-    _entitiesView.center = TGPaintAddPoints(boundsCenter, offset);
-    if (_entitiesView.superview != _entitiesWrapperView) {
-        [_entitiesWrapperView addSubview:_entitiesView];
+    CGFloat cropScale = 1.0;
+    if (_photoEditor.originalSize.width > _photoEditor.originalSize.height) {
+        cropScale = _photoEditor.originalSize.height / _photoEditor.cropRect.size.height;
+    } else {
+        cropScale = _photoEditor.originalSize.width / _photoEditor.cropRect.size.width;
     }
+    
+    CGFloat scale = _previewView.frame.size.width / _entitiesView.frame.size.width;
+    CGAffineTransform rotationTransform = CGAffineTransformMakeRotation(TGRotationForOrientation(_photoEditor.cropOrientation));
+    _entitiesWrapperView.transform = CGAffineTransformScale(rotationTransform, scale * cropScale, scale * cropScale);
+    _entitiesWrapperView.frame = [_previewView convertRect:_previewView.bounds toView:_entitiesWrapperView.superview];
 }
 
 - (void)loadView
@@ -507,6 +509,9 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     TGPhotoEditorPreviewView *previewView = _previewView;
     previewView.hidden = false;
     [previewView performTransitionInIfNeeded];
+        
+    _entitiesReady++;
+    [self layoutEntitiesView];
 }
 
 - (void)prepareForCustomTransitionOut

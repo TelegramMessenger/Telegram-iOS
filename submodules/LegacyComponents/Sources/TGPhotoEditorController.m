@@ -1171,6 +1171,7 @@
     UIView *snapshotView = nil;
     
     TGPhotoEditorTabController *currentController = _currentTabController;
+    TGPhotoEditorTab switchingFromTab = TGPhotoEditorNoneTab;
     if (currentController != nil)
     {
         if (![currentController isDismissAllowed])
@@ -1178,13 +1179,18 @@
         
         [self savePaintingData];
                 
+        bool resetTransform = false;
+        if ([self presentedForAvatarCreation] && tab == TGPhotoEditorCropTab && [currentController isKindOfClass:[TGPhotoPaintController class]]) {
+            resetTransform = true;
+        }
+        
         currentController.switchingToTab = tab;
         [currentController transitionOutSwitching:true completion:^
         {
             [currentController removeFromParentViewController];
             [currentController.view removeFromSuperview];
             
-            if ([self presentedForAvatarCreation] && tab == TGPhotoEditorCropTab) {
+            if (resetTransform) {
                 _previewView.transform = CGAffineTransformIdentity;
             }
         }];
@@ -1200,6 +1206,9 @@
             {
                 _backgroundView.alpha = 0.0f;
             } completion:nil];
+            switchingFromTab = TGPhotoEditorCropTab;
+        } else if ([currentController isKindOfClass:[TGPhotoToolsController class]]) {
+            switchingFromTab = TGPhotoEditorToolsTab;
         }
         
         isInitialAppearance = false;
@@ -1281,7 +1290,7 @@
                 cropController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
                 cropController.controlVideoPlayback = ^(bool play) {
                     __strong TGPhotoEditorController *strongSelf = weakSelf;
-                    if (strongSelf == nil)
+                    if (strongSelf == nil || strongSelf->_progressVisible)
                         return;
                     if (play) {
                         [strongSelf startVideoPlayback:false];
@@ -1297,7 +1306,7 @@
                 };
                 cropController.togglePlayback = ^{
                     __strong TGPhotoEditorController *strongSelf = weakSelf;
-                    if (strongSelf == nil || !strongSelf->_item.isVideo)
+                    if (strongSelf == nil || !strongSelf->_item.isVideo || strongSelf->_progressVisible)
                         return;
                     
                     if (strongSelf->_isPlaying) {
@@ -1613,6 +1622,7 @@
     _currentTabController = controller;
     _currentTabController.item = _item;
     _currentTabController.intent = _intent;
+    _currentTabController.switchingFromTab = switchingFromTab;
     _currentTabController.initialAppearance = isInitialAppearance;
     
     if (![_currentTabController isKindOfClass:[TGPhotoPaintController class]])
@@ -1983,8 +1993,10 @@
                     preset = TGMediaVideoConversionPresetProfileVeryHigh;
                 } else if (duration <= 5.0) {
                     preset = TGMediaVideoConversionPresetProfileHigh;
-                } else {
+                } else if (duration <= 8.0) {
                     preset = TGMediaVideoConversionPresetProfile;
+                } else {
+                    preset = TGMediaVideoConversionPresetProfileLow;
                 }
                 
                 TGDispatchOnMainThread(^{

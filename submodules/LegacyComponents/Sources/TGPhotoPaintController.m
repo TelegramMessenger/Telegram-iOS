@@ -99,6 +99,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     
     bool _appeared;
     bool _skipEntitiesSetup;
+    bool _entitiesReady;
     
     TGPhotoPaintFont *_selectedTextFont;
     TGPhotoPaintTextEntityStyle _selectedTextStyle;
@@ -268,7 +269,9 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         
         [strongSelf updateSettingsButton];
     };
-    [_contentWrapperView addSubview:_entitiesContainerView];
+    if (!_skipEntitiesSetup) {
+        [_contentWrapperView addSubview:_entitiesContainerView];
+    }
     _undoManager.entitiesContainer = _entitiesContainerView;
     
     _dimView = [[UIView alloc] init];
@@ -1816,7 +1819,6 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     
     if (self.presentedForAvatarCreation) {
         _canvasView.hidden = true;
-        _entitiesContainerView.hidden = true;
     }
 }
 
@@ -1865,7 +1867,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     
     [self setupCanvas];
     _entitiesContainerView.hidden = false;
-    
+        
     TGPhotoEditorPreviewView *previewView = _previewView;
     [previewView setPaintingHidden:true];
     previewView.hidden = false;
@@ -1887,8 +1889,10 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     CGPoint boundsCenter = TGPaintCenterOfRect(_contentWrapperView.bounds);
     _entitiesContainerView.center = TGPaintAddPoints(boundsCenter, offset);
     
-    [_contentWrapperView addSubview:_entitiesContainerView];
-    
+    if (!_skipEntitiesSetup || _entitiesReady) {
+        [_contentWrapperView addSubview:_entitiesContainerView];
+    }
+    _entitiesReady = true;
     [self resetScrollView];
 }
 
@@ -2321,6 +2325,13 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     CGRect originalFrame = CGRectMake(-cropRect.origin.x * ratio, -cropRect.origin.y * ratio, originalSize.width * ratio, originalSize.height * ratio);
     
     previewView.frame = previewFrame;
+    
+    if ([self presentedForAvatarCreation]) {
+        CGAffineTransform transform = CGAffineTransformMakeRotation(TGRotationForOrientation(photoEditor.cropOrientation));
+        if (photoEditor.cropMirrored)
+            transform = CGAffineTransformScale(transform, -1.0f, 1.0f);
+        previewView.transform = transform;
+    }
     
     CGSize fittedOriginalSize = CGSizeMake(originalSize.width * ratio, originalSize.height * ratio);
     CGSize rotatedSize = TGRotatedContentSize(fittedOriginalSize, rotation);
