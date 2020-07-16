@@ -426,7 +426,7 @@
             
             [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarImage:resultImage];
         };
-        controller.didFinishEditingVideo = ^(NSURL *url, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
+        controller.didFinishEditingVideo = ^(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
             if (!hasChanges)
                 return;
             
@@ -434,7 +434,7 @@
             if (strongSelf == nil)
                 return;
             
-            [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarVideo:url adjustments:adjustments image:resultImage];
+            [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarVideo:asset adjustments:adjustments image:resultImage];
         };
         controller.requestThumbnailImage = ^(id<TGMediaEditableItem> editableItem)
         {

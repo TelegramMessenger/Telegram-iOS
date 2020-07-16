@@ -174,9 +174,9 @@ public func fetchedAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<
                     for photo in photos {
                         let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
                         if result.isEmpty, let first = initialEntries.first {
-                            result.append(.image(photo.image.imageId, photo.image.reference, first.representations, photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil))
+                            result.append(.image(photo.image.imageId, photo.image.reference, first.representations, photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil))
                         } else {
-                            result.append(.image(photo.image.imageId, photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.standalone(resource: $0.resource)) }), photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil))
+                            result.append(.image(photo.image.imageId, photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil))
                         }
                         index += 1
                     }
@@ -202,9 +202,9 @@ public func fetchedAvatarGalleryEntries(account: Account, peer: Peer, firstEntry
                 for photo in photos {
                     let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
                     if result.isEmpty, let first = initialEntries.first {
-                        result.append(.image(photo.image.imageId, photo.image.reference, first.representations, photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil))
+                        result.append(.image(photo.image.imageId, photo.image.reference, first.representations, photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil))
                     } else {
-                        result.append(.image(photo.image.imageId, photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.standalone(resource: $0.resource)) }), photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil))
+                        result.append(.image(photo.image.imageId, photo.image.reference, photo.image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), photo.image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), peer, photo.date, indexData, photo.messageId, photo.image.immediateThumbnailData, nil))
                     }
                     index += 1
                 }
@@ -845,7 +845,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         }
         let actionSheet = ActionSheetController(presentationData: presentationData)
         let items: [ActionSheetItem] = [
-            ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: { [weak actionSheet] in
+            ActionSheetButtonItem(title: presentationData.strings.Settings_RemoveConfirmation, color: .destructive, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 proceed()
             })

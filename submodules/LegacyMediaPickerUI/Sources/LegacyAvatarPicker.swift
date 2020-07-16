@@ -23,16 +23,16 @@ public func presentLegacyAvatarEditor(theme: PresentationTheme, image: UIImage?,
         if let image = image {
             imageCompletion(image)
         }
-    }, didFinishWithVideo: { image, url, adjustments in
-        if let image = image, let url = url {
-            videoCompletion(image, url, adjustments)
+    }, didFinishWithVideo: { image, asset, adjustments in
+        if let image = image {
+//            videoCompletion(image, url, adjustments)
         }
     }, dismissed: { [weak legacyController] in
         legacyController?.dismiss()
     })
 }
 
-public func presentLegacyAvatarPicker(holder: Atomic<NSObject?>, signup: Bool, theme: PresentationTheme, present: (ViewController, Any?) -> Void, openCurrent: (() -> Void)?, completion: @escaping (UIImage) -> Void, videoCompletion: @escaping (UIImage, URL, TGVideoEditAdjustments?) -> Void = { _, _, _ in}) {
+public func presentLegacyAvatarPicker(holder: Atomic<NSObject?>, signup: Bool, theme: PresentationTheme, present: (ViewController, Any?) -> Void, openCurrent: (() -> Void)?, completion: @escaping (UIImage) -> Void, videoCompletion: @escaping (UIImage, Any?, TGVideoEditAdjustments?) -> Void = { _, _, _ in}) {
     let legacyController = LegacyController(presentation: .custom, theme: theme)
     legacyController.statusBar.statusBarStyle = .Ignore
     
@@ -53,11 +53,11 @@ public func presentLegacyAvatarPicker(holder: Atomic<NSObject?>, signup: Bool, t
         }
         completion(image)
     }
-    mixin.didFinishWithVideo = { image, url, adjustments in
-        guard let image = image, let url = url else {
+    mixin.didFinishWithVideo = { image, asset, adjustments in
+        guard let image = image else {
             return
         }
-        videoCompletion(image, url, adjustments)
+        videoCompletion(image, asset, adjustments)
     }
     mixin.didFinishWithView = {
         openCurrent?()

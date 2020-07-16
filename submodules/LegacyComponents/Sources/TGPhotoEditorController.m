@@ -345,6 +345,7 @@
         _fullPaintingView.frame = _fullPreviewView.frame;
         
         _fullEntitiesView = [[TGPhotoEntitiesContainerView alloc] init];
+        _fullEntitiesView.userInteractionEnabled = false;
         _fullEntitiesView.frame = _fullPreviewView.frame;
     }
         
@@ -1266,6 +1267,7 @@
                 cropController.fullPreviewView = _fullPreviewView;
                 cropController.fullPaintingView = _fullPaintingView;
                 cropController.fullEntitiesView = _fullEntitiesView;
+                cropController.fullEntitiesView.userInteractionEnabled = false;
                 cropController.fromCamera = [self presentedFromCamera];
                 cropController.skipTransitionIn = skipInitialTransition;
                 if (snapshotImage != nil)
@@ -1534,7 +1536,7 @@
             
         case TGPhotoEditorToolsTab:
         {
-            TGPhotoToolsController *toolsController = [[TGPhotoToolsController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView];
+            TGPhotoToolsController *toolsController = [[TGPhotoToolsController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView entitiesView:_fullEntitiesView];
             toolsController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
             toolsController.beginTransitionIn = ^UIView *(CGRect *referenceFrame, UIView **parentView, bool *noTransitionView)
             {
@@ -1981,7 +1983,7 @@
                 
                 TGDispatchOnMainThread(^{
                     if (self.didFinishEditingVideo != nil)
-                        self.didFinishEditingVideo(asset.URL, [adjustments editAdjustmentsWithPreset:preset videoStartValue:videoStartValue trimStartValue:trimStartValue trimEndValue:trimEndValue], fullImage, nil, true);
+                        self.didFinishEditingVideo(asset, [adjustments editAdjustmentsWithPreset:preset videoStartValue:videoStartValue trimStartValue:trimStartValue trimEndValue:trimEndValue], fullImage, nil, true);
                     
                     [self dismissAnimated:true];
                 });

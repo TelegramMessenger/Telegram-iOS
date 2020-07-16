@@ -566,10 +566,10 @@
         self.avatarCompletionBlock(image);
 }
 
-- (void)completeWithAvatarVideo:(NSURL *)url adjustments:(TGVideoEditAdjustments *)adjustments image:(UIImage *)image
+- (void)completeWithAvatarVideo:(AVAsset *)asset adjustments:(TGVideoEditAdjustments *)adjustments image:(UIImage *)image
 {
     if (self.avatarVideoCompletionBlock != nil)
-        self.avatarVideoCompletionBlock(image, url, adjustments);
+        self.avatarVideoCompletionBlock(image, asset, adjustments);
 }
 
 - (void)completeWithCurrentItem:(TGMediaAsset *)currentItem silentPosting:(bool)silentPosting scheduleTime:(int32_t)scheduleTime

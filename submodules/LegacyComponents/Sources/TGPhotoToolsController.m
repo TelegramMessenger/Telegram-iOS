@@ -44,6 +44,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     TGPhotoEditorCollectionView *_portraitCollectionView;
     TGPhotoEditorCollectionView *_landscapeCollectionView;
     TGPhotoEditorHUDView *_hudView;
+    TGPhotoEntitiesContainerView *_entitiesView;
     
     void (^_changeBlock)(PGPhotoTool *, id, bool);
     void (^_interactionBegan)(void);
@@ -64,14 +65,15 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 
 @implementation TGPhotoToolsController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView entitiesView:(TGPhotoEntitiesContainerView *)entitiesView
 {
     self = [super initWithContext:context];
     if (self != nil)
     {
         self.photoEditor = photoEditor;
         self.previewView = previewView;
-                
+        _entitiesView = entitiesView;
+
          __weak TGPhotoToolsController *weakSelf = self;
         _changeBlock = ^(PGPhotoTool *tool, __unused id newValue, bool animated)
         {
