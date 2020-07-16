@@ -346,7 +346,8 @@
         
         _fullEntitiesView = [[TGPhotoEntitiesContainerView alloc] init];
         _fullEntitiesView.userInteractionEnabled = false;
-        _fullEntitiesView.frame = _fullPreviewView.frame;
+        CGRect rect = [TGPhotoPaintController fittedCropRect:_photoEditor.cropRect originalSize:_photoEditor.originalSize keepOriginalSize:true];
+        _fullEntitiesView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
     }
         
     _dotMarkerView = [[UIImageView alloc] initWithImage:TGCircleImage(7.0, [TGPhotoEditorInterfaceAssets accentColor])];
@@ -1061,8 +1062,13 @@
             UIImage *image = result[@"image"];
             UIImage *thumbnailImage = result[@"thumbnail"];
             
-            if (avatar && completion != nil)
+            if (avatar && image.size.width < 150.0) {
+                image = TGScaleImageToPixelSize(image, CGSizeMake(150.0, 150.0));
+            }
+            
+            if (avatar && completion != nil) {
                 completion(image);
+            }
             
             if (!saveOnly && didFinishEditing != nil)
                 didFinishEditing(editorValues, image, thumbnailImage, true);

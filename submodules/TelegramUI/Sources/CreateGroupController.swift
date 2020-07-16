@@ -628,7 +628,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                             })
                             signal = durationSignal.map(toSignal: { duration -> SSignal? in
                                 if let duration = duration as? Double {
-                                    return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
+                                    return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, watcher: nil, entityRenderer: entityRenderer)!
                                 } else {
                                     return SSignal.single(nil)
                                 }

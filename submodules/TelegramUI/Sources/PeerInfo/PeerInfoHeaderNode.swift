@@ -916,9 +916,13 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         guard case let .image(image) = item else {
             return false
         }
+                
         var items: [PeerInfoAvatarListItem] = []
         var entries: [AvatarGalleryEntry] = []
         let previousIndex = self.currentIndex
+        
+        var index = 0
+        var deletedIndex: Int?
         for entry in self.galleryEntries {
             switch entry {
                 case let .topImage(representations, videoRepresentations, _, _, immediateThumbnailData, _):
@@ -928,9 +932,25 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     if image.0 != reference {
                         entries.append(entry)
                         items.append(.image(reference, representations, videoRepresentations, immediateThumbnailData))
+                    } else {
+                        deletedIndex = index
                     }
             }
+            index += 1
         }
+        
+        
+        if let peer = self.peer, peer is TelegramGroup || peer is TelegramChannel, deletedIndex == 0 {
+            self.galleryEntries = []
+            self.items = []
+            self.itemsUpdated?([])
+            self.currentIndex = 0
+            if let size = self.validLayout {
+                self.updateItems(size: size, update: true, transition: .immediate, stripTransition: .immediate, synchronous: true)
+            }
+            return true
+        }
+        
         self.galleryEntries = normalizeEntries(entries)
         self.items = items
         self.itemsUpdated?(items)

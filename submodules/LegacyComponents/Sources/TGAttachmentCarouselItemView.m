@@ -898,7 +898,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         };
         
         __weak TGPhotoEditorController *weakController = controller;
-        controller.didFinishEditing = ^(__unused id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, __unused UIImage *thumbnailImage, __unused bool hasChanges)
+        controller.didFinishEditing = ^(id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, __unused UIImage *thumbnailImage, __unused bool hasChanges)
         {
             if (!hasChanges)
                 return;
@@ -911,8 +911,34 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             if (strongController == nil)
                 return;
             
-            if (strongSelf.avatarCompletionBlock != nil)
-                strongSelf.avatarCompletionBlock(resultImage);
+            if (adjustments.paintingData.hasAnimation) {
+                TGVideoEditAdjustments *videoAdjustments = adjustments;
+                if ([videoAdjustments isKindOfClass:[PGPhotoEditorValues class]]) {
+                    videoAdjustments = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)adjustments preset:TGMediaVideoConversionPresetProfileVeryHigh];
+                }
+                
+                NSString *filePath = [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"gifvideo_%x.jpg", (int)arc4random()]];
+                NSData *data = UIImageJPEGRepresentation(resultImage, 0.8);
+                [data writeToFile:filePath atomically:true];
+                
+                UIImage *previewImage = resultImage;
+                if ([adjustments cropAppliedForAvatar:false] || adjustments.hasPainting || adjustments.toolsApplied)
+                {
+                    UIImage *paintingImage = adjustments.paintingData.stillImage;
+                    if (paintingImage == nil) {
+                        paintingImage = adjustments.paintingData.image;
+                    }
+                    UIImage *thumbnailImage = TGPhotoEditorVideoExtCrop(resultImage, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(asset.dimensions, CGSizeMake(800, 800)), adjustments.originalSize, true, true, true);
+                    if (thumbnailImage != nil) {
+                        previewImage = thumbnailImage;
+                    }
+                }
+                if (strongSelf.avatarVideoCompletionBlock != nil)
+                    strongSelf.avatarVideoCompletionBlock(previewImage, [NSURL fileURLWithPath:filePath], videoAdjustments);
+            } else {
+                if (strongSelf.avatarCompletionBlock != nil)
+                    strongSelf.avatarCompletionBlock(resultImage);
+            }
         };
         controller.didFinishEditingVideo = ^(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
             if (!hasChanges)

@@ -22,6 +22,9 @@
 #import "TGPhotoEditorPreviewView.h"
 #import "TGPhotoEditorHUDView.h"
 #import "TGPhotoEditorSparseView.h"
+#import "TGPhotoEntitiesContainerView.h"
+
+#import "TGPhotoPaintController.h"
 
 const CGFloat TGPhotoEditorToolsPanelSize = 180.0f;
 const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize + 40.0f;
@@ -52,6 +55,8 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     
     bool _preview;
     TGPhotoEditorTab _currentTab;
+    
+    UIView *_entitiesWrapperView;
     
     UIView <TGPhotoEditorToolView> *_toolAreaView;
     UIView <TGPhotoEditorToolView> *_portraitToolControlView;
@@ -99,6 +104,29 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 {
     _portraitCollectionView.toolsDataSource = nil;
     _landscapeCollectionView.toolsDataSource = nil;
+}
+
+- (void)layoutEntitiesView {
+    CGSize fittedContentSize = [TGPhotoPaintController fittedContentSize:_photoEditor.cropRect orientation:_photoEditor.cropOrientation originalSize:_photoEditor.originalSize];
+    CGRect fittedCropRect = [TGPhotoPaintController fittedCropRect:_photoEditor.cropRect originalSize:_photoEditor.originalSize keepOriginalSize:false];
+    _entitiesWrapperView.frame = CGRectMake(0.0f, 0.0f, fittedContentSize.width, fittedContentSize.height);
+    
+    CGRect rect = [TGPhotoPaintController fittedCropRect:self.photoEditor.cropRect originalSize:self.photoEditor.originalSize keepOriginalSize:true];
+    _entitiesView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
+    _entitiesView.transform = CGAffineTransformMakeRotation(_photoEditor.cropRotation);
+    
+    CGSize fittedOriginalSize = TGScaleToSize(_photoEditor.originalSize, [TGPhotoPaintController maximumPaintingSize]);
+    CGSize rotatedSize = TGRotatedContentSize(fittedOriginalSize, _photoEditor.cropRotation);
+    CGPoint centerPoint = CGPointMake(rotatedSize.width / 2.0f, rotatedSize.height / 2.0f);
+    
+    CGFloat scale = fittedOriginalSize.width / _photoEditor.originalSize.width;
+    CGPoint offset = TGPaintSubtractPoints(centerPoint, [TGPhotoPaintController fittedCropRect:_photoEditor.cropRect centerScale:scale]);
+    
+    CGPoint boundsCenter = TGPaintCenterOfRect(_entitiesWrapperView.bounds);
+    _entitiesView.center = TGPaintAddPoints(boundsCenter, offset);
+    if (_entitiesView.superview != _entitiesWrapperView) {
+        [_entitiesWrapperView addSubview:_entitiesView];
+    }
 }
 
 - (void)loadView
@@ -190,6 +218,10 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     
     _wrapperView = [[TGPhotoEditorSparseView alloc] initWithFrame:CGRectZero];
     [self.view addSubview:_wrapperView];
+    
+    _entitiesWrapperView = [[UIView alloc] init];
+    _entitiesWrapperView.userInteractionEnabled = false;
+    [_wrapperView addSubview:_entitiesWrapperView];
     
     _portraitToolsWrapperView = [[UIView alloc] initWithFrame:CGRectZero];
     _portraitToolsWrapperView.alpha = 0.0f;
@@ -977,6 +1009,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     [_landscapeCollectionView.collectionViewLayout invalidateLayout];
     
     [self updatePreviewView];
+    [self layoutEntitiesView];
 }
 
 - (TGPhotoEditorTab)availableTabs

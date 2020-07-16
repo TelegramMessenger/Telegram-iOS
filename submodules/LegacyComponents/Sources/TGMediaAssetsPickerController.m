@@ -406,6 +406,7 @@
         }
         
         TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:_context item:editableItem intent:intent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
+        controller.stickersContext = self.stickersContext;
         controller.editingContext = self.editingContext;
         controller.didFinishRenderingFullSizeImage = ^(UIImage *resultImage)
         {
@@ -415,7 +416,7 @@
             
             [[strongSelf->_assetsLibrary saveAssetWithImage:resultImage] startWithNext:nil];
         };
-        controller.didFinishEditing = ^(__unused id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, __unused UIImage *thumbnailImage, bool hasChanges)
+        controller.didFinishEditing = ^(id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, __unused UIImage *thumbnailImage, bool hasChanges)
         {
             if (!hasChanges)
                 return;
@@ -424,7 +425,32 @@
             if (strongSelf == nil)
                 return;
             
-            [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarImage:resultImage];
+            if (adjustments.paintingData.hasAnimation) {
+                TGVideoEditAdjustments *videoAdjustments = adjustments;
+                if ([videoAdjustments isKindOfClass:[PGPhotoEditorValues class]]) {
+                    videoAdjustments = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)adjustments preset:TGMediaVideoConversionPresetProfileVeryHigh];
+                }
+                
+                NSString *filePath = [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"gifvideo_%x.jpg", (int)arc4random()]];
+                NSData *data = UIImageJPEGRepresentation(resultImage, 0.8);
+                [data writeToFile:filePath atomically:true];
+                
+                UIImage *previewImage = resultImage;
+                if ([adjustments cropAppliedForAvatar:false] || adjustments.hasPainting || adjustments.toolsApplied)
+                {
+                    UIImage *paintingImage = adjustments.paintingData.stillImage;
+                    if (paintingImage == nil) {
+                        paintingImage = adjustments.paintingData.image;
+                    }
+                    UIImage *thumbnailImage = TGPhotoEditorVideoExtCrop(resultImage, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(asset.dimensions, CGSizeMake(800, 800)), adjustments.originalSize, true, true, true);
+                    if (thumbnailImage != nil) {
+                        previewImage = thumbnailImage;
+                    }
+                }
+                [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarVideo:[NSURL fileURLWithPath:filePath] adjustments:videoAdjustments image:previewImage];
+            } else {
+                [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarImage:resultImage];
+            }
         };
         controller.didFinishEditingVideo = ^(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
             if (!hasChanges)

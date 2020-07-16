@@ -186,28 +186,6 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
              
              [self _finishedTransitionInWithView:transitionView];
     }];
-    
-//    POPSpringAnimation *animation = [TGPhotoEditorAnimation prepareTransitionAnimationForPropertyNamed:kPOPViewFrame];
-//    if (self.transitionSpeed > FLT_EPSILON)
-//        animation.springSpeed = self.transitionSpeed;
-//    animation.fromValue = [NSValue valueWithCGRect:_transitionView.frame];
-//    animation.toValue = [NSValue valueWithCGRect:_transitionTargetFrame];
-//    animation.completionBlock = ^(__unused POPAnimation *animation, __unused BOOL finished)
-//    {
-//        _transitionInProgress = false;
-//        
-//        UIView *transitionView = _transitionView;
-//        _transitionView = nil;
-//        
-//        if (self.finishedTransitionIn != nil)
-//        {
-//            self.finishedTransitionIn();
-//            self.finishedTransitionIn = nil;
-//        }
-//        
-//        [self _finishedTransitionInWithView:transitionView];
-//    };
-//    [_transitionView pop_addAnimation:animation forKey:@"frame"];
 }
 
 - (void)prepareForCustomTransitionOut
