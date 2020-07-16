@@ -627,8 +627,6 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                             entries.insert(previousFirstEntry, at: index)
                         }
                                               
-                     
-                        
                         entries = normalizeEntries(entries)
                         self.galleryNode.pager.replaceItems(entries.map({ entry in PeerAvatarImageGalleryItem(context: self.context, peer: self.peer, presentationData: presentationData, entry: entry, sourceCorners: self.sourceCorners, delete: self.canDelete ? { [weak self] in
                             self?.deleteEntry(entry)
@@ -638,6 +636,10 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                             self?.editEntry(entry)
                         }) }), centralItemIndex: 0, synchronous: true)
                         self.entries = entries
+                        
+                        if let firstEntry = self.entries.first {
+                            self._hiddenMedia.set(.single(firstEntry))
+                        }
                     }
                 } else {
 //                    if let messageId = messageId {
