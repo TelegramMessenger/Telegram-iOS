@@ -16,6 +16,7 @@
 
 #import "TGMediaPickerGalleryVideoScrubber.h"
 #import "TGModernGalleryVideoView.h"
+#import "TGPhotoEntitiesContainerView.h"
 
 #import "TGPhotoPaintController.h"
 
@@ -257,6 +258,50 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         [self.view insertSubview:_transitionView belowSubview:_wrapperView];
 }
 
+- (void)animateTransitionIn {
+    if (self.initialAppearance) {
+        [super animateTransitionIn];
+        return;
+    } else {
+        _animateScale = true;
+        
+        [self transitEntities:_previewView];
+        
+        [super animateTransitionIn];
+    }
+}
+
++ (CGRect)fittedCropRect:(CGRect)cropRect originalSize:(CGSize)originalSize fitSize:(CGSize)fitSize {
+    CGSize fittedOriginalSize = TGScaleToSize(originalSize, fitSize);
+    CGFloat scale = fittedOriginalSize.width / originalSize.width;
+    
+    CGSize size = fittedOriginalSize;
+    
+    return CGRectMake(-cropRect.origin.x * scale, -cropRect.origin.y * scale, size.width, size.height);
+}
+
+- (void)transitEntities:(UIView *)parentView {
+    UIView *containerView = [[UIView alloc] init];
+    [parentView addSubview:containerView];
+    
+    containerView.frame = CGRectMake(0.0, 0.0, _fullEntitiesView.frame.size.width, _fullEntitiesView.frame.size.height);
+    [containerView addSubview:_fullEntitiesView];
+    
+    CGFloat paintingScale = _fullEntitiesView.frame.size.width / _photoEditor.originalSize.width;
+    _fullEntitiesView.frame = CGRectMake(-_photoEditor.cropRect.origin.x * paintingScale, -_photoEditor.cropRect.origin.y * paintingScale, _fullEntitiesView.frame.size.width, _fullEntitiesView.frame.size.height);
+        
+    CGFloat cropScale = 1.0;
+    if (_photoEditor.originalSize.width > _photoEditor.originalSize.height) {
+        cropScale = _photoEditor.originalSize.height / _photoEditor.cropRect.size.height;
+    } else {
+        cropScale = _photoEditor.originalSize.width / _photoEditor.cropRect.size.width;
+    }
+    
+    CGFloat scale = parentView.frame.size.width / _fullEntitiesView.frame.size.width;
+    containerView.transform = CGAffineTransformMakeScale(scale * cropScale, scale * cropScale);
+    containerView.frame = CGRectMake(0.0, 0.0, parentView.frame.size.width, parentView.frame.size.height);
+}
+
 - (void)transitionIn
 {
     if (_portraitToolsWrapperView.frame.size.height < FLT_EPSILON) {
@@ -373,13 +418,22 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     
         [_cropView closeCurtains];
         
+        [self transitEntities:_cropView.clipView];
+        
+        CGAffineTransform initialTransform = _previewView.transform;
         [UIView animateWithDuration:0.3f delay:0.0f options:UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionLayoutSubviews animations:^
         {
-            _previewView.frame = targetFrame;
+            CGFloat scale = targetFrame.size.width / _previewView.frame.size.width;
+            _previewView.center = CGPointMake(CGRectGetMidX(targetFrame), CGRectGetMidY(targetFrame));
+            _previewView.transform = CGAffineTransformScale(initialTransform, scale, scale);
+            
             _cropView.center = CGPointMake(CGRectGetMidX(targetCropViewFrame), CGRectGetMidY(targetCropViewFrame));
             _cropView.transform = CGAffineTransformMakeScale(targetCropViewScale, targetCropViewScale);
         } completion:^(__unused BOOL finished)
-         {
+        {
+            _fullEntitiesView.frame = CGRectMake(0, 0, _fullEntitiesView.frame.size.width, _fullEntitiesView.frame.size.height);
+            _previewView.transform = initialTransform;
+            _previewView.frame = targetFrame;
             [_cropView removeFromSuperview];
             _previewView.alpha = 1.0;
             if (self.finishedTransitionOut != nil)
@@ -504,8 +558,13 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 {
     _appeared = true;
     
+    if (!self.initialAppearance) {
+        [_fullEntitiesView.superview removeFromSuperview];
+        _fullEntitiesView.frame = CGRectMake(0, 0, _fullEntitiesView.frame.size.width, _fullEntitiesView.frame.size.height);
+        [_cropView attachEntitiesView];
+    }
+    
     if ([transitionView isKindOfClass:[TGPhotoEditorPreviewView class]]) {
-
     } else {
         [transitionView removeFromSuperview];
     }

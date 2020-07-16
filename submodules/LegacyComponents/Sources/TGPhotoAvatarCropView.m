@@ -146,8 +146,17 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
         
         UITapGestureRecognizer *tapRecognier = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTap:)];
         [_wrapperView addGestureRecognizer:tapRecognier];
+        
+        _clipView = [[UIView alloc] init];
+        _clipView.clipsToBounds = true;
+        _clipView.userInteractionEnabled = false;
+        [self addSubview:_clipView];
     }
     return self;
+}
+
+- (void)attachEntitiesView {
+    [_entitiesWrapperView addSubview:_fullEntitiesView];
 }
 
 - (void)dealloc
@@ -643,6 +652,8 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
 - (void)layoutSubviews
 {
     [self _layoutOverlayViews];
+    
+    _clipView.frame = self.bounds;
     
     _flashView.frame = self.bounds;
     

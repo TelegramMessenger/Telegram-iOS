@@ -9,6 +9,8 @@
     bool _dismissing;
     UIView *_transitionView;
     bool _noTransitionToSnapshot;
+    
+    bool _animateScale;
 }
 
 @property (nonatomic, weak) id<TGMediaEditableItem> item;

@@ -7,6 +7,8 @@
 
 @property (nonatomic, strong) UIImage *image;
 
+@property (nonatomic, readonly) UIView *clipView;
+
 @property (nonatomic, readonly) CGSize originalSize;
 @property (nonatomic, assign) CGRect cropRect;
 @property (nonatomic, assign) UIImageOrientation cropOrientation;
@@ -37,6 +39,7 @@
 - (void)animateTransitionOut;
 - (void)transitionInFinishedFromCamera:(bool)fromCamera;
 
+- (void)attachEntitiesView;
 - (void)closeCurtains;
 - (void)openCurtains;
 

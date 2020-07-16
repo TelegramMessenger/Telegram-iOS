@@ -1281,7 +1281,7 @@
                 cropController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
                 cropController.controlVideoPlayback = ^(bool play) {
                     __strong TGPhotoEditorController *strongSelf = weakSelf;
-                    if (strongSelf == nil)
+                    if (strongSelf == nil || strongSelf->_progressVisible)
                         return;
                     if (play) {
                         [strongSelf startVideoPlayback:false];
@@ -1297,7 +1297,7 @@
                 };
                 cropController.togglePlayback = ^{
                     __strong TGPhotoEditorController *strongSelf = weakSelf;
-                    if (strongSelf == nil || !strongSelf->_item.isVideo)
+                    if (strongSelf == nil || !strongSelf->_item.isVideo || strongSelf->_progressVisible)
                         return;
                     
                     if (strongSelf->_isPlaying) {

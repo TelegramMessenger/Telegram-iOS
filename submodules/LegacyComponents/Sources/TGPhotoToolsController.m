@@ -107,26 +107,21 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 }
 
 - (void)layoutEntitiesView {
-    CGSize fittedContentSize = [TGPhotoPaintController fittedContentSize:_photoEditor.cropRect orientation:_photoEditor.cropOrientation originalSize:_photoEditor.originalSize];
-    CGRect fittedCropRect = [TGPhotoPaintController fittedCropRect:_photoEditor.cropRect originalSize:_photoEditor.originalSize keepOriginalSize:false];
-    _entitiesWrapperView.frame = CGRectMake(0.0f, 0.0f, fittedContentSize.width, fittedContentSize.height);
+    _entitiesWrapperView.frame = CGRectMake(0.0, 0.0, _entitiesView.frame.size.width, _entitiesView.frame.size.height);
     
-    CGRect rect = [TGPhotoPaintController fittedCropRect:self.photoEditor.cropRect originalSize:self.photoEditor.originalSize keepOriginalSize:true];
-    _entitiesView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
-    _entitiesView.transform = CGAffineTransformMakeRotation(_photoEditor.cropRotation);
+    CGFloat paintingScale = _entitiesView.frame.size.width / _photoEditor.originalSize.width;
+    _entitiesView.frame = CGRectMake(-_photoEditor.cropRect.origin.x * paintingScale, -_photoEditor.cropRect.origin.y * paintingScale, _entitiesView.frame.size.width, _entitiesView.frame.size.height);
     
-    CGSize fittedOriginalSize = TGScaleToSize(_photoEditor.originalSize, [TGPhotoPaintController maximumPaintingSize]);
-    CGSize rotatedSize = TGRotatedContentSize(fittedOriginalSize, _photoEditor.cropRotation);
-    CGPoint centerPoint = CGPointMake(rotatedSize.width / 2.0f, rotatedSize.height / 2.0f);
-    
-    CGFloat scale = fittedOriginalSize.width / _photoEditor.originalSize.width;
-    CGPoint offset = TGPaintSubtractPoints(centerPoint, [TGPhotoPaintController fittedCropRect:_photoEditor.cropRect centerScale:scale]);
-    
-    CGPoint boundsCenter = TGPaintCenterOfRect(_entitiesWrapperView.bounds);
-    _entitiesView.center = TGPaintAddPoints(boundsCenter, offset);
-    if (_entitiesView.superview != _entitiesWrapperView) {
-        [_entitiesWrapperView addSubview:_entitiesView];
+    CGFloat cropScale = 1.0;
+    if (_photoEditor.originalSize.width > _photoEditor.originalSize.height) {
+        cropScale = _photoEditor.originalSize.height / _photoEditor.cropRect.size.height;
+    } else {
+        cropScale = _photoEditor.originalSize.width / _photoEditor.cropRect.size.width;
     }
+    
+    CGFloat scale = _previewView.frame.size.width / _entitiesView.frame.size.width;
+    _entitiesWrapperView.transform = CGAffineTransformMakeScale(scale * cropScale, scale * cropScale);
+    _entitiesWrapperView.frame = CGRectMake(0.0, 0.0, _previewView.frame.size.width, _previewView.frame.size.height);
 }
 
 - (void)loadView

@@ -99,6 +99,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     
     bool _appeared;
     bool _skipEntitiesSetup;
+    bool _entitiesReady;
     
     TGPhotoPaintFont *_selectedTextFont;
     TGPhotoPaintTextEntityStyle _selectedTextStyle;
@@ -268,7 +269,9 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         
         [strongSelf updateSettingsButton];
     };
-    [_contentWrapperView addSubview:_entitiesContainerView];
+    if (!_skipEntitiesSetup) {
+        [_contentWrapperView addSubview:_entitiesContainerView];
+    }
     _undoManager.entitiesContainer = _entitiesContainerView;
     
     _dimView = [[UIView alloc] init];
@@ -1816,7 +1819,6 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     
     if (self.presentedForAvatarCreation) {
         _canvasView.hidden = true;
-        _entitiesContainerView.hidden = true;
     }
 }
 
@@ -1865,7 +1867,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     
     [self setupCanvas];
     _entitiesContainerView.hidden = false;
-    
+        
     TGPhotoEditorPreviewView *previewView = _previewView;
     [previewView setPaintingHidden:true];
     previewView.hidden = false;
@@ -1887,8 +1889,10 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     CGPoint boundsCenter = TGPaintCenterOfRect(_contentWrapperView.bounds);
     _entitiesContainerView.center = TGPaintAddPoints(boundsCenter, offset);
     
-    [_contentWrapperView addSubview:_entitiesContainerView];
-    
+    if (!_skipEntitiesSetup || _entitiesReady) {
+        [_contentWrapperView addSubview:_entitiesContainerView];
+    }
+    _entitiesReady = true;
     [self resetScrollView];
 }
 
