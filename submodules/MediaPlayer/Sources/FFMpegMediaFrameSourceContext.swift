@@ -287,6 +287,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
     
     fileprivate var requestedDataOffset: Int?
     fileprivate let fetchedDataDisposable = MetaDisposable()
+    fileprivate let keepDataDisposable = MetaDisposable()
     fileprivate let fetchedFullDataDisposable = MetaDisposable()
     fileprivate var requestedCompleteFetch = false
     
@@ -294,6 +295,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         didSet {
             self.fetchedDataDisposable.dispose()
             self.fetchedFullDataDisposable.dispose()
+            self.keepDataDisposable.dispose()
         }
     }
     
@@ -316,6 +318,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         
         self.fetchedDataDisposable.dispose()
         self.fetchedFullDataDisposable.dispose()
+        self.keepDataDisposable.dispose()
     }
     
     func initializeState(postbox: Postbox, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int?) {
@@ -339,6 +342,10 @@ final class FFMpegMediaFrameSourceContext: NSObject {
             if file.isInstantVideo {
                 preferSoftwareAudioDecoding = true
             }
+        }
+        
+        if self.tempFilePath == nil {
+            self.keepDataDisposable.set(postbox.mediaBox.keepResource(id: resourceReference.resource.id).start())
         }
         
         if streamable {
