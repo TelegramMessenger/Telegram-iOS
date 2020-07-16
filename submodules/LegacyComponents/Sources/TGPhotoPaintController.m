@@ -1900,6 +1900,8 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (void)transitionOutSwitching:(bool)__unused switching completion:(void (^)(void))completion
 {
+    [_stickersScreen invalidate];
+    
     TGPhotoEditorPreviewView *previewView = self.previewView;
     previewView.interactionEnded = nil;
     
@@ -1931,9 +1933,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 - (void)_animatePreviewViewTransitionOutToFrame:(CGRect)targetFrame saving:(bool)saving parentView:(UIView *)parentView completion:(void (^)(void))completion
 {
     _dismissing = true;
-    
-    [_stickersScreen invalidate];
-    
+        
     [_entitySelectionView removeFromSuperview];
     _entitySelectionView = nil;
     

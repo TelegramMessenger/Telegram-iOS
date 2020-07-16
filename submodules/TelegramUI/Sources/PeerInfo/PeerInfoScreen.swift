@@ -3846,68 +3846,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
         }
     }
-    
-    private func editAvatarItem(_ item: PeerInfoAvatarListItem) {
-        guard case let .image(reference, representations, videoRepresentations, _) = item else {
-            return
-        }
         
-        let mediaReference: AnyMediaReference
-        if let video = videoRepresentations.last {
-            mediaReference = .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
-        } else {
-            let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
-            mediaReference = .standalone(media: media)
-        }
-        
-        var dismissStatus: (() -> Void)?
-        let statusController = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: {
-            dismissStatus?()
-        }))
-        dismissStatus = { [weak self, weak statusController] in
-            self?.editAvatarDisposable.set(nil)
-            statusController?.dismiss()
-        }
-        self.controller?.present(statusController, in: .window(.root))
-        
-        self.editAvatarDisposable.set((fetchMediaData(context: self.context, postbox: self.context.account.postbox, mediaReference: mediaReference)
-            |> deliverOnMainQueue).start(next: { [weak self] state, isImage in
-                guard let strongSelf = self else {
-                    return
-                }
-                switch state {
-                    case .progress:
-                        break
-                    case let .data(data):
-                        dismissStatus?()
-                        
-                        let image: UIImage?
-                        let video: URL?
-                        if isImage {
-                            if let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                                image = UIImage(data: fileData)
-                            } else {
-                                image = nil
-                            }
-                            video = nil
-                        } else {
-                            image = nil
-                            video = URL(fileURLWithPath: data.path)
-                        }
-                        
-//                        presentLegacyAvatarEditor(theme: strongSelf.presentationData.theme, image: image, video: video, present: { [weak self] c, a in
-//                            if let strongSelf = self {
-//                                strongSelf.controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
-//                            }
-//                        }, imageCompletion: { [weak self] image in
-//                            self?.updateProfilePhoto(image)
-//                        }, videoCompletion: { [weak self] image, url, adjustments in
-//                            self?.updateProfileVideo(image, url: url, adjustments: adjustments)
-//                        })
-                }
-            }))
-    }
-    
     private func setMainAvatar(_ item: PeerInfoAvatarListItem) {
         if self.data?.peer?.id == self.context.account.peerId {
             if case let .image(reference, _, _, _) = item {

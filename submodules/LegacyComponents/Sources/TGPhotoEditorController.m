@@ -1061,8 +1061,13 @@
             UIImage *image = result[@"image"];
             UIImage *thumbnailImage = result[@"thumbnail"];
             
-            if (avatar && completion != nil)
+            if (avatar && image.size.width < 150.0) {
+                image = TGScaleImageToPixelSize(image, CGSizeMake(150.0, 150.0));
+            }
+            
+            if (avatar && completion != nil) {
                 completion(image);
+            }
             
             if (!saveOnly && didFinishEditing != nil)
                 didFinishEditing(editorValues, image, thumbnailImage, true);

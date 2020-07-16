@@ -2592,7 +2592,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 if (animated) {
                     dict[@"isAnimation"] = @true;
                     if ([adjustments isKindOfClass:[PGPhotoEditorValues class]]) {
-                        dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)adjustments];
+                        dict[@"adjustments"] = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)adjustments preset:TGMediaVideoConversionPresetAnimation];
                     } else {
                         dict[@"adjustments"] = adjustments;
                     }

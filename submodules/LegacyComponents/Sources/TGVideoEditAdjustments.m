@@ -136,7 +136,7 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     return adjustments;
 }
 
-+ (instancetype)editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)values {
++ (instancetype)editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)values preset:(TGMediaVideoConversionPreset)preset {
     TGVideoEditAdjustments *adjustments = [[[self class] alloc] init];
     adjustments->_originalSize = values.originalSize;
     CGRect cropRect = values.cropRect;
@@ -150,7 +150,7 @@ const NSTimeInterval TGVideoEditMaximumGifDuration = 30.5;
     adjustments->_cropMirrored = values.cropMirrored;
     adjustments->_paintingData = [values.paintingData dataForAnimation];
     adjustments->_sendAsGif = true;
-    adjustments->_preset = TGMediaVideoConversionPresetAnimation;
+    adjustments->_preset = preset;
     
     return adjustments;
 }
