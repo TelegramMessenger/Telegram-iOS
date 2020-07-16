@@ -24,14 +24,15 @@ func switchToAuthorizedAccount(transaction: AccountManagerModifier, account: Una
         }
         return 0
     }).max() ?? 0) + 1
+    var attributes: [AccountRecordAttribute] = [AccountEnvironmentAttribute(environment: account.testingEnvironment ? .test : .production), AccountSortOrderAttribute(order: nextSortOrder)]
+    if let hiddenAccountAttribute = transaction.getCurrentAuth()?.attributes.first(where: { $0 is HiddenAccountAttribute }) {
+        attributes.append(hiddenAccountAttribute)
+    }
     transaction.updateRecord(account.id, { _ in
-        return AccountRecord(id: account.id, attributes: [AccountEnvironmentAttribute(environment: account.testingEnvironment ? .test : .production), AccountSortOrderAttribute(order: nextSortOrder)], temporarySessionId: nil)
+        return AccountRecord(id: account.id, attributes: attributes, temporarySessionId: nil)
     })
     transaction.setCurrentId(account.id)
     transaction.removeAuth()
-    
-    // TODO: -- Show UI here and call this function only if user chooses to use false bottom
-    setAccountRecordAccessChallengeData(transaction: transaction, id: account.id, accessChallengeData: .numericalPassword(value: "2222"))
 }
 
 public func sendAuthorizationCode(accountManager: AccountManager, account: UnauthorizedAccount, phoneNumber: String, apiId: Int32, apiHash: String, syncContacts: Bool) -> Signal<UnauthorizedAccount, AuthorizationCodeRequestError> {

@@ -185,7 +185,11 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                             } else {
                                 data = PostboxAccessChallengeData.plaintextPassword(value: passcode)
                             }
-                            // TODO: -- add passcode to auth record in this transaction
+                            
+                            if let record = transaction.getCurrentAuth() {
+                                let attributes = record.attributes + [HiddenAccountAttribute(accessChallengeData: data)]
+                                transaction.setCurrentAuthAttributes(attributes)
+                            }
 
                         }) |> deliverOnMainQueue).start(next: { _ in
                         }, error: { _ in
