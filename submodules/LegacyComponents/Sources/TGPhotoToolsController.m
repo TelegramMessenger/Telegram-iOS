@@ -35,6 +35,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     bool _appeared;
     bool _scheduledTransitionIn;
     CGFloat _cellWidth;
+    int _entitiesReady;
     
     NSArray *_allTools;
     NSArray *_simpleTools;
@@ -107,7 +108,12 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 }
 
 - (void)layoutEntitiesView {
+    if (_entitiesReady < 2 || _dismissing)
+        return;
+    
+    _entitiesWrapperView.transform = CGAffineTransformIdentity;
     _entitiesWrapperView.frame = CGRectMake(0.0, 0.0, _entitiesView.frame.size.width, _entitiesView.frame.size.height);
+    [_entitiesWrapperView addSubview:_entitiesView];
     
     CGFloat paintingScale = _entitiesView.frame.size.width / _photoEditor.originalSize.width;
     _entitiesView.frame = CGRectMake(-_photoEditor.cropRect.origin.x * paintingScale, -_photoEditor.cropRect.origin.y * paintingScale, _entitiesView.frame.size.width, _entitiesView.frame.size.height);
@@ -121,7 +127,8 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     
     CGFloat scale = _previewView.frame.size.width / _entitiesView.frame.size.width;
     _entitiesWrapperView.transform = CGAffineTransformMakeScale(scale * cropScale, scale * cropScale);
-    _entitiesWrapperView.frame = CGRectMake(0.0, 0.0, _previewView.frame.size.width, _previewView.frame.size.height);
+    
+    _entitiesWrapperView.frame = [_previewView convertRect:_previewView.bounds toView:_entitiesWrapperView.superview];
 }
 
 - (void)loadView
@@ -502,6 +509,9 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     TGPhotoEditorPreviewView *previewView = _previewView;
     previewView.hidden = false;
     [previewView performTransitionInIfNeeded];
+        
+    _entitiesReady++;
+    [self layoutEntitiesView];
 }
 
 - (void)prepareForCustomTransitionOut

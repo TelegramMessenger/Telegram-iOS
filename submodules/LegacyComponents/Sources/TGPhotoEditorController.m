@@ -1178,13 +1178,18 @@
         
         [self savePaintingData];
                 
+        bool resetTransform = false;
+        if ([self presentedForAvatarCreation] && tab == TGPhotoEditorCropTab && [currentController isKindOfClass:[TGPhotoPaintController class]]) {
+            resetTransform = true;
+        }
+        
         currentController.switchingToTab = tab;
         [currentController transitionOutSwitching:true completion:^
         {
             [currentController removeFromParentViewController];
             [currentController.view removeFromSuperview];
             
-            if ([self presentedForAvatarCreation] && tab == TGPhotoEditorCropTab) {
+            if (resetTransform) {
                 _previewView.transform = CGAffineTransformIdentity;
             }
         }];
