@@ -125,7 +125,7 @@
                 
                 CGSize dimensions = [avAsset tracksWithMediaType:AVMediaTypeVideo].firstObject.naturalSize;
                 TGMediaVideoConversionPreset preset = adjustments.sendAsGif ? TGMediaVideoConversionPresetAnimation : [self presetFromAdjustments:adjustments];
-                if (!CGSizeEqualToSize(dimensions, CGSizeZero) && preset != TGMediaVideoConversionPresetAnimation && preset != TGMediaVideoConversionPresetVideoMessage && preset != TGMediaVideoConversionPresetProfile && preset != TGMediaVideoConversionPresetProfileHigh && preset != TGMediaVideoConversionPresetProfileVeryHigh && preset != TGMediaVideoConversionPresetPassthrough)
+                if (!CGSizeEqualToSize(dimensions, CGSizeZero) && preset != TGMediaVideoConversionPresetAnimation && preset != TGMediaVideoConversionPresetVideoMessage && preset != TGMediaVideoConversionPresetProfile && preset != TGMediaVideoConversionPresetProfileLow && preset != TGMediaVideoConversionPresetProfileHigh && preset != TGMediaVideoConversionPresetProfileVeryHigh && preset != TGMediaVideoConversionPresetPassthrough)
                 {
                     TGMediaVideoConversionPreset bestPreset = [self bestAvailablePresetForDimensions:dimensions];
                     if (preset > bestPreset)
@@ -240,7 +240,7 @@
                     return;
                 
                 TGMediaVideoConversionPreset preset = TGMediaVideoConversionPresetAnimation;
-                if (adjustments.preset == TGMediaVideoConversionPresetProfile || adjustments.preset == TGMediaVideoConversionPresetProfileHigh || adjustments.preset == TGMediaVideoConversionPresetProfileVeryHigh) {
+                if (adjustments.preset == TGMediaVideoConversionPresetProfile || adjustments.preset != TGMediaVideoConversionPresetProfileLow || adjustments.preset == TGMediaVideoConversionPresetProfileHigh || adjustments.preset == TGMediaVideoConversionPresetProfileVeryHigh) {
                     preset = adjustments.preset;
                 }
                 
@@ -355,7 +355,7 @@
     if (TGOrientationIsSideward(adjustments.cropOrientation, NULL))
         outputDimensions = CGSizeMake(outputDimensions.height, outputDimensions.width);
     
-    if ((preset == TGMediaVideoConversionPresetProfile || preset == TGMediaVideoConversionPresetProfileHigh || preset == TGMediaVideoConversionPresetProfileVeryHigh) && MIN(outputDimensions.width, outputDimensions.height) < 160.0) {
+    if ((preset == TGMediaVideoConversionPresetProfile || preset == TGMediaVideoConversionPresetProfileLow || preset == TGMediaVideoConversionPresetProfileHigh || preset == TGMediaVideoConversionPresetProfileVeryHigh) && MIN(outputDimensions.width, outputDimensions.height) < 160.0) {
         outputDimensions = CGSizeMake(160.0, 160.0);
     }
         
@@ -1255,6 +1255,9 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
         case TGMediaVideoConversionPresetVideoMessage:
             return (CGSize){ 240.0f, 240.0f };
         
+        case TGMediaVideoConversionPresetProfileLow:
+            return (CGSize){ 720.0f, 720.0f };
+            
         case TGMediaVideoConversionPresetProfile:
         case TGMediaVideoConversionPresetProfileHigh:
         case TGMediaVideoConversionPresetProfileVeryHigh:
@@ -1267,7 +1270,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
 
 + (bool)keepAudioForPreset:(TGMediaVideoConversionPreset)preset
 {
-    return preset != TGMediaVideoConversionPresetAnimation && preset != TGMediaVideoConversionPresetProfile && preset != TGMediaVideoConversionPresetProfileHigh && preset != TGMediaVideoConversionPresetProfileVeryHigh;
+    return preset != TGMediaVideoConversionPresetAnimation && preset != TGMediaVideoConversionPresetProfile && preset != TGMediaVideoConversionPresetProfileLow && preset != TGMediaVideoConversionPresetProfileHigh && preset != TGMediaVideoConversionPresetProfileVeryHigh;
 }
 
 + (NSDictionary *)audioSettingsForPreset:(TGMediaVideoConversionPreset)preset
@@ -1346,6 +1349,9 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
         case TGMediaVideoConversionPresetProfile:
             return 1500;
             
+        case TGMediaVideoConversionPresetProfileLow:
+            return 1100;
+            
         case TGMediaVideoConversionPresetProfileHigh:
             return 2000;
             
@@ -1381,6 +1387,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             
         case TGMediaVideoConversionPresetAnimation:
         case TGMediaVideoConversionPresetProfile:
+        case TGMediaVideoConversionPresetProfileLow:
         case TGMediaVideoConversionPresetProfileHigh:
         case TGMediaVideoConversionPresetProfileVeryHigh:
             return 0;
@@ -1411,6 +1418,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             
         case TGMediaVideoConversionPresetAnimation:
         case TGMediaVideoConversionPresetProfile:
+        case TGMediaVideoConversionPresetProfileLow:
         case TGMediaVideoConversionPresetProfileHigh:
         case TGMediaVideoConversionPresetProfileVeryHigh:
             return 0;
