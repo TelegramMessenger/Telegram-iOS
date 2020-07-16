@@ -42,6 +42,8 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
     
     CGFloat _currentDiameter;
     
+    UIView *_entitiesWrapperView;
+    
     __weak PGPhotoEditorView *_fullPreviewView;
     __weak UIImageView *_fullPaintingView;
     __weak TGPhotoEntitiesContainerView *_fullEntitiesView;
@@ -91,9 +93,16 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
         _fullPaintingView.frame = _fullPreviewView.frame;
         [_wrapperView addSubview:_fullPaintingView];
         
+        _entitiesWrapperView = [[UIView alloc] init];
         _fullEntitiesView = fullEntitiesView;
-        _fullEntitiesView.frame = _fullPreviewView.frame;
-        [_wrapperView addSubview:_fullEntitiesView];
+        _fullEntitiesView.frame = CGRectMake(0.0, 0.0, _fullEntitiesView.frame.size.width, _fullEntitiesView.frame.size.height);
+        _entitiesWrapperView.frame = _fullEntitiesView.frame;
+        
+        CGFloat entitiesScale = _fullPreviewView.frame.size.width / _entitiesWrapperView.frame.size.width;
+        _entitiesWrapperView.transform = CGAffineTransformMakeScale(entitiesScale, entitiesScale);
+        _entitiesWrapperView.frame = _fullPreviewView.frame;
+        [_entitiesWrapperView addSubview:_fullEntitiesView];
+        [_wrapperView addSubview:_entitiesWrapperView];
         
         _flashView = [[UIView alloc] init];
         _flashView.alpha = 0.0;

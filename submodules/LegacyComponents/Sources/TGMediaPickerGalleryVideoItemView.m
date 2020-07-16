@@ -800,7 +800,7 @@
     CGRect fittedCropRect = [TGPhotoPaintController fittedCropRect:cropRect originalSize:originalSize keepOriginalSize:false];
     _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, fittedContentSize.width, fittedContentSize.height);
     
-    CGFloat contentScale = ratio;//_contentView.bounds.size.width / fittedCropRect.size.width;
+    CGFloat contentScale = ratio;
     _contentWrapperView.transform = CGAffineTransformMakeScale(contentScale, contentScale);
     _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, _contentView.bounds.size.width, _contentView.bounds.size.height);
     

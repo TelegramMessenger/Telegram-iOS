@@ -98,6 +98,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     id<TGPhotoPaintStickersScreen> _stickersScreen;
     
     bool _appeared;
+    bool _skipEntitiesSetup;
     
     TGPhotoPaintFont *_selectedTextFont;
     TGPhotoPaintTextEntityStyle _selectedTextStyle;
@@ -152,6 +153,9 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         self.photoEditor = photoEditor;
         self.previewView = previewView;
         _entitiesContainerView = entitiesView;
+        if (entitiesView != nil) {
+            _skipEntitiesSetup = true;
+        }
         entitiesView.userInteractionEnabled = true;
         
         _brushes = @
@@ -509,7 +513,9 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     [super viewDidLoad];
     
     PGPhotoEditor *photoEditor = _photoEditor;
-    [_entitiesContainerView setupWithPaintingData:photoEditor.paintingData];
+    if (!_skipEntitiesSetup) {
+        [_entitiesContainerView setupWithPaintingData:photoEditor.paintingData];
+    }
     for (TGPhotoPaintEntityView *view in _entitiesContainerView.subviews)
     {
         if (![view isKindOfClass:[TGPhotoPaintEntityView class]])

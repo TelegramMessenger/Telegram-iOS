@@ -346,7 +346,8 @@
         
         _fullEntitiesView = [[TGPhotoEntitiesContainerView alloc] init];
         _fullEntitiesView.userInteractionEnabled = false;
-        _fullEntitiesView.frame = _fullPreviewView.frame;
+        CGRect rect = [TGPhotoPaintController fittedCropRect:_photoEditor.cropRect originalSize:_photoEditor.originalSize keepOriginalSize:true];
+        _fullEntitiesView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
     }
         
     _dotMarkerView = [[UIImageView alloc] initWithImage:TGCircleImage(7.0, [TGPhotoEditorInterfaceAssets accentColor])];
