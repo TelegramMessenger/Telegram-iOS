@@ -1,3 +1,4 @@
+#import <AVFoundation/AVFoundation.h>
 #import <LegacyComponents/TGOverlayControllerWindow.h>
 #import <LegacyComponents/TGOverlayController.h>
 #import <LegacyComponents/LegacyComponentsContext.h>

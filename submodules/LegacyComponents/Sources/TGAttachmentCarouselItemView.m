@@ -914,7 +914,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             if (strongSelf.avatarCompletionBlock != nil)
                 strongSelf.avatarCompletionBlock(resultImage);
         };
-        controller.didFinishEditingVideo = ^(NSURL *url, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
+        controller.didFinishEditingVideo = ^(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
             if (!hasChanges)
                 return;
             
@@ -927,7 +927,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
                 return;
             
             if (strongSelf.avatarVideoCompletionBlock != nil)
-                strongSelf.avatarVideoCompletionBlock(resultImage, url, adjustments);
+                strongSelf.avatarVideoCompletionBlock(resultImage, asset, adjustments);
         };
         controller.requestThumbnailImage = ^(id<TGMediaEditableItem> editableItem)
         {

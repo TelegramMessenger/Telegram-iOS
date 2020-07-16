@@ -152,6 +152,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         self.photoEditor = photoEditor;
         self.previewView = previewView;
         _entitiesContainerView = entitiesView;
+        entitiesView.userInteractionEnabled = true;
         
         _brushes = @
         [

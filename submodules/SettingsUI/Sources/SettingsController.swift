@@ -1418,9 +1418,9 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                        completedProfilePhotoImpl(image)
                     }
                 }
-                mixin.didFinishWithVideo = { image, url, adjustments in
-                    if let image = image, let url = url {
-                        completedProfileVideoImpl(image, url, adjustments)
+                mixin.didFinishWithVideo = { image, asset, adjustments in
+                    if let image = image {
+//                        completedProfileVideoImpl(image, url, adjustments)
                     }
                 }
                 mixin.didFinishWithDelete = {
