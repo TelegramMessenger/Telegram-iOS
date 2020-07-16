@@ -443,7 +443,7 @@ public func legacyEnqueueWebSearchMessages(_ selectionState: TGMediaSelectionCon
                             if animated {
                                 dict["isAnimation"] = true
                                 if let photoEditorValues = adjustments as? PGPhotoEditorValues {
-                                    dict["adjustments"] = TGVideoEditAdjustments(photoEditorValues: photoEditorValues)
+                                    dict["adjustments"] = TGVideoEditAdjustments(photoEditorValues: photoEditorValues, preset: TGMediaVideoConversionPresetAnimation)
                                 }
                                 
                                 let filePath = NSTemporaryDirectory().appending("/gifvideo_\(arc4random()).jpg")

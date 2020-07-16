@@ -259,7 +259,10 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     id = image.0.id
                     category = image.9
                 } else {
-                    id = Int64(entry.peer?.id.id ?? 1)
+                    id = Int64(entry.peer?.id.id ?? 0)
+                    if let resource = entry.videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
+                        id = id &+ resource.photoId
+                    }
                 }
                 if let video = entry.videoRepresentations.last, let peerReference = PeerReference(self.peer) {
                     if video != previousVideoRepresentations?.last {

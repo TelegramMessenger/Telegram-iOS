@@ -684,9 +684,9 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
                     completedProfilePhotoImpl(image)
                 }
             }
-            mixin.didFinishWithVideo = { image, url, adjustments in
-                if let image = image, let url = url {
-                    completedProfileVideoImpl(image, url, adjustments)
+            mixin.didFinishWithVideo = { image, asset, adjustments in
+                if let image = image {
+//                    completedProfileVideoImpl(image, url, adjustments)
                 }
             }
             mixin.didFinishWithDelete = {

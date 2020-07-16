@@ -586,7 +586,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                 }
             }
             
-            let completedGroupVideoImpl: (UIImage, URL, TGVideoEditAdjustments?) -> Void = { image, url, adjustments in
+            let completedGroupVideoImpl: (UIImage, Any?, TGVideoEditAdjustments?) -> Void = { image, asset, adjustments in
                 if let data = image.jpegData(compressionQuality: 0.6) {
                     let photoResource = LocalFileMediaResource(fileId: arc4random64())
                     context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
@@ -603,12 +603,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                     }
                     
                     let signal = Signal<TelegramMediaResource?, UploadPeerPhotoError> { subscriber in
-                        var filteredPath = url.path
-                        if filteredPath.hasPrefix("file://") {
-                            filteredPath = String(filteredPath[filteredPath.index(filteredPath.startIndex, offsetBy: "file://".count)])
-                        }
                         
-                        let avAsset = AVURLAsset(url: URL(fileURLWithPath: filteredPath))
                         let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
                             if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
                                 return LegacyPaintEntityRenderer(account: context.account, adjustments: adjustments)
@@ -617,7 +612,31 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                             }
                         }
                         let uploadInterface = LegacyLiveUploadInterface(account: context.account)
-                        let signal = TGMediaVideoConverter.convert(avAsset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
+                        let signal: SSignal
+                        if let asset = asset as? AVAsset {
+                            signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
+                        } else if let url = asset as? URL, let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
+                            let durationSignal: SSignal = SSignal(generator: { subscriber in
+                                let disposable = (entityRenderer.duration()).start(next: { duration in
+                                    subscriber?.putNext(duration)
+                                    subscriber?.putCompletion()
+                                })
+                                
+                                return SBlockDisposable(block: {
+                                    disposable.dispose()
+                                })
+                            })
+                            signal = durationSignal.map(toSignal: { duration -> SSignal? in
+                                if let duration = duration as? Double {
+                                    return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, watcher: nil, entityRenderer: entityRenderer)!
+                                } else {
+                                    return SSignal.single(nil)
+                                }
+                            })
+                           
+                        } else {
+                            signal = SSignal.complete()
+                        }
                         
                         let signalDisposable = signal.start(next: { next in
                             if let result = next as? TGMediaVideoConversionResult {
@@ -696,9 +715,9 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                     completedGroupPhotoImpl(image)
                 }
             }
-            mixin.didFinishWithVideo = { image, url, adjustments in
-                if let image = image, let url = url {
-                    completedGroupVideoImpl(image, url, adjustments)
+            mixin.didFinishWithVideo = { image, asset, adjustments in
+                if let image = image, let asset = asset {
+                    completedGroupVideoImpl(image, asset, adjustments)
                 }
             }
             if stateValue.with({ $0.avatar }) != nil {

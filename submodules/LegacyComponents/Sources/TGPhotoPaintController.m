@@ -98,6 +98,8 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     id<TGPhotoPaintStickersScreen> _stickersScreen;
     
     bool _appeared;
+    bool _skipEntitiesSetup;
+    bool _entitiesReady;
     
     TGPhotoPaintFont *_selectedTextFont;
     TGPhotoPaintTextEntityStyle _selectedTextStyle;
@@ -152,6 +154,10 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         self.photoEditor = photoEditor;
         self.previewView = previewView;
         _entitiesContainerView = entitiesView;
+        if (entitiesView != nil) {
+            _skipEntitiesSetup = true;
+        }
+        entitiesView.userInteractionEnabled = true;
         
         _brushes = @
         [
@@ -263,7 +269,9 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         
         [strongSelf updateSettingsButton];
     };
-    [_contentWrapperView addSubview:_entitiesContainerView];
+    if (!_skipEntitiesSetup) {
+        [_contentWrapperView addSubview:_entitiesContainerView];
+    }
     _undoManager.entitiesContainer = _entitiesContainerView;
     
     _dimView = [[UIView alloc] init];
@@ -508,7 +516,9 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     [super viewDidLoad];
     
     PGPhotoEditor *photoEditor = _photoEditor;
-    [_entitiesContainerView setupWithPaintingData:photoEditor.paintingData];
+    if (!_skipEntitiesSetup) {
+        [_entitiesContainerView setupWithPaintingData:photoEditor.paintingData];
+    }
     for (TGPhotoPaintEntityView *view in _entitiesContainerView.subviews)
     {
         if (![view isKindOfClass:[TGPhotoPaintEntityView class]])
@@ -1809,7 +1819,6 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     
     if (self.presentedForAvatarCreation) {
         _canvasView.hidden = true;
-        _entitiesContainerView.hidden = true;
     }
 }
 
@@ -1858,7 +1867,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     
     [self setupCanvas];
     _entitiesContainerView.hidden = false;
-    
+        
     TGPhotoEditorPreviewView *previewView = _previewView;
     [previewView setPaintingHidden:true];
     previewView.hidden = false;
@@ -1880,8 +1889,10 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     CGPoint boundsCenter = TGPaintCenterOfRect(_contentWrapperView.bounds);
     _entitiesContainerView.center = TGPaintAddPoints(boundsCenter, offset);
     
-    [_contentWrapperView addSubview:_entitiesContainerView];
-    
+    if (!_skipEntitiesSetup || _entitiesReady) {
+        [_contentWrapperView addSubview:_entitiesContainerView];
+    }
+    _entitiesReady = true;
     [self resetScrollView];
 }
 
@@ -1899,6 +1910,8 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (void)transitionOutSwitching:(bool)__unused switching completion:(void (^)(void))completion
 {
+    [_stickersScreen invalidate];
+    
     TGPhotoEditorPreviewView *previewView = self.previewView;
     previewView.interactionEnded = nil;
     
@@ -1930,9 +1943,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 - (void)_animatePreviewViewTransitionOutToFrame:(CGRect)targetFrame saving:(bool)saving parentView:(UIView *)parentView completion:(void (^)(void))completion
 {
     _dismissing = true;
-    
-    [_stickersScreen invalidate];
-    
+        
     [_entitySelectionView removeFromSuperview];
     _entitySelectionView = nil;
     
@@ -2314,6 +2325,13 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     CGRect originalFrame = CGRectMake(-cropRect.origin.x * ratio, -cropRect.origin.y * ratio, originalSize.width * ratio, originalSize.height * ratio);
     
     previewView.frame = previewFrame;
+    
+    if ([self presentedForAvatarCreation]) {
+        CGAffineTransform transform = CGAffineTransformMakeRotation(TGRotationForOrientation(photoEditor.cropOrientation));
+        if (photoEditor.cropMirrored)
+            transform = CGAffineTransformScale(transform, -1.0f, 1.0f);
+        previewView.transform = transform;
+    }
     
     CGSize fittedOriginalSize = CGSizeMake(originalSize.width * ratio, originalSize.height * ratio);
     CGSize rotatedSize = TGRotatedContentSize(fittedOriginalSize, rotation);

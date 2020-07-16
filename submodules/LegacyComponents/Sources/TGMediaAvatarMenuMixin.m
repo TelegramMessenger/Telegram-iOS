@@ -127,7 +127,7 @@
         
         [strongController dismissAnimated:false];
     };
-    carouselItem.avatarVideoCompletionBlock = ^(UIImage *image, NSURL *url, TGVideoEditAdjustments *adjustments) {
+    carouselItem.avatarVideoCompletionBlock = ^(UIImage *image, AVAsset *asset, TGVideoEditAdjustments *adjustments) {
         __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
         if (strongSelf == nil)
             return;
@@ -137,7 +137,7 @@
             return;
         
         if (strongSelf.didFinishWithVideo != nil)
-            strongSelf.didFinishWithVideo(image, url, adjustments);
+            strongSelf.didFinishWithVideo(image, asset, adjustments);
         
         [strongController dismissAnimated:false];
     };
@@ -285,7 +285,7 @@
         controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:_saveEditedPhotos saveCapturedMedia:_saveCapturedMedia camera:cameraView.previewView.camera previewView:cameraView.previewView intent:_signup ? TGCameraControllerSignupAvatarIntent : TGCameraControllerAvatarIntent];
     else
         controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:_saveEditedPhotos saveCapturedMedia:_saveCapturedMedia intent:_signup ? TGCameraControllerSignupAvatarIntent : TGCameraControllerAvatarIntent];
-    
+    controller.stickersContext = _stickersContext;
     controller.shouldStoreCapturedAssets = true;
     
     TGCameraControllerWindow *controllerWindow = [[TGCameraControllerWindow alloc] initWithManager:windowManager parentController:_parentController contentController:controller];
@@ -355,13 +355,13 @@
         [menuController dismissAnimated:false];
     };
     
-    controller.finishedWithVideo = ^(__unused TGOverlayController *controller, NSURL *videoURL, UIImage *previewImage, __unused NSTimeInterval duration, __unused CGSize dimensions, TGVideoEditAdjustments *adjustments, __unused NSString *caption, __unused NSArray *entities, __unused NSArray *stickers, __unused NSNumber *timer){
+    controller.finishedWithVideo = ^(__unused TGOverlayController *controller, NSURL *url, UIImage *previewImage, __unused NSTimeInterval duration, __unused CGSize dimensions, TGVideoEditAdjustments *adjustments, __unused NSString *caption, __unused NSArray *entities, __unused NSArray *stickers, __unused NSNumber *timer){
         __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
         if (strongSelf == nil)
             return;
         
         if (strongSelf.didFinishWithVideo != nil)
-            strongSelf.didFinishWithVideo(previewImage, videoURL, adjustments);
+            strongSelf.didFinishWithVideo(previewImage, [[AVURLAsset alloc] initWithURL:url options:nil], adjustments);
         
         [menuController dismissAnimated:false];
     };
@@ -459,6 +459,7 @@
             
             TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:context assetGroup:group intent:strongSelf->_signup ? TGMediaAssetsControllerSetSignupProfilePhotoIntent : TGMediaAssetsControllerSetProfilePhotoIntent recipientName:nil saveEditedPhotos:strongSelf->_saveEditedPhotos allowGrouping:false selectionLimit:10];
             __weak TGMediaAssetsController *weakController = controller;
+            controller.stickersContext = _stickersContext;
             controller.avatarCompletionBlock = ^(UIImage *resultImage)
             {
                 __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
@@ -472,13 +473,13 @@
                 if (strongController != nil && strongController.dismissalBlock != nil)
                     strongController.dismissalBlock();
             };
-            controller.avatarVideoCompletionBlock = ^(UIImage *image, NSURL *url, TGVideoEditAdjustments *adjustments) {
+            controller.avatarVideoCompletionBlock = ^(UIImage *image, AVAsset *asset, TGVideoEditAdjustments *adjustments) {
                 __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
                 if (strongSelf == nil)
                     return;
                 
                 if (strongSelf.didFinishWithVideo != nil)
-                    strongSelf.didFinishWithVideo(image, url, adjustments);
+                    strongSelf.didFinishWithVideo(image, asset, adjustments);
                 
                 __strong TGMediaAssetsController *strongController = weakController;
                 if (strongController != nil && strongController.dismissalBlock != nil)

@@ -76,7 +76,7 @@ typedef enum
 @property (nonatomic, copy) NSDictionary *(^descriptionGenerator)(id, NSString *, NSArray *, NSString *);
 @property (nonatomic, copy) void (^avatarCompletionBlock)(UIImage *image);
 @property (nonatomic, copy) void (^completionBlock)(NSArray *signals, bool silentPosting, int32_t scheduleTime);
-@property (nonatomic, copy) void (^avatarVideoCompletionBlock)(UIImage *image, NSURL *url, TGVideoEditAdjustments *adjustments);
+@property (nonatomic, copy) void (^avatarVideoCompletionBlock)(UIImage *image, AVAsset *asset, TGVideoEditAdjustments *adjustments);
 @property (nonatomic, copy) void (^singleCompletionBlock)(id<TGMediaEditableItem> item, TGMediaEditingContext *editingContext);
 @property (nonatomic, copy) void (^dismissalBlock)(void);
 @property (nonatomic, copy) void (^selectionBlock)(TGMediaAsset *asset, UIImage *);
@@ -94,7 +94,7 @@ typedef enum
 - (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSString *, NSArray *, NSString *))descriptionGenerator;
 
 - (void)completeWithAvatarImage:(UIImage *)image;
-- (void)completeWithAvatarVideo:(NSURL *)url adjustments:(TGVideoEditAdjustments *)adjustments image:(UIImage *)image;
+- (void)completeWithAvatarVideo:(AVAsset *)asset adjustments:(TGVideoEditAdjustments *)adjustments image:(UIImage *)image;
 - (void)completeWithCurrentItem:(TGMediaAsset *)currentItem silentPosting:(bool)silentPosting scheduleTime:(int32_t)scheduleTime;
 
 - (void)dismiss;

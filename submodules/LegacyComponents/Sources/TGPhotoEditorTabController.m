@@ -169,45 +169,35 @@ const CGFloat TGPhotoEditorToolbarSize = 49.0f;
     
     _transitionInProgress = true;
     
+    CGAffineTransform initialTransform = _transitionView.transform;
     [UIView animateWithDuration:0.3f delay:0.0f options:UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionLayoutSubviews animations:^
     {
-        _transitionView.frame = _transitionTargetFrame;
+        if (_animateScale) {
+            CGFloat scale = _transitionTargetFrame.size.width / _transitionView.frame.size.width;
+            _transitionView.center = CGPointMake(CGRectGetMidX(_transitionTargetFrame), CGRectGetMidY(_transitionTargetFrame));
+            _transitionView.transform = CGAffineTransformScale(initialTransform, scale, scale);
+        } else {
+            _transitionView.frame = _transitionTargetFrame;
+        }
     } completion:^(BOOL finished) {
         _transitionInProgress = false;
              
-             UIView *transitionView = _transitionView;
-             _transitionView = nil;
-             
-             if (self.finishedTransitionIn != nil)
-             {
-                 self.finishedTransitionIn();
-                 self.finishedTransitionIn = nil;
-             }
-             
-             [self _finishedTransitionInWithView:transitionView];
+         UIView *transitionView = _transitionView;
+         _transitionView = nil;
+         
+        if (_animateScale) {
+            _transitionView.transform = initialTransform;
+            _transitionView.frame = _transitionTargetFrame;
+        }
+        
+        if (self.finishedTransitionIn != nil)
+        {
+            self.finishedTransitionIn();
+            self.finishedTransitionIn = nil;
+        }
+         
+        [self _finishedTransitionInWithView:transitionView];
     }];
-    
-//    POPSpringAnimation *animation = [TGPhotoEditorAnimation prepareTransitionAnimationForPropertyNamed:kPOPViewFrame];
-//    if (self.transitionSpeed > FLT_EPSILON)
-//        animation.springSpeed = self.transitionSpeed;
-//    animation.fromValue = [NSValue valueWithCGRect:_transitionView.frame];
-//    animation.toValue = [NSValue valueWithCGRect:_transitionTargetFrame];
-//    animation.completionBlock = ^(__unused POPAnimation *animation, __unused BOOL finished)
-//    {
-//        _transitionInProgress = false;
-//        
-//        UIView *transitionView = _transitionView;
-//        _transitionView = nil;
-//        
-//        if (self.finishedTransitionIn != nil)
-//        {
-//            self.finishedTransitionIn();
-//            self.finishedTransitionIn = nil;
-//        }
-//        
-//        [self _finishedTransitionInWithView:transitionView];
-//    };
-//    [_transitionView pop_addAnimation:animation forKey:@"frame"];
 }
 
 - (void)prepareForCustomTransitionOut

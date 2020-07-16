@@ -345,7 +345,9 @@
         _fullPaintingView.frame = _fullPreviewView.frame;
         
         _fullEntitiesView = [[TGPhotoEntitiesContainerView alloc] init];
-        _fullEntitiesView.frame = _fullPreviewView.frame;
+        _fullEntitiesView.userInteractionEnabled = false;
+        CGRect rect = [TGPhotoPaintController fittedCropRect:_photoEditor.cropRect originalSize:_photoEditor.originalSize keepOriginalSize:true];
+        _fullEntitiesView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
     }
         
     _dotMarkerView = [[UIImageView alloc] initWithImage:TGCircleImage(7.0, [TGPhotoEditorInterfaceAssets accentColor])];
@@ -1060,8 +1062,13 @@
             UIImage *image = result[@"image"];
             UIImage *thumbnailImage = result[@"thumbnail"];
             
-            if (avatar && completion != nil)
+            if (avatar && image.size.width < 150.0) {
+                image = TGScaleImageToPixelSize(image, CGSizeMake(150.0, 150.0));
+            }
+            
+            if (avatar && completion != nil) {
                 completion(image);
+            }
             
             if (!saveOnly && didFinishEditing != nil)
                 didFinishEditing(editorValues, image, thumbnailImage, true);
@@ -1164,6 +1171,7 @@
     UIView *snapshotView = nil;
     
     TGPhotoEditorTabController *currentController = _currentTabController;
+    TGPhotoEditorTab switchingFromTab = TGPhotoEditorNoneTab;
     if (currentController != nil)
     {
         if (![currentController isDismissAllowed])
@@ -1171,13 +1179,18 @@
         
         [self savePaintingData];
                 
+        bool resetTransform = false;
+        if ([self presentedForAvatarCreation] && tab == TGPhotoEditorCropTab && [currentController isKindOfClass:[TGPhotoPaintController class]]) {
+            resetTransform = true;
+        }
+        
         currentController.switchingToTab = tab;
         [currentController transitionOutSwitching:true completion:^
         {
             [currentController removeFromParentViewController];
             [currentController.view removeFromSuperview];
             
-            if ([self presentedForAvatarCreation] && tab == TGPhotoEditorCropTab) {
+            if (resetTransform) {
                 _previewView.transform = CGAffineTransformIdentity;
             }
         }];
@@ -1193,6 +1206,9 @@
             {
                 _backgroundView.alpha = 0.0f;
             } completion:nil];
+            switchingFromTab = TGPhotoEditorCropTab;
+        } else if ([currentController isKindOfClass:[TGPhotoToolsController class]]) {
+            switchingFromTab = TGPhotoEditorToolsTab;
         }
         
         isInitialAppearance = false;
@@ -1266,6 +1282,7 @@
                 cropController.fullPreviewView = _fullPreviewView;
                 cropController.fullPaintingView = _fullPaintingView;
                 cropController.fullEntitiesView = _fullEntitiesView;
+                cropController.fullEntitiesView.userInteractionEnabled = false;
                 cropController.fromCamera = [self presentedFromCamera];
                 cropController.skipTransitionIn = skipInitialTransition;
                 if (snapshotImage != nil)
@@ -1273,7 +1290,7 @@
                 cropController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
                 cropController.controlVideoPlayback = ^(bool play) {
                     __strong TGPhotoEditorController *strongSelf = weakSelf;
-                    if (strongSelf == nil)
+                    if (strongSelf == nil || strongSelf->_progressVisible)
                         return;
                     if (play) {
                         [strongSelf startVideoPlayback:false];
@@ -1289,7 +1306,7 @@
                 };
                 cropController.togglePlayback = ^{
                     __strong TGPhotoEditorController *strongSelf = weakSelf;
-                    if (strongSelf == nil || !strongSelf->_item.isVideo)
+                    if (strongSelf == nil || !strongSelf->_item.isVideo || strongSelf->_progressVisible)
                         return;
                     
                     if (strongSelf->_isPlaying) {
@@ -1534,7 +1551,7 @@
             
         case TGPhotoEditorToolsTab:
         {
-            TGPhotoToolsController *toolsController = [[TGPhotoToolsController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView];
+            TGPhotoToolsController *toolsController = [[TGPhotoToolsController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView entitiesView:_fullEntitiesView];
             toolsController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
             toolsController.beginTransitionIn = ^UIView *(CGRect *referenceFrame, UIView **parentView, bool *noTransitionView)
             {
@@ -1605,6 +1622,7 @@
     _currentTabController = controller;
     _currentTabController.item = _item;
     _currentTabController.intent = _intent;
+    _currentTabController.switchingFromTab = switchingFromTab;
     _currentTabController.initialAppearance = isInitialAppearance;
     
     if (![_currentTabController isKindOfClass:[TGPhotoPaintController class]])
@@ -1981,7 +1999,7 @@
                 
                 TGDispatchOnMainThread(^{
                     if (self.didFinishEditingVideo != nil)
-                        self.didFinishEditingVideo(asset.URL, [adjustments editAdjustmentsWithPreset:preset videoStartValue:videoStartValue trimStartValue:trimStartValue trimEndValue:trimEndValue], fullImage, nil, true);
+                        self.didFinishEditingVideo(asset, [adjustments editAdjustmentsWithPreset:preset videoStartValue:videoStartValue trimStartValue:trimStartValue trimEndValue:trimEndValue], fullImage, nil, true);
                     
                     [self dismissAnimated:true];
                 });

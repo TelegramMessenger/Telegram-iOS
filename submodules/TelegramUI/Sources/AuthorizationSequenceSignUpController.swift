@@ -22,9 +22,9 @@ final class AuthorizationSequenceSignUpController: ViewController {
     var initialName: (String, String) = ("", "")
     private var termsOfService: UnauthorizedAccountTermsOfService?
     
-    var signUpWithName: ((String, String, Data?, URL?, TGVideoEditAdjustments?) -> Void)?
+    var signUpWithName: ((String, String, Data?, Any?, TGVideoEditAdjustments?) -> Void)?
     
-    var avatarUrl: URL?
+    var avatarAsset: Any?
     var avatarAdjustments: TGVideoEditAdjustments?
     
     private let hapticFeedback = HapticFeedback()
@@ -91,11 +91,11 @@ final class AuthorizationSequenceSignUpController: ViewController {
                 self?.present(c, in: .window(.root), with: a)
             }, openCurrent: nil, completion: { image in
                 self?.controllerNode.currentPhoto = image
-                self?.avatarUrl = nil
+                self?.avatarAsset = nil
                 self?.avatarAdjustments = nil
-            }, videoCompletion: { image, url, adjustments in
+            }, videoCompletion: { image, asset, adjustments in
                 self?.controllerNode.currentPhoto = image
-                self?.avatarUrl = url
+                self?.avatarAsset = asset
                 self?.avatarAdjustments = adjustments
             })
         })
@@ -159,7 +159,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
         if let name = name {
             self.signUpWithName?(name.0, name.1, self.controllerNode.currentPhoto.flatMap({ image in
                 return compressImageToJPEG(image, quality: 0.7)
-            }), self.avatarUrl, self.avatarAdjustments)
+            }), self.avatarAsset, self.avatarAdjustments)
         }
     }
 }

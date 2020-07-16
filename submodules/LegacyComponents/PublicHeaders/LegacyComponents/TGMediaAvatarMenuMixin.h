@@ -1,4 +1,5 @@
 #import <Foundation/Foundation.h>
+#import <AVFoundation/AVFoundation.h>
 #import <LegacyComponents/LegacyComponentsContext.h>
 
 @class TGViewController;
@@ -13,7 +14,7 @@ typedef void (^TGMediaAvatarPresentImpl)(id<LegacyComponentsContext>, void (^)(U
 @interface TGMediaAvatarMenuMixin : NSObject
 
 @property (nonatomic, copy) void (^didFinishWithImage)(UIImage *image);
-@property (nonatomic, copy) void (^didFinishWithVideo)(UIImage *image, NSURL *url, TGVideoEditAdjustments *adjustments);
+@property (nonatomic, copy) void (^didFinishWithVideo)(UIImage *image, AVAsset *asset, TGVideoEditAdjustments *adjustments);
 @property (nonatomic, copy) void (^didFinishWithDelete)(void);
 @property (nonatomic, copy) void (^didFinishWithView)(void);
 @property (nonatomic, copy) void (^didDismiss)(void);

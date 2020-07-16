@@ -33,8 +33,6 @@
         editableItem = [[TGCameraCapturedVideo alloc] initWithURL:video];
     }
     
-    
- 
     void (^present)(UIImage *) = ^(UIImage *screenImage) {
         TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:editableItem intent:TGPhotoEditorControllerAvatarIntent adjustments:nil caption:nil screenImage:screenImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
         //    controller.stickersContext = _stickersContext;
@@ -45,9 +43,12 @@
             if (didFinishWithImage != nil)
                 didFinishWithImage(resultImage);
         };
-        controller.didFinishEditingVideo = ^(NSURL *url, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
-            if (didFinishWithVideo != nil)
-                didFinishWithVideo(resultImage, url, adjustments);
+        controller.didFinishEditingVideo = ^(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
+            if (didFinishWithVideo != nil) {
+                if ([asset isKindOfClass:[AVURLAsset class]]) {
+                    didFinishWithVideo(resultImage, [(AVURLAsset *)asset URL], adjustments);
+                }
+            }
         };
         controller.requestThumbnailImage = ^(id<TGMediaEditableItem> editableItem)
         {
