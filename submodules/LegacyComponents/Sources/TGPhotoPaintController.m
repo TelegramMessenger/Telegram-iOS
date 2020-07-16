@@ -2326,6 +2326,13 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     
     previewView.frame = previewFrame;
     
+    if ([self presentedForAvatarCreation]) {
+        CGAffineTransform transform = CGAffineTransformMakeRotation(TGRotationForOrientation(photoEditor.cropOrientation));
+        if (photoEditor.cropMirrored)
+            transform = CGAffineTransformScale(transform, -1.0f, 1.0f);
+        previewView.transform = transform;
+    }
+    
     CGSize fittedOriginalSize = CGSizeMake(originalSize.width * ratio, originalSize.height * ratio);
     CGSize rotatedSize = TGRotatedContentSize(fittedOriginalSize, rotation);
     CGPoint centerPoint = CGPointMake(rotatedSize.width / 2.0f, rotatedSize.height / 2.0f);

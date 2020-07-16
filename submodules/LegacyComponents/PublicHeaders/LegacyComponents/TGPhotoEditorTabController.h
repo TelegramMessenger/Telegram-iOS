@@ -38,6 +38,7 @@
 
 @property (nonatomic, assign) TGPhotoEditorTab availableTabs;
 
+@property (nonatomic, assign) TGPhotoEditorTab switchingFromTab;
 @property (nonatomic, assign) TGPhotoEditorTab switchingToTab;
 
 - (void)transitionOutSwitching:(bool)switching completion:(void (^)(void))completion;

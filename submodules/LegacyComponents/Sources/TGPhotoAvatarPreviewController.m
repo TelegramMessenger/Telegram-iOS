@@ -297,8 +297,16 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         cropScale = _photoEditor.originalSize.width / _photoEditor.cropRect.size.width;
     }
     
+    UIImageOrientation imageOrientation = _photoEditor.cropOrientation;
+    if ([parentView isKindOfClass:[TGPhotoEditorPreviewView class]])
+        imageOrientation = UIImageOrientationUp;
+    
+    CGAffineTransform rotationTransform = CGAffineTransformMakeRotation(TGRotationForOrientation(imageOrientation));
+    if ([parentView isKindOfClass:[TGPhotoEditorPreviewView class]] && _photoEditor.cropMirrored) {
+        rotationTransform = CGAffineTransformMakeScale(-1.0, 1.0);
+    }
     CGFloat scale = parentView.frame.size.width / _fullEntitiesView.frame.size.width;
-    containerView.transform = CGAffineTransformMakeScale(scale * cropScale, scale * cropScale);
+    containerView.transform = CGAffineTransformScale(rotationTransform, scale * cropScale, scale * cropScale);
     containerView.frame = CGRectMake(0.0, 0.0, parentView.frame.size.width, parentView.frame.size.height);
 }
 

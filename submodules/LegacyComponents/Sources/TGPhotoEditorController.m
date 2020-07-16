@@ -1171,6 +1171,7 @@
     UIView *snapshotView = nil;
     
     TGPhotoEditorTabController *currentController = _currentTabController;
+    TGPhotoEditorTab switchingFromTab = TGPhotoEditorNoneTab;
     if (currentController != nil)
     {
         if (![currentController isDismissAllowed])
@@ -1205,6 +1206,9 @@
             {
                 _backgroundView.alpha = 0.0f;
             } completion:nil];
+            switchingFromTab = TGPhotoEditorCropTab;
+        } else if ([currentController isKindOfClass:[TGPhotoToolsController class]]) {
+            switchingFromTab = TGPhotoEditorToolsTab;
         }
         
         isInitialAppearance = false;
@@ -1618,6 +1622,7 @@
     _currentTabController = controller;
     _currentTabController.item = _item;
     _currentTabController.intent = _intent;
+    _currentTabController.switchingFromTab = switchingFromTab;
     _currentTabController.initialAppearance = isInitialAppearance;
     
     if (![_currentTabController isKindOfClass:[TGPhotoPaintController class]])

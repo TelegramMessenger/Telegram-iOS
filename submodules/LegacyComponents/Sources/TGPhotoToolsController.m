@@ -126,8 +126,8 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     }
     
     CGFloat scale = _previewView.frame.size.width / _entitiesView.frame.size.width;
-    _entitiesWrapperView.transform = CGAffineTransformMakeScale(scale * cropScale, scale * cropScale);
-    
+    CGAffineTransform rotationTransform = CGAffineTransformMakeRotation(TGRotationForOrientation(_photoEditor.cropOrientation));
+    _entitiesWrapperView.transform = CGAffineTransformScale(rotationTransform, scale * cropScale, scale * cropScale);
     _entitiesWrapperView.frame = [_previewView convertRect:_previewView.bounds toView:_entitiesWrapperView.superview];
 }
 
