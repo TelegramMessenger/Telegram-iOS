@@ -920,7 +920,7 @@
                                     if (paintingImage == nil) {
                                         paintingImage = adjustments.paintingData.image;
                                     }
-                                    UIImage *thumbnailImage = TGPhotoEditorVideoExtCrop(image, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(asset.dimensions, CGSizeMake(512, 512)), adjustments.originalSize, true, true, true);
+                                    UIImage *thumbnailImage = TGPhotoEditorVideoExtCrop(image, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(asset.dimensions, CGSizeMake(512, 512)), adjustments.originalSize, true, true, true, false);
                                     if (thumbnailImage != nil) {
                                         dict[@"previewImage"] = thumbnailImage;
                                     }

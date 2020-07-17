@@ -928,7 +928,8 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
                     if (paintingImage == nil) {
                         paintingImage = adjustments.paintingData.image;
                     }
-                    UIImage *thumbnailImage = TGPhotoEditorVideoExtCrop(resultImage, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(asset.dimensions, CGSizeMake(800, 800)), adjustments.originalSize, true, true, true);
+                    UIImage *croppedPaintingImage = TGPhotoEditorPaintingCrop(paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, resultImage.size, adjustments.originalSize, true, true, false);
+                    UIImage *thumbnailImage = TGPhotoEditorVideoExtCrop(resultImage, croppedPaintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(asset.dimensions, CGSizeMake(800, 800)), adjustments.originalSize, true, true, true, true);
                     if (thumbnailImage != nil) {
                         previewImage = thumbnailImage;
                     }
