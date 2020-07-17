@@ -26,6 +26,7 @@ public struct AccountManagerModifier {
 public protocol DisplayedAccountsFilter {
     var unlockedHiddenAccountRecordIdPromise: Promise<AccountRecordId?> { get }
     var getHiddenAccountsAccessChallengeDataPromise: Promise<[AccountRecordId:PostboxAccessChallengeData]> { get }
+    var accountManagerRecordIdPromise: ValuePromise<AccountRecordId?> { get }
     
     func filterDisplayed(_ records: [AccountRecord]) -> [AccountRecord]
     func filterHidden(_ records: [AccountRecord]) -> [AccountRecord]
@@ -104,13 +105,20 @@ final class AccountManagerImpl {
             self.syncAtomicStateToFile()
         }
         
-        self.unlockedHiddenAccountRecordIdDisposable = displayedAccountsFilter.unlockedHiddenAccountRecordIdPromise.get().start(next: { [weak self] id in
+        self.unlockedHiddenAccountRecordIdDisposable = displayedAccountsFilter.accountManagerRecordIdPromise.get().start(next: { [weak self] id in
             guard let strongSelf = self else { return }
             
             var operations = [AccountManagerRecordOperation]()
+            var metadataOperations = [AccountManagerMetadataOperation]()
             
             if let id = id {
+                var hidden = displayedAccountsFilter.filterHidden(strongSelf.currentAtomicState.records.map { $0.value })
+                hidden.removeAll { $0.id == id }
+                for record in hidden {
+                    operations.append(.set(id: record.id, record: nil))
+                }
                 operations.append(.set(id: id, record: strongSelf.currentAtomicState.records[id]))
+                metadataOperations.append(.updateCurrentAccountId(id))
             } else {
                 for record in displayedAccountsFilter.filterHidden(strongSelf.currentAtomicState.records.map { $0.value }) {
                     operations.append(.set(id: record.id, record: nil))
@@ -118,7 +126,7 @@ final class AccountManagerImpl {
             }
             
             for (view, pipe) in strongSelf.recordsViews.copyItems() {
-                if view.replay(operations: operations, metadataOperations: []) {
+                if view.replay(operations: operations, metadataOperations: metadataOperations) {
                     pipe.putNext(AccountRecordsView(view))
                 }
             }
