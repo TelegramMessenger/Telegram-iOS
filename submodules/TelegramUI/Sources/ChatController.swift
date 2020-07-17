@@ -2029,6 +2029,57 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.chatDisplayNode.animateQuizCorrectOptionSelected()
         }, greetingStickerNode: { [weak self] in
             return self?.chatDisplayNode.greetingStickerNode
+        }, openPeerContextMenu: { [weak self] peer, node, rect, gesture in
+            guard let strongSelf = self else {
+                return
+            }
+            let context = strongSelf.context
+            let _ = (context.account.postbox.transaction { transaction -> Peer? in
+                return transaction.getPeer(peer.id)
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                guard let strongSelf = self, let peer = peer, peer.smallProfileImage != nil else {
+                    return
+                }
+              
+                let galleryController = AvatarGalleryController(context: context, peer: peer, remoteEntries: nil, replaceRootController: { controller, ready in
+                }, synchronousLoad: true)
+                galleryController.setHintWillBePresentedInPreviewingContext(true)
+                
+                let items: Signal<[ContextMenuItem], NoError> = context.account.postbox.transaction { transaction -> [ContextMenuItem] in
+                    var items: [ContextMenuItem] = [
+                        .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuOpenProfile, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { _, f in
+                            f(.dismissWithoutContent)
+                            self?.openPeer(peerId: peer.id, navigation: .info, fromMessage: nil)
+                        }))
+                    ]
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuSendMessage, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        f(.dismissWithoutContent)
+                        self?.openPeer(peerId: peer.id, navigation: .chat(textInputState: nil, subject: nil, peekData: nil), fromMessage: nil)
+                    })))
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuMention, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Mention"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        f(.dismissWithoutContent)
+                        
+                        self?.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+                            var inputMode = inputMode
+                            if inputMode == .none {
+                                inputMode = .text
+                            }
+                            return (chatTextInputAddMentionAttribute(current, peer: peer), inputMode)
+                        }
+                    })))
+                    return items
+                }
+                
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: galleryController, sourceNode: node)), items: items, reactionItems: [], gesture: gesture)
+                strongSelf.presentInGlobalOverlay(contextController)
+            })
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
