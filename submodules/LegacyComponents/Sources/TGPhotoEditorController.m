@@ -622,7 +622,10 @@
 
 - (NSTimeInterval)trimEndValue {
     if (_scrubberView != nil) {
-        return _scrubberView.trimEndValue;
+        if (_scrubberView.trimEndValue > 0.0)
+            return _scrubberView.trimEndValue;
+        else
+            return MIN(9.9, _scrubberView.duration);
     } else {
         return _photoEditor.trimEndValue;
     }
@@ -1925,7 +1928,7 @@
     {
         videoStartValue = _dotPosition;
         trimStartValue = self.trimStartValue;
-        trimEndValue = self.trimEndValue;
+        trimEndValue = MIN(self.trimStartValue + 9.9, self.trimEndValue);
     }
     
     [self stopVideoPlayback:true];
@@ -1989,14 +1992,18 @@
                 
                 NSTimeInterval duration = trimEndValue - trimStartValue;
                 TGMediaVideoConversionPreset preset;
-                if (duration <= 2.5) {
-                    preset = TGMediaVideoConversionPresetProfileVeryHigh;
-                } else if (duration <= 5.0) {
-                    preset = TGMediaVideoConversionPresetProfileHigh;
-                } else if (duration <= 8.0) {
-                    preset = TGMediaVideoConversionPresetProfile;
+                if (duration > 0.0) {
+                    if (duration <= 2.0) {
+                        preset = TGMediaVideoConversionPresetProfileVeryHigh;
+                    } else if (duration <= 5.0) {
+                        preset = TGMediaVideoConversionPresetProfileHigh;
+                    } else if (duration <= 8.0) {
+                        preset = TGMediaVideoConversionPresetProfile;
+                    } else {
+                        preset = TGMediaVideoConversionPresetProfileLow;
+                    }
                 } else {
-                    preset = TGMediaVideoConversionPresetProfileLow;
+                    preset = TGMediaVideoConversionPresetProfile;
                 }
                 
                 TGDispatchOnMainThread(^{
