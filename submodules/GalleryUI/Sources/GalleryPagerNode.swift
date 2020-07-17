@@ -346,6 +346,12 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         
         if self.updateOnReplacement {
             self.items = items
+            
+            for i in 0 ..< self.items.count {
+                if let itemNode = self.visibleItemNode(at: i) {
+                    self.items[i].updateNode(node: itemNode, synchronous: synchronous)
+                }
+            }
         }
     }
     
@@ -357,7 +363,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
                 updatedItem.item.updateNode(node: itemNode, synchronous: transaction.synchronous)
             }
         }
-        
+                
         if !transaction.deleteItems.isEmpty || !transaction.insertItems.isEmpty {
             let deleteItems = transaction.deleteItems.sorted()
             
