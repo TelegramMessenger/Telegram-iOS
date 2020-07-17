@@ -5067,19 +5067,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if case let .peer(peerId) = self.chatLocation {
                 let context = self.context
                 self.keepPeerInfoScreenDataHotDisposable.set(keepPeerInfoScreenDataHot(context: context, peerId: peerId).start())
-                self.preloadAvatarDisposable.set((peerInfoProfilePhotosWithCache(context: context, peerId: peerId)
-                |> mapToSignal { result -> Signal<Never, NoError> in
-                    var signals: [Signal<Never, NoError>] = [.complete()]
-                    for i in 0 ..< min(1, result.count) {
-                        if let video = result[i].videoRepresentations.first {
-                            let duration: Double = (video.representation.startTimestamp ?? 0.0) + (i == 0 ? 4.0 : 2.0)
-                            signals.append(preloadVideoResource(postbox: context.account.postbox, resourceReference: video.reference, duration: duration))
+                
+                if peerId.namespace == Namespaces.Peer.CloudUser {
+                    self.preloadAvatarDisposable.set((peerInfoProfilePhotosWithCache(context: context, peerId: peerId)
+                    |> mapToSignal { result -> Signal<Never, NoError> in
+                        var signals: [Signal<Never, NoError>] = [.complete()]
+                        for i in 0 ..< min(1, result.count) {
+                            if let video = result[i].videoRepresentations.first {
+                                let duration: Double = (video.representation.startTimestamp ?? 0.0) + (i == 0 ? 4.0 : 2.0)
+                                signals.append(preloadVideoResource(postbox: context.account.postbox, resourceReference: video.reference, duration: duration))
+                            }
                         }
-                    }
-                    return combineLatest(signals) |> mapToSignal { _ in
-                        return .never()
-                    }
-                }).start())
+                        return combineLatest(signals) |> mapToSignal { _ in
+                            return .never()
+                        }
+                    }).start())
+                }
             }
         }
         

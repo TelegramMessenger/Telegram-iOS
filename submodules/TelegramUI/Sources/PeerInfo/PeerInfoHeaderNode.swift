@@ -201,10 +201,12 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
     private let playbackStartDisposable = MetaDisposable()
     private let statusDisposable = MetaDisposable()
     private let preloadDisposable = MetaDisposable()
-    private var statusNode: RadialStatusNode?
+    private let statusNode: RadialStatusNode
     
     private var fetchStatus: MediaResourceStatus?
     private var playerStatus: MediaPlayerStatus?
+    private var isLoading = ValuePromise<Bool>(false)
+    private var loadingDisposable = MetaDisposable()
     
     let isReady = Promise<Bool>()
     private var didSetReady: Bool = false
@@ -258,12 +260,34 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
         self.peer = peer
         self.imageNode = TransformImageNode()
         
+        self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(rgb: 0x000000, alpha: 0.3))
+        self.statusNode.isUserInteractionEnabled = false
+   
         super.init()
         
         self.clipsToBounds = true
-        
+                
         self.imageNode.contentAnimations = [.firstUpdate, .subsequentUpdates]
         self.addSubnode(self.imageNode)
+        self.addSubnode(self.statusNode)
+                
+        self.loadingDisposable.set((self.isLoading.get()
+        |> mapToSignal { value -> Signal<Bool, NoError> in
+            if value {
+                return .single(value) |> delay(0.5, queue: Queue.mainQueue())
+            } else {
+                return .single(value)
+            }
+        }).start(next: { [weak self] loading in
+            guard let strongSelf = self else {
+                return
+            }
+            if loading {
+                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false), completion: {})
+            } else {
+                strongSelf.statusNode.transitionToState(.none, completion: {})
+            }
+        }))
     }
     
     deinit {
@@ -300,41 +324,8 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
         } else if case .Remote = fetchStatus, !isPlaying {
             progressRequired = true
         }
-        
-        if progressRequired {
-            if self.statusNode == nil {
-                let statusNode = RadialStatusNode(backgroundNodeColor: UIColor(rgb: 0x000000, alpha: 0.3))
-                statusNode.isUserInteractionEnabled = false
-                statusNode.frame = CGRect(origin: CGPoint(x: floor((self.frame.size.width - 50.0) / 2.0), y: floor((self.frame.size.height - 50.0) / 2.0)), size: CGSize(width: 50.0, height: 50.0))
-                self.statusNode = statusNode
-                self.addSubnode(statusNode)
-            }
-        } else {
-            if let statusNode = self.statusNode {
-                statusNode.transitionToState(.none, completion: { [weak statusNode] in
-                    statusNode?.removeFromSupernode()
-                })
-                self.statusNode = nil
-            }
-        }
-        
-        var state: RadialStatusNodeState
-        if progressRequired {
-            state = .progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false)
-        } else {
-            state = .none
-        }
-        
-        if let statusNode = self.statusNode {
-            if state == .none {
-                self.statusNode = nil
-            }
-            statusNode.transitionToState(state, completion: { [weak statusNode] in
-                if state == .none {
-                    statusNode?.removeFromSupernode()
-                }
-            })
-        }
+                
+        self.isLoading.set(progressRequired)
     }
     
     func updateTransitionFraction(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -398,7 +389,7 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
             }
         }))
         
-        self.addSubnode(videoNode)
+        self.insertSubnode(videoNode, belowSubnode: self.statusNode)
         
         self.isReady.set(videoNode.ready |> map { return true })
     }
@@ -472,6 +463,8 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
         let _ = applyLayout()
         let imageFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize)
         transition.updateFrame(node: self.imageNode, frame: imageFrame)
+        
+        transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: floor((size.width - 50.0) / 2.0), y: floor((size.height - 50.0) / 2.0)), size: CGSize(width: 50.0, height: 50.0)))
         
         if let videoNode = self.videoNode {
             videoNode.updateLayout(size: imageSize, transition: .immediate)
@@ -1127,7 +1120,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     wasAdded = true
                     let addedItemNode = PeerInfoAvatarListItemNode(context: self.context, peer: peer)
                     itemNode = addedItemNode
-                    addedItemNode.setup(item: self.items[i], synchronous: synchronous && i == self.currentIndex)
+                    addedItemNode.setup(item: self.items[i], synchronous: (i == 0 && i == self.currentIndex) || (synchronous && i == self.currentIndex))
                     self.itemNodes[self.items[i].id] = addedItemNode
                     self.contentNode.addSubnode(addedItemNode)
                 }

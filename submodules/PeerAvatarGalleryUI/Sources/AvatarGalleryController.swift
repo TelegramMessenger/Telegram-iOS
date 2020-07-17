@@ -136,7 +136,7 @@ public func initialAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<
         initialEntries.append(.topImage(peer.profileImageRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), [], peer, nil, nil, nil))
     }
     
-    if peer is TelegramChannel || peer is TelegramGroup {
+    if peer is TelegramChannel || peer is TelegramGroup, let peerReference = PeerReference(peer) {
         return account.postbox.transaction { transaction in
             return transaction.getPeerCachedData(peerId: peer.id)
         } |> map { cachedData in
@@ -148,10 +148,14 @@ public func initialAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<
                 initialPhoto = photo
             }
             
-            if let photo = initialPhoto, !photo.videoRepresentations.isEmpty, let peerReference = PeerReference(peer) {
-                return [.topImage(photo.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), photo.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), peer, nil, nil, nil)]
+            if let photo = initialPhoto, !photo.videoRepresentations.isEmpty {
+                return [.topImage(photo.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), photo.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), peer, nil, photo.immediateThumbnailData, nil)]
             } else {
-                return initialEntries
+                if !peer.profileImageRepresentations.isEmpty {
+                    return [.topImage(peer.profileImageRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), [], peer, nil, initialPhoto?.immediateThumbnailData, nil)]
+                } else {
+                    return []
+                }
             }
         }
     } else {
