@@ -659,70 +659,6 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         }
     }
     
-    private func openEntryEdit(_ rawEntry: AvatarGalleryEntry) {
-        let mediaReference: AnyMediaReference
-        if let video = rawEntry.videoRepresentations.last?.representation {
-            mediaReference = .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
-        } else {
-            let media = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: rawEntry.representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
-            mediaReference = .standalone(media: media)
-        }
-        
-        var dismissStatus: (() -> Void)?
-        let statusController = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: {
-            dismissStatus?()
-        }))
-        dismissStatus = { [weak self, weak statusController] in
-            self?.editDisposable.set(nil)
-            statusController?.dismiss()
-        }
-        self.present(statusController, in: .window(.root))
-        
-        self.editDisposable.set((fetchMediaData(context: self.context, postbox: self.context.account.postbox, mediaReference: mediaReference)
-        |> deliverOnMainQueue).start(next: { [weak self] state, isImage in
-            guard let strongSelf = self else {
-                return
-            }
-            switch state {
-                case .progress:
-                    break
-                case let .data(data):
-                    dismissStatus?()
-                    
-                    let image: UIImage?
-                    let video: URL?
-                    if isImage {
-                        if let fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                            image = UIImage(data: fileData)
-                        } else {
-                            image = nil
-                        }
-                        video = nil
-                    } else {
-                        image = nil
-                        video = URL(fileURLWithPath: data.path)
-                    }
-                    
-                    let avatarPhotoEditCompletion = strongSelf.avatarPhotoEditCompletion
-                    let avatarVideoEditCompletion = strongSelf.avatarVideoEditCompletion
-                    
-                    presentLegacyAvatarEditor(theme: strongSelf.presentationData.theme, image: image, video: video, present: { [weak self] c, a in
-                        if let strongSelf = self {
-                            strongSelf.present(c, in: .window(.root), with: a, blockInteraction: true)
-                        }
-                        }, imageCompletion: { image in
-                            avatarPhotoEditCompletion?(image)
-                    }, videoCompletion: { image, url, adjustments in
-                        avatarVideoEditCompletion?(image, url, adjustments)
-                    })
-                    
-                    Queue.mainQueue().after(0.4) {
-                        strongSelf.dismiss(forceAway: true)
-                }
-            }
-        }))
-    }
-    
     private func editEntry(_ rawEntry: AvatarGalleryEntry) {
         let actionSheet = ActionSheetController(presentationData: self.presentationData)
         let dismissAction: () -> Void = { [weak actionSheet] in
@@ -786,6 +722,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             var focusOnItem: Int?
             var updatedEntries = self.entries
             var replaceItems = false
+            var dismiss = false
             
             switch entry {
                 case .topImage:
@@ -793,7 +730,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                     } else {
                         if entry == self.entries.first {
                             let _ = updatePeerPhoto(postbox: self.context.account.postbox, network: self.context.account.network, stateManager: self.context.account.stateManager, accountPeerId: self.context.account.peerId, peerId: self.peer.id, photo: nil, mapResourceToAvatarSizes: { _, _ in .single([:]) }).start()
-                            self.dismiss(forceAway: true)
+                            dismiss = true
                         } else {
                             if let index = self.entries.firstIndex(of: entry) {
                                 self.entries.remove(at: index)
@@ -807,7 +744,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                             let _ = removeAccountPhoto(network: self.context.account.network, reference: reference).start()
                         }
                         if entry == self.entries.first {
-                            self.dismiss(forceAway: true)
+                            dismiss = true
                         } else {
                             if let index = self.entries.firstIndex(of: entry) {
                                 replaceItems = true
@@ -822,7 +759,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                         
                         if entry == self.entries.first {
                             let _ = updatePeerPhoto(postbox: self.context.account.postbox, network: self.context.account.network, stateManager: self.context.account.stateManager, accountPeerId: self.context.account.peerId, peerId: self.peer.id, photo: nil, mapResourceToAvatarSizes: { _, _ in .single([:]) }).start()
-                            self.dismiss(forceAway: true)
+                            dismiss = true
                         } else {
                             if let index = self.entries.firstIndex(of: entry) {
                                 replaceItems = true
@@ -843,6 +780,16 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                     self?.editEntry(entry)
                 }) }), centralItemIndex: focusOnItem, synchronous: true)
                 self.entries = updatedEntries
+            }
+            if dismiss {
+                self._hiddenMedia.set(.single(nil))
+                Queue.mainQueue().after(0.2) {
+                    self.dismiss(forceAway: true)
+                }
+            } else {
+                if let firstEntry = self.entries.first {
+                    self._hiddenMedia.set(.single(firstEntry))
+                }
             }
         }
         let actionSheet = ActionSheetController(presentationData: presentationData)
