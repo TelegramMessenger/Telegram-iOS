@@ -220,7 +220,7 @@ public func getHiddenAccountsAccessChallengeData(manager: AccountManager) -> Sig
 
 public final class DisplayedAccountsFilterImpl: DisplayedAccountsFilter {
     public let unlockedHiddenAccountRecordIdPromise = Promise<AccountRecordId?>()
-    private var unlockedHiddenAccountRecordId: AccountRecordId?
+    public var unlockedHiddenAccountRecordId: AccountRecordId?
     private var unlockedHiddenAccountRecordIdDisposable: Disposable?
     
     public let accountManagerRecordIdPromise = ValuePromise<AccountRecordId?>()
