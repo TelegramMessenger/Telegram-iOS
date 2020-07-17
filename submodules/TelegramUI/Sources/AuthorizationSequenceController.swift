@@ -194,6 +194,9 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         }) |> deliverOnMainQueue).start(next: { _ in
                         }, error: { _ in
                         }, completed: {
+                            let accountManager = strongSelf.sharedContext.accountManager
+                            // TODO: -- Call this after a new account record is created
+                            accountManager.displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise.set(getHiddenAccountsAccessChallengeData(manager: accountManager))
                             innerReplaceTopControllerImpl?(strongController, true)
                         })
                     }
