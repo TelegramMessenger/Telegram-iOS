@@ -459,7 +459,7 @@ public func legacyEnqueueWebSearchMessages(_ selectionState: TGMediaSelectionCon
                                         paintingImage = adjustments.paintingData?.image
                                     }
                                     
-                                    let thumbnailImage = TGPhotoEditorVideoExtCrop(image, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(image.size, CGSize(width: 512.0, height: 512.0)), adjustments.originalSize, true, true, true)
+                                    let thumbnailImage = TGPhotoEditorVideoExtCrop(image, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(image.size, CGSize(width: 512.0, height: 512.0)), adjustments.originalSize, true, true, true, false)
                                     if let thumbnailImage = thumbnailImage {
                                         dict["previewImage"] = thumbnailImage
                                     }
