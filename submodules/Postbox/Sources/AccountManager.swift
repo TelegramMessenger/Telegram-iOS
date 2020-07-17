@@ -26,7 +26,8 @@ public struct AccountManagerModifier {
 public protocol DisplayedAccountsFilter {
     var unlockedHiddenAccountRecordIdPromise: Promise<AccountRecordId?> { get }
     
-    func isDisplayed(_ record: AccountRecord) -> Bool
+    func filterDisplayed(_ records: [AccountRecord]) -> [AccountRecord]
+    func filterHidden(_ records: [AccountRecord]) -> [AccountRecord]
 }
 
 final class AccountManagerImpl {
@@ -110,8 +111,8 @@ final class AccountManagerImpl {
             if let id = id {
                 operations.append(.set(id: id, record: strongSelf.currentAtomicState.records[id]))
             } else {
-                for (id, _) in strongSelf.currentAtomicState.records.filter({ !displayedAccountsFilter.isDisplayed($0.value) }) {
-                    operations.append(.set(id: id, record: nil))
+                for record in displayedAccountsFilter.filterHidden(strongSelf.currentAtomicState.records.map { $0.value }) {
+                    operations.append(.set(id: record.id, record: nil))
                 }
             }
             
@@ -143,8 +144,7 @@ final class AccountManagerImpl {
                 self.valueBox.begin()
                 
                 let transaction = AccountManagerModifier(getRecords: {
-                    return self.currentAtomicState.records.map { $0.1 }
-                    .filter(self.displayedAccountsFilter.isDisplayed)
+                    return self.displayedAccountsFilter.filterDisplayed(self.currentAtomicState.records.map { $0.1 })
                 }, getAllRecords: {
                     return self.currentAtomicState.records.map { $0.1 }
                 }, updateRecord: { id, update in
@@ -327,8 +327,7 @@ final class AccountManagerImpl {
     private func accountRecordsInternal(transaction: AccountManagerModifier) -> Signal<AccountRecordsView, NoError> {
         assert(self.queue.isCurrent())
         let mutableView = MutableAccountRecordsView(getRecords: {
-            return self.currentAtomicState.records.map { $0.1 }
-                .filter(displayedAccountsFilter.isDisplayed)
+            return displayedAccountsFilter.filterDisplayed(self.currentAtomicState.records.map { $0.1 })
         }, currentId: self.currentAtomicState.currentRecordId, currentAuth: self.currentAtomicState.currentAuthRecord)
         let pipe = ValuePipe<AccountRecordsView>()
         let index = self.recordsViews.add((mutableView, pipe))

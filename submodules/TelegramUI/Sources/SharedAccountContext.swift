@@ -298,6 +298,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             guard let strongSelf = self else { return }
             
             if let id = id {
+                // TODO: -- Delay after updating account manager, now crashes if hiden password is typed first on app launch
                 strongSelf.switchToAccount(id: id)
             } else {
                 if let otherAccountId = strongSelf.activeAccountsValue?.accounts.first?.0 {
