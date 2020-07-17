@@ -1266,13 +1266,6 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         resolvedUrlPromise.set(resolvedUrl)
         openFaq(resolvedUrlPromise, anchor)
     }, openEditing: {
-        let _ = (contextValue.get()
-        |> deliverOnMainQueue
-        |> take(1)).start(next: { context in
-            if let presentControllerImpl = presentControllerImpl, let pushControllerImpl = pushControllerImpl {
-                openEditingDisposable.set(openEditSettings(context: context, accountsAndPeers: accountsAndPeers.get(), presentController: presentControllerImpl, pushController: pushControllerImpl))
-            }
-        })
     }, displayCopyContextMenu: {
         let _ = (contextValue.get()
         |> deliverOnMainQueue
