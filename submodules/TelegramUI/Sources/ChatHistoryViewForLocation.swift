@@ -83,7 +83,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: A
                         }
                         var scrollPosition: ChatHistoryViewScrollPosition?
                         
-                        if let maxReadIndex = view.maxReadIndex, tagMask == nil {
+                        if let maxReadIndex = view.maxReadIndex, tagMask == nil, view.isAddedToChatList {
                             let aroundIndex = maxReadIndex
                             scrollPosition = .unread(index: maxReadIndex)
                             
@@ -120,7 +120,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: A
                                     }
                                 }
                             }
-                        } else if let historyScrollState = (initialData?.chatInterfaceState as? ChatInterfaceState)?.historyScrollState, tagMask == nil {
+                        } else if view.isAddedToChatList, let historyScrollState = (initialData?.chatInterfaceState as? ChatInterfaceState)?.historyScrollState, tagMask == nil {
                             scrollPosition = .positionRestoration(index: historyScrollState.messageIndex, relativeOffset: CGFloat(historyScrollState.relativeOffset))
                         } else {
                             if view.entries.isEmpty && (view.holeEarlier || view.holeLater) {
