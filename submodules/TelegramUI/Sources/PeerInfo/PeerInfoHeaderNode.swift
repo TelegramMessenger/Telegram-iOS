@@ -1061,6 +1061,10 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                     return
                 }
                 
+                if strongSelf.galleryEntries.count > 1, entries.count == 1, let first = entries.first, case .topImage = first {
+                    return
+                }
+                
                 var entries = entries
                 var synchronous = false
                 if !strongSelf.galleryEntries.isEmpty, let updated = entries.first, case let .image(image) = updated, !image.3.isEmpty, let previous = strongSelf.galleryEntries.first, case let .topImage(topImage) = previous {
