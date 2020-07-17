@@ -1356,7 +1356,7 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             return 2000;
             
         case TGMediaVideoConversionPresetProfileVeryHigh:
-            return 2500;
+            return 2300;
             
         default:
             return 900;
