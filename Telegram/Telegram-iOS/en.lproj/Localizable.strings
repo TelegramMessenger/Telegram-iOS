@@ -5696,3 +5696,7 @@ Any member of this group will be able to see messages in the channel.";
 "EditProfile.NameAndPhotoOrVideoHelp" = "Enter your name and add an optional profile photo or video.";
 
 "Settings.RemoveConfirmation" = "Remove";
+
+"Conversation.ContextMenuOpenProfile" = "Open Profile";
+"Conversation.ContextMenuSendMessage" = "Send Message";
+"Conversation.ContextMenuMention" = "Mention";
