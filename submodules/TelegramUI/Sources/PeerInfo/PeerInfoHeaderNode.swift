@@ -274,7 +274,7 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
         self.loadingDisposable.set((self.isLoading.get()
         |> mapToSignal { value -> Signal<Bool, NoError> in
             if value {
-                return .single(value) |> delay(0.5, queue: Queue.mainQueue())
+                return .single(value) |> delay(1.0, queue: Queue.mainQueue())
             } else {
                 return .single(value)
             }
