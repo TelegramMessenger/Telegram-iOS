@@ -223,6 +223,8 @@ public final class DisplayedAccountsFilterImpl: DisplayedAccountsFilter {
     private var unlockedHiddenAccountRecordId: AccountRecordId?
     private var unlockedHiddenAccountRecordIdDisposable: Disposable?
     
+    public let getHiddenAccountsAccessChallengeDataPromise = Promise<[AccountRecordId:PostboxAccessChallengeData]>()
+    
     public init() {
         unlockedHiddenAccountRecordIdDisposable = (unlockedHiddenAccountRecordIdPromise.get()
             |> deliverOnMainQueue).start(next: { [weak self] value in

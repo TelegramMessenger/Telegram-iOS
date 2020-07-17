@@ -681,6 +681,7 @@ final class SharedApplicationContext {
                         self.mainWindow.coveringView = nil
                     }
                 }
+                displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise.set(getHiddenAccountsAccessChallengeData(manager: accountManager))
                 subscriber.putNext(accountManager)
                 subscriber.putCompletion()
             })
@@ -775,7 +776,7 @@ final class SharedApplicationContext {
             let legacyCache = LegacyCache(path: legacyBasePath + "/Caches")
             
             let presentationDataPromise = Promise<PresentationData>()
-            let appLockContext = AppLockContextImpl(rootPath: rootPath, window: self.mainWindow!, rootController: self.window?.rootViewController, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), hiddenAccountsAccessChallengeData: getHiddenAccountsAccessChallengeData(manager: accountManager), lockIconInitialFrame: {
+            let appLockContext = AppLockContextImpl(rootPath: rootPath, window: self.mainWindow!, rootController: self.window?.rootViewController, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), hiddenAccountsAccessChallengeDataPromise: displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise, lockIconInitialFrame: {
                 return (self.mainWindow?.viewController as? TelegramRootController)?.chatListController?.lockViewFrame
             })
             

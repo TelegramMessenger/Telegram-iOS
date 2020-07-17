@@ -172,8 +172,10 @@ public class ShareRootControllerImpl {
             
             if let globalInternalContext = globalInternalContext {
                 internalContext = globalInternalContext
+                displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise.set(getHiddenAccountsAccessChallengeData(manager: accountManager))
             } else {
                 initializeAccountManagement()
+                displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise.set(getHiddenAccountsAccessChallengeData(manager: accountManager))
                 var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
                 let semaphore = DispatchSemaphore(value: 0)
                 let systemUserInterfaceStyle: WindowUserInterfaceStyle
@@ -190,7 +192,7 @@ public class ShareRootControllerImpl {
                 
                 let presentationDataPromise = Promise<PresentationData>()
                 
-                let appLockContext = AppLockContextImpl(rootPath: rootPath, window: nil, rootController: nil, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), hiddenAccountsAccessChallengeData: getHiddenAccountsAccessChallengeData(manager: accountManager), lockIconInitialFrame: {
+                let appLockContext = AppLockContextImpl(rootPath: rootPath, window: nil, rootController: nil, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), hiddenAccountsAccessChallengeDataPromise: displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise, lockIconInitialFrame: {
                     return nil
                 })
                 

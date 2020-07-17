@@ -92,10 +92,14 @@ public final class AppLockContextImpl: AppLockContext {
     private var lastActiveTimestamp: Double?
     private var lastActiveValue: Bool = false
     
+    private let hiddenAccountsAccessChallengeDataPromise: Promise<[AccountRecordId:PostboxAccessChallengeData]>
+    private var hiddenAccountsAccessChallengeDataDisposable: Disposable?
+    private var hiddenAccountsAccessChallengeData = [AccountRecordId:PostboxAccessChallengeData]()
+    
     public var unlockedHiddenAccountRecordId = ValuePromise<AccountRecordId?>()
     // TODO: -- Erase when locked
     
-    public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, hiddenAccountsAccessChallengeData: Signal<[AccountRecordId:PostboxAccessChallengeData], NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
+    public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, hiddenAccountsAccessChallengeDataPromise: Promise<[AccountRecordId:PostboxAccessChallengeData]>, lockIconInitialFrame: @escaping () -> CGRect?) {
         assert(Queue.mainQueue().isCurrent())
         
         self.applicationBindings = applicationBindings
@@ -112,15 +116,24 @@ public final class AppLockContextImpl: AppLockContext {
         }
         self.autolockTimeout.set(self.currentStateValue.autolockTimeout)
         
+        self.hiddenAccountsAccessChallengeDataPromise = hiddenAccountsAccessChallengeDataPromise
+        
+        let _ = (self.hiddenAccountsAccessChallengeDataPromise.get() |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            strongSelf.hiddenAccountsAccessChallengeData = value
+        })
+        
         let _ = (combineLatest(queue: .mainQueue(),
             accountManager.accessChallengeData(),
             accountManager.sharedData(keys: Set([ApplicationSpecificSharedDataKeys.presentationPasscodeSettings])),
             presentationDataSignal,
             applicationBindings.applicationIsActive,
-            self.currentState.get(),
-            hiddenAccountsAccessChallengeData
+            self.currentState.get()
         )
-        |> deliverOnMainQueue).start(next: { [weak self] accessChallengeData, sharedData, presentationData, appInForeground, state, hiddenAccountsAccessChallengeData in
+        |> deliverOnMainQueue).start(next: { [weak self] accessChallengeData, sharedData, presentationData, appInForeground, state in
             guard let strongSelf = self else {
                 return
             }
@@ -190,7 +203,7 @@ public final class AppLockContextImpl: AppLockContext {
                         }
                         passcodeController.ensureInputFocused()
                     } else {
-                        let passcodeController = PasscodeEntryController(applicationBindings: strongSelf.applicationBindings, accountManager: strongSelf.accountManager, appLockContext: strongSelf, presentationData: presentationData, presentationDataSignal: strongSelf.presentationDataSignal, challengeData: accessChallengeData.data, hiddenAccountsAccessChallengeData: hiddenAccountsAccessChallengeData, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: !becameActiveRecently, lockIconInitialFrame: { [weak self] in
+                        let passcodeController = PasscodeEntryController(applicationBindings: strongSelf.applicationBindings, accountManager: strongSelf.accountManager, appLockContext: strongSelf, presentationData: presentationData, presentationDataSignal: strongSelf.presentationDataSignal, challengeData: accessChallengeData.data, hiddenAccountsAccessChallengeData: strongSelf.hiddenAccountsAccessChallengeData, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: !becameActiveRecently, lockIconInitialFrame: { [weak self] in
                             if let lockViewFrame = lockIconInitialFrame() {
                                 return lockViewFrame
                             } else {
@@ -371,5 +384,9 @@ public final class AppLockContextImpl: AppLockContext {
             state.unlockAttemts = unlockAttemts
             return state
         }
+    }
+    
+    deinit {
+        hiddenAccountsAccessChallengeDataDisposable?.dispose()
     }
 }
