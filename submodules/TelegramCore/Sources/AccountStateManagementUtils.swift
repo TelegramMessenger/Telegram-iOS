@@ -1637,7 +1637,7 @@ func keepPollingChannel(postbox: Postbox, network: Network, peerId: PeerId, stat
     |> restart
     
     return signal
-    |> delay(5.0, queue: .concurrentDefaultQueue())
+    |> delay(1.0, queue: .concurrentDefaultQueue())
 }
 
 private func resetChannels(network: Network, peers: [Peer], state: AccountMutableState) -> Signal<AccountMutableState, NoError> {

@@ -816,7 +816,7 @@ private final class MediaPlayerContext {
             rate = 0.0
             print("bufferingProgress = \(progress)")
             
-            let tickTimer = SwiftSignalKit.Timer(timeout: 0.1, repeat: false, completion: { [weak self] in
+            let tickTimer = SwiftSignalKit.Timer(timeout: 0.3, repeat: false, completion: { [weak self] in
                 self?.tick()
             }, queue: self.queue)
             self.tickTimer = tickTimer
