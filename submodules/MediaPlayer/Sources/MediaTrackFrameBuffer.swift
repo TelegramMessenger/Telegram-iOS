@@ -3,7 +3,7 @@ import SwiftSignalKit
 import CoreMedia
 
 public enum MediaTrackFrameBufferStatus {
-    case buffering
+    case buffering(progress: Double)
     case full(until: Double)
     case finished(at: Double)
 }
@@ -123,7 +123,12 @@ public final class MediaTrackFrameBuffer {
             if traceEvents {
                 print("buffered duration: \(bufferedDuration), requesting until \(timestamp) + \(self.highWaterDuration - bufferedDuration)")
             }
-            self.frameSource.generateFrames(until: timestamp + self.highWaterDuration)
+            let delayIncrement = 0.3
+            var generateUntil = timestamp + delayIncrement
+            while generateUntil < timestamp + self.highWaterDuration {
+                self.frameSource.generateFrames(until: min(timestamp + self.highWaterDuration, generateUntil))
+                generateUntil += delayIncrement
+            }
             
             if bufferedDuration > self.stallDuration {
                 if traceEvents {
@@ -131,7 +136,7 @@ public final class MediaTrackFrameBuffer {
                 }
                 return .full(until: timestamp + self.highWaterDuration)
             } else {
-                return .buffering
+                return .buffering(progress: max(0.0, bufferedDuration / self.stallDuration))
             }
         } else {
             if traceEvents {
