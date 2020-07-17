@@ -272,6 +272,8 @@ final class MutableMessageHistoryView {
     
     fileprivate(set) var sampledState: HistoryViewSample
     
+    fileprivate var isAddedToChatList: Bool
+    
     init(postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, clipHoles: Bool, peerIds: MessageHistoryViewPeerIds, anchor inputAnchor: HistoryViewInputAnchor, combinedReadStates: MessageHistoryViewReadState?, transientReadStates: MessageHistoryViewReadState?, tag: MessageTags?, namespaces: MessageIdNamespaces, count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
         self.anchor = inputAnchor
         
@@ -285,6 +287,15 @@ final class MutableMessageHistoryView {
         self.fillCount = count
         self.topTaggedMessages = topTaggedMessages
         self.additionalDatas = additionalDatas
+        
+        let mainPeerId: PeerId
+        switch peerIds {
+        case let .associated(peerId, _):
+            mainPeerId = peerId
+        case let .single(peerId):
+            mainPeerId = peerId
+        }
+        self.isAddedToChatList = postbox.chatListTable.getPeerChatListIndex(peerId: mainPeerId) != nil
         
         self.state = HistoryViewState(postbox: postbox, inputAnchor: inputAnchor, tag: tag, namespaces: namespaces, statistics: self.orderStatistics, halfLimit: count + 1, locations: peerIds)
         if case let .loading(loadingState) = self.state {
@@ -350,6 +361,17 @@ final class MutableMessageHistoryView {
     func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
         var operations: [[MessageHistoryOperation]] = []
         var peerIdsSet = Set<PeerId>()
+        
+        if !transaction.chatListOperations.isEmpty {
+            let mainPeerId: PeerId
+            switch peerIds {
+            case let .associated(peerId, _):
+                mainPeerId = peerId
+            case let .single(peerId):
+                mainPeerId = peerId
+            }
+            self.isAddedToChatList = postbox.chatListTable.getPeerChatListIndex(peerId: mainPeerId) != nil
+        }
         
         switch self.peerIds {
         case let .single(peerId):
@@ -718,10 +740,12 @@ public final class MessageHistoryView {
     public let topTaggedMessages: [Message]
     public let additionalData: [AdditionalMessageHistoryViewDataEntry]
     public let isLoading: Bool
+    public let isAddedToChatList: Bool
     
     init(_ mutableView: MutableMessageHistoryView) {
         self.tagMask = mutableView.tag
         self.namespaces = mutableView.namespaces
+        self.isAddedToChatList = mutableView.isAddedToChatList
         var entries: [MessageHistoryEntry]
         switch mutableView.sampledState {
         case .loading:

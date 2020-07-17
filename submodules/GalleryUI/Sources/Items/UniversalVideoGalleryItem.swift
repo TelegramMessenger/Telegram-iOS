@@ -626,7 +626,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             case .playing:
                                 isPaused = false
                                 playing = true
-                            case let .buffering(_, whilePlaying):
+                            case let .buffering(_, whilePlaying, _):
                                 initialBuffering = true
                                 isPaused = !whilePlaying
                                 var isStreaming = false

@@ -60,7 +60,7 @@ func messageFileMediaResourceStatus(context: AccountContext, file: TelegramMedia
                         mediaStatus = .playbackStatus(.playing)
                     case .paused:
                         mediaStatus = .playbackStatus(.paused)
-                    case let .buffering(_, whilePlaying):
+                    case let .buffering(_, whilePlaying, _):
                         if whilePlaying {
                             mediaStatus = .playbackStatus(.playing)
                         } else {
@@ -84,7 +84,7 @@ func messageFileMediaResourceStatus(context: AccountContext, file: TelegramMedia
                         mediaStatus = .playbackStatus(.playing)
                     case .paused:
                         mediaStatus = .playbackStatus(.paused)
-                    case let .buffering(_, whilePlaying):
+                    case let .buffering(_, whilePlaying, _):
                         if whilePlaying {
                             mediaStatus = .playbackStatus(.playing)
                         } else {
