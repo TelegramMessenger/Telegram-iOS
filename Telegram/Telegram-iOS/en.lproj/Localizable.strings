@@ -5700,3 +5700,13 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.ContextMenuOpenProfile" = "Open Profile";
 "Conversation.ContextMenuSendMessage" = "Send Message";
 "Conversation.ContextMenuMention" = "Mention";
+
+"Conversation.ContextMenuOpenChannelProfile" = "Open Profile";
+"Conversation.ContextMenuOpenChannel" = "Open Channel";
+
+"Cache.KeepMediaHelp" = "Photos, videos and other files from cloud chats that you have **not accessed** during this period will be removed from this device to save disk space.";
+
+
+"Cache.MaximumCacheSize" = "Maximum Cache Size";
+"Cache.NoLimit" = "No Limit";
+"Cache.MaximumCacheSizeHelp" = "If your cache size exceeds this limit, the oldest media will be deleted.\n\nAll media will stay in the Telegram cloud and can be re-downloaded if you need it again.";
