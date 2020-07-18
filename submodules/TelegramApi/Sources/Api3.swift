@@ -6767,20 +6767,6 @@ public extension Api {
                 }
             }
             public struct photos {
-                public static func updateProfilePhoto(id: Api.InputPhoto) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UserProfilePhoto>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-256159406)
-                    id.serialize(buffer, true)
-                    return (FunctionDescription(name: "photos.updateProfilePhoto", parameters: [("id", id)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.UserProfilePhoto? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.UserProfilePhoto?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.UserProfilePhoto
-                        }
-                        return result
-                    })
-                }
-            
                 public static func deletePhotos(id: [Api.InputPhoto]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Int64]>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-2016444625)
@@ -6824,6 +6810,20 @@ public extension Api {
                     if Int(flags) & Int(1 << 1) != 0 {video!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeDouble(videoStartTs!, buffer: buffer, boxed: false)}
                     return (FunctionDescription(name: "photos.uploadProfilePhoto", parameters: [("flags", flags), ("file", file), ("video", video), ("videoStartTs", videoStartTs)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.photos.Photo? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.photos.Photo?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.photos.Photo
+                        }
+                        return result
+                    })
+                }
+            
+                public static func updateProfilePhoto(id: Api.InputPhoto) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.photos.Photo>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1926525996)
+                    id.serialize(buffer, true)
+                    return (FunctionDescription(name: "photos.updateProfilePhoto", parameters: [("id", id)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.photos.Photo? in
                         let reader = BufferReader(buffer)
                         var result: Api.photos.Photo?
                         if let signature = reader.readInt32() {
