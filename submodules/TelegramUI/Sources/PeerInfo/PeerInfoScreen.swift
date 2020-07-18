@@ -4182,35 +4182,55 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     return
                 }
                 
-                if let item = item {
-                    strongSelf.deleteAvatar(item, remove: false)
-                }
-                
-                let _ = strongSelf.currentAvatarMixin.swap(nil)
-                if let _ = peer.smallProfileImage {
-                    strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
-                    if let (layout, navigationHeight) = strongSelf.validLayout {
-                        strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                let proceed = {
+                    if let item = item {
+                        strongSelf.deleteAvatar(item, remove: false)
                     }
-                }
-                let postbox = strongSelf.context.account.postbox
-                strongSelf.updateAvatarDisposable.set((updatePeerPhoto(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, stateManager: strongSelf.context.account.stateManager, accountPeerId: strongSelf.context.account.peerId, peerId: strongSelf.peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
-                    return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
-                })
-                |> deliverOnMainQueue).start(next: { result in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    switch result {
-                    case .complete:
+                    
+                    let _ = strongSelf.currentAvatarMixin.swap(nil)
+                    if let _ = peer.smallProfileImage {
                         strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
                         if let (layout, navigationHeight) = strongSelf.validLayout {
                             strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
                         }
-                    case .progress:
-                        break
                     }
-                }))
+                    let postbox = strongSelf.context.account.postbox
+                    strongSelf.updateAvatarDisposable.set((updatePeerPhoto(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, stateManager: strongSelf.context.account.stateManager, accountPeerId: strongSelf.context.account.peerId, peerId: strongSelf.peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
+                        return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
+                    })
+                    |> deliverOnMainQueue).start(next: { result in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        switch result {
+                        case .complete:
+                            strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
+                            if let (layout, navigationHeight) = strongSelf.validLayout {
+                                strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                            }
+                        case .progress:
+                            break
+                        }
+                    }))
+                }
+                
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                let items: [ActionSheetItem] = [
+                    ActionSheetButtonItem(title: presentationData.strings.Settings_RemoveConfirmation, color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        proceed()
+                    })
+                ]
+                
+                actionSheet.setItemGroups([
+                    ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
+                ])
+                strongSelf.controller?.present(actionSheet, in: .window(.root))
             }
             mixin.didDismiss = { [weak legacyController] in
                 guard let strongSelf = self else {
