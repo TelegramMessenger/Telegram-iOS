@@ -3847,18 +3847,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
         }
     }
-        
-    private func setMainAvatar(_ item: PeerInfoAvatarListItem) {
-        if self.data?.peer?.id == self.context.account.peerId {
-            if case let .image(reference, _, _, _) = item {
-                if let reference = reference {
-                    let _ = updatePeerPhotoExisting(network: self.context.account.network, reference: reference).start()
-                    self.headerNode.avatarListNode.listContainerNode.setMainItem(item)
-                    
-                }
-            }
-        }
-    }
     
     private func deleteAvatar(_ item: PeerInfoAvatarListItem, remove: Bool = true) {
         if self.data?.peer?.id == self.context.account.peerId {
@@ -3880,28 +3868,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                 }
             }
-//            if entry == self.entries.first {
-//                self.dismiss(forceAway: true)
-//            } else {
-//                if let index = self.entries.firstIndex(of: entry) {
-//                    self.entries.remove(at: index)
-//                    self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
-//                }
-//            }
-        } else {
-//            if let messageId = messageId {
-//                let _ = deleteMessagesInteractively(account: self.context.account, messageIds: [messageId], type: .forEveryone).start()
-//            }
-            
-//            if entry == self.entries.first {
-//                let _ = updatePeerPhoto(postbox: self.context.account.postbox, network: self.context.account.network, stateManager: self.context.account.stateManager, accountPeerId: self.context.account.peerId, peerId: self.peer.id, photo: nil, mapResourceToAvatarSizes: { _, _ in .single([:]) }).start()
-//                self.dismiss(forceAway: true)
-//            } else {
-//                if let index = self.entries.firstIndex(of: entry) {
-//                    self.entries.remove(at: index)
-//                    self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
-//                }
-//            }
         }
     }
     
@@ -3948,18 +3914,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
             }
         }))
-    }
-    
-    fileprivate func resetHeaderExpansion() {
-        if self.headerNode.isAvatarExpanded {
-            self.headerNode.ignoreCollapse = true
-            self.headerNode.updateIsAvatarExpanded(false, transition: .immediate)
-            self.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
-            if let (layout, navigationHeight) = self.validLayout {
-                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
-            }
-            self.headerNode.ignoreCollapse = false
-        }
     }
               
     private func updateProfileVideo(_ image: UIImage, asset: Any?, adjustments: TGVideoEditAdjustments?) {
@@ -5390,6 +5344,18 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         let paneAreaExpansionFinalPoint: CGFloat = self.paneContainerNode.frame.minY - navigationHeight
         if abs(scrollView.contentOffset.y - paneAreaExpansionFinalPoint) < .ulpOfOne {
             self.paneContainerNode.currentPane?.node.transferVelocity(self.previousVelocityM1)
+        }
+    }
+    
+    fileprivate func resetHeaderExpansion() {
+        if self.headerNode.isAvatarExpanded {
+            self.headerNode.ignoreCollapse = true
+            self.headerNode.updateIsAvatarExpanded(false, transition: .immediate)
+            self.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
+            if let (layout, navigationHeight) = self.validLayout {
+                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+            }
+            self.headerNode.ignoreCollapse = false
         }
     }
     
