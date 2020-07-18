@@ -284,7 +284,7 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
                 return
             }
             if isLoading, let progress = progress {
-                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: CGFloat(progress), cancelEnabled: false), completion: {})
+                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: CGFloat(max(0.027, progress)), cancelEnabled: false), completion: {})
             } else {
                 strongSelf.statusNode.transitionToState(.none, completion: {})
             }
