@@ -203,10 +203,11 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
     private let preloadDisposable = MetaDisposable()
     private let statusNode: RadialStatusNode
     
-    private var fetchStatus: MediaResourceStatus?
+
     private var playerStatus: MediaPlayerStatus?
     private var isLoading = ValuePromise<Bool>(false)
-    private var loadingDisposable = MetaDisposable()
+    private var loadingProgress = ValuePromise<Float?>(nil)
+    private var loadingProgressDisposable = MetaDisposable()
     
     let isReady = Promise<Bool>()
     private var didSetReady: Bool = false
@@ -271,19 +272,19 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
         self.addSubnode(self.imageNode)
         self.addSubnode(self.statusNode)
                 
-        self.loadingDisposable.set((self.isLoading.get()
+        self.loadingProgressDisposable.set((combineLatest(self.isLoading.get()
         |> mapToSignal { value -> Signal<Bool, NoError> in
             if value {
-                return .single(value) |> delay(1.0, queue: Queue.mainQueue())
+                return .single(value) |> delay(0.5, queue: Queue.mainQueue())
             } else {
                 return .single(value)
             }
-        }).start(next: { [weak self] loading in
+        }, self.loadingProgress.get())).start(next: { [weak self] isLoading, progress in
             guard let strongSelf = self else {
                 return
             }
-            if loading {
-                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false), completion: {})
+            if isLoading, let progress = progress {
+                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: CGFloat(progress), cancelEnabled: false), completion: {})
             } else {
                 strongSelf.statusNode.transitionToState(.none, completion: {})
             }
@@ -297,35 +298,26 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
     }
     
     private func updateStatus() {
-        guard let videoContent = self.videoContent, let fetchStatus = self.fetchStatus else {
+        guard let videoContent = self.videoContent else {
             return
         }
              
-        var isBuffering: Bool?
-        var isPlaying = false
+        var bufferingProgress: Float?
         if isMediaStreamable(resource: videoContent.fileReference.media.resource) {
             if let playerStatus = self.playerStatus {
-                if case .buffering = playerStatus.status {
-                    isBuffering = true
+                if case let .buffering(_, _, progress) = playerStatus.status {
+                    bufferingProgress = progress
+                    print(progress)
                 } else if case .playing = playerStatus.status {
-                    isPlaying = true
+                    bufferingProgress = nil
                 }
             } else {
-                isBuffering = false
+                bufferingProgress = nil
             }
         }
-        
-        var progressRequired = false
-        if case .Local = fetchStatus {
-        } else if isBuffering ?? false {
-            progressRequired = true
-        } else if case .Fetching = fetchStatus, !isPlaying {
-            progressRequired = true
-        } else if case .Remote = fetchStatus, !isPlaying {
-            progressRequired = true
-        }
-                
-        self.isLoading.set(progressRequired)
+          
+        self.loadingProgress.set(bufferingProgress)
+        self.isLoading.set(bufferingProgress != nil)
     }
     
     func updateTransitionFraction(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -378,13 +370,12 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
         let videoStartTimestamp = self.videoStartTimestamp
         self.statusPromise.set(videoNode.status |> map { ($0, videoStartTimestamp) })
         
-        self.statusDisposable.set((combineLatest(self.mediaStatus, self.context.account.postbox.mediaBox.resourceStatus(videoContent.fileReference.media.resource))
-        |> deliverOnMainQueue).start(next: { [weak self] mediaStatus, fetchStatus in
+        self.statusDisposable.set((self.mediaStatus
+        |> deliverOnMainQueue).start(next: { [weak self] mediaStatus in
             if let strongSelf = self {
                 if let mediaStatusAndStartTimestamp = mediaStatus {
                     strongSelf.playerStatus = mediaStatusAndStartTimestamp.0
                 }
-                strongSelf.fetchStatus = fetchStatus
                 strongSelf.updateStatus()
             }
         }))
