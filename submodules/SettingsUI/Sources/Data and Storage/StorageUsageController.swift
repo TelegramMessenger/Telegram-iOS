@@ -37,14 +37,16 @@ private func freeDiskSpace() -> Int64 {
 private final class StorageUsageControllerArguments {
     let context: AccountContext
     let updateKeepMediaTimeout: (Int32) -> Void
+    let updateMaximumCacheSize: (Int32) -> Void
     let openClearAll: () -> Void
     let openPeerMedia: (PeerId) -> Void
     let clearPeerMedia: (PeerId) -> Void
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     
-    init(context: AccountContext, updateKeepMediaTimeout: @escaping (Int32) -> Void, openClearAll: @escaping () -> Void, openPeerMedia: @escaping (PeerId) -> Void, clearPeerMedia: @escaping (PeerId) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void) {
+    init(context: AccountContext, updateKeepMediaTimeout: @escaping (Int32) -> Void, updateMaximumCacheSize: @escaping (Int32) -> Void, openClearAll: @escaping () -> Void, openPeerMedia: @escaping (PeerId) -> Void, clearPeerMedia: @escaping (PeerId) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void) {
         self.context = context
         self.updateKeepMediaTimeout = updateKeepMediaTimeout
+        self.updateMaximumCacheSize = updateMaximumCacheSize
         self.openClearAll = openClearAll
         self.openPeerMedia = openPeerMedia
         self.clearPeerMedia = clearPeerMedia
@@ -54,6 +56,7 @@ private final class StorageUsageControllerArguments {
 
 private enum StorageUsageSection: Int32 {
     case keepMedia
+    case maximumSize
     case storage
     case peers
 }
@@ -62,6 +65,10 @@ private enum StorageUsageEntry: ItemListNodeEntry {
     case keepMediaHeader(PresentationTheme, String)
     case keepMedia(PresentationTheme, PresentationStrings, Int32)
     case keepMediaInfo(PresentationTheme, String)
+    
+    case maximumSizeHeader(PresentationTheme, String)
+    case maximumSize(PresentationTheme, PresentationStrings, Int32)
+    case maximumSizeInfo(PresentationTheme, String)
     
     case storageHeader(PresentationTheme, String)
     case storageUsage(PresentationTheme, PresentationDateTimeFormat, [StorageUsageCategory])
@@ -75,6 +82,8 @@ private enum StorageUsageEntry: ItemListNodeEntry {
         switch self {
             case .keepMediaHeader, .keepMedia, .keepMediaInfo:
                 return StorageUsageSection.keepMedia.rawValue
+            case .maximumSizeHeader, .maximumSize, .maximumSizeInfo:
+                return StorageUsageSection.maximumSize.rawValue
             case .storageHeader, .storageUsage, .collecting, .clearAll:
                 return StorageUsageSection.storage.rawValue
             case .peersHeader, .peer:
@@ -90,18 +99,24 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 return 1
             case .keepMediaInfo:
                 return 2
-            case .storageHeader:
+            case .maximumSizeHeader:
                 return 3
-            case .storageUsage:
+            case .maximumSize:
                 return 4
-            case .collecting:
+            case .maximumSizeInfo:
                 return 5
-            case .clearAll:
+            case .storageHeader:
                 return 6
-            case .peersHeader:
+            case .storageUsage:
                 return 7
+            case .collecting:
+                return 8
+            case .clearAll:
+                return 9
+            case .peersHeader:
+                return 10
             case let .peer(index, _, _, _, _, _, _, _, _):
-                return 8 + index
+                return 11 + index
         }
     }
     
@@ -121,6 +136,24 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 }
             case let .keepMediaInfo(lhsTheme, lhsText):
                 if case let .keepMediaInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .maximumSizeHeader(lhsTheme, lhsText):
+                if case let .maximumSizeHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .maximumSize(lhsTheme, lhsStrings, lhsValue):
+                if case let .maximumSize(rhsTheme, rhsStrings, rhsValue) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .maximumSizeInfo(lhsTheme, lhsText):
+                if case let .maximumSizeInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -202,25 +235,33 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .keepMedia(theme, strings, value):
                 return KeepMediaDurationPickerItem(theme: theme, strings: strings, value: value, sectionId: self.section, updated: { updatedValue in
-                        arguments.updateKeepMediaTimeout(updatedValue)
-                    })
-            case let .keepMediaInfo(theme, text):
+                    arguments.updateKeepMediaTimeout(updatedValue)
+                })
+            case let .keepMediaInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
-            case let .storageHeader(theme, text):
+            case let .maximumSizeHeader(_, text):
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+            case let .maximumSize(theme, strings, value):
+                return MaximumCacheSizePickerItem(theme: theme, strings: strings, value: value, sectionId: self.section, updated: { updatedValue in
+                    arguments.updateMaximumCacheSize(updatedValue)
+                })
+            case let .maximumSizeInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
+            case let .storageHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .storageUsage(theme, dateTimeFormat, categories):
                 return StorageUsageItem(theme: theme, dateTimeFormat: dateTimeFormat, categories: categories, sectionId: self.section)
             case let .collecting(theme, text):
                 return CalculatingCacheSizeItem(theme: theme, title: text, sectionId: self.section, style: .blocks)
-            case let .clearAll(theme, text, enabled):
+            case let .clearAll(_, text, enabled):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: enabled ? .generic : .disabled, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     if enabled {
                         arguments.openClearAll()
                     }
                 })
-            case let .peersHeader(theme, text):
+            case let .peersHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .peer(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer, chatPeer, value, revealed):
+            case let .peer(_, _, strings, dateTimeFormat, nameDisplayOrder, peer, chatPeer, value, revealed):
                 var options: [ItemListPeerItemRevealOption] = [ItemListPeerItemRevealOption(type: .destructive, title: strings.ClearCache_Clear, action: {
                     arguments.clearPeerMedia(peer.id)
                 })]
@@ -248,7 +289,11 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
     
     entries.append(.keepMediaHeader(presentationData.theme, presentationData.strings.Cache_KeepMedia.uppercased()))
     entries.append(.keepMedia(presentationData.theme, presentationData.strings, cacheSettings.defaultCacheStorageTimeout))
-    entries.append(.keepMediaInfo(presentationData.theme, presentationData.strings.Cache_Help))
+    entries.append(.keepMediaInfo(presentationData.theme, presentationData.strings.Cache_KeepMediaHelp))
+    
+    entries.append(.maximumSizeHeader(presentationData.theme, presentationData.strings.Cache_MaximumCacheSize.uppercased()))
+    entries.append(.maximumSize(presentationData.theme, presentationData.strings, cacheSettings.defaultCacheStorageLimitGigabytes))
+    entries.append(.maximumSizeInfo(presentationData.theme, presentationData.strings.Cache_MaximumCacheSizeHelp))
     
     var addedHeader = false
     
@@ -395,6 +440,10 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
     let arguments = StorageUsageControllerArguments(context: context, updateKeepMediaTimeout: { value in
         let _ = updateCacheStorageSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             return current.withUpdatedDefaultCacheStorageTimeout(value)
+        }).start()
+    }, updateMaximumCacheSize: { value in
+        let _ = updateCacheStorageSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+            return current.withUpdatedDefaultCacheStorageLimitGigabytes(value)
         }).start()
     }, openClearAll: {
         let _ = (statsPromise.get()
