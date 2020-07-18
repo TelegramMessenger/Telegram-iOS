@@ -217,12 +217,7 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
     private var statusPromise = Promise<(MediaPlayerStatus?, Double?)?>()
     var mediaStatus: Signal<(MediaPlayerStatus?, Double?)?, NoError> {
         get {
-            if let videoNode = self.videoNode {
-                let videoStartTimestamp = self.videoStartTimestamp
-                return videoNode.status |> map { ($0, videoStartTimestamp) }
-            } else {
-                return self.statusPromise.get()
-            }
+            return self.statusPromise.get()
         }
     }
     
@@ -307,7 +302,6 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
             if let playerStatus = self.playerStatus {
                 if case let .buffering(_, _, progress) = playerStatus.status {
                     bufferingProgress = progress
-                    print(progress)
                 } else if case .playing = playerStatus.status {
                     bufferingProgress = nil
                 }
