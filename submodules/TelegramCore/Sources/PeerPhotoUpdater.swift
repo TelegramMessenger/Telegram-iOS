@@ -294,10 +294,12 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
             }
         } else {
             if let _ = peer as? TelegramUser {
-                return network.request(Api.functions.photos.updateProfilePhoto(id: Api.InputPhoto.inputPhotoEmpty))
-                |> `catch` { _ -> Signal<Api.UserProfilePhoto, UploadPeerPhotoError> in
-                    return .fail(.generic)
+                let signal: Signal<Api.photos.Photo, UploadPeerPhotoError> = network.request(Api.functions.photos.updateProfilePhoto(id: Api.InputPhoto.inputPhotoEmpty))
+                |> mapError { _ -> UploadPeerPhotoError in
+                    return .generic
                 }
+                    
+                return signal
                 |> mapToSignal { _ -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> in
                     return .single(.complete([]))
                 }
@@ -341,7 +343,7 @@ public func updatePeerPhotoExisting(network: Network, reference: TelegramMediaIm
     switch reference {
         case let .cloud(imageId, accessHash, fileReference):
             return network.request(Api.functions.photos.updateProfilePhoto(id: .inputPhoto(id: imageId, accessHash: accessHash, fileReference: Buffer(data: fileReference))))
-            |> `catch` { _ -> Signal<Api.UserProfilePhoto, NoError> in
+            |> `catch` { _ -> Signal<Api.photos.Photo, NoError> in
                 return .complete()
             }
             |> mapToSignal { _ -> Signal<Void, NoError> in
