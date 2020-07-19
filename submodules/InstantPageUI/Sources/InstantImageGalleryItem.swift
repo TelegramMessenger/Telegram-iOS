@@ -15,7 +15,7 @@ private struct InstantImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account
     let mediaReference: AnyMediaReference
     
-    var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
+    func image(synchronous: Bool) -> (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
         if let imageReferene = mediaReference.concrete(TelegramMediaImage.self), let representation = largestImageRepresentation(imageReferene.media.representations) {
             return (mediaGridMessagePhoto(account: self.account, photoReference: imageReferene), representation.dimensions.cgSize)
         } else if let fileReference = mediaReference.concrete(TelegramMediaFile.self), let dimensions = fileReference.media.dimensions {

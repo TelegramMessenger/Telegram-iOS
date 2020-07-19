@@ -634,7 +634,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         if let size = self.validLayout {
             self.playbackProgress = position
             self.loading = loading
-            self.updateItems(size: size, transition: .immediate, stripTransition: .animated(duration: 0.3, curve: .spring))
+            self.updateStrips(size: size, itemsAdded: false, stripTransition: .animated(duration: 0.3, curve: .spring))
         }
     }
     
@@ -911,17 +911,19 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         case .cancelled, .ended:
             let translation = recognizer.translation(in: self.view)
             let velocity = recognizer.velocity(in: self.view)
-            var directionIsToRight = false
+            var directionIsToRight: Bool?
             if abs(velocity.x) > 10.0 {
                 directionIsToRight = velocity.x < 0.0
-            } else {
-                directionIsToRight = translation.x > self.bounds.width / 2.0
+            } else if abs(transitionFraction) > 0.5 {
+                directionIsToRight = transitionFraction < 0.0
             }
             var updatedIndex = self.currentIndex
-            if directionIsToRight {
-                updatedIndex = min(updatedIndex + 1, self.items.count - 1)
-            } else {
-                updatedIndex = max(updatedIndex - 1, 0)
+            if let directionIsToRight = directionIsToRight {
+                if directionIsToRight {
+                    updatedIndex = min(updatedIndex + 1, self.items.count - 1)
+                } else {
+                    updatedIndex = max(updatedIndex - 1, 0)
+                }
             }
             let previousIndex = self.currentIndex
             self.currentIndex = updatedIndex
@@ -1089,6 +1091,80 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.updateItems(size: size, transition: transition, stripTransition: transition)
     }
     
+    private func updateStrips(size: CGSize, itemsAdded: Bool, stripTransition: ContainedViewLayoutTransition) {
+        let hadOneStripNode = self.stripNodes.count == 1
+        if self.stripNodes.count != self.items.count {
+            if self.stripNodes.count < self.items.count {
+                for _ in 0 ..< self.items.count - self.stripNodes.count {
+                    let stripNode = ASImageNode()
+                    stripNode.displaysAsynchronously = false
+                    stripNode.displayWithoutProcessing = true
+                    stripNode.image = self.activeStripImage
+                    stripNode.alpha = 0.2
+                    self.stripNodes.append(stripNode)
+                    self.stripContainerNode.addSubnode(stripNode)
+                }
+            } else {
+                for i in (self.items.count ..< self.stripNodes.count).reversed() {
+                    self.stripNodes[i].removeFromSupernode()
+                    self.stripNodes.remove(at: i)
+                }
+            }
+            self.stripContainerNode.addSubnode(self.activeStripNode)
+            self.stripContainerNode.addSubnode(self.loadingStripNode)
+        }
+        if self.appliedStripNodeCurrentIndex != self.currentIndex || itemsAdded {
+            if !self.itemNodes.isEmpty {
+                self.appliedStripNodeCurrentIndex = self.currentIndex
+            }
+            
+            if let currentItemNode = self.currentItemNode {
+                self.positionDisposable.set((currentItemNode.mediaStatus
+                    |> deliverOnMainQueue).start(next: { [weak self] statusAndVideoStartTimestamp in
+                        if let strongSelf = self {
+                            strongSelf.playerStatus = statusAndVideoStartTimestamp
+                        }
+                    }))
+            } else {
+                self.positionDisposable.set(nil)
+            }
+        }
+        if hadOneStripNode && self.stripNodes.count > 1 {
+            self.stripContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+        }
+        let stripInset: CGFloat = 8.0
+        let stripSpacing: CGFloat = 4.0
+        let stripWidth: CGFloat = max(5.0, floor((size.width - stripInset * 2.0 - stripSpacing * CGFloat(self.stripNodes.count - 1)) / CGFloat(self.stripNodes.count)))
+        let currentStripMinX = stripInset + CGFloat(self.currentIndex) * (stripWidth + stripSpacing)
+        let currentStripMidX = floor(currentStripMinX + stripWidth / 2.0)
+        let lastStripMaxX = stripInset + CGFloat(self.stripNodes.count - 1) * (stripWidth + stripSpacing) + stripWidth
+        let stripOffset: CGFloat = min(0.0, max(size.width - stripInset - lastStripMaxX, size.width / 2.0 - currentStripMidX))
+        for i in 0 ..< self.stripNodes.count {
+            let stripX: CGFloat = stripInset + CGFloat(i) * (stripWidth + stripSpacing)
+            if i == 0 && self.stripNodes.count == 1 {
+                self.stripNodes[i].isHidden = true
+            } else {
+                self.stripNodes[i].isHidden = false
+            }
+            let stripFrame = CGRect(origin: CGPoint(x: stripOffset + stripX, y: 0.0), size: CGSize(width: stripWidth + 1.0, height: 2.0))
+            stripTransition.updateFrame(node: self.stripNodes[i], frame: stripFrame)
+        }
+        
+        if self.currentIndex >= 0 && self.currentIndex < self.stripNodes.count {
+            var frame = self.stripNodes[self.currentIndex].frame
+            stripTransition.updateFrame(node: self.loadingStripNode, frame: frame)
+            if let playbackProgress = self.playbackProgress {
+                frame.size.width = max(frame.size.height, frame.size.width * playbackProgress)
+            }
+            stripTransition.updateFrameAdditive(node: self.activeStripNode, frame: frame)
+            stripTransition.updateAlpha(node: self.activeStripNode, alpha: self.loading ? 0.0 : 1.0)
+            stripTransition.updateAlpha(node: self.loadingStripNode, alpha: self.loading ? 1.0 : 0.0)
+            
+            self.activeStripNode.isHidden = self.stripNodes.count < 2
+            self.loadingStripNode.isHidden = self.stripNodes.count < 2 || !self.loading
+        }
+    }
+    
     private func updateItems(size: CGSize, update: Bool = false, transition: ContainedViewLayoutTransition, stripTransition: ContainedViewLayoutTransition, synchronous: Bool = false) {
         var validIds: [WrappedMediaResourceId] = []
         var addedItemNodesForAdditiveTransition: [PeerInfoAvatarListItemNode] = []
@@ -1149,77 +1225,7 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             }
         }
         
-        let hadOneStripNode = self.stripNodes.count == 1
-        if self.stripNodes.count != self.items.count {
-            if self.stripNodes.count < self.items.count {
-                for _ in 0 ..< self.items.count - self.stripNodes.count {
-                    let stripNode = ASImageNode()
-                    stripNode.displaysAsynchronously = false
-                    stripNode.displayWithoutProcessing = true
-                    stripNode.image = self.activeStripImage
-                    stripNode.alpha = 0.2
-                    self.stripNodes.append(stripNode)
-                    self.stripContainerNode.addSubnode(stripNode)
-                }
-            } else {
-                for i in (self.items.count ..< self.stripNodes.count).reversed() {
-                    self.stripNodes[i].removeFromSupernode()
-                    self.stripNodes.remove(at: i)
-                }
-            }
-            self.stripContainerNode.addSubnode(self.activeStripNode)
-            self.stripContainerNode.addSubnode(self.loadingStripNode)
-        }
-        if self.appliedStripNodeCurrentIndex != self.currentIndex || itemsAdded {
-            if !self.itemNodes.isEmpty {
-                self.appliedStripNodeCurrentIndex = self.currentIndex
-            }
-
-            if let currentItemNode = self.currentItemNode {
-                self.positionDisposable.set((currentItemNode.mediaStatus
-                |> deliverOnMainQueue).start(next: { [weak self] statusAndVideoStartTimestamp in
-                    if let strongSelf = self {
-                        strongSelf.playerStatus = statusAndVideoStartTimestamp
-                    }
-                }))
-            } else {
-                self.positionDisposable.set(nil)
-            }
-        }
-        if hadOneStripNode && self.stripNodes.count > 1 {
-            self.stripContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
-        }
-        let stripInset: CGFloat = 8.0
-        let stripSpacing: CGFloat = 4.0
-        let stripWidth: CGFloat = max(5.0, floor((size.width - stripInset * 2.0 - stripSpacing * CGFloat(self.stripNodes.count - 1)) / CGFloat(self.stripNodes.count)))
-        let currentStripMinX = stripInset + CGFloat(self.currentIndex) * (stripWidth + stripSpacing)
-        let currentStripMidX = floor(currentStripMinX + stripWidth / 2.0)
-        let lastStripMaxX = stripInset + CGFloat(self.stripNodes.count - 1) * (stripWidth + stripSpacing) + stripWidth
-        let stripOffset: CGFloat = min(0.0, max(size.width - stripInset - lastStripMaxX, size.width / 2.0 - currentStripMidX))
-        for i in 0 ..< self.stripNodes.count {
-            let stripX: CGFloat = stripInset + CGFloat(i) * (stripWidth + stripSpacing)
-            if i == 0 && self.stripNodes.count == 1 {
-                self.stripNodes[i].isHidden = true
-            } else {
-                self.stripNodes[i].isHidden = false
-            }
-            let stripFrame = CGRect(origin: CGPoint(x: stripOffset + stripX, y: 0.0), size: CGSize(width: stripWidth + 1.0, height: 2.0))
-            stripTransition.updateFrame(node: self.stripNodes[i], frame: stripFrame)
-        }
-        
-        if self.currentIndex >= 0 && self.currentIndex < self.stripNodes.count {
-            var frame = self.stripNodes[self.currentIndex].frame
-            stripTransition.updateFrame(node: self.loadingStripNode, frame: frame)
-            if let playbackProgress = self.playbackProgress {
-                frame.size.width = max(frame.size.height, frame.size.width * playbackProgress)
-            }
-            stripTransition.updateFrameAdditive(node: self.activeStripNode, frame: frame)
-            stripTransition.updateAlpha(node: self.activeStripNode, alpha: self.loading ? 0.0 : 1.0)
-            stripTransition.updateAlpha(node: self.loadingStripNode, alpha: self.loading ? 1.0 : 0.0)
-            
-            self.activeStripNode.isHidden = self.stripNodes.count < 2
-            self.loadingStripNode.isHidden = self.stripNodes.count < 2 || !self.loading
-        }
+        self.updateStrips(size: size, itemsAdded: itemsAdded, stripTransition: stripTransition)
         
         if let item = self.items.first, let itemNode = self.itemNodes[item.id] {
             if !self.didSetReady {

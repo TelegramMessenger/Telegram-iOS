@@ -25,9 +25,9 @@ private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
         self.content = content
     }
     
-    var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
+    func image(synchronous: Bool) -> (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
         if let representation = largestImageRepresentation(self.content.map({ $0.representation })) {
-            return (avatarGalleryThumbnailPhoto(account: self.account, representations: self.content), representation.dimensions.cgSize)
+            return (avatarGalleryThumbnailPhoto(account: self.account, representations: self.content, synchronousLoad: synchronous), representation.dimensions.cgSize)
         } else {
             return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
         }

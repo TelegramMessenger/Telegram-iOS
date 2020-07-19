@@ -352,6 +352,15 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
                     self.items[i].updateNode(node: itemNode, synchronous: synchronous)
                 }
             }
+            for i in (0 ..< self.itemNodes.count).reversed() {
+                let node = self.itemNodes[i]
+                if node.index > self.items.count - 1 {
+                    node.removeFromSupernode()
+                    self.itemNodes.remove(at: i)
+                }
+            }
+            
+            self.updateCentralIndexOffset(transition: .immediate)
         }
     }
     

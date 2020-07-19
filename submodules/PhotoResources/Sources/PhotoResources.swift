@@ -1000,9 +1000,9 @@ public func chatSecretPhoto(account: Account, photoReference: ImageMediaReferenc
     }
 }
 
-private func avatarGalleryThumbnailDatas(postbox: Postbox, representations: [ImageRepresentationWithReference], fullRepresentationSize: CGSize = CGSize(width: 1280.0, height: 1280.0), autoFetchFullSize: Bool = false) -> Signal<Tuple3<Data?, Data?, Bool>, NoError> {
+private func avatarGalleryThumbnailDatas(postbox: Postbox, representations: [ImageRepresentationWithReference], fullRepresentationSize: CGSize = CGSize(width: 1280.0, height: 1280.0), autoFetchFullSize: Bool = false, synchronousLoad: Bool) -> Signal<Tuple3<Data?, Data?, Bool>, NoError> {
     if let smallestRepresentation = smallestImageRepresentation(representations.map({ $0.representation })), let largestRepresentation = imageRepresentationLargerThan(representations.map({ $0.representation }), size: PixelDimensions(width: Int32(fullRepresentationSize.width), height: Int32(fullRepresentationSize.height))), let smallestIndex = representations.firstIndex(where: { $0.representation == smallestRepresentation }), let largestIndex = representations.firstIndex(where: { $0.representation == largestRepresentation }) {
-        let maybeFullSize = postbox.mediaBox.resourceData(largestRepresentation.resource)
+        let maybeFullSize = postbox.mediaBox.resourceData(largestRepresentation.resource, attemptSynchronously: synchronousLoad)
         
         let signal = maybeFullSize
         |> take(1)
@@ -1070,8 +1070,8 @@ private func avatarGalleryThumbnailDatas(postbox: Postbox, representations: [Ima
     }
 }
 
-public func avatarGalleryThumbnailPhoto(account: Account, representations: [ImageRepresentationWithReference]) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = avatarGalleryThumbnailDatas(postbox: account.postbox, representations: representations, fullRepresentationSize: CGSize(width: 127.0, height: 127.0), autoFetchFullSize: true)
+public func avatarGalleryThumbnailPhoto(account: Account, representations: [ImageRepresentationWithReference], synchronousLoad: Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = avatarGalleryThumbnailDatas(postbox: account.postbox, representations: representations, fullRepresentationSize: CGSize(width: 127.0, height: 127.0), autoFetchFullSize: true, synchronousLoad: synchronousLoad)
     return signal
     |> map { value in
         let thumbnailData = value._0
@@ -1079,7 +1079,6 @@ public func avatarGalleryThumbnailPhoto(account: Account, representations: [Imag
         let fullSizeComplete = value._2
         
         return { arguments in
-            assertNotOnMainThread()
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
             
             let drawingRect = arguments.drawingRect

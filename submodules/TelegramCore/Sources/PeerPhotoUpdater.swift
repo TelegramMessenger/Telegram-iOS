@@ -339,15 +339,19 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
     }
 }
 
-public func updatePeerPhotoExisting(network: Network, reference: TelegramMediaImageReference) -> Signal<Void, NoError> {
+public func updatePeerPhotoExisting(network: Network, reference: TelegramMediaImageReference) -> Signal<TelegramMediaImage?, NoError> {
     switch reference {
         case let .cloud(imageId, accessHash, fileReference):
             return network.request(Api.functions.photos.updateProfilePhoto(id: .inputPhoto(id: imageId, accessHash: accessHash, fileReference: Buffer(data: fileReference))))
             |> `catch` { _ -> Signal<Api.photos.Photo, NoError> in
                 return .complete()
             }
-            |> mapToSignal { _ -> Signal<Void, NoError> in
-                return .complete()
+            |> mapToSignal { photo -> Signal<TelegramMediaImage?, NoError> in
+                if case let .photo(photo, _) = photo {
+                    return .single(telegramMediaImageFromApiPhoto(photo))
+                } else {
+                    return .complete()
+                }
             }
     }
 }

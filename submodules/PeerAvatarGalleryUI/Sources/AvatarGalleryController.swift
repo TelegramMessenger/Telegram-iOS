@@ -656,6 +656,19 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         return canDelete
     }
     
+    private func replaceEntries(_ entries: [AvatarGalleryEntry]) {
+        self.galleryNode.currentThumbnailContainerNode?.updateSynchronously = true
+        self.galleryNode.pager.replaceItems(entries.map({ entry in PeerAvatarImageGalleryItem(context: self.context, peer: self.peer, presentationData: presentationData, entry: entry, sourceCorners: self.sourceCorners, delete: self.canDelete ? { [weak self] in
+            self?.deleteEntry(entry)
+        } : nil, setMain: { [weak self] in
+            self?.setMainEntry(entry)
+        }, edit: { [weak self] in
+            self?.editEntry(entry)
+        }) }), centralItemIndex: 0, synchronous: true)
+        self.entries = entries
+        self.galleryNode.currentThumbnailContainerNode?.updateSynchronously = false
+    }
+    
     private func setMainEntry(_ rawEntry: AvatarGalleryEntry) {
         var entry = rawEntry
         if case .topImage = entry, !self.entries.isEmpty {
@@ -668,9 +681,33 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                 } else {
                 }
             case let .image(_, reference, _, _, _, _, _, _, _, _):
-                if self.peer.id == self.context.account.peerId {
+                if self.peer.id == self.context.account.peerId, let peerReference = PeerReference(self.peer) {
                     if let reference = reference {
-                        let _ = updatePeerPhotoExisting(network: self.context.account.network, reference: reference).start()
+                        let _ = (updatePeerPhotoExisting(network: self.context.account.network, reference: reference)
+                        |> deliverOnMainQueue).start(next: { [weak self] photo in
+                            if let strongSelf = self, let photo = photo, let firstEntry = strongSelf.entries.first, case let .image(image) = firstEntry {
+                                let updatedEntry = AvatarGalleryEntry.image(photo.imageId, photo.reference, photo.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), photo.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), strongSelf.peer, image.5, image.6, image.7, photo.immediateThumbnailData, image.9)
+                                
+                                for (lhs, rhs) in zip(firstEntry.representations, updatedEntry.representations) {
+                                    if lhs.representation.dimensions == rhs.representation.dimensions {
+                                        strongSelf.context.account.postbox.mediaBox.copyResourceData(from: lhs.representation.resource.id, to: rhs.representation.resource.id, synchronous: true)
+                                    }
+                                }
+                                for (lhs, rhs) in zip(firstEntry.videoRepresentations, updatedEntry.videoRepresentations) {
+                                    if lhs.representation.dimensions == rhs.representation.dimensions {
+                                        strongSelf.context.account.postbox.mediaBox.copyResourceData(from: lhs.representation.resource.id, to: rhs.representation.resource.id, synchronous: true)
+                                    }
+                                }
+                                
+                                var entries = strongSelf.entries
+                                entries.remove(at: 0)
+                                entries.insert(updatedEntry, at: 0)
+                                strongSelf.replaceEntries(normalizeEntries(entries))
+                                if let firstEntry = strongSelf.entries.first {
+                                    strongSelf._hiddenMedia.set(.single(firstEntry))
+                                }
+                            }
+                        })
                     }
 
                     if let index = self.entries.firstIndex(of: entry) {
@@ -684,35 +721,12 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                             entries.insert(previousFirstEntry, at: index)
                         }
                                               
-                        entries = normalizeEntries(entries)
-                        self.galleryNode.pager.replaceItems(entries.map({ entry in PeerAvatarImageGalleryItem(context: self.context, peer: self.peer, presentationData: presentationData, entry: entry, sourceCorners: self.sourceCorners, delete: self.canDelete ? { [weak self] in
-                            self?.deleteEntry(entry)
-                        } : nil, setMain: { [weak self] in
-                            self?.setMainEntry(entry)
-                        }, edit: { [weak self] in
-                            self?.editEntry(entry)
-                        }) }), centralItemIndex: 0, synchronous: true)
-                        self.entries = entries
-                        
+                        self.replaceEntries(normalizeEntries(entries))
                         if let firstEntry = self.entries.first {
                             self._hiddenMedia.set(.single(firstEntry))
                         }
                     }
-                } else {
-//                    if let messageId = messageId {
-//                        let _ = deleteMessagesInteractively(account: self.context.account, messageIds: [messageId], type: .forEveryone).start()
-//                    }
-//
-//                    if entry == self.entries.first {
-//                        let _ = updatePeerPhoto(postbox: self.context.account.postbox, network: self.context.account.network, stateManager: self.context.account.stateManager, accountPeerId: self.context.account.peerId, peerId: self.peer.id, photo: nil, mapResourceToAvatarSizes: { _, _ in .single([:]) }).start()
-//                        self.dismiss(forceAway: true)
-//                    } else {
-//                        if let index = self.entries.firstIndex(of: entry) {
-//                            self.entries.remove(at: index)
-//                            self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1))
-//                        }
-//                    }
-            }
+                }
         }
     }
     
