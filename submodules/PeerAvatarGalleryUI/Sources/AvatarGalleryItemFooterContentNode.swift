@@ -109,8 +109,10 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         switch entry {
             case let .image(_, _, _, videoRepresentations, peer, date, _, _, _, _):
                 nameText = peer?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""
-                dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: date)
-            
+                if let date = date {
+                    dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: date)
+                }
+                
                 if (!videoRepresentations.isEmpty) {
                     typeText = self.strings.ProfilePhoto_MainVideo
                     buttonText = self.strings.ProfilePhoto_SetMainVideo
