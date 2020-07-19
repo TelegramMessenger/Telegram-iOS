@@ -3847,18 +3847,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
         }
     }
-        
-    private func setMainAvatar(_ item: PeerInfoAvatarListItem) {
-        if self.data?.peer?.id == self.context.account.peerId {
-            if case let .image(reference, _, _, _) = item {
-                if let reference = reference {
-                    let _ = updatePeerPhotoExisting(network: self.context.account.network, reference: reference).start()
-                    self.headerNode.avatarListNode.listContainerNode.setMainItem(item)
-                    
-                }
-            }
-        }
-    }
     
     private func deleteAvatar(_ item: PeerInfoAvatarListItem, remove: Bool = true) {
         if self.data?.peer?.id == self.context.account.peerId {
@@ -3880,28 +3868,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                 }
             }
-//            if entry == self.entries.first {
-//                self.dismiss(forceAway: true)
-//            } else {
-//                if let index = self.entries.firstIndex(of: entry) {
-//                    self.entries.remove(at: index)
-//                    self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
-//                }
-//            }
-        } else {
-//            if let messageId = messageId {
-//                let _ = deleteMessagesInteractively(account: self.context.account, messageIds: [messageId], type: .forEveryone).start()
-//            }
-            
-//            if entry == self.entries.first {
-//                let _ = updatePeerPhoto(postbox: self.context.account.postbox, network: self.context.account.network, stateManager: self.context.account.stateManager, accountPeerId: self.context.account.peerId, peerId: self.peer.id, photo: nil, mapResourceToAvatarSizes: { _, _ in .single([:]) }).start()
-//                self.dismiss(forceAway: true)
-//            } else {
-//                if let index = self.entries.firstIndex(of: entry) {
-//                    self.entries.remove(at: index)
-//                    self.galleryNode.pager.transaction(GalleryPagerTransaction(deleteItems: [index], insertItems: [], updateItems: [], focusOnItem: index - 1, synchronous: false))
-//                }
-//            }
         }
     }
     
@@ -3948,18 +3914,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
             }
         }))
-    }
-    
-    fileprivate func resetHeaderExpansion() {
-        if self.headerNode.isAvatarExpanded {
-            self.headerNode.ignoreCollapse = true
-            self.headerNode.updateIsAvatarExpanded(false, transition: .immediate)
-            self.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
-            if let (layout, navigationHeight) = self.validLayout {
-                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
-            }
-            self.headerNode.ignoreCollapse = false
-        }
     }
               
     private func updateProfileVideo(_ image: UIImage, asset: Any?, adjustments: TGVideoEditAdjustments?) {
@@ -4182,35 +4136,55 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     return
                 }
                 
-                if let item = item {
-                    strongSelf.deleteAvatar(item, remove: false)
-                }
-                
-                let _ = strongSelf.currentAvatarMixin.swap(nil)
-                if let _ = peer.smallProfileImage {
-                    strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
-                    if let (layout, navigationHeight) = strongSelf.validLayout {
-                        strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                let proceed = {
+                    if let item = item {
+                        strongSelf.deleteAvatar(item, remove: false)
                     }
-                }
-                let postbox = strongSelf.context.account.postbox
-                strongSelf.updateAvatarDisposable.set((updatePeerPhoto(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, stateManager: strongSelf.context.account.stateManager, accountPeerId: strongSelf.context.account.peerId, peerId: strongSelf.peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
-                    return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
-                })
-                |> deliverOnMainQueue).start(next: { result in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    switch result {
-                    case .complete:
+                    
+                    let _ = strongSelf.currentAvatarMixin.swap(nil)
+                    if let _ = peer.smallProfileImage {
                         strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
                         if let (layout, navigationHeight) = strongSelf.validLayout {
                             strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
                         }
-                    case .progress:
-                        break
                     }
-                }))
+                    let postbox = strongSelf.context.account.postbox
+                    strongSelf.updateAvatarDisposable.set((updatePeerPhoto(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, stateManager: strongSelf.context.account.stateManager, accountPeerId: strongSelf.context.account.peerId, peerId: strongSelf.peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
+                        return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
+                    })
+                    |> deliverOnMainQueue).start(next: { result in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        switch result {
+                        case .complete:
+                            strongSelf.state = strongSelf.state.withUpdatingAvatar(nil)
+                            if let (layout, navigationHeight) = strongSelf.validLayout {
+                                strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                            }
+                        case .progress:
+                            break
+                        }
+                    }))
+                }
+                
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                let items: [ActionSheetItem] = [
+                    ActionSheetButtonItem(title: presentationData.strings.Settings_RemoveConfirmation, color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        proceed()
+                    })
+                ]
+                
+                actionSheet.setItemGroups([
+                    ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
+                ])
+                strongSelf.controller?.present(actionSheet, in: .window(.root))
             }
             mixin.didDismiss = { [weak legacyController] in
                 guard let strongSelf = self else {
@@ -5370,6 +5344,18 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         let paneAreaExpansionFinalPoint: CGFloat = self.paneContainerNode.frame.minY - navigationHeight
         if abs(scrollView.contentOffset.y - paneAreaExpansionFinalPoint) < .ulpOfOne {
             self.paneContainerNode.currentPane?.node.transferVelocity(self.previousVelocityM1)
+        }
+    }
+    
+    fileprivate func resetHeaderExpansion() {
+        if self.headerNode.isAvatarExpanded {
+            self.headerNode.ignoreCollapse = true
+            self.headerNode.updateIsAvatarExpanded(false, transition: .immediate)
+            self.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
+            if let (layout, navigationHeight) = self.validLayout {
+                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+            }
+            self.headerNode.ignoreCollapse = false
         }
     }
     
