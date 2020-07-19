@@ -11,20 +11,35 @@ import LegacyComponents
 import ItemListUI
 import PresentationDataUtils
 
+private func totalDiskSpace() -> Int64 {
+    do {
+        let systemAttributes = try FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory() as String)
+        return (systemAttributes[FileAttributeKey.systemSize] as? NSNumber)?.int64Value ?? 0
+    } catch {
+        return 0
+    }
+}
+
 private func stringForCacheSize(strings: PresentationStrings, size: Int32) -> String {
-    if size > 50 {
+    if size > 100 {
         return strings.Cache_NoLimit
     } else {
         return dataSizeString(Int64(size) * 1024 * 1024 * 1024)
     }
 }
 
-private let maximumCacheSizeValues: [Int32] = [
-    5,
-    20,
-    50,
-    Int32.max
-]
+private let maximumCacheSizeValues: [Int32] = {
+    let diskSpace = totalDiskSpace()
+    if diskSpace > 100 * 1024 * 1024 * 1024 {
+        return [5, 20, 50, Int32.max]
+    } else if diskSpace > 50 * 1024 * 1024 * 1024 {
+        return [5, 16, 32, Int32.max]
+    } else if diskSpace > 24 * 1024 * 1024 * 1024 {
+        return [2, 8, 16, Int32.max]
+    } else {
+        return [1, 4, 8, Int32.max]
+    }
+}()
 
 final class MaximumCacheSizePickerItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme

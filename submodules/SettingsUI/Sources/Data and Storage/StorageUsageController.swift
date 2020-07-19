@@ -291,9 +291,9 @@ private func storageUsageControllerEntries(presentationData: PresentationData, c
     entries.append(.keepMedia(presentationData.theme, presentationData.strings, cacheSettings.defaultCacheStorageTimeout))
     entries.append(.keepMediaInfo(presentationData.theme, presentationData.strings.Cache_KeepMediaHelp))
     
-    /*entries.append(.maximumSizeHeader(presentationData.theme, presentationData.strings.Cache_MaximumCacheSize.uppercased()))
+    entries.append(.maximumSizeHeader(presentationData.theme, presentationData.strings.Cache_MaximumCacheSize.uppercased()))
     entries.append(.maximumSize(presentationData.theme, presentationData.strings, cacheSettings.defaultCacheStorageLimitGigabytes))
-    entries.append(.maximumSizeInfo(presentationData.theme, presentationData.strings.Cache_MaximumCacheSizeHelp))*/
+    entries.append(.maximumSizeInfo(presentationData.theme, presentationData.strings.Cache_MaximumCacheSizeHelp))
     
     var addedHeader = false
     
