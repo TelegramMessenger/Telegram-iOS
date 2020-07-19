@@ -102,14 +102,14 @@ private final class TimeBasedCleanupImpl {
                     })
                 }
                 
-                var checkFiles:[GeneralFile] = []
+                var checkFiles: [GeneralFile] = []
                 
-                var totalLimitSize: Int = 0
+                var totalLimitSize: UInt64 = 0
                 
                 for path in generalPaths {
                     scanFiles(at: path, olderThan: oldestGeneralTimestamp, anyway: { file, size, timestamp in
                         checkFiles.append(GeneralFile(file: file, size: size, timestamp: timestamp))
-                        totalLimitSize += size
+                        totalLimitSize += UInt64(size)
                     }, unlink: { file in
                         removedGeneralCount += 1
                         unlink(file)
@@ -120,7 +120,11 @@ private final class TimeBasedCleanupImpl {
                     if totalLimitSize > bytesLimit {
                         unlink(item.file)
                         removedGeneralLimitCount += 1
-                        totalLimitSize -= item.size
+                        if totalLimitSize > UInt64(item.size) {
+                            totalLimitSize -= UInt64(item.size)
+                        } else {
+                            totalLimitSize = 0
+                        }
                     } else {
                         break clear
                     }
