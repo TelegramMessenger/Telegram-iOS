@@ -101,9 +101,10 @@ public final class AppLockContextImpl: AppLockContext {
     private var hiddenAccountsAccessChallengeData = [AccountRecordId:PostboxAccessChallengeData]()
     
     public var unlockedHiddenAccountRecordId = ValuePromise<AccountRecordId?>()
-    // TODO: -- Erase when locked
     
-    public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, hiddenAccountsAccessChallengeDataPromise: Promise<[AccountRecordId:PostboxAccessChallengeData]>, lockIconInitialFrame: @escaping () -> CGRect?) {
+    private var applicationIsActiveDisposable: Disposable?
+    
+    public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, hiddenAccountsAccessChallengeDataPromise: Promise<[AccountRecordId:PostboxAccessChallengeData]>, applicationIsActive: Signal<Bool, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
         assert(Queue.mainQueue().isCurrent())
         
         self.applicationBindings = applicationBindings
@@ -266,6 +267,12 @@ public final class AppLockContextImpl: AppLockContext {
         
         self.currentState.set(.single(self.currentStateValue))
         
+        self.applicationIsActiveDisposable = applicationIsActive.start(next: { [weak self] value in
+            guard let strongSelf = self, !value else { return }
+            
+            strongSelf.unlockedHiddenAccountRecordId.set(nil)
+        })
+        
         let _ = (self.autolockTimeout.get()
         |> deliverOnMainQueue).start(next: { [weak self] autolockTimeout in
             self?.updateLockState { state in
@@ -391,6 +398,7 @@ public final class AppLockContextImpl: AppLockContext {
     }
     
     deinit {
-        hiddenAccountsAccessChallengeDataDisposable?.dispose()
+        self.hiddenAccountsAccessChallengeDataDisposable?.dispose()
+        self.applicationIsActiveDisposable?.dispose()
     }
 }
