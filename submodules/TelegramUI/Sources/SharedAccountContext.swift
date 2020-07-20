@@ -148,8 +148,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     private var experimentalUISettingsDisposable: Disposable?
     
-    private var unlockedHiddenAccountRecordIdDisposable: Disposable?
-    
     public var presentGlobalController: (ViewController, Any?) -> Void = { _, _ in }
     public var presentCrossfadeController: () -> Void = {}
     public var masterPasswordIsSet: Bool {
@@ -161,7 +159,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private var spotlightDataContext: SpotlightDataContext?
     private var widgetDataContext: WidgetDataContext?
     
-    public init(mainWindow: Window1?, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, legacyCache: LegacyCache?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, unlockedHiddenAccountRecordId: Signal<AccountRecordId?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }) {
+    public init(mainWindow: Window1?, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, legacyCache: LegacyCache?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }) {
         assert(Queue.mainQueue().isCurrent())
         
         precondition(!testHasInstance)
@@ -296,20 +294,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 let _ = strongSelf.currentAutodownloadSettings.swap(next)
             }
         }))
-        
-        self.unlockedHiddenAccountRecordIdDisposable = unlockedHiddenAccountRecordId.start(next: { [weak self] id in
-            guard let strongSelf = self else { return }
-            
-            if let id = id {
-                strongSelf.switchToAccount(id: id)
-            } else {
-                if let otherAccountId = strongSelf.activeAccountsValue?.accounts.first?.0 {
-                    strongSelf.switchToAccount(id: otherAccountId)
-                } else {
-                    // TODO: -- Show login screen is there are no open accounts
-                }
-            }
-        })
         
         let startTime = CFAbsoluteTimeGetCurrent()
         
@@ -715,7 +699,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.mediaInputSettingsDisposable?.dispose()
         self.callDisposable?.dispose()
         self.callStateDisposable?.dispose()
-        self.unlockedHiddenAccountRecordIdDisposable?.dispose()
         self.currentCallStatusTextTimer?.invalidate()
     }
     
@@ -848,6 +831,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: ViewController? = nil, withChatListController chatListController: ViewController? = nil) {
+        
+        if let unlockedHiddenAccountRecordId = accountManager.displayedAccountsFilter.unlockedHiddenAccountRecordId, unlockedHiddenAccountRecordId != id {
+            appLockContext.unlockedHiddenAccountRecordId.set(nil)
+        }
+        
         if self.activeAccountsValue?.primary?.id == id {
             return
         }

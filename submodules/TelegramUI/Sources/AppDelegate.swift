@@ -39,6 +39,7 @@ import PresentationDataUtils
 import TelegramIntents
 import AccountUtils
 import CoreSpotlight
+import PasscodeUI
 
 #if canImport(BackgroundTasks)
 import BackgroundTasks
@@ -191,6 +192,7 @@ final class SharedApplicationContext {
     private let openNotificationSettingsWhenReadyDisposable = MetaDisposable()
     private let openChatWhenReadyDisposable = MetaDisposable()
     private let openUrlWhenReadyDisposable = MetaDisposable()
+    private let showFalseBottomAlertDisposable = MetaDisposable()
     
     private let badgeDisposable = MetaDisposable()
     private let quickActionsDisposable = MetaDisposable()
@@ -681,6 +683,7 @@ final class SharedApplicationContext {
                         self.mainWindow.coveringView = nil
                     }
                 }
+                displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise.set(getHiddenAccountsAccessChallengeData(manager: accountManager))
                 subscriber.putNext(accountManager)
                 subscriber.putCompletion()
             })
@@ -775,14 +778,14 @@ final class SharedApplicationContext {
             let legacyCache = LegacyCache(path: legacyBasePath + "/Caches")
             
             let presentationDataPromise = Promise<PresentationData>()
-            let appLockContext = AppLockContextImpl(rootPath: rootPath, window: self.mainWindow!, rootController: self.window?.rootViewController, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), hiddenAccountsAccessChallengeData: getHiddenAccountsAccessChallengeData(manager: accountManager), lockIconInitialFrame: {
+            let appLockContext = AppLockContextImpl(rootPath: rootPath, window: self.mainWindow!, rootController: self.window?.rootViewController, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), hiddenAccountsAccessChallengeDataPromise: displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise, lockIconInitialFrame: {
                 return (self.mainWindow?.viewController as? TelegramRootController)?.chatListController?.lockViewFrame
             })
             
             displayedAccountsFilter.unlockedHiddenAccountRecordIdPromise.set(appLockContext.unlockedHiddenAccountRecordId.get())
             
             var setPresentationCall: ((PresentationCall?) -> Void)?
-            let sharedContext = SharedAccountContextImpl(mainWindow: self.mainWindow, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, legacyCache: legacyCache, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), unlockedHiddenAccountRecordId: displayedAccountsFilter.unlockedHiddenAccountRecordIdPromise.get(), setNotificationCall: { call in
+            let sharedContext = SharedAccountContextImpl(mainWindow: self.mainWindow, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, legacyCache: legacyCache, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
                 setPresentationCall?(call)
             }, navigateToChat: { accountId, peerId, messageId in
                 self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
@@ -1197,9 +1200,12 @@ final class SharedApplicationContext {
                     }
                     |> take(1)
                     |> timeout(4.0, queue: .mainQueue(), alternate: .complete())
-                    |> deliverOnMainQueue).start(completed: {
+                    |> deliverOnMainQueue).start(completed: { [weak self] in
                         authContextValue.rootController.view.endEditing(true)
                         authContextValue.rootController.dismiss()
+                        if let strongSelf = self {
+                            strongSelf.showFalseBottomAlert()
+                        }
                     })
                 } else {
                     authContextValue.rootController.view.endEditing(true)
@@ -1968,6 +1974,68 @@ final class SharedApplicationContext {
             let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
             context.context.sharedContext.openExternalUrl(context: context.context, urlContext: .generic, url: url, forceExternal: false, presentationData: presentationData, navigationController: context.rootController, dismissInput: {
             })
+        }))
+    }
+    
+    private func showFalseBottomAlert() {
+        self.showFalseBottomAlertDisposable.set((self.authorizedContext()
+        |> take(1)
+        |> delay(1.0, queue: .mainQueue())).start(next: { context in
+            let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
+            
+            let addFalseBottomToCurrentAccount: () -> Void = {
+                let accountContext = context.sharedApplicationContext.sharedContext
+                
+                let replaceTopControllerImpl: ((ViewController, Bool) -> Void)? = { c, animated in
+                    context.rootController.pushViewController(c, animated: animated)
+                }
+                
+                let popToRoot: () -> Void = {
+                    context.rootController.popToRoot(animated: true)
+                }
+                
+                var innerReplaceTopControllerImpl: ((ViewController, Bool) -> Void)?
+                let introController = PrivacyIntroController(context: accountContext, mode: .passcode, proceedAction: {
+                    let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits6))
+                    setupController.complete = { passcode, numerical in
+                        let _ = (accountContext.accountManager.transaction({ transaction -> Void in
+                            var data = transaction.getAccessChallengeData()
+                            if numerical {
+                                data = PostboxAccessChallengeData.numericalPassword(value: passcode)
+                            } else {
+                                data = PostboxAccessChallengeData.plaintextPassword(value: passcode)
+                            }
+                            
+                            if let (id, _) = transaction.getCurrent() {
+                                setAccountRecordAccessChallengeData(transaction: transaction, id: id, accessChallengeData: data)
+                            }
+
+                        }) |> deliverOnMainQueue).start(next: { _ in
+                        }, error: { _ in
+                        }, completed: {
+                            let accountManager = accountContext.accountManager
+                            accountManager.displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise.set(getHiddenAccountsAccessChallengeData(manager: accountManager))
+                            popToRoot()
+                            accountContext.appLockContext.lock()
+                        })
+                    }
+                    innerReplaceTopControllerImpl?(setupController, true)
+                    innerReplaceTopControllerImpl = { [weak setupController] c, animated in
+                        (setupController?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
+                    }
+                })
+                replaceTopControllerImpl?(introController, false)
+                innerReplaceTopControllerImpl = { [weak introController] c, animated in
+                    (introController?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
+                }
+            }
+            
+            context.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Add false bottom?", actions: [
+                TextAlertAction(type: .genericAction, title: "Yes", action: {
+                    addFalseBottomToCurrentAccount()
+                }),
+                TextAlertAction(type: .defaultAction, title: "No", action: {})
+            ]), on: .root, blockInteraction: false, completion: {})
         }))
     }
     

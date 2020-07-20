@@ -168,54 +168,6 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 (controller?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
             }
             
-            controller.enabledFalseBottom = { [weak self, weak controller] in
-                guard let strongSelf = self, let strongController = controller else {
-                    return
-                }
-                // TODO: -- Replace text and add cancel (back) button
-                
-                if !strongSelf.sharedContext.masterPasswordIsSet {
-                    
-                }
-
-                var innerReplaceTopControllerImpl: ((ViewController, Bool) -> Void)?
-                let introController = PrivacyIntroController(context: strongSelf.sharedContext, mode: .passcode, proceedAction: {
-                    let setupController = PasscodeSetupController(context: strongSelf.sharedContext, mode: .setup(change: false, .digits6))
-                    setupController.complete = { passcode, numerical in
-                        let _ = (strongSelf.sharedContext.accountManager.transaction({ transaction -> Void in
-                            var data = transaction.getAccessChallengeData()
-                            if numerical {
-                                data = PostboxAccessChallengeData.numericalPassword(value: passcode)
-                            } else {
-                                data = PostboxAccessChallengeData.plaintextPassword(value: passcode)
-                            }
-                            
-                            if let record = transaction.getCurrentAuth() {
-                                let attributes = record.attributes + [HiddenAccountAttribute(accessChallengeData: data)]
-                                transaction.setCurrentAuthAttributes(attributes)
-                            }
-
-                        }) |> deliverOnMainQueue).start(next: { _ in
-                        }, error: { _ in
-                        }, completed: {
-                            innerReplaceTopControllerImpl?(strongController, true)
-                        })
-                    }
-                    innerReplaceTopControllerImpl?(setupController, true)
-                    innerReplaceTopControllerImpl = { [weak setupController] c, animated in
-                        (setupController?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
-                    }
-                })
-                replaceTopControllerImpl?(introController, false)
-                innerReplaceTopControllerImpl = { [weak introController] c, animated in
-                    (controller?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
-                }
-            }
-            
-            controller.disabledFalseBottom = { [weak self] in
-                // TODO: delete passcode from auth record
-            }
-            
             controller.loginWithNumber = { [weak self, weak controller] number, syncContacts in
                 if let strongSelf = self {
                     controller?.inProgress = true

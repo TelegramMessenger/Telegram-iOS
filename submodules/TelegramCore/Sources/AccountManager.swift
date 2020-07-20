@@ -190,7 +190,19 @@ public func performAppGroupUpgrades(appGroupPath: String, rootPath: String) {
 public func getHiddenAccountsAccessChallengeData(manager: AccountManager) -> Signal<[AccountRecordId:PostboxAccessChallengeData], NoError> {
     manager.transaction { transaction in
         var result = [AccountRecordId:PostboxAccessChallengeData]()
-        for record in transaction.getAllRecords() {
+        let recordsWithOrder: [(AccountRecord, Int32)] = transaction.getAllRecords().map { record in
+            var order: Int32 = 0
+            for attribute in record.attributes {
+                if let attribute = attribute as? AccountSortOrderAttribute {
+                    order = attribute.order
+                    break
+                }
+            }
+            return (record, order)
+        }
+        let records = recordsWithOrder.sorted(by: { $0.1 > $1.1 })
+            .map { $0.0 }
+        for record in records {
             var accessChallengeData = PostboxAccessChallengeData.none
             for attribute in record.attributes {
                 if let attribute = attribute as? HiddenAccountAttribute {
@@ -202,15 +214,17 @@ public func getHiddenAccountsAccessChallengeData(manager: AccountManager) -> Sig
                 result[record.id] = accessChallengeData
             }
         }
-        // TODO: -- Check `AccountSortOrderAttribute` and return only the last record for each matching passcode
         return result
     }
 }
 
 public final class DisplayedAccountsFilterImpl: DisplayedAccountsFilter {
     public let unlockedHiddenAccountRecordIdPromise = Promise<AccountRecordId?>()
-    private var unlockedHiddenAccountRecordId: AccountRecordId?
+    public var unlockedHiddenAccountRecordId: AccountRecordId?
     private var unlockedHiddenAccountRecordIdDisposable: Disposable?
+    
+    public let accountManagerRecordIdPromise = ValuePromise<AccountRecordId?>()
+    public let getHiddenAccountsAccessChallengeDataPromise = Promise<[AccountRecordId:PostboxAccessChallengeData]>()
     
     public init() {
         unlockedHiddenAccountRecordIdDisposable = (unlockedHiddenAccountRecordIdPromise.get()
@@ -218,17 +232,53 @@ public final class DisplayedAccountsFilterImpl: DisplayedAccountsFilter {
                 guard let strongSelf = self else { return }
                 
                 strongSelf.unlockedHiddenAccountRecordId = value
+                strongSelf.accountManagerRecordIdPromise.set(value)
             })
     }
     
-    public func isDisplayed(_ record: AccountRecord) -> Bool {
-        for attribute in record.attributes {
-            if let attribute = attribute as? HiddenAccountAttribute {
-                return record.id == unlockedHiddenAccountRecordId
+    public func filterDisplayed(_ records: [AccountRecord]) -> [AccountRecord] {
+        let recordsWithOrder: [(AccountRecord, Int32)] = records.map { record in
+            var order: Int32 = 0
+            for attribute in record.attributes {
+                if let attribute = attribute as? AccountSortOrderAttribute {
+                    order = attribute.order
+                    break
+                }
             }
-            // TODO: -- Check `AccountSortOrderAttribute` and return only the last record for each matching passcode
+            return (record, order)
         }
-        return true
+        let sortedRecords = recordsWithOrder.sorted(by: { $0.1 > $1.1 })
+            .map { $0.0 }
+        
+        var result = [AccountRecord]()
+        var containHidden = false
+        
+        for record in records {
+            var isVisible = true
+            for attribute in record.attributes {
+                if let attribute = attribute as? HiddenAccountAttribute {
+                    if record.id == unlockedHiddenAccountRecordId, !containHidden {
+                        containHidden = true
+                    } else {
+                        isVisible = false
+                    }
+                    break
+                }
+            }
+            if isVisible {
+                result.append(record)
+            }
+        }
+        return result
+    }
+    
+    public func filterHidden(_ records: [AccountRecord]) -> [AccountRecord] {
+        var result = records
+        let displayed = filterDisplayed(records)
+        for record in displayed {
+            result.removeAll { $0.id == record.id }
+        }
+        return result
     }
     
     deinit {
