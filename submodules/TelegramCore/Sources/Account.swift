@@ -286,13 +286,6 @@ public func accountWithId(accountManager: AccountManager, networkArguments: Netw
     }
 }
 
-// TODO: -- Curently unused
-public func setAccountRecordAccessChallengeData(accountManager: AccountManager, id: AccountRecordId, accessChallengeData: PostboxAccessChallengeData) {
-    accountManager.transaction { transaction -> Void in
-        setAccountRecordAccessChallengeData(transaction: transaction, id: id, accessChallengeData: accessChallengeData)
-    }.start()
-}
-
 public func setAccountRecordAccessChallengeData(transaction: AccountManagerModifier, id: AccountRecordId, accessChallengeData: PostboxAccessChallengeData) {
     transaction.updateRecord(id) { record in
         guard let record = record else { return nil }
