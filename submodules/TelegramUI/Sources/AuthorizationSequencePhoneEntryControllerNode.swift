@@ -204,36 +204,6 @@ private final class ContactSyncNode: ASDisplayNode {
     }
 }
 
-private final class FalseBottomNode: ASDisplayNode {
-    private let titleNode: ImmediateTextNode
-    let switchNode: SwitchNode
-
-    init(theme: PresentationTheme, strings: PresentationStrings) {
-        self.titleNode = ImmediateTextNode()
-        self.titleNode.maximumNumberOfLines = 1
-        self.titleNode.attributedText = NSAttributedString(string: "False bottom", font: Font.regular(17.0), textColor: theme.list.itemPrimaryTextColor)
-        self.switchNode = SwitchNode()
-        self.switchNode.frameColor = theme.list.itemSwitchColors.frameColor
-        self.switchNode.contentColor = theme.list.itemSwitchColors.contentColor
-        self.switchNode.handleColor = theme.list.itemSwitchColors.handleColor
-        self.switchNode.isOn = false
-
-        super.init()
-
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.switchNode)
-    }
-
-    func updateLayout(width: CGFloat) -> CGSize {
-        let switchSize = CGSize(width: 51.0, height: 31.0)
-        let titleSize = self.titleNode.updateLayout(CGSize(width: width - switchSize.width - 16.0 * 2.0 - 8.0, height: .greatestFiniteMagnitude))
-        let height: CGFloat = 40.0
-        self.titleNode.frame = CGRect(origin: CGPoint(x: 16.0, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
-        self.switchNode.frame = CGRect(origin: CGPoint(x: width - 16.0 - switchSize.width, y: floor((height - switchSize.height) / 2.0)), size: switchSize)
-        return CGSize(width: width, height: height)
-    }
-}
-
 final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     private let sharedContext: SharedAccountContext
     private var account: UnauthorizedAccount
@@ -245,7 +215,6 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     private let noticeNode: ASTextNode
     private let phoneAndCountryNode: PhoneAndCountryNode
     private let contactSyncNode: ContactSyncNode
-    private let falseBottomNode: FalseBottomNode
     
     private var qrNode: ASImageNode?
     private let exportTokenDisposable = MetaDisposable()
@@ -275,15 +244,6 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
             }
         }
     }
-    
-    var falseBottom: Bool {
-        get {
-            return self.falseBottomNode.switchNode.isOn
-        }
-    }
-    
-    var enabledFalseBottom: (() -> Void)?
-    var disabledFalseBottom: (() -> Void)?
     
     var selectCountryCode: (() -> Void)?
     var checkPhone: (() -> Void)?
@@ -317,7 +277,6 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.noticeNode.attributedText = NSAttributedString(string: strings.Login_PhoneAndCountryHelp, font: Font.regular(16.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
         
         self.contactSyncNode = ContactSyncNode(theme: theme, strings: strings)
-        self.falseBottomNode = FalseBottomNode(theme: theme, strings: strings)
         
         self.phoneAndCountryNode = PhoneAndCountryNode(strings: strings, theme: theme)
         
@@ -333,7 +292,6 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.addSubnode(self.noticeNode)
         self.addSubnode(self.phoneAndCountryNode)
         self.addSubnode(self.contactSyncNode)
-        self.addSubnode(self.falseBottomNode)
         self.contactSyncNode.isHidden = true
         
         self.phoneAndCountryNode.selectCountryCode = { [weak self] in
@@ -359,11 +317,6 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         
         self.titleNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.debugTap(_:))))
         
-        self.falseBottomNode.switchNode.valueUpdated = { [weak self] value in
-            guard let strongSelf = self else { return }
-            
-            strongSelf.falseBottomValueUpdated(value)
-        }
         #if DEBUG
         self.noticeNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.debugQrTap(_:))))
         #endif
@@ -392,25 +345,14 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
             AuthorizationLayoutItem(node: self.phoneAndCountryNode, size: CGSize(width: layout.size.width, height: 115.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 44.0, maxValue: 44.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0))
         ]
         let contactSyncSize = self.contactSyncNode.updateLayout(width: layout.size.width)
-        let falseBottomSize = self.falseBottomNode.updateLayout(width: layout.size.width)
         if self.hasOtherAccounts {
             self.contactSyncNode.isHidden = false
             items.append(AuthorizationLayoutItem(node: self.contactSyncNode, size: contactSyncSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 16.0, maxValue: 16.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
-            
-            self.falseBottomNode.isHidden = false
-            items.append(AuthorizationLayoutItem(node: self.falseBottomNode, size: falseBottomSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 16.0, maxValue: 16.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         } else {
             self.contactSyncNode.isHidden = true
-            self.falseBottomNode.isHidden = true
         }
         
         let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - 10.0)), items: items, transition: transition, failIfDoesNotFit: false)
-    }
-    
-    private func falseBottomValueUpdated(_ value: Bool) {
-        value ?
-            self.enabledFalseBottom?() :
-            self.disabledFalseBottom?()
     }
     
     func activateInput() {

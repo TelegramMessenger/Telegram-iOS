@@ -44,9 +44,6 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     var loginWithNumber: ((String, Bool) -> Void)?
     var accountUpdated: ((UnauthorizedAccount) -> Void)?
     
-    var enabledFalseBottom: (() -> Void)?
-    var disabledFalseBottom: (() -> Void)?
-    
     private let termsDisposable = MetaDisposable()
     
     private let hapticFeedback = HapticFeedback()
@@ -140,14 +137,6 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         }
         self.controllerNode.checkPhone = { [weak self] in
             self?.nextPressed()
-        }
-        
-        self.controllerNode.enabledFalseBottom = { [weak self] in
-            self?.enabledFalseBottom?()
-        }
-        
-        self.controllerNode.disabledFalseBottom = { [weak self] in
-            self?.disabledFalseBottom?()
         }
     }
     
