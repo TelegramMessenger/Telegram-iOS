@@ -152,7 +152,13 @@ public final class NotificationViewControllerImpl {
             
             let presentationDataPromise = Promise<PresentationData>()
             
-            let appLockContext = AppLockContextImpl(rootPath: rootPath, window: nil, rootController: nil, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), hiddenAccountsAccessChallengeDataPromise: displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise, lockIconInitialFrame: {
+            let isActiveSignal = Signal<Bool, NoError> { subscriber in
+                subscriber.putNext(false)
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
+            
+            let appLockContext = AppLockContextImpl(rootPath: rootPath, window: nil, rootController: nil, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), hiddenAccountsAccessChallengeDataPromise: displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise, applicationIsActive: isActiveSignal, lockIconInitialFrame: {
                 return nil
             })
             
