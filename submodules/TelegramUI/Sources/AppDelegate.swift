@@ -683,7 +683,7 @@ final class SharedApplicationContext {
                         self.mainWindow.coveringView = nil
                     }
                 }
-                displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise.set(getHiddenAccountsAccessChallengeData(manager: accountManager))
+                updateHiddenAccountsAccessChallengeData(manager: accountManager)
                 subscriber.putNext(accountManager)
                 subscriber.putCompletion()
             })
@@ -2013,8 +2013,7 @@ final class SharedApplicationContext {
                         }) |> deliverOnMainQueue).start(next: { _ in
                         }, error: { _ in
                         }, completed: {
-                            let accountManager = accountContext.accountManager
-                            accountManager.displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise.set(getHiddenAccountsAccessChallengeData(manager: accountManager))
+                            updateHiddenAccountsAccessChallengeData(manager: accountContext.accountManager)
                             popToRoot()
                             accountContext.appLockContext.lock()
                         })
