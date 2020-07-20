@@ -167,15 +167,16 @@ public class ShareRootControllerImpl {
             
             let internalContext: InternalContext
             
+            initializeAccountManagement()
+            
             let displayedAccountsFilter = DisplayedAccountsFilterImpl()
             let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", displayedAccountsFilter: displayedAccountsFilter)
             
+            displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise.set(getHiddenAccountsAccessChallengeData(manager: accountManager))
+            
             if let globalInternalContext = globalInternalContext {
                 internalContext = globalInternalContext
-                displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise.set(getHiddenAccountsAccessChallengeData(manager: accountManager))
             } else {
-                initializeAccountManagement()
-                displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise.set(getHiddenAccountsAccessChallengeData(manager: accountManager))
                 var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
                 let semaphore = DispatchSemaphore(value: 0)
                 let systemUserInterfaceStyle: WindowUserInterfaceStyle
