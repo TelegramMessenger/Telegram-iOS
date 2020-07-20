@@ -173,6 +173,10 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     return
                 }
                 // TODO: -- Replace text and add cancel (back) button
+                
+                if !strongSelf.sharedContext.masterPasswordIsSet {
+                    
+                }
 
                 var innerReplaceTopControllerImpl: ((ViewController, Bool) -> Void)?
                 let introController = PrivacyIntroController(context: strongSelf.sharedContext, mode: .passcode, proceedAction: {

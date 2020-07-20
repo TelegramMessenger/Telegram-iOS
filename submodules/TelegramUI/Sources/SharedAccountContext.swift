@@ -152,6 +152,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public var presentGlobalController: (ViewController, Any?) -> Void = { _, _ in }
     public var presentCrossfadeController: () -> Void = {}
+    public var masterPasswordIsSet: Bool {
+        appLockContext.masterPasswordIsSet
+    }
     
     private let displayUpgradeProgress: (Float?) -> Void
     
