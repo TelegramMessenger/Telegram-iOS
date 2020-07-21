@@ -14,13 +14,19 @@ import CheckNode
 
 public final class FalseBottomRequirementsScreen: ViewController {
     private let presentationData: PresentationData
+    private let context: SharedAccountContext
     
     var buttonPressed: (() -> Void)?
     var setMasterPassword: (() -> Void)?
     var createAnotherAccount: (() -> Void)?
     
-    public init(presentationData: PresentationData) {
+    private var node: FalseBottomRequirementsScreenNode {
+        return self.displayNode as! FalseBottomRequirementsScreenNode
+    }
+    
+    public init(presentationData: PresentationData, context: SharedAccountContext) {
         self.presentationData = presentationData
+        self.context = context
         
         let defaultTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme)
         let navigationBarTheme = NavigationBarTheme(buttonColor: defaultTheme.buttonColor, disabledButtonColor: defaultTheme.disabledButtonColor, primaryTextColor: defaultTheme.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultTheme.badgeBackgroundColor, badgeStrokeColor: defaultTheme.badgeStrokeColor, badgeTextColor: defaultTheme.badgeTextColor)
@@ -43,7 +49,7 @@ public final class FalseBottomRequirementsScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = FalseBottomRequirementsScreenNode(presentationData: self.presentationData, action: { [weak self] in
+        let displayNode = FalseBottomRequirementsScreenNode(presentationData: self.presentationData, action: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
@@ -51,13 +57,46 @@ public final class FalseBottomRequirementsScreen: ViewController {
             strongSelf.buttonPressed?()
         })
         
+        displayNode.setMasterPassword = { [weak self] in
+            guard let strongSelf = self else { return }
+            
+            strongSelf.setMasterPassword?()
+        }
+        
+        displayNode.createAnotherAccount = { [weak self] in
+            guard let strongSelf = self else { return }
+            
+            strongSelf.createAnotherAccount?()
+        }
+        
+        self.displayNode = displayNode
         self.displayNodeDidLoad()
+        
+        updateState()
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        (self.displayNode as! FalseBottomRequirementsScreenNode).containerLayoutUpdated(layout: layout, navigationHeight: self.navigationHeight, transition: transition)
+        node.containerLayoutUpdated(layout: layout, navigationHeight: self.navigationHeight, transition: transition)
+    }
+    
+    func didSetMasterPassword() {
+        updateState()
+    }
+    
+    private func updateState() {
+        let _ = (context.accountManager.transaction { transaction -> (Bool, Bool) in
+            let isMasterPasswordSet = transaction.getAccessChallengeData() != .none
+            let hasOtherOpenAccounts = transaction.getRecords().count > 1
+            return (isMasterPasswordSet, hasOtherOpenAccounts)
+        } |> deliverOnMainQueue).start(next: { [weak self] (isMasterPasswordSet, hasOtherOpenAccounts) in
+            guard let strongSelf = self else { return }
+            
+            strongSelf.node.masterPasswordCheckNode.setIsChecked(isMasterPasswordSet, animated: false)
+            strongSelf.node.openAccountCheckNode.setIsChecked(hasOtherOpenAccounts, animated: false)
+            strongSelf.node.inProgress = !(isMasterPasswordSet && hasOtherOpenAccounts)
+        })
     }
 }
 
@@ -69,6 +108,9 @@ private final class FalseBottomRequirementsScreenNode: ViewControllerTracingNode
     let openAccountCheckNode: CheckNode
     let masterPasswordCheckNode: CheckNode
     let buttonNode: SolidRoundedButtonNode
+    
+    var setMasterPassword: (() -> Void)?
+    var createAnotherAccount: (() -> Void)?
     
     var inProgress: Bool = false {
         didSet {
@@ -122,9 +164,17 @@ private final class FalseBottomRequirementsScreenNode: ViewControllerTracingNode
         self.addSubnode(self.openAccountCheckNode)
         self.addSubnode(self.masterPasswordCheckNode)
         
+        self.openAccountCheckNode.addTarget(target: self, action: #selector(didTapOpenAccountText))
+        self.masterPasswordCheckNode.addTarget(target: self, action: #selector(didTapMasterPasswordText))
+        
+        self.openAccountTextNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(didTapOpenAccountText)))
+        self.masterPasswordCheckNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(didTapMasterPasswordText)))
+        
         self.buttonNode.pressed = {
             action()
         }
+        
+        self.inProgress = true
     }
     
     override func didLoad() {
@@ -138,10 +188,10 @@ private final class FalseBottomRequirementsScreenNode: ViewControllerTracingNode
         let buttonHeight: CGFloat = 50.0
         let checkSize = CGSize(width: 32.0, height: 32.0)
         
-        let titleSize = self.openAccountTextNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0 - checkSize.width, height: layout.size.height))
-        let textSize = self.masterPasscodeTextNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0 - checkSize.width, height: layout.size.height))
+        let openAccountTextSize = self.openAccountTextNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0 - checkSize.width, height: layout.size.height))
+        let masterPasscodeTextSize = self.masterPasscodeTextNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0 - checkSize.width, height: layout.size.height))
         
-        let contentHeight = titleSize.height + titleSpacing + textSize.height
+        let contentHeight = openAccountTextSize.height + titleSpacing + masterPasscodeTextSize.height
         var contentVerticalOrigin = floor((layout.size.height - contentHeight / 2.0) / 2.0)
         
         let minimalBottomInset: CGFloat = 60.0
@@ -158,16 +208,28 @@ private final class FalseBottomRequirementsScreenNode: ViewControllerTracingNode
         contentVerticalOrigin = min(contentVerticalOrigin, maxContentVerticalOrigin)
         
         
-        let titleFrame = CGRect(origin: CGPoint(x: sideInset + checkSize.width, y: contentVerticalOrigin), size: titleSize)
-        transition.updateFrameAdditive(node: self.openAccountTextNode, frame: titleFrame)
+        let openAccountTextFrame = CGRect(origin: CGPoint(x: sideInset + checkSize.width, y: contentVerticalOrigin), size: openAccountTextSize)
+        transition.updateFrameAdditive(node: self.openAccountTextNode, frame: openAccountTextFrame)
         
-        let textFrame = CGRect(origin: CGPoint(x: sideInset + checkSize.width, y: titleFrame.maxY + titleSpacing), size: textSize)
-        transition.updateFrameAdditive(node: self.masterPasscodeTextNode, frame: textFrame)
+        let masterPasscodeTextFrame = CGRect(origin: CGPoint(x: sideInset + checkSize.width, y: openAccountTextFrame.maxY + titleSpacing), size: masterPasscodeTextSize)
+        transition.updateFrameAdditive(node: self.masterPasscodeTextNode, frame: masterPasscodeTextFrame)
         
-        let openAccountCheckFrame = CGRect(origin: CGPoint(x: sideInset, y: titleFrame.midY - checkSize.width / 2), size: checkSize)
+        let openAccountCheckFrame = CGRect(origin: CGPoint(x: sideInset, y: openAccountTextFrame.midY - checkSize.width / 2), size: checkSize)
         transition.updateFrameAdditive(node: self.openAccountCheckNode, frame: openAccountCheckFrame)
         
-        let masterPasswordCheckFrame = CGRect(origin: CGPoint(x: sideInset, y: textFrame.midY - checkSize.width / 2), size: checkSize)
+        let masterPasswordCheckFrame = CGRect(origin: CGPoint(x: sideInset, y: masterPasscodeTextFrame.midY - checkSize.width / 2), size: checkSize)
         transition.updateFrameAdditive(node: self.masterPasswordCheckNode, frame: masterPasswordCheckFrame)
+    }
+    
+    @objc private func didTapOpenAccountText() {
+        guard !self.openAccountCheckNode.isChecked else { return }
+        
+        self.createAnotherAccount?()
+    }
+    
+    @objc private func didTapMasterPasswordText() {
+        guard !self.masterPasswordCheckNode.isChecked else { return }
+        
+        self.setMasterPassword?()
     }
 }

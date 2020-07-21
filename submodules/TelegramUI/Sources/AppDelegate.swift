@@ -2001,7 +2001,8 @@ final class SharedApplicationContext {
             
             let showRequirementsScreen: (@escaping () -> Void) -> Void = { action in
                 let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
-                let controller = FalseBottomRequirementsScreen(presentationData: presentationData)
+                let accountContext = context.sharedApplicationContext.sharedContext
+                let controller = FalseBottomRequirementsScreen(presentationData: presentationData, context: accountContext)
                 controller.buttonPressed = action
                 
                 // TODO: --
@@ -2009,8 +2010,6 @@ final class SharedApplicationContext {
                 
                 controller.setMasterPassword = { [weak controller] in
                     guard let strongController = controller else { return }
-                    
-                    let accountContext = context.sharedApplicationContext.sharedContext
                     
                     let popToRoot: () -> Void = {
                         context.rootController.popToRoot(animated: true)
@@ -2035,6 +2034,7 @@ final class SharedApplicationContext {
                             }, error: { _ in
                             }, completed: {
                                 replaceTopControllerImpl(strongController, false)
+                                strongController.didSetMasterPassword()
                             })
                         }
                         innerReplaceTopControllerImpl?(setupController, true)
