@@ -94,7 +94,7 @@ public final class AppLockContextImpl: AppLockContext {
     
     private let hiddenAccountsAccessChallengeDataPromise: Promise<[AccountRecordId:PostboxAccessChallengeData]>
     private var hiddenAccountsAccessChallengeDataDisposable: Disposable?
-    private var hiddenAccountsAccessChallengeData = [AccountRecordId:PostboxAccessChallengeData]()
+    public private(set) var hiddenAccountsAccessChallengeData = [AccountRecordId:PostboxAccessChallengeData]()
     
     public var unlockedHiddenAccountRecordId = ValuePromise<AccountRecordId?>()
     // TODO: -- Erase when locked

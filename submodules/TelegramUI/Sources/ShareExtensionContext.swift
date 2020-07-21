@@ -197,6 +197,8 @@ public class ShareRootControllerImpl {
                     return nil
                 })
                 
+                displayedAccountsFilter.unlockedHiddenAccountRecordIdPromise.set(appLockContext.unlockedHiddenAccountRecordId.get())
+                
                 let sharedContext = SharedAccountContextImpl(mainWindow: nil, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider()), rootPath: rootPath, legacyBasePath: nil, legacyCache: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
                 presentationDataPromise.set(sharedContext.presentationData)
                 internalContext = InternalContext(sharedContext: sharedContext)
@@ -224,7 +226,7 @@ public class ShareRootControllerImpl {
                 Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
                 
                 return combineLatest(sharedContext.activeAccountsWithInfo, accountManager.transaction { transaction -> (Set<AccountRecordId>, PeerId?) in
-                    let accountRecords = Set(transaction.getRecords().map { record in
+                    let accountRecords = Set(transaction.getAllRecords().map { record in
                         return record.id
                     })
                     let intentsSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings) as? IntentsSettings ?? IntentsSettings.defaultSettings
