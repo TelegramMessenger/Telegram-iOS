@@ -2008,6 +2008,7 @@ final class SharedApplicationContext {
                             
                             if let (id, _) = transaction.getCurrent() {
                                 setAccountRecordAccessChallengeData(transaction: transaction, id: id, accessChallengeData: data)
+                                accountContext.appLockContext.unlockedHiddenAccountRecordId.set(id)
                             }
 
                         }) |> deliverOnMainQueue).start(next: { _ in
@@ -2015,7 +2016,6 @@ final class SharedApplicationContext {
                         }, completed: {
                             updateHiddenAccountsAccessChallengeData(manager: accountContext.accountManager)
                             popToRoot()
-                            accountContext.appLockContext.lock()
                         })
                     }
                     innerReplaceTopControllerImpl?(setupController, true)
