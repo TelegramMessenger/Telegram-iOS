@@ -647,7 +647,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             interaction.openSettings(.avatar)
         }))
     }
-    if let peer = data.peer, peer.addressName == nil {
+    if let peer = data.peer, (peer.addressName ?? "").isEmpty {
         items[.edit]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.Settings_SetUsername, icon: UIImage(bundleImageName: "Settings/SetUsername"), action: {
             interaction.openSettings(.username)
         }))
@@ -2118,7 +2118,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             let galleryController = AvatarGalleryController(context: strongSelf.context, peer: peer, sourceCorners: .round(!strongSelf.headerNode.isAvatarExpanded), remoteEntries: entriesPromise, skipInitial: true, centralEntryIndex: centralEntry.flatMap { entries.firstIndex(of: $0) }, replaceRootController: { controller, ready in
             })
             galleryController.openAvatarSetup = { [weak self] completion in
-                self?.openAvatarForEditing(hasRemove: false, completion: completion)
+                self?.openAvatarForEditing(fromGallery: true, completion: completion)
             }
             galleryController.avatarPhotoEditCompletion = { [weak self] image in
                 self?.updateProfilePhoto(image)
@@ -4053,7 +4053,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }))
     }
     
-    private func openAvatarForEditing(hasRemove: Bool = true, completion: @escaping () -> Void = {}) {
+    private func openAvatarForEditing(fromGallery: Bool = false, completion: @escaping () -> Void = {}) {
         guard let peer = self.data?.peer, canEditPeerInfo(context: self.context, peer: peer) else {
             return
         }
@@ -4105,7 +4105,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 return controller
             }
             
-            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos && hasRemove, hasViewButton: false, personalPhoto: strongSelf.isSettings, isVideo: currentIsVideo, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
+            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos && !fromGallery, hasViewButton: false, personalPhoto: strongSelf.isSettings, isVideo: currentIsVideo, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
             mixin.stickersContext = paintStickersContext
             let _ = strongSelf.currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { [weak self] assetsController in
@@ -4118,6 +4118,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 }))
                 controller.navigationPresentation = .modal
                 strongSelf.controller?.push(controller)
+                
+                if fromGallery {
+                    completion()
+                }
             }
             mixin.didFinishWithImage = { [weak self] image in
                 if let image = image {

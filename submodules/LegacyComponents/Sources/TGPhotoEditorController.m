@@ -297,8 +297,7 @@
                 break;
         }
     };
-    
-    
+     
     TGPhotoEditorBackButton backButton = TGPhotoEditorBackButtonCancel;
     TGPhotoEditorDoneButton doneButton = TGPhotoEditorDoneButtonCheck;
     _portraitToolbarView = [[TGPhotoToolbarView alloc] initWithBackButton:backButton doneButton:doneButton solidBackground:true];
@@ -481,6 +480,8 @@
     if ([adjustments isKindOfClass:[TGMediaVideoEditAdjustments class]])
         position = adjustments.trimStartValue;
     
+    PGPhotoEditor *photoEditor = _photoEditor;
+    
     CGSize screenSize = TGNativeScreenSize();
     SSignal *signal = nil;
     if ([_photoEditor hasDefaultCropping] && (NSInteger)screenSize.width == 320)
@@ -504,20 +505,18 @@
                 if (avatar) {
                     return image;
                 } else {
-                    return TGPhotoEditorCrop(image, nil, _photoEditor.cropOrientation, _photoEditor.cropRotation, _photoEditor.cropRect, _photoEditor.cropMirrored, TGPhotoEditorScreenImageMaxSize(), _photoEditor.originalSize, true);
+                    return TGPhotoEditorCrop(image, nil, photoEditor.cropOrientation, photoEditor.cropRotation, photoEditor.cropRect, photoEditor.cropMirrored, TGPhotoEditorScreenImageMaxSize(), photoEditor.originalSize, true);
                 }
             }];
         }
     }
     
     __weak TGPhotoEditorController *weakSelf = self;
-    PGPhotoEditor *photoEditor = _photoEditor;
-    
     [signal startWithNext:^(id next)
     {
         __strong TGPhotoEditorController *strongSelf = weakSelf;
-         if (strongSelf == nil)
-             return;
+        if (strongSelf == nil)
+            return;
         
         if (strongSelf->_dismissed)
             return;
@@ -566,7 +565,6 @@
             
             if (strongSelf->_hadProgress && !progressVisible) {
                 [strongSelf->_progressView setPlay];
-                
                 [strongSelf->_scrubberView reloadThumbnails];
             }
         });
@@ -968,6 +966,7 @@
         }];
     };
     
+    SQueue *queue = _queue;
     SSignal *(^imageRenderSignal)(UIImage *) = ^(UIImage *image)
     {
         return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
@@ -975,7 +974,7 @@
             [photoEditor setImage:image forCropRect:photoEditor.cropRect cropRotation:photoEditor.cropRotation cropOrientation:photoEditor.cropOrientation cropMirrored:photoEditor.cropMirrored fullSize:true];
             [photoEditor createResultImageWithCompletion:^(UIImage *result)
             {
-                [_queue dispatch:^{
+                [queue dispatch:^{
                     UIImage *final = result;
                     if (hasPainting)
                     {
@@ -998,7 +997,7 @@
     }] mapToSignal:^SSignal *(UIImage *image)
     {
         if (hasImageAdjustments)
-            return [[[SSignal complete] delay:0.3 onQueue:_queue] then:imageRenderSignal(image)];
+            return [[[SSignal complete] delay:0.3 onQueue:queue] then:imageRenderSignal(image)];
         else
             return [SSignal single:image];
     }];
