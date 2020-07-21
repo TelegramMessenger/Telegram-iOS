@@ -33,36 +33,40 @@ public func ==(lhs: CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) -> Bool
 }
 
 public func nearbyVenues(account: Account, latitude: Double, longitude: Double, query: String? = nil) -> Signal<[TelegramMediaMap], NoError> {
-    return resolvePeerByName(account: account, name: "foursquare")
-    |> take(1)
-    |> mapToSignal { peerId -> Signal<ChatContextResultCollection?, NoError> in
-        guard let peerId = peerId else {
-            return .single(nil)
-        }
-        return requestChatContextResults(account: account, botId: peerId, peerId: account.peerId, query: query ?? "", location: .single((latitude, longitude)), offset: "")
-        |> map { results -> ChatContextResultCollection? in
-            return results?.results
-        }
-        |> `catch` { error -> Signal<ChatContextResultCollection?, NoError> in
-            return .single(nil)
-        }
-    }
-    |> map { contextResult -> [TelegramMediaMap] in
-        guard let contextResult = contextResult else {
-            return []
-        }
-        var list: [TelegramMediaMap] = []
-        for result in contextResult.results {
-            switch result.message {
-                case let .mapLocation(mapMedia, _):
-                    if let _ = mapMedia.venue {
-                        list.append(mapMedia)
-                    }
-                default:
-                    break
+    return account.postbox.transaction { transaction -> SearchBotsConfiguration in
+        return currentSearchBotsConfiguration(transaction: transaction)
+    } |> mapToSignal { searchBotsConfiguration in
+        return resolvePeerByName(account: account, name: searchBotsConfiguration.venueBotUsername ?? "foursquare")
+        |> take(1)
+        |> mapToSignal { peerId -> Signal<ChatContextResultCollection?, NoError> in
+            guard let peerId = peerId else {
+                return .single(nil)
+            }
+            return requestChatContextResults(account: account, botId: peerId, peerId: account.peerId, query: query ?? "", location: .single((latitude, longitude)), offset: "")
+            |> map { results -> ChatContextResultCollection? in
+                return results?.results
+            }
+            |> `catch` { error -> Signal<ChatContextResultCollection?, NoError> in
+                return .single(nil)
             }
         }
-        return list
+        |> map { contextResult -> [TelegramMediaMap] in
+            guard let contextResult = contextResult else {
+                return []
+            }
+            var list: [TelegramMediaMap] = []
+            for result in contextResult.results {
+                switch result.message {
+                    case let .mapLocation(mapMedia, _):
+                        if let _ = mapMedia.venue {
+                            list.append(mapMedia)
+                        }
+                    default:
+                        break
+                }
+            }
+            return list
+        }
     }
 }
 
@@ -86,7 +90,7 @@ func stringForDistance(strings: PresentationStrings, distance: CLLocationDistanc
 
 func stringForEstimatedDuration(strings: PresentationStrings, eta: Double) -> String? {
     if eta > 0.0 && eta < 60.0 * 60.0 * 10.0 {
-        var eta = max(eta, 60.0)
+        let eta = max(eta, 60.0)
         let minutes = Int32(eta / 60.0) % 60
         let hours = Int32(eta / 3600.0)
         

@@ -5,7 +5,6 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
-import ListSectionHeaderNode
 import ItemListUI
 import AppBundle
 
