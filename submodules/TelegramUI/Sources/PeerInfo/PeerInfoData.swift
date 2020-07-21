@@ -328,14 +328,14 @@ private func peerInfoProfilePhotos(context: AccountContext, peerId: PeerId) -> S
         }
     }
     |> distinctUntilChanged
-    |> mapToSignal { firstEntry -> Signal<[AvatarGalleryEntry], NoError> in
+    |> mapToSignal { firstEntry -> Signal<(Bool, [AvatarGalleryEntry]), NoError> in
         if let firstEntry = firstEntry {
             return context.account.postbox.loadedPeerWithId(peerId)
-            |> mapToSignal { peer -> Signal<[AvatarGalleryEntry], NoError>in
+            |> mapToSignal { peer -> Signal<(Bool, [AvatarGalleryEntry]), NoError>in
                 return fetchedAvatarGalleryEntries(account: context.account, peer: peer, firstEntry: firstEntry)
             }
         } else {
-            return .single([])
+            return .single((true, []))
         }
     }
     |> map { items -> Any in
@@ -343,10 +343,10 @@ private func peerInfoProfilePhotos(context: AccountContext, peerId: PeerId) -> S
     }
 }
 
-func peerInfoProfilePhotosWithCache(context: AccountContext, peerId: PeerId) -> Signal<[AvatarGalleryEntry], NoError> {
+func peerInfoProfilePhotosWithCache(context: AccountContext, peerId: PeerId) -> Signal<(Bool, [AvatarGalleryEntry]), NoError> {
     return context.peerChannelMemberCategoriesContextsManager.profilePhotos(postbox: context.account.postbox, network: context.account.network, peerId: peerId, fetch: peerInfoProfilePhotos(context: context, peerId: peerId))
-    |> map { items -> [AvatarGalleryEntry] in
-        return items as? [AvatarGalleryEntry] ?? []
+    |> map { items -> (Bool, [AvatarGalleryEntry]) in
+        return items as? (Bool, [AvatarGalleryEntry]) ?? (true, [])
     }
 }
 

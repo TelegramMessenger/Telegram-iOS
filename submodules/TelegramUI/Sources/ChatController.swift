@@ -5124,7 +5124,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 if peerId.namespace == Namespaces.Peer.CloudUser {
                     self.preloadAvatarDisposable.set((peerInfoProfilePhotosWithCache(context: context, peerId: peerId)
-                    |> mapToSignal { result -> Signal<Never, NoError> in
+                    |> mapToSignal { (complete, result) -> Signal<Never, NoError> in
                         var signals: [Signal<Never, NoError>] = [.complete()]
                         for i in 0 ..< min(1, result.count) {
                             if let video = result[i].videoRepresentations.first {
