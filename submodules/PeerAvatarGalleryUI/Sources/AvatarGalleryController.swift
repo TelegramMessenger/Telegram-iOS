@@ -149,7 +149,11 @@ public func initialAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<
             }
             
             if let photo = initialPhoto {
-                return [.image(photo.imageId, photo.reference, photo.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), photo.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), peer, nil, nil, nil, photo.immediateThumbnailData, nil)]
+                if photo.immediateThumbnailData == nil {
+                    return initialEntries
+                } else {
+                    return [.image(photo.imageId, photo.reference, photo.representations.map({ ImageRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) }), photo.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatarList(peer: peerReference, resource: $0.resource)) }), peer, nil, nil, nil, photo.immediateThumbnailData, nil)]
+                }
             } else {
                 return []
             }
@@ -215,12 +219,12 @@ public func fetchedAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<
     }
 }
 
-public func fetchedAvatarGalleryEntries(account: Account, peer: Peer, firstEntry: AvatarGalleryEntry) -> Signal<[AvatarGalleryEntry], NoError> {
+public func fetchedAvatarGalleryEntries(account: Account, peer: Peer, firstEntry: AvatarGalleryEntry) -> Signal<(Bool, [AvatarGalleryEntry]), NoError> {
     let initialEntries = [firstEntry]
-    return Signal<[AvatarGalleryEntry], NoError>.single(initialEntries)
+    return Signal<(Bool, [AvatarGalleryEntry]), NoError>.single((false, initialEntries))
     |> then(
         requestPeerPhotos(postbox: account.postbox, network: account.network, peerId: peer.id)
-        |> map { photos -> [AvatarGalleryEntry] in
+        |> map { photos -> (Bool, [AvatarGalleryEntry]) in
             var result: [AvatarGalleryEntry] = []
             let initialEntries = [firstEntry]
             if photos.isEmpty {
@@ -266,7 +270,7 @@ public func fetchedAvatarGalleryEntries(account: Account, peer: Peer, firstEntry
                     }
                 }
             }
-            return result
+            return (true, result)
         }
     )
 }

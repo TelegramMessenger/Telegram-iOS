@@ -1105,4 +1105,22 @@ public final class MediaBox {
             return EmptyDisposable
         }
     }
+    
+
+    
+    public func allFileContexts() -> Signal<[(partial: String, complete: String)], NoError> {
+        return Signal { subscriber in
+            self.dataQueue.async {
+                var result: [(partial: String, complete: String)] = []
+                for (id, _) in self.fileContexts {
+                    let paths = self.storePathsForId(id.id)
+                    result.append((partial: paths.partial, complete: paths.complete))
+                }
+                subscriber.putNext(result)
+                subscriber.putCompletion()
+            }
+            return EmptyDisposable
+        }
+    }
+
 }
