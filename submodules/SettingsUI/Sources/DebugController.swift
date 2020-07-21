@@ -73,6 +73,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
     case videoCalls(Bool)
+    case videoCallsReference(Bool)
     case videoCallsInfo(PresentationTheme, String)
     case hostInfo(PresentationTheme, String)
     case versionInfo(PresentationTheme)
@@ -89,7 +90,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.experiments.rawValue
         case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .alternativeFolderTabs, .playerEmbedding, .playlistPlayback:
             return DebugControllerSection.experiments.rawValue
-        case .videoCalls, .videoCallsInfo:
+        case .videoCalls, .videoCallsReference, .videoCallsInfo:
             return DebugControllerSection.videoExperiments.rawValue
         case .hostInfo, .versionInfo:
             return DebugControllerSection.info.rawValue
@@ -150,12 +151,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 25
         case .videoCalls:
             return 26
-        case .videoCallsInfo:
+        case .videoCallsReference:
             return 27
-        case .hostInfo:
+        case .videoCallsInfo:
             return 28
-        case .versionInfo:
+        case .hostInfo:
             return 29
+        case .versionInfo:
+            return 30
         }
     }
     
@@ -583,6 +586,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .videoCallsReference(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Reference Implementation", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        settings.videoCallsReference = value
+                        return settings
+                    })
+                }).start()
+            })
         case let .videoCallsInfo(_, text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .hostInfo(theme, string):
@@ -631,6 +644,9 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
     entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
     entries.append(.videoCalls(experimentalSettings.videoCalls))
+    if experimentalSettings.videoCalls {
+        entries.append(.videoCallsReference(experimentalSettings.videoCallsReference))
+    }
     entries.append(.videoCallsInfo(presentationData.theme, "Enables experimental transmission of electromagnetic radiation synchronized with pressure waves. Needs to be enabled on both sides."))
 
     if let backupHostOverride = networkSettings?.backupHostOverride {

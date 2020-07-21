@@ -288,9 +288,9 @@ public final class PresentationCallImpl: PresentationCall {
         self.isVideo = startWithVideo
         if self.isVideo {
             self.videoCapturer = OngoingCallVideoCapturer()
-            self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: .outgoingRequested, remoteVideoState: .inactive))
+            self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: .outgoingRequested, remoteVideoState: .active))
         } else {
-            self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: self.isVideoPossible ? .possible : .notAvailable, remoteVideoState: .inactive))
+            self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: self.isVideoPossible ? .possible : .notAvailable, remoteVideoState: .active))
         }
         
         self.serializedData = serializedData
@@ -483,7 +483,7 @@ public final class PresentationCallImpl: PresentationCall {
             } else {
                 mappedVideoState = .notAvailable
             }
-            if videoWasActive {
+            if self.videoWasActive {
                 mappedRemoteVideoState = .active
             } else {
                 mappedRemoteVideoState = .inactive

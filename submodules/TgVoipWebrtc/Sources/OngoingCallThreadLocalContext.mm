@@ -7,6 +7,8 @@
 
 #import "Instance.h"
 #import "InstanceImpl.h"
+#import "reference/InstanceImplReference.h"
+
 #import "VideoCaptureInterface.h"
 
 #ifndef WEBRTC_IOS
@@ -102,7 +104,26 @@
 
 @end
 
+@interface OngoingCallThreadLocalContextWebrtcTerminationResult : NSObject
+
+@property (nonatomic, readonly) tgcalls::FinalState finalState;
+
+@end
+
+@implementation OngoingCallThreadLocalContextWebrtcTerminationResult
+
+- (instancetype)initWithFinalState:(tgcalls::FinalState)finalState {
+    self = [super init];
+    if (self != nil) {
+        _finalState = finalState;
+    }
+    return self;
+}
+
+@end
+
 @interface OngoingCallThreadLocalContextWebrtc () {
+    NSString *_version;
     id<OngoingCallThreadLocalContextQueueWebrtc> _queue;
     int32_t _contextId;
 
@@ -113,6 +134,7 @@
     NSTimeInterval _callPacketTimeout;
     
     std::unique_ptr<tgcalls::Instance> _tgVoip;
+    OngoingCallThreadLocalContextWebrtcTerminationResult *_terminationResult;
     
     OngoingCallStateWebrtc _state;
     OngoingCallVideoStateWebrtc _videoState;
@@ -213,15 +235,22 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     return 92;
 }
 
-+ (NSString *)version {
-    return @"2.7.7";
++ (NSArray<NSString *> * _Nonnull)versionsWithIncludeReference:(bool)includeReference {
+    if (includeReference) {
+        return @[@"2.7.7", @"2.8.8"];
+    } else {
+        return @[@"2.7.7"];
+    }
 }
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy rtcServers:(NSArray<VoipRtcServerWebrtc *> * _Nonnull)rtcServers networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescriptionWebrtc * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath sendSignalingData:(void (^)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer {
+- (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy rtcServers:(NSArray<VoipRtcServerWebrtc *> * _Nonnull)rtcServers networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescriptionWebrtc * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath sendSignalingData:(void (^)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer {
     self = [super init];
     if (self != nil) {
+        _version = version;
         _queue = queue;
         assert([queue isCurrent]);
+        
+        assert([[OngoingCallThreadLocalContextWebrtc versionsWithIncludeReference:true] containsObject:version]);
         
         _callReceiveTimeout = 20.0;
         _callRingTimeout = 90.0;
@@ -235,7 +264,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             _remoteVideoState = OngoingCallRemoteVideoStateActive;
         } else {
             _videoState = OngoingCallVideoStatePossible;
-            _remoteVideoState = OngoingCallRemoteVideoStateInactive;
+            _remoteVideoState = OngoingCallRemoteVideoStateActive;
         }
         
         std::vector<uint8_t> derivedStateValue;
@@ -302,9 +331,8 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .maxApiLayer = [OngoingCallThreadLocalContextWebrtc maxLayer]
         };
         
-        std::vector<uint8_t> encryptionKeyValue;
-        encryptionKeyValue.resize(key.length);
-        memcpy(encryptionKeyValue.data(), key.bytes, key.length);
+        auto encryptionKeyValue = std::make_shared<std::array<uint8_t, 256>>();
+        memcpy(encryptionKeyValue->data(), key.bytes, key.length);
         
         tgcalls::EncryptionKey encryptionKey(encryptionKeyValue, isOutgoing);
         
@@ -312,8 +340,9 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{
             tgcalls::Register<tgcalls::InstanceImpl>();
+            tgcalls::Register<tgcalls::InstanceImplReference>();
         });
-        _tgVoip = tgcalls::Meta::Create("2.7.7", (tgcalls::Descriptor){
+        _tgVoip = tgcalls::Meta::Create([version UTF8String], (tgcalls::Descriptor){
             .config = config,
             .persistentState = (tgcalls::PersistentState){ derivedStateValue },
             .endpoints = endpoints,
@@ -346,8 +375,16 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                     }
                 }];
             },
-            .signalBarsUpdated = [](int value) {
-                
+            .signalBarsUpdated = [weakSelf, queue](int value) {
+                [queue dispatch:^{
+                    __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
+                    if (strongSelf) {
+                        strongSelf->_signalBars = value;
+                        if (strongSelf->_signalBarsChanged) {
+                            strongSelf->_signalBarsChanged(value);
+                        }
+                    }
+                }];
             },
             .remoteVideoIsActiveUpdated = [weakSelf, queue](bool isActive) {
                 [queue dispatch:^{
@@ -396,15 +433,34 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     return false;
 }
 
+- (void)stopInstanceIfNeeded {
+    if (!_tgVoip) {
+        return;
+    }
+    tgcalls::FinalState finalState = _tgVoip->stop();
+    _tgVoip = nil;
+    _terminationResult = [[OngoingCallThreadLocalContextWebrtcTerminationResult alloc] initWithFinalState:finalState];
+}
+
+- (void)beginTermination {
+    [self stopInstanceIfNeeded];
+}
+
 - (void)stop:(void (^)(NSString *, int64_t, int64_t, int64_t, int64_t))completion {
-    if (_tgVoip) {
-        tgcalls::FinalState finalState = _tgVoip->stop();
-        
-        NSString *debugLog = [NSString stringWithUTF8String:finalState.debugLog.c_str()];
-        _lastDerivedState = [[NSData alloc] initWithBytes:finalState.persistentState.value.data() length:finalState.persistentState.value.size()];
-        
-        if (completion) {
-            completion(debugLog, finalState.trafficStats.bytesSentWifi, finalState.trafficStats.bytesReceivedWifi, finalState.trafficStats.bytesSentMobile, finalState.trafficStats.bytesReceivedMobile);
+    [self stopInstanceIfNeeded];
+    
+    if (completion) {
+        if (_terminationResult) {
+            NSString *debugLog = [NSString stringWithUTF8String:_terminationResult.finalState.debugLog.c_str()];
+            _lastDerivedState = [[NSData alloc] initWithBytes:_terminationResult.finalState.persistentState.value.data() length:_terminationResult.finalState.persistentState.value.size()];
+            
+            if (completion) {
+                completion(debugLog, _terminationResult.finalState.trafficStats.bytesSentWifi, _terminationResult.finalState.trafficStats.bytesReceivedWifi, _terminationResult.finalState.trafficStats.bytesSentMobile, _terminationResult.finalState.trafficStats.bytesReceivedMobile);
+            }
+        } else {
+            if (completion) {
+                completion(@"", 0, 0, 0, 0);
+            }
         }
     }
 }
@@ -421,7 +477,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 }
 
 - (NSString *)version {
-    return @"2.7.7";
+    return _version;
 }
 
 - (NSData * _Nonnull)getDerivedState {

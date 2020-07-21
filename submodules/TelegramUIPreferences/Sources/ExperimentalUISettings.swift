@@ -10,6 +10,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
     public var knockoutWallpaper: Bool
     public var foldersTabAtBottom: Bool
     public var videoCalls: Bool
+    public var videoCallsReference: Bool
     public var playerEmbedding: Bool
     public var playlistPlayback: Bool
     
@@ -22,6 +23,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
             knockoutWallpaper: false,
             foldersTabAtBottom: false,
             videoCalls: false,
+            videoCallsReference: true,
             playerEmbedding: false,
             playlistPlayback: false
         )
@@ -35,6 +37,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         knockoutWallpaper: Bool,
         foldersTabAtBottom: Bool,
         videoCalls: Bool,
+        videoCallsReference: Bool,
         playerEmbedding: Bool,
         playlistPlayback: Bool
     ) {
@@ -45,6 +48,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         self.knockoutWallpaper = knockoutWallpaper
         self.foldersTabAtBottom = foldersTabAtBottom
         self.videoCalls = videoCalls
+        self.videoCallsReference = videoCallsReference
         self.playerEmbedding = playerEmbedding
         self.playlistPlayback = playlistPlayback
     }
@@ -57,6 +61,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         self.knockoutWallpaper = decoder.decodeInt32ForKey("knockoutWallpaper", orElse: 0) != 0
         self.foldersTabAtBottom = decoder.decodeInt32ForKey("foldersTabAtBottom", orElse: 0) != 0
         self.videoCalls = decoder.decodeInt32ForKey("videoCalls", orElse: 0) != 0
+        self.videoCallsReference = decoder.decodeInt32ForKey("videoCallsReference", orElse: 1) != 0
         self.playerEmbedding = decoder.decodeInt32ForKey("playerEmbedding", orElse: 0) != 0
         self.playlistPlayback = decoder.decodeInt32ForKey("playlistPlayback", orElse: 0) != 0
     }
@@ -69,6 +74,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         encoder.encodeInt32(self.knockoutWallpaper ? 1 : 0, forKey: "knockoutWallpaper")
         encoder.encodeInt32(self.foldersTabAtBottom ? 1 : 0, forKey: "foldersTabAtBottom")
         encoder.encodeInt32(self.videoCalls ? 1 : 0, forKey: "videoCalls")
+        encoder.encodeInt32(self.videoCallsReference ? 1 : 0, forKey: "videoCallsReference")
         encoder.encodeInt32(self.playerEmbedding ? 1 : 0, forKey: "playerEmbedding")
         encoder.encodeInt32(self.playlistPlayback ? 1 : 0, forKey: "playlistPlayback")
     }

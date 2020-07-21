@@ -248,6 +248,7 @@ private protocol OngoingCallThreadLocalContextProtocol: class {
     func nativeRequestVideo(_ capturer: OngoingCallVideoCapturer)
     func nativeAcceptVideo(_ capturer: OngoingCallVideoCapturer)
     func nativeStop(_ completion: @escaping (String?, Int64, Int64, Int64, Int64) -> Void)
+    func nativeBeginTermination()
     func nativeDebugInfo() -> String
     func nativeVersion() -> String
     func nativeGetDerivedState() -> Data
@@ -268,6 +269,9 @@ extension OngoingCallThreadLocalContext: OngoingCallThreadLocalContextProtocol {
     
     func nativeStop(_ completion: @escaping (String?, Int64, Int64, Int64, Int64) -> Void) {
         self.stop(completion)
+    }
+    
+    func nativeBeginTermination() {
     }
     
     func nativeSetIsMuted(_ value: Bool) {
@@ -334,6 +338,10 @@ extension OngoingCallThreadLocalContextWebrtc: OngoingCallThreadLocalContextProt
     
     func nativeStop(_ completion: @escaping (String?, Int64, Int64, Int64, Int64) -> Void) {
         self.stop(completion)
+    }
+    
+    func nativeBeginTermination() {
+        self.beginTermination()
     }
     
     func nativeSetIsMuted(_ value: Bool) {
@@ -458,14 +466,12 @@ public final class OngoingCallContext {
     
     public static var maxLayer: Int32 {
         return OngoingCallThreadLocalContext.maxLayer()
-        //return max(OngoingCallThreadLocalContext.maxLayer(), OngoingCallThreadLocalContextWebrtc.maxLayer())
     }
     
-    public static func versions(includeExperimental: Bool) -> [String] {
+    public static func versions(includeExperimental: Bool, includeReference: Bool) -> [String] {
         var result: [String] = [OngoingCallThreadLocalContext.version()]
         if includeExperimental {
-            result.append(OngoingCallThreadLocalContextWebrtc.version())
-            //result.append(OngoingCallThreadLocalContextWebrtcCustom.version())
+            result.append(contentsOf: OngoingCallThreadLocalContextWebrtc.versions(withIncludeReference: includeReference))
         }
         return result
     }
@@ -489,7 +495,7 @@ public final class OngoingCallContext {
         |> take(1)
         |> deliverOn(queue)).start(next: { [weak self] _ in
             if let strongSelf = self {
-                if version == OngoingCallThreadLocalContextWebrtc.version() {
+                if OngoingCallThreadLocalContextWebrtc.versions(withIncludeReference: true).contains(version) {
                     var voipProxyServer: VoipProxyServerWebrtc?
                     if let proxyServer = proxyServer {
                         switch proxyServer.connection {
@@ -520,7 +526,7 @@ public final class OngoingCallContext {
                             ))
                         }
                     }
-                    let context = OngoingCallThreadLocalContextWebrtc(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, rtcServers: rtcServers, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescriptionWebrtc(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescriptionWebrtc), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath, sendSignalingData: { [weak callSessionManager] data in
+                    let context = OngoingCallThreadLocalContextWebrtc(version: version, queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, rtcServers: rtcServers, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescriptionWebrtc(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescriptionWebrtc), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath, sendSignalingData: { [weak callSessionManager] data in
                         callSessionManager?.sendSignalingData(internalId: internalId, data: data)
                     }, videoCapturer: video?.impl)
                     
@@ -628,6 +634,12 @@ public final class OngoingCallContext {
                 let context = contextRef.takeUnretainedValue()
                 f(context.context)
             }
+        }
+    }
+    
+    public func beginTermination() {
+        self.withContext { context in
+            context.nativeBeginTermination()
         }
     }
     

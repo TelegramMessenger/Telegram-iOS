@@ -117,8 +117,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         return OngoingCallContext.maxLayer
     }
     
-    public static func voipVersions(includeExperimental: Bool) -> [String] {
-        return OngoingCallContext.versions(includeExperimental: includeExperimental)
+    public static func voipVersions(includeExperimental: Bool, includeReference: Bool) -> [String] {
+        return OngoingCallContext.versions(includeExperimental: includeExperimental, includeReference: includeReference)
     }
     
     public init(accountManager: AccountManager, enableVideoCalls: Bool, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), isMediaPlaying: @escaping () -> Bool, resumeMediaPlayback: @escaping () -> Void, audioSession: ManagedAudioSession, activeAccounts: Signal<[Account], NoError>) {
