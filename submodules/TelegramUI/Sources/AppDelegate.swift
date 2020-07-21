@@ -1983,12 +1983,12 @@ final class SharedApplicationContext {
         |> delay(1.0, queue: .mainQueue())).start(next: { context in
             let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
             
+            let replaceTopControllerImpl: (ViewController, Bool) -> Void = { c, animated in
+                context.rootController.pushViewController(c, animated: animated)
+            }
+            
             let addFalseBottomToCurrentAccount: () -> Void = {
                 let accountContext = context.sharedApplicationContext.sharedContext
-                
-                let replaceTopControllerImpl: ((ViewController, Bool) -> Void)? = { c, animated in
-                    context.rootController.pushViewController(c, animated: animated)
-                }
                 
                 let popToRoot: () -> Void = {
                     context.rootController.popToRoot(animated: true)
@@ -2023,15 +2023,22 @@ final class SharedApplicationContext {
                         (setupController?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
                     }
                 })
-                replaceTopControllerImpl?(introController, false)
+                replaceTopControllerImpl(introController, false)
                 innerReplaceTopControllerImpl = { [weak introController] c, animated in
                     (introController?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
                 }
             }
             
+            let showSplashScreen: () -> Void = {
+                let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
+                let controller = FalseBottomSplashScreen(presentationData: presentationData)
+                controller.buttonPressed = addFalseBottomToCurrentAccount
+                replaceTopControllerImpl(controller, true)
+            }
+            
             context.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Add false bottom?", actions: [
                 TextAlertAction(type: .genericAction, title: "Yes", action: {
-                    addFalseBottomToCurrentAccount()
+                    showSplashScreen()
                 }),
                 TextAlertAction(type: .defaultAction, title: "No", action: {})
             ]), on: .root, blockInteraction: false, completion: {})
