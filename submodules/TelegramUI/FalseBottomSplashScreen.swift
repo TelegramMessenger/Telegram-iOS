@@ -11,13 +11,20 @@ import AccountContext
 import TelegramPresentationData
 import PresentationDataUtils
 
+public enum FalseBottomSplashMode {
+    case intro
+    case done
+}
+
 public final class FalseBottomSplashScreen: ViewController {
-    private var presentationData: PresentationData
+    private let presentationData: PresentationData
+    private let mode: FalseBottomSplashMode
     
     var buttonPressed: (() -> Void)?
     
-    public init(presentationData: PresentationData) {
+    public init(presentationData: PresentationData, mode: FalseBottomSplashMode) {
         self.presentationData = presentationData
+        self.mode = mode
         
         let defaultTheme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme)
         let navigationBarTheme = NavigationBarTheme(buttonColor: defaultTheme.buttonColor, disabledButtonColor: defaultTheme.disabledButtonColor, primaryTextColor: defaultTheme.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultTheme.badgeBackgroundColor, badgeStrokeColor: defaultTheme.badgeStrokeColor, badgeTextColor: defaultTheme.badgeTextColor)
@@ -40,7 +47,7 @@ public final class FalseBottomSplashScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = FalseBottomSplashScreenNode(presentationData: self.presentationData, action: { [weak self] in
+        self.displayNode = FalseBottomSplashScreenNode(presentationData: self.presentationData, mode: self.mode, action: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
@@ -59,7 +66,8 @@ public final class FalseBottomSplashScreen: ViewController {
 }
 
 private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
-    private var presentationData: PresentationData
+    private let presentationData: PresentationData
+    private let mode: FalseBottomSplashMode
     
     private var animationSize: CGSize = CGSize()
     private var animationOffset: CGPoint = CGPoint()
@@ -75,8 +83,9 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
         }
     }
     
-    init(presentationData: PresentationData, action: @escaping () -> Void) {
+    init(presentationData: PresentationData, mode: FalseBottomSplashMode, action: @escaping () -> Void) {
         self.presentationData = presentationData
+        self.mode = mode
         
         self.animationNode = AnimatedStickerNode()
         
@@ -87,14 +96,27 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
         let textFont = Font.regular(16.0)
         let textColor = self.presentationData.theme.list.itemPrimaryTextColor
 
-        title = "False Bottom"
-        text = NSAttributedString(string: "Access different accounts depending on the passcode you enter", font: textFont, textColor: textColor)
-        buttonText = "Enable"
-        
-        if let path = getAppBundle().path(forResource: "TwoFactorSetupIntro", ofType: "tgs") {
-            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct)
-            self.animationSize = CGSize(width: 124.0, height: 124.0)
-            self.animationNode.visibility = true
+        switch mode {
+        case .intro:
+            title = "False Bottom"
+            text = NSAttributedString(string: "Access different accounts depending on the passcode you enter", font: textFont, textColor: textColor)
+            buttonText = "Enable"
+            
+            if let path = getAppBundle().path(forResource: "TwoFactorSetupIntro", ofType: "tgs") {
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct)
+                self.animationSize = CGSize(width: 124.0, height: 124.0)
+                self.animationNode.visibility = true
+            }
+        case .done:
+            title = "Account is hidden"
+            text = NSAttributedString(string: "", font: textFont, textColor: textColor)
+            buttonText = "Continue"
+            
+            if let path = getAppBundle().path(forResource: "TwoFactorSetupDone", ofType: "tgs") {
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, mode: .direct)
+                self.animationSize = CGSize(width: 124.0, height: 124.0)
+                self.animationNode.visibility = true
+            }
         }
         
         self.titleNode = ImmediateTextNode()
@@ -139,7 +161,13 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
         let buttonHeight: CGFloat = 50.0
         
         let iconSize: CGSize = self.animationSize
-        var iconOffset = CGPoint.zero
+        var iconOffset = CGPoint()
+        switch self.mode {
+        case .done:
+            iconOffset.x = 10.0
+        default:
+            break
+        }
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
         let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))

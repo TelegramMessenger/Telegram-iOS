@@ -40,6 +40,7 @@ import TelegramIntents
 import AccountUtils
 import CoreSpotlight
 import PasscodeUI
+import LocalAuth
 
 #if canImport(BackgroundTasks)
 import BackgroundTasks
@@ -1984,10 +1985,22 @@ final class SharedApplicationContext {
             let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
             
             let replaceTopControllerImpl: (ViewController, Bool) -> Void = { c, animated in
-                context.rootController.pushViewController(c, animated: animated)
+                context.rootController.replaceTopController(c, animated: animated)
             }
             
-            let addFalseBottomToCurrentAccount: () -> Void = {
+            let showSplashScreen: (FalseBottomSplashMode, Bool, @escaping () -> Void) -> Void = { mode, push, action in
+                let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
+                let controller = FalseBottomSplashScreen(presentationData: presentationData, mode: mode)
+                controller.buttonPressed = action
+                if push {
+                    context.rootController.pushViewController(controller, animated: true)
+                } else {
+                    replaceTopControllerImpl(controller, true)
+                }
+            }
+            
+            // TODO: -- currently unused, use this
+            let setMasterPassword: (@escaping () -> Void) -> Void = { completion in
                 let accountContext = context.sharedApplicationContext.sharedContext
                 
                 let popToRoot: () -> Void = {
@@ -2006,16 +2019,13 @@ final class SharedApplicationContext {
                                 data = PostboxAccessChallengeData.plaintextPassword(value: passcode)
                             }
                             
-                            if let (id, _) = transaction.getCurrent() {
-                                setAccountRecordAccessChallengeData(transaction: transaction, id: id, accessChallengeData: data)
-                                accountContext.appLockContext.unlockedHiddenAccountRecordId.set(id)
-                            }
+                            transaction.setAccessChallengeData(data)
 
+                            updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(1 * 60 * 60).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
                         }) |> deliverOnMainQueue).start(next: { _ in
                         }, error: { _ in
                         }, completed: {
-                            updateHiddenAccountsAccessChallengeData(manager: accountContext.accountManager)
-                            popToRoot()
+                            completion()
                         })
                     }
                     innerReplaceTopControllerImpl?(setupController, true)
@@ -2029,16 +2039,41 @@ final class SharedApplicationContext {
                 }
             }
             
-            let showSplashScreen: () -> Void = {
-                let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
-                let controller = FalseBottomSplashScreen(presentationData: presentationData)
-                controller.buttonPressed = addFalseBottomToCurrentAccount
-                replaceTopControllerImpl(controller, true)
+            let addFalseBottomToCurrentAccount: () -> Void = {
+                let accountContext = context.sharedApplicationContext.sharedContext
+                
+                let popToRoot: () -> Void = {
+                    context.rootController.popToRoot(animated: true)
+                }
+                
+                let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits6))
+                setupController.complete = { passcode, numerical in
+                    let _ = (accountContext.accountManager.transaction({ transaction -> Void in
+                        var data = transaction.getAccessChallengeData()
+                        if numerical {
+                            data = PostboxAccessChallengeData.numericalPassword(value: passcode)
+                        } else {
+                            data = PostboxAccessChallengeData.plaintextPassword(value: passcode)
+                        }
+                        
+                        if let (id, _) = transaction.getCurrent() {
+                            setAccountRecordAccessChallengeData(transaction: transaction, id: id, accessChallengeData: data)
+                            accountContext.appLockContext.unlockedHiddenAccountRecordId.set(id)
+                        }
+
+                    }) |> deliverOnMainQueue).start(next: { _ in
+                    }, error: { _ in
+                    }, completed: {
+                        updateHiddenAccountsAccessChallengeData(manager: accountContext.accountManager)
+                        showSplashScreen(.done, false, popToRoot)
+                    })
+                }
+                replaceTopControllerImpl(setupController, false)
             }
             
             context.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Add false bottom?", actions: [
                 TextAlertAction(type: .genericAction, title: "Yes", action: {
-                    showSplashScreen()
+                    showSplashScreen(.intro, true, addFalseBottomToCurrentAccount)
                 }),
                 TextAlertAction(type: .defaultAction, title: "No", action: {})
             ]), on: .root, blockInteraction: false, completion: {})
