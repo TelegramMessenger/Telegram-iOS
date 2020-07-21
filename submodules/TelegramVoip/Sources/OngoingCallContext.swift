@@ -468,10 +468,10 @@ public final class OngoingCallContext {
         return OngoingCallThreadLocalContext.maxLayer()
     }
     
-    public static func versions(includeExperimental: Bool) -> [String] {
+    public static func versions(includeExperimental: Bool, includeReference: Bool) -> [String] {
         var result: [String] = [OngoingCallThreadLocalContext.version()]
         if includeExperimental {
-            result.append(contentsOf: OngoingCallThreadLocalContextWebrtc.versions())
+            result.append(contentsOf: OngoingCallThreadLocalContextWebrtc.versions(withIncludeReference: includeReference))
         }
         return result
     }
@@ -495,7 +495,7 @@ public final class OngoingCallContext {
         |> take(1)
         |> deliverOn(queue)).start(next: { [weak self] _ in
             if let strongSelf = self {
-                if OngoingCallThreadLocalContextWebrtc.versions().contains(version) {
+                if OngoingCallThreadLocalContextWebrtc.versions(withIncludeReference: true).contains(version) {
                     var voipProxyServer: VoipProxyServerWebrtc?
                     if let proxyServer = proxyServer {
                         switch proxyServer.connection {

@@ -235,8 +235,12 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     return 92;
 }
 
-+ (NSArray<NSString *> * _Nonnull)versions {
-    return @[@"2.7.7", @"2.8.8"];
++ (NSArray<NSString *> * _Nonnull)versionsWithIncludeReference:(bool)includeReference {
+    if (includeReference) {
+        return @[@"2.7.7", @"2.8.8"];
+    } else {
+        return @[@"2.7.7"];
+    }
 }
 
 - (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy rtcServers:(NSArray<VoipRtcServerWebrtc *> * _Nonnull)rtcServers networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescriptionWebrtc * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath sendSignalingData:(void (^)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer {
@@ -246,7 +250,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         _queue = queue;
         assert([queue isCurrent]);
         
-        assert([[OngoingCallThreadLocalContextWebrtc versions] containsObject:version]);
+        assert([[OngoingCallThreadLocalContextWebrtc versionsWithIncludeReference:true] containsObject:version]);
         
         _callReceiveTimeout = 20.0;
         _callRingTimeout = 90.0;
@@ -327,9 +331,8 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .maxApiLayer = [OngoingCallThreadLocalContextWebrtc maxLayer]
         };
         
-        std::vector<uint8_t> encryptionKeyValue;
-        encryptionKeyValue.resize(key.length);
-        memcpy(encryptionKeyValue.data(), key.bytes, key.length);
+        auto encryptionKeyValue = std::make_shared<std::array<uint8_t, 256>>();
+        memcpy(encryptionKeyValue->data(), key.bytes, key.length);
         
         tgcalls::EncryptionKey encryptionKey(encryptionKeyValue, isOutgoing);
         

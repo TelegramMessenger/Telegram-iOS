@@ -251,7 +251,7 @@ public final class AccountContextImpl: AccountContext {
         self.experimentalUISettingsDisposable = (sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.experimentalUISettings])
         |> deliverOnMainQueue).start(next: { sharedData in
             if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings {
-                account.callSessionManager.updateVersions(versions: PresentationCallManagerImpl.voipVersions(includeExperimental: settings.videoCalls))
+                account.callSessionManager.updateVersions(versions: PresentationCallManagerImpl.voipVersions(includeExperimental: settings.videoCalls, includeReference: settings.videoCallsReference))
             }
         })
     }

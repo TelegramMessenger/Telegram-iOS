@@ -107,7 +107,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 + (void)setupLoggingFunction:(void (* _Nullable)(NSString * _Nullable))loggingFunction;
 + (void)applyServerConfig:(NSString * _Nullable)data;
 + (int32_t)maxLayer;
-+ (NSArray<NSString *> * _Nonnull)versions;
++ (NSArray<NSString *> * _Nonnull)versionsWithIncludeReference:(bool)includeReference;
 
 @property (nonatomic, copy) void (^ _Nullable stateChanged)(OngoingCallStateWebrtc, OngoingCallVideoStateWebrtc, OngoingCallRemoteVideoStateWebrtc);
 @property (nonatomic, copy) void (^ _Nullable signalBarsChanged)(int32_t);
