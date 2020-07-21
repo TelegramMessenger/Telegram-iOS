@@ -9487,11 +9487,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     override public func updatePossibleControllerDropContent(content: NavigationControllerDropContent?) {
-        self.chatDisplayNode.updateEmbeddedTitlePeekContent(content: content)
+        //self.chatDisplayNode.updateEmbeddedTitlePeekContent(content: content)
     }
     
     override public func acceptPossibleControllerDropContent(content: NavigationControllerDropContent) -> Bool {
-        return self.chatDisplayNode.acceptEmbeddedTitlePeekContent(content: content)
+        //return self.chatDisplayNode.acceptEmbeddedTitlePeekContent(content: content)
+        return false
     }
 }
 
