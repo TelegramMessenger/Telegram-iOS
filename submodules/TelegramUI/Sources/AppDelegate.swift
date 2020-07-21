@@ -1999,44 +1999,56 @@ final class SharedApplicationContext {
                 }
             }
             
-            // TODO: -- currently unused, use this
-            let setMasterPassword: (@escaping () -> Void) -> Void = { completion in
+            let showRequirementsScreen: (@escaping () -> Void) -> Void = { action in
+                let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
                 let accountContext = context.sharedApplicationContext.sharedContext
+                let controller = FalseBottomRequirementsScreen(presentationData: presentationData, context: accountContext)
+                controller.buttonPressed = action
                 
-                let popToRoot: () -> Void = {
-                    context.rootController.popToRoot(animated: true)
-                }
+                // TODO: --
+                controller.createAnotherAccount = {}
                 
-                var innerReplaceTopControllerImpl: ((ViewController, Bool) -> Void)?
-                let introController = PrivacyIntroController(context: accountContext, mode: .passcode, proceedAction: {
-                    let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits6))
-                    setupController.complete = { passcode, numerical in
-                        let _ = (accountContext.accountManager.transaction({ transaction -> Void in
-                            var data = transaction.getAccessChallengeData()
-                            if numerical {
-                                data = PostboxAccessChallengeData.numericalPassword(value: passcode)
-                            } else {
-                                data = PostboxAccessChallengeData.plaintextPassword(value: passcode)
-                            }
-                            
-                            transaction.setAccessChallengeData(data)
+                controller.setMasterPassword = { [weak controller] in
+                    guard let strongController = controller else { return }
+                    
+                    let popToRoot: () -> Void = {
+                        context.rootController.popToRoot(animated: true)
+                    }
+                    
+                    var innerReplaceTopControllerImpl: ((ViewController, Bool) -> Void)?
+                    let introController = PrivacyIntroController(context: accountContext, mode: .passcode, proceedAction: {
+                        let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits6))
+                        setupController.complete = { passcode, numerical in
+                            let _ = (accountContext.accountManager.transaction({ transaction -> Void in
+                                var data = transaction.getAccessChallengeData()
+                                if numerical {
+                                    data = PostboxAccessChallengeData.numericalPassword(value: passcode)
+                                } else {
+                                    data = PostboxAccessChallengeData.plaintextPassword(value: passcode)
+                                }
+                                
+                                transaction.setAccessChallengeData(data)
 
-                            updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(1 * 60 * 60).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
-                        }) |> deliverOnMainQueue).start(next: { _ in
-                        }, error: { _ in
-                        }, completed: {
-                            completion()
-                        })
+                                updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(1 * 60 * 60).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
+                            }) |> deliverOnMainQueue).start(next: { _ in
+                            }, error: { _ in
+                            }, completed: {
+                                replaceTopControllerImpl(strongController, false)
+                                strongController.didSetMasterPassword()
+                            })
+                        }
+                        innerReplaceTopControllerImpl?(setupController, true)
+                        innerReplaceTopControllerImpl = { [weak setupController] c, animated in
+                            (setupController?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
+                        }
+                    })
+                    replaceTopControllerImpl(introController, false)
+                    innerReplaceTopControllerImpl = { [weak introController] c, animated in
+                        (introController?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
                     }
-                    innerReplaceTopControllerImpl?(setupController, true)
-                    innerReplaceTopControllerImpl = { [weak setupController] c, animated in
-                        (setupController?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
-                    }
-                })
-                replaceTopControllerImpl(introController, false)
-                innerReplaceTopControllerImpl = { [weak introController] c, animated in
-                    (introController?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
                 }
+                
+                context.rootController.pushViewController(controller, animated: true)
             }
             
             let addFalseBottomToCurrentAccount: () -> Void = {
@@ -2073,7 +2085,7 @@ final class SharedApplicationContext {
             
             context.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Add false bottom?", actions: [
                 TextAlertAction(type: .genericAction, title: "Yes", action: {
-                    showSplashScreen(.intro, true, addFalseBottomToCurrentAccount)
+                    showSplashScreen(.intro, true, { showRequirementsScreen(addFalseBottomToCurrentAccount) })
                 }),
                 TextAlertAction(type: .defaultAction, title: "No", action: {})
             ]), on: .root, blockInteraction: false, completion: {})
