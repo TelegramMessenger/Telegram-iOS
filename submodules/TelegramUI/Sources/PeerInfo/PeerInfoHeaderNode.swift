@@ -203,11 +203,11 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
     private let preloadDisposable = MetaDisposable()
     private let statusNode: RadialStatusNode
     
-
     private var playerStatus: MediaPlayerStatus?
     private var isLoading = ValuePromise<Bool>(false)
     private var loadingProgress = ValuePromise<Float?>(nil)
     private var loadingProgressDisposable = MetaDisposable()
+    private var hasProgress = false
     
     let isReady = Promise<Bool>()
     private var didSetReady: Bool = false
@@ -274,14 +274,25 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
             } else {
                 return .single(value)
             }
-        }, self.loadingProgress.get())).start(next: { [weak self] isLoading, progress in
+        } |> distinctUntilChanged, self.loadingProgress.get() |> distinctUntilChanged)).start(next: { [weak self] isLoading, progress in
             guard let strongSelf = self else {
                 return
             }
             if isLoading, let progress = progress {
+                strongSelf.hasProgress = true
                 strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: CGFloat(max(0.027, progress)), cancelEnabled: false), completion: {})
-            } else {
-                strongSelf.statusNode.transitionToState(.none, completion: {})
+            } else if strongSelf.hasProgress {
+                strongSelf.hasProgress = false
+                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: 1.0, cancelEnabled: false), completion: { [weak self] in
+                     guard let strongSelf = self else {
+                        return
+                    }
+                    if !strongSelf.hasProgress {
+                        Queue.mainQueue().after(0.3) {
+                            strongSelf.statusNode.transitionToState(.none, completion: {})
+                        }
+                    }
+                })
             }
         }))
     }
@@ -309,7 +320,6 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
                 bufferingProgress = nil
             }
         }
-          
         self.loadingProgress.set(bufferingProgress)
         self.isLoading.set(bufferingProgress != nil)
     }
@@ -1043,12 +1053,12 @@ final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         if let peer = peer, !self.initializedList {
             self.initializedList = true
             self.disposable.set((peerInfoProfilePhotosWithCache(context: self.context, peerId: peer.id)
-            |> deliverOnMainQueue).start(next: { [weak self] entries in
+            |> deliverOnMainQueue).start(next: { [weak self] (complete, entries) in
                 guard let strongSelf = self else {
                     return
                 }
                 
-                if strongSelf.galleryEntries.count > 1, entries.count == 1, let first = entries.first, case .topImage = first {
+                if strongSelf.galleryEntries.count > 1, entries.count == 1 && !complete {
                     return
                 }
                 
