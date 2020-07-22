@@ -274,6 +274,8 @@ public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
             Queue.mainQueue().after(0.2) {
                 self.complete?(text)
             }
+        } else {
+            didChangeText(text)
         }
     }
     
@@ -376,17 +378,23 @@ public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
             Queue.mainQueue().after(0.2) {
                 self.complete?(text)
             }
+        } else {
+            didChangeText(text)
         }
         
+        return true
+    }
+    
+    private func didChangeText(_ text: String){
         if fieldType == .digits6, text.count == 4, let didEnter4Digits = self.didEnter4Digits {
             didEnter4Digits(text, { [weak self] in
                 guard let strongSelf = self else { return }
                 
-                strongSelf.complete?(text)
+                Queue.mainQueue().after(0.2) {
+                    strongSelf.complete?(text)
+                }
             })
         }
-        
-        return true
     }
 }
 
