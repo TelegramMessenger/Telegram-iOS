@@ -1307,7 +1307,16 @@ final class SharedApplicationContext {
                     return activeAccountsAndPeers(context: context.context)
                     |> take(1)
                     |> map { primaryAndAccounts -> (Account, Peer, Int32)? in
-                        return primaryAndAccounts.1.first
+                        let accounts = primaryAndAccounts.1
+                        if context.context.sharedContext.appLockContext.unlockedHiddenAccountRecordId != nil {
+                            if accounts.count > 1 {
+                                return accounts.first
+                            } else {
+                                return nil
+                            }
+                        } else {
+                            return accounts.first
+                        }
                     }
                     |> map { accountAndPeer -> String? in
                         if let (_, peer, _) = accountAndPeer {
