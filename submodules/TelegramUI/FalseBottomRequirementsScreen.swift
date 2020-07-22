@@ -93,7 +93,7 @@ public final class FalseBottomRequirementsScreen: ViewController {
         } |> deliverOnMainQueue).start(next: { [weak self] (isMasterPasswordSet, hasOtherOpenAccounts) in
             guard let strongSelf = self else { return }
             
-            strongSelf.node.masterPasswordCheckNode.setIsChecked(isMasterPasswordSet, animated: false)
+            strongSelf.node.masterPasscodeCheckNode.setIsChecked(isMasterPasswordSet, animated: false)
             strongSelf.node.openAccountCheckNode.setIsChecked(hasOtherOpenAccounts, animated: false)
             strongSelf.node.inProgress = !(isMasterPasswordSet && hasOtherOpenAccounts)
         })
@@ -106,7 +106,7 @@ private final class FalseBottomRequirementsScreenNode: ViewControllerTracingNode
     private let openAccountTextNode: ImmediateTextNode
     private let masterPasscodeTextNode: ImmediateTextNode
     let openAccountCheckNode: CheckNode
-    let masterPasswordCheckNode: CheckNode
+    let masterPasscodeCheckNode: CheckNode
     let buttonNode: SolidRoundedButtonNode
     
     var setMasterPassword: (() -> Void)?
@@ -152,7 +152,7 @@ private final class FalseBottomRequirementsScreenNode: ViewControllerTracingNode
         
         self.openAccountCheckNode = CheckNode(strokeColor: presentationData.theme.list.itemCheckColors.strokeColor, fillColor: presentationData.theme.list.itemSwitchColors.positiveColor, foregroundColor: presentationData.theme.list.itemCheckColors.foregroundColor, style: .plain)
         
-        self.masterPasswordCheckNode = CheckNode(strokeColor: presentationData.theme.list.itemCheckColors.strokeColor, fillColor: presentationData.theme.list.itemSwitchColors.positiveColor, foregroundColor: presentationData.theme.list.itemCheckColors.foregroundColor, style: .plain)
+        self.masterPasscodeCheckNode = CheckNode(strokeColor: presentationData.theme.list.itemCheckColors.strokeColor, fillColor: presentationData.theme.list.itemSwitchColors.positiveColor, foregroundColor: presentationData.theme.list.itemCheckColors.foregroundColor, style: .plain)
         
         super.init()
         
@@ -162,13 +162,13 @@ private final class FalseBottomRequirementsScreenNode: ViewControllerTracingNode
         self.addSubnode(self.masterPasscodeTextNode)
         self.addSubnode(self.buttonNode)
         self.addSubnode(self.openAccountCheckNode)
-        self.addSubnode(self.masterPasswordCheckNode)
+        self.addSubnode(self.masterPasscodeCheckNode)
         
         self.openAccountCheckNode.addTarget(target: self, action: #selector(didTapOpenAccountText))
-        self.masterPasswordCheckNode.addTarget(target: self, action: #selector(didTapMasterPasswordText))
+        self.masterPasscodeCheckNode.addTarget(target: self, action: #selector(didTapMasterPasswordText))
         
         self.openAccountTextNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(didTapOpenAccountText)))
-        self.masterPasswordCheckNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(didTapMasterPasswordText)))
+        self.masterPasscodeTextNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(didTapMasterPasswordText)))
         
         self.buttonNode.pressed = {
             action()
@@ -218,7 +218,7 @@ private final class FalseBottomRequirementsScreenNode: ViewControllerTracingNode
         transition.updateFrameAdditive(node: self.openAccountCheckNode, frame: openAccountCheckFrame)
         
         let masterPasswordCheckFrame = CGRect(origin: CGPoint(x: sideInset, y: masterPasscodeTextFrame.midY - checkSize.width / 2), size: checkSize)
-        transition.updateFrameAdditive(node: self.masterPasswordCheckNode, frame: masterPasswordCheckFrame)
+        transition.updateFrameAdditive(node: self.masterPasscodeCheckNode, frame: masterPasswordCheckFrame)
     }
     
     @objc private func didTapOpenAccountText() {
@@ -228,7 +228,7 @@ private final class FalseBottomRequirementsScreenNode: ViewControllerTracingNode
     }
     
     @objc private func didTapMasterPasswordText() {
-        guard !self.masterPasswordCheckNode.isChecked else { return }
+        guard !self.masterPasscodeCheckNode.isChecked else { return }
         
         self.setMasterPassword?()
     }
