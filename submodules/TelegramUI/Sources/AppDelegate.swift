@@ -2058,7 +2058,7 @@ final class SharedApplicationContext {
                     context.rootController.popToRoot(animated: true)
                 }
                 
-                let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits6))
+                let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits4), isChangeModeAllowed: false)
                 setupController.complete = { passcode, numerical in
                     let _ = (accountContext.accountManager.transaction({ transaction -> Void in
                         var data = transaction.getAccessChallengeData()

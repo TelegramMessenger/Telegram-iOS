@@ -142,6 +142,7 @@ public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var validLayout: (CGSize, CGFloat)?
     
     public var complete: ((String) -> Void)?
+    public var didEnter4Digits: ((String, () -> Void) -> Void)?
     
     public var text: String {
         return self.textFieldNode.textField.text ?? ""
@@ -376,6 +377,15 @@ public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
                 self.complete?(text)
             }
         }
+        
+        if fieldType == .digits6, text.count == 4, let didEnter4Digits = self.didEnter4Digits {
+            didEnter4Digits(text, { [weak self] in
+                guard let strongSelf = self else { return }
+                
+                strongSelf.complete?(text)
+            })
+        }
+        
         return true
     }
 }

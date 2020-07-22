@@ -51,6 +51,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     
     var checkPasscode: ((String) -> Void)?
     var requestBiometrics: (() -> Void)?
+    var didEnter4Digits: ((String, () -> Void) -> Void)?
     
     init(accountManager: AccountManager, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, passcodeType: PasscodeEntryFieldType, biometricsType: LocalAuthBiometricAuthentication?, arguments: PasscodeEntryControllerPresentationArguments, statusBar: StatusBar, modalPresentation: Bool) {
         self.accountManager = accountManager
@@ -97,6 +98,14 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             } else {
                 strongSelf.checkPasscode?(passcode)
             }
+        }
+        
+        self.inputFieldNode.didEnter4Digits = { [weak self] passcode, completion in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            strongSelf.didEnter4Digits?(passcode, completion)
         }
         
         self.cancelButtonNode.setTitle(strings.Common_Cancel, with: buttonFont, with: .white, for: .normal)

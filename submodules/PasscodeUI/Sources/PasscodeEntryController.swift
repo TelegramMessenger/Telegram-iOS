@@ -142,27 +142,40 @@ public final class PasscodeEntryController: ViewController {
             strongSelf.controllerNode.updateInvalidAttempts(attempts)
         })
         
+        func check(passcode: String, challengeData: PostboxAccessChallengeData) -> Bool {
+            switch challengeData {
+            case .none:
+                return true
+            case let .numericalPassword(code):
+                return passcode == normalizeArabicNumeralString(code, type: .western)
+            case let .plaintextPassword(code):
+                return passcode == code
+            }
+        }
+        
+        self.controllerNode.didEnter4Digits = { [weak self] passcode, completion in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            for (id, challengeData) in strongSelf.hiddenAccountsAccessChallengeData {
+                if check(passcode: passcode, challengeData: challengeData) {
+                    completion()
+                    break
+                }
+            }
+        }
+        
         self.controllerNode.checkPasscode = { [weak self] passcode in
             guard let strongSelf = self else {
                 return
             }
-    
-            func check(challengeData: PostboxAccessChallengeData) -> Bool {
-                switch challengeData {
-                case .none:
-                    return true
-                case let .numericalPassword(code):
-                    return passcode == normalizeArabicNumeralString(code, type: .western)
-                case let .plaintextPassword(code):
-                    return passcode == code
-                }
-            }
             
-            var succeed = check(challengeData: strongSelf.challengeData)
+            var succeed = check(passcode: passcode, challengeData: strongSelf.challengeData)
             
             if !succeed {
                 for (id, challengeData) in strongSelf.hiddenAccountsAccessChallengeData {
-                    if check(challengeData: challengeData) {
+                    if check(passcode: passcode, challengeData: challengeData) {
                         strongSelf.appLockContext.unlockedHiddenAccountRecordId.set(id)
                         succeed = true
                         break
