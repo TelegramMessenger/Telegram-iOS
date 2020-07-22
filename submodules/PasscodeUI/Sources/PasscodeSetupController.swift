@@ -31,9 +31,12 @@ public final class PasscodeSetupController: ViewController {
     
     private var nextAction: UIBarButtonItem?
     
-    public init(context: SharedAccountContext, mode: PasscodeSetupControllerMode) {
+    private let isChangeModeAllowed: Bool
+    
+    public init(context: SharedAccountContext, mode: PasscodeSetupControllerMode, isChangeModeAllowed: Bool = true) {
         self.context = context
         self.mode = mode
+        self.isChangeModeAllowed = isChangeModeAllowed
         self.presentationData = context.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
@@ -51,7 +54,7 @@ public final class PasscodeSetupController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PasscodeSetupControllerNode(presentationData: self.presentationData, mode: self.mode)
+        self.displayNode = PasscodeSetupControllerNode(presentationData: self.presentationData, mode: self.mode, isChangeModeAllowed: isChangeModeAllowed)
         self.displayNodeDidLoad()
         
         self.controllerNode.selectPasscodeMode = { [weak self] in

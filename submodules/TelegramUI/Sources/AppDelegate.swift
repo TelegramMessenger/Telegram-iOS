@@ -1307,7 +1307,16 @@ final class SharedApplicationContext {
                     return activeAccountsAndPeers(context: context.context)
                     |> take(1)
                     |> map { primaryAndAccounts -> (Account, Peer, Int32)? in
-                        return primaryAndAccounts.1.first
+                        let accounts = primaryAndAccounts.1
+                        if context.context.sharedContext.appLockContext.unlockedHiddenAccountRecordId != nil {
+                            if accounts.count > 1 {
+                                return accounts.first
+                            } else {
+                                return nil
+                            }
+                        } else {
+                            return accounts.first
+                        }
                     }
                     |> map { accountAndPeer -> String? in
                         if let (_, peer, _) = accountAndPeer {
@@ -2058,7 +2067,7 @@ final class SharedApplicationContext {
                     context.rootController.popToRoot(animated: true)
                 }
                 
-                let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits6))
+                let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits4), isChangeModeAllowed: false)
                 setupController.complete = { passcode, numerical in
                     let _ = (accountContext.accountManager.transaction({ transaction -> Void in
                         var data = transaction.getAccessChallengeData()

@@ -56,10 +56,12 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     private var maxBottomInset: CGFloat?
+    private let isChangeModeAllowed: Bool
     
-    init(presentationData: PresentationData, mode: PasscodeSetupControllerMode) {
+    init(presentationData: PresentationData, mode: PasscodeSetupControllerMode, isChangeModeAllowed: Bool) {
         self.presentationData = presentationData
         self.mode = mode
+        self.isChangeModeAllowed = isChangeModeAllowed
         
         self.wrapperNode = ASDisplayNode()
         
@@ -80,8 +82,8 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                     default:
                         passcodeType = .alphanumeric
                 }
-            case .setup:
-                passcodeType = .digits6
+            case let .setup(_ , type):
+                passcodeType = type
         }
         
         self.inputFieldNode = PasscodeInputFieldNode(color: self.presentationData.theme.list.itemPrimaryTextColor, accentColor: self.presentationData.theme.list.itemAccentColor, fieldType: passcodeType, keyboardAppearance: self.presentationData.theme.rootController.keyboardColor.keyboardAppearance)
@@ -129,6 +131,11 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         }
         
         self.modeButtonNode.addTarget(self, action: #selector(self.modePressed), forControlEvents: .touchUpInside)
+        
+        if !self.isChangeModeAllowed {
+            self.modeButtonNode.isHidden = true
+            self.modeButtonNode.isAccessibilityElement = false
+        }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -220,8 +227,10 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                             self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.EnterPasscode_EnterNewPasscodeChange, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
                             self.subtitleNode.isHidden = false
                             self.subtitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.PasscodeSettings_DoNotMatch, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
-                            self.modeButtonNode.isHidden = false
-                            self.modeButtonNode.isAccessibilityElement = true
+                            if self.isChangeModeAllowed {
+                                self.modeButtonNode.isHidden = false
+                                self.modeButtonNode.isAccessibilityElement = true
+                            }
                             
                             UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: self.presentationData.strings.PasscodeSettings_DoNotMatch)
                             
