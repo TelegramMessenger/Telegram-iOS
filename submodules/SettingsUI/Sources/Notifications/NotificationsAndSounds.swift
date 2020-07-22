@@ -907,7 +907,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
             settings.channels.displayPreviews = value
             return settings
         }).start()
-    }, updateChannelSound: {value in
+    }, updateChannelSound: { value in
         let _ = updateGlobalNotificationSettingsInteractively(postbox: context.account.postbox, { settings in
             var settings = settings
             settings.channels.sound = value
