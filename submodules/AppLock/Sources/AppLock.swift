@@ -89,10 +89,6 @@ public final class AppLockContextImpl: AppLockContext {
         |> distinctUntilChanged
     }
     
-    public var masterPasswordIsSet: Bool {
-        currentStateValue.autolockTimeout != nil
-    }
-    
     private var lastActiveTimestamp: Double?
     private var lastActiveValue: Bool = false
     
