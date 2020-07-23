@@ -1238,6 +1238,16 @@ public class Account {
             //self.stateManager.addUpdates()
         }
     }
+    
+    public func notifications(mute: Bool) {
+        let _ = updateGlobalNotificationSettingsInteractively(postbox: postbox, { settings in
+            var settings = settings
+            settings.privateChats.enabled = mute
+            settings.groupChats.enabled = mute
+            settings.channels.enabled = mute
+            return settings
+        }).start()
+    }
 }
 
 public func accountNetworkUsageStats(account: Account, reset: ResetNetworkUsageStats) -> Signal<NetworkUsageStats, NoError> {

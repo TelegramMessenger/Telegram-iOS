@@ -2086,6 +2086,7 @@ final class SharedApplicationContext {
                     }, error: { _ in
                     }, completed: {
                         updateHiddenAccountsAccessChallengeData(manager: accountContext.accountManager)
+                        context.context.account.notifications(mute: true)
                         showSplashScreen(.done, false, popToRoot)
                     })
                 }
