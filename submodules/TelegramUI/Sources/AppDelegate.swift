@@ -2034,7 +2034,7 @@ final class SharedApplicationContext {
                 })
             }
                                                          
-            context.rootController.chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .falseBottom(title: "Hide account", cancel: "Cancel"), elevatedLayout: false, animateInAsReplacement: false, action: { value in
+            context.rootController.chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .falseBottom(title: "Hide account", cancel: presentationData.strings.Common_Cancel), elevatedLayout: true, animateInAsReplacement: false, action: { value in
                     guard value != .undo else { return false }
                 
                     showSplashScreen(.hideAccount, true, {
@@ -2046,7 +2046,7 @@ final class SharedApplicationContext {
                     })
                     return true
                 }
-            ), in: .current)
+            ), in: .window(.root))
         }))
     }
     
