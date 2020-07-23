@@ -2033,9 +2033,10 @@ final class SharedApplicationContext {
                     }
                 })
             }
-
-            context.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Add false bottom?", actions: [
-                TextAlertAction(type: .genericAction, title: "Yes", action: {
+                                                         
+            context.rootController.currentWindow?.present(UndoOverlayController(presentationData: presentationData, content: .falseBottom(title: "Hide account", cancel: "Cancel"), elevatedLayout: false, animateInAsReplacement: false, action: { value in
+                    guard value != .undo else { return false }
+                
                     showSplashScreen(.hideAccount, true, {
                         showOtherAccountScreenIfNeeded { [weak self] in
                             guard let strongSelf = self else { return }
@@ -2043,9 +2044,9 @@ final class SharedApplicationContext {
                             strongSelf.continueFalseBottomFlow()
                         }
                     })
-                }),
-                TextAlertAction(type: .defaultAction, title: "No", action: {})
-            ]), on: .root, blockInteraction: false, completion: {})
+                    return true
+                }
+            ), on: .root, blockInteraction: false, completion: {})
         }))
     }
     
@@ -2156,7 +2157,7 @@ final class SharedApplicationContext {
                 
                 showSplashScreen(.setSecretPasscode, true, addFalseBottomToCurrentAccount)
             }
-            
+
             showMasterPasscodeScreenIfNeeded(showSecretPasscodeScreen)
         }))
     }
