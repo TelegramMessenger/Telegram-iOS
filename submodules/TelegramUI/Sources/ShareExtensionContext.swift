@@ -167,15 +167,16 @@ public class ShareRootControllerImpl {
             
             let internalContext: InternalContext
             
+            initializeAccountManagement()
+            
             let displayedAccountsFilter = DisplayedAccountsFilterImpl()
             let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", displayedAccountsFilter: displayedAccountsFilter)
             
+            updateHiddenAccountsAccessChallengeData(manager: accountManager)
+            
             if let globalInternalContext = globalInternalContext {
                 internalContext = globalInternalContext
-                updateHiddenAccountsAccessChallengeData(manager: accountManager)
             } else {
-                initializeAccountManagement()
-                updateHiddenAccountsAccessChallengeData(manager: accountManager)
                 var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
                 let semaphore = DispatchSemaphore(value: 0)
                 let systemUserInterfaceStyle: WindowUserInterfaceStyle
@@ -223,7 +224,7 @@ public class ShareRootControllerImpl {
                 Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
                 
                 return combineLatest(sharedContext.activeAccountsWithInfo, accountManager.transaction { transaction -> (Set<AccountRecordId>, PeerId?) in
-                    let accountRecords = Set(transaction.getRecords().map { record in
+                    let accountRecords = Set(transaction.getAllRecords().map { record in
                         return record.id
                     })
                     let intentsSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings) as? IntentsSettings ?? IntentsSettings.defaultSettings

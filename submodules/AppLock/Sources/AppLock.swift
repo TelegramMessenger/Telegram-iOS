@@ -89,12 +89,16 @@ public final class AppLockContextImpl: AppLockContext {
         |> distinctUntilChanged
     }
     
+    public var masterPasswordIsSet: Bool {
+        currentStateValue.autolockTimeout != nil
+    }
+    
     private var lastActiveTimestamp: Double?
     private var lastActiveValue: Bool = false
     
     private let hiddenAccountsAccessChallengeDataPromise: Promise<[AccountRecordId:PostboxAccessChallengeData]>
     private var hiddenAccountsAccessChallengeDataDisposable: Disposable?
-    private var hiddenAccountsAccessChallengeData = [AccountRecordId:PostboxAccessChallengeData]()
+    public private(set) var hiddenAccountsAccessChallengeData = [AccountRecordId:PostboxAccessChallengeData]()
     
     public var unlockedHiddenAccountRecordId = ValuePromise<AccountRecordId?>()
     
