@@ -76,6 +76,7 @@ private var declaredEncodables: Void = {
     declareEncodable(AccountEnvironmentAttribute.self, f: { AccountEnvironmentAttribute(decoder: $0) })
     declareEncodable(AccountSortOrderAttribute.self, f: { AccountSortOrderAttribute(decoder: $0) })
     declareEncodable(HiddenAccountAttribute.self, f: { HiddenAccountAttribute(decoder: $0) })
+    declareEncodable(ContinueFalseBottomFlowAttribute.self, f: { ContinueFalseBottomFlowAttribute(decoder: $0) })
     declareEncodable(CloudChatClearHistoryOperation.self, f: { CloudChatClearHistoryOperation(decoder: $0) })
     declareEncodable(OutgoingContentInfoMessageAttribute.self, f: { OutgoingContentInfoMessageAttribute(decoder: $0) })
     declareEncodable(ConsumableContentMessageAttribute.self, f: { ConsumableContentMessageAttribute(decoder: $0) })

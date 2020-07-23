@@ -506,6 +506,7 @@ public protocol SharedAccountContext: class {
     
     func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: ViewController?, withChatListController chatListController: ViewController?)
     func beginNewAuth(testingEnvironment: Bool)
+    func beginNewAuthAndContinueFalseBottomFlow(testingEnvironment: Bool)
 }
 
 #if ENABLE_WALLET

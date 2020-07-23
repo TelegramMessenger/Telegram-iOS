@@ -74,6 +74,8 @@ public class UnauthorizedAccount {
     
     public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
     
+    public var continueFalseBottomFlowAccountRecordId: AccountRecordId?
+    
     init(networkArguments: NetworkInitializationArguments, id: AccountRecordId, rootPath: String, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, shouldKeepAutoConnection: Bool = true) {
         self.networkArguments = networkArguments
         self.id = id
