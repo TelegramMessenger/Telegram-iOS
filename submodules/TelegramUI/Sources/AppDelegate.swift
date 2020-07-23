@@ -2008,94 +2008,113 @@ final class SharedApplicationContext {
                 }
             }
             
-            let showRequirementsScreen: (@escaping () -> Void) -> Void = { action in
-                let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
-                let accountContext = context.sharedApplicationContext.sharedContext
-                let controller = FalseBottomRequirementsScreen(presentationData: presentationData, context: accountContext)
-                controller.buttonPressed = action
+            let showOtherAccountScreenIfNeeded: (@escaping () -> Void) -> Void = { completion in
+                let checkOtherAccounts: (@escaping (Bool) -> Void) -> Void = { completion in
+                    let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> Bool in
+                        return transaction.getRecords().count > 1
+                    } |> deliverOnMainQueue).start(next: { result in
+                        completion(result)
+                    })
+                }
                 
-                // TODO: --
-                controller.createAnotherAccount = {}
+                checkOtherAccounts({ hasOtherAccounts in
+                    if hasOtherAccounts {
+                        completion()
+                    } else {
+                        showSplashScreen(.addOneMoreAcount, true, {
+                            // TODO: -- perform full auth flow here
+                            completion()
+                        })
+                    }
+                })
+            }
+
+            let showMasterPasscodeScreenIfNeeded: (@escaping () -> Void) -> Void = { completion in
+                let checkMasterPassode: (@escaping (Bool) -> Void) -> Void = { completion in
+                    let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> Bool in
+                        return transaction.getAccessChallengeData() != .none
+                    } |> deliverOnMainQueue).start(next: { result in
+                        completion(result)
+                    })
+                }
                 
-                controller.setMasterPassword = { [weak controller] in
-                    guard let strongController = controller else { return }
+                let setupMasterPasscode: (@escaping () -> Void) -> Void = { innerCompletion in
+                    let accountContext = context.sharedApplicationContext.sharedContext
+                    let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits6))
+                    setupController.complete = { passcode, numerical in
+                        let _ = (accountContext.accountManager.transaction({ transaction -> Void in
+                            var data = transaction.getAccessChallengeData()
+                            if numerical {
+                                data = PostboxAccessChallengeData.numericalPassword(value: passcode)
+                            } else {
+                                data = PostboxAccessChallengeData.plaintextPassword(value: passcode)
+                            }
+                            
+                            transaction.setAccessChallengeData(data)
+                            
+                            updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(1 * 60 * 60).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
+                        }) |> deliverOnMainQueue).start(next: { _ in
+                        }, error: { _ in
+                        }, completed: {
+                            innerCompletion()
+                        })
+                    }
+                    context.rootController.pushViewController(setupController, animated: true)
+                }
+                
+                checkMasterPassode({ isMasterPasscodeSet in
+                    if isMasterPasscodeSet {
+                        completion()
+                    } else {
+                        showSplashScreen(.setMasterPasscode, true, {
+                            setupMasterPasscode(completion)
+                        })
+                    }
+                })
+            }
+            
+            let showSecretPasscodeScreen: () -> Void = {
+                let addFalseBottomToCurrentAccount: () -> Void = {
+                    let accountContext = context.sharedApplicationContext.sharedContext
                     
                     let popToRoot: () -> Void = {
                         context.rootController.popToRoot(animated: true)
                     }
                     
-                    var innerReplaceTopControllerImpl: ((ViewController, Bool) -> Void)?
-                    let introController = PrivacyIntroController(context: accountContext, mode: .passcode, proceedAction: {
-                        let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits6))
-                        setupController.complete = { passcode, numerical in
-                            let _ = (accountContext.accountManager.transaction({ transaction -> Void in
-                                var data = transaction.getAccessChallengeData()
-                                if numerical {
-                                    data = PostboxAccessChallengeData.numericalPassword(value: passcode)
-                                } else {
-                                    data = PostboxAccessChallengeData.plaintextPassword(value: passcode)
-                                }
-                                
-                                transaction.setAccessChallengeData(data)
+                    let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits4), isChangeModeAllowed: false)
+                    setupController.complete = { passcode, numerical in
+                        let _ = (accountContext.accountManager.transaction({ transaction -> Void in
+                            var data = transaction.getAccessChallengeData()
+                            if numerical {
+                                data = PostboxAccessChallengeData.numericalPassword(value: passcode)
+                            } else {
+                                data = PostboxAccessChallengeData.plaintextPassword(value: passcode)
+                            }
+                            
+                            if let (id, _) = transaction.getCurrent() {
+                                setAccountRecordAccessChallengeData(transaction: transaction, id: id, accessChallengeData: data)
+                                accountContext.appLockContext.unlockedHiddenAccountRecordId.set(id)
+                            }
 
-                                updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(1 * 60 * 60).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
-                            }) |> deliverOnMainQueue).start(next: { _ in
-                            }, error: { _ in
-                            }, completed: {
-                                replaceTopControllerImpl(strongController, false)
-                                strongController.didSetMasterPassword()
+                        }) |> deliverOnMainQueue).start(next: { _ in
+                        }, error: { _ in
+                        }, completed: {
+                            updateHiddenAccountsAccessChallengeData(manager: accountContext.accountManager)
+                            showSplashScreen(.accountWasHidden, false, {
+                                accountContext.appLockContext.lock()
+                                popToRoot()
                             })
-                        }
-                        innerReplaceTopControllerImpl?(setupController, true)
-                        innerReplaceTopControllerImpl = { [weak setupController] c, animated in
-                            (setupController?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
-                        }
-                    })
-                    replaceTopControllerImpl(introController, false)
-                    innerReplaceTopControllerImpl = { [weak introController] c, animated in
-                        (introController?.navigationController as? NavigationController)?.replaceTopController(c, animated: animated)
+                        })
                     }
+                    replaceTopControllerImpl(setupController, false)
                 }
                 
-                context.rootController.pushViewController(controller, animated: true)
-            }
-            
-            let addFalseBottomToCurrentAccount: () -> Void = {
-                let accountContext = context.sharedApplicationContext.sharedContext
-                
-                let popToRoot: () -> Void = {
-                    context.rootController.popToRoot(animated: true)
-                }
-                
-                let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits4), isChangeModeAllowed: false)
-                setupController.complete = { passcode, numerical in
-                    let _ = (accountContext.accountManager.transaction({ transaction -> Void in
-                        var data = transaction.getAccessChallengeData()
-                        if numerical {
-                            data = PostboxAccessChallengeData.numericalPassword(value: passcode)
-                        } else {
-                            data = PostboxAccessChallengeData.plaintextPassword(value: passcode)
-                        }
-                        
-                        if let (id, _) = transaction.getCurrent() {
-                            setAccountRecordAccessChallengeData(transaction: transaction, id: id, accessChallengeData: data)
-                            accountContext.appLockContext.unlockedHiddenAccountRecordId.set(id)
-                        }
-
-                    }) |> deliverOnMainQueue).start(next: { _ in
-                    }, error: { _ in
-                    }, completed: {
-                        updateHiddenAccountsAccessChallengeData(manager: accountContext.accountManager)
-                        context.context.account.notifications(mute: true)
-                        showSplashScreen(.done, false, popToRoot)
-                    })
-                }
-                replaceTopControllerImpl(setupController, false)
+                showSplashScreen(.setSecretPasscode, true, addFalseBottomToCurrentAccount)
             }
             
             context.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Add false bottom?", actions: [
                 TextAlertAction(type: .genericAction, title: "Yes", action: {
-                    showSplashScreen(.intro, true, { showRequirementsScreen(addFalseBottomToCurrentAccount) })
+                    showSplashScreen(.hideAccount, true, { showOtherAccountScreenIfNeeded { showMasterPasscodeScreenIfNeeded(showSecretPasscodeScreen) } })
                 }),
                 TextAlertAction(type: .defaultAction, title: "No", action: {})
             ]), on: .root, blockInteraction: false, completion: {})

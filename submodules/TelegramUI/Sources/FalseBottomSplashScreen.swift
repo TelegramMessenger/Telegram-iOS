@@ -12,8 +12,11 @@ import TelegramPresentationData
 import PresentationDataUtils
 
 public enum FalseBottomSplashMode {
-    case intro
-    case done
+    case hideAccount
+    case addOneMoreAcount
+    case setMasterPasscode
+    case setSecretPasscode
+    case accountWasHidden
 }
 
 public final class FalseBottomSplashScreen: ViewController {
@@ -97,8 +100,8 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
         let textColor = self.presentationData.theme.list.itemPrimaryTextColor
 
         switch mode {
-        case .intro:
-            title = "False Bottom"
+        case .hideAccount:
+            title = "Hide Account"
             text = NSAttributedString(string: "Access different accounts depending on the passcode you enter", font: textFont, textColor: textColor)
             buttonText = "Enable"
             
@@ -107,10 +110,43 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
                 self.animationSize = CGSize(width: 124.0, height: 124.0)
                 self.animationNode.visibility = true
             }
-        case .done:
+        case .addOneMoreAcount:
+            title = "One More Account"
+            text = NSAttributedString(string: "You have to add one more Telegram account which will always be visible", font: textFont, textColor: textColor)
+            buttonText = "Add Account"
+            
+            if let path = getAppBundle().path(forResource: "TwoFactorSetupIntro", ofType: "tgs") {
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct)
+                self.animationSize = CGSize(width: 124.0, height: 124.0)
+                self.animationNode.visibility = true
+        }
+            
+        case .setMasterPasscode:
+            title = "Shared Passcode"
+            text = NSAttributedString(string: "Set up a shared passcode for all non-hidden accounts", font: textFont, textColor: textColor)
+            buttonText = "Set Passcode"
+            
+            if let path = getAppBundle().path(forResource: "TwoFactorSetupIntro", ofType: "tgs") {
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct)
+                self.animationSize = CGSize(width: 124.0, height: 124.0)
+                self.animationNode.visibility = true
+            }
+            
+        case .setSecretPasscode:
+            title = "Hidden passcode"
+            text = NSAttributedString(string: "Set up a passcode for the account you want to hide", font: textFont, textColor: textColor)
+            buttonText = "Set Passcode"
+            
+            if let path = getAppBundle().path(forResource: "TwoFactorSetupIntro", ofType: "tgs") {
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct)
+                self.animationSize = CGSize(width: 124.0, height: 124.0)
+                self.animationNode.visibility = true
+            }
+
+        case .accountWasHidden:
             title = "Account is hidden"
-            text = NSAttributedString(string: "", font: textFont, textColor: textColor)
-            buttonText = "Continue"
+            text = NSAttributedString(string: "Now you can open the account you need by entering the corresponding passcode", font: textFont, textColor: textColor)
+            buttonText = "Enter Passcode"
             
             if let path = getAppBundle().path(forResource: "TwoFactorSetupDone", ofType: "tgs") {
                 self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, mode: .direct)
@@ -163,7 +199,7 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
         let iconSize: CGSize = self.animationSize
         var iconOffset = CGPoint()
         switch self.mode {
-        case .done:
+        case .accountWasHidden:
             iconOffset.x = 10.0
         default:
             break
