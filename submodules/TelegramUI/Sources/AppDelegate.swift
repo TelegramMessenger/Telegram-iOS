@@ -194,6 +194,7 @@ final class SharedApplicationContext {
     private let openChatWhenReadyDisposable = MetaDisposable()
     private let openUrlWhenReadyDisposable = MetaDisposable()
     private let showFalseBottomAlertDisposable = MetaDisposable()
+    private let continueFalseBottomFlowDisposable = MetaDisposable()
     
     private let badgeDisposable = MetaDisposable()
     private let quickActionsDisposable = MetaDisposable()
@@ -1205,7 +1206,11 @@ final class SharedApplicationContext {
                         authContextValue.rootController.view.endEditing(true)
                         authContextValue.rootController.dismiss()
                         if let strongSelf = self {
-                            strongSelf.showFalseBottomAlert()
+                            if let accountRecordId = authContextValue.account.continueFalseBottomFlowAccountRecordId {
+                                strongSelf.continueFalseBottomFlow(hideAccountWithId: accountRecordId)
+                            } else {
+                                strongSelf.showFalseBottomAlert()
+                            }
                         }
                     })
                 } else {
@@ -2022,13 +2027,50 @@ final class SharedApplicationContext {
                         completion()
                     } else {
                         showSplashScreen(.addOneMoreAcount, true, {
-                            // TODO: -- perform full auth flow here
-                            completion()
+                            let isTestingEnvironment = context.context.account.testingEnvironment
+                            context.sharedApplicationContext.sharedContext.beginNewAuthAndContinueFalseBottomFlow(testingEnvironment: isTestingEnvironment)
                         })
                     }
                 })
             }
-
+                                                         
+            context.rootController.currentWindow?.present(UndoOverlayController(presentationData: presentationData, content: .falseBottom(title: "Hide account", cancel: "Cancel"), elevatedLayout: false, animateInAsReplacement: false, action: { value in
+                    guard value != .undo else { return false }
+                
+                    showSplashScreen(.hideAccount, true, {
+                        showOtherAccountScreenIfNeeded { [weak self] in
+                            guard let strongSelf = self else { return }
+                            
+                            strongSelf.continueFalseBottomFlow()
+                        }
+                    })
+                    return true
+                }
+            ), on: .root, blockInteraction: false, completion: {})
+        }))
+    }
+    
+    private func continueFalseBottomFlow(hideAccountWithId: AccountRecordId? = nil) {
+        self.continueFalseBottomFlowDisposable.set((self.authorizedContext()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { context in
+            let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
+            
+            let replaceTopControllerImpl: (ViewController, Bool) -> Void = { c, animated in
+                context.rootController.replaceTopController(c, animated: animated)
+            }
+            
+            let showSplashScreen: (FalseBottomSplashMode, Bool, @escaping () -> Void) -> Void = { mode, push, action in
+                let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
+                let controller = FalseBottomSplashScreen(presentationData: presentationData, mode: mode)
+                controller.buttonPressed = action
+                if push {
+                    context.rootController.pushViewController(controller, animated: true)
+                } else {
+                    replaceTopControllerImpl(controller, true)
+                }
+            }
+                
             let showMasterPasscodeScreenIfNeeded: (@escaping () -> Void) -> Void = { completion in
                 let checkMasterPassode: (@escaping (Bool) -> Void) -> Void = { completion in
                     let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> Bool in
@@ -2091,9 +2133,13 @@ final class SharedApplicationContext {
                                 data = PostboxAccessChallengeData.plaintextPassword(value: passcode)
                             }
                             
-                            if let (id, _) = transaction.getCurrent() {
+                            var id = hideAccountWithId
+                            if id == nil, let (currentId, _) = transaction.getCurrent() {
+                                id = currentId
+                            }
+                            
+                            if let id = id {
                                 setAccountRecordAccessChallengeData(transaction: transaction, id: id, accessChallengeData: data)
-                                accountContext.appLockContext.unlockedHiddenAccountRecordId.set(id)
                             }
 
                         }) |> deliverOnMainQueue).start(next: { _ in
@@ -2111,14 +2157,8 @@ final class SharedApplicationContext {
                 
                 showSplashScreen(.setSecretPasscode, true, addFalseBottomToCurrentAccount)
             }
-                        
-            context.rootController.currentWindow?.present(UndoOverlayController(presentationData: presentationData, content: .falseBottom(title: "Hide account", cancel: "Cancel"), elevatedLayout: false, animateInAsReplacement: false, action: { value in
-                    guard value != .undo else { return false }
-                
-                    showSplashScreen(.hideAccount, true, { showOtherAccountScreenIfNeeded { showMasterPasscodeScreenIfNeeded(showSecretPasscodeScreen) } })
-                    return true
-                }
-            ), on: .root, blockInteraction: false, completion: {})
+
+            showMasterPasscodeScreenIfNeeded(showSecretPasscodeScreen)
         }))
     }
     
