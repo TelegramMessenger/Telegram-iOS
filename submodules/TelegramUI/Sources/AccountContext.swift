@@ -272,25 +272,6 @@ public final class AccountContextImpl: AccountContext {
         timer.start()
     }
     
-    public func muteAccountNotifications() {
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
-            var settings = settings
-            settings.privateChats.enabled = false
-            settings.groupChats.enabled = false
-            settings.channels.enabled = false
-            return settings
-        }).start()
-        
-        let _ = updateInAppNotificationSettingsInteractively(accountManager: sharedContext.accountManager, { settings in
-            var settings = settings
-            settings.playSounds = false
-            settings.vibrate = false
-            settings.displayPreviews = false
-            
-            return settings
-        }).start()
-    }
-    
     public func getStoredSecureIdPassword() -> String? {
         if let (password, timestamp, timer) = self.storedPassword {
             if CFAbsoluteTimeGetCurrent() > timestamp + 1.0 * 60.0 * 60.0 {
