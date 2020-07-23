@@ -187,35 +187,45 @@ public func performAppGroupUpgrades(appGroupPath: String, rootPath: String) {
     }
 }
 
+public func getHiddenAccountsAccessChallengeData(transaction: AccountManagerModifier) -> [AccountRecordId:PostboxAccessChallengeData] {
+    var result = [AccountRecordId:PostboxAccessChallengeData]()
+    let recordsWithOrder: [(AccountRecord, Int32)] = transaction.getAllRecords().map { record in
+        var order: Int32 = 0
+        for attribute in record.attributes {
+            if let attribute = attribute as? AccountSortOrderAttribute {
+                order = attribute.order
+                break
+            }
+        }
+        return (record, order)
+    }
+    let records = recordsWithOrder.sorted(by: { $0.1 > $1.1 })
+        .map { $0.0 }
+    for record in records {
+        guard !record.attributes.contains(where: { $0 is LoggedOutAccountAttribute }) else { continue }
+        
+        var accessChallengeData = PostboxAccessChallengeData.none
+        for attribute in record.attributes {
+            if let attribute = attribute as? HiddenAccountAttribute {
+                accessChallengeData = attribute.accessChallengeData
+                break
+            }
+        }
+        if accessChallengeData != .none {
+            result[record.id] = accessChallengeData
+        }
+    }
+    return result
+}
+
 public func getHiddenAccountsAccessChallengeData(manager: AccountManager) -> Signal<[AccountRecordId:PostboxAccessChallengeData], NoError> {
     manager.transaction { transaction in
-        var result = [AccountRecordId:PostboxAccessChallengeData]()
-        let recordsWithOrder: [(AccountRecord, Int32)] = transaction.getAllRecords().map { record in
-            var order: Int32 = 0
-            for attribute in record.attributes {
-                if let attribute = attribute as? AccountSortOrderAttribute {
-                    order = attribute.order
-                    break
-                }
-            }
-            return (record, order)
-        }
-        let records = recordsWithOrder.sorted(by: { $0.1 > $1.1 })
-            .map { $0.0 }
-        for record in records {
-            var accessChallengeData = PostboxAccessChallengeData.none
-            for attribute in record.attributes {
-                if let attribute = attribute as? HiddenAccountAttribute {
-                    accessChallengeData = attribute.accessChallengeData
-                    break
-                }
-            }
-            if accessChallengeData != .none {
-                result[record.id] = accessChallengeData
-            }
-        }
-        return result
+        return getHiddenAccountsAccessChallengeData(transaction: transaction)
     }
+}
+
+public func updateHiddenAccountsAccessChallengeData(manager: AccountManager) {
+    manager.displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise.set(getHiddenAccountsAccessChallengeData(manager: manager))
 }
 
 public final class DisplayedAccountsFilterImpl: DisplayedAccountsFilter {
@@ -401,6 +411,8 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
                 return nil
             }
         })
+        let hiddenAccountsAccessChallengeData = getHiddenAccountsAccessChallengeData(transaction: transaction)
+        accountManager.displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise.set(.single(hiddenAccountsAccessChallengeData))
     }
 }
 

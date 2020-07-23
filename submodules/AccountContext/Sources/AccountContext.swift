@@ -419,6 +419,8 @@ public enum CreateGroupMode {
 }
 
 public protocol AppLockContext: class {
+    var masterPasswordIsSet: Bool { get }
+
     var invalidAttempts: Signal<AccessChallengeAttempts?, NoError> { get }
     var autolockDeadline: Signal<Int32?, NoError> { get }
     var unlockedHiddenAccountRecordId: ValuePromise<AccountRecordId?> { get }
@@ -437,6 +439,7 @@ public protocol SharedAccountContext: class {
     var mainWindow: Window1? { get }
     var accountManager: AccountManager { get }
     var appLockContext: AppLockContext { get }
+    var masterPasswordIsSet: Bool { get }
     
     var currentPresentationData: Atomic<PresentationData> { get }
     var presentationData: Signal<PresentationData, NoError> { get }

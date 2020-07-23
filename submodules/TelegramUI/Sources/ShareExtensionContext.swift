@@ -172,7 +172,7 @@ public class ShareRootControllerImpl {
             let displayedAccountsFilter = DisplayedAccountsFilterImpl()
             let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", displayedAccountsFilter: displayedAccountsFilter)
             
-            displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise.set(getHiddenAccountsAccessChallengeData(manager: accountManager))
+            updateHiddenAccountsAccessChallengeData(manager: accountManager)
             
             if let globalInternalContext = globalInternalContext {
                 internalContext = globalInternalContext
@@ -193,7 +193,7 @@ public class ShareRootControllerImpl {
                 
                 let presentationDataPromise = Promise<PresentationData>()
                 
-                let appLockContext = AppLockContextImpl(rootPath: rootPath, window: nil, rootController: nil, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), hiddenAccountsAccessChallengeDataPromise: displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise, lockIconInitialFrame: {
+                let appLockContext = AppLockContextImpl(rootPath: rootPath, window: nil, rootController: nil, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), hiddenAccountsAccessChallengeDataPromise: displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise, applicationIsActive: inForeground.get(), lockIconInitialFrame: {
                     return nil
                 })
                 
