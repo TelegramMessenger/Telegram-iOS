@@ -55,6 +55,13 @@ const CGFloat TGPhotoStickerSelectionViewHandleSide = 30.0f;
         _mirrored = entity.isMirrored;
         
         _stickerView = [context stickerViewForDocument:entity.document];
+        
+        __weak TGPhotoStickerEntityView *weakSelf = self;
+        _stickerView.started = ^(double duration) {
+            __strong TGPhotoStickerEntityView *strongSelf = weakSelf;
+            if (strongSelf != nil && strongSelf.started != nil)
+                strongSelf.started(duration);
+        };
         [self addSubview:_stickerView];
         
         _document = entity.document;
@@ -176,6 +183,22 @@ const CGFloat TGPhotoStickerSelectionViewHandleSide = 30.0f;
 
 - (void)updateVisibility:(bool)visible {
     [_stickerView setIsVisible:visible];
+}
+
+- (void)seekTo:(double)timestamp {
+    [_stickerView seekTo:timestamp];
+}
+
+- (void)play {
+    [_stickerView play];
+}
+
+- (void)pause {
+    [_stickerView pause];
+}
+
+- (void)resetToStart {
+    [_stickerView resetToStart];
 }
 
 @end

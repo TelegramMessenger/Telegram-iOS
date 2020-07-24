@@ -95,6 +95,7 @@ typedef enum
     if (self != nil)
     {
         _allowsTrimming = true;
+        _minimumLength = TGVideoScrubberMinimumTrimDuration;
         
         _currentTimeLabel = [[UILabel alloc] initWithFrame:CGRectMake(8, 4, 100, 15)];
         _currentTimeLabel.font = TGSystemFontOfSize(12.0f);
@@ -237,7 +238,7 @@ typedef enum
             
             NSTimeInterval duration = trimEndPosition - trimStartPosition;
             
-            if (trimEndPosition - trimStartPosition < TGVideoScrubberMinimumTrimDuration)
+            if (trimEndPosition - trimStartPosition < self.minimumLength)
                 return;
             
             if (strongSelf.maximumLength > DBL_EPSILON && duration > strongSelf.maximumLength)
@@ -300,7 +301,7 @@ typedef enum
             
             NSTimeInterval duration = trimEndPosition - trimStartPosition;
             
-            if (trimEndPosition - trimStartPosition < TGVideoScrubberMinimumTrimDuration)
+            if (trimEndPosition - trimStartPosition < self.minimumLength)
                 return;
             
             if (strongSelf.maximumLength > DBL_EPSILON && duration > strongSelf.maximumLength)

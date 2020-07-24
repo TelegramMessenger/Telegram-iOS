@@ -52,6 +52,7 @@ public enum AnimatedStickerMode {
 public enum AnimatedStickerPlaybackPosition {
     case start
     case end
+    case timestamp(Double)
 }
 
 public enum AnimatedStickerPlaybackMode {
@@ -83,8 +84,9 @@ public final class AnimatedStickerFrame {
 public protocol AnimatedStickerFrameSource: class {
     var frameRate: Int { get }
     var frameCount: Int { get }
+    var frameIndex: Int { get }
     
-    func takeFrame() -> AnimatedStickerFrame?
+    func takeFrame(draw: Bool) -> AnimatedStickerFrame?
     func skipToEnd()
 }
 
@@ -109,7 +111,7 @@ public final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource 
     let height: Int
     public let frameRate: Int
     public let frameCount: Int
-    private var frameIndex: Int
+    public var frameIndex: Int
     private let initialOffset: Int
     private var offset: Int
     var decodeBuffer: Data
@@ -179,7 +181,7 @@ public final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource 
         assert(self.queue.isCurrent())
     }
     
-    public func takeFrame() -> AnimatedStickerFrame? {
+    public func takeFrame(draw: Bool) -> AnimatedStickerFrame? {
         var frameData: Data?
         var isLastFrame = false
         
@@ -210,27 +212,29 @@ public final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource 
             
             self.offset += 4
             
-            self.scratchBuffer.withUnsafeMutableBytes { (scratchBytes: UnsafeMutablePointer<UInt8>) -> Void in
-                self.decodeBuffer.withUnsafeMutableBytes { (decodeBytes: UnsafeMutablePointer<UInt8>) -> Void in
-                    self.frameBuffer.withUnsafeMutableBytes { (frameBytes: UnsafeMutablePointer<UInt8>) -> Void in
-                        compression_decode_buffer(decodeBytes, decodeBufferLength, bytes.advanced(by: self.offset), Int(frameLength), UnsafeMutableRawPointer(scratchBytes), COMPRESSION_LZFSE)
-                        
-                        var lhs = UnsafeMutableRawPointer(frameBytes).assumingMemoryBound(to: UInt64.self)
-                        var rhs = UnsafeRawPointer(decodeBytes).assumingMemoryBound(to: UInt64.self)
-                        for _ in 0 ..< decodeBufferLength / 8 {
-                            lhs.pointee = lhs.pointee ^ rhs.pointee
-                            lhs = lhs.advanced(by: 1)
-                            rhs = rhs.advanced(by: 1)
+            if draw {
+                self.scratchBuffer.withUnsafeMutableBytes { (scratchBytes: UnsafeMutablePointer<UInt8>) -> Void in
+                    self.decodeBuffer.withUnsafeMutableBytes { (decodeBytes: UnsafeMutablePointer<UInt8>) -> Void in
+                        self.frameBuffer.withUnsafeMutableBytes { (frameBytes: UnsafeMutablePointer<UInt8>) -> Void in
+                            compression_decode_buffer(decodeBytes, decodeBufferLength, bytes.advanced(by: self.offset), Int(frameLength), UnsafeMutableRawPointer(scratchBytes), COMPRESSION_LZFSE)
+                            
+                            var lhs = UnsafeMutableRawPointer(frameBytes).assumingMemoryBound(to: UInt64.self)
+                            var rhs = UnsafeRawPointer(decodeBytes).assumingMemoryBound(to: UInt64.self)
+                            for _ in 0 ..< decodeBufferLength / 8 {
+                                lhs.pointee = lhs.pointee ^ rhs.pointee
+                                lhs = lhs.advanced(by: 1)
+                                rhs = rhs.advanced(by: 1)
+                            }
+                            var lhsRest = UnsafeMutableRawPointer(frameBytes).assumingMemoryBound(to: UInt8.self).advanced(by: (decodeBufferLength / 8) * 8)
+                            var rhsRest = UnsafeMutableRawPointer(decodeBytes).assumingMemoryBound(to: UInt8.self).advanced(by: (decodeBufferLength / 8) * 8)
+                            for _ in (decodeBufferLength / 8) * 8 ..< decodeBufferLength {
+                                lhsRest.pointee = rhsRest.pointee ^ lhsRest.pointee
+                                lhsRest = lhsRest.advanced(by: 1)
+                                rhsRest = rhsRest.advanced(by: 1)
+                            }
+                            
+                            frameData = Data(bytes: frameBytes, count: decodeBufferLength)
                         }
-                        var lhsRest = UnsafeMutableRawPointer(frameBytes).assumingMemoryBound(to: UInt8.self).advanced(by: (decodeBufferLength / 8) * 8)
-                        var rhsRest = UnsafeMutableRawPointer(decodeBytes).assumingMemoryBound(to: UInt8.self).advanced(by: (decodeBufferLength / 8) * 8)
-                        for _ in (decodeBufferLength / 8) * 8 ..< decodeBufferLength {
-                            lhsRest.pointee = rhsRest.pointee ^ lhsRest.pointee
-                            lhsRest = lhsRest.advanced(by: 1)
-                            rhsRest = rhsRest.advanced(by: 1)
-                        }
-                        
-                        frameData = Data(bytes: frameBytes, count: decodeBufferLength)
                     }
                 }
             }
@@ -247,7 +251,7 @@ public final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource 
             }
         }
         
-        if let frameData = frameData {
+        if let frameData = frameData, draw {
             return AnimatedStickerFrame(data: frameData, type: .yuva, width: self.width, height: self.height, bytesPerRow: self.bytesPerRow, index: frameIndex, isLastFrame: isLastFrame)
         } else {
             return nil
@@ -271,8 +275,12 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
     private let bytesPerRow: Int
     let frameCount: Int
     let frameRate: Int
-    private var currentFrame: Int
+    fileprivate var currentFrame: Int
     private let animation: LottieInstance
+    
+    var frameIndex: Int {
+        return self.currentFrame % self.frameCount
+    }
     
     init?(queue: Queue, data: Data, width: Int, height: Int) {
         self.queue = queue
@@ -294,15 +302,19 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
         assert(self.queue.isCurrent())
     }
     
-    func takeFrame() -> AnimatedStickerFrame? {
+    func takeFrame(draw: Bool) -> AnimatedStickerFrame? {
         let frameIndex = self.currentFrame % self.frameCount
         self.currentFrame += 1
-        var frameData = Data(count: self.bytesPerRow * self.height)
-        frameData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-            memset(bytes, 0, self.bytesPerRow * self.height)
-            self.animation.renderFrame(with: Int32(frameIndex), into: bytes, width: Int32(self.width), height: Int32(self.height), bytesPerRow: Int32(self.bytesPerRow))
+        if draw {
+            var frameData = Data(count: self.bytesPerRow * self.height)
+            frameData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                memset(bytes, 0, self.bytesPerRow * self.height)
+                self.animation.renderFrame(with: Int32(frameIndex), into: bytes, width: Int32(self.width), height: Int32(self.height), bytesPerRow: Int32(self.bytesPerRow))
+            }
+            return AnimatedStickerFrame(data: frameData, type: .argb, width: self.width, height: self.height, bytesPerRow: self.bytesPerRow, index: frameIndex, isLastFrame: frameIndex == self.frameCount - 1)
+        } else {
+            return nil
         }
-        return AnimatedStickerFrame(data: frameData, type: .argb, width: self.width, height: self.height, bytesPerRow: self.bytesPerRow, index: frameIndex, isLastFrame: frameIndex == self.frameCount - 1)
     }
     
     func skipToEnd() {
@@ -326,9 +338,9 @@ public final class AnimatedStickerFrameQueue {
         assert(self.queue.isCurrent())
     }
     
-    public func take() -> AnimatedStickerFrame? {
+    public func take(draw: Bool) -> AnimatedStickerFrame? {
         if self.frames.isEmpty {
-            if let frame = self.source.takeFrame() {
+            if let frame = self.source.takeFrame(draw: draw) {
                 self.frames.append(frame)
             }
         }
@@ -342,7 +354,7 @@ public final class AnimatedStickerFrameQueue {
     
     public func generateFramesIfNeeded() {
         if self.frames.isEmpty {
-            if let frame = self.source.takeFrame() {
+            if let frame = self.source.takeFrame(draw: true) {
                 self.frames.append(frame)
             }
         }
@@ -583,7 +595,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                 
                 let timer = SwiftSignalKit.Timer(timeout: 1.0 / Double(frameRate), repeat: !firstFrame, completion: {
                     let maybeFrame = frameQueue.syncWith { frameQueue in
-                        return frameQueue.take()
+                        return frameQueue.take(draw: true)
                     }
                     if let maybeFrame = maybeFrame, let frame = maybeFrame {
                         Queue.mainQueue().async {
@@ -654,7 +666,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                 
                 let timer = SwiftSignalKit.Timer(timeout: 1.0 / Double(frameRate), repeat: !firstFrame, completion: {
                     let maybeFrame = frameQueue.syncWith { frameQueue in
-                        return frameQueue.take()
+                        return frameQueue.take(draw: true)
                     }
                     if let maybeFrame = maybeFrame, let frame = maybeFrame {
                         Queue.mainQueue().async {
@@ -710,19 +722,25 @@ public final class AnimatedStickerNode: ASDisplayNode {
         let directData = self.directData
         let cachedData = self.cachedData
         let queue = self.queue
+        let frameSourceHolder = self.frameSource
         let timerHolder = self.timer
         self.queue.async { [weak self] in
-            var maybeFrameSource: AnimatedStickerFrameSource?
-            if let directData = directData {
-                maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3)
-                if position == .end {
-                    maybeFrameSource?.skipToEnd()
-                }
-            } else if let (cachedData, cachedDataComplete) = cachedData {
-                if #available(iOS 9.0, *) {
-                    maybeFrameSource = AnimatedStickerCachedFrameSource(queue: queue, data: cachedData, complete: cachedDataComplete, notifyUpdated: {})
+            var maybeFrameSource: AnimatedStickerFrameSource? = frameSourceHolder.with { $0 }?.syncWith { $0 }?.value
+            if case .timestamp = position {
+            } else {
+                var maybeFrameSource: AnimatedStickerFrameSource?
+                if let directData = directData {
+                    maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3)
+                    if case .end = position {
+                        maybeFrameSource?.skipToEnd()
+                    }
+                } else if let (cachedData, cachedDataComplete) = cachedData {
+                    if #available(iOS 9.0, *) {
+                        maybeFrameSource = AnimatedStickerCachedFrameSource(queue: queue, data: cachedData, complete: cachedDataComplete, notifyUpdated: {})
+                    }
                 }
             }
+
             guard let frameSource = maybeFrameSource else {
                 return
             }
@@ -732,9 +750,31 @@ public final class AnimatedStickerNode: ASDisplayNode {
             timerHolder.swap(nil)?.invalidate()
             
             let duration: Double = frameSource.frameRate > 0 ? Double(frameSource.frameCount) / Double(frameSource.frameRate) : 0
-            
-            let maybeFrame = frameQueue.syncWith { frameQueue in
-                return frameQueue.take()
+        
+            var maybeFrame: AnimatedStickerFrame??
+            if case let .timestamp(timestamp) = position {
+                var stickerTimestamp = timestamp
+                while stickerTimestamp > duration {
+                    stickerTimestamp -= duration
+                }
+                let targetFrame = Int(stickerTimestamp / duration * Double(frameSource.frameCount))
+                if targetFrame == frameSource.frameIndex {
+                    return
+                }
+                
+                var delta = targetFrame - frameSource.frameIndex
+                if delta < 0 {
+                    delta = frameSource.frameCount + delta
+                }
+                for i in 0 ..< delta {
+                    maybeFrame = frameQueue.syncWith { frameQueue in
+                        return frameQueue.take(draw: i == delta - 1)
+                    }
+                }
+            } else {
+                maybeFrame = frameQueue.syncWith { frameQueue in
+                    return frameQueue.take(draw: true)
+                }
             }
             if let maybeFrame = maybeFrame, let frame = maybeFrame {
                 Queue.mainQueue().async {
