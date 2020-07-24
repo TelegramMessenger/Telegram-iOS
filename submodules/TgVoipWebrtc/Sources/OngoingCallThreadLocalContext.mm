@@ -42,19 +42,65 @@
 
 @end
 
-@interface VideoMetalView (VideoViewImpl) <OngoingCallThreadLocalContextWebrtcVideoView>
+@protocol OngoingCallThreadLocalContextWebrtcVideoViewImpl <NSObject>
+
+@property (nonatomic, readwrite) OngoingCallVideoOrientationWebrtc orientation;
+
+@end
+
+@interface VideoMetalView (VideoViewImpl) <OngoingCallThreadLocalContextWebrtcVideoView, OngoingCallThreadLocalContextWebrtcVideoViewImpl>
+
+@property (nonatomic, readwrite) OngoingCallVideoOrientationWebrtc orientation;
 
 @end
 
 @implementation VideoMetalView (VideoViewImpl)
 
+- (OngoingCallVideoOrientationWebrtc)orientation {
+    return (OngoingCallVideoOrientationWebrtc)self.internalOrientation;
+}
+
+- (void)setOrientation:(OngoingCallVideoOrientationWebrtc)orientation {
+    [self setInternalOrientation:(int)orientation];
+}
+
+- (void)setOnOrientationUpdated:(void (^ _Nullable)(OngoingCallVideoOrientationWebrtc))onOrientationUpdated {
+    if (onOrientationUpdated) {
+        [self internalSetOnOrientationUpdated:^(int value) {
+            onOrientationUpdated((OngoingCallVideoOrientationWebrtc)value);
+        }];
+    } else {
+        [self internalSetOnOrientationUpdated:nil];
+    }
+}
+
 @end
 
-@interface GLVideoView (VideoViewImpl) <OngoingCallThreadLocalContextWebrtcVideoView>
+@interface GLVideoView (VideoViewImpl) <OngoingCallThreadLocalContextWebrtcVideoView, OngoingCallThreadLocalContextWebrtcVideoViewImpl>
+
+@property (nonatomic, readwrite) OngoingCallVideoOrientationWebrtc orientation;
 
 @end
 
 @implementation GLVideoView (VideoViewImpl)
+
+- (OngoingCallVideoOrientationWebrtc)orientation {
+    return (OngoingCallVideoOrientationWebrtc)self.internalOrientation;
+}
+
+- (void)setOrientation:(OngoingCallVideoOrientationWebrtc)orientation {
+    [self setInternalOrientation:(int)orientation];
+}
+
+- (void)setOnOrientationUpdated:(void (^ _Nullable)(OngoingCallVideoOrientationWebrtc))onOrientationUpdated {
+    if (onOrientationUpdated) {
+        [self internalSetOnOrientationUpdated:^(int value) {
+            onOrientationUpdated((OngoingCallVideoOrientationWebrtc)value);
+        }];
+    } else {
+        [self internalSetOnOrientationUpdated:nil];
+    }
+}
 
 @end
 
@@ -66,6 +112,9 @@
         _interface = tgcalls::VideoCaptureInterface::Create();
     }
     return self;
+}
+
+- (void)dealloc {
 }
 
 - (void)switchVideoCamera {
@@ -140,6 +189,8 @@
     OngoingCallVideoStateWebrtc _videoState;
     bool _connectedOnce;
     OngoingCallRemoteVideoStateWebrtc _remoteVideoState;
+    OngoingCallVideoOrientationWebrtc _remoteVideoOrientation;
+    __weak UIView<OngoingCallThreadLocalContextWebrtcVideoViewImpl> *_currentRemoteVideoRenderer;
     OngoingCallThreadLocalContextVideoCapturer *_videoCapturer;
     
     int32_t _signalBars;
@@ -266,6 +317,8 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             _videoState = OngoingCallVideoStatePossible;
             _remoteVideoState = OngoingCallRemoteVideoStateActive;
         }
+        
+        _remoteVideoOrientation = OngoingCallVideoOrientation0;
         
         std::vector<uint8_t> derivedStateValue;
         derivedStateValue.resize(derivedState.length);
@@ -568,6 +621,8 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                 std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
                 __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
                 if (strongSelf) {
+                    [remoteRenderer setOrientation:strongSelf->_remoteVideoOrientation];
+                    strongSelf->_currentRemoteVideoRenderer = remoteRenderer;
                     strongSelf->_tgVoip->setIncomingVideoOutput(sink);
                 }
                 
@@ -578,6 +633,8 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                 std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
                 __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
                 if (strongSelf) {
+                    [remoteRenderer setOrientation:strongSelf->_remoteVideoOrientation];
+                    strongSelf->_currentRemoteVideoRenderer = remoteRenderer;
                     strongSelf->_tgVoip->setIncomingVideoOutput(sink);
                 }
                 

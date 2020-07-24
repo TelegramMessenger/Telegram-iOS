@@ -318,6 +318,11 @@ public final class OngoingCallVideoCapturer {
                     view: view,
                     setOnFirstFrameReceived: { [weak view] f in
                         view?.setOnFirstFrameReceived(f)
+                    },
+                    getOrientation: {
+                        return .rotation0
+                    },
+                    setOnOrientationUpdated: { _ in
                     }
                 ))
             } else {
@@ -403,16 +408,46 @@ private extension OngoingCallContextState.State {
     }
 }
 
+public enum OngoingCallVideoOrientation {
+    case rotation0
+    case rotation90
+    case rotation180
+    case rotation270
+}
+
+private extension OngoingCallVideoOrientation {
+    init(_ orientation: OngoingCallVideoOrientationWebrtc) {
+        switch orientation {
+        case .orientation0:
+            self = .rotation0
+        case .orientation90:
+            self = .rotation90
+        case .orientation180:
+            self = .rotation180
+        case .orientation270:
+            self = .rotation270
+        @unknown default:
+            self = .rotation0
+        }
+    }
+}
+
 public final class OngoingCallContextPresentationCallVideoView {
     public let view: UIView
     public let setOnFirstFrameReceived: ((() -> Void)?) -> Void
+    public let getOrientation: () -> OngoingCallVideoOrientation
+    public let setOnOrientationUpdated: (((OngoingCallVideoOrientation) -> Void)?) -> Void
     
     public init(
         view: UIView,
-        setOnFirstFrameReceived: @escaping ((() -> Void)?) -> Void
+        setOnFirstFrameReceived: @escaping ((() -> Void)?) -> Void,
+        getOrientation: @escaping () -> OngoingCallVideoOrientation,
+        setOnOrientationUpdated: @escaping (((OngoingCallVideoOrientation) -> Void)?) -> Void
     ) {
         self.view = view
         self.setOnFirstFrameReceived = setOnFirstFrameReceived
+        self.getOrientation = getOrientation
+        self.setOnOrientationUpdated = setOnOrientationUpdated
     }
 }
 
@@ -721,6 +756,18 @@ public final class OngoingCallContext {
                             view: view,
                             setOnFirstFrameReceived: { [weak view] f in
                                 view?.setOnFirstFrameReceived(f)
+                            },
+                            getOrientation: { [weak view] in
+                                if let view = view {
+                                    return OngoingCallVideoOrientation(view.orientation)
+                                } else {
+                                    return .rotation0
+                                }
+                            },
+                            setOnOrientationUpdated: { [weak view] f in
+                                view?.setOnOrientationUpdated { value in
+                                    f?(OngoingCallVideoOrientation(value))
+                                }
                             }
                         ))
                     } else {
