@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 
-public class ViewCountMessageAttribute: MessageAttribute {
+public class ForwardCountMessageAttribute: MessageAttribute {
     public let count: Int
     
     public var associatedMessageIds: [MessageId] = []

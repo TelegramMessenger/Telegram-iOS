@@ -1164,8 +1164,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return $0.updatedInputMode(f)
             })
         }, openMessageShareMenu: { [weak self] id in
-            if let strongSelf = self, let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(id) {
-                let shareController = ShareController(context: strongSelf.context, subject: .messages(messages))
+            if let strongSelf = self, let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(id), let message = messages.first {
+                var shares: Int = 0
+                for attribute in message.attributes {
+                    if let forwardsAttribute = attribute as? ForwardCountMessageAttribute {
+                        shares = forwardsAttribute.count
+                        break
+                    }
+                }
+                let shareController = ShareController(context: strongSelf.context, subject: .messages(messages), openStats: { [weak self] in
+                    if let strongSelf = self, let cachedChannelData = strongSelf.peerView?.cachedData as? CachedChannelData {
+                        strongSelf.push(messageStatsController(context: strongSelf.context, messageId: id, cachedPeerData: cachedChannelData))
+                    }
+                }, shares: shares)
                 shareController.dismissed = { shared in
                     if shared {
                         self?.commitPurposefulAction()

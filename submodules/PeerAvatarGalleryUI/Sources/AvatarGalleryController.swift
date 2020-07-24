@@ -761,11 +761,6 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             }))
         }
         
-//        items.append(ActionSheetButtonItem(title: self.presentationData.strings.ProfilePhoto_OpenInEditor, color: .accent, action: { [weak self] in
-//            dismissAction()
-//            self?.openEntryEdit(rawEntry)
-//        }))
-        
         let deleteTitle: String
         if let _ = rawEntry.videoRepresentations.last {
             deleteTitle = self.presentationData.strings.Settings_RemoveVideo

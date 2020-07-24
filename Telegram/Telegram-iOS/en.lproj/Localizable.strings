@@ -5710,3 +5710,8 @@ Any member of this group will be able to see messages in the channel.";
 "Cache.MaximumCacheSize" = "Maximum Cache Size";
 "Cache.NoLimit" = "No Limit";
 "Cache.MaximumCacheSizeHelp" = "If your cache size exceeds this limit, the oldest media will be deleted.\n\nAll media will stay in the Telegram cloud and can be re-downloaded if you need it again.";
+
+"Stats.MessageTitle" = "Message Statistics";
+"Stats.MessageOverview" = "Overview";
+"Stats.MessageInteractionsTitle" = "Interactions";
+"Stats.MessagePublicForwardsTitle" = "Public Shares";
