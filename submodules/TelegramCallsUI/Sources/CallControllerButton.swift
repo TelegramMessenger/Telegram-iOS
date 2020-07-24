@@ -31,6 +31,13 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
         
         var appearance: Appearance
         var image: Image
+        var isEnabled: Bool
+        
+        init(appearance: Appearance, image: Image, isEnabled: Bool = true) {
+            self.appearance = appearance
+            self.image = image
+            self.isEnabled = isEnabled
+        }
     }
     
     private let contentContainer: ASDisplayNode
@@ -106,6 +113,9 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
             case .color:
                 self.effectView.isHidden = true
             }
+            
+            self.alpha = content.isEnabled ? 1.0 : 0.7
+            self.isUserInteractionEnabled = content.isEnabled
             
             let contentImage = generateImage(CGSize(width: self.largeButtonSize, height: self.largeButtonSize), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))

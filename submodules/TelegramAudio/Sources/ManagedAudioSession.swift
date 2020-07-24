@@ -244,6 +244,20 @@ public final class ManagedAudioSession {
         
         if let availableInputs = audioSession.availableInputs {
             var hasHeadphones = false
+            
+            var headphonesAreActive = false
+            loop: for currentOutput in audioSession.currentRoute.outputs {
+                switch currentOutput.portType {
+                case .headphones, .bluetoothA2DP, .bluetoothHFP:
+                    headphonesAreActive = true
+                    hasHeadphones = true
+                    activeOutput = .headphones
+                    break loop
+                default:
+                    break
+                }
+            }
+            
             for input in availableInputs {
                 var isActive = false
                 for currentInput in audioSession.currentRoute.inputs {
@@ -253,7 +267,7 @@ public final class ManagedAudioSession {
                 }
                 
                 if input.portType == .builtInMic {
-                    if isActive {
+                    if isActive && !headphonesAreActive {
                         activeOutput = .builtin
                         inner: for currentOutput in audioSession.currentRoute.outputs {
                             if currentOutput.portType == .builtInSpeaker {
@@ -739,13 +753,28 @@ public final class ManagedAudioSession {
                 case .voiceCall, .playWithPossiblePortOverride, .record(true):
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
                     if let routes = AVAudioSession.sharedInstance().availableInputs {
-                        for route in routes {
-                            if route.portType == .builtInMic {
-                                if case .record = updatedType, self.isHeadsetPluggedInValue {
-                                } else {
+                        var alreadySet = false
+                        if self.isHeadsetPluggedInValue {
+                            loop: for route in routes {
+                                switch route.portType {
+                                case .headphones, .bluetoothA2DP, .bluetoothHFP:
                                     let _ = try? AVAudioSession.sharedInstance().setPreferredInput(route)
+                                    alreadySet = true
+                                    break loop
+                                default:
+                                    break
                                 }
-                                break
+                            }
+                        }
+                        if !alreadySet {
+                            for route in routes {
+                                if route.portType == .builtInMic {
+                                    if case .record = updatedType, self.isHeadsetPluggedInValue {
+                                    } else {
+                                        let _ = try? AVAudioSession.sharedInstance().setPreferredInput(route)
+                                    }
+                                    break
+                                }
                             }
                         }
                     }
