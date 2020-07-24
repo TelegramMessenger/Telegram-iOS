@@ -1480,6 +1480,8 @@ public final class ChatListNode: ListView {
                     }
                     
                     completion()
+                    
+                    strongSelf.context.sharedContext.accountManager.displayedAccountsFilter.didFinishChangingAccountPromise.set(.single(()))
                 }
             }
             
