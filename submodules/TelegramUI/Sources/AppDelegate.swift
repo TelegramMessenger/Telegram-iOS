@@ -2376,10 +2376,13 @@ final class SharedApplicationContext {
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         let _ = (accountIdFromNotification(notification, sharedContext: self.sharedContextPromise.get())
         |> deliverOnMainQueue).start(next: { accountId in
-            if let context = self.contextValue {
-                if let accountId = accountId, context.context.account.id != accountId {
-                    completionHandler([.alert])
-                }
+            if let context = self.contextValue, let accountId = accountId, context.context.account.id != accountId {
+                let _ = context.context.sharedContext.accountManager.transaction { transaction in
+                    if let record = transaction.getAllRecords().first(where: { $0.id == accountId }),
+                        !record.attributes.contains(where: { $0 is HiddenAccountAttribute }) {
+                        completionHandler([.alert])
+                    }
+                }.start()
             }
         })
     }
