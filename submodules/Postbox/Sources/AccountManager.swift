@@ -28,6 +28,7 @@ public protocol DisplayedAccountsFilter {
     var unlockedHiddenAccountRecordId: AccountRecordId? { get }
     var getHiddenAccountsAccessChallengeDataPromise: Promise<[AccountRecordId:PostboxAccessChallengeData]> { get }
     var accountManagerRecordIdPromise: ValuePromise<AccountRecordId?> { get }
+    var didFinishChangingAccountPromise: Promise<Void> { get }
     
     func filterDisplayed(_ records: [AccountRecord]) -> [AccountRecord]
     func filterHidden(_ records: [AccountRecord]) -> [AccountRecord]

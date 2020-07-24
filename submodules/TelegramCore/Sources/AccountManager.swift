@@ -236,6 +236,7 @@ public final class DisplayedAccountsFilterImpl: DisplayedAccountsFilter {
     
     public let accountManagerRecordIdPromise = ValuePromise<AccountRecordId?>()
     public let getHiddenAccountsAccessChallengeDataPromise = Promise<[AccountRecordId:PostboxAccessChallengeData]>()
+    public let didFinishChangingAccountPromise = Promise<Void>()
     
     public init() {
         unlockedHiddenAccountRecordIdDisposable = (unlockedHiddenAccountRecordIdPromise.get()
