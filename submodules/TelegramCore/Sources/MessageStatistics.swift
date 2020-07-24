@@ -5,18 +5,14 @@ import TelegramApi
 import MtProtoKit
 import SyncCore
 
-//stats.getMessagePublicForwards channel:InputChannel msg_id:int offset_rate:int offset_peer:InputPeer offset_id:int limit:int = messages.Messages;
-
 public struct MessageStats: Equatable {
     public let views: Int
-    public let publicForwards: Int
-    public let privateForwards: Int
+    public let forwards: Int
     public let interactionsGraph: StatsGraph
     
-    init(views: Int, publicForwards: Int, privateForwards: Int, interactionsGraph: StatsGraph) {
+    init(views: Int, forwards: Int, interactionsGraph: StatsGraph) {
         self.views = views
-        self.publicForwards = publicForwards
-        self.privateForwards = privateForwards
+        self.forwards = forwards
         self.interactionsGraph = interactionsGraph
     }
     
@@ -24,10 +20,7 @@ public struct MessageStats: Equatable {
         if lhs.views != rhs.views {
             return false
         }
-        if lhs.publicForwards != rhs.publicForwards {
-            return false
-        }
-        if lhs.privateForwards != rhs.privateForwards {
+        if lhs.forwards != rhs.forwards {
             return false
         }
         if lhs.interactionsGraph != rhs.interactionsGraph {
@@ -37,7 +30,7 @@ public struct MessageStats: Equatable {
     }
     
     public func withUpdatedInteractionsGraph(_ interactionsGraph: StatsGraph) -> MessageStats {
-        return MessageStats(views: self.views, publicForwards: self.publicForwards, privateForwards: self.privateForwards, interactionsGraph: self.interactionsGraph)
+        return MessageStats(views: self.views, forwards: self.forwards, interactionsGraph: self.interactionsGraph)
     }
 }
 
@@ -87,7 +80,7 @@ private func requestMessageStats(postbox: Postbox, network: Network, datacenterI
         return signal
         |> map { result -> MessageStats? in
             if case let .messageStats(apiViewsGraph) = result {
-                return MessageStats(views: views, publicForwards: forwards, privateForwards: forwards, interactionsGraph: StatsGraph(apiStatsGraph: apiViewsGraph))
+                return MessageStats(views: views, forwards: forwards, interactionsGraph: StatsGraph(apiStatsGraph: apiViewsGraph))
             } else {
                 return nil
             }

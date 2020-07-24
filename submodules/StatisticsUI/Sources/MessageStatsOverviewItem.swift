@@ -127,14 +127,13 @@ class MessageStatsOverviewItemNode: ListViewItemNode {
             let itemBackgroundColor: UIColor
             let itemSeparatorColor: UIColor
             
-            let horizontalSpacing: CGFloat = 62.0
             let topInset: CGFloat = 14.0
             let sideInset: CGFloat = 16.0
             
             var height: CGFloat = topInset * 2.0
             
             let leftInset = params.leftInset
-            let rightInset: CGFloat = params.rightInset
+            let rightInset = params.rightInset
             var updatedTheme: PresentationTheme?
             
             if currentItem?.presentationData.theme !== item.presentationData.theme {
@@ -167,7 +166,7 @@ class MessageStatsOverviewItemNode: ListViewItemNode {
             
             centerValueLabelLayoutAndApply = makeCenterValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.publicShares.flatMap { compactNumericCountString(Int($0)) } ?? "–", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            rightValueLabelLayoutAndApply = makeRightValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.publicShares.flatMap { "≈\( compactNumericCountString(item.stats.privateForwards - Int($0)))" } ?? "–", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            rightValueLabelLayoutAndApply = makeRightValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.publicShares.flatMap { "≈\( compactNumericCountString(item.stats.forwards - Int($0)))" } ?? "–", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                         
             leftTitleLabelLayoutAndApply = makeLeftTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Views", font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -252,7 +251,13 @@ class MessageStatsOverviewItemNode: ListViewItemNode {
                         strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
                     }
                     
-                    var x: CGFloat = sideInset + leftInset
+                    let maxLeftWidth = max(leftValueLabelLayoutAndApply?.0.size.width ?? 0.0, leftTitleLabelLayoutAndApply?.0.size.width ?? 0.0)
+                    let maxCenterWidth = max(centerValueLabelLayoutAndApply?.0.size.width ?? 0.0, centerTitleLabelLayoutAndApply?.0.size.width ?? 0.0)
+                    let maxRightWidth = max(rightValueLabelLayoutAndApply?.0.size.width ?? 0.0, rightTitleLabelLayoutAndApply?.0.size.width ?? 0.0)
+                    
+                    let horizontalSpacing = min(60, (params.width - leftInset - rightInset - sideInset * 2.0 - maxLeftWidth - maxCenterWidth - maxRightWidth) / 2.0)
+                    
+                    var x: CGFloat = leftInset + (params.width - maxLeftWidth - maxCenterWidth - maxRightWidth - horizontalSpacing * 2.0) / 2.0
                     if let leftValueLabelLayout = leftValueLabelLayoutAndApply?.0, let leftTitleLabelLayout = leftTitleLabelLayoutAndApply?.0 {
                         strongSelf.leftValueLabel.frame = CGRect(origin: CGPoint(x: x, y: topInset), size: leftValueLabelLayout.size)
                         strongSelf.leftTitleLabel.frame = CGRect(origin: CGPoint(x: x, y: strongSelf.leftValueLabel.frame.maxY), size: leftTitleLabelLayout.size)
