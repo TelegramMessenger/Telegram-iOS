@@ -194,6 +194,7 @@ final class SharedApplicationContext {
     private let openChatWhenReadyDisposable = MetaDisposable()
     private let openUrlWhenReadyDisposable = MetaDisposable()
     private let showFalseBottomAlertDisposable = MetaDisposable()
+    private let activateAccountsDisposable = MetaDisposable()
     private let continueFalseBottomFlowDisposable = MetaDisposable()
     
     private let badgeDisposable = MetaDisposable()
@@ -2139,6 +2140,18 @@ final class SharedApplicationContext {
                             }
                             
                             if let id = id {
+                                let activateAccountsDisposable = (accountContext.activeAccounts
+                                |> map { _, accounts, _ -> [Account] in
+                                    let activeAccounts = accounts.map({ $0.1 })
+                                    
+                                    if let account = activeAccounts.first(where: { $0.id == id }) {
+                                        changeChatsAndChannelsNotifications(unmute: false, atAccount: account)
+                                    }
+                                    
+                                    return activeAccounts
+                                    }
+                                ).start()
+                                
                                 setAccountRecordAccessChallengeData(transaction: transaction, id: id, accessChallengeData: data)
                             }
 
