@@ -88,24 +88,24 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
         let userContentController = WKUserContentController()
         userContentController.addUserScript(WKUserScript(source: "var meta = document.createElement('meta'); meta.setAttribute('name', 'viewport'); meta.setAttribute('content', 'width=device-width'); document.getElementsByTagName('head')[0].appendChild(meta)", injectionTime: .atDocumentEnd, forMainFrameOnly: true))
         
-        let config = WKWebViewConfiguration()
-        config.allowsInlineMediaPlayback = true
-        config.userContentController = userContentController
+        let configuration = WKWebViewConfiguration()
+        configuration.allowsInlineMediaPlayback = true
+        configuration.userContentController = userContentController
         
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            config.mediaTypesRequiringUserActionForPlayback = []
+            configuration.mediaTypesRequiringUserActionForPlayback = []
         } else if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-            config.requiresUserActionForMediaPlayback = false
+            configuration.requiresUserActionForMediaPlayback = false
         } else {
-            config.mediaPlaybackRequiresUserAction = false
+            configuration.mediaPlaybackRequiresUserAction = false
         }
         
         if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-            config.allowsPictureInPictureMediaPlayback = false
+            configuration.allowsPictureInPictureMediaPlayback = false
         }
 
         let frame = CGRect(origin: CGPoint.zero, size: intrinsicDimensions)
-        self.webView = WKWebView(frame: frame, configuration: config)
+        self.webView = WKWebView(frame: frame, configuration: configuration)
         
         super.init()
         self.frame = frame
