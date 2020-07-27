@@ -13,7 +13,7 @@ import PresentationDataUtils
 
 public enum FalseBottomSplashMode {
     case hideAccount
-    case addOneMoreAcount
+    case addOneMoreAccount
     case setMasterPasscode
     case setSecretPasscode
     case accountWasHidden
@@ -110,7 +110,7 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
                 self.animationSize = CGSize(width: 124.0, height: 124.0)
                 self.animationNode.visibility = true
             }
-        case .addOneMoreAcount:
+        case .addOneMoreAccount:
             title = presentationData.strings.FalseBottom_AddOneMoreAccount_Title
             text = NSAttributedString(string: presentationData.strings.FalseBottom_AddOneMoreAccount_Text, font: textFont, textColor: textColor)
             buttonText = presentationData.strings.FalseBottom_AddOneMoreAccount_Button

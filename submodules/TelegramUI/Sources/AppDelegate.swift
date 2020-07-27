@@ -2026,7 +2026,7 @@ final class SharedApplicationContext {
                     if hasOtherAccounts {
                         completion()
                     } else {
-                        showSplashScreen(.addOneMoreAcount, true, {
+                        showSplashScreen(.addOneMoreAccount, true, {
                             let isTestingEnvironment = context.context.account.testingEnvironment
                             context.sharedApplicationContext.sharedContext.beginNewAuthAndContinueFalseBottomFlow(testingEnvironment: isTestingEnvironment)
                         })
