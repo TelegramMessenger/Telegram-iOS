@@ -51,13 +51,13 @@ class WallpaperGalleryItem: GalleryItem {
         self.source = source
     }
     
-    func node() -> GalleryItemNode {
+    func node(synchronous: Bool) -> GalleryItemNode {
         let node = WallpaperGalleryItemNode(context: self.context)
         node.setEntry(self.entry, arguments: self.arguments, source: self.source)
         return node
     }
     
-    func updateNode(node: GalleryItemNode) {
+    func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? WallpaperGalleryItemNode {
             node.setEntry(self.entry, arguments: self.arguments, source: self.source)
         }

@@ -84,8 +84,10 @@ public final class CachedSecretChatData: CachedPeerData {
     }
     
     public init(decoder: PostboxDecoder) {
-        if let value = decoder.decodeOptionalInt32ForKey("pcs") {
-            self.peerStatusSettings = PeerStatusSettings(rawValue: value)
+        if let legacyValue = decoder.decodeOptionalInt32ForKey("pcs") {
+            self.peerStatusSettings = PeerStatusSettings(flags: PeerStatusSettings.Flags(rawValue: legacyValue), geoDistance: nil)
+        } else if let peerStatusSettings = decoder.decodeObjectForKey("pss", decoder: { PeerStatusSettings(decoder: $0) }) as? PeerStatusSettings {
+            self.peerStatusSettings = peerStatusSettings
         } else {
             self.peerStatusSettings = nil
         }
@@ -93,9 +95,9 @@ public final class CachedSecretChatData: CachedPeerData {
     
     public func encode(_ encoder: PostboxEncoder) {
         if let peerStatusSettings = self.peerStatusSettings {
-            encoder.encodeInt32(peerStatusSettings.rawValue, forKey: "pcs")
+            encoder.encodeObject(peerStatusSettings, forKey: "pss")
         } else {
-            encoder.encodeNil(forKey: "pcs")
+            encoder.encodeNil(forKey: "pss")
         }
     }
     

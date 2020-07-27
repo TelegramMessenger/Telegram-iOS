@@ -445,7 +445,12 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     TGMediaAssetImageType screenImageType = refresh ? TGMediaAssetImageTypeLargeThumbnail : TGMediaAssetImageTypeFastLargeThumbnail;
     TGMediaAssetImageType imageType = thumbnail ? TGMediaAssetImageTypeAspectRatioThumbnail : screenImageType;
     
-    SSignal *assetSignal = [TGMediaAssetImageSignals imageForAsset:asset imageType:imageType size:imageSize];
+    TGMediaAsset *concreteAsset = asset;
+    if ([concreteAsset isKindOfClass:[TGCameraCapturedVideo class]]) {
+        concreteAsset = [(TGCameraCapturedVideo *)asset originalAsset];
+    }
+    
+    SSignal *assetSignal = [TGMediaAssetImageSignals imageForAsset:concreteAsset imageType:imageType size:imageSize];
     if (_editingContext == nil)
         return assetSignal;
     
@@ -830,7 +835,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
 {
     for (TGAttachmentAssetCell *cell in [_collectionView visibleCells])
     {
-        if ([cell.asset isEqual:asset])
+        if ([cell.asset.uniqueIdentifier isEqual:asset.uniqueIdentifier])
             return cell;
     }
     
@@ -871,7 +876,12 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     {
         id<LegacyComponentsOverlayWindowManager> windowManager = [_context makeOverlayWindowManager];
         
-        TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:asset intent:_disableStickers ? TGPhotoEditorControllerSignupAvatarIntent : TGPhotoEditorControllerAvatarIntent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
+        id<TGMediaEditableItem> editableItem = asset;
+        if (asset.type == TGMediaAssetGifType) {
+            editableItem = [[TGCameraCapturedVideo alloc] initWithAsset:asset livePhoto:false];
+        }
+        
+        TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:editableItem intent:_disableStickers ? TGPhotoEditorControllerSignupAvatarIntent : TGPhotoEditorControllerAvatarIntent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
         controller.editingContext = _editingContext;
         controller.stickersContext = _stickersContext;
         controller.dontHideStatusBar = true;
@@ -888,7 +898,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         };
         
         __weak TGPhotoEditorController *weakController = controller;
-        controller.didFinishEditing = ^(__unused id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, __unused UIImage *thumbnailImage, __unused bool hasChanges)
+        controller.didFinishEditing = ^(id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, __unused UIImage *thumbnailImage, __unused bool hasChanges)
         {
             if (!hasChanges)
                 return;
@@ -901,12 +911,51 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             if (strongController == nil)
                 return;
             
-            if (strongSelf.avatarCompletionBlock != nil)
-                strongSelf.avatarCompletionBlock(resultImage);
-            
-            [strongController dismissAnimated:true];
+            if (adjustments.paintingData.hasAnimation) {
+                TGVideoEditAdjustments *videoAdjustments = adjustments;
+                if ([videoAdjustments isKindOfClass:[PGPhotoEditorValues class]]) {
+                    videoAdjustments = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)adjustments preset:TGMediaVideoConversionPresetProfileVeryHigh];
+                }
+                
+                NSString *filePath = [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"gifvideo_%x.jpg", (int)arc4random()]];
+                NSData *data = UIImageJPEGRepresentation(resultImage, 0.8);
+                [data writeToFile:filePath atomically:true];
+                
+                UIImage *previewImage = resultImage;
+                if ([adjustments cropAppliedForAvatar:false] || adjustments.hasPainting || adjustments.toolsApplied)
+                {
+                    UIImage *paintingImage = adjustments.paintingData.stillImage;
+                    if (paintingImage == nil) {
+                        paintingImage = adjustments.paintingData.image;
+                    }
+                    UIImage *croppedPaintingImage = TGPhotoEditorPaintingCrop(paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, resultImage.size, adjustments.originalSize, true, true, false);
+                    UIImage *thumbnailImage = TGPhotoEditorVideoExtCrop(resultImage, croppedPaintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(asset.dimensions, CGSizeMake(800, 800)), adjustments.originalSize, true, true, true, true);
+                    if (thumbnailImage != nil) {
+                        previewImage = thumbnailImage;
+                    }
+                }
+                if (strongSelf.avatarVideoCompletionBlock != nil)
+                    strongSelf.avatarVideoCompletionBlock(previewImage, [NSURL fileURLWithPath:filePath], videoAdjustments);
+            } else {
+                if (strongSelf.avatarCompletionBlock != nil)
+                    strongSelf.avatarCompletionBlock(resultImage);
+            }
         };
-        
+        controller.didFinishEditingVideo = ^(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
+            if (!hasChanges)
+                return;
+            
+            __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            __strong TGPhotoEditorController *strongController = weakController;
+            if (strongController == nil)
+                return;
+            
+            if (strongSelf.avatarVideoCompletionBlock != nil)
+                strongSelf.avatarVideoCompletionBlock(resultImage, asset, adjustments);
+        };
         controller.requestThumbnailImage = ^(id<TGMediaEditableItem> editableItem)
         {
             return [editableItem thumbnailImageSignal];
@@ -921,7 +970,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         {
             if (editableItem.isVideo) {
                 if ([editableItem isKindOfClass:[TGMediaAsset class]]) {
-                    return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem];
+                    return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem allowNetworkAccess:true];
                 } else if ([editableItem isKindOfClass:[TGCameraCapturedVideo class]]) {
                     return ((TGCameraCapturedVideo *)editableItem).avAsset;
                 } else {
@@ -935,7 +984,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:windowManager parentController:_parentController contentController:controller];
         controllerWindow.hidden = false;
         controller.view.clipsToBounds = true;
-        
+    
         transition.referenceFrame = ^CGRect
         {
             UIView *referenceView = referenceViewForAsset(asset);
@@ -956,14 +1005,14 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
             if (strongSelf == nil)
                 return;
-            
+
             transition.outReferenceFrame = outReferenceFrame;
             transition.repView = repView;
             [transition dismissAnimated:true completion:^
             {
                 strongSelf->_hiddenItem = nil;
-                [strongSelf updateHiddenCellAnimated:false];
-                
+                [strongSelf updateHiddenCellAnimated:true];
+
                 dispatch_async(dispatch_get_main_queue(), ^
                 {
                     if (completion != nil)
@@ -1000,10 +1049,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             break;
             
         case TGMediaAssetGifType:
-            if (_forProfilePhoto)
-                cellIdentifier = TGAttachmentPhotoCellIdentifier;
-            else
-                cellIdentifier = TGAttachmentGifCellIdentifier;
+            cellIdentifier = TGAttachmentGifCellIdentifier;
             break;
             
         default:
@@ -1055,7 +1101,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
 - (void)updateHiddenCellAnimated:(bool)animated
 {
     for (TGAttachmentAssetCell *cell in [_collectionView visibleCells])
-        [cell setHidden:([cell.asset isEqual:_hiddenItem]) animated:animated];
+        [cell setHidden:([cell.asset.uniqueIdentifier isEqual:_hiddenItem.uniqueIdentifier]) animated:animated];
 }
 
 #pragma mark -

@@ -16,6 +16,47 @@ private func callKitIntegrationIfEnabled(_ integration: CallKitIntegration?, set
     return enabled ? integration : nil
 }
 
+private func auxiliaryServers(appConfiguration: AppConfiguration) -> [CallAuxiliaryServer] {
+    guard let data = appConfiguration.data else {
+        return []
+    }
+    guard let servers = data["rtc_servers"] as? [[String: Any]] else {
+        return []
+    }
+    var result: [CallAuxiliaryServer] = []
+    for server in servers {
+        guard let host = server["host"] as? String else {
+            continue
+        }
+        guard let portString = server["port"] as? String else {
+            continue
+        }
+        guard let username = server["username"] as? String else {
+            continue
+        }
+        guard let password = server["password"] as? String else {
+            continue
+        }
+        guard let port = Int(portString) else {
+            continue
+        }
+        result.append(CallAuxiliaryServer(
+            host: host,
+            port: port,
+            connection: .stun
+        ))
+        result.append(CallAuxiliaryServer(
+            host: host,
+            port: port,
+            connection: .turn(
+                username: username,
+                password: password
+            )
+        ))
+    }
+    return result
+}
+
 private enum CurrentCall {
     case none
     case incomingRinging(CallSessionRingingState)
@@ -41,6 +82,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
     private let accountManager: AccountManager
     private let audioSession: ManagedAudioSession
     private let callKitIntegration: CallKitIntegration?
+    private var isVideoPossible: Bool
     
     private var currentCallValue: PresentationCallImpl?
     private var currentCall: PresentationCallImpl? {
@@ -79,23 +121,24 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         return OngoingCallContext.versions(includeExperimental: includeExperimental)
     }
     
-    public init(accountManager: AccountManager, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), isMediaPlaying: @escaping () -> Bool, resumeMediaPlayback: @escaping () -> Void, audioSession: ManagedAudioSession, activeAccounts: Signal<[Account], NoError>) {
+    public init(accountManager: AccountManager, enableVideoCalls: Bool, getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void), isMediaPlaying: @escaping () -> Bool, resumeMediaPlayback: @escaping () -> Void, audioSession: ManagedAudioSession, activeAccounts: Signal<[Account], NoError>) {
         self.getDeviceAccessData = getDeviceAccessData
         self.accountManager = accountManager
         self.audioSession = audioSession
+        self.isVideoPossible = enableVideoCalls
         
         self.isMediaPlaying = isMediaPlaying
         self.resumeMediaPlayback = resumeMediaPlayback
         
-        var startCallImpl: ((Account, UUID, String) -> Signal<Bool, NoError>)?
+        var startCallImpl: ((Account, UUID, String, Bool) -> Signal<Bool, NoError>)?
         var answerCallImpl: ((UUID) -> Void)?
         var endCallImpl: ((UUID) -> Signal<Bool, NoError>)?
         var setCallMutedImpl: ((UUID, Bool) -> Void)?
         var audioSessionActivationChangedImpl: ((Bool) -> Void)?
         
-        self.callKitIntegration = CallKitIntegration(startCall: { account, uuid, handle in
+        self.callKitIntegration = CallKitIntegration(enableVideoCalls: enableVideoCalls, startCall: { account, uuid, handle, isVideo in
             if let startCallImpl = startCallImpl {
-                return startCallImpl(account, uuid, handle)
+                return startCallImpl(account, uuid, handle, isVideo)
             } else {
                 return .single(false)
             }
@@ -169,9 +212,9 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             self?.ringingStatesUpdated(ringingStates, enableCallKit: enableCallKit)
         })
         
-        startCallImpl = { [weak self] account, uuid, handle in
+        startCallImpl = { [weak self] account, uuid, handle, isVideo in
             if let strongSelf = self, let userId = Int32(handle) {
-                return strongSelf.startCall(account: account, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), internalId: uuid)
+                return strongSelf.startCall(account: account, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), isVideo: isVideo, isVideoPossible: strongSelf.isVideoPossible, internalId: uuid)
                 |> take(1)
                 |> map { result -> Bool in
                     return result
@@ -237,55 +280,10 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         self.callSettingsDisposable?.dispose()
     }
     
-    public func injectRingingStateSynchronously(account: Account, ringingState: CallSessionRingingState, callSession: CallSession) {
-        if self.currentCall != nil {
-            return
-        }
-        
-        let semaphore = DispatchSemaphore(value: 0)
-        var data: (PreferencesView, AccountSharedDataView, Peer?)?
-        let _ = combineLatest(
-            account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState])
-            |> take(1),
-            accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings])
-            |> take(1),
-            account.postbox.transaction { transaction -> Peer? in
-                return transaction.getPeer(ringingState.peerId)
-            }
-        ).start(next: { preferences, sharedData, peer in
-            data = (preferences, sharedData, peer)
-            semaphore.signal()
-        })
-        semaphore.wait()
-        
-        if let (preferences, sharedData, maybePeer) = data, let peer = maybePeer {
-            let configuration = preferences.values[PreferencesKeys.voipConfiguration] as? VoipConfiguration ?? .defaultValue
-            let derivedState = preferences.values[ApplicationSpecificPreferencesKeys.voipDerivedState] as? VoipDerivedState ?? .default
-            let autodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings ?? .defaultSettings
-            
-            let enableCallKit = true
-            
-            let call = PresentationCallImpl(account: account, audioSession: self.audioSession, callSessionManager: account.callSessionManager, callKitIntegration: enableCallKit ? callKitIntegrationIfEnabled(self.callKitIntegration, settings: self.callSettings) : nil, serializedData: configuration.serializedData, dataSaving: effectiveDataSaving(for: self.callSettings, autodownloadSettings: autodownloadSettings), derivedState: derivedState, getDeviceAccessData: self.getDeviceAccessData, initialState: callSession, internalId: ringingState.id, peerId: ringingState.peerId, isOutgoing: false, peer: peer, proxyServer: self.proxyServer, currentNetworkType: .none, updatedNetworkType: account.networkType)
-            self.updateCurrentCall(call)
-            self.currentCallPromise.set(.single(call))
-            self.hasActiveCallsPromise.set(true)
-            self.removeCurrentCallDisposable.set((call.canBeRemoved
-            |> deliverOnMainQueue).start(next: { [weak self, weak call] value in
-                if value, let strongSelf = self, let call = call {
-                    if strongSelf.currentCall === call {
-                        strongSelf.updateCurrentCall(nil)
-                        strongSelf.currentCallPromise.set(.single(nil))
-                        strongSelf.hasActiveCallsPromise.set(false)
-                    }
-                }
-            }))
-        }
-    }
-    
     private func ringingStatesUpdated(_ ringingStates: [(Account, Peer, CallSessionRingingState, Bool, NetworkType)], enableCallKit: Bool) {
         if let firstState = ringingStates.first {
             if self.currentCall == nil {
-                self.currentCallDisposable.set((combineLatest(firstState.0.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState]) |> take(1), accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings]) |> take(1))
+                self.currentCallDisposable.set((combineLatest(firstState.0.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState, PreferencesKeys.appConfiguration]) |> take(1), accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings]) |> take(1))
                 |> deliverOnMainQueue).start(next: { [weak self] preferences, sharedData in
                     guard let strongSelf = self else {
                         return
@@ -294,8 +292,29 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     let configuration = preferences.values[PreferencesKeys.voipConfiguration] as? VoipConfiguration ?? .defaultValue
                     let derivedState = preferences.values[ApplicationSpecificPreferencesKeys.voipDerivedState] as? VoipDerivedState ?? .default
                     let autodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings ?? .defaultSettings
+                    let appConfiguration = preferences.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? AppConfiguration.defaultValue
                     
-                    let call = PresentationCallImpl(account: firstState.0, audioSession: strongSelf.audioSession, callSessionManager: firstState.0.callSessionManager, callKitIntegration: enableCallKit ? callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings) : nil, serializedData: configuration.serializedData, dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings), derivedState: derivedState, getDeviceAccessData: strongSelf.getDeviceAccessData, initialState: nil, internalId: firstState.2.id, peerId: firstState.2.peerId, isOutgoing: false, peer: firstState.1, proxyServer: strongSelf.proxyServer, currentNetworkType: firstState.4, updatedNetworkType: firstState.0.networkType)
+                    let call = PresentationCallImpl(
+                        account: firstState.0,
+                        audioSession: strongSelf.audioSession,
+                        callSessionManager: firstState.0.callSessionManager,
+                        callKitIntegration: enableCallKit ? callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings) : nil,
+                        serializedData: configuration.serializedData,
+                        dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings),
+                        derivedState: derivedState,
+                        getDeviceAccessData: strongSelf.getDeviceAccessData,
+                        initialState: nil,
+                        internalId: firstState.2.id,
+                        peerId: firstState.2.peerId,
+                        isOutgoing: false,
+                        peer: firstState.1,
+                        proxyServer: strongSelf.proxyServer,
+                        auxiliaryServers: auxiliaryServers(appConfiguration: appConfiguration),
+                        currentNetworkType: firstState.4,
+                        updatedNetworkType: firstState.0.networkType,
+                        startWithVideo: firstState.2.isVideo,
+                        isVideoPossible: strongSelf.isVideoPossible
+                    )
                     strongSelf.updateCurrentCall(call)
                     strongSelf.currentCallPromise.set(.single(call))
                     strongSelf.hasActiveCallsPromise.set(true)
@@ -320,7 +339,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         }
     }
     
-    public func requestCall(account: Account, peerId: PeerId, endCurrentIfAny: Bool) -> RequestCallResult {
+    public func requestCall(account: Account, peerId: PeerId, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult {
+        let isVideoPossible = self.isVideoPossible
         if let call = self.currentCall, !endCurrentIfAny {
             return .alreadyInProgress(call.peerId)
         }
@@ -337,8 +357,19 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     }, openSettings: {
                         openSettings()
                     }, { value in
-                        subscriber.putNext(value)
-                        subscriber.putCompletion()
+                        if isVideo {
+                            DeviceAccess.authorizeAccess(to: .camera, presentationData: presentationData, present: { c, a in
+                                present(c, a)
+                            }, openSettings: {
+                                openSettings()
+                            }, { value in
+                                subscriber.putNext(value)
+                                subscriber.putCompletion()
+                            })
+                        } else {
+                            subscriber.putNext(value)
+                            subscriber.putCompletion()
+                        }
                     })
                     return EmptyDisposable
                 }
@@ -357,7 +388,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     guard let strongSelf = self, let peer = peer else {
                         return
                     }
-                    strongSelf.callKitIntegration?.startCall(account: account, peerId: peerId, displayTitle: peer.debugDisplayTitle)
+                    strongSelf.callKitIntegration?.startCall(account: account, peerId: peerId, isVideo: isVideo, displayTitle: peer.debugDisplayTitle)
                 }))
             }
             if let currentCall = self.currentCall {
@@ -374,7 +405,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 guard let strongSelf = self else {
                     return
                 }
-                let _ = strongSelf.startCall(account: account, peerId: peerId).start()
+                let _ = strongSelf.startCall(account: account, peerId: peerId, isVideo: isVideo, isVideoPossible: isVideoPossible).start()
             }
             if let currentCall = self.currentCall {
                 self.startCallDisposable.set((currentCall.hangUp()
@@ -388,7 +419,13 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         return .requested
     }
     
-    private func startCall(account: Account, peerId: PeerId, internalId: CallSessionInternalId = CallSessionInternalId()) -> Signal<Bool, NoError> {
+    private func startCall(
+        account: Account,
+        peerId: PeerId,
+        isVideo: Bool,
+        isVideoPossible: Bool,
+        internalId: CallSessionInternalId = CallSessionInternalId()
+    ) -> Signal<Bool, NoError> {
         let (presentationData, present, openSettings) = self.getDeviceAccessData()
         
         let accessEnabledSignal: Signal<Bool, NoError> = Signal { subscriber in
@@ -397,8 +434,19 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             }, openSettings: {
                 openSettings()
             }, { value in
-                subscriber.putNext(value)
-                subscriber.putCompletion()
+                if isVideo {
+                    DeviceAccess.authorizeAccess(to: .camera, presentationData: presentationData, present: { c, a in
+                        present(c, a)
+                    }, openSettings: {
+                        openSettings()
+                    }, { value in
+                        subscriber.putNext(value)
+                        subscriber.putCompletion()
+                    })
+                } else {
+                    subscriber.putNext(value)
+                    subscriber.putCompletion()
+                }
             })
             return EmptyDisposable
         }
@@ -411,9 +459,9 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             if !accessEnabled {
                 return .single(false)
             }
-            return (combineLatest(queue: .mainQueue(), account.callSessionManager.request(peerId: peerId, internalId: internalId), networkType |> take(1), account.postbox.peerView(id: peerId) |> map { peerView -> Bool in
+            return (combineLatest(queue: .mainQueue(), account.callSessionManager.request(peerId: peerId, isVideo: isVideo, internalId: internalId), networkType |> take(1), account.postbox.peerView(id: peerId) |> map { peerView -> Bool in
                 return peerView.peerIsContact
-            } |> take(1), account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState]) |> take(1), accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings]) |> take(1))
+            } |> take(1), account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState, PreferencesKeys.appConfiguration]) |> take(1), accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings]) |> take(1))
             |> deliverOnMainQueue
             |> beforeNext { internalId, currentNetworkType, isContact, preferences, sharedData in
                 if let strongSelf = self, accessEnabled {
@@ -424,8 +472,32 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     let configuration = preferences.values[PreferencesKeys.voipConfiguration] as? VoipConfiguration ?? .defaultValue
                     let derivedState = preferences.values[ApplicationSpecificPreferencesKeys.voipDerivedState] as? VoipDerivedState ?? .default
                     let autodownloadSettings = sharedData.entries[SharedDataKeys.autodownloadSettings] as? AutodownloadSettings ?? .defaultSettings
+                    let appConfiguration = preferences.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? AppConfiguration.defaultValue
                     
-                    let call = PresentationCallImpl(account: account, audioSession: strongSelf.audioSession, callSessionManager: account.callSessionManager, callKitIntegration: callKitIntegrationIfEnabled(strongSelf.callKitIntegration, settings: strongSelf.callSettings), serializedData: configuration.serializedData, dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings), derivedState: derivedState, getDeviceAccessData: strongSelf.getDeviceAccessData, initialState: nil, internalId: internalId, peerId: peerId, isOutgoing: true, peer: nil, proxyServer: strongSelf.proxyServer, currentNetworkType: currentNetworkType, updatedNetworkType: account.networkType)
+                    let call = PresentationCallImpl(
+                        account: account,
+                        audioSession: strongSelf.audioSession,
+                        callSessionManager: account.callSessionManager,
+                        callKitIntegration: callKitIntegrationIfEnabled(
+                            strongSelf.callKitIntegration,
+                            settings: strongSelf.callSettings
+                        ),
+                        serializedData: configuration.serializedData,
+                        dataSaving: effectiveDataSaving(for: strongSelf.callSettings, autodownloadSettings: autodownloadSettings),
+                        derivedState: derivedState,
+                        getDeviceAccessData: strongSelf.getDeviceAccessData,
+                        initialState: nil,
+                        internalId: internalId,
+                        peerId: peerId,
+                        isOutgoing: true,
+                        peer: nil,
+                        proxyServer: strongSelf.proxyServer,
+                        auxiliaryServers: auxiliaryServers(appConfiguration: appConfiguration),
+                        currentNetworkType: currentNetworkType,
+                        updatedNetworkType: account.networkType,
+                        startWithVideo: isVideo,
+                        isVideoPossible: isVideoPossible
+                    )
                     strongSelf.updateCurrentCall(call)
                     strongSelf.currentCallPromise.set(.single(call))
                     strongSelf.hasActiveCallsPromise.set(true)

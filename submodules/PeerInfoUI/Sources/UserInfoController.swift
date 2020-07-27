@@ -859,7 +859,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
         return .single((view, view.cachedData))
     }))
     
-    let requestCallImpl: () -> Void = {
+    let requestCallImpl: (Bool) -> Void = { isVideo in
         let _ = (peerView.get()
             |> take(1)
             |> deliverOnMainQueue).start(next: { view in
@@ -873,7 +873,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                 return
             }
             
-            let callResult = context.sharedContext.callManager?.requestCall(account: context.account, peerId: peer.id, endCurrentIfAny: false)
+            let callResult = context.sharedContext.callManager?.requestCall(account: context.account, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
             if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
                 if currentPeerId == peer.id {
                     context.sharedContext.navigateToCurrentCall()
@@ -884,7 +884,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                         } |> deliverOnMainQueue).start(next: { peer, current in
                             if let peer = peer, let current = current {
                                 presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                    let _ = context.sharedContext.callManager?.requestCall(account: context.account, peerId: peer.id, endCurrentIfAny: true)
+                                    let _ = context.sharedContext.callManager?.requestCall(account: context.account, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
                                 })]), nil)
                             }
                         })
@@ -1111,7 +1111,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
     }, displayCopyContextMenu: { tag, phone in
         displayCopyContextMenuImpl?(tag, phone)
     }, call: {
-        requestCallImpl()
+        requestCallImpl(false)
     }, openCallMenu: { number in
         let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId)
         |> deliverOnMainQueue).start(next: { peer, _ in
@@ -1125,7 +1125,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                     ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: presentationData.strings.UserInfo_TelegramCall, action: {
                             dismissAction()
-                            requestCallImpl()
+                            requestCallImpl(false)
                         }),
                         ActionSheetButtonItem(title: presentationData.strings.UserInfo_PhoneCall, action: {
                             dismissAction()

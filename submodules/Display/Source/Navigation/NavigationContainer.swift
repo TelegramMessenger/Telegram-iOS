@@ -228,6 +228,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 let velocity = recognizer.velocity(in: self.view).x
                 
                 if velocity > 1000 || navigationTransitionCoordinator.progress > 0.2 {
+                    self.state.top?.value.viewWillLeaveNavigation()
                     navigationTransitionCoordinator.animateCompletion(velocity, completion: { [weak self] in
                         guard let strongSelf = self, let _ = strongSelf.state.layout, let _ = strongSelf.state.transition, let top = strongSelf.state.top else {
                             return
@@ -399,6 +400,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 })
             }
             
+            fromValue.value.viewWillLeaveNavigation()
             fromValue.value.viewWillDisappear(true)
             toValue.value.viewWillAppear(true)
             toValue.value.setIgnoreAppearanceMethodInvocations(true)
@@ -464,6 +466,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             })
         } else {
             if let fromValue = fromValue {
+                fromValue.value.viewWillLeaveNavigation()
                 fromValue.value.viewWillDisappear(false)
                 fromValue.value.setIgnoreAppearanceMethodInvocations(true)
                 fromValue.value.displayNode.removeFromSupernode()

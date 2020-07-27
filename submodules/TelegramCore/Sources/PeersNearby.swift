@@ -155,7 +155,7 @@ public final class PeersNearbyContext {
             var selfPeer: PeerNearby?
             for entry in updatedEntries {
                 switch entry {
-                    case let .selfPeer:
+                    case .selfPeer:
                         if let index = existingSelfPeer {
                             entries[index] = entry
                         } else {

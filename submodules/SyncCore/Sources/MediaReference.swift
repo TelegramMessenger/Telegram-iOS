@@ -214,6 +214,7 @@ public enum AnyMediaReference: Equatable {
     case webPage(webPage: WebpageReference, media: Media)
     case stickerPack(stickerPack: StickerPackReference, media: Media)
     case savedGif(media: Media)
+    case avatarList(peer: PeerReference, media: Media)
     
     public static func ==(lhs: AnyMediaReference, rhs: AnyMediaReference) -> Bool {
         switch lhs {
@@ -247,6 +248,12 @@ public enum AnyMediaReference: Equatable {
                 } else {
                     return false
                 }
+            case let .avatarList(lhsPeer, lhsMedia):
+                if case let .avatarList(rhsPeer, rhsMedia) = rhs, lhsPeer == rhsPeer, lhsMedia.isEqual(to: rhsMedia) {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -262,6 +269,8 @@ public enum AnyMediaReference: Equatable {
                 return .stickerPack(stickerPack: stickerPack)
             case .savedGif:
                 return .savedGif
+            case let .avatarList(peer, media):
+                return nil
         }
     }
     
@@ -287,6 +296,10 @@ public enum AnyMediaReference: Equatable {
                 if let media = media as? T {
                     return .savedGif(media: media)
                 }
+            case let .avatarList(peer, media):
+                if let media = media as? T {
+                    return .avatarList(peer: peer, media: media)
+                }
         }
         return nil
     }
@@ -302,6 +315,8 @@ public enum AnyMediaReference: Equatable {
             case let .stickerPack(_, media):
                 return media
             case let .savedGif(media):
+                return media
+            case let .avatarList(_, media):
                 return media
         }
     }
@@ -380,6 +395,7 @@ public enum MediaReference<T: Media> {
         case webPage
         case stickerPack
         case savedGif
+        case avatarList
     }
     
     case standalone(media: T)
@@ -387,6 +403,7 @@ public enum MediaReference<T: Media> {
     case webPage(webPage: WebpageReference, media: T)
     case stickerPack(stickerPack: StickerPackReference, media: T)
     case savedGif(media: T)
+    case avatarList(peer: PeerReference, media: T)
     
     public init?(decoder: PostboxDecoder) {
         guard let caseIdValue = decoder.decodeOptionalInt32ForKey("_r"), let caseId = CodingCase(rawValue: caseIdValue) else {
@@ -421,6 +438,12 @@ public enum MediaReference<T: Media> {
                     return nil
                 }
                 self = .savedGif(media: media)
+            case .avatarList:
+                let peer = decoder.decodeObjectForKey("pr", decoder: { StickerPackReference(decoder: $0) }) as! PeerReference
+                guard let media = decoder.decodeObjectForKey("m") as? T else {
+                    return nil
+                }
+                self = .avatarList(peer: peer, media: media)
         }
     }
     
@@ -444,6 +467,10 @@ public enum MediaReference<T: Media> {
             case let .savedGif(media):
                 encoder.encodeInt32(CodingCase.savedGif.rawValue, forKey: "_r")
                 encoder.encodeObject(media, forKey: "m")
+            case let .avatarList(peer, media):
+                encoder.encodeInt32(CodingCase.avatarList.rawValue, forKey: "_r")
+                encoder.encodeObject(peer, forKey: "pr")
+                encoder.encodeObject(media, forKey: "m")
         }
     }
     
@@ -459,6 +486,8 @@ public enum MediaReference<T: Media> {
                 return .stickerPack(stickerPack: stickerPack, media: media)
             case let .savedGif(media):
                 return .savedGif(media: media)
+            case let .avatarList(peer, media):
+                return .avatarList(peer: peer, media: media)
         }
     }
     
@@ -478,6 +507,8 @@ public enum MediaReference<T: Media> {
                 return media
             case let .savedGif(media):
                 return media
+            case let .avatarList(_, media):
+                return media
         }
     }
     
@@ -493,6 +524,7 @@ public enum MediaResourceReference: Equatable {
     case media(media: AnyMediaReference, resource: MediaResource)
     case standalone(resource: MediaResource)
     case avatar(peer: PeerReference, resource: MediaResource)
+    case avatarList(peer: PeerReference, resource: MediaResource)
     case messageAuthorAvatar(message: MessageReference, resource: MediaResource)
     case wallpaper(wallpaper: WallpaperReference?, resource: MediaResource)
     case stickerPackThumbnail(stickerPack: StickerPackReference, resource: MediaResource)
@@ -505,6 +537,8 @@ public enum MediaResourceReference: Equatable {
             case let .standalone(resource):
                 return resource
             case let .avatar(_, resource):
+                return resource
+            case let .avatarList(_, resource):
                 return resource
             case let .messageAuthorAvatar(_, resource):
                 return resource
@@ -533,6 +567,12 @@ public enum MediaResourceReference: Equatable {
             }
         case let .avatar(lhsPeer, lhsResource):
             if case let .avatar(rhsPeer, rhsResource) = rhs, lhsPeer == rhsPeer, lhsResource.isEqual(to: rhsResource) {
+                return true
+            } else {
+                return false
+            }
+        case let .avatarList(lhsPeer, lhsResource):
+            if case let .avatarList(rhsPeer, rhsResource) = rhs, lhsPeer == rhsPeer, lhsResource.isEqual(to: rhsResource) {
                 return true
             } else {
                 return false

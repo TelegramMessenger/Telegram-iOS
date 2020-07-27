@@ -14,13 +14,13 @@ import ActivityIndicator
 
 class StatsGraphItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
-    let graph: ChannelStatsGraph
+    let graph: StatsGraph
     let type: ChartType
     let getDetailsData: ((Date, @escaping (String?) -> Void) -> Void)?
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     
-    init(presentationData: ItemListPresentationData, graph: ChannelStatsGraph, type: ChartType, getDetailsData: ((Date, @escaping (String?) -> Void) -> Void)? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
+    init(presentationData: ItemListPresentationData, graph: StatsGraph, type: ChartType, getDetailsData: ((Date, @escaping (String?) -> Void) -> Void)? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
         self.presentationData = presentationData
         self.graph = graph
         self.type = type
@@ -126,7 +126,7 @@ class StatsGraphItemNode: ListViewItemNode {
             let leftInset = params.leftInset
             let rightInset: CGFloat = params.rightInset
             var updatedTheme: PresentationTheme?
-            var updatedGraph: ChannelStatsGraph?
+            var updatedGraph: StatsGraph?
             var updatedController: BaseChartController?
             
             if currentItem?.presentationData.theme !== item.presentationData.theme {

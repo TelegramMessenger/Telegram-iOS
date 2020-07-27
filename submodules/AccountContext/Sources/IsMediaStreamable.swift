@@ -3,6 +3,8 @@ import Postbox
 import TelegramCore
 import SyncCore
 
+private let minimalStreamableSize: Int = 384 * 1024
+
 public func isMediaStreamable(message: Message, media: TelegramMediaFile) -> Bool {
     if message.containsSecretMedia {
         return false
@@ -13,7 +15,7 @@ public func isMediaStreamable(message: Message, media: TelegramMediaFile) -> Boo
     guard let size = media.size else {
         return false
     }
-    if size < 256 * 1024 {
+    if size < minimalStreamableSize {
         return false
     }
     for attribute in media.attributes {
@@ -36,7 +38,7 @@ public func isMediaStreamable(media: TelegramMediaFile) -> Bool {
     guard let size = media.size else {
         return false
     }
-    if size < 1 * 1024 * 1024 {
+    if size < minimalStreamableSize {
         return false
     }
     for attribute in media.attributes {
@@ -48,4 +50,12 @@ public func isMediaStreamable(media: TelegramMediaFile) -> Bool {
         }
     }
     return false
+}
+
+public func isMediaStreamable(resource: MediaResource) -> Bool {
+    if let size = resource.size, size >= minimalStreamableSize  {
+        return true
+    } else {
+        return false
+    }
 }

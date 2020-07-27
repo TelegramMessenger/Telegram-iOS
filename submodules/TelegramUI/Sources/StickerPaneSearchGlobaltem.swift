@@ -81,7 +81,6 @@ final class StickerPaneSearchGlobalItem: GridItem {
     let listAppearance: Bool
     let info: StickerPackCollectionInfo
     let topItems: [StickerPackItem]
-    let grid: Bool
     let topSeparator: Bool
     let regularInsets: Bool
     let installed: Bool
@@ -93,7 +92,7 @@ final class StickerPaneSearchGlobalItem: GridItem {
     let itemContext: StickerPaneSearchGlobalItemContext
     
     let section: GridSection?
-    var fillsRowWithHeight: CGFloat? {
+    var fillsRowWithHeight: (CGFloat, Bool)? {
         var additionalHeight: CGFloat = 0.0
         if self.regularInsets {
             additionalHeight = 12.0 + 12.0
@@ -104,17 +103,16 @@ final class StickerPaneSearchGlobalItem: GridItem {
             }
         }
         
-        return self.grid ? nil : (128.0 + additionalHeight)
+        return (128.0 + additionalHeight, !self.listAppearance)
     }
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, listAppearance: Bool, info: StickerPackCollectionInfo, topItems: [StickerPackItem], grid: Bool, topSeparator: Bool, regularInsets: Bool, installed: Bool, installing: Bool = false, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, itemContext: StickerPaneSearchGlobalItemContext, sectionTitle: String? = nil) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, listAppearance: Bool, info: StickerPackCollectionInfo, topItems: [StickerPackItem], topSeparator: Bool, regularInsets: Bool, installed: Bool, installing: Bool = false, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, itemContext: StickerPaneSearchGlobalItemContext, sectionTitle: String? = nil) {
         self.account = account
         self.theme = theme
         self.strings = strings
         self.listAppearance = listAppearance
         self.info = info
         self.topItems = topItems
-        self.grid = grid
         self.topSeparator = topSeparator
         self.regularInsets = regularInsets
         self.installed = installed

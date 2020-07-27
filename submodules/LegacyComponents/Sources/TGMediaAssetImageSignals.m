@@ -1,10 +1,8 @@
 #import "TGMediaAssetImageSignals.h"
 
 #import <Photos/Photos.h>
-#import <AssetsLibrary/AssetsLibrary.h>
 
 #import "TGMediaAssetModernImageSignals.h"
-#import "TGMediaAssetLegacyImageSignals.h"
 
 #import "TGPhotoEditorUtils.h"
 
@@ -27,10 +25,7 @@ static Class TGMediaAssetImageSignalsClass = nil;
 
 + (void)load
 {
-    if ([TGMediaAssetsLibrary usesPhotoFramework])
-        TGMediaAssetImageSignalsClass = [TGMediaAssetModernImageSignals class];
-    else
-        TGMediaAssetImageSignalsClass = [TGMediaAssetLegacyImageSignals class];
+    TGMediaAssetImageSignalsClass = [TGMediaAssetModernImageSignals class];
 }
 
 + (SSignal *)imageForAsset:(TGMediaAsset *)asset imageType:(TGMediaAssetImageType)imageType size:(CGSize)size
@@ -116,6 +111,8 @@ static Class TGMediaAssetImageSignalsClass = nil;
         AVAssetImageGenerator *generator = [AVAssetImageGenerator assetImageGeneratorWithAsset:avAsset];
         generator.appliesPreferredTrackTransform = true;
         generator.maximumSize = size;
+        generator.requestedTimeToleranceBefore = kCMTimeZero;
+        generator.requestedTimeToleranceAfter = kCMTimeZero;
         
         [generator generateCGImagesAsynchronouslyForTimes:timestamps completionHandler:^(__unused CMTime requestedTime, CGImageRef imageRef, __unused CMTime actualTime, AVAssetImageGeneratorResult result, NSError *error)
         {

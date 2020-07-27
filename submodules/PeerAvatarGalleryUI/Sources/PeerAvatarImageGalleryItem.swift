@@ -12,6 +12,7 @@ import RadialStatusNode
 import ShareController
 import PhotoResources
 import GalleryUI
+import TelegramUniversalVideoContent
 
 private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account
@@ -24,9 +25,9 @@ private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
         self.content = content
     }
     
-    var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
+    func image(synchronous: Bool) -> (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
         if let representation = largestImageRepresentation(self.content.map({ $0.representation })) {
-            return (avatarGalleryThumbnailPhoto(account: self.account, representations: self.content), representation.dimensions.cgSize)
+            return (avatarGalleryThumbnailPhoto(account: self.account, representations: self.content, synchronousLoad: synchronous), representation.dimensions.cgSize)
         } else {
             return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
         }
@@ -50,48 +51,62 @@ class PeerAvatarImageGalleryItem: GalleryItem {
     let peer: Peer
     let presentationData: PresentationData
     let entry: AvatarGalleryEntry
-    let sourceHasRoundCorners: Bool
+    let sourceCorners: AvatarGalleryController.SourceCorners
     let delete: (() -> Void)?
+    let setMain: (() -> Void)?
+    let edit: (() -> Void)?
     
-    init(context: AccountContext, peer: Peer, presentationData: PresentationData, entry: AvatarGalleryEntry, sourceHasRoundCorners: Bool, delete: (() -> Void)?) {
+    init(context: AccountContext, peer: Peer, presentationData: PresentationData, entry: AvatarGalleryEntry, sourceCorners: AvatarGalleryController.SourceCorners, delete: (() -> Void)?, setMain: (() -> Void)?, edit: (() -> Void)?) {
         self.context = context
         self.peer = peer
         self.presentationData = presentationData
         self.entry = entry
-        self.sourceHasRoundCorners = sourceHasRoundCorners
+        self.sourceCorners = sourceCorners
         self.delete = delete
+        self.setMain = setMain
+        self.edit = edit
     }
-    
-    func node() -> GalleryItemNode {
-        let node = PeerAvatarImageGalleryItemNode(context: self.context, presentationData: self.presentationData, peer: self.peer, sourceHasRoundCorners: self.sourceHasRoundCorners)
+        
+    func node(synchronous: Bool) -> GalleryItemNode {
+        let node = PeerAvatarImageGalleryItemNode(context: self.context, presentationData: self.presentationData, peer: self.peer, sourceCorners: self.sourceCorners)
         
         if let indexData = self.entry.indexData {
             node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
         }
         
-        node.setEntry(self.entry)
+        node.setEntry(self.entry, synchronous: synchronous)
         node.footerContentNode.delete = self.delete
+        node.footerContentNode.setMain = self.setMain
+        node.edit = self.edit
         
         return node
     }
     
-    func updateNode(node: GalleryItemNode) {
+    func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? PeerAvatarImageGalleryItemNode {
             if let indexData = self.entry.indexData {
                 node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
             }
-            
-            node.setEntry(self.entry)
+            let previousContentAnimations = node.imageNode.contentAnimations
+            if synchronous {
+                node.imageNode.contentAnimations = []
+            }
+            node.setEntry(self.entry, synchronous: synchronous)
+            if synchronous {
+                 node.imageNode.contentAnimations = previousContentAnimations
+            }
             node.footerContentNode.delete = self.delete
+            node.footerContentNode.setMain = self.setMain
+            node.edit = self.edit
         }
     }
     
     func thumbnailItem() -> (Int64, GalleryThumbnailItem)? {
         let content: [ImageRepresentationWithReference]
         switch self.entry {
-            case let .topImage(representations, _):
+            case let .topImage(representations, _, _, _, _, _):
                 content = representations
-            case let .image(_, _, representations, _, _, _, _):
+            case let .image(_, _, representations, _, _, _, _, _, _, _):
                 content = representations
         }
         
@@ -99,16 +114,36 @@ class PeerAvatarImageGalleryItem: GalleryItem {
     }
 }
 
+private class PeerAvatarImageGalleryContentNode: ASDisplayNode {
+    override func layout() {
+        super.layout()
+        
+        if let subnodes = self.subnodes {
+            for node in subnodes {
+                node.frame = self.bounds
+            }
+        }
+    }
+}
+
 final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let context: AccountContext
+    private let presentationData: PresentationData
     private let peer: Peer
-    private let sourceHasRoundCorners: Bool
+    private let sourceCorners: AvatarGalleryController.SourceCorners
     
     private var entry: AvatarGalleryEntry?
     
-    private let imageNode: TransformImageNode
+    private let contentNode: PeerAvatarImageGalleryContentNode
+    fileprivate let imageNode: TransformImageNode
+    private var videoNode: UniversalVideoNode?
+    private var videoContent: NativeVideoContent?
+    private var videoStartTimestamp: Double?
+    
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
+    fileprivate let _rightBarButtonItems = Promise<[UIBarButtonItem]?>()
+    
     private let statusNodeContainer: HighlightableButtonNode
     private let statusNode: RadialStatusNode
     fileprivate let footerContentNode: AvatarGalleryItemFooterContentNode
@@ -116,12 +151,17 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private let fetchDisposable = MetaDisposable()
     private let statusDisposable = MetaDisposable()
     private var status: MediaResourceStatus?
+    private let playbackStatusDisposable = MetaDisposable()
     
-    init(context: AccountContext, presentationData: PresentationData, peer: Peer, sourceHasRoundCorners: Bool) {
+    fileprivate var edit: (() -> Void)?
+    
+    init(context: AccountContext, presentationData: PresentationData, peer: Peer, sourceCorners: AvatarGalleryController.SourceCorners) {
         self.context = context
+        self.presentationData = presentationData
         self.peer = peer
-        self.sourceHasRoundCorners = sourceHasRoundCorners
+        self.sourceCorners = sourceCorners
         
+        self.contentNode = PeerAvatarImageGalleryContentNode()
         self.imageNode = TransformImageNode()
         self.footerContentNode = AvatarGalleryItemFooterContentNode(context: context, presentationData: presentationData)
         
@@ -131,10 +171,8 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         super.init()
         
-        self.imageNode.imageUpdated = { [weak self] _ in
-            self?._ready.set(.single(Void()))
-        }
-        
+        self.contentNode.addSubnode(self.imageNode)
+                
         self.imageNode.contentAnimations = .subsequentUpdates
         self.imageNode.view.contentMode = .scaleAspectFill
         self.imageNode.clipsToBounds = true
@@ -147,7 +185,14 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         self.footerContentNode.share = { [weak self] interaction in
             if let strongSelf = self, let entry = strongSelf.entry, !entry.representations.isEmpty {
-                let shareController = ShareController(context: strongSelf.context, subject: .image(entry.representations), preferredAction: .saveToCameraRoll)
+                let subject: ShareControllerSubject
+                if let video = entry.videoRepresentations.last, let peerReference = PeerReference(peer) {
+                    let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
+                    subject = .media(videoFileReference.abstract)
+                } else {
+                    subject = .image(entry.representations)
+                }
+                let shareController = ShareController(context: strongSelf.context, subject: subject, preferredAction: .saveToCameraRoll)
                 interaction.presentController(shareController, nil)
             }
         }
@@ -156,6 +201,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     deinit {
         self.fetchDisposable.dispose()
         self.statusDisposable.dispose()
+        self.playbackStatusDisposable.dispose()
     }
     
     override func ready() -> Signal<Void, NoError> {
@@ -170,80 +216,156 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(), size: statusSize))
     }
     
-    fileprivate func setEntry(_ entry: AvatarGalleryEntry) {
+    fileprivate func setEntry(_ entry: AvatarGalleryEntry, synchronous: Bool) {
+        let previousRepresentations = self.entry?.representations
+        let previousVideoRepresentations = self.entry?.videoRepresentations
         if self.entry != entry {
             self.entry = entry
             
-            self.footerContentNode.setEntry(entry)
+            var barButtonItems: [UIBarButtonItem] = []
+            let footerContent: AvatarGalleryItemFooterContent = .info
+            if self.peer.id == self.context.account.peerId {
+                let rightBarButtonItem =  UIBarButtonItem(title: entry.videoRepresentations.isEmpty ? self.presentationData.strings.Settings_EditPhoto : self.presentationData.strings.Settings_EditVideo, style: .plain, target: self, action: #selector(self.editPressed))
+                barButtonItems.append(rightBarButtonItem)
+            }
+            self._rightBarButtonItems.set(.single(barButtonItems))
+                        
+            self.footerContentNode.setEntry(entry, content: footerContent)
             
             if let largestSize = largestImageRepresentation(entry.representations.map({ $0.representation })) {
                 let displaySize = largestSize.dimensions.cgSize.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
-                let representations: [ImageRepresentationWithReference]
-                switch entry {
-                    case let .topImage(topRepresentations, _):
-                        representations = topRepresentations
-                    case let .image(_, _, imageRepresentations, _, _, _, _):
-                        representations = imageRepresentations
+                let representations = entry.representations
+                if representations.last != previousRepresentations?.last {
+                    self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, immediateThumbnailData: entry.immediateThumbnailData, attemptSynchronously: synchronous), attemptSynchronously: synchronous, dispatchOnDisplayLink: false)
+                    if entry.videoRepresentations.isEmpty {
+                        self.imageNode.imageUpdated = { [weak self] _ in
+                            self?._ready.set(.single(Void()))
+                        }
+                    }
                 }
-                self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations), dispatchOnDisplayLink: false)
-                self.zoomableContent = (largestSize.dimensions.cgSize, self.imageNode)
+                
+                self.zoomableContent = (largestSize.dimensions.cgSize, self.contentNode)
+
                 if let largestIndex = representations.firstIndex(where: { $0.representation == largestSize }) {
                     self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, reference: representations[largestIndex].reference).start())
                 }
                 
-                self.statusDisposable.set((self.context.account.postbox.mediaBox.resourceStatus(largestSize.resource)
-                |> deliverOnMainQueue).start(next: { [weak self] status in
-                    if let strongSelf = self {
-                        let previousStatus = strongSelf.status
-                        strongSelf.status = status
-                        switch status {
-                            case .Remote:
-                                strongSelf.statusNode.isHidden = false
-                                strongSelf.statusNodeContainer.isUserInteractionEnabled = true
-                                strongSelf.statusNode.transitionToState(.download(.white), completion: {})
-                            case let .Fetching(_, progress):
-                                strongSelf.statusNode.isHidden = false
-                                strongSelf.statusNodeContainer.isUserInteractionEnabled = true
-                                let adjustedProgress = max(progress, 0.027)
-                                strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true), completion: {})
-                            case .Local:
-                                if let previousStatus = previousStatus, case .Fetching = previousStatus {
-                                    strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: 1.0, cancelEnabled: true), completion: {
-                                        if let strongSelf = self {
-                                            strongSelf.statusNode.alpha = 0.0
-                                            strongSelf.statusNodeContainer.isUserInteractionEnabled = false
-                                            strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
-                                                if let strongSelf = self {
-                                                    strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
-                                                }
-                                            })
-                                        }
-                                    })
-                                } else if !strongSelf.statusNode.isHidden && !strongSelf.statusNode.alpha.isZero {
-                                    strongSelf.statusNode.alpha = 0.0
-                                    strongSelf.statusNodeContainer.isUserInteractionEnabled = false
-                                    strongSelf.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
-                                        if let strongSelf = self {
-                                            strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
-                                        }
-                                    })
-                                }
-                        }
+                var id: Int64
+                var category: String?
+                if case let .image(image) = entry {
+                    id = image.0.id
+                    category = image.9
+                } else {
+                    id = Int64(entry.peer?.id.id ?? 0)
+                    if let resource = entry.videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
+                        id = id &+ resource.photoId
                     }
-                }))
+                }
+                if let video = entry.videoRepresentations.last, let peerReference = PeerReference(self.peer) {
+                    if video != previousVideoRepresentations?.last {
+                        let mediaManager = self.context.sharedContext.mediaManager
+                        let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: entry.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
+                        let videoContent = NativeVideoContent(id: .profileVideo(id, category), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: true, useLargeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
+                        let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .overlay)
+                        videoNode.isUserInteractionEnabled = false
+                        videoNode.isHidden = true
+                        self.videoStartTimestamp = video.representation.startTimestamp
+                                            
+                        self.videoContent = videoContent
+                        self.videoNode = videoNode
+                        
+                        self.playVideoIfCentral()
+                        videoNode.updateLayout(size: largestSize.dimensions.cgSize, transition: .immediate)
+                        
+                        self.contentNode.addSubnode(videoNode)
+                        
+                        self._ready.set(videoNode.ready)
+                    }
+                } else if let videoNode = self.videoNode {
+                    self.videoContent = nil
+                    self.videoNode = nil
+                    
+                    Queue.mainQueue().after(0.1) {
+                        videoNode.removeFromSupernode()
+                    }
+                }
+                
+                self.imageNode.frame = self.contentNode.bounds
+                self.videoNode?.frame = self.contentNode.bounds
             } else {
                 self._ready.set(.single(Void()))
             }
         }
     }
     
-    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
-        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
-        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view.superview)
+    private func playVideoIfCentral() {
+        guard let videoNode = self.videoNode, self.isCentral else {
+            return
+        }
+        if let _ = self.videoStartTimestamp {
+            videoNode.isHidden = true
+            self.playbackStatusDisposable.set((videoNode.status
+                |> map { status -> Bool in
+                    if let status = status, case .playing = status.status {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+                |> filter { playing in
+                    return playing
+                }
+                |> take(1)
+                |> deliverOnMainQueue).start(completed: { [weak self] in
+                    if let strongSelf = self {
+                        Queue.mainQueue().after(0.1) {
+                            strongSelf.videoNode?.isHidden = false
+                        }
+                    }
+                }))
+        } else {
+            self.playbackStatusDisposable.set(nil)
+            videoNode.isHidden = false
+        }
+    
+        let hadAttachedContent = videoNode.hasAttachedContext
+        videoNode.canAttachContent = true
+        if videoNode.hasAttachedContext {
+            if let startTimestamp = self.videoStartTimestamp, !hadAttachedContent {
+                videoNode.seek(startTimestamp)
+            }
+            videoNode.play()
+        }
+    }
+    
+    var isCentral = false
+    override func centralityUpdated(isCentral: Bool) {
+        super.centralityUpdated(isCentral: isCentral)
+        
+        if self.isCentral != isCentral {
+            self.isCentral = isCentral
+            
+            if isCentral {
+                self.playVideoIfCentral()
+            } else if let videoNode = self.videoNode {
+                videoNode.pause()
+                if let startTimestamp = self.videoStartTimestamp {
+                    videoNode.seek(startTimestamp)
+                } else {
+                    videoNode.seek(0.0)
+                }
+                videoNode.isHidden = true
+            }
+        }
+    }
+    
+    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
+        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.contentNode.view)
+        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.contentNode.view.superview)
         let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
-        let transformedCopyViewFinalFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: self.view)
-        let scaledLocalImageViewBounds = self.imageNode.view.bounds
+        let transformedCopyViewFinalFrame = self.contentNode.view.convert(self.contentNode.view.bounds, to: self.view)
+        let scaledLocalImageViewBounds = self.contentNode.view.bounds
         
         let copyViewContents = node.2().0!
         let copyView = UIView()
@@ -261,7 +383,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         var transformedSurfaceFinalFrame: CGRect?
         if let contentSurface = surfaceCopyView.superview {
             transformedSurfaceFrame = node.0.view.convert(node.0.view.bounds, to: contentSurface)
-            transformedSurfaceFinalFrame = self.imageNode.view.convert(scaledLocalImageViewBounds, to: contentSurface)
+            transformedSurfaceFinalFrame = self.contentNode.view.convert(scaledLocalImageViewBounds, to: contentSurface)
         }
         
         if let transformedSurfaceFrame = transformedSurfaceFrame, let transformedSurfaceFinalFrame = transformedSurfaceFinalFrame {
@@ -278,7 +400,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             })
         }
         
-        if self.sourceHasRoundCorners {
+        if case .round = self.sourceCorners {
             self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         }
         copyView.frame = transformedSelfFrame
@@ -291,22 +413,39 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         let scale = CGSize(width: transformedCopyViewFinalFrame.size.width / transformedSelfFrame.size.width, height: transformedCopyViewFinalFrame.size.height / transformedSelfFrame.size.height)
         copyView.layer.animate(from: NSValue(caTransform3D: CATransform3DIdentity), to: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false)
         
-        self.imageNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.imageNode.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
-        self.imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.07)
+        self.contentNode.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.contentNode.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+            completion()
+        })
+        
+        if let _ = self.videoNode {
+            self.contentNode.view.superview?.bringSubviewToFront(self.contentNode.view)
+        } else {
+            self.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.07)
+        }
         
         transformedFrame.origin = CGPoint()
         //self.imageNode.layer.animateBounds(from: transformedFrame, to: self.imageNode.layer.bounds, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
         
-        let transform = CATransform3DScale(self.imageNode.layer.transform, transformedFrame.size.width / self.imageNode.layer.bounds.size.width, transformedFrame.size.height / self.imageNode.layer.bounds.size.height, 1.0)
-        self.imageNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: self.imageNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
+        let transform = CATransform3DScale(self.contentNode.layer.transform, transformedFrame.size.width / self.contentNode.layer.bounds.size.width, transformedFrame.size.height / self.contentNode.layer.bounds.size.height, 1.0)
+        self.contentNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: self.contentNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
         
-        self.imageNode.clipsToBounds = true
-        if self.sourceHasRoundCorners {
-            self.imageNode.layer.animate(from: (self.imageNode.frame.width / 2.0) as NSNumber, to: 0.0 as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18, removeOnCompletion: false, completion: { [weak self] value in
+        self.contentNode.clipsToBounds = true
+        if case .round(true) = self.sourceCorners {
+            self.contentNode.layer.animate(from: (self.contentNode.frame.width / 2.0) as NSNumber, to: 0.0 as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18, removeOnCompletion: false, completion: { [weak self] value in
                 if value {
-                    self?.imageNode.clipsToBounds = false
+                    self?.contentNode.clipsToBounds = false
                 }
             })
+        } else if case let .roundRect(cornerRadius) = self.sourceCorners {
+            let scale = scaledLocalImageViewBounds.width / transformedCopyViewFinalFrame.width
+            let selfScale = transformedCopyViewFinalFrame.width / transformedSelfFrame.width
+            self.contentNode.layer.animate(from: (cornerRadius * scale * selfScale) as NSNumber, to: 0.0 as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18, removeOnCompletion: false, completion: { [weak self] value in
+                if value {
+                    self?.contentNode.clipsToBounds = false
+                }
+            })
+        } else {
+            self.contentNode.clipsToBounds = false
         }
         
         self.statusNodeContainer.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.statusNodeContainer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
@@ -315,25 +454,35 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     override func animateOut(to node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
-        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
-        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view.superview)
+        var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.contentNode.view)
+        let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.contentNode.view.superview)
         let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
-        let transformedCopyViewInitialFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: self.view)
+        let transformedCopyViewInitialFrame = self.contentNode.view.convert(self.contentNode.view.bounds, to: self.view)
+        let scaledLocalImageViewBounds = self.contentNode.view.bounds
         
         var positionCompleted = false
         var boundsCompleted = false
         var copyCompleted = false
         var surfaceCopyCompleted = false
         
-        let copyView = node.2().0!
+        let (maybeCopyView, copyViewBackground) = node.2()
+        copyViewBackground?.alpha = 1.0
         
-        if self.sourceHasRoundCorners {
+        let copyView = maybeCopyView!
+        
+        var sourceHasRoundCorners = false
+        if case .none = self.sourceCorners {
+        } else {
+            sourceHasRoundCorners = true
+        }
+        
+        if sourceHasRoundCorners {
             self.view.insertSubview(copyView, belowSubview: self.scrollNode.view)
         }
         copyView.frame = transformedSelfFrame
         
         let surfaceCopyView = node.2().0!
-        if !self.sourceHasRoundCorners {
+        if !sourceHasRoundCorners {
             addToTransitionSurface(surfaceCopyView)
         }
         
@@ -341,7 +490,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         var transformedSurfaceCopyViewInitialFrame: CGRect?
         if let contentSurface = surfaceCopyView.superview {
             transformedSurfaceFrame = node.0.view.convert(node.0.view.bounds, to: contentSurface)
-            transformedSurfaceCopyViewInitialFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: contentSurface)
+            transformedSurfaceCopyViewInitialFrame = self.contentNode.view.convert(self.contentNode.view.bounds, to: contentSurface)
         }
         
         let durationFactor = 1.0
@@ -376,24 +525,32 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
             intermediateCompletion()
         })
         
-        self.imageNode.layer.animatePosition(from: self.imageNode.layer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25 * durationFactor, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+        if let _ = self.videoNode {
+            self.contentNode.view.superview?.bringSubviewToFront(self.contentNode.view)
+        } else {
+            self.contentNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25 * durationFactor, removeOnCompletion: false)
+        }
+        
+        self.contentNode.layer.animatePosition(from: self.contentNode.layer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25 * durationFactor, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
             positionCompleted = true
             intermediateCompletion()
         })
         
-        self.imageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25 * durationFactor, removeOnCompletion: false)
-        
         transformedFrame.origin = CGPoint()
         
-        let transform = CATransform3DScale(self.imageNode.layer.transform, transformedFrame.size.width / self.imageNode.layer.bounds.size.width, transformedFrame.size.height / self.imageNode.layer.bounds.size.height, 1.0)
-        self.imageNode.layer.animate(from: NSValue(caTransform3D: self.imageNode.layer.transform), to: NSValue(caTransform3D: transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25 * durationFactor, removeOnCompletion: false, completion: { _ in
+        let transform = CATransform3DScale(self.contentNode.layer.transform, transformedFrame.size.width / self.contentNode.layer.bounds.size.width, transformedFrame.size.height / self.contentNode.layer.bounds.size.height, 1.0)
+        self.contentNode.layer.animate(from: NSValue(caTransform3D: self.contentNode.layer.transform), to: NSValue(caTransform3D: transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25 * durationFactor, removeOnCompletion: false, completion: { _ in
             boundsCompleted = true
             intermediateCompletion()
         })
         
-        self.imageNode.clipsToBounds = true
-        if self.sourceHasRoundCorners {
-            self.imageNode.layer.animate(from: 0.0 as NSNumber, to: (self.imageNode.frame.width / 2.0) as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18 * durationFactor, removeOnCompletion: false)
+        self.contentNode.clipsToBounds = true
+        if case .round = self.sourceCorners {
+            self.contentNode.layer.animate(from: 0.0 as NSNumber, to: (self.contentNode.frame.width / 2.0) as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18 * durationFactor, removeOnCompletion: false)
+        } else if case let .roundRect(cornerRadius) = self.sourceCorners {
+            let scale = scaledLocalImageViewBounds.width / transformedCopyViewInitialFrame.width
+            let selfScale = transformedCopyViewInitialFrame.width / transformedSelfFrame.width
+            self.contentNode.layer.animate(from: 0.0 as NSNumber, to: (cornerRadius * scale * selfScale) as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18 * durationFactor, removeOnCompletion: false)
         }
         
         self.statusNodeContainer.layer.animatePosition(from: self.statusNodeContainer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
@@ -408,6 +565,10 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         return self._title.get()
     }
     
+    override func rightBarButtonItems() -> Signal<[UIBarButtonItem]?, NoError> {
+        return self._rightBarButtonItems.get()
+    }
+    
     @objc func statusPressed() {
         if let entry = self.entry, let largestSize = largestImageRepresentation(entry.representations.map({ $0.representation })), let status = self.status {
             switch status {
@@ -416,9 +577,9 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 case .Remote:
                     let representations: [ImageRepresentationWithReference]
                     switch entry {
-                        case let .topImage(topRepresentations, _):
+                        case let .topImage(topRepresentations, _, _, _, _, _):
                             representations = topRepresentations
-                        case let .image(_, _, imageRepresentations, _, _, _, _):
+                        case let .image(_, _, imageRepresentations, _, _, _, _, _, _, _):
                             representations = imageRepresentations
                     }
                     
@@ -429,6 +590,10 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     break
             }
         }
+    }
+    
+    @objc private func editPressed() {
+        self.edit?()
     }
     
     override func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {

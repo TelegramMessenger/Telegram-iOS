@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 
 public enum ContainedViewLayoutTransitionCurve {
+    case linear
     case easeInOut
     case spring
     case custom(Float, Float, Float, Float)
@@ -15,6 +16,8 @@ public enum ContainedViewLayoutTransitionCurve {
 public extension ContainedViewLayoutTransitionCurve {
     var timingFunction: String {
         switch self {
+            case .linear:
+                return CAMediaTimingFunctionName.linear.rawValue
             case .easeInOut:
                 return CAMediaTimingFunctionName.easeInEaseOut.rawValue
             case .spring:
@@ -26,6 +29,8 @@ public extension ContainedViewLayoutTransitionCurve {
     
     var mediaTimingFunction: CAMediaTimingFunction? {
         switch self {
+            case .linear:
+                return nil
             case .easeInOut:
                 return nil
             case .spring:
@@ -38,6 +43,8 @@ public extension ContainedViewLayoutTransitionCurve {
     #if os(iOS)
     var viewAnimationOptions: UIView.AnimationOptions {
         switch self {
+            case .linear:
+                return [.curveLinear]
             case .easeInOut:
                 return [.curveEaseInOut]
             case .spring:
@@ -63,7 +70,7 @@ public enum ContainedViewLayoutTransition {
 }
 
 public extension ContainedViewLayoutTransition {
-    func updateFrame(node: ASDisplayNode, frame: CGRect, force: Bool = false, beginWithCurrentState: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    func updateFrame(node: ASDisplayNode, frame: CGRect, force: Bool = false, beginWithCurrentState: Bool = false, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
         if node.frame.equalTo(frame) && !force {
             completion?(true)
         } else {
@@ -81,7 +88,7 @@ public extension ContainedViewLayoutTransition {
                     previousFrame = node.frame
                 }
                 node.frame = frame
-                node.layer.animateFrame(from: previousFrame, to: frame, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, force: force, completion: { result in
+                node.layer.animateFrame(from: previousFrame, to: frame, duration: duration, delay: delay, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, force: force, completion: { result in
                     if let completion = completion {
                         completion(result)
                     }
@@ -537,6 +544,31 @@ public extension ContainedViewLayoutTransition {
             let previousCornerRadius = node.cornerRadius
             node.cornerRadius = cornerRadius
             node.layer.animate(from: NSNumber(value: Float(previousCornerRadius)), to: NSNumber(value: Float(cornerRadius)), keyPath: "cornerRadius", timingFunction: curve.timingFunction, duration: duration, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
+                if let completion = completion {
+                    completion(result)
+                }
+            })
+        }
+    }
+    
+    func updateCornerRadius(layer: CALayer, cornerRadius: CGFloat, completion: ((Bool) -> Void)? = nil) {
+        if layer.cornerRadius.isEqual(to: cornerRadius) {
+            if let completion = completion {
+                completion(true)
+            }
+            return
+        }
+        
+        switch self {
+        case .immediate:
+            layer.cornerRadius = cornerRadius
+            if let completion = completion {
+                completion(true)
+            }
+        case let .animated(duration, curve):
+            let previousCornerRadius = layer.cornerRadius
+            layer.cornerRadius = cornerRadius
+            layer.animate(from: NSNumber(value: Float(previousCornerRadius)), to: NSNumber(value: Float(cornerRadius)), keyPath: "cornerRadius", timingFunction: curve.timingFunction, duration: duration, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                 if let completion = completion {
                     completion(result)
                 }

@@ -331,7 +331,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollVi
                     switch status {
                         case .paused:
                             paused = true
-                        case let .buffering(_, whilePlaying):
+                        case let .buffering(_, whilePlaying, _):
                             paused = !whilePlaying
                         case .playing:
                             paused = false

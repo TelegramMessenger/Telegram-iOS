@@ -30,6 +30,12 @@ public class PercentPieChartController: BaseChartController {
     let pieController: PieChartComponentController
     let transitionRenderer: PercentPieAnimationRenderer
     
+    var initiallyZoomed = false
+    public convenience init(chartsCollection: ChartsCollection, initiallyZoomed: Bool) {
+        self.init(chartsCollection: chartsCollection)
+        self.initiallyZoomed = initiallyZoomed
+    }
+    
     override public init(chartsCollection: ChartsCollection)  {
         transitionRenderer = PercentPieAnimationRenderer()
         percentController = PercentChartComponentController(isZoomed: false,
@@ -88,14 +94,14 @@ public class PercentPieChartController: BaseChartController {
                 pieController.previewBarChartRenderer]
     }
 
-   public  override func initializeChart() {
+    public override func initializeChart() {
         percentController.initialize(chartsCollection: initialChartsCollection,
                                      initialDate: Date(),
                                      totalHorizontalRange: BaseConstants.defaultRange,
                                      totalVerticalRange: BaseConstants.defaultRange)
         switchToChart(chartsCollection: percentController.chartsCollection, isZoomed: false, animated: false)
     
-        if let lastDate = initialChartsCollection.axisValues.last {
+        if let lastDate = initialChartsCollection.axisValues.last, self.initiallyZoomed {
             TimeInterval.animationDurationMultipler = 0.00001
             self.didTapZoomIn(date: lastDate, animated: false)
             TimeInterval.animationDurationMultipler = 1.0

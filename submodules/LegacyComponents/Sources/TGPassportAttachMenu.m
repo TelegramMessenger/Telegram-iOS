@@ -11,7 +11,6 @@
 #import "TGAttachmentCameraView.h"
 
 #import <LegacyComponents/TGCameraController.h>
-#import <LegacyComponents/TGLegacyCameraController.h>
 
 @interface TGPassportDocumentPickerDelegate : NSObject <UIDocumentPickerDelegate>
 {
@@ -270,26 +269,6 @@
     }
 }
 
-+ (void)_displayLegacyCameraWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController uploadAction:(void (^)(SSignal *, void (^)(void)))uploadAction
-{
-    TGLegacyCameraController *legacyCameraController = [[TGLegacyCameraController alloc] initWithContext:context];
-    legacyCameraController.sourceType = UIImagePickerControllerSourceTypeCamera;
-    
-    __weak TGViewController *weakParentController = parentController;
-    legacyCameraController.finishedWithImage = ^(UIImage *image)
-    {
-        TGCameraCapturedPhoto *photo = [[TGCameraCapturedPhoto alloc] initWithImage:image metadata:nil];
-        uploadAction([TGPassportAttachMenu resultSignalForEditingContext:nil selectionContext:nil currentItem:photo], ^
-        {
-            __strong TGViewController *strongParentController = weakParentController;
-            if (strongParentController != nil)
-                [strongParentController dismissViewControllerAnimated:true completion:nil];
-        });
-    };
-    
-    [parentController presentViewController:legacyCameraController animated:true completion:nil];
-}
-
 + (void)_displayCameraWithView:(TGAttachmentCameraView *)cameraView menuController:(TGMenuSheetController *)menuController parentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context intent:(TGPassportAttachIntent)intent uploadAction:(void (^)(SSignal *, void (^)(void)))uploadAction
 {
     if (![[[LegacyComponentsGlobals provider] accessChecker] checkCameraAuthorizationStatusForIntent:TGCameraAccessIntentDefault alertDismissCompletion:nil])
@@ -297,14 +276,7 @@
     
     if ([context currentlyInSplitView])
         return;
-    
-    if ([TGCameraController useLegacyCamera])
-    {
-        [self _displayLegacyCameraWithContext:context parentController:parentController uploadAction:uploadAction];
-        [menuController dismissAnimated:true];
-        return;
-    }
-    
+       
     TGCameraController *controller = nil;
     CGSize screenSize = TGScreenSize();
     

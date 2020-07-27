@@ -1,6 +1,9 @@
 #import <UIKit/UIKit.h>
 #import <SSignalKit/SSignalKit.h>
 
+@protocol TGMediaEditableItem;
+@class TGMediaEditingContext;
+
 @interface TGPaintFaceFeature : NSObject
 {
     CGPoint _position;
@@ -48,6 +51,8 @@
 @interface TGPaintFaceDetector : NSObject
 
 + (SSignal *)detectFacesInImage:(UIImage *)image originalSize:(CGSize)originalSize;
+
++ (SSignal *)detectFacesInItem:(id<TGMediaEditableItem>)item editingContext:(TGMediaEditingContext *)editingContext;
 
 @end
 

@@ -69,7 +69,7 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
             case _ as InlineBotMessageAttribute:
                 return true
             case _ as OutgoingMessageInfoAttribute:
-                return true
+                return false
             case _ as OutgoingContentInfoMessageAttribute:
                 return true
             case _ as ReplyMarkupMessageAttribute:

@@ -21,24 +21,26 @@
 #import "TGPhotoEditorController.h"
 #import "TGPhotoEditorPreviewView.h"
 #import "TGPhotoEditorHUDView.h"
+#import "TGPhotoEditorSparseView.h"
+#import "TGPhotoEntitiesContainerView.h"
+
+#import "TGPhotoPaintController.h"
 
 const CGFloat TGPhotoEditorToolsPanelSize = 180.0f;
 const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize + 40.0f;
-
-@interface TGPhotoToolsWrapperView : UIView
-
-@end
 
 @interface TGPhotoToolsController () <TGPhotoEditorCollectionViewToolsDataSource>
 {
     NSValue *_contentOffsetAfterRotation;
     bool _appeared;
+    bool _scheduledTransitionIn;
     CGFloat _cellWidth;
+    int _entitiesReady;
     
     NSArray *_allTools;
     NSArray *_simpleTools;
     
-    TGPhotoToolsWrapperView *_wrapperView;
+    TGPhotoEditorSparseView *_wrapperView;
     UIView *_portraitToolsWrapperView;
     UIView *_landscapeToolsWrapperView;
     UIView *_portraitWrapperBackgroundView;
@@ -46,6 +48,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     TGPhotoEditorCollectionView *_portraitCollectionView;
     TGPhotoEditorCollectionView *_landscapeCollectionView;
     TGPhotoEditorHUDView *_hudView;
+    TGPhotoEntitiesContainerView *_entitiesView;
     
     void (^_changeBlock)(PGPhotoTool *, id, bool);
     void (^_interactionBegan)(void);
@@ -53,6 +56,8 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     
     bool _preview;
     TGPhotoEditorTab _currentTab;
+    
+    UIView *_entitiesWrapperView;
     
     UIView <TGPhotoEditorToolView> *_toolAreaView;
     UIView <TGPhotoEditorToolView> *_portraitToolControlView;
@@ -66,28 +71,15 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 
 @implementation TGPhotoToolsController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView entitiesView:(TGPhotoEntitiesContainerView *)entitiesView
 {
     self = [super initWithContext:context];
     if (self != nil)
     {
         self.photoEditor = photoEditor;
         self.previewView = previewView;
-        
-        NSMutableArray *tools = [[NSMutableArray alloc] init];
-        NSMutableArray *simpleTools = [[NSMutableArray alloc] init];
-        for (PGPhotoTool *tool in photoEditor.tools)
-        {
-            if (!tool.isHidden)
-            {
-                [tools addObject:tool];
-                if (tool.isSimple)
-                    [simpleTools addObject:tool];
-            }
-        }
-        _allTools = tools;
-        _simpleTools = simpleTools;
-        
+        _entitiesView = entitiesView;
+
          __weak TGPhotoToolsController *weakSelf = self;
         _changeBlock = ^(PGPhotoTool *tool, __unused id newValue, bool animated)
         {
@@ -115,10 +107,57 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     _landscapeCollectionView.toolsDataSource = nil;
 }
 
+- (void)layoutEntitiesView {
+    if (_entitiesReady < 2 || _dismissing)
+        return;
+    
+    _entitiesWrapperView.transform = CGAffineTransformIdentity;
+    _entitiesWrapperView.frame = CGRectMake(0.0, 0.0, _entitiesView.frame.size.width, _entitiesView.frame.size.height);
+    [_entitiesWrapperView addSubview:_entitiesView];
+    
+    CGFloat paintingScale = _entitiesView.frame.size.width / _photoEditor.originalSize.width;
+    _entitiesView.frame = CGRectMake(-_photoEditor.cropRect.origin.x * paintingScale, -_photoEditor.cropRect.origin.y * paintingScale, _entitiesView.frame.size.width, _entitiesView.frame.size.height);
+    
+    CGFloat cropScale = 1.0;
+    if (_photoEditor.originalSize.width > _photoEditor.originalSize.height) {
+        cropScale = _photoEditor.originalSize.height / _photoEditor.cropRect.size.height;
+    } else {
+        cropScale = _photoEditor.originalSize.width / _photoEditor.cropRect.size.width;
+    }
+    
+    CGFloat scale = _previewView.frame.size.width / _entitiesView.frame.size.width;
+    CGAffineTransform rotationTransform = CGAffineTransformMakeRotation(TGRotationForOrientation(_photoEditor.cropOrientation));
+    _entitiesWrapperView.transform = CGAffineTransformScale(rotationTransform, scale * cropScale, scale * cropScale);
+    _entitiesWrapperView.frame = [_previewView convertRect:_previewView.bounds toView:_entitiesWrapperView.superview];
+}
+
 - (void)loadView
 {
     [super loadView];
     self.view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    
+    TGPhotoEditorController *editorController = (TGPhotoEditorController *)self.parentViewController;
+    NSArray *faces;
+    if ([editorController isKindOfClass:[TGPhotoEditorController class]]) {
+        faces = editorController.faces;
+    }
+    
+    NSMutableArray *tools = [[NSMutableArray alloc] init];
+    NSMutableArray *simpleTools = [[NSMutableArray alloc] init];
+    for (PGPhotoTool *tool in self.photoEditor.tools)
+    {
+        if (tool.requiresFaces && faces.count < 1) {
+            continue;
+        }
+        if (!tool.isHidden)
+        {
+            [tools addObject:tool];
+            if (tool.isSimple)
+                [simpleTools addObject:tool];
+        }
+    }
+    _allTools = tools;
+    _simpleTools = simpleTools;
     
     __weak TGPhotoToolsController *weakSelf = self;
     _interactionBegan = ^
@@ -153,8 +192,9 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
         if (strongSelf != nil) {
             [strongSelf->_hudView setText:nil];
             
-            if (forVideo) {
-                strongSelf->_photoEditor.disableAll = false;
+            strongSelf->_photoEditor.disableAll = false;
+            if (!forVideo) {
+                [strongSelf->_photoEditor processAnimated:false completion:nil];
             }
         }
     };
@@ -164,8 +204,9 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
         if (strongSelf != nil) {
             [strongSelf->_hudView setText:TGLocalized(@"PhotoEditor.Original")];
             
-            if (forVideo) {
-                strongSelf->_photoEditor.disableAll = true;
+            strongSelf->_photoEditor.disableAll = true;
+            if (!forVideo) {
+                [strongSelf->_photoEditor processAnimated:false completion:nil];
             }
         }
     };
@@ -174,11 +215,15 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
         if (strongSelf != nil)
             [strongSelf setPreview:!strongSelf->_preview animated:true];
     };
-    previewView.customTouchDownHandling = forVideo;
+    previewView.customTouchDownHandling = true;
     [self.view addSubview:_previewView];
     
-    _wrapperView = [[TGPhotoToolsWrapperView alloc] initWithFrame:CGRectZero];
+    _wrapperView = [[TGPhotoEditorSparseView alloc] initWithFrame:CGRectZero];
     [self.view addSubview:_wrapperView];
+    
+    _entitiesWrapperView = [[UIView alloc] init];
+    _entitiesWrapperView.userInteractionEnabled = false;
+    [_wrapperView addSubview:_entitiesWrapperView];
     
     _portraitToolsWrapperView = [[UIView alloc] initWithFrame:CGRectZero];
     _portraitToolsWrapperView.alpha = 0.0f;
@@ -300,17 +345,17 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 
 - (void)transitionIn
 {
+    if (_portraitToolsWrapperView.frame.size.height < FLT_EPSILON) {
+        _scheduledTransitionIn = true;
+        return;
+    }
     [UIView animateWithDuration:0.3f animations:^
     {
         _portraitToolsWrapperView.alpha = 1.0f;
         _landscapeToolsWrapperView.alpha = 1.0f;
     }];
     
-    UIInterfaceOrientation orientation = self.interfaceOrientation;
-    if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
-        orientation = UIInterfaceOrientationPortrait;
-    
-    switch (orientation)
+    switch (self.effectiveOrientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
         {
@@ -344,8 +389,12 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     }
 }
 
-- (void)transitionOutSwitching:(bool)__unused switching completion:(void (^)(void))completion
+- (void)transitionOutSwitching:(bool)switching completion:(void (^)(void))completion
 {
+    if (switching) {
+        _dismissing = true;
+    }
+    
     TGPhotoEditorPreviewView *previewView = self.previewView;
     previewView.touchedUp = nil;
     previewView.touchedDown = nil;
@@ -354,11 +403,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     
     [_toolAreaView.superview bringSubviewToFront:_toolAreaView];
 
-    UIInterfaceOrientation orientation = self.interfaceOrientation;
-    if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
-        orientation = UIInterfaceOrientationPortrait;
-    
-    switch (orientation)
+    switch (self.effectiveOrientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
         {
@@ -455,11 +500,18 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 {
     _appeared = true;
     
-    [transitionView removeFromSuperview];
+    if ([transitionView isKindOfClass:[TGPhotoEditorPreviewView class]]) {
+        [self.view insertSubview:transitionView atIndex:0];
+    } else {
+        [transitionView removeFromSuperview];
+    }
     
     TGPhotoEditorPreviewView *previewView = _previewView;
     previewView.hidden = false;
     [previewView performTransitionInIfNeeded];
+        
+    _entitiesReady++;
+    [self layoutEntitiesView];
 }
 
 - (void)prepareForCustomTransitionOut
@@ -662,12 +714,6 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     return _interactionEnded;
 }
 
-- (void)updateValues
-{
-    [_portraitCollectionView reloadData];
-    [_landscapeCollectionView reloadData];
-}
-
 #pragma mark - Layout
 
 - (void)_prepareCollectionViewsForTransitionFromOrientation:(UIInterfaceOrientation)fromOrientation toOrientation:(UIInterfaceOrientation)toOrientation
@@ -765,17 +811,18 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     
     [self updateLayout:[[LegacyComponentsGlobals provider] applicationStatusBarOrientation]];
     
+    if (_scheduledTransitionIn) {
+        _scheduledTransitionIn = false;
+        [self transitionIn];
+    }
+    
     if (![self inFormSheet])
         [self _applyPreparedContentOffset];
 }
 
 - (CGRect)transitionOutSourceFrameForReferenceFrame:(CGRect)referenceFrame orientation:(UIInterfaceOrientation)orientation
 {
-    bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
-    
-    CGRect containerFrame = [TGPhotoToolsController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
+    CGRect containerFrame = [TGPhotoToolsController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
     CGSize fittedSize = TGScaleToSize(referenceFrame.size, containerFrame.size);
     CGRect sourceFrame = CGRectMake(containerFrame.origin.x + (containerFrame.size.width - fittedSize.width) / 2, containerFrame.origin.y + (containerFrame.size.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
     
@@ -785,16 +832,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 - (CGRect)_targetFrameForTransitionInFromFrame:(CGRect)fromFrame
 {
     CGSize referenceSize = [self referenceViewSize];
-    UIInterfaceOrientation orientation = self.interfaceOrientation;
-    
-    if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
-        orientation = UIInterfaceOrientationPortrait;
-    
-    bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
-    
-    CGRect containerFrame = [TGPhotoToolsController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
+    CGRect containerFrame = [TGPhotoToolsController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:self.effectiveOrientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
     CGSize fittedSize = TGScaleToSize(fromFrame.size, containerFrame.size);
     CGRect toFrame = CGRectMake(containerFrame.origin.x + (containerFrame.size.width - fittedSize.width) / 2, containerFrame.origin.y + (containerFrame.size.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
     
@@ -827,11 +865,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     CGFloat panelToolbarPortraitSize = panelSize + TGPhotoEditorToolbarSize;
     CGFloat panelToolbarLandscapeSize = panelSize + TGPhotoEditorToolbarSize;
     
-    bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
-    
-    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:self.hasOnScreenNavigation];
     UIEdgeInsets screenEdges = UIEdgeInsetsMake((screenSide - referenceSize.height) / 2, (screenSide - referenceSize.width) / 2, (screenSide + referenceSize.height) / 2, (screenSide + referenceSize.width) / 2);
     screenEdges.top += safeAreaInset.top;
     screenEdges.left += safeAreaInset.left;
@@ -942,24 +976,23 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
 
 - (void)updatePreviewView
 {
-    UIInterfaceOrientation orientation = self.interfaceOrientation;
-    if ([self inFormSheet] || TGIsPad())
-        orientation = UIInterfaceOrientationPortrait;
-    
-    CGSize referenceSize = [self referenceViewSize];
-    
     PGPhotoEditor *photoEditor = self.photoEditor;
     TGPhotoEditorPreviewView *previewView = self.previewView;
     
     if (_dismissing || previewView.superview != self.view)
         return;
     
-    bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
-    
-    CGRect containerFrame = _preview ? CGRectMake(0.0f, 0.0f, referenceSize.width, referenceSize.height) : [TGPhotoToolsController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
+    CGSize referenceSize = [self referenceViewSize];
+    CGRect containerFrame = _preview ? CGRectMake(0.0f, 0.0f, referenceSize.width, referenceSize.height) : [TGPhotoToolsController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:self.effectiveOrientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
     CGSize fittedSize = TGScaleToSize(photoEditor.rotatedCropSize, containerFrame.size);
+    
+    if ([self presentedForAvatarCreation]) {
+        CGAffineTransform transform = CGAffineTransformMakeRotation(TGRotationForOrientation(photoEditor.cropOrientation));
+        if (photoEditor.cropMirrored)
+            transform = CGAffineTransformScale(transform, -1.0f, 1.0f);
+        previewView.transform = transform;
+    }
+    
     previewView.frame = CGRectMake(containerFrame.origin.x + (containerFrame.size.width - fittedSize.width) / 2, containerFrame.origin.y + (containerFrame.size.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
     
     [UIView performWithoutAnimation:^
@@ -981,6 +1014,7 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
     [_landscapeCollectionView.collectionViewLayout invalidateLayout];
     
     [self updatePreviewView];
+    [self layoutEntitiesView];
 }
 
 - (TGPhotoEditorTab)availableTabs
@@ -1066,20 +1100,6 @@ const CGFloat TGPhotoEditorToolsLandscapePanelSize = TGPhotoEditorToolsPanelSize
         tabs |= TGPhotoEditorTintTab;
     
     return tabs;
-}
-
-@end
-
-
-@implementation TGPhotoToolsWrapperView
-
-- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
-{
-    UIView *result = [super hitTest:point withEvent:event];
-    if (result == self)
-        return nil;
-    
-    return result;
 }
 
 @end

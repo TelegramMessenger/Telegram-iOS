@@ -21,6 +21,7 @@
     TGPhotoEditorBlurTypeButton *_offButton;
     TGPhotoEditorBlurTypeButton *_radialButton;
     TGPhotoEditorBlurTypeButton *_linearButton;
+    TGPhotoEditorBlurTypeButton *_portraitButton;
     
     TGPhotoEditorSliderView *_sliderView;
     
@@ -59,27 +60,34 @@
         _titleLabel.textColor = [TGPhotoEditorInterfaceAssets editorItemTitleColor];
         _titleLabel.userInteractionEnabled = false;
         [self addSubview:_titleLabel];
-        
+               
         _offButton = [[TGPhotoEditorBlurTypeButton alloc] initWithFrame:CGRectZero];
         _offButton.tag = PGBlurToolTypeNone;
         [_offButton addTarget:self action:@selector(blurButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
-        [_offButton setImage:TGComponentsImageNamed(@"PhotoEditorBlurOff")];
+        [_offButton setImage:TGTintedImage([UIImage imageNamed:@"Editor/BlurOff"], [UIColor whiteColor])];
         [_offButton setTitle:TGLocalized(@"PhotoEditor.BlurToolOff")];
         [_buttonsWrapper addSubview:_offButton];
         
         _radialButton = [[TGPhotoEditorBlurTypeButton alloc] initWithFrame:CGRectZero];
         _radialButton.tag = PGBlurToolTypeRadial;
         [_radialButton addTarget:self action:@selector(blurButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
-        [_radialButton setImage:TGComponentsImageNamed(@"PhotoEditorBlurRadial")];
+        [_radialButton setImage:TGTintedImage([UIImage imageNamed:@"Editor/BlurRadial"], [UIColor whiteColor])];
         [_radialButton setTitle:TGLocalized(@"PhotoEditor.BlurToolRadial")];
         [_buttonsWrapper addSubview:_radialButton];
 
         _linearButton = [[TGPhotoEditorBlurTypeButton alloc] initWithFrame:CGRectZero];
         _linearButton.tag = PGBlurToolTypeLinear;
         [_linearButton addTarget:self action:@selector(blurButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
-        [_linearButton setImage:TGComponentsImageNamed(@"PhotoEditorBlurLinear")];
+        [_linearButton setImage:TGTintedImage([UIImage imageNamed:@"Editor/BlurLinear"], [UIColor whiteColor])];
         [_linearButton setTitle:TGLocalized(@"PhotoEditor.BlurToolLinear")];
         [_buttonsWrapper addSubview:_linearButton];
+        
+        _portraitButton = [[TGPhotoEditorBlurTypeButton alloc] initWithFrame:CGRectZero];
+        _portraitButton.tag = PGBlurToolTypePortrait;
+        [_portraitButton addTarget:self action:@selector(blurButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
+        [_portraitButton setImage:TGTintedImage([UIImage imageNamed:@"Editor/BlurPortrait"], [UIColor whiteColor])];
+        [_portraitButton setTitle:TGLocalized(@"PhotoEditor.BlurToolPortrait")];
+//        [_buttonsWrapper addSubview:_portraitButton];
         
         _sliderView = [[TGPhotoEditorSliderView alloc] initWithFrame:CGRectZero];
         _sliderView.alpha = 0.0f;

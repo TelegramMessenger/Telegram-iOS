@@ -19,8 +19,9 @@
 
 @property (nonatomic, copy) id (^requestActivityHolder)();
 @property (nonatomic, copy) void (^micLevel)(CGFloat level);
+@property (nonatomic, copy) void (^onDuration)(NSTimeInterval duration);
 @property (nonatomic, copy) void(^finishedWithVideo)(NSURL *videoURL, UIImage *previewImage, NSUInteger fileSize, NSTimeInterval duration, CGSize dimensions, id liveUploadData, TGVideoEditAdjustments *adjustments, bool, int32_t);
-@property (nonatomic, copy) void(^onDismiss)(bool isAuto);
+@property (nonatomic, copy) void(^onDismiss)(bool isAuto, bool isCancelled);
 @property (nonatomic, copy) void(^onStop)(void);
 @property (nonatomic, copy) void(^onCancel)(void);
 @property (nonatomic, copy) void(^didDismiss)(void);

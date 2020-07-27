@@ -85,8 +85,54 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
         case data
     }
     
+    public final class VideoRepresentation: Equatable, PostboxCoding {
+        public let dimensions: PixelDimensions
+        public let resource: TelegramMediaResource
+        public let startTimestamp: Double?
+        
+        public init(dimensions: PixelDimensions, resource: TelegramMediaResource, startTimestamp: Double?) {
+            self.dimensions = dimensions
+            self.resource = resource
+            self.startTimestamp = startTimestamp
+        }
+        
+        public init(decoder: PostboxDecoder) {
+            self.dimensions = PixelDimensions(width: decoder.decodeInt32ForKey("w", orElse: 0), height: decoder.decodeInt32ForKey("h", orElse: 0))
+            self.resource = decoder.decodeObjectForKey("r") as! TelegramMediaResource
+            self.startTimestamp = decoder.decodeOptionalDoubleForKey("s")
+        }
+        
+        public func encode(_ encoder: PostboxEncoder) {
+            encoder.encodeInt32(self.dimensions.width, forKey: "w")
+            encoder.encodeInt32(self.dimensions.height, forKey: "h")
+            encoder.encodeObject(self.resource, forKey: "r")
+            if let startTimestamp = self.startTimestamp {
+                encoder.encodeDouble(startTimestamp, forKey: "s")
+            } else {
+                encoder.encodeNil(forKey: "s")
+            }
+        }
+        
+        public static func ==(lhs: VideoRepresentation, rhs: VideoRepresentation) -> Bool {
+            if lhs === rhs {
+                return true
+            }
+            if lhs.dimensions != rhs.dimensions {
+                return false
+            }
+            if !lhs.resource.isEqual(to: rhs.resource) {
+                return false
+            }
+            if lhs.startTimestamp != rhs.startTimestamp {
+                return false
+            }
+            return true
+        }
+    }
+    
     public let imageId: MediaId
     public let representations: [TelegramMediaImageRepresentation]
+    public let videoRepresentations: [TelegramMediaImage.VideoRepresentation]
     public let immediateThumbnailData: Data?
     public let reference: TelegramMediaImageReference?
     public let partialReference: PartialMediaReference?
@@ -97,9 +143,10 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
         return self.imageId
     }
     
-    public init(imageId: MediaId, representations: [TelegramMediaImageRepresentation], immediateThumbnailData: Data?, reference: TelegramMediaImageReference?, partialReference: PartialMediaReference?, flags: TelegramMediaImageFlags) {
+    public init(imageId: MediaId, representations: [TelegramMediaImageRepresentation], videoRepresentations: [TelegramMediaImage.VideoRepresentation] = [], immediateThumbnailData: Data?, reference: TelegramMediaImageReference?, partialReference: PartialMediaReference?, flags: TelegramMediaImageFlags) {
         self.imageId = imageId
         self.representations = representations
+        self.videoRepresentations = videoRepresentations
         self.immediateThumbnailData = immediateThumbnailData
         self.reference = reference
         self.partialReference = partialReference
@@ -109,6 +156,7 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
     public init(decoder: PostboxDecoder) {
         self.imageId = MediaId(decoder.decodeBytesForKeyNoCopy("i")!)
         self.representations = decoder.decodeObjectArrayForKey("r")
+        self.videoRepresentations = decoder.decodeObjectArrayForKey("vr")
         self.immediateThumbnailData = decoder.decodeDataForKey("itd")
         self.reference = decoder.decodeObjectForKey("rf", decoder: { TelegramMediaImageReference(decoder: $0) }) as? TelegramMediaImageReference
         self.partialReference = decoder.decodeAnyObjectForKey("prf", decoder: { PartialMediaReference(decoder: $0) }) as? PartialMediaReference
@@ -120,6 +168,7 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
         self.imageId.encodeToBuffer(buffer)
         encoder.encodeBytes(buffer, forKey: "i")
         encoder.encodeObjectArray(self.representations, forKey: "r")
+        encoder.encodeObjectArray(self.videoRepresentations, forKey: "vr")
         if let immediateThumbnailData = self.immediateThumbnailData {
             encoder.encodeData(immediateThumbnailData, forKey: "itd")
         } else {
@@ -147,6 +196,7 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
         }
         self.imageId = object.imageId
         self.representations = object.representations
+        self.videoRepresentations = object.videoRepresentations
         self.immediateThumbnailData = object.immediateThumbnailData
         self.reference = object.reference
         self.partialReference = object.partialReference
@@ -196,6 +246,9 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
             if other.representations != self.representations {
                 return false
             }
+            if other.videoRepresentations != self.videoRepresentations {
+                return false
+            }
             if other.immediateThumbnailData != self.immediateThumbnailData {
                 return false
             }
@@ -216,6 +269,9 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
                 return false
             }
             if other.representations.count != self.representations.count {
+                return false
+            }
+            if other.videoRepresentations.count != self.videoRepresentations.count {
                 return false
             }
             for i in 0 ..< self.representations.count {
@@ -240,7 +296,7 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
     }
     
     public func withUpdatedPartialReference(_ partialReference: PartialMediaReference?) -> TelegramMediaImage {
-        return TelegramMediaImage(imageId: self.imageId, representations: self.representations, immediateThumbnailData: self.immediateThumbnailData, reference: self.reference, partialReference: partialReference, flags: self.flags)
+        return TelegramMediaImage(imageId: self.imageId, representations: self.representations, videoRepresentations: self.videoRepresentations, immediateThumbnailData: self.immediateThumbnailData, reference: self.reference, partialReference: partialReference, flags: self.flags)
     }
 }
 

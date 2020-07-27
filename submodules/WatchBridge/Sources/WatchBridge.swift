@@ -211,7 +211,7 @@ func makeBridgeMedia(message: Message, strings: PresentationStrings, chatPeer: P
                             bridgeAction?.actionType = .channelCreated
                         }
                     }
-                case let .phoneCall(_, discardReason, _):
+                case let .phoneCall(_, discardReason, _, _):
                     let bridgeAttachment = TGBridgeUnsupportedMediaAttachment()
                     let incoming = message.flags.contains(.Incoming)
                     var compactTitle: String = ""

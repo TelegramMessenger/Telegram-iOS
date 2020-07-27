@@ -3,19 +3,19 @@
 typedef NS_OPTIONS(NSUInteger, TGPhotoEditorTab) {
     TGPhotoEditorNoneTab        = 0,
     TGPhotoEditorCropTab        = 1 << 0,
-    TGPhotoEditorPaintTab       = 1 << 1,
-    TGPhotoEditorEraserTab      = 1 << 2,
-    TGPhotoEditorStickerTab     = 1 << 3,
-    TGPhotoEditorTextTab        = 1 << 4,
-    TGPhotoEditorToolsTab       = 1 << 5,
-    TGPhotoEditorRotateTab      = 1 << 6,
-    TGPhotoEditorQualityTab     = 1 << 7,
-    TGPhotoEditorTimerTab       = 1 << 8,
-    TGPhotoEditorMirrorTab      = 1 << 9,
+    TGPhotoEditorRotateTab      = 1 << 1,
+    TGPhotoEditorMirrorTab      = 1 << 2,
+    TGPhotoEditorPaintTab       = 1 << 3,
+    TGPhotoEditorEraserTab      = 1 << 4,
+    TGPhotoEditorStickerTab     = 1 << 5,
+    TGPhotoEditorTextTab        = 1 << 6,
+    TGPhotoEditorToolsTab       = 1 << 7,
+    TGPhotoEditorQualityTab     = 1 << 8,
+    TGPhotoEditorTimerTab       = 1 << 9,
     TGPhotoEditorAspectRatioTab = 1 << 10,
     TGPhotoEditorTintTab        = 1 << 11,
     TGPhotoEditorBlurTab        = 1 << 12,
-    TGPhotoEditorCurvesTab      = 1 << 13,
+    TGPhotoEditorCurvesTab      = 1 << 13
 };
 
 typedef enum
@@ -27,7 +27,8 @@ typedef enum
 typedef enum
 {
     TGPhotoEditorDoneButtonSend,
-    TGPhotoEditorDoneButtonCheck
+    TGPhotoEditorDoneButtonCheck,
+    TGPhotoEditorDoneButtonDone
 } TGPhotoEditorDoneButton;
 
 @interface TGPhotoToolbarView : UIView
@@ -45,6 +46,9 @@ typedef enum
 
 @property (nonatomic, readonly) CGRect cancelButtonFrame;
 @property (nonatomic, readonly) CGRect doneButtonFrame;
+
+@property (nonatomic, assign) TGPhotoEditorBackButton backButtonType;
+@property (nonatomic, assign) TGPhotoEditorDoneButton doneButtonType;
 
 - (instancetype)initWithBackButton:(TGPhotoEditorBackButton)backButton doneButton:(TGPhotoEditorDoneButton)doneButton solidBackground:(bool)solidBackground;
 

@@ -30,7 +30,7 @@ public final class OpenChatMessageParams {
     public let addToTransitionSurface: (UIView) -> Void
     public let openUrl: (String) -> Void
     public let openPeer: (Peer, ChatControllerInteractionNavigateToPeer) -> Void
-    public let callPeer: (PeerId) -> Void
+    public let callPeer: (PeerId, Bool) -> Void
     public let enqueueMessage: (EnqueueMessage) -> Void
     public let sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
     public let setupTemporaryHiddenMedia: (Signal<Any?, NoError>, Int, Media) -> Void
@@ -51,7 +51,7 @@ public final class OpenChatMessageParams {
         addToTransitionSurface: @escaping (UIView) -> Void,
         openUrl: @escaping (String) -> Void,
         openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void,
-        callPeer: @escaping (PeerId) -> Void,
+        callPeer: @escaping (PeerId, Bool) -> Void,
         enqueueMessage: @escaping (EnqueueMessage) -> Void,
         sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?,
         setupTemporaryHiddenMedia: @escaping (Signal<Any?, NoError>, Int, Media) -> Void,

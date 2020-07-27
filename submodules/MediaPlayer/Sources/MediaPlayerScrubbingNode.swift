@@ -488,6 +488,12 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
         })
     }
     
+    deinit {
+        self.displayLink?.invalidate()
+        self.statusDisposable?.dispose()
+        self.bufferingStatusDisposable?.dispose()
+    }
+    
     private func setupContentNodes() {
         if let subnodes = self.subnodes {
             for subnode in subnodes {
@@ -660,10 +666,27 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
         self.updateProgressAnimations()
     }
     
-    deinit {
-        self.displayLink?.invalidate()
-        self.statusDisposable?.dispose()
-        self.bufferingStatusDisposable?.dispose()
+    public func setCollapsed(_ collapsed: Bool, animated: Bool) {
+        let alpha: CGFloat = collapsed ? 0.0 : 1.0
+        let backgroundScale: CGFloat = collapsed ? 0.4 : 1.0
+        let handleScale: CGFloat = collapsed ? 0.2 : 1.0
+        switch self.contentNodes {
+            case let .standard(node):
+                let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate
+                node.foregroundContentNode.backgroundColor = collapsed ? .white : nil
+                
+                if let handleNode = node.handleNodeContainer {
+                    transition.updateAlpha(node: node.foregroundContentNode, alpha: collapsed ? 0.45 : 1.0)
+                    transition.updateAlpha(node: handleNode, alpha: collapsed ? 0.0 : 1.0)
+                    transition.updateTransformScale(node: handleNode, scale: CGPoint(x: 1.0, y: handleScale))
+                }
+                transition.updateAlpha(node: node.bufferingNode, alpha: alpha)
+                transition.updateAlpha(node: node.backgroundNode, alpha: alpha)
+                transition.updateTransformScale(node: node.foregroundContentNode, scale: CGPoint(x: 1.0, y: backgroundScale))
+                transition.updateTransformScale(node: node.backgroundNode, scale: CGPoint(x: 1.0, y: backgroundScale))
+            case .custom:
+                break
+        }
     }
     
     override public var frame: CGRect {
@@ -758,7 +781,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                 default:
                     break
             }
-            if case .buffering(true, _) = statusValue.status {
+            if case .buffering(true, _, _) = statusValue.status {
                 //initialBuffering = true
             } else if Double(0.0).isLess(than: statusValue.duration) {
                 if let scrubbingTimestampValue = self.scrubbingTimestampValue {
@@ -772,8 +795,12 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
         switch self.contentNodes {
             case let .standard(node):
                 let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: floor((bounds.size.height - node.lineHeight) / 2.0)), size: CGSize(width: bounds.size.width, height: node.lineHeight))
-                node.backgroundNode.frame = backgroundFrame
-                node.foregroundContentNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
+                node.backgroundNode.position = backgroundFrame.center
+                node.backgroundNode.bounds = CGRect(origin: CGPoint(), size: backgroundFrame.size)
+                
+                let foregroundContentFrame = CGRect(origin: CGPoint(), size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
+                node.foregroundContentNode.position = foregroundContentFrame.center
+                node.foregroundContentNode.bounds = CGRect(origin: CGPoint(), size: foregroundContentFrame.size)
                 
                 node.bufferingNode.frame = backgroundFrame
                 node.bufferingNode.updateLayout(size: backgroundFrame.size, transition: .immediate)

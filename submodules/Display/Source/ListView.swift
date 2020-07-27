@@ -274,6 +274,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private final var itemNodes: [ListViewItemNode] = []
     private final var itemHeaderNodes: [Int64: ListViewItemHeaderNode] = [:]
     
+    public final var itemHeaderNodesAlpha: CGFloat = 1.0
+    
     public final var displayedItemRangeChanged: (ListViewDisplayedItemRange, Any?) -> Void = { _, _ in }
     public private(set) final var displayedItemRange: ListViewDisplayedItemRange = ListViewDisplayedItemRange(loadedRange: nil, visibleRange: nil)
     
@@ -3215,6 +3217,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 stickLocationDistanceFactor = max(0.0, min(1.0, stickLocationDistance / itemHeaderHeight))
             }
             visibleHeaderNodes.insert(id)
+            
+            let initialHeaderNodeAlpha = self.itemHeaderNodesAlpha
             if let headerNode = self.itemHeaderNodes[id] {
                 switch transition.0 {
                     case .immediate:
@@ -3227,6 +3231,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                             offset = -offset
                         }
                         switch curve {
+                            case .linear:
+                                 headerNode.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, mediaTimingFunction: CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear))
                             case .spring:
                                 transition.0.animateOffsetAdditive(node: headerNode, offset: offset)
                             case let .custom(p1, p2, p3, p4):
@@ -3252,15 +3258,16 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         headerNode.animateRemoved(duration: 0.2)
                     }
                 } else if hasValidNodes && headerNode.alpha.isZero {
-                    headerNode.alpha = 1.0
+                    headerNode.alpha = initialHeaderNodeAlpha
                     if animateInsertion {
-                        headerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        headerNode.layer.animateAlpha(from: 0.0, to: initialHeaderNodeAlpha, duration: 0.2)
                         headerNode.layer.animateScale(from: 0.2, to: 1.0, duration: 0.2)
                     }
                 }
                 headerNode.updateStickDistanceFactor(stickLocationDistanceFactor, transition: transition.0)
             } else {
                 let headerNode = item.node()
+                headerNode.alpha = initialHeaderNodeAlpha
                 if headerNode.item !== item {
                     item.updateNode(headerNode, previous: nil, next: nil)
                     headerNode.item = item
@@ -3276,7 +3283,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     self.addSubnode(headerNode)
                 }
                 if animateInsertion {
-                    headerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                    headerNode.layer.animateAlpha(from: 0.0, to: initialHeaderNodeAlpha, duration: 0.3)
                     headerNode.layer.animateScale(from: 0.2, to: 1.0, duration: 0.3)
                 }
                 headerNode.updateStickDistanceFactor(stickLocationDistanceFactor, transition: .immediate)

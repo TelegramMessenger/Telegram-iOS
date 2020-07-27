@@ -14,9 +14,34 @@ import AccountContext
 import TelegramNotices
 import AppBundle
 
+protocol CallControllerNodeProtocol: class {
+    var isMuted: Bool { get set }
+    
+    var toggleMute: (() -> Void)? { get set }
+    var setCurrentAudioOutput: ((AudioSessionOutput) -> Void)? { get set }
+    var beginAudioOuputSelection: (() -> Void)? { get set }
+    var acceptCall: (() -> Void)? { get set }
+    var endCall: (() -> Void)? { get set }
+    var setIsVideoPaused: ((Bool) -> Void)? { get set }
+    var back: (() -> Void)? { get set }
+    var presentCallRating: ((CallId) -> Void)? { get set }
+    var callEnded: ((Bool) -> Void)? { get set }
+    var dismissedInteractively: (() -> Void)? { get set }
+    
+    func updateAudioOutputs(availableOutputs: [AudioSessionOutput], currentOutput: AudioSessionOutput?)
+    func updateCallState(_ callState: PresentationCallState)
+    func updatePeer(accountPeer: Peer, peer: Peer, hasOther: Bool)
+    
+    func animateIn()
+    func animateOut(completion: @escaping () -> Void)
+    func expandFromPipIfPossible()
+    
+    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition)
+}
+
 public final class CallController: ViewController {
-    private var controllerNode: CallControllerNode {
-        return self.displayNode as! CallControllerNode
+    private var controllerNode: CallControllerNodeProtocol {
+        return self.displayNode as! CallControllerNodeProtocol
     }
     
     private let _ready = Promise<Bool>(false)
@@ -44,6 +69,8 @@ public final class CallController: ViewController {
     
     private var audioOutputStateDisposable: Disposable?
     private var audioOutputState: ([AudioSessionOutput], AudioSessionOutput?)?
+    
+    private let idleTimerExtensionDisposable = MetaDisposable()
     
     public init(sharedContext: SharedAccountContext, account: Account, call: PresentationCall, easyDebugAccess: Bool) {
         self.sharedContext = sharedContext
@@ -97,6 +124,7 @@ public final class CallController: ViewController {
         self.disposable?.dispose()
         self.callMutedDisposable?.dispose()
         self.audioOutputStateDisposable?.dispose()
+        self.idleTimerExtensionDisposable.dispose()
     }
     
     private func callStateUpdated(_ callState: PresentationCallState) {
@@ -106,7 +134,11 @@ public final class CallController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = CallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit, easyDebugAccess: self.easyDebugAccess, call: self.call)
+        if self.call.isVideoPossible {
+            self.displayNode = CallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit, easyDebugAccess: self.easyDebugAccess, call: self.call)
+        } else {
+            self.displayNode = LegacyCallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit, easyDebugAccess: self.easyDebugAccess, call: self.call)
+        }
         self.displayNodeDidLoad()
         
         self.controllerNode.toggleMute = { [weak self] in
@@ -173,6 +205,10 @@ public final class CallController: ViewController {
         
         self.controllerNode.endCall = { [weak self] in
             let _ = self?.call.hangUp()
+        }
+        
+        self.controllerNode.setIsVideoPaused = { [weak self] isPaused in
+            self?.call.setOutgoingVideoIsPaused(isPaused)
         }
         
         self.controllerNode.back = { [weak self] in
@@ -260,6 +296,14 @@ public final class CallController: ViewController {
             
             self.controllerNode.animateIn()
         }
+        
+        self.idleTimerExtensionDisposable.set(self.sharedContext.applicationBindings.pushIdleTimerExtension())
+    }
+    
+    override public func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        
+        self.idleTimerExtensionDisposable.set(nil)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -277,7 +321,11 @@ public final class CallController: ViewController {
         })
     }
     
-    @objc func backPressed() {
+    @objc private func backPressed() {
         self.dismiss()
+    }
+    
+    public func expandFromPipIfPossible() {
+        self.controllerNode.expandFromPipIfPossible()
     }
 }

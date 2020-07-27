@@ -421,14 +421,51 @@ public func legacyEnqueueWebSearchMessages(_ selectionState: TGMediaSelectionCon
         var signals: [Any] = []
         for result in results {
             let editableItem = LegacyWebSearchItem(result: result)
-            if editingState.adjustments(for: editableItem) != nil {
+            if let adjustments = editingState.adjustments(for: editableItem) {
+                var animated = false
+                if let entities = adjustments.paintingData?.entities {
+                    for entity in entities {
+                        if let paintEntity = entity as? TGPhotoPaintEntity, paintEntity.animated {
+                            animated = true
+                            break
+                        }
+                    }
+                }
+ 
                 if let imageSignal = editingState.imageSignal(for: editableItem) {
                     let signal = imageSignal.map { image -> Any in
                         if let image = image as? UIImage {
-                            let dict: [AnyHashable: Any] = [
+                            var dict: [AnyHashable: Any] = [
                                 "type": "editedPhoto",
                                 "image": image
                             ]
+                            
+                            if animated {
+                                dict["isAnimation"] = true
+                                if let photoEditorValues = adjustments as? PGPhotoEditorValues {
+                                    dict["adjustments"] = TGVideoEditAdjustments(photoEditorValues: photoEditorValues, preset: TGMediaVideoConversionPresetAnimation)
+                                }
+                                
+                                let filePath = NSTemporaryDirectory().appending("/gifvideo_\(arc4random()).jpg")
+                                let data = image.jpegData(compressionQuality: 0.8)
+                                if let data = data {
+                                    let _ = try? data.write(to: URL(fileURLWithPath: filePath), options: [])
+                                }
+                                dict["url"] = NSURL(fileURLWithPath: filePath)
+                                
+                                if adjustments.cropApplied(forAvatar: false) || adjustments.hasPainting() || adjustments.toolsApplied() {
+                                    var paintingImage: UIImage? = adjustments.paintingData?.stillImage
+                                    if paintingImage == nil {
+                                        paintingImage = adjustments.paintingData?.image
+                                    }
+                                    
+                                    let thumbnailImage = TGPhotoEditorVideoExtCrop(image, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(image.size, CGSize(width: 512.0, height: 512.0)), adjustments.originalSize, true, true, true, false)
+                                    if let thumbnailImage = thumbnailImage {
+                                        dict["previewImage"] = thumbnailImage
+                                    }
+                                }
+                            }
+                            
                             return legacyAssetPickerItemGenerator()(dict, nil, nil, nil) as Any
                         } else {
                             return SSignal.complete()

@@ -2289,7 +2289,9 @@ Unused sets are archived when you add more.";
 
 "Notification.CallTimeFormat" = "%1$@ (%2$@)"; // 1 - type, 2 - duration
 "Notification.CallOutgoing" = "Outgoing Call";
+"Notification.VideoCallOutgoing" = "Outgoing Video Call";
 "Notification.CallIncoming" = "Incoming Call";
+"Notification.VideoCallIncoming" = "Incoming Video Call";
 "Notification.CallMissed" = "Missed Call";
 "Notification.CallCanceled" = "Cancelled Call";
 "Notification.CallOutgoingShort" = "Outgoing";
@@ -2424,6 +2426,8 @@ Unused sets are archived when you add more.";
 "Calls.RatingFeedback" = "Write a comment...";
 
 "Call.StatusIncoming" = "Telegram Audio...";
+"Call.IncomingVoiceCall" = "Incoming Voice Call";
+"Call.IncomingVideoCall" = "Incoming Video Call";
 "Call.StatusRequesting" = "Contacting...";
 "Call.StatusWaiting" = "Waiting...";
 "Call.StatusRinging" = "Ringing...";
@@ -4132,7 +4136,7 @@ Unused sets are archived when you add more.";
 "Chat.DeleteMessagesConfirmation_1" = "Delete message";
 "Chat.DeleteMessagesConfirmation_any" = "Delete %@ messages";
 
-"Settings.Search" = "Search";
+"Settings.Search" = "Search Settings";
 
 "SettingsSearch.FAQ" = "FAQ";
 
@@ -5328,6 +5332,7 @@ Any member of this group will be able to see messages in the channel.";
 "PeerInfo.ButtonMessage" = "Message";
 "PeerInfo.ButtonDiscuss" = "Discuss";
 "PeerInfo.ButtonCall" = "Call";
+"PeerInfo.ButtonVideoCall" = "Video Call";
 "PeerInfo.ButtonMute" = "Mute";
 "PeerInfo.ButtonUnmute" = "Unmute";
 "PeerInfo.ButtonMore" = "More";
@@ -5538,3 +5543,170 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.PrivateChannelTimeLimitedAlertTitle" = "Join Channel";
 "Conversation.PrivateChannelTimeLimitedAlertText" = "This channel is private. Please join it to continue viewing its content.";
 "Conversation.PrivateChannelTimeLimitedAlertJoin" = "Join";
+
+"KeyCommand.SearchInChat" = "Search in Chat";
+
+"PhotoEditor.SkinTool" = "Soften Skin";
+"PhotoEditor.BlurToolPortrait" = "Portrait";
+"PhotoEditor.SelectCoverFrame" = "Choose a cover for your profile video";
+
+"Conversation.PeerNearbyTitle" = "%1$@ is %2$@ away";
+"Conversation.PeerNearbyText" = "Send a message or tap on the greeting below to show that you are ready to chat.";
+"Conversation.PeerNearbyDistance" = "%1$@ is %2$@ away";
+
+"ProfilePhoto.MainPhoto" = "Main Photo";
+"ProfilePhoto.SetMainPhoto" = "Set as Main Photo";
+
+"ProfilePhoto.MainVideo" = "Main Video";
+"ProfilePhoto.SetMainVideo" = "Set as Main Video";
+
+"Stats.GroupOverview" = "OVERVIEW";
+"Stats.GroupMembers" = "Members";
+"Stats.GroupMessages" = "Messages";
+"Stats.GroupViewers" = "Viewing Members";
+"Stats.GroupPosters" = "Posting Members";
+
+"Stats.GroupGrowthTitle" = "GROWTH";
+"Stats.GroupMembersTitle" = "GROUP MEMBERS";
+"Stats.GroupNewMembersBySourceTitle" = "NEW MEMBERS BY SOURCE";
+"Stats.GroupLanguagesTitle" = "MEMBERS' PRIMARY LANGUAGE";
+"Stats.GroupMessagesTitle" = "MESSAGES";
+"Stats.GroupActionsTitle" = "ACTIONS";
+"Stats.GroupTopHoursTitle" = "TOP HOURS";
+"Stats.GroupTopWeekdaysTitle" = "TOP DAYS OF WEEK";
+"Stats.GroupTopPostersTitle" = "TOP MEMBERS";
+"Stats.GroupTopAdminsTitle" = "TOP ADMINS";
+"Stats.GroupTopInvitersTitle" = "TOP INVITERS";
+
+"Stats.GroupTopPosterMessages_0" = "%@ messages";
+"Stats.GroupTopPosterMessages_1" = "%@ message";
+"Stats.GroupTopPosterMessages_2" = "%@ messages";
+"Stats.GroupTopPosterMessages_3_10" = "%@ messages";
+"Stats.GroupTopPosterMessages_many" = "%@ messages";
+"Stats.GroupTopPosterMessages_any" = "%@ messages";
+
+"Stats.GroupTopPosterChars_0" = "%@ symbols per message";
+"Stats.GroupTopPosterChars_1" = "%@ symbol per message";
+"Stats.GroupTopPosterChars_2" = "%@ symbols per message";
+"Stats.GroupTopPosterChars_3_10" = "%@ symbols per message";
+"Stats.GroupTopPosterChars_many" = "%@ symbols per message";
+"Stats.GroupTopPosterChars_any" = "%@ symbols per message";
+
+"Stats.GroupTopPoster.History" = "History";
+"Stats.GroupTopPoster.Promote" = "Promote";
+
+"Stats.GroupTopAdminDeletions_0" = "%@ deletions";
+"Stats.GroupTopAdminDeletions_1" = "%@ deletion";
+"Stats.GroupTopAdminDeletions_2" = "%@ deletions";
+"Stats.GroupTopAdminDeletions_3_10" = "%@ deletions";
+"Stats.GroupTopAdminDeletions_many" = "%@ deletions";
+"Stats.GroupTopAdminDeletions_any" = "%@ deletions";
+
+"Stats.GroupTopAdminKicks_0" = "%@ kicks";
+"Stats.GroupTopAdminKicks_1" = "%@ kick";
+"Stats.GroupTopAdminKicks_2" = "%@ kicks";
+"Stats.GroupTopAdminKicks_3_10" = "%@ kicks";
+"Stats.GroupTopAdminKicks_many" = "%@ kicks";
+"Stats.GroupTopAdminKicks_any" = "%@ kicks";
+
+"Stats.GroupTopAdminBans_0" = "%@ bans";
+"Stats.GroupTopAdminBans_1" = "%@ ban";
+"Stats.GroupTopAdminBans_2" = "%@ bans";
+"Stats.GroupTopAdminBans_3_10" = "%@ bans";
+"Stats.GroupTopAdminBans_many" = "%@ bans";
+"Stats.GroupTopAdminBans_any" = "%@ bans";
+
+"Stats.GroupTopAdmin.Actions" = "Actions";
+"Stats.GroupTopAdmin.Promote" = "Promote";
+
+"Stats.GroupTopInviterInvites_0" = "%@ invitations";
+"Stats.GroupTopInviterInvites_1" = "%@ invitation";
+"Stats.GroupTopInviterInvites_2" = "%@ invitations";
+"Stats.GroupTopInviterInvites_3_10" = "%@ invitations";
+"Stats.GroupTopInviterInvites_many" = "%@ invitations";
+"Stats.GroupTopInviterInvites_any" = "%@ invitations";
+
+"Stats.GroupTopInviter.History" = "History";
+"Stats.GroupTopInviter.Promote" = "Promote";
+
+"PrivacySettings.AutoArchiveTitle" = "NEW CHATS FROM UNKNOWN USERS";
+"PrivacySettings.AutoArchive" = "Archive and Mute";
+"PrivacySettings.AutoArchiveInfo" = "Automatically archive and mute new chats, groups and channels from non-contacts.";
+
+"Call.RemoteVideoPaused" = "%@'s video paused";
+
+"Settings.SetProfilePhotoOrVideo" = "Set Photo or Video";
+"Settings.SetNewProfilePhotoOrVideo" = "Set New Photo or Video";
+"Settings.ViewVideo" = "View Video";
+"Settings.RemoveVideo" = "Remove Video";
+
+"Conversation.Unarchive" = "Unarchive";
+"Conversation.UnarchiveDone" = "The chat was moved to your main list.";
+
+"ChatList.AutoarchiveSuggestion.Title" = "Hide new chats?";
+"ChatList.AutoarchiveSuggestion.Text" = "You are receiving lots of new chats from users who are not in your Contact List. Do you want to have such chats **automatically muted** and **archived**?";
+"ChatList.AutoarchiveSuggestion.OpenSettings" = "Go to Settings";
+
+"SettingsSearch.Synonyms.ChatSettings.IntentsSettings" = "Siri Suggestions";
+
+"Stats.GroupShowMoreTopPosters_0" = "Show %@ More";
+"Stats.GroupShowMoreTopPosters_1" = "Show %@ More";
+"Stats.GroupShowMoreTopPosters_2" = "Show %@ More";
+"Stats.GroupShowMoreTopPosters_3_10" = "Show %@ More";
+"Stats.GroupShowMoreTopPosters_many" = "Show %@ More";
+"Stats.GroupShowMoreTopPosters_any" = "Show %@ More";
+
+"Stats.GroupShowMoreTopAdmins_0" = "Show %@ More";
+"Stats.GroupShowMoreTopAdmins_1" = "Show %@ More";
+"Stats.GroupShowMoreTopAdmins_2" = "Show %@ More";
+"Stats.GroupShowMoreTopAdmins_3_10" = "Show %@ More";
+"Stats.GroupShowMoreTopAdmins_many" = "Show %@ More";
+"Stats.GroupShowMoreTopAdmins_any" = "Show %@ More";
+
+"Stats.GroupShowMoreTopInviters_0" = "Show %@ More";
+"Stats.GroupShowMoreTopInviters_1" = "Show %@ More";
+"Stats.GroupShowMoreTopInviters_2" = "Show %@ More";
+"Stats.GroupShowMoreTopInviters_3_10" = "Show %@ More";
+"Stats.GroupShowMoreTopInviters_many" = "Show %@ More";
+"Stats.GroupShowMoreTopInviters_any" = "Show %@ More";
+
+"Settings.AddAnotherAccount" = "Add Another Account";
+"Settings.AddAnotherAccount.Help" = "You can add up to three accounts with different phone numbers.";
+
+"ProfilePhoto.OpenGallery" = "Open Gallery";
+"ProfilePhoto.SearchWeb" = "Search Web";
+"ProfilePhoto.OpenInEditor" = "Open in Editor";
+
+"Settings.EditAccount" = "Edit Account";
+"Settings.EditPhoto" = "Edit";
+"Settings.EditVideo" = "Edit";
+"Settings.CancelUpload" = "Cancel Upload";
+
+"Settings.FrequentlyAskedQuestions" = "Frequently Asked Questions";
+
+"Notification.ChangedGroupVideo" = "%@ changed group video";
+"Group.MessageVideoUpdated" = "Group video updated";
+"Channel.MessageVideoUpdated" = "Channel video updated";
+
+"Conversation.Dice.u1F3C0" = "Send a basketball emoji to try your luck.";
+"Conversation.Dice.u26BD" = "Send a football emoji to try your luck.";
+
+"SettingsSearch_Synonyms_ChatFolders" = "";
+
+"EditProfile.NameAndPhotoOrVideoHelp" = "Enter your name and add an optional profile photo or video.";
+
+"Settings.RemoveConfirmation" = "Remove";
+
+"Conversation.ContextMenuOpenProfile" = "Open Profile";
+"Conversation.ContextMenuSendMessage" = "Send Message";
+"Conversation.ContextMenuMention" = "Mention";
+
+"Conversation.ContextMenuOpenChannelProfile" = "Open Profile";
+"Conversation.ContextMenuOpenChannel" = "Open Channel";
+
+"Cache.KeepMediaHelp" = "Photos, videos and other files from cloud chats that you have **not accessed** during this period will be removed from this device to save disk space.";
+
+
+"Cache.MaximumCacheSize" = "Maximum Cache Size";
+"Cache.NoLimit" = "No Limit";
+"Cache.MaximumCacheSizeHelp" = "If your cache size exceeds this limit, the oldest media will be deleted.\n\nAll media will stay in the Telegram cloud and can be re-downloaded if you need it again.";

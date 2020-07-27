@@ -202,6 +202,53 @@ public final class ChatPeekTimeout {
     }
 }
 
+public final class ChatPeerNearbyData: Equatable {
+    public static func == (lhs: ChatPeerNearbyData, rhs: ChatPeerNearbyData) -> Bool {
+        if let lhsSticker = lhs.sticker, let rhsSticker = rhs.sticker, !lhsSticker.isEqual(to: rhsSticker) {
+            return false
+        } else if (lhs.sticker == nil) != (rhs.sticker == nil) {
+            return false
+        }
+        return lhs.distance == rhs.distance
+    }
+    
+    public let distance: Int32
+    public let sticker: TelegramMediaFile?
+    
+    public init(distance: Int32, sticker: TelegramMediaFile?) {
+        self.distance = distance
+        self.sticker = sticker
+    }
+}
+
+public enum ChatSearchDomain: Equatable {
+    case everything
+    case members
+    case member(Peer)
+    
+    public static func ==(lhs: ChatSearchDomain, rhs: ChatSearchDomain) -> Bool {
+        switch lhs {
+            case .everything:
+                if case .everything = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .members:
+                if case .members = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .member(lhsPeer):
+                if case let .member(rhsPeer) = rhs, lhsPeer.isEqual(rhsPeer) {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
 public final class NavigateToChatControllerParams {
     public let navigationController: NavigationController
     public let chatController: ChatController?
@@ -215,14 +262,15 @@ public final class NavigateToChatControllerParams {
     public let useExisting: Bool
     public let purposefulAction: (() -> Void)?
     public let scrollToEndIfExists: Bool
-    public let activateMessageSearch: Bool
+    public let activateMessageSearch: (ChatSearchDomain, String)?
     public let peekData: ChatPeekTimeout?
+    public let peerNearbyData: ChatPeerNearbyData?
     public let animated: Bool
     public let options: NavigationAnimationOptions
     public let parentGroupId: PeerGroupId?
     public let completion: (ChatController) -> Void
     
-    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: Bool = false, peekData: ChatPeekTimeout? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping (ChatController) -> Void = { _ in }) {
+    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping (ChatController) -> Void = { _ in }) {
         self.navigationController = navigationController
         self.chatController = chatController
         self.context = context
@@ -237,6 +285,7 @@ public final class NavigateToChatControllerParams {
         self.scrollToEndIfExists = scrollToEndIfExists
         self.activateMessageSearch = activateMessageSearch
         self.peekData = peekData
+        self.peerNearbyData = peerNearbyData
         self.animated = animated
         self.options = options
         self.parentGroupId = parentGroupId
@@ -275,7 +324,7 @@ public enum DeviceContactInfoSubject {
 public enum PeerInfoControllerMode {
     case generic
     case calls(messages: [Message])
-    case nearbyPeer
+    case nearbyPeer(distance: Int32)
     case group(PeerId)
 }
 
@@ -468,6 +517,7 @@ public protocol SharedAccountContext: class {
     func messageFromPreloadedChatHistoryViewForLocation(id: MessageId, location: ChatHistoryLocationInput, account: Account, chatLocation: ChatLocation, tagMask: MessageTags?) -> Signal<(MessageIndex?, Bool), NoError>
     func makeOverlayAudioPlayerController(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, parentNavigationController: NavigationController?) -> ViewController & OverlayAudioPlayerController
     func makePeerInfoController(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool, fromChat: Bool) -> ViewController?
+    func makeChannelAdminController(context: AccountContext, peerId: PeerId, adminId: PeerId, initialParticipant: ChannelParticipant) -> ViewController?
     func makeDeviceContactInfoController(context: AccountContext, subject: DeviceContactInfoSubject, completed: (() -> Void)?, cancelled: (() -> Void)?) -> ViewController
     func makePeersNearbyController(context: AccountContext) -> ViewController
     func makeComposeController(context: AccountContext) -> ViewController
@@ -482,7 +532,8 @@ public protocol SharedAccountContext: class {
     func makeProxySettingsController(context: AccountContext) -> ViewController
     func makeLocalizationListController(context: AccountContext) -> ViewController
     func makeCreateGroupController(context: AccountContext, peerIds: [PeerId], initialTitle: String?, mode: CreateGroupMode, completion: ((PeerId, @escaping () -> Void) -> Void)?) -> ViewController
-    func makeChatRecentActionsController(context: AccountContext, peer: Peer) -> ViewController
+    func makeChatRecentActionsController(context: AccountContext, peer: Peer, adminPeerId: PeerId?) -> ViewController
+    func makePrivacyAndSecurityController(context: AccountContext) -> ViewController
     func navigateToChatController(_ params: NavigateToChatControllerParams)
     func openExternalUrl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void)
     func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError>

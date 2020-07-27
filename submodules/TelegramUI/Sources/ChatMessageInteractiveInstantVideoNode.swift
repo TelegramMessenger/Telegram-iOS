@@ -519,7 +519,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
         
         var isBuffering: Bool?
-        if let message = self.item?.message, let media = self.media, let size = media.size, (isMediaStreamable(message: message, media: media) || size <= 256 * 1024) && (self.automaticDownload ?? false) {
+        if let message = self.item?.message, let media = self.media, isMediaStreamable(message: message, media: media) && (self.automaticDownload ?? false) {
             if let playerStatus = self.playerStatus, case .buffering = playerStatus.status {
                 isBuffering = true
             } else {
