@@ -37,9 +37,6 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
     CGFloat _autoRotationAngle;
     
     UIView *_buttonsWrapperView;
-    TGModernButton *_rotateButton;
-    TGModernButton *_mirrorButton;
-    TGModernButton *_aspectRatioButton;
     TGModernButton *_resetButton;
 
     TGPhotoCropView *_cropView;
@@ -153,31 +150,6 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
     _buttonsWrapperView = [[UIView alloc] initWithFrame:CGRectZero];
     [_wrapperView addSubview:_buttonsWrapperView];
     
-    _rotateButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 36, 36)];
-    _rotateButton.exclusiveTouch = true;
-    _rotateButton.hitTestEdgeInsets = UIEdgeInsetsMake(-10, -10, -10, -10);
-    [_rotateButton addTarget:self action:@selector(rotate) forControlEvents:UIControlEventTouchUpInside];
-    [_rotateButton setImage:TGComponentsImageNamed(@"PhotoEditorRotateIcon") forState:UIControlStateNormal];
-    //[_buttonsWrapperView addSubview:_rotateButton];
-    
-    _mirrorButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 36, 36)];
-    _mirrorButton.exclusiveTouch = true;
-    _mirrorButton.imageEdgeInsets = UIEdgeInsetsMake(4.0f, 0.0f, 0.0f, 0.0f);
-    _mirrorButton.hitTestEdgeInsets = UIEdgeInsetsMake(-10, -10, -10, -10);
-    [_mirrorButton addTarget:self action:@selector(mirror) forControlEvents:UIControlEventTouchUpInside];
-    [_mirrorButton setImage:TGComponentsImageNamed(@"PhotoEditorMirrorIcon") forState:UIControlStateNormal];
-    //[_buttonsWrapperView addSubview:_mirrorButton];
-    
-    _aspectRatioButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 36, 36)];
-    _aspectRatioButton.exclusiveTouch = true;
-    _aspectRatioButton.hitTestEdgeInsets = UIEdgeInsetsMake(-10, -10, -10, -10);
-    [_aspectRatioButton addTarget:self action:@selector(aspectRatioButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-    UIImage *aspectRatioHighlightedImage = TGTintedImage(TGComponentsImageNamed(@"PhotoEditorAspectRatioIcon"), [TGPhotoEditorInterfaceAssets accentColor]);
-    [_aspectRatioButton setImage:TGComponentsImageNamed(@"PhotoEditorAspectRatioIcon") forState:UIControlStateNormal];
-    [_aspectRatioButton setImage:aspectRatioHighlightedImage forState:UIControlStateSelected];
-    [_aspectRatioButton setImage:aspectRatioHighlightedImage forState:UIControlStateSelected | UIControlStateHighlighted];
-    //[_buttonsWrapperView addSubview:_aspectRatioButton];
-    
     NSString *resetButtonTitle = TGLocalized(@"PhotoEditor.CropReset");
     _resetButton = [[TGModernButton alloc] init];
     _resetButton.exclusiveTouch = true;
@@ -190,14 +162,10 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
     _resetButton.frame = CGRectMake(0, 0, _resetButton.frame.size.width, 24);
     [_buttonsWrapperView addSubview:_resetButton];
     
-    if ([resetButtonTitle respondsToSelector:@selector(sizeWithAttributes:)])
-        _resetButtonWidth = CGCeil([resetButtonTitle sizeWithAttributes:@{ NSFontAttributeName:TGSystemFontOfSize(13) }].width);
-    else
-        _resetButtonWidth = CGCeil([resetButtonTitle sizeWithFont:TGSystemFontOfSize(13)].width);
+    _resetButtonWidth = CGCeil([resetButtonTitle sizeWithAttributes:@{ NSFontAttributeName:TGSystemFontOfSize(13) }].width);
     
     if (photoEditor.cropLockedAspectRatio > FLT_EPSILON)
     {
-        _aspectRatioButton.selected = true;
         [_cropView setLockedAspectRatio:photoEditor.cropLockedAspectRatio performResize:false animated:false];
     }
     else if ([photoEditor hasDefaultCropping] && ABS(_autoRotationAngle) > FLT_EPSILON)
@@ -376,16 +344,11 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
 - (CGRect)_targetFrameForTransitionInFromFrame:(CGRect)fromFrame
 {
     CGSize referenceSize = [self referenceViewSize];
-    
-    UIInterfaceOrientation orientation = self.interfaceOrientation;
-    if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
-        orientation = UIInterfaceOrientationPortrait;
-    
     bool hasOnScreenNavigation = false;
     if (iosMajorVersion() >= 11)
         hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
     
-    CGRect containerFrame = [TGPhotoCropController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation hasArbitraryRotation:_cropView.hasArbitraryRotation hasOnScreenNavigation:hasOnScreenNavigation];
+    CGRect containerFrame = [TGPhotoCropController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:self.effectiveOrientation hasArbitraryRotation:_cropView.hasArbitraryRotation hasOnScreenNavigation:hasOnScreenNavigation];
     containerFrame = CGRectInset(containerFrame, TGPhotoCropAreaInsetSize.width, TGPhotoCropAreaInsetSize.height);
     
     CGSize fittedSize = TGScaleToSize(fromFrame.size, containerFrame.size);
@@ -576,7 +539,6 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
     if (_cropView.isAspectRatioLocked)
     {
         [_cropView unlockAspectRatio];
-        _aspectRatioButton.selected = false;
     }
     else
     {
@@ -677,14 +639,14 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
         }]];
         
         [controller setItemViews:items];
-        controller.sourceRect = ^CGRect
-        {
-            __strong TGPhotoCropController *strongSelf = weakSelf;
-            if (strongSelf != nil)
-                return [strongSelf.view convertRect:strongSelf->_aspectRatioButton.frame fromView:strongSelf->_aspectRatioButton.superview];
-            
-            return CGRectZero;
-        };
+//        controller.sourceRect = ^CGRect
+//        {
+//            __strong TGPhotoCropController *strongSelf = weakSelf;
+//            if (strongSelf != nil)
+//                return [strongSelf.view convertRect:strongSelf->_aspectRatioButton.frame fromView:strongSelf->_aspectRatioButton.superview];
+//
+//            return CGRectZero;
+//        };
         [controller presentInViewController:self.parentViewController sourceView:self.view animated:true];
     }
     
@@ -706,8 +668,6 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
     }
     else
     {
-        _aspectRatioButton.selected = false;
-        
         [_cropView resetAnimated:true];
         
         if (hasAutorotationAngle)
@@ -796,8 +756,7 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
 
 - (void)updateLayout:(UIInterfaceOrientation)orientation
 {
-    if ([self inFormSheet] || [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
-        orientation = UIInterfaceOrientationPortrait;
+    orientation = [self effectiveOrientation:orientation];
     
     CGSize referenceSize = [self referenceViewSize];
     
@@ -823,19 +782,8 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
         {
             case UIInterfaceOrientationLandscapeLeft:
             {
-                _buttonsWrapperView.frame = CGRectMake(screenEdges.left + self.toolbarLandscapeSize,
-                                                       screenEdges.top,
-                                                       TGPhotoCropButtonsWrapperSize,
-                                                       referenceSize.height);
-                
-                _rotateButton.frame = CGRectMake(25, 10, _rotateButton.frame.size.width, _rotateButton.frame.size.height);
-                _mirrorButton.frame = CGRectMake(25, 60, _mirrorButton.frame.size.width, _mirrorButton.frame.size.height);
-                
-                _aspectRatioButton.frame = CGRectMake(25,
-                                                      _buttonsWrapperView.frame.size.height - _aspectRatioButton.frame.size.height - 10,
-                                                      _aspectRatioButton.frame.size.width,
-                                                      _aspectRatioButton.frame.size.height);
-                
+                _buttonsWrapperView.frame = CGRectMake(screenEdges.left + self.toolbarLandscapeSize, screenEdges.top, TGPhotoCropButtonsWrapperSize, referenceSize.height);
+                                
                 _resetButton.transform = CGAffineTransformIdentity;
                 _resetButton.frame = CGRectMake(0, 0, _resetButtonWidth, 24);
                 
@@ -852,19 +800,8 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
                 
             case UIInterfaceOrientationLandscapeRight:
             {
-                _buttonsWrapperView.frame = CGRectMake(screenEdges.right - self.toolbarLandscapeSize - TGPhotoCropButtonsWrapperSize,
-                                                       screenEdges.top,
-                                                       TGPhotoCropButtonsWrapperSize,
-                                                       referenceSize.height);
-                
-                _rotateButton.frame = CGRectMake(_buttonsWrapperView.frame.size.width - _rotateButton.frame.size.width - 25, 10, _rotateButton.frame.size.width, _rotateButton.frame.size.height);
-                _mirrorButton.frame = CGRectMake(_buttonsWrapperView.frame.size.width - _mirrorButton.frame.size.width - 25, 60, _mirrorButton.frame.size.width, _mirrorButton.frame.size.height);
-                
-                _aspectRatioButton.frame = CGRectMake(_buttonsWrapperView.frame.size.width - _aspectRatioButton.frame.size.width - 25,
-                                                      _buttonsWrapperView.frame.size.height - _aspectRatioButton.frame.size.height - 10,
-                                                      _aspectRatioButton.frame.size.width,
-                                                      _aspectRatioButton.frame.size.height);
-                
+                _buttonsWrapperView.frame = CGRectMake(screenEdges.right - self.toolbarLandscapeSize - TGPhotoCropButtonsWrapperSize, screenEdges.top, TGPhotoCropButtonsWrapperSize, referenceSize.height);
+                                
                 _resetButton.transform = CGAffineTransformIdentity;
                 _resetButton.frame = CGRectMake(0, 0, _resetButtonWidth, 24);
                 
@@ -881,18 +818,7 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
                 
             default:
             {
-                _buttonsWrapperView.frame = CGRectMake(screenEdges.left,
-                                                       screenEdges.bottom - TGPhotoEditorToolbarSize - TGPhotoCropButtonsWrapperSize,
-                                                       referenceSize.width,
-                                                       TGPhotoCropButtonsWrapperSize);
-                
-                _rotateButton.frame = CGRectMake(10, _buttonsWrapperView.frame.size.height - _rotateButton.frame.size.height - 25, _rotateButton.frame.size.width, _rotateButton.frame.size.height);
-                _mirrorButton.frame = CGRectMake(60, _buttonsWrapperView.frame.size.height - _mirrorButton.frame.size.height - 25, _mirrorButton.frame.size.width, _mirrorButton.frame.size.height);
-                
-                _aspectRatioButton.frame = CGRectMake(_buttonsWrapperView.frame.size.width - _aspectRatioButton.frame.size.width - 10,
-                                                      _buttonsWrapperView.frame.size.height - _aspectRatioButton.frame.size.height - 25,
-                                                      _aspectRatioButton.frame.size.width,
-                                                      _aspectRatioButton.frame.size.height);
+                _buttonsWrapperView.frame = CGRectMake(screenEdges.left, screenEdges.bottom - TGPhotoEditorToolbarSize - TGPhotoCropButtonsWrapperSize, referenceSize.width, TGPhotoCropButtonsWrapperSize);
                 
                 _resetButton.transform = CGAffineTransformIdentity;
                 _resetButton.frame = CGRectMake((_buttonsWrapperView.frame.size.width - _resetButton.frame.size.width) / 2, 20, _resetButtonWidth, 24);

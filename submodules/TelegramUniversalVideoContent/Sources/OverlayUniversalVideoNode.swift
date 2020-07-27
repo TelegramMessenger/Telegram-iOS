@@ -10,7 +10,7 @@ import TelegramAudio
 import AccountContext
 
 public final class OverlayUniversalVideoNode: OverlayMediaItemNode {
-    private let content: UniversalVideoContent
+    public let content: UniversalVideoContent
     private let videoNode: UniversalVideoNode
     private let decoration: OverlayVideoDecoration
     
@@ -30,24 +30,40 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode {
         }
     }
     
+    private let defaultExpand: () -> Void
+    public var customExpand: (() -> Void)?
+    public var customClose: (() -> Void)?
+    public var controlsAreShowingUpdated: ((Bool) -> Void)?
+    
     public init(postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoManager, content: UniversalVideoContent, expand: @escaping () -> Void, close: @escaping () -> Void) {
         self.content = content
+        self.defaultExpand = expand
+        
+        var expandImpl: (() -> Void)?
+        var controlsAreShowingUpdatedImpl: ((Bool) -> Void)?
+        
         var unminimizeImpl: (() -> Void)?
         var togglePlayPauseImpl: (() -> Void)?
         var closeImpl: (() -> Void)?
-        let decoration = OverlayVideoDecoration(unminimize: {
+        let decoration = OverlayVideoDecoration(contentDimensions: content.dimensions, unminimize: {
             unminimizeImpl?()
         }, togglePlayPause: {
             togglePlayPauseImpl?()
         }, expand: {
-            expand()
+            expandImpl?()
         }, close: {
             closeImpl?()
+        }, controlsAreShowingUpdated: { value in
+            controlsAreShowingUpdatedImpl?(value)
         })
         self.videoNode = UniversalVideoNode(postbox: postbox, audioSession: audioSession, manager: manager, decoration: decoration, content: content, priority: .overlay)
         self.decoration = decoration
         
         super.init()
+        
+        expandImpl = { [weak self] in
+            self?.expand()
+        }
         
         unminimizeImpl = { [weak self] in
             self?.unminimize?()
@@ -57,6 +73,10 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode {
         }
         closeImpl = { [weak self] in
             if let strongSelf = self {
+                if let customClose = strongSelf.customClose {
+                    customClose()
+                    return
+                }
                 if strongSelf.videoNode.hasAttachedContext {
                     strongSelf.videoNode.continuePlayingWithoutSound()
                 }
@@ -66,6 +86,10 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode {
                 })
                 strongSelf.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
             }
+        }
+        
+        controlsAreShowingUpdatedImpl = { [weak self] value in
+            self?.controlsAreShowingUpdated?(value)
         }
 
         self.clipsToBounds = true
@@ -81,7 +105,7 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode {
                 if previous != value {
                     if !value {
                         strongSelf.dismiss()
-                        close()
+                        closeImpl?()
                     }
                 }
             }
@@ -104,18 +128,44 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode {
     
     override public func updateLayout(_ size: CGSize) {
         if size != self.validLayoutSize {
-            self.updateLayoutImpl(size)
+            self.updateLayoutImpl(size, transition: .immediate)
         }
     }
     
-    private func updateLayoutImpl(_ size: CGSize) {
+    public func updateLayout(_ size: CGSize, transition: ContainedViewLayoutTransition) {
+        if size != self.validLayoutSize {
+            self.updateLayoutImpl(size, transition: transition)
+        }
+    }
+    
+    private func updateLayoutImpl(_ size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayoutSize = size
         
-        self.videoNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.videoNode.updateLayout(size: size, transition: .immediate)
+        transition.updateFrame(node: self.videoNode, frame: CGRect(origin: CGPoint(), size: size))
+        self.videoNode.updateLayout(size: size, transition: transition)
     }
     
     override public func updateMinimizedEdge(_ edge: OverlayMediaItemMinimizationEdge?, adjusting: Bool) {
         self.decoration.updateMinimizedEdge(edge, adjusting: adjusting)
+    }
+    
+    public func updateRoundCorners(_ value: Bool, transition: ContainedViewLayoutTransition) {
+        transition.updateCornerRadius(node: self, cornerRadius: value ? 4.0 : 0.0)
+    }
+    
+    public func showControls() {
+        self.decoration.showControls()
+    }
+    
+    public func expand() {
+        if let customExpand = self.customExpand {
+            customExpand()
+        } else {
+            self.defaultExpand()
+        }
+    }
+    
+    public func controlPlay() {
+        self.videoNode.play()
     }
 }

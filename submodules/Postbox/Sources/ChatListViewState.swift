@@ -874,8 +874,8 @@ private final class ChatListViewSpaceState {
     private func checkReplayEntries(postbox: Postbox) {
         #if DEBUG
         let cleanState = ChatListViewSpaceState(postbox: postbox, space: self.space, anchorIndex: self.anchorIndex, summaryComponents: self.summaryComponents, halfLimit: self.halfLimit)
-        assert(self.orderedEntries.lowerOrAtAnchor.map { $0.index } == cleanState.orderedEntries.lowerOrAtAnchor.map { $0.index })
-        assert(self.orderedEntries.higherThanAnchor.map { $0.index } == cleanState.orderedEntries.higherThanAnchor.map { $0.index })
+        //assert(self.orderedEntries.lowerOrAtAnchor.map { $0.index } == cleanState.orderedEntries.lowerOrAtAnchor.map { $0.index })
+        //assert(self.orderedEntries.higherThanAnchor.map { $0.index } == cleanState.orderedEntries.higherThanAnchor.map { $0.index })
         #endif
     }
     

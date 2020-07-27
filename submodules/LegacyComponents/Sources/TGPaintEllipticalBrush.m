@@ -2,19 +2,19 @@
 #import <LegacyComponents/TGPhotoEditorUtils.h>
 
 const CGFloat TGPaintEllipticalBrushHardness = 0.89f;
-const CGFloat TGPaintEllipticalBrushAngle = 125.0f;
+const CGFloat TGPaintEllipticalBrushAngle = 110.0f;
 const CGFloat TGPaintEllipticalBrushRoundness = 0.35f;
 
 @implementation TGPaintEllipticalBrush
 
 - (CGFloat)spacing
 {
-    return 0.05f;
+    return 0.075f;
 }
 
 - (CGFloat)alpha
 {
-    return 0.5f;
+    return 0.17f;
 }
 
 - (CGFloat)angle

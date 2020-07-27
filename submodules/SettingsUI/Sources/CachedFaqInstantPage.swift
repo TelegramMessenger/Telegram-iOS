@@ -28,7 +28,7 @@ private func extractAnchor(string: String) -> (String, String?) {
 
 private let refreshTimeout: Int32 = 60 * 60 * 12
 
-func cachedFaqInstantPage(context: AccountContext) -> Signal<ResolvedUrl, NoError> {
+public func cachedFaqInstantPage(context: AccountContext) -> Signal<ResolvedUrl, NoError> {
     var faqUrl = context.sharedContext.currentPresentationData.with { $0 }.strings.Settings_FAQ_URL
     if faqUrl == "Settings.FAQ_URL" || faqUrl.isEmpty {
         faqUrl = "https://telegram.org/faq#general-questions"
@@ -71,7 +71,7 @@ func cachedFaqInstantPage(context: AccountContext) -> Signal<ResolvedUrl, NoErro
     }
 }
 
-func faqSearchableItems(context: AccountContext) -> Signal<[SettingsSearchableItem], NoError> {
+func faqSearchableItems(context: AccountContext, suggestAccountDeletion: Bool) -> Signal<[SettingsSearchableItem], NoError> {
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
     return cachedFaqInstantPage(context: context)
     |> map { resolvedUrl -> [SettingsSearchableItem] in
@@ -105,7 +105,7 @@ func faqSearchableItems(context: AccountContext) -> Signal<[SettingsSearchableIt
                                         if case let .text(itemText, _) = item, case let .url(text, url, _) = itemText {
                                             let (_, anchor) = extractAnchor(string: url)
                                             var index = nextIndex
-                                            if anchor?.contains("delete-my-account") ?? false {
+                                            if suggestAccountDeletion && (anchor?.contains("delete-my-account") ?? false) {
                                                 index = 1
                                             } else {
                                                 nextIndex += 1

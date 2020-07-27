@@ -107,7 +107,7 @@ open class NavigationBar: ASDisplayNode {
         return 38.0
     }
     
-    private var presentationData: NavigationBarPresentationData
+    var presentationData: NavigationBarPresentationData
     
     private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat, CGFloat, Bool)?
     private var requestedLayout: Bool = false
@@ -117,6 +117,7 @@ open class NavigationBar: ASDisplayNode {
     
     public var userInfo: Any?
     public var makeCustomTransitionNode: ((NavigationBar, Bool) -> CustomNavigationTransitionNode?)?
+    public var allowsCustomTransition: (() -> Bool)?
     
     private var collapsed: Bool {
         get {

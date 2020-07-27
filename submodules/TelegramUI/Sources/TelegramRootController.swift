@@ -22,7 +22,7 @@ public final class TelegramRootController: NavigationController {
     public var contactsController: ContactsController?
     public var callListController: CallListController?
     public var chatListController: ChatListController?
-    public var accountSettingsController: ViewController?
+    public var accountSettingsController: PeerInfoScreen?
     
     private var permissionsDisposable: Disposable?
     private var presentationDataDisposable: Disposable?
@@ -110,7 +110,13 @@ public final class TelegramRootController: NavigationController {
             sharedContext.switchingData = (nil, nil, nil)
         }
         
-        let accountSettingsController = restoreSettignsController ?? settingsController(context: self.context, accountManager: context.sharedContext.accountManager, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild)
+        let accountSettingsController = PeerInfoScreen(context: self.context, peerId: self.context.account.peerId, avatarInitiallyExpanded: false, isOpenedFromChat: false, nearbyPeerDistance: nil, callMessages: [], isSettings: true)
+        accountSettingsController.tabBarItemDebugTapAction = { [weak self, weak accountSettingsController] in
+            guard let strongSelf = self, let accountSettingsController = accountSettingsController else {
+                return
+            }
+            accountSettingsController.push(debugController(sharedContext: strongSelf.context.sharedContext, context: strongSelf.context))
+        }
         controllers.append(accountSettingsController)
         
         tabBarController.setControllers(controllers, selectedIndex: restoreSettignsController != nil ? (controllers.count - 1) : (controllers.count - 2))

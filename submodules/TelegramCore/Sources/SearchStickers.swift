@@ -58,6 +58,18 @@ public struct SearchStickersScope: OptionSet {
     public static let remote = SearchStickersScope(rawValue: 1 << 1)
 }
 
+public func randomGreetingSticker(account: Account) -> Signal<FoundStickerItem?, NoError> {
+    return account.postbox.transaction { transaction -> FoundStickerItem? in
+        var stickerItems: [FoundStickerItem] = []
+        for entry in transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudGreetingStickers) {
+            if let item = entry.contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile {
+                stickerItems.append(FoundStickerItem(file: file, stringRepresentations: []))
+            }
+        }
+        return stickerItems.randomElement()
+    }
+}
+
 public func searchStickers(account: Account, query: String, scope: SearchStickersScope = [.installed, .remote]) -> Signal<[FoundStickerItem], NoError> {
     if scope.isEmpty {
         return .single([])

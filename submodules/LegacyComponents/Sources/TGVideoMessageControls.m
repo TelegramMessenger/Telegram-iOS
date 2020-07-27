@@ -160,7 +160,7 @@ static CGRect viewFrame(UIView *view)
             CGRect slideToCancelArrowFrame = viewFrame(_slideToCancelArrow);
             setViewFrame(_slideToCancelArrow, CGRectMake(CGFloor((self.frame.size.width - _slideToCancelLabel.frame.size.width) / 2.0f) - slideToCancelArrowFrame.size.width - 7.0f, CGFloor((self.frame.size.height - _slideToCancelLabel.frame.size.height) / 2.0f), slideToCancelArrowFrame.size.width, slideToCancelArrowFrame.size.height));
             _slideToCancelArrow.alpha = 0.0f;
-            [self addSubview:_slideToCancelArrow];
+//            [self addSubview:_slideToCancelArrow];
             
             _slideToCancelArrow.transform = CGAffineTransformMakeTranslation(hideLeftOffset, 0.0f);
             _slideToCancelLabel.transform = CGAffineTransformMakeTranslation(hideLeftOffset, 0.0f);
@@ -185,11 +185,11 @@ static CGRect viewFrame(UIView *view)
         _recordDurationLabel.text = @"0:00,00";
         
         if (_recordIndicatorView.superview == nil)
-            [self addSubview:_recordIndicatorView];
+//            [self addSubview:_recordIndicatorView];
         [_recordIndicatorView.layer removeAllAnimations];
         
         if (_recordDurationLabel.superview == nil)
-            [self addSubview:_recordDurationLabel];
+//            [self addSubview:_recordDurationLabel];
         [_recordDurationLabel.layer removeAllAnimations];
         
         _slideToCancelArrow.transform = CGAffineTransformMakeTranslation(300.0f, 0.0f);
@@ -211,7 +211,7 @@ static CGRect viewFrame(UIView *view)
         if (!isAlreadyLocked)
         {
             if (_slideToCancelLabel.superview == nil)
-                [self addSubview:_slideToCancelLabel];
+//                [self addSubview:_slideToCancelLabel];
             
             [UIView animateWithDuration:0.18 delay:0.0 options:animationCurveOption animations:^
             {
@@ -445,8 +445,7 @@ static CGRect viewFrame(UIView *view)
     
     [UIView animateWithDuration:0.2 delay:0.0 options:UIViewAnimationOptionBeginFromCurrentState | animationCurveOption animations:^
     {
-        CGAffineTransform transform = CGAffineTransformMakeTranslation(0.0f, -22.0f);
-        transform = CGAffineTransformScale(transform, 0.25f, 0.25f);
+        CGAffineTransform transform = CGAffineTransformScale(transform, 0.25f, 0.25f);
         _cancelButton.transform = transform;
         _cancelButton.alpha = 0.0f;
     } completion:nil];

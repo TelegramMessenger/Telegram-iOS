@@ -28,7 +28,12 @@ private final class OverlayMediaVideoNodeData {
     }
 }
 
+
+
 final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
+    private let updatePossibleEmbeddingItem: (OverlayMediaControllerEmbeddingItem?) -> Void
+    private let embedPossibleEmbeddingItem: (OverlayMediaControllerEmbeddingItem) -> Bool
+    
     private var videoNodes: [OverlayMediaVideoNodeData] = []
     private var validLayout: ContainerViewLayout?
     
@@ -40,7 +45,10 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
     private var pinchingNode: OverlayMediaItemNode?
     private var pinchingNodeInitialSize: CGSize?
     
-    override init() {
+    init(updatePossibleEmbeddingItem: @escaping (OverlayMediaControllerEmbeddingItem?) -> Void, embedPossibleEmbeddingItem: @escaping (OverlayMediaControllerEmbeddingItem) -> Bool) {
+        self.updatePossibleEmbeddingItem = updatePossibleEmbeddingItem
+        self.embedPossibleEmbeddingItem = embedPossibleEmbeddingItem
+        
         super.init()
         
         self.setViewBlock({
@@ -329,34 +337,46 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
                         draggingNode.updateMinimizedEdge(nil, adjusting: true)
                     }
                     draggingNode.frame = nodeFrame
+                    self.updatePossibleEmbeddingItem(OverlayMediaControllerEmbeddingItem(
+                        position: nodeFrame.center,
+                        itemNode: draggingNode
+                    ))
                 }
             case .ended, .cancelled:
                 if let draggingNode = self.draggingNode, let validLayout = self.validLayout, let index = self.videoNodes.firstIndex(where: { $0.node === draggingNode }){
                     let nodeSize = self.videoNodes[index].currentSize
                     let previousFrame = draggingNode.frame
                     
-                    let (updatedLocation, shouldDismiss) = self.nodeLocationForPosition(layout: validLayout, position: CGPoint(x: previousFrame.midX, y: previousFrame.midY), velocity: recognizer.velocity(in: self.view), size: nodeSize, tempExtendedTopInset: draggingNode.tempExtendedTopInset)
-                    
-                    if shouldDismiss && draggingNode.isMinimizeable {
-                        draggingNode.updateMinimizedEdge(updatedLocation.x.isZero ? .left : .right, adjusting: false)
-                        self.videoNodes[index].isMinimized = true
+                    if self.embedPossibleEmbeddingItem(OverlayMediaControllerEmbeddingItem(
+                        position: previousFrame.center,
+                        itemNode: draggingNode
+                    )) {
+                        self.draggingNode = nil
                     } else {
-                        draggingNode.updateMinimizedEdge(nil, adjusting: true)
-                        self.videoNodes[index].isMinimized = false
+                        let (updatedLocation, shouldDismiss) = self.nodeLocationForPosition(layout: validLayout, position: CGPoint(x: previousFrame.midX, y: previousFrame.midY), velocity: recognizer.velocity(in: self.view), size: nodeSize, tempExtendedTopInset: draggingNode.tempExtendedTopInset)
+                        
+                        if shouldDismiss && draggingNode.isMinimizeable {
+                            draggingNode.updateMinimizedEdge(updatedLocation.x.isZero ? .left : .right, adjusting: false)
+                            self.videoNodes[index].isMinimized = true
+                        } else {
+                            draggingNode.updateMinimizedEdge(nil, adjusting: true)
+                            self.videoNodes[index].isMinimized = false
+                        }
+                        
+                        if let group = draggingNode.group {
+                            self.locationByGroup[group] = updatedLocation
+                        }
+                        self.videoNodes[index].location = updatedLocation
+                        
+                        draggingNode.frame = CGRect(origin: self.nodePosition(layout: validLayout, size: nodeSize, location: updatedLocation, hidden: !draggingNode.hasAttachedContext, isMinimized: self.videoNodes[index].isMinimized, tempExtendedTopInset: draggingNode.tempExtendedTopInset), size: nodeSize)
+                        draggingNode.layer.animateFrame(from: previousFrame, to: draggingNode.frame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                        self.draggingNode = nil
+                        
+                        if shouldDismiss && !draggingNode.isMinimizeable {
+                            draggingNode.dismiss()
+                        }
                     }
-                    
-                    if let group = draggingNode.group {
-                        self.locationByGroup[group] = updatedLocation
-                    }
-                    self.videoNodes[index].location = updatedLocation
-                    
-                    draggingNode.frame = CGRect(origin: self.nodePosition(layout: validLayout, size: nodeSize, location: updatedLocation, hidden: !draggingNode.hasAttachedContext, isMinimized: self.videoNodes[index].isMinimized, tempExtendedTopInset: draggingNode.tempExtendedTopInset), size: nodeSize)
-                    draggingNode.layer.animateFrame(from: previousFrame, to: draggingNode.frame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-                    self.draggingNode = nil
-                    
-                    if shouldDismiss && !draggingNode.isMinimizeable {
-                        draggingNode.dismiss()
-                    }
+                    self.updatePossibleEmbeddingItem(nil)
                 }
             default:
                 break

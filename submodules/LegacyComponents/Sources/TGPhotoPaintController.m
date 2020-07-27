@@ -68,7 +68,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     UIView *_scrollContentView;
     
     UIButton *_containerView;
-    TGPhotoPaintSparseView *_wrapperView;
+    TGPhotoEditorSparseView *_wrapperView;
     UIView *_portraitToolsWrapperView;
     UIView *_landscapeToolsWrapperView;
     
@@ -98,6 +98,8 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     id<TGPhotoPaintStickersScreen> _stickersScreen;
     
     bool _appeared;
+    bool _skipEntitiesSetup;
+    bool _entitiesReady;
     
     TGPhotoPaintFont *_selectedTextFont;
     TGPhotoPaintTextEntityStyle _selectedTextStyle;
@@ -117,13 +119,9 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     TGMenuContainerView *_menuContainerView;
     
     TGPaintingData *_resultData;
-    UIImage *_stillImage;
         
     TGPaintingWrapperView *_paintingWrapperView;
-    
-    SMetaDisposable *_faceDetectorDisposable;
-    NSArray *_faces;
-    
+        
     bool _enableStickers;
     
     NSData *_eyedropperBackgroundData;
@@ -143,7 +141,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 @implementation TGPhotoPaintController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView entitiesView:(TGPhotoEntitiesContainerView *)entitiesView
 {
     self = [super initWithContext:context];
     if (self != nil)
@@ -155,6 +153,11 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         
         self.photoEditor = photoEditor;
         self.previewView = previewView;
+        _entitiesContainerView = entitiesView;
+        if (entitiesView != nil) {
+            _skipEntitiesSetup = true;
+        }
+        entitiesView.userInteractionEnabled = true;
         
         _brushes = @
         [
@@ -183,7 +186,6 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 - (void)dealloc
 {
     [_actionHandle reset];
-    [_faceDetectorDisposable dispose];
 }
 
 - (void)loadView
@@ -220,7 +222,6 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     TGPhotoEditorPreviewView *previewView = _previewView;
     previewView.userInteractionEnabled = false;
     previewView.hidden = true;
-    [_containerView addSubview:_previewView];
     
     __weak TGPhotoPaintController *weakSelf = self;
     _paintingWrapperView = [[TGPaintingWrapperView alloc] init];
@@ -244,9 +245,11 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     _contentWrapperView.userInteractionEnabled = false;
     [_contentView addSubview:_contentWrapperView];
     
-    _entitiesContainerView = [[TGPhotoEntitiesContainerView alloc] init];
-    _entitiesContainerView.clipsToBounds = true;
-    _entitiesContainerView.stickersContext = _stickersContext;
+    if (_entitiesContainerView == nil) {
+        _entitiesContainerView = [[TGPhotoEntitiesContainerView alloc] init];
+        _entitiesContainerView.clipsToBounds = true;
+        _entitiesContainerView.stickersContext = _stickersContext;
+    }
     _entitiesContainerView.entitySelected = ^(TGPhotoPaintEntityView *sender)
     {
         __strong TGPhotoPaintController *strongSelf = weakSelf;
@@ -266,7 +269,9 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         
         [strongSelf updateSettingsButton];
     };
-    [_contentWrapperView addSubview:_entitiesContainerView];
+    if (!_skipEntitiesSetup) {
+        [_contentWrapperView addSubview:_entitiesContainerView];
+    }
     _undoManager.entitiesContainer = _entitiesContainerView;
     
     _dimView = [[UIView alloc] init];
@@ -299,7 +304,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     _eyedropperView.hidden = true;
     [_selectionContainerView addSubview:_eyedropperView];
     
-    _wrapperView = [[TGPhotoPaintSparseView alloc] initWithFrame:CGRectZero];
+    _wrapperView = [[TGPhotoEditorSparseView alloc] initWithFrame:CGRectZero];
     [self.view addSubview:_wrapperView];
     
     _portraitToolsWrapperView = [[UIView alloc] initWithFrame:CGRectZero];
@@ -437,68 +442,70 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (void)setupCanvas
 {
-    __weak TGPhotoPaintController *weakSelf = self;
-    _canvasView = [[TGPaintCanvas alloc] initWithFrame:CGRectZero];
-    _canvasView.pointInsideContainer = ^bool(CGPoint point)
-    {
-        __strong TGPhotoPaintController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return false;
-        
-        return [strongSelf->_containerView pointInside:[strongSelf->_canvasView convertPoint:point toView:strongSelf->_containerView] withEvent:nil];
-    };
-    _canvasView.shouldDraw = ^bool
-    {
-        __strong TGPhotoPaintController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return false;
-        
-        return ![strongSelf->_entitiesContainerView isTrackingAnyEntityView];
-    };
-    _canvasView.shouldDrawOnSingleTap = ^bool
-    {
-        __strong TGPhotoPaintController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return false;
-        
-        bool rotating = (strongSelf->_rotationGestureRecognizer.state == UIGestureRecognizerStateBegan || strongSelf->_rotationGestureRecognizer.state == UIGestureRecognizerStateChanged);
-        bool pinching = (strongSelf->_pinchGestureRecognizer.state == UIGestureRecognizerStateBegan || strongSelf->_pinchGestureRecognizer.state == UIGestureRecognizerStateChanged);
-        
-        if (strongSelf->_currentEntityView != nil && !rotating && !pinching)
+    if (_canvasView == nil) {
+        __weak TGPhotoPaintController *weakSelf = self;
+        _canvasView = [[TGPaintCanvas alloc] initWithFrame:CGRectZero];
+        _canvasView.pointInsideContainer = ^bool(CGPoint point)
         {
-            [strongSelf selectEntityView:nil];
-            return false;
-        }
-        
-        return true;
-    };
-    _canvasView.strokeBegan = ^
-    {
-        __strong TGPhotoPaintController *strongSelf = weakSelf;
-        if (strongSelf != nil)
-            [strongSelf selectEntityView:nil];
-    };
-    _canvasView.strokeCommited = ^
-    {
-        __strong TGPhotoPaintController *strongSelf = weakSelf;
-        if (strongSelf != nil)
-            [strongSelf updateActionsView];
-    };
-    _canvasView.hitTest = ^UIView *(CGPoint point, UIEvent *event)
-    {
-        __strong TGPhotoPaintController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return nil;
-        
-        return [strongSelf->_entitiesContainerView hitTest:[strongSelf->_canvasView convertPoint:point toView:strongSelf->_entitiesContainerView] withEvent:event];
-    };
-    _canvasView.cropRect = _photoEditor.cropRect;
-    _canvasView.cropOrientation = _photoEditor.cropOrientation;
-    _canvasView.originalSize = _photoEditor.originalSize;
-    [_canvasView setPainting:_painting];
-    [_canvasView setBrush:_brushes.firstObject];
-    [self setCurrentSwatch:_portraitSettingsView.swatch sender:nil];
-    [_paintingWrapperView addSubview:_canvasView];
+            __strong TGPhotoPaintController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return false;
+            
+            return [strongSelf->_containerView pointInside:[strongSelf->_canvasView convertPoint:point toView:strongSelf->_containerView] withEvent:nil];
+        };
+        _canvasView.shouldDraw = ^bool
+        {
+            __strong TGPhotoPaintController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return false;
+            
+            return ![strongSelf->_entitiesContainerView isTrackingAnyEntityView];
+        };
+        _canvasView.shouldDrawOnSingleTap = ^bool
+        {
+            __strong TGPhotoPaintController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return false;
+            
+            bool rotating = (strongSelf->_rotationGestureRecognizer.state == UIGestureRecognizerStateBegan || strongSelf->_rotationGestureRecognizer.state == UIGestureRecognizerStateChanged);
+            bool pinching = (strongSelf->_pinchGestureRecognizer.state == UIGestureRecognizerStateBegan || strongSelf->_pinchGestureRecognizer.state == UIGestureRecognizerStateChanged);
+            
+            if (strongSelf->_currentEntityView != nil && !rotating && !pinching)
+            {
+                [strongSelf selectEntityView:nil];
+                return false;
+            }
+            
+            return true;
+        };
+        _canvasView.strokeBegan = ^
+        {
+            __strong TGPhotoPaintController *strongSelf = weakSelf;
+            if (strongSelf != nil)
+                [strongSelf selectEntityView:nil];
+        };
+        _canvasView.strokeCommited = ^
+        {
+            __strong TGPhotoPaintController *strongSelf = weakSelf;
+            if (strongSelf != nil)
+                [strongSelf updateActionsView];
+        };
+        _canvasView.hitTest = ^UIView *(CGPoint point, UIEvent *event)
+        {
+            __strong TGPhotoPaintController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return nil;
+            
+            return [strongSelf->_entitiesContainerView hitTest:[strongSelf->_canvasView convertPoint:point toView:strongSelf->_entitiesContainerView] withEvent:event];
+        };
+        _canvasView.cropRect = _photoEditor.cropRect;
+        _canvasView.cropOrientation = _photoEditor.cropOrientation;
+        _canvasView.originalSize = _photoEditor.originalSize;
+        [_canvasView setPainting:_painting];
+        [_canvasView setBrush:_brushes.firstObject];
+        [self setCurrentSwatch:_portraitSettingsView.swatch sender:nil];
+        [_paintingWrapperView addSubview:_canvasView];
+    }
     
     _canvasView.hidden = false;
     [self.view setNeedsLayout];
@@ -509,7 +516,9 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     [super viewDidLoad];
     
     PGPhotoEditor *photoEditor = _photoEditor;
-    [_entitiesContainerView setupWithPaintingData:photoEditor.paintingData];
+    if (!_skipEntitiesSetup) {
+        [_entitiesContainerView setupWithPaintingData:photoEditor.paintingData];
+    }
     for (TGPhotoPaintEntityView *view in _entitiesContainerView.subviews)
     {
         if (![view isKindOfClass:[TGPhotoPaintEntityView class]])
@@ -527,8 +536,6 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     };
     
     [self updateActionsView];
-    
-    [self performFaceDetection];
 }
 
 - (void)viewDidAppear:(BOOL)animated
@@ -1809,6 +1816,10 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         _portraitSettingsView.layer.shouldRasterize = false;
         _landscapeSettingsView.layer.shouldRasterize = false;
     }];
+    
+    if (self.presentedForAvatarCreation) {
+        _canvasView.hidden = true;
+    }
 }
 
 + (CGRect)photoContainerFrameForParentViewFrame:(CGRect)parentViewFrame toolbarLandscapeSize:(CGFloat)toolbarLandscapeSize orientation:(UIInterfaceOrientation)orientation panelSize:(CGFloat)panelSize hasOnScreenNavigation:(bool)hasOnScreenNavigation
@@ -1836,16 +1847,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 - (CGRect)_targetFrameForTransitionInFromFrame:(CGRect)fromFrame
 {
     CGSize referenceSize = [self referenceViewSize];
-    UIInterfaceOrientation orientation = self.interfaceOrientation;
-    
-    if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
-        orientation = UIInterfaceOrientationPortrait;
-    
-    bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
-    
-    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
+    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:self.effectiveOrientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
     
     CGSize fittedSize = TGScaleToSize(fromFrame.size, containerFrame.size);
     CGRect toFrame = CGRectMake(containerFrame.origin.x + (containerFrame.size.width - fittedSize.width) / 2, containerFrame.origin.y + (containerFrame.size.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
@@ -1857,14 +1859,20 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 {
     _appeared = true;
     
-    [transitionView removeFromSuperview];
- 
-    [self setupCanvas];
+    if ([transitionView isKindOfClass:[TGPhotoEditorPreviewView class]]) {
+
+    } else {
+        [transitionView removeFromSuperview];
+    }
     
+    [self setupCanvas];
+    _entitiesContainerView.hidden = false;
+        
     TGPhotoEditorPreviewView *previewView = _previewView;
     [previewView setPaintingHidden:true];
     previewView.hidden = false;
     [_containerView insertSubview:previewView belowSubview:_paintingWrapperView];
+    [self updateContentViewLayout];
     [previewView performTransitionInIfNeeded];
     
     CGRect rect = [self fittedCropRect:true];
@@ -1881,8 +1889,10 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     CGPoint boundsCenter = TGPaintCenterOfRect(_contentWrapperView.bounds);
     _entitiesContainerView.center = TGPaintAddPoints(boundsCenter, offset);
     
-    [_contentWrapperView addSubview:_entitiesContainerView];
-    
+    if (!_skipEntitiesSetup || _entitiesReady) {
+        [_contentWrapperView addSubview:_entitiesContainerView];
+    }
+    _entitiesReady = true;
     [self resetScrollView];
 }
 
@@ -1900,6 +1910,8 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (void)transitionOutSwitching:(bool)__unused switching completion:(void (^)(void))completion
 {
+    [_stickersScreen invalidate];
+    
     TGPhotoEditorPreviewView *previewView = self.previewView;
     previewView.interactionEnded = nil;
     
@@ -1922,11 +1934,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (CGRect)transitionOutSourceFrameForReferenceFrame:(CGRect)referenceFrame orientation:(UIInterfaceOrientation)orientation
 {
-    bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
-    
-    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
+    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
     
     CGSize fittedSize = TGScaleToSize(referenceFrame.size, containerFrame.size);
     return CGRectMake(containerFrame.origin.x + (containerFrame.size.width - fittedSize.width) / 2, containerFrame.origin.y + (containerFrame.size.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
@@ -1935,24 +1943,15 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 - (void)_animatePreviewViewTransitionOutToFrame:(CGRect)targetFrame saving:(bool)saving parentView:(UIView *)parentView completion:(void (^)(void))completion
 {
     _dismissing = true;
-    
-    [_stickersScreen invalidate];
-    
+        
     [_entitySelectionView removeFromSuperview];
     _entitySelectionView = nil;
     
     TGPhotoEditorPreviewView *previewView = self.previewView;
     [previewView prepareForTransitionOut];
     
-    bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
-    
-    UIInterfaceOrientation orientation = self.interfaceOrientation;
-    if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
-        orientation = UIInterfaceOrientationPortrait;
-    
-    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
+    UIInterfaceOrientation orientation = self.effectiveOrientation;
+    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
     CGRect referenceFrame = CGRectMake(0, 0, self.photoEditor.rotatedCropSize.width, self.photoEditor.rotatedCropSize.height);
     CGRect rect = CGRectOffset([self transitionOutSourceFrameForReferenceFrame:referenceFrame orientation:orientation], -containerFrame.origin.x, -containerFrame.origin.y);
     previewView.frame = rect;
@@ -2066,7 +2065,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 - (CGRect)transitionOutReferenceFrame
 {
     TGPhotoEditorPreviewView *previewView = _previewView;
-    return previewView.frame;
+    return [previewView convertRect:previewView.bounds toView:self.view];
 }
 
 - (UIView *)transitionOutReferenceView
@@ -2165,6 +2164,14 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     [self updateLayout:toInterfaceOrientation];
 }
 
+- (void)updateContentViewLayout
+{
+    CGAffineTransform rotationTransform = CGAffineTransformMakeRotation(TGRotationForOrientation(_photoEditor.cropOrientation));
+    _contentView.transform = rotationTransform;
+    _contentView.frame = self.previewView.frame;
+    [self resetScrollView];
+}
+
 - (void)updateLayout:(UIInterfaceOrientation)orientation
 {
     if ([self inFormSheet] || [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
@@ -2184,19 +2191,15 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     
     CGFloat panelToolbarPortraitSize = TGPhotoPaintBottomPanelSize + TGPhotoEditorToolbarSize;
     CGFloat panelToolbarLandscapeSize = TGPhotoPaintBottomPanelSize + self.toolbarLandscapeSize;
-    
-    bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
-    
-    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
+        
+    UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:self.hasOnScreenNavigation];
     UIEdgeInsets screenEdges = UIEdgeInsetsMake((screenSide - referenceSize.height) / 2, (screenSide - referenceSize.width) / 2, (screenSide + referenceSize.height) / 2, (screenSide + referenceSize.width) / 2);
     screenEdges.top += safeAreaInset.top;
     screenEdges.left += safeAreaInset.left;
     screenEdges.bottom -= safeAreaInset.bottom;
     screenEdges.right -= safeAreaInset.right;
     
-    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
+    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
     
     _settingsViewWrapper.frame = self.parentViewController.view.bounds;
     
@@ -2323,6 +2326,13 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     
     previewView.frame = previewFrame;
     
+    if ([self presentedForAvatarCreation]) {
+        CGAffineTransform transform = CGAffineTransformMakeRotation(TGRotationForOrientation(photoEditor.cropOrientation));
+        if (photoEditor.cropMirrored)
+            transform = CGAffineTransformScale(transform, -1.0f, 1.0f);
+        previewView.transform = transform;
+    }
+    
     CGSize fittedOriginalSize = CGSizeMake(originalSize.width * ratio, originalSize.height * ratio);
     CGSize rotatedSize = TGRotatedContentSize(fittedOriginalSize, rotation);
     CGPoint centerPoint = CGPointMake(rotatedSize.width / 2.0f, rotatedSize.height / 2.0f);
@@ -2363,18 +2373,10 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (void)keyboardHeightChangedTo:(CGFloat)height duration:(NSTimeInterval)duration curve:(NSInteger)curve
 {
-    UIInterfaceOrientation orientation = self.interfaceOrientation;
-    if ([self inFormSheet] || [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
-        orientation = UIInterfaceOrientationPortrait;
-    
-    bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || _context.safeAreaInset.bottom > FLT_EPSILON;
-    
     CGSize referenceSize = [self referenceViewSize];
     CGFloat screenSide = MAX(referenceSize.width, referenceSize.height) + 2 * TGPhotoPaintBottomPanelSize;
     
-    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
+    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:self.effectiveOrientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
     
     CGFloat visibleArea = self.view.frame.size.height - height;
     CGFloat yCenter = visibleArea / 2.0f;
@@ -2478,13 +2480,13 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 
 - (TGPaintFace *)_randomFaceWithVacantAnchor:(TGPhotoMaskAnchor)anchor documentId:(int64_t)documentId
 {
-    NSInteger randomIndex = (NSInteger)arc4random_uniform((uint32_t)_faces.count);
-    NSInteger count = _faces.count;
-    NSInteger remaining = _faces.count;
+    NSInteger randomIndex = (NSInteger)arc4random_uniform((uint32_t)self.faces.count);
+    NSInteger count = self.faces.count;
+    NSInteger remaining = self.faces.count;
     
     for (NSInteger i = randomIndex; remaining > 0; (i = (i + 1) % count), remaining--)
     {
-        TGPaintFace *face = _faces[i];
+        TGPaintFace *face = self.faces[i];
         if (![self _isFaceAnchorOccupied:face anchor:anchor documentId:documentId])
             return face;
     }
@@ -2543,68 +2545,20 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         if ([TGPhotoMaskPosition anchorOfMask:mask] != anchor)
             continue;
         
-        if ((documentId == maskDocumentId || _faces.count > 1) && TGPaintDistance(entity.position, anchorPoint) < minDistance)
+        if ((documentId == maskDocumentId || self.faces.count > 1) && TGPaintDistance(entity.position, anchorPoint) < minDistance)
             return true;
     }
     
     return false;
 }
 
-- (void)performFaceDetection
+- (NSArray *)faces
 {
     TGPhotoEditorController *editorController = (TGPhotoEditorController *)self.parentViewController;
-    if (![editorController isKindOfClass:[TGPhotoEditorController class]])
-        return;
-    
-    if (self.intent == TGPhotoEditorControllerVideoIntent)
-        return;
-
-    if (_faceDetectorDisposable == nil)
-        _faceDetectorDisposable = [[SMetaDisposable alloc] init];
-    
-    id<TGMediaEditableItem> item = self.item;
-    CGSize originalSize = _photoEditor.originalSize;
-    
-    if (editorController.requestOriginalScreenSizeImage == nil)
-        return;
-    
-    SSignal *cachedSignal = [[editorController.editingContext facesForItem:item] mapToSignal:^SSignal *(id result)
-    {
-        if (result == nil)
-            return [SSignal fail:nil];
-        return [SSignal single:result];
-    }];
-    SSignal *imageSignal = [editorController.requestOriginalScreenSizeImage(item, 0) take:1];
-    SSignal *detectSignal = [[imageSignal filter:^bool(UIImage *image)
-    {
-        if (![image isKindOfClass:[UIImage class]])
-            return false;
-        
-        if (image.degraded)
-            return false;
-        
-        return true;
-    }] mapToSignal:^SSignal *(UIImage *image) {
-        return [[TGPaintFaceDetector detectFacesInImage:image originalSize:originalSize] startOn:[SQueue concurrentDefaultQueue]];
-    }];
-    
-    __weak TGPhotoPaintController *weakSelf = self;
-    [_faceDetectorDisposable setDisposable:[[[cachedSignal catch:^SSignal *(__unused id error)
-    {
-        return detectSignal;
-    }] deliverOn:[SQueue mainQueue]] startWithNext:^(NSArray *next)
-    {
-        [editorController.editingContext setFaces:next forItem:item];
-     
-        if (next.count == 0)
-            return;
-        
-        __strong TGPhotoPaintController *strongSelf = weakSelf;
-        if (strongSelf == nil)
-            return;
-        
-        strongSelf->_faces = next;
-    }]];
+    if ([editorController isKindOfClass:[TGPhotoEditorController class]])
+        return editorController.faces;
+    else
+        return @[];
 }
 
 - (UIRectEdge)preferredScreenEdgesDeferringSystemGestures

@@ -28,10 +28,11 @@ private final class PrivacyAndSecurityControllerArguments {
     let openPasscode: () -> Void
     let openTwoStepVerification: (TwoStepVerificationAccessConfiguration?) -> Void
     let openActiveSessions: () -> Void
+    let toggleArchiveAndMuteNonContacts: (Bool) -> Void
     let setupAccountAutoremove: () -> Void
     let openDataSettings: () -> Void
     
-    init(account: Account, openBlockedUsers: @escaping () -> Void, openLastSeenPrivacy: @escaping () -> Void, openGroupsPrivacy: @escaping () -> Void, openVoiceCallPrivacy: @escaping () -> Void, openProfilePhotoPrivacy: @escaping () -> Void, openForwardPrivacy: @escaping () -> Void, openPhoneNumberPrivacy: @escaping () -> Void, openPasscode: @escaping () -> Void, openTwoStepVerification: @escaping (TwoStepVerificationAccessConfiguration?) -> Void, openActiveSessions: @escaping () -> Void, setupAccountAutoremove: @escaping () -> Void, openDataSettings: @escaping () -> Void) {
+    init(account: Account, openBlockedUsers: @escaping () -> Void, openLastSeenPrivacy: @escaping () -> Void, openGroupsPrivacy: @escaping () -> Void, openVoiceCallPrivacy: @escaping () -> Void, openProfilePhotoPrivacy: @escaping () -> Void, openForwardPrivacy: @escaping () -> Void, openPhoneNumberPrivacy: @escaping () -> Void, openPasscode: @escaping () -> Void, openTwoStepVerification: @escaping (TwoStepVerificationAccessConfiguration?) -> Void, openActiveSessions: @escaping () -> Void, toggleArchiveAndMuteNonContacts: @escaping (Bool) -> Void, setupAccountAutoremove: @escaping () -> Void, openDataSettings: @escaping () -> Void) {
         self.account = account
         self.openBlockedUsers = openBlockedUsers
         self.openLastSeenPrivacy = openLastSeenPrivacy
@@ -43,6 +44,7 @@ private final class PrivacyAndSecurityControllerArguments {
         self.openPasscode = openPasscode
         self.openTwoStepVerification = openTwoStepVerification
         self.openActiveSessions = openActiveSessions
+        self.toggleArchiveAndMuteNonContacts = toggleArchiveAndMuteNonContacts
         self.setupAccountAutoremove = setupAccountAutoremove
         self.openDataSettings = openDataSettings
     }
@@ -51,12 +53,14 @@ private final class PrivacyAndSecurityControllerArguments {
 private enum PrivacyAndSecuritySection: Int32 {
     case general
     case privacy
+    case autoArchive
     case account
     case dataSettings
 }
 
 public enum PrivacyAndSecurityEntryTag: ItemListItemTag {
     case accountTimeout
+    case autoArchive
     
     public func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? PrivacyAndSecurityEntryTag, self == other {
@@ -80,6 +84,9 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     case passcode(PresentationTheme, String, Bool, String)
     case twoStepVerification(PresentationTheme, String, String, TwoStepVerificationAccessConfiguration?)
     case activeSessions(PresentationTheme, String, String)
+    case autoArchiveHeader(String)
+    case autoArchive(String, Bool)
+    case autoArchiveInfo(String)
     case accountHeader(PresentationTheme, String)
     case accountTimeout(PresentationTheme, String, String)
     case accountInfo(PresentationTheme, String)
@@ -92,6 +99,8 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return PrivacyAndSecuritySection.general.rawValue
             case .privacyHeader, .phoneNumberPrivacy, .lastSeenPrivacy, .profilePhotoPrivacy, .forwardPrivacy, .groupPrivacy, .selectivePrivacyInfo, .voiceCallPrivacy:
                 return PrivacyAndSecuritySection.privacy.rawValue
+            case .autoArchiveHeader, .autoArchive, .autoArchiveInfo:
+                return PrivacyAndSecuritySection.autoArchive.rawValue
             case .accountHeader, .accountTimeout, .accountInfo:
                 return PrivacyAndSecuritySection.account.rawValue
             case .dataSettings, .dataSettingsInfo:
@@ -125,16 +134,22 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return 11
             case .selectivePrivacyInfo:
                 return 12
-            case .accountHeader:
+            case .autoArchiveHeader:
                 return 13
-            case .accountTimeout:
+            case .autoArchive:
                 return 14
-            case .accountInfo:
+            case .autoArchiveInfo:
                 return 15
-            case .dataSettings:
+            case .accountHeader:
                 return 16
-            case .dataSettingsInfo:
+            case .accountTimeout:
                 return 17
+            case .accountInfo:
+                return 18
+            case .dataSettings:
+                return 19
+            case .dataSettingsInfo:
+                return 20
         }
     }
     
@@ -208,6 +223,24 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 }
             case let .activeSessions(lhsTheme, lhsText, lhsValue):
                 if case let .activeSessions(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .autoArchiveHeader(text):
+                if case .autoArchiveHeader(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .autoArchive(text, value):
+                if case .autoArchive(text, value) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .autoArchiveInfo(text):
+                if case .autoArchiveInfo(text) = rhs {
                     return true
                 } else {
                     return false
@@ -296,6 +329,14 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/Websites")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openActiveSessions()
                 })
+            case let .autoArchiveHeader(text):
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+            case let .autoArchive(text, value):
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.toggleArchiveAndMuteNonContacts(value)
+                }, tag: PrivacyAndSecurityEntryTag.autoArchive)
+            case let .autoArchiveInfo(text):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .accountHeader(theme, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .accountTimeout(theme, text, value):
@@ -316,6 +357,7 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
 
 private struct PrivacyAndSecurityControllerState: Equatable {
     var updatingAccountTimeoutValue: Int32? = nil
+    var updatingAutomaticallyArchiveAndMuteNonContacts: Bool? = nil
 }
 
 private func countForSelectivePeers(_ peers: [PeerId: SelectivePrivacyPeer]) -> Int {
@@ -353,7 +395,7 @@ private func stringForSelectiveSettings(strings: PresentationStrings, settings: 
     }
 }
 
-private func privacyAndSecurityControllerEntries(presentationData: PresentationData, state: PrivacyAndSecurityControllerState, privacySettings: AccountPrivacySettings?, accessChallengeData: PostboxAccessChallengeData, blockedPeerCount: Int?, activeWebsitesCount: Int, hasTwoStepAuth: Bool?, twoStepAuthData: TwoStepVerificationAccessConfiguration?) -> [PrivacyAndSecurityEntry] {
+private func privacyAndSecurityControllerEntries(presentationData: PresentationData, state: PrivacyAndSecurityControllerState, privacySettings: AccountPrivacySettings?, accessChallengeData: PostboxAccessChallengeData, blockedPeerCount: Int?, activeWebsitesCount: Int, hasTwoStepAuth: Bool?, twoStepAuthData: TwoStepVerificationAccessConfiguration?, canAutoarchive: Bool) -> [PrivacyAndSecurityEntry] {
     var entries: [PrivacyAndSecurityEntry] = []
     
     entries.append(.blockedPeers(presentationData.theme, presentationData.strings.Settings_BlockedUsers, blockedPeerCount == nil ? "" : (blockedPeerCount == 0 ? presentationData.strings.PrivacySettings_BlockedPeersEmpty : "\(blockedPeerCount!)")))
@@ -404,6 +446,23 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
         entries.append(.selectivePrivacyInfo(presentationData.theme, presentationData.strings.PrivacyLastSeenSettings_GroupsAndChannelsHelp))
     }
     
+    if canAutoarchive {
+        entries.append(.autoArchiveHeader(presentationData.strings.PrivacySettings_AutoArchiveTitle.uppercased()))
+        if let privacySettings = privacySettings {
+            let automaticallyArchiveAndMuteNonContactsValue: Bool
+            if let automaticallyArchiveAndMuteNonContacts = state.updatingAutomaticallyArchiveAndMuteNonContacts {
+                automaticallyArchiveAndMuteNonContactsValue = automaticallyArchiveAndMuteNonContacts
+            } else {
+                automaticallyArchiveAndMuteNonContactsValue = privacySettings.automaticallyArchiveAndMuteNonContacts
+            }
+            
+            entries.append(.autoArchive(presentationData.strings.PrivacySettings_AutoArchive, automaticallyArchiveAndMuteNonContactsValue))
+        } else {
+            entries.append(.autoArchive(presentationData.strings.PrivacySettings_AutoArchive, false))
+        }
+        entries.append(.autoArchiveInfo(presentationData.strings.PrivacySettings_AutoArchiveInfo))
+    }
+    
     entries.append(.accountHeader(presentationData.theme, presentationData.strings.PrivacySettings_DeleteAccountTitle.uppercased()))
     if let privacySettings = privacySettings {
         let value: Int32
@@ -442,6 +501,9 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     
     let updateAccountTimeoutDisposable = MetaDisposable()
     actionsDisposable.add(updateAccountTimeoutDisposable)
+    
+    let updateAutoArchiveDisposable = MetaDisposable()
+    actionsDisposable.add(updateAutoArchiveDisposable)
     
     let privacySettingsPromise = Promise<AccountPrivacySettings?>()
     privacySettingsPromise.set(.single(initialSettings) |> then(requestAccountPrivacySettings(account: context.account) |> map(Optional.init)))
@@ -516,7 +578,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                         |> deliverOnMainQueue
                         |> mapToSignal { value -> Signal<Void, NoError> in
                             if let value = value {
-                                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: updated, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, accountRemovalTimeout: value.accountRemovalTimeout)))
+                                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: updated, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, automaticallyArchiveAndMuteNonContacts: value.automaticallyArchiveAndMuteNonContacts, accountRemovalTimeout: value.accountRemovalTimeout)))
                             }
                             return .complete()
                         }
@@ -539,7 +601,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                         |> deliverOnMainQueue
                         |> mapToSignal { value -> Signal<Void, NoError> in
                             if let value = value {
-                                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: updated, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, accountRemovalTimeout: value.accountRemovalTimeout)))
+                                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: updated, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, automaticallyArchiveAndMuteNonContacts: value.automaticallyArchiveAndMuteNonContacts, accountRemovalTimeout: value.accountRemovalTimeout)))
                             }
                             return .complete()
                         }
@@ -576,7 +638,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                         |> deliverOnMainQueue
                         |> mapToSignal { value -> Signal<Void, NoError> in
                             if let value = value {
-                                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: updated, voiceCallsP2P: updatedCallsPrivacy, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, accountRemovalTimeout: value.accountRemovalTimeout)))
+                                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: updated, voiceCallsP2P: updatedCallsPrivacy, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, automaticallyArchiveAndMuteNonContacts: value.automaticallyArchiveAndMuteNonContacts, accountRemovalTimeout: value.accountRemovalTimeout)))
                             }
                             return .complete()
                         }
@@ -599,7 +661,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                         |> deliverOnMainQueue
                         |> mapToSignal { value -> Signal<Void, NoError> in
                             if let value = value {
-                                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: updated, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, accountRemovalTimeout: value.accountRemovalTimeout)))
+                                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: updated, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, automaticallyArchiveAndMuteNonContacts: value.automaticallyArchiveAndMuteNonContacts, accountRemovalTimeout: value.accountRemovalTimeout)))
                             }
                             return .complete()
                         }
@@ -622,7 +684,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                             |> deliverOnMainQueue
                             |> mapToSignal { value -> Signal<Void, NoError> in
                                 if let value = value {
-                                    privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: updated, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, accountRemovalTimeout: value.accountRemovalTimeout)))
+                                    privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: updated, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, automaticallyArchiveAndMuteNonContacts: value.automaticallyArchiveAndMuteNonContacts, accountRemovalTimeout: value.accountRemovalTimeout)))
                                 }
                                 return .complete()
                         }
@@ -645,7 +707,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                         |> deliverOnMainQueue
                         |> mapToSignal { value -> Signal<Void, NoError> in
                             if let value = value {
-                                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: updated, phoneDiscoveryEnabled: updatedDiscoveryEnabled ?? value.phoneDiscoveryEnabled, accountRemovalTimeout: value.accountRemovalTimeout)))
+                                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: updated, phoneDiscoveryEnabled: updatedDiscoveryEnabled ?? value.phoneDiscoveryEnabled, automaticallyArchiveAndMuteNonContacts: value.automaticallyArchiveAndMuteNonContacts, accountRemovalTimeout: value.accountRemovalTimeout)))
                             }
                             return .complete()
                         }
@@ -700,6 +762,33 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         }
     }, openActiveSessions: {
         pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: true), true)
+    }, toggleArchiveAndMuteNonContacts: { archiveValue in
+        updateState { state in
+            var state = state
+            state.updatingAutomaticallyArchiveAndMuteNonContacts = archiveValue
+            return state
+        }
+        let applyTimeout: Signal<Void, NoError> = privacySettingsPromise.get()
+        |> filter { $0 != nil }
+        |> take(1)
+        |> deliverOnMainQueue
+        |> mapToSignal { value -> Signal<Void, NoError> in
+            if let value = value {
+                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, automaticallyArchiveAndMuteNonContacts: archiveValue, accountRemovalTimeout: value.accountRemovalTimeout)))
+            }
+            return .complete()
+        }
+        
+        updateAutoArchiveDisposable.set((updateAccountAutoArchiveChats(account: context.account, value: archiveValue)
+        |> mapToSignal { _ -> Signal<Void, NoError> in }
+        |> then(applyTimeout)
+        |> deliverOnMainQueue).start(completed: {
+            updateState { state in
+                var state = state
+                state.updatingAutomaticallyArchiveAndMuteNonContacts = nil
+                return state
+            }
+        }))
     }, setupAccountAutoremove: {
         let signal = privacySettingsPromise.get()
         |> take(1)
@@ -724,7 +813,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                         |> deliverOnMainQueue
                         |> mapToSignal { value -> Signal<Void, NoError> in
                             if let value = value {
-                                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, accountRemovalTimeout: timeout)))
+                                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, automaticallyArchiveAndMuteNonContacts: value.automaticallyArchiveAndMuteNonContacts, accountRemovalTimeout: timeout)))
                             }
                             return .complete()
                         }
@@ -774,8 +863,15 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         updatedBlockedPeers?(blockedPeersContext)
     }))
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), privacySettingsPromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), recentPeers(account: context.account), blockedPeersState.get(), webSessionsContext.state, context.sharedContext.accountManager.accessChallengeData(), combineLatest(twoStepAuth.get(), twoStepAuthDataValue.get()))
-    |> map { presentationData, state, privacySettings, noticeView, sharedData, recentPeers, blockedPeersState, activeWebsitesState, accessChallengeData, twoStepAuth -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let preferencesKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.appConfiguration]))
+    
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), privacySettingsPromise.get(), context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.secretChatLinkPreviewsKey()), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), recentPeers(account: context.account), blockedPeersState.get(), webSessionsContext.state, context.sharedContext.accountManager.accessChallengeData(), combineLatest(twoStepAuth.get(), twoStepAuthDataValue.get()), context.account.postbox.combinedView(keys: [preferencesKey]))
+    |> map { presentationData, state, privacySettings, noticeView, sharedData, recentPeers, blockedPeersState, activeWebsitesState, accessChallengeData, twoStepAuth, preferences -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        var canAutoarchive = false
+        if let view = preferences.views[preferencesKey] as? PreferencesView, let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration, let data = appConfiguration.data, let hasAutoarchive = data["autoarchive_setting_available"] as? Bool {
+            canAutoarchive = hasAutoarchive
+        }
+        
         var rightNavigationButton: ItemListNavigationButton?
         if privacySettings == nil || state.updatingAccountTimeoutValue != nil {
             rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})
@@ -783,7 +879,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.PrivacySettings_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: privacyAndSecurityControllerEntries(presentationData: presentationData, state: state, privacySettings: privacySettings, accessChallengeData: accessChallengeData.data, blockedPeerCount: blockedPeersState.totalCount, activeWebsitesCount: activeWebsitesState.sessions.count, hasTwoStepAuth: twoStepAuth.0, twoStepAuthData: twoStepAuth.1), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: privacyAndSecurityControllerEntries(presentationData: presentationData, state: state, privacySettings: privacySettings, accessChallengeData: accessChallengeData.data, blockedPeerCount: blockedPeersState.totalCount, activeWebsitesCount: activeWebsitesState.sessions.count, hasTwoStepAuth: twoStepAuth.0, twoStepAuthData: twoStepAuth.1, canAutoarchive: canAutoarchive), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

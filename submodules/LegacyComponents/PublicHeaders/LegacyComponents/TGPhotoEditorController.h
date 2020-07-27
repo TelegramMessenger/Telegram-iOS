@@ -10,6 +10,7 @@
 @class PGCameraShotMetadata;
 @class TGSuggestionContext;
 @class TGPhotoEditorController;
+@class AVPlayer;
 
 @protocol TGPhotoPaintStickersContext;
 @class TGPhotoEntitiesContainerView;
@@ -34,6 +35,8 @@ typedef enum {
 @property (nonatomic, copy) UIView *(^beginTransitionOut)(CGRect *referenceFrame, UIView **parentView);
 @property (nonatomic, copy) void (^finishedTransitionOut)(bool saved);
 
+@property (nonatomic, copy) void (^onDismiss)();
+
 @property (nonatomic, copy) void (^beginCustomTransitionOut)(CGRect, UIView *, void(^)(void));
 
 @property (nonatomic, copy) SSignal *(^requestThumbnailImage)(id<TGMediaEditableItem> item);
@@ -50,10 +53,14 @@ typedef enum {
 @property (nonatomic, copy) void (^willFinishEditing)(id<TGMediaEditAdjustments> adjustments, id temporaryRep, bool hasChanges);
 @property (nonatomic, copy) void (^didFinishRenderingFullSizeImage)(UIImage *fullSizeImage);
 @property (nonatomic, copy) void (^didFinishEditing)(id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges);
+@property (nonatomic, copy) void (^didFinishEditingVideo)(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges);
 
 @property (nonatomic, assign) bool skipInitialTransition;
 @property (nonatomic, assign) bool dontHideStatusBar;
 @property (nonatomic, strong) PGCameraShotMetadata *metadata;
+@property (nonatomic, strong) NSArray *faces;
+
+@property (nonatomic, strong) AVPlayer *player;
 
 @property (nonatomic, strong) TGPhotoEntitiesContainerView *entitiesView;
 

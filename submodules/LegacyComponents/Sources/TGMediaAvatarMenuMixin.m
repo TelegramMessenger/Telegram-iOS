@@ -12,11 +12,9 @@
 #import "TGAttachmentCarouselItemView.h"
 
 #import <LegacyComponents/TGCameraController.h>
-#import "TGLegacyCameraController.h"
-#import <LegacyComponents/TGImagePickerController.h>
 #import <LegacyComponents/TGMediaAssetsController.h>
 
-@interface TGMediaAvatarMenuMixin () <TGLegacyCameraControllerDelegate>
+@interface TGMediaAvatarMenuMixin ()
 {
     TGViewController *_parentController;
     bool _hasSearchButton;
@@ -27,6 +25,7 @@
     bool _saveCapturedMedia;
     bool _saveEditedPhotos;
     bool _signup;
+    bool _isVideo;
 }
 @end
 
@@ -39,10 +38,10 @@
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasDeleteButton:(bool)hasDeleteButton personalPhoto:(bool)personalPhoto saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia
 {
-    return [self initWithContext:context parentController:parentController hasSearchButton:false hasDeleteButton:hasDeleteButton hasViewButton:false personalPhoto:personalPhoto saveEditedPhotos:saveEditedPhotos saveCapturedMedia:saveCapturedMedia signup:false];
+    return [self initWithContext:context parentController:parentController hasSearchButton:false hasDeleteButton:hasDeleteButton hasViewButton:false personalPhoto:personalPhoto isVideo:false saveEditedPhotos:saveEditedPhotos saveCapturedMedia:saveCapturedMedia signup:false];
 }
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasSearchButton:(bool)hasSearchButton hasDeleteButton:(bool)hasDeleteButton hasViewButton:(bool)hasViewButton personalPhoto:(bool)personalPhoto saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia signup:(bool)signup
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasSearchButton:(bool)hasSearchButton hasDeleteButton:(bool)hasDeleteButton hasViewButton:(bool)hasViewButton personalPhoto:(bool)personalPhoto isVideo:(bool)isVideo saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia signup:(bool)signup
 {
     self = [super init];
     if (self != nil)
@@ -55,6 +54,7 @@
         _hasDeleteButton = hasDeleteButton;
         _hasViewButton = hasViewButton;
         _personalPhoto = ![TGCameraController useLegacyCamera] ? personalPhoto : false;
+        _isVideo = isVideo;
         _signup = signup;
     }
     return self;
@@ -93,7 +93,7 @@
     
     NSMutableArray *itemViews = [[NSMutableArray alloc] init];
     
-    TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:_context camera:true selfPortrait:_personalPhoto forProfilePhoto:true assetType:TGMediaAssetPhotoType saveEditedPhotos:_saveEditedPhotos allowGrouping:false];
+    TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:_context camera:true selfPortrait:_personalPhoto forProfilePhoto:true assetType:_signup ? TGMediaAssetPhotoType : TGMediaAssetAnyType saveEditedPhotos:_saveEditedPhotos allowGrouping:false];
     carouselItem.stickersContext = _stickersContext;
     carouselItem.parentController = _parentController;
     carouselItem.openEditor = true;
@@ -127,9 +127,23 @@
         
         [strongController dismissAnimated:false];
     };
+    carouselItem.avatarVideoCompletionBlock = ^(UIImage *image, AVAsset *asset, TGVideoEditAdjustments *adjustments) {
+        __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return;
+        
+        __strong TGMenuSheetController *strongController = weakController;
+        if (strongController == nil)
+            return;
+        
+        if (strongSelf.didFinishWithVideo != nil)
+            strongSelf.didFinishWithVideo(image, asset, adjustments);
+        
+        [strongController dismissAnimated:false];
+    };
     [itemViews addObject:carouselItem];
     
-    TGMenuSheetButtonItemView *galleryItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.ChoosePhoto") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
+    TGMenuSheetButtonItemView *galleryItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"ProfilePhoto.OpenGallery") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
     {
         __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
         if (strongSelf == nil)
@@ -146,7 +160,7 @@
     
     if (_hasSearchButton)
     {
-        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"AttachmentMenu.WebSearch") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
+        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"ProfilePhoto.SearchWeb") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
         {
             __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
             if (strongSelf == nil)
@@ -165,7 +179,7 @@
     
     if (_hasViewButton)
     {
-        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Settings.ViewPhoto") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
+        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:_isVideo ? TGLocalized(@"Settings.ViewVideo") : TGLocalized(@"Settings.ViewPhoto") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
         {
             __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
             if (strongSelf == nil)
@@ -183,7 +197,7 @@
         
     if (_hasDeleteButton)
     {
-        TGMenuSheetButtonItemView *deleteItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"GroupInfo.SetGroupPhotoDelete") type:TGMenuSheetButtonTypeDestructive fontSize:20.0 action:^
+        TGMenuSheetButtonItemView *deleteItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:_isVideo ? TGLocalized(@"Settings.RemoveVideo") : TGLocalized(@"GroupInfo.SetGroupPhotoDelete") type:TGMenuSheetButtonTypeDestructive fontSize:20.0 action:^
         {
             __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
             if (strongSelf == nil)
@@ -262,13 +276,6 @@
     if ([_context currentlyInSplitView])
         return;
         
-    if ([TGCameraController useLegacyCamera])
-    {
-        [self _displayLegacyCamera];
-        [menuController dismissAnimated:true];
-        return;
-    }
-    
     TGCameraController *controller = nil;
     CGSize screenSize = TGScreenSize();
     
@@ -278,7 +285,7 @@
         controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:_saveEditedPhotos saveCapturedMedia:_saveCapturedMedia camera:cameraView.previewView.camera previewView:cameraView.previewView intent:_signup ? TGCameraControllerSignupAvatarIntent : TGCameraControllerAvatarIntent];
     else
         controller = [[TGCameraController alloc] initWithContext:[windowManager context] saveEditedPhotos:_saveEditedPhotos saveCapturedMedia:_saveCapturedMedia intent:_signup ? TGCameraControllerSignupAvatarIntent : TGCameraControllerAvatarIntent];
-    
+    controller.stickersContext = _stickersContext;
     controller.shouldStoreCapturedAssets = true;
     
     TGCameraControllerWindow *controllerWindow = [[TGCameraControllerWindow alloc] initWithManager:windowManager parentController:_parentController contentController:controller];
@@ -347,16 +354,17 @@
         
         [menuController dismissAnimated:false];
     };
-}
-
-- (void)_displayLegacyCamera
-{
-    TGLegacyCameraController *legacyCameraController = [[TGLegacyCameraController alloc] initWithContext:_context];
-    legacyCameraController.sourceType = UIImagePickerControllerSourceTypeCamera;
-    legacyCameraController.avatarMode = true;
-    legacyCameraController.completionDelegate = self;
     
-    [_parentController presentViewController:legacyCameraController animated:true completion:nil];
+    controller.finishedWithVideo = ^(__unused TGOverlayController *controller, NSURL *url, UIImage *previewImage, __unused NSTimeInterval duration, __unused CGSize dimensions, TGVideoEditAdjustments *adjustments, __unused NSString *caption, __unused NSArray *entities, __unused NSArray *stickers, __unused NSNumber *timer){
+        __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return;
+        
+        if (strongSelf.didFinishWithVideo != nil)
+            strongSelf.didFinishWithVideo(previewImage, [[AVURLAsset alloc] initWithURL:url options:nil], adjustments);
+        
+        [menuController dismissAnimated:false];
+    };
 }
 
 - (void)_displayMediaPicker
@@ -380,14 +388,14 @@
             {
                 __strong TGMediaAssetsController *strongController = weakController;
                 if (strongController != nil) {
-                    [strongController dismissViewControllerAnimated:true completion:nil];
+                    [strongController dismissViewControllerAnimated:false completion:nil];
                 }
                 
                 __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
                 if (strongSelf == nil)
                     return;
                 
-                [strongSelf->_parentController dismissViewControllerAnimated:true completion:nil];
+                [strongSelf->_parentController dismissViewControllerAnimated:false completion:nil];
                 
                 if (strongSelf.didDismiss != nil)
                     strongSelf.didDismiss();
@@ -451,6 +459,7 @@
             
             TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:context assetGroup:group intent:strongSelf->_signup ? TGMediaAssetsControllerSetSignupProfilePhotoIntent : TGMediaAssetsControllerSetProfilePhotoIntent recipientName:nil saveEditedPhotos:strongSelf->_saveEditedPhotos allowGrouping:false selectionLimit:10];
             __weak TGMediaAssetsController *weakController = controller;
+            controller.stickersContext = _stickersContext;
             controller.avatarCompletionBlock = ^(UIImage *resultImage)
             {
                 __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
@@ -464,15 +473,18 @@
                 if (strongController != nil && strongController.dismissalBlock != nil)
                     strongController.dismissalBlock();
             };
-            if (strongSelf.requestSearchController != nil) {
-                controller.requestSearchController = ^
-                {
-                    __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
-                    __strong TGMediaAssetsController *strongController = weakController;
-                    if (strongSelf != nil)
-                        strongSelf.requestSearchController(strongController);
-                };
-            }
+            controller.avatarVideoCompletionBlock = ^(UIImage *image, AVAsset *asset, TGVideoEditAdjustments *adjustments) {
+                __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                if (strongSelf.didFinishWithVideo != nil)
+                    strongSelf.didFinishWithVideo(image, asset, adjustments);
+                
+                __strong TGMediaAssetsController *strongController = weakController;
+                if (strongController != nil && strongController.dismissalBlock != nil)
+                    strongController.dismissalBlock();
+            };
             return presentBlock(controller);
         };
         
@@ -499,30 +511,6 @@
     {
         showMediaPicker(nil);
     }
-}
-
-- (void)imagePickerController:(TGImagePickerController *)__unused imagePicker didFinishPickingWithAssets:(NSArray *)assets
-{
-    UIImage *resultImage = nil;
-    
-    if (assets.count != 0)
-    {
-        if ([assets[0] isKindOfClass:[UIImage class]])
-            resultImage = assets[0];
-    }
-    
-    if (self.didFinishWithImage != nil)
-        self.didFinishWithImage(resultImage);
-    
-    [_parentController dismissViewControllerAnimated:true completion:nil];
-}
-
-- (void)legacyCameraControllerCompletedWithNoResult
-{
-    [_parentController dismissViewControllerAnimated:true completion:nil];
-    
-    if (self.didDismiss != nil)
-        self.didDismiss();
 }
 
 - (void)_performDelete

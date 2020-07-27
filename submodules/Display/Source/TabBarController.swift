@@ -185,6 +185,13 @@ open class TabBarController: ViewController {
         self.tabBarControllerNode.updateIsTabBarEnabled(value, transition: transition)
     }
     
+    public func updateIsTabBarHidden(_ value: Bool, transition: ContainedViewLayoutTransition) {
+        self.tabBarControllerNode.tabBarHidden = value
+        if let layout = self.validLayout {
+            self.containerLayoutUpdated(layout, transition: .animated(duration: 0.4, curve: .slide))
+        }
+    }
+    
     override open func loadDisplayNode() {
         self.displayNode = TabBarControllerNode(theme: self.theme, navigationBar: self.navigationBar, itemSelected: { [weak self] index, longTap, itemNodes in
             if let strongSelf = self {
@@ -311,6 +318,9 @@ open class TabBarController: ViewController {
             self.navigationBar?.setSecondaryContentNode(currentController.navigationBar?.secondaryContentNode)
             currentController.displayNode.recursivelyEnsureDisplaySynchronously(true)
             self.statusBar.statusBarStyle = currentController.statusBar.statusBarStyle
+            if let navigationBarPresentationData = currentController.navigationBar?.presentationData {
+                self.navigationBar?.updatePresentationData(navigationBarPresentationData)
+            }
         } else {
             self.navigationItem.title = nil
             self.navigationItem.leftBarButtonItem = nil

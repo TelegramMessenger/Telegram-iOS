@@ -15,6 +15,8 @@ import AccountContext
 import CountrySelectionUI
 import SettingsUI
 import PhoneNumberFormat
+import LegacyComponents
+import LegacyMediaPickerUI
 
 private enum InnerState: Equatable {
     case state(UnauthorizedAccountStateContents)
@@ -684,11 +686,64 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     transaction.setState(UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: "")))
                 }).start()
             }, displayCancel: displayCancel)
-            controller.signUpWithName = { [weak self, weak controller] firstName, lastName, avatarData in
+            controller.signUpWithName = { [weak self, weak controller] firstName, lastName, avatarData, avatarAsset, avatarAdjustments in
                 if let strongSelf = self {
                     controller?.inProgress = true
                     
-                    strongSelf.actionDisposable.set((signUpWithName(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, firstName: firstName, lastName: lastName, avatarData: avatarData)
+                    var videoStartTimestamp: Double? = nil
+                    if let adjustments = avatarAdjustments, adjustments.videoStartValue > 0.0 {
+                        videoStartTimestamp = adjustments.videoStartValue - adjustments.trimStartValue
+                    }
+                    
+                    let avatarVideo: Signal<UploadedPeerPhotoData?, NoError>?
+                    if let avatarAsset = avatarAsset as? AVAsset {
+                        let account = strongSelf.account
+                        avatarVideo = Signal<TelegramMediaResource?, NoError> { subscriber in
+                            let entityRenderer: LegacyPaintEntityRenderer? = avatarAdjustments.flatMap { adjustments in
+                                if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
+                                    return LegacyPaintEntityRenderer(account: nil, adjustments: adjustments)
+                                } else {
+                                    return nil
+                                }
+                            }
+                            
+                            let signal = TGMediaVideoConverter.convert(avatarAsset, adjustments: avatarAdjustments, watcher: nil, entityRenderer: entityRenderer)!
+                            
+                            let signalDisposable = signal.start(next: { next in
+                                if let result = next as? TGMediaVideoConversionResult {
+                                    var value = stat()
+                                    if stat(result.fileURL.path, &value) == 0 {
+                                        if let data = try? Data(contentsOf: result.fileURL) {
+                                            let resource = LocalFileMediaResource(fileId: arc4random64())
+                                            account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                                            subscriber.putNext(resource)
+                                        }
+                                    }
+                                    subscriber.putCompletion()
+                                }
+                            }, error: { _ in
+                            }, completed: nil)
+                            
+                            let disposable = ActionDisposable {
+                                signalDisposable?.dispose()
+                            }
+                            
+                            return ActionDisposable {
+                                disposable.dispose()
+                            }
+                        }
+                        |> mapToSignal { resource -> Signal<UploadedPeerPhotoData?, NoError> in
+                            if let resource = resource {
+                                return uploadedPeerVideo(postbox: account.postbox, network: account.network, messageMediaPreuploadManager: nil, resource: resource) |> map(Optional.init)
+                            } else {
+                                return .single(nil)
+                            }
+                        }
+                    } else {
+                        avatarVideo = nil
+                    }
+                    
+                    strongSelf.actionDisposable.set((signUpWithName(accountManager: strongSelf.sharedContext.accountManager, account: strongSelf.account, firstName: firstName, lastName: lastName, avatarData: avatarData, avatarVideo: avatarVideo, videoStartTimestamp: videoStartTimestamp)
                     |> deliverOnMainQueue).start(error: { error in
                         Queue.mainQueue().async {
                             if let strongSelf = self, let controller = controller {

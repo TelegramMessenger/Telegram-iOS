@@ -97,7 +97,7 @@ final class VimeoEmbedImplementation: WebEmbedImplementation {
     init(videoId: String, timestamp: Int = 0) {
         self.videoId = videoId
         self.timestamp = timestamp
-        self.status = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: Double(timestamp), baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: true), soundEnabled: true)
+        self.status = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: Double(timestamp), baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: true, progress: 0.0), soundEnabled: true)
     }
     
     func setup(_ webView: WKWebView, userContentController: WKUserContentController, evaluateJavaScript: @escaping (String, ((Any?) -> Void)?) -> Void, updateStatus: @escaping (MediaPlayerStatus) -> Void, onPlaybackStarted: @escaping () -> Void) {
@@ -221,7 +221,7 @@ final class VimeoEmbedImplementation: WebEmbedImplementation {
                         playbackStatus = .paused
                         newTimestamp = 0.0
                     default:
-                        playbackStatus = .buffering(initial: true, whilePlaying: false)
+                        playbackStatus = .buffering(initial: true, whilePlaying: false, progress: 0.0)
                     }
                     
                     self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: Double(duration), dimensions: self.status.dimensions, timestamp: newTimestamp, baseRate: 1.0, seekId: self.status.seekId, status: playbackStatus, soundEnabled: true)

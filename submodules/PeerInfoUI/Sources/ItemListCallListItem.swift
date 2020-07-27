@@ -68,7 +68,7 @@ private func stringForCallType(message: Message, strings: PresentationStrings) -
         switch media {
             case let action as TelegramMediaAction:
                 switch action.action {
-                    case let .phoneCall(_, discardReason, _):
+                    case let .phoneCall(_, discardReason, _, _):
                         let incoming = message.flags.contains(.Incoming)
                         if let discardReason = discardReason {
                             switch discardReason {

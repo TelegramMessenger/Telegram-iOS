@@ -487,6 +487,32 @@ public enum TabBarItemContextActionType {
         }
     }
     
+    public func setNavigationBarPresentationData(_ presentationData: NavigationBarPresentationData, animated: Bool) {
+        if animated, let navigationBar = self.navigationBar {
+            UIView.transition(with: navigationBar.view, duration: 0.3, options: [.transitionCrossDissolve], animations: {
+            }, completion: nil)
+        }
+        self.navigationBar?.updatePresentationData(presentationData)
+        if let parent = self.parent as? TabBarController {
+            if parent.currentController === self {
+                if animated, let navigationBar = parent.navigationBar {
+                    UIView.transition(with: navigationBar.view, duration: 0.3, options: [.transitionCrossDissolve], animations: {
+                    }, completion: nil)
+                }
+                parent.navigationBar?.updatePresentationData(presentationData)
+            }
+        }
+    }
+    
+    public func setStatusBarStyle(_ style: StatusBarStyle, animated: Bool) {
+        self.statusBar.updateStatusBarStyle(style, animated: animated)
+        if let parent = self.parent as? TabBarController {
+            if parent.currentController === self {
+                parent.statusBar.updateStatusBarStyle(style, animated: animated)
+            }
+        }
+    }
+    
     override open func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
         self.view.window?.rootViewController?.present(viewControllerToPresent, animated: flag, completion: completion)
     }
@@ -559,6 +585,9 @@ public enum TabBarItemContextActionType {
         self.activeInputView = self.activeInputViewCandidate
         
         super.viewDidDisappear(animated)
+    }
+    
+    open func viewWillLeaveNavigation() {
     }
     
     open override func viewDidAppear(_ animated: Bool) {
@@ -643,6 +672,13 @@ public enum TabBarItemContextActionType {
     }
     
     open func tabBarItemSwipeAction(direction: TabBarItemSwipeDirection) {
+    }
+    
+    open func updatePossibleControllerDropContent(content: NavigationControllerDropContent?) {
+    }
+    
+    open func acceptPossibleControllerDropContent(content: NavigationControllerDropContent) -> Bool {
+        return false
     }
 }
 

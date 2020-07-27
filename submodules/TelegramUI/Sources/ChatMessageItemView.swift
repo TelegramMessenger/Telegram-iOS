@@ -616,7 +616,7 @@ final class ChatMessageAccessibilityData {
                     canReply = false
                 }
                 else if let media = media as? TelegramMediaAction {
-                    if case .phoneCall(_, _, _) = media.action {
+                    if case .phoneCall = media.action {
                     } else {
                         canReply = false
                     }

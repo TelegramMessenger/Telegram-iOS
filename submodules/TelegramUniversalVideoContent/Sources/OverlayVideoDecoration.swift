@@ -26,11 +26,14 @@ private func setupArrowFrame(size: CGSize, edge: OverlayMediaItemMinimizationEdg
 private let backgroundImage = UIImage(bundleImageName: "Chat/Message/OverlayPlainVideoShadow")?.precomposed().resizableImage(withCapInsets: UIEdgeInsets(top: 22.0, left: 25.0, bottom: 26.0, right: 25.0), resizingMode: .stretch)
 
 final class OverlayVideoDecoration: UniversalVideoDecoration {
+    private let contentDimensions: CGSize
+    
     let backgroundNode: ASDisplayNode?
     let contentContainerNode: ASDisplayNode
     let foregroundNode: ASDisplayNode?
     
     private let unminimize: () -> Void
+    private let controlsAreShowingUpdated: (Bool) -> Void
     
     private let shadowNode: ASImageNode
     private let foregroundContainerNode: ASDisplayNode
@@ -46,8 +49,11 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
     
     private var validLayoutSize: CGSize?
     
-    init(unminimize: @escaping () -> Void, togglePlayPause: @escaping () -> Void, expand: @escaping () -> Void, close: @escaping () -> Void) {
+    init(contentDimensions: CGSize, unminimize: @escaping () -> Void, togglePlayPause: @escaping () -> Void, expand: @escaping () -> Void, close: @escaping () -> Void, controlsAreShowingUpdated: @escaping (Bool) -> Void) {
+        self.contentDimensions = contentDimensions
+        
         self.unminimize = unminimize
+        self.controlsAreShowingUpdated = controlsAreShowingUpdated
         
         self.shadowNode = ASImageNode()
         self.shadowNode.image = backgroundImage
@@ -78,6 +84,14 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
         self.statusDisposable.dispose()
     }
     
+    private func frameForContent(size: CGSize) -> CGRect {
+        if !self.contentDimensions.width.isZero && !self.contentDimensions.height.isZero {
+            let fittedSize = self.contentDimensions.aspectFittedWithOverflow(size, leeway: 10.0)
+            return CGRect(origin: CGPoint(x: floor(size.width - fittedSize.width) / 2.0, y: floor(size.height - fittedSize.height) / 2.0), size: fittedSize)
+        }
+        return CGRect(origin: CGPoint(), size: size)
+    }
+    
     func updateContentNode(_ contentNode: (UniversalVideoContentNode & ASDisplayNode)?) {
         if self.contentNode !== contentNode {
             let previous = self.contentNode
@@ -93,7 +107,7 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
                 if contentNode.supernode !== self.contentContainerNode {
                     self.contentContainerNode.addSubnode(contentNode)
                     if let validLayoutSize = self.validLayoutSize {
-                        contentNode.frame = CGRect(origin: CGPoint(), size: validLayoutSize)
+                        contentNode.frame = self.frameForContent(size: validLayoutSize)
                         contentNode.updateLayout(size: validLayoutSize, transition: .immediate)
                     }
                 }
@@ -106,6 +120,8 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayoutSize = size
+        
+        let contentFrame = self.frameForContent(size: size)
         
         let shadowInsets = UIEdgeInsets(top: 2.0, left: 3.0, bottom: 4.0, right: 3.0)
         transition.updateFrame(node: self.shadowNode, frame: CGRect(origin: CGPoint(x: -shadowInsets.left, y: -shadowInsets.top), size: CGSize(width: size.width + shadowInsets.left + shadowInsets.right, height: size.height + shadowInsets.top + shadowInsets.bottom)))
@@ -129,8 +145,8 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - progressSize.width) / 2.0), y: floorToScreenPixels((size.height - progressSize.height) / 2.0)), size: progressSize))
         
         if let contentNode = self.contentNode {
-            transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(), size: size))
-            contentNode.updateLayout(size: size, transition: transition)
+            transition.updateFrame(node: contentNode, frame: contentFrame)
+            contentNode.updateLayout(size: contentFrame.size, transition: transition)
         }
     }
     
@@ -141,10 +157,20 @@ final class OverlayVideoDecoration: UniversalVideoDecoration {
             if self.controlsNode.alpha.isZero {
                 self.controlsNode.alpha = 1.0
                 self.controlsNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                self.controlsAreShowingUpdated(true)
             } else {
                 self.controlsNode.alpha = 0.0
                 self.controlsNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                self.controlsAreShowingUpdated(false)
             }
+        }
+    }
+    
+    func showControls() {
+        if self.controlsNode.alpha.isZero {
+            self.controlsNode.alpha = 1.0
+            self.controlsNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.controlsAreShowingUpdated(true)
         }
     }
     

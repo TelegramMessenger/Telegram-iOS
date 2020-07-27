@@ -143,7 +143,7 @@ public extension String {
         return (string, fitzModifier)
     }
     
-    var strippedEmoji: (String) {
+    var strippedEmoji: String {
         var string = ""
         for scalar in self.unicodeScalars {
             if scalar.value != 0xfe0f {

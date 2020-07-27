@@ -9,7 +9,6 @@ const CGFloat TGCameraModeControlVerticalInteritemSpace = 29.0f;
 
 @interface TGCameraModeControl ()
 {
-    UIImageView *_dotView;
     UIControl *_wrapperView;
     
     CGFloat _kerning;
@@ -22,29 +21,11 @@ const CGFloat TGCameraModeControlVerticalInteritemSpace = 29.0f;
 
 @implementation TGCameraModeControl
 
-- (instancetype)initWithFrame:(CGRect)frame
+- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar
 {
     self = [super initWithFrame:frame];
     if (self != nil)
     {
-        static UIImage *dotImage = nil;
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^
-        {
-            UIGraphicsBeginImageContextWithOptions(CGSizeMake(6, 6), false, 0.0f);
-            CGContextRef context = UIGraphicsGetCurrentContext();
-
-            CGContextSetFillColorWithColor(context, [TGCameraInterfaceAssets accentColor].CGColor);
-            CGContextFillEllipseInRect(context, CGRectMake(0, 0, 6, 6));
-
-            dotImage = UIGraphicsGetImageFromCurrentImageContext();
-            UIGraphicsEndImageContext();
-        });
-        
-        _dotView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 6, 6)];
-        _dotView.image = dotImage;
-        //[self addSubview:_dotView];
-        
         if (frame.size.width > frame.size.height)
             _kerning = 3.5f;
         else
@@ -60,13 +41,20 @@ const CGFloat TGCameraModeControlVerticalInteritemSpace = 29.0f;
         _wrapperView.opaque = false;
         [_maskView addSubview:_wrapperView];
         
-        _buttons = @
-        [
-         [self _createButtonForMode:PGCameraModeVideo title:TGLocalized(@"Camera.VideoMode")],
-         [self _createButtonForMode:PGCameraModePhoto title:TGLocalized(@"Camera.PhotoMode")],
-        // [self _createButtonForMode:PGCameraModeSquare title:TGLocalized(@"Camera.SquareMode")],
-        // [self _createButtonForMode:PGCameraModeClip title:TGLocalized(@"Camera.MomentMode")]
-        ];
+        if (avatar) {
+            _buttons = @
+            [
+             [self _createButtonForMode:PGCameraModeSquareVideo title:TGLocalized(@"Camera.VideoMode")],
+             [self _createButtonForMode:PGCameraModePhoto title:TGLocalized(@"Camera.PhotoMode")]
+//             [self _createButtonForMode:PGCameraModeSquareSwing title:@"SWING"]
+            ];
+        } else {
+            _buttons = @
+            [
+             [self _createButtonForMode:PGCameraModeVideo title:TGLocalized(@"Camera.VideoMode")],
+             [self _createButtonForMode:PGCameraModePhoto title:TGLocalized(@"Camera.PhotoMode")]
+            ];
+        }
         
         for (UIButton *button in _buttons)
             [_wrapperView addSubview:button];
@@ -113,7 +101,6 @@ const CGFloat TGCameraModeControlVerticalInteritemSpace = 29.0f;
 
 + (CGFloat)_buttonHorizontalSpacing
 {
-    //return 22;
     return 19;
 }
 
@@ -276,14 +263,7 @@ const CGFloat TGCameraModeControlVerticalInteritemSpace = 29.0f;
 - (void)layoutSubviews
 {
     if (self.frame.size.width > self.frame.size.height)
-    {
-        _dotView.frame = CGRectMake((self.frame.size.width - _dotView.frame.size.width) / 2, self.frame.size.height / 2 - 12, _dotView.frame.size.width, _dotView.frame.size.height);
         _maskLayer.frame = CGRectMake(0, 0, _maskView.frame.size.width, _maskView.frame.size.height);
-    }
-    else
-    {
-        _dotView.frame = CGRectMake(13, (self.frame.size.height - _dotView.frame.size.height) / 2, _dotView.frame.size.width, _dotView.frame.size.height);
-    }
 }
 
 @end

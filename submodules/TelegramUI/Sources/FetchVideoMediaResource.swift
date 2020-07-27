@@ -27,33 +27,6 @@ private final class AVURLAssetCopyItem: MediaResourceDataFetchCopyLocalItem {
     }
 }
 
-class VideoConversionWatcher: TGMediaVideoFileWatcher {
-    private let update: (String, Int) -> Void
-    private var path: String?
-    
-    init(update: @escaping (String, Int) -> Void) {
-        self.update = update
-        
-        super.init()
-    }
-    
-    override func setup(withFileURL fileURL: URL!) {
-        self.path = fileURL?.path
-        super.setup(withFileURL: fileURL)
-    }
-    
-    override func fileUpdated(_ completed: Bool) -> Any! {
-        if let path = self.path {
-            var value = stat()
-            if stat(path, &value) == 0 {
-                self.update(path, Int(value.st_size))
-            }
-        }
-        
-        return super.fileUpdated(completed)
-    }
-}
-
 struct VideoConversionConfiguration {
     static var defaultValue: VideoConversionConfiguration {
         return VideoConversionConfiguration(remuxToFMp4: false)

@@ -480,8 +480,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             return false
                         }
                         else if let media = media as? TelegramMediaAction {
-                            if case .phoneCall(_, _, _) = media.action {
-                                
+                            if case .phoneCall(_, _, _, _) = media.action {
                             } else {
                                 return false
                             }
@@ -2547,9 +2546,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                                 item.controllerInteraction.openTheme(item.message)
                             })
                         }
-                    case let .call(peerId):
+                    case let .call(peerId, isVideo):
                         return .optionalAction({
-                            self.item?.controllerInteraction.callPeer(peerId)
+                            self.item?.controllerInteraction.callPeer(peerId, isVideo)
                         })
                     case .openMessage:
                         if let item = self.item {
@@ -2720,7 +2719,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         }
         
         if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(point) {
-            return self.view
+            return avatarNode.containerNode.view
         }
         
         if !self.backgroundNode.frame.contains(point) {

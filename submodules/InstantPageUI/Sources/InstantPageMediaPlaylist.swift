@@ -207,7 +207,11 @@ final class InstantPageMediaPlaylist: SharedMediaPlaylist {
                     }
                     self.updateState()
                 } else {
-                    self.currentItem = self.items[self.initialItemIndex]
+                    if self.initialItemIndex < self.items.count {
+                        self.currentItem = self.items[self.initialItemIndex]
+                    } else {
+                        self.currentItem = nil
+                    }
                     self.playedToEnd = false
                     self.updateState()
                 }

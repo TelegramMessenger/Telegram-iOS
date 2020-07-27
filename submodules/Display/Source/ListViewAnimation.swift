@@ -187,7 +187,7 @@ public func listViewAnimationDurationAndCurve(transition: ContainedViewLayoutTra
         case let .animated(animationDuration, animationCurve):
             duration = animationDuration
             switch animationCurve {
-                case .easeInOut, .custom:
+                case .linear, .easeInOut, .custom:
                     break
                 case .spring:
                     curve = 7

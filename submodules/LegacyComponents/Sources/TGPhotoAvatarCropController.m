@@ -28,6 +28,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
     TGModernButton *_resetButton;
     
     TGPhotoAvatarCropView *_cropView;
+
     UIView *_snapshotView;
     UIImage *_snapshotImage;
     
@@ -62,6 +63,14 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
     [super loadView];
     
     __weak TGPhotoAvatarCropController *weakSelf = self;
+    void(^interactionBegan)(void) = ^
+    {
+        __strong TGPhotoAvatarCropController *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return;
+        
+        self.controlVideoPlayback(false);
+    };
     void(^interactionEnded)(void) = ^
     {
         __strong TGPhotoAvatarCropController *strongSelf = weakSelf;
@@ -70,6 +79,8 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
         
         if ([strongSelf shouldAutorotate])
             [TGViewController attemptAutorotation];
+        
+        self.controlVideoPlayback(true);
     };
     
     _wrapperView = [[UIView alloc] initWithFrame:self.view.bounds];
@@ -77,7 +88,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
     [self.view addSubview:_wrapperView];
     
     PGPhotoEditor *photoEditor = self.photoEditor;
-    _cropView = [[TGPhotoAvatarCropView alloc] initWithOriginalSize:photoEditor.originalSize screenSize:[self referenceViewSize]];
+    _cropView = [[TGPhotoAvatarCropView alloc] initWithOriginalSize:photoEditor.originalSize screenSize:[self referenceViewSize] fullPreviewView:nil fullPaintingView:nil fullEntitiesView:nil];
     [_cropView setCropRect:photoEditor.cropRect];
     [_cropView setCropOrientation:photoEditor.cropOrientation];
     [_cropView setCropMirrored:photoEditor.cropMirrored];
@@ -87,7 +98,6 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
         if (strongSelf == nil)
             return;
         
-        PGPhotoEditor *photoEditor = strongSelf.photoEditor;
         photoEditor.cropRect = strongSelf->_cropView.cropRect;
         photoEditor.cropOrientation = strongSelf->_cropView.cropOrientation;
         photoEditor.cropMirrored = strongSelf->_cropView.cropMirrored;
@@ -102,6 +112,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
         [_cropView setSnapshotImage:_snapshotImage];
         _snapshotImage = nil;
     }
+    _cropView.interactionBegan = interactionBegan;
     _cropView.interactionEnded = interactionEnded;
     [_wrapperView addSubview:_cropView];
     
@@ -113,7 +124,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
     _rotateButton.hitTestEdgeInsets = UIEdgeInsetsMake(-10, -10, -10, -10);
     [_rotateButton addTarget:self action:@selector(rotate) forControlEvents:UIControlEventTouchUpInside];
     [_rotateButton setImage:TGComponentsImageNamed(@"PhotoEditorRotateIcon") forState:UIControlStateNormal];
-    [_buttonsWrapperView addSubview:_rotateButton];
+//    [_buttonsWrapperView addSubview:_rotateButton];
     
     _mirrorButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 36, 36)];
     _mirrorButton.exclusiveTouch = true;
@@ -121,7 +132,7 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
     _mirrorButton.hitTestEdgeInsets = UIEdgeInsetsMake(-10, -10, -10, -10);
     [_mirrorButton addTarget:self action:@selector(mirror) forControlEvents:UIControlEventTouchUpInside];
     [_mirrorButton setImage:TGComponentsImageNamed(@"PhotoEditorMirrorIcon") forState:UIControlStateNormal];
-    [_buttonsWrapperView addSubview:_mirrorButton];
+//    [_buttonsWrapperView addSubview:_mirrorButton];
     
     _resetButton = [[TGModernButton alloc] init];
     _resetButton.contentEdgeInsets = UIEdgeInsetsMake(0.0f, 8.0f, 0.0f, 8.0f);
@@ -197,6 +208,10 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
     [_cropView setImage:image];
 }
 
+- (void)setPlayer:(AVPlayer *)player
+{
+}
+
 - (void)setSnapshotImage:(UIImage *)snapshotImage
 {
     _snapshotImage = snapshotImage;
@@ -238,7 +253,11 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
 
 - (void)_finishedTransitionInWithView:(UIView *)transitionView
 {
-    [transitionView removeFromSuperview];
+    if ([transitionView isKindOfClass:[TGPhotoEditorPreviewView class]]) {
+        
+    } else {
+        [transitionView removeFromSuperview];
+    }
     
     _buttonsWrapperView.alpha = 1.0f;
     [_cropView transitionInFinishedFromCamera:(self.fromCamera && self.initialAppearance)];
@@ -246,17 +265,21 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
 
 - (void)_finishedTransitionIn
 {
-    [_cropView animateTransitionIn];
+//    [_cropView animateTransitionIn];
     [_cropView transitionInFinishedFromCamera:true];
+    
+    self.finishedTransitionIn();
+    self.finishedTransitionIn = nil;
 }
 
 - (void)prepareForCustomTransitionOut
 {
     [_cropView hideImageForCustomTransition];
     [_cropView animateTransitionOutSwitching:false];
+    
     [UIView animateWithDuration:0.3f animations:^
     {
-     _buttonsWrapperView.alpha = 0.0f;
+        _buttonsWrapperView.alpha = 0.0f;
     } completion:nil];
 }
 
@@ -276,51 +299,65 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
         
         PGPhotoEditor *photoEditor = self.photoEditor;
         
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^
-        {
-            if (dispatch_semaphore_wait(_waitSemaphore, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC))))
-            {
-                TGLegacyLog(@"Photo crop on switching failed");
-                return;
-            }
-            
-            UIImage *croppedImage = [_cropView croppedImageWithMaxSize:TGPhotoEditorScreenImageMaxSize()];
-            [photoEditor setImage:croppedImage forCropRect:_cropView.cropRect cropRotation:0.0f cropOrientation:_cropView.cropOrientation cropMirrored:_cropView.cropMirrored fullSize:false];
-            
-            [photoEditor processAnimated:false completion:^
-            {
-                TGDispatchOnMainThread(^
-                {
-                    [previewView setSnapshotImage:croppedImage];
-                   
-                    if (!previewView.hidden)
-                        [previewView performTransitionInWithCompletion:nil];
-                    else
-                        [previewView setNeedsTransitionIn];
-                });
-            }];
+        if (self.item.isVideo) {
+            if (!previewView.hidden)
+                [previewView performTransitionInWithCompletion:nil];
+            else
+                [previewView setNeedsTransitionIn];
             
             if (self.finishedPhotoProcessing != nil)
                 self.finishedPhotoProcessing();
-        });
+        } else {
+            UIImage *image = _cropView.currentImage;
+            CGRect cropRect = _cropView.cropRect;
+            UIImageOrientation cropOrientation = _cropView.cropOrientation;
+            bool cropMirrored = _cropView.cropMirrored;
+            CGSize originalSize = _cropView.originalSize;
+            
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^
+            {
+                if (dispatch_semaphore_wait(_waitSemaphore, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC))))
+                {
+                    TGLegacyLog(@"Photo crop on switching failed");
+                    return;
+                }
+                
+                UIImage *croppedImage = TGPhotoEditorCrop(image, nil, cropOrientation, 0.0f, cropRect, false, TGPhotoEditorScreenImageMaxSize(), originalSize, true);
+                [photoEditor setImage:croppedImage forCropRect:cropRect cropRotation:0.0f cropOrientation:cropOrientation cropMirrored:cropMirrored fullSize:false];
+                
+                [photoEditor processAnimated:false completion:^
+                {
+                    TGDispatchOnMainThread(^
+                    {
+                        [previewView setSnapshotImage:croppedImage];
+                        
+                        if (!previewView.hidden)
+                            [previewView performTransitionInWithCompletion:nil];
+                        else
+                            [previewView setNeedsTransitionIn];
+                    });
+                }];
+                
+                if (self.finishedPhotoProcessing != nil)
+                    self.finishedPhotoProcessing();
+            });
+        }
         
-        UIInterfaceOrientation orientation = [[LegacyComponentsGlobals provider] applicationStatusBarOrientation];
-        if ([self inFormSheet] || [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
-            orientation = UIInterfaceOrientationPortrait;
-        
-        bool hasOnScreenNavigation = false;
-        if (iosMajorVersion() >= 11)
-            hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
+        UIInterfaceOrientation orientation = self.effectiveOrientation;
         
         CGRect cropRectFrame = [_cropView cropRectFrameForView:self.view];
         CGSize referenceSize = [self referenceViewSizeForOrientation:orientation];
         CGRect referenceBounds = CGRectMake(0, 0, referenceSize.width, referenceSize.height);
-        CGRect containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:referenceBounds toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
+        CGRect containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:referenceBounds toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoEditorPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
         
-        if (self.switchingToTab == TGPhotoEditorPaintTab)
-        {
-            containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:referenceBounds toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:hasOnScreenNavigation];
-        }
+//        if (self.switchingToTab == TGPhotoEditorPreviewTab)
+//        {
+//            containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:referenceBounds toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:0 hasOnScreenNavigation:self.hasOnScreenNavigation];
+//        }
+//        else if (self.switchingToTab == TGPhotoEditorPaintTab)
+//        {
+//            containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:referenceBounds toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
+//        }
         
         CGSize fittedSize = TGScaleToSize(cropRectFrame.size, containerFrame.size);
         CGRect targetFrame = CGRectMake(containerFrame.origin.x + (containerFrame.size.width - fittedSize.width) / 2,
@@ -334,15 +371,24 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
         [self.view addSubview:snapshotView];
 
         CGRect targetCropViewFrame = [self.view convertRect:targetFrame toView:_wrapperView];
+                
+        if (!self.item.isVideo) {
+            _previewView.hidden = true;
+        }
         
         [UIView animateWithDuration:0.3f delay:0.0f options:UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionLayoutSubviews animations:^
         {
             snapshotView.frame = targetFrame;
-            snapshotView.alpha = 1.0f;
+            if (self.item.isVideo) {
+                _cropView.alpha = 0.0f;
+            } else {
+                snapshotView.alpha = 1.0f;
+            }
             _cropView.frame = targetCropViewFrame;
             [_cropView invalidateCropRect];
         } completion:^(__unused BOOL finished)
         {
+            _previewView.hidden = false;
             if (self.finishedTransitionOut != nil)
                 self.finishedTransitionOut();
         }];
@@ -431,16 +477,9 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
 - (CGRect)_targetFrameForTransitionInFromFrame:(CGRect)fromFrame
 {
     CGSize referenceSize = [self referenceViewSize];
-    UIInterfaceOrientation orientation = self.interfaceOrientation;
+    UIInterfaceOrientation orientation = self.effectiveOrientation;
     
-    bool hasOnScreenNavigation = false;
-    if (iosMajorVersion() >= 11)
-        hasOnScreenNavigation = (self.viewLoaded && self.view.safeAreaInsets.bottom > FLT_EPSILON) || self.context.safeAreaInset.bottom > FLT_EPSILON;
-    
-    if ([self inFormSheet] || [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
-        orientation = UIInterfaceOrientationPortrait;
-
-    CGRect containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:0.0f hasOnScreenNavigation:hasOnScreenNavigation];
+    CGRect containerFrame = [TGPhotoEditorTabController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:0.0f hasOnScreenNavigation:self.hasOnScreenNavigation];
 
     CGRect targetFrame = CGRectZero;
     
@@ -513,9 +552,10 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
 {
     if ([self inFormSheet] || [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
     {
-        orientation = UIInterfaceOrientationPortrait;
         _resetButton.hidden = true;
     }
+    
+    orientation = [self effectiveOrientation:orientation];
     
     CGSize referenceSize = [self referenceViewSize];
     
@@ -640,7 +680,28 @@ const CGFloat TGPhotoAvatarCropButtonsWrapperSize = 61.0f;
 
 - (TGPhotoEditorTab)availableTabs
 {
-    return iosMajorVersion() >= 7 ? (TGPhotoEditorPaintTab | TGPhotoEditorToolsTab) : TGPhotoEditorNoneTab;
+    return TGPhotoEditorRotateTab | TGPhotoEditorMirrorTab;
+}
+
+- (void)handleTabAction:(TGPhotoEditorTab)tab
+{
+    switch (tab)
+    {
+        case TGPhotoEditorRotateTab:
+        {
+            [self rotate];
+        }
+            break;
+            
+        case TGPhotoEditorMirrorTab:
+        {
+            [self mirror];
+        }
+            break;
+                
+        default:
+            break;
+    }
 }
 
 @end

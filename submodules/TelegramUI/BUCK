@@ -205,6 +205,7 @@ framework(
         "//submodules/StatisticsUI:StatisticsUI",
         "//submodules/ManagedAnimationNode:ManagedAnimationNode",
         "//submodules/TooltipUI:TooltipUI",
+        "//submodules/AuthTransferUI:AuthTransferUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

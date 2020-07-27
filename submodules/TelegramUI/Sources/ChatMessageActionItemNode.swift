@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import SyncCore
+import AccountContext
 import TelegramPresentationData
 import TelegramUIPreferences
 import TextFormat
@@ -13,6 +14,9 @@ import LocalizedPeerData
 import UrlEscaping
 import PhotoResources
 import TelegramStringFormatting
+import UniversalMediaPlayer
+import TelegramUniversalVideoContent
+import GalleryUI
 
 private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
     return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, message: message, accountPeerId: accountPeerId)
@@ -22,7 +26,12 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     let labelNode: TextNode
     let filledBackgroundNode: LinkHighlightingNode
     var linkHighlightingNode: LinkHighlightingNode?
+    
+    private let mediaBackgroundNode: ASImageNode
     fileprivate var imageNode: TransformImageNode?
+    fileprivate var videoNode: UniversalVideoNode?
+    private var videoContent: NativeVideoContent?
+    private var videoStartTimestamp: Double?
     private let fetchDisposable = MetaDisposable()
     
     required init() {
@@ -31,6 +40,10 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         self.labelNode.displaysAsynchronously = true
         
         self.filledBackgroundNode = LinkHighlightingNode(color: .clear)
+        
+        self.mediaBackgroundNode = ASImageNode()
+        self.mediaBackgroundNode.displaysAsynchronously = false
+        self.mediaBackgroundNode.displayWithoutProcessing = true
         
         super.init()
         
@@ -52,8 +65,27 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let imageNode = self.imageNode, self.item?.message.id == messageId {
-            return (imageNode, imageNode.bounds, { [weak imageNode] in
-                return (imageNode?.view.snapshotContentTree(unhide: true), nil)
+            return (imageNode, imageNode.bounds, { [weak self] in
+                guard let strongSelf = self, let imageNode = strongSelf.imageNode else {
+                    return (nil, nil)
+                }
+                
+                let resultView = imageNode.view.snapshotContentTree(unhide: true)
+                if let resultView = resultView, strongSelf.mediaBackgroundNode.supernode != nil, let backgroundView = strongSelf.mediaBackgroundNode.view.snapshotContentTree(unhide: true) {
+                    let backgroundContainer = UIView()
+                    
+                    backgroundContainer.addSubview(backgroundView)
+                    backgroundContainer.frame = CGRect(origin: CGPoint(x: -2.0, y: -2.0), size: CGSize(width: resultView.frame.width + 4.0, height: resultView.frame.height + 4.0))
+                    backgroundView.frame = backgroundContainer.bounds
+                    let viewWithBackground = UIView()
+                    viewWithBackground.addSubview(backgroundContainer)
+                    viewWithBackground.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: resultView.frame.size)
+                    resultView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: resultView.frame.size)
+                    viewWithBackground.addSubview(resultView)
+                    return (viewWithBackground, backgroundContainer)
+                }
+                
+                return (resultView, nil)
             })
         } else {
             return nil
@@ -86,6 +118,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         }
         
         self.imageNode?.isHidden = mediaHidden
+        self.mediaBackgroundNode.isHidden = mediaHidden
         return mediaHidden
     }
     
@@ -96,6 +129,8 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         
         return { item, layoutConstants, _, _, _ in
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .always, forceFullCorners: false, forceAlignment: .center)
+            
+            let backgroundImage = PresentationResourcesChat.chatActionPhotoBackgroundImage(item.presentationData.theme.theme, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, message: item.message, accountPeerId: item.context.account.peerId)
@@ -112,9 +147,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                
-               
-                let imageSize = CGSize(width: 70.0, height: 70.0)
+                let imageSize = CGSize(width: 212.0, height: 212.0)
                 
                 let (labelLayout, apply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
@@ -139,46 +172,94 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                     labelRects[i].origin.x = floor((labelLayout.size.width - labelRects[i].width) / 2.0)
                 }
             
-                
                 let serviceColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                 let backgroundApply = backgroundLayout(serviceColor.fill, labelRects, 10.0, 10.0, 0.0)
             
                 var backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
-                let layoutInsets = UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)
                 
                 if let _ = image {
                     backgroundSize.height += imageSize.height + 10
                 }
                 
                 return (backgroundSize.width, { boundingWidth in
-                    return (backgroundSize, { [weak self] animation, _ in
+                    return (backgroundSize, { [weak self] animation, synchronousLoads in
                         if let strongSelf = self {
                             strongSelf.item = item
                             
+                            let maskPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: imageSize), cornerRadius: 15.5)
+
+                            let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - imageSize.width) / 2.0), y: labelLayout.size.height + 10 + 2), size: imageSize)
                             if let image = image {
                                 let imageNode: TransformImageNode
                                 if let current = strongSelf.imageNode {
                                     imageNode = current
                                 } else {
                                     imageNode = TransformImageNode()
+                                    let shape = CAShapeLayer()
+                                    shape.path = maskPath.cgPath
+                                    imageNode.layer.mask = shape
                                     strongSelf.imageNode = imageNode
                                     strongSelf.insertSubnode(imageNode, at: 0)
-                                    let arguments = TransformImageArguments(corners: ImageCorners(radius: imageSize.width / 2), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())
-                                    let apply = imageNode.asyncLayout()(arguments)
-                                    apply()
-                                    
+                                    strongSelf.insertSubnode(strongSelf.mediaBackgroundNode, at: 0)
                                 }
                                 strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, photoReference: .message(message: MessageReference(item.message), media: image), storeToDownloadsPeerType: nil).start())
-                                let updateImageSignal = chatMessagePhoto(postbox: item.context.account.postbox, photoReference: .message(message: MessageReference(item.message), media: image))
+                                let updateImageSignal = chatMessagePhoto(postbox: item.context.account.postbox, photoReference: .message(message: MessageReference(item.message), media: image), synchronousLoad: synchronousLoads)
 
-                                imageNode.setSignal(updateImageSignal)
+                                imageNode.setSignal(updateImageSignal, attemptSynchronously: synchronousLoads)
                                 
-                                imageNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - imageSize.width) / 2.0), y: labelLayout.size.height + 10 + 2), size: imageSize)
+                                let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())
+                                let apply = imageNode.asyncLayout()(arguments)
+                                apply()
+                                
+                                imageNode.frame = imageFrame
+                                strongSelf.mediaBackgroundNode.frame = imageFrame.insetBy(dx: -2.0, dy: -2.0)
                             } else if let imageNode = strongSelf.imageNode {
+                                strongSelf.mediaBackgroundNode.removeFromSupernode()
                                 imageNode.removeFromSupernode()
                                 strongSelf.imageNode = nil
                             }
+                            strongSelf.mediaBackgroundNode.image = backgroundImage
                             
+                            if let image = image, let video = image.videoRepresentations.last, let id = image.id?.id {
+                                let videoFileReference = FileMediaReference.message(message: MessageReference(item.message), media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: image.representations, videoThumbnails: [], immediateThumbnailData: image.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
+                                let videoContent = NativeVideoContent(id: .profileVideo(id, "action"), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
+                                if videoContent.id != strongSelf.videoContent?.id {
+                                    let mediaManager = item.context.sharedContext.mediaManager
+                                    let videoNode = UniversalVideoNode(postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .secondaryOverlay)
+                                    videoNode.isUserInteractionEnabled = false
+                                    videoNode.ownsContentNodeUpdated = { [weak self] owns in
+                                        if let strongSelf = self {
+                                            strongSelf.videoNode?.isHidden = !owns
+                                        }
+                                    }
+                                    strongSelf.videoContent = videoContent
+                                    strongSelf.videoNode = videoNode
+                                    
+                                    videoNode.updateLayout(size: imageSize, transition: .immediate)
+                                    videoNode.frame = imageFrame
+                                    
+                                    let shape = CAShapeLayer()
+                                    shape.path = maskPath.cgPath
+                                    videoNode.layer.mask = shape
+                                    
+                                    strongSelf.addSubnode(videoNode)
+                                    
+                                    videoNode.canAttachContent = true
+                                    if let videoStartTimestamp = video.startTimestamp {
+                                        videoNode.seek(videoStartTimestamp)
+                                    } else {
+                                        videoNode.seek(0.0)
+                                    }
+                                    videoNode.play()
+                                    
+                                }
+                            } else if let videoNode = strongSelf.videoNode {
+                                strongSelf.videoContent = nil
+                                strongSelf.videoNode = nil
+                                
+                                videoNode.removeFromSupernode()
+                            }
+                                                        
                             let _ = apply()
                             let _ = backgroundApply()
                             

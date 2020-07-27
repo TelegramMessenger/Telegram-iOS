@@ -127,8 +127,8 @@ public class PeerMediaCollectionController: TelegramBaseController {
                     self?.openUrl(url)
                 }, openPeer: { peer, navigation in
                     self?.controllerInteraction?.openPeer(peer.id, navigation, nil)
-                }, callPeer: { peerId in
-                    self?.controllerInteraction?.callPeer(peerId)
+                }, callPeer: { peerId, isVideo in
+                    self?.controllerInteraction?.callPeer(peerId, isVideo)
                 }, enqueueMessage: { _ in
                 }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }))
             }
@@ -357,7 +357,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                 return nil
             }, reactionContainerNode: {
                 return nil
-            }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in
+            }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in
             }, longTap: { [weak self] content, _ in
                 if let strongSelf = self {
                     strongSelf.view.endEditing(true)
@@ -433,6 +433,9 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, displayPsa: { _, _ in
         }, displayDiceTooltip: { _ in
         }, animateDiceSuccess: {  
+        }, greetingStickerNode: {
+            return nil
+        }, openPeerContextMenu: { _, _, _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
@@ -530,7 +533,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, presentPeerContact: {
         }, dismissReportPeer: {
         }, deleteChat: {
-        }, beginCall: {
+        }, beginCall: { _ in
         }, toggleMessageStickerStarred: { _ in
         }, presentController: { _, _ in
         }, getNavigationController: {
@@ -548,8 +551,9 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: { _, _ in
         }, openScheduledMessages: {
+        }, openPeersNearby: {
         }, displaySearchResultsTooltip: { _, _ in
-        }, statuses: nil)
+        }, unarchivePeer: {}, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })
         

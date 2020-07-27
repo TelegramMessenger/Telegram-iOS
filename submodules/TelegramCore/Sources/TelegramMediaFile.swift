@@ -156,7 +156,7 @@ func telegramMediaFileFromApiDocument(_ document: Api.Document) -> TelegramMedia
             if let videoThumbs = videoThumbs {
                 for thumb in videoThumbs {
                     switch thumb {
-                    case let .videoSize(type, location, w, h, _):
+                    case let .videoSize(_, type, location, w, h, _, _):
                         let resource: TelegramMediaResource
                         switch location {
                         case let .fileLocationToBeDeprecated(volumeId, localId):

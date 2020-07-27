@@ -37,7 +37,7 @@ final class PictureInPictureVideoControlsNode: ASDisplayNode {
                             case .playing:
                                 self.playButton.isHidden = true
                                 self.pauseButton.isHidden = false
-                            case let .buffering(_, whilePlaying):
+                            case let .buffering(_, whilePlaying, _):
                                 if whilePlaying {
                                     self.playButton.isHidden = true
                                     self.pauseButton.isHidden = false
@@ -109,12 +109,12 @@ final class PictureInPictureVideoControlsNode: ASDisplayNode {
         
         let buttonSize = TGEmbedPIPButtonSize
         
-        self.leaveButton.frame = CGRect(origin: CGPoint(x: forth - floor(buttonSize.width / 2.0) - 10.0, y: size.height - buttonSize.height - 15.0), size: buttonSize)
+        transition.updateFrame(view: self.leaveButton, frame: CGRect(origin: CGPoint(x: forth - floor(buttonSize.width / 2.0) - 10.0, y: size.height - buttonSize.height - 15.0), size: buttonSize))
         
-        self.pauseButton.frame = CGRect(origin: CGPoint(x: floor((size.width - buttonSize.width) / 2.0), y: size.height - buttonSize.height - 15.0), size: buttonSize)
-        self.playButton.frame = CGRect(origin: CGPoint(x: floor((size.width - buttonSize.width) / 2.0), y: size.height - buttonSize.height - 15.0), size: buttonSize)
+        transition.updateFrame(view: self.pauseButton, frame: CGRect(origin: CGPoint(x: floor((size.width - buttonSize.width) / 2.0), y: size.height - buttonSize.height - 15.0), size: buttonSize))
+        transition.updateFrame(view: self.playButton, frame: CGRect(origin: CGPoint(x: floor((size.width - buttonSize.width) / 2.0), y: size.height - buttonSize.height - 15.0), size: buttonSize))
         
-        self.closeButton.frame = CGRect(origin: CGPoint(x: self.playButton.frame.origin.x + forth + 10.0, y: size.height - buttonSize.height - 15.0), size: buttonSize)
+        transition.updateFrame(view: self.closeButton, frame: CGRect(origin: CGPoint(x: self.playButton.frame.origin.x + forth + 10.0, y: size.height - buttonSize.height - 15.0), size: buttonSize))
     }
     
     @objc func leavePressed() {

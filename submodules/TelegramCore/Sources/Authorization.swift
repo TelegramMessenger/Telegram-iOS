@@ -430,7 +430,7 @@ public enum SignUpError {
     case invalidLastName
 }
 
-public func signUpWithName(accountManager: AccountManager, account: UnauthorizedAccount, firstName: String, lastName: String, avatarData: Data?) -> Signal<Void, SignUpError> {
+public func signUpWithName(accountManager: AccountManager, account: UnauthorizedAccount, firstName: String, lastName: String, avatarData: Data?, avatarVideo: Signal<UploadedPeerPhotoData?, NoError>?, videoStartTimestamp: Double?) -> Signal<Void, SignUpError> {
     return account.postbox.transaction { transaction -> Signal<Void, SignUpError> in
         if let state = transaction.getState() as? UnauthorizedAccountState, case let .signUp(number, codeHash, _, _, _, syncContacts) = state.contents {
             return account.network.request(Api.functions.auth.signUp(phoneNumber: number, phoneCodeHash: codeHash, firstName: firstName, lastName: lastName))
@@ -470,7 +470,7 @@ public func signUpWithName(accountManager: AccountManager, account: Unauthorized
                         let resource = LocalFileMediaResource(fileId: arc4random64())
                         account.postbox.mediaBox.storeResourceData(resource.id, data: avatarData)
                         
-                        return updatePeerPhotoInternal(postbox: account.postbox, network: account.network, stateManager: nil, accountPeerId: user.id, peer: .single(user), photo: uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: resource), mapResourceToAvatarSizes: { _, _ in .single([:]) })
+                        return updatePeerPhotoInternal(postbox: account.postbox, network: account.network, stateManager: nil, accountPeerId: user.id, peer: .single(user), photo: uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: resource), video: avatarVideo, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { _, _ in .single([:]) })
                             |> `catch` { _ -> Signal<UpdatePeerPhotoStatus, SignUpError> in
                                 return .complete()
                             }
@@ -486,7 +486,7 @@ public func signUpWithName(accountManager: AccountManager, account: Unauthorized
                             |> then(switchedAccounts)
                     } else {
                         return appliedState
-                            |> then(switchedAccounts)
+                        |> then(switchedAccounts)
                     }
                 case .authorizationSignUpRequired:
                     return .fail(.generic)

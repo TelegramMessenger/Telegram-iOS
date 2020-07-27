@@ -121,7 +121,7 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
         if self.timestamp > 0 {
             self.ignoreEarlierTimestamps = true
         }
-        self.status = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: Double(timestamp), baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: true), soundEnabled: true)
+        self.status = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: Double(timestamp), baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: true, progress: 0.0), soundEnabled: true)
         
         self.benchmarkStartTime = CFAbsoluteTimeGetCurrent()
     }
@@ -286,16 +286,16 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
                                     playbackStatus = .paused
                                     newTimestamp = 0.0
                                 } else {
-                                    playbackStatus = .buffering(initial: false, whilePlaying: true)
+                                    playbackStatus = .buffering(initial: false, whilePlaying: true, progress: 0.0)
                                 }
                             case 1:
                                 playbackStatus = .playing
                             case 2:
                                 playbackStatus = .paused
                             case 3:
-                                playbackStatus = .buffering(initial: false, whilePlaying: true)
+                                playbackStatus = .buffering(initial: false, whilePlaying: true, progress: 0.0)
                             default:
-                                playbackStatus = .buffering(initial: true, whilePlaying: false)
+                                playbackStatus = .buffering(initial: true, whilePlaying: false, progress: 0.0)
                         }
                         
                         if case .playing = playbackStatus, !self.started {

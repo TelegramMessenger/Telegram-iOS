@@ -135,7 +135,16 @@ class CallListCallItem: ListViewItem {
     
     func selected(listView: ListView) {
         listView.clearHighlightAnimated(true)
-        self.interaction.call(self.topMessage.id.peerId)
+        var isVideo = false
+        for media in self.topMessage.media {
+            if let action = media as? TelegramMediaAction {
+                if case let .phoneCall(_, _, _, isVideoValue) = action.action {
+                    break
+                    isVideo = isVideoValue
+                }
+            }
+        }
+        self.interaction.call(self.topMessage.id.peerId, isVideo)
     }
     
     static func mergeType(item: CallListCallItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
@@ -237,7 +246,16 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             guard let item = self?.layoutParams?.0 else {
                 return false
             }
-            item.interaction.call(item.topMessage.id.peerId)
+            var isVideo = false
+            for media in item.topMessage.media {
+                if let action = media as? TelegramMediaAction {
+                    if case let .phoneCall(_, _, _, isVideoValue) = action.action {
+                        break
+                        isVideo = isVideoValue
+                    }
+                }
+            }
+            item.interaction.call(item.topMessage.id.peerId, isVideo)
             return true
         }
     }
@@ -357,7 +375,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             for message in item.messages {
                 inner: for media in message.media {
                     if let action = media as? TelegramMediaAction {
-                        if case let .phoneCall(_, discardReason, duration) = action.action {
+                        if case let .phoneCall(_, discardReason, duration, _) = action.action {
                             if message.flags.contains(.Incoming) {
                                 hasIncoming = true
                                 

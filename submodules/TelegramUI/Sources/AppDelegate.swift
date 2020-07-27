@@ -141,6 +141,14 @@ protocol SupportedStartCallIntent {
 @available(iOS 10.0, *)
 extension INStartAudioCallIntent: SupportedStartCallIntent {}
 
+protocol SupportedStartVideoCallIntent {
+    @available(iOS 10.0, *)
+    var contacts: [INPerson]? { get }
+}
+
+@available(iOS 10.0, *)
+extension INStartVideoCallIntent: SupportedStartVideoCallIntent {}
+
 private enum QueuedWakeup: Int32 {
     case call
     case backgroundLocation
@@ -1725,9 +1733,19 @@ final class SharedApplicationContext {
     
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
         if #available(iOS 10.0, *) {
+            var startCallContacts: [INPerson]?
+            var startCallIsVideo = false
             if let startCallIntent = userActivity.interaction?.intent as? SupportedStartCallIntent {
+                startCallContacts = startCallIntent.contacts
+                startCallIsVideo = false
+            } else if let startCallIntent = userActivity.interaction?.intent as? SupportedStartVideoCallIntent {
+                startCallContacts = startCallIntent.contacts
+                startCallIsVideo = true
+            }
+            
+            if let startCallContacts = startCallContacts {
                 let startCall: (Int32) -> Void = { userId in
-                    self.startCallWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId))
+                    self.startCallWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), isVideo: startCallIsVideo)
                 }
                 
                 func cleanPhoneNumber(_ text: String) -> String {
@@ -1754,7 +1772,7 @@ final class SharedApplicationContext {
                     }
                 }
                 
-                if let contact = startCallIntent.contacts?.first {
+                if let contact = startCallContacts.first {
                     var processed = false
                     if let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                         let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
@@ -1914,7 +1932,7 @@ final class SharedApplicationContext {
         })
     }
     
-    private func startCallWhenReady(accountId: AccountRecordId?, peerId: PeerId) {
+    private func startCallWhenReady(accountId: AccountRecordId?, peerId: PeerId, isVideo: Bool) {
         let signal = self.sharedContextPromise.get()
         |> take(1)
         |> mapToSignal { sharedApplicationContext -> Signal<AuthorizedApplicationContext, NoError> in
@@ -1932,7 +1950,7 @@ final class SharedApplicationContext {
         }
         self.openChatWhenReadyDisposable.set((signal
         |> deliverOnMainQueue).start(next: { context in
-            context.startCall(peerId: peerId)
+            context.startCall(peerId: peerId, isVideo: isVideo)
         }))
     }
     

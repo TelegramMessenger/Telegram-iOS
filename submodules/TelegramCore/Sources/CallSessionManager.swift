@@ -107,9 +107,10 @@ typealias CallSessionStableId = Int64
 public struct CallSessionRingingState: Equatable {
     public let id: CallSessionInternalId
     public let peerId: PeerId
+    public let isVideo: Bool
     
     public static func ==(lhs: CallSessionRingingState, rhs: CallSessionRingingState) -> Bool {
-        return lhs.id == rhs.id && lhs.peerId == rhs.peerId
+        return lhs.id == rhs.id && lhs.peerId == rhs.peerId && lhs.isVideo == rhs.isVideo
     }
 }
 
@@ -179,8 +180,14 @@ public enum CallSessionState {
 }
 
 public struct CallSession {
+    public enum CallType {
+        case audio
+        case video
+    }
+    
     public let id: CallSessionInternalId
     public let isOutgoing: Bool
+    public let type: CallType
     public let state: CallSessionState
 }
 
@@ -211,6 +218,7 @@ private func parseConnectionSet(primary: Api.PhoneConnection, alternative: [Api.
 private final class CallSessionContext {
     let peerId: PeerId
     let isOutgoing: Bool
+    var type: CallSession.CallType
     var state: CallSessionInternalState
     let subscribers = Bag<(CallSession) -> Void>()
     let signalingSubscribers = Bag<(Data) -> Void>()
@@ -227,9 +235,10 @@ private final class CallSessionContext {
         }
     }
     
-    init(peerId: PeerId, isOutgoing: Bool, state: CallSessionInternalState) {
+    init(peerId: PeerId, isOutgoing: Bool, type: CallSession.CallType, state: CallSessionInternalState) {
         self.peerId = peerId
         self.isOutgoing = isOutgoing
+        self.type = type
         self.state = state
     }
     
@@ -311,7 +320,7 @@ private final class CallSessionManagerContext {
                     let index = context.subscribers.add { next in
                         subscriber.putNext(next)
                     }
-                    subscriber.putNext(CallSession(id: internalId, isOutgoing: context.isOutgoing, state: CallSessionState(context)))
+                    subscriber.putNext(CallSession(id: internalId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context)))
                     disposable.set(ActionDisposable {
                         queue.async {
                             if let strongSelf = self, let context = strongSelf.contexts[internalId] {
@@ -357,7 +366,7 @@ private final class CallSessionManagerContext {
         var ringingContexts: [CallSessionRingingState] = []
         for (id, context) in self.contexts {
             if case .ringing = context.state {
-                ringingContexts.append(CallSessionRingingState(id: id, peerId: context.peerId))
+                ringingContexts.append(CallSessionRingingState(id: id, peerId: context.peerId, isVideo: context.type == .video))
             }
         }
         return ringingContexts
@@ -372,14 +381,14 @@ private final class CallSessionManagerContext {
     
     private func contextUpdated(internalId: CallSessionInternalId) {
         if let context = self.contexts[internalId] {
-            let session = CallSession(id: internalId, isOutgoing: context.isOutgoing, state: CallSessionState(context))
+            let session = CallSession(id: internalId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context))
             for subscriber in context.subscribers.copyItems() {
                 subscriber(session)
             }
         }
     }
     
-    private func addIncoming(peerId: PeerId, stableId: CallSessionStableId, accessHash: Int64, timestamp: Int32, gAHash: Data, versions: [String]) -> CallSessionInternalId? {
+    private func addIncoming(peerId: PeerId, stableId: CallSessionStableId, accessHash: Int64, timestamp: Int32, gAHash: Data, versions: [String], isVideo: Bool) -> CallSessionInternalId? {
         if self.contextIdByStableId[stableId] != nil {
             return nil
         }
@@ -390,7 +399,7 @@ private final class CallSessionManagerContext {
         
         if randomStatus == 0 {
             let internalId = CallSessionInternalId()
-            let context = CallSessionContext(peerId: peerId, isOutgoing: false, state: .ringing(id: stableId, accessHash: accessHash, gAHash: gAHash, b: b, versions: versions))
+            let context = CallSessionContext(peerId: peerId, isOutgoing: false, type: isVideo ? .video : .audio, state: .ringing(id: stableId, accessHash: accessHash, gAHash: gAHash, b: b, versions: versions))
             self.contexts[internalId] = context
             let queue = self.queue
             context.acknowledgeIncomingCallDisposable.set(self.network.request(Api.functions.phone.receivedCall(peer: .inputPhoneCall(id: stableId, accessHash: accessHash))).start(error: { [weak self] _ in
@@ -414,6 +423,7 @@ private final class CallSessionManagerContext {
         if let context = self.contexts[internalId] {
             var dropData: (CallSessionStableId, Int64, DropCallSessionReason)?
             var wasRinging = false
+            let isVideo = context.type == .video
             switch context.state {
                 case let .ringing(id, accessHash, _, _, _):
                     wasRinging = true
@@ -471,7 +481,7 @@ private final class CallSessionManagerContext {
             
             if let (id, accessHash, reason) = dropData {
                 self.contextIdByStableId.removeValue(forKey: id)
-                context.state = .dropping((dropCallSession(network: self.network, addUpdates: self.addUpdates, stableId: id, accessHash: accessHash, reason: reason)
+                context.state = .dropping((dropCallSession(network: self.network, addUpdates: self.addUpdates, stableId: id, accessHash: accessHash, isVideo: isVideo, reason: reason)
                 |> deliverOn(self.queue)).start(next: { [weak self] reportRating, sendDebugLogs in
                     if let strongSelf = self {
                         if let context = strongSelf.contexts[internalId] {
@@ -563,6 +573,12 @@ private final class CallSessionManagerContext {
             default:
                 break
             }
+        }
+    }
+    
+    func updateCallType(internalId: CallSessionInternalId, type: CallSession.CallType) {
+        if let context = self.contexts[internalId] {
+            context.type = type
         }
     }
     
@@ -722,13 +738,14 @@ private final class CallSessionManagerContext {
                 }
             }
         case let .phoneCallRequested(flags, id, accessHash, date, adminId, _, gAHash, requestedProtocol):
+            let isVideo = (flags & (1 << 5)) != 0
             let versions: [String]
             switch requestedProtocol {
             case let .phoneCallProtocol(_, _, _, libraryVersions):
                 versions = libraryVersions
             }
             if self.contextIdByStableId[id] == nil {
-                let internalId = self.addIncoming(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId), stableId: id, accessHash: accessHash, timestamp: date, gAHash: gAHash.makeData(), versions: versions)
+                let internalId = self.addIncoming(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: adminId), stableId: id, accessHash: accessHash, timestamp: date, gAHash: gAHash.makeData(), versions: versions, isVideo: isVideo)
                 if let internalId = internalId {
                     var resultRingingStateValue: CallSessionRingingState?
                     for ringingState in self.ringingStatesValue() {
@@ -738,7 +755,7 @@ private final class CallSessionManagerContext {
                         }
                     }
                     if let context = self.contexts[internalId] {
-                        let callSession = CallSession(id: internalId, isOutgoing: context.isOutgoing, state: CallSessionState(context))
+                        let callSession = CallSession(id: internalId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context))
                         if let resultRingingStateValue = resultRingingStateValue {
                             resultRingingState = (resultRingingStateValue, callSession)
                         }
@@ -802,12 +819,12 @@ private final class CallSessionManagerContext {
         return (key, keyId, keyVisualHash)
     }
     
-    func request(peerId: PeerId, internalId: CallSessionInternalId) -> CallSessionInternalId? {
+    func request(peerId: PeerId, internalId: CallSessionInternalId, isVideo: Bool) -> CallSessionInternalId? {
         let aBytes = malloc(256)!
         let randomStatus = SecRandomCopyBytes(nil, 256, aBytes.assumingMemoryBound(to: UInt8.self))
         let a = Data(bytesNoCopy: aBytes, count: 256, deallocator: .free)
         if randomStatus == 0 {
-            self.contexts[internalId] = CallSessionContext(peerId: peerId, isOutgoing: true, state: .requesting(a: a, disposable: (requestCallSession(postbox: self.postbox, network: self.network, peerId: peerId, a: a, maxLayer: self.maxLayer, versions: self.versions) |> deliverOn(queue)).start(next: { [weak self] result in
+            self.contexts[internalId] = CallSessionContext(peerId: peerId, isOutgoing: true, type: isVideo ? .video : .audio, state: .requesting(a: a, disposable: (requestCallSession(postbox: self.postbox, network: self.network, peerId: peerId, a: a, maxLayer: self.maxLayer, versions: self.versions, isVideo: isVideo) |> deliverOn(queue)).start(next: { [weak self] result in
                 if let strongSelf = self, let context = strongSelf.contexts[internalId] {
                     if case .requesting = context.state {
                         switch result {
@@ -900,12 +917,12 @@ public final class CallSessionManager {
         }
     }
     
-    public func request(peerId: PeerId, internalId: CallSessionInternalId = CallSessionInternalId()) -> Signal<CallSessionInternalId, NoError> {
+    public func request(peerId: PeerId, isVideo: Bool, internalId: CallSessionInternalId = CallSessionInternalId()) -> Signal<CallSessionInternalId, NoError> {
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
             
             self?.withContext { context in
-                if let internalId = context.request(peerId: peerId, internalId: internalId) {
+                if let internalId = context.request(peerId: peerId, internalId: internalId, isVideo: isVideo) {
                     subscriber.putNext(internalId)
                     subscriber.putCompletion()
                 }
@@ -918,6 +935,12 @@ public final class CallSessionManager {
     public func sendSignalingData(internalId: CallSessionInternalId, data: Data) {
         self.withContext { context in
             context.sendSignalingData(internalId: internalId, data: data)
+        }
+    }
+    
+    public func updateCallType(internalId: CallSessionInternalId, type: CallSession.CallType) {
+        self.withContext { context in
+            context.updateCallType(internalId: internalId, type: type)
         }
     }
     
@@ -1040,7 +1063,7 @@ private enum RequestCallSessionResult {
     case failed(CallSessionError)
 }
 
-private func requestCallSession(postbox: Postbox, network: Network, peerId: PeerId, a: Data, maxLayer: Int32, versions: [String]) -> Signal<RequestCallSessionResult, NoError> {
+private func requestCallSession(postbox: Postbox, network: Network, peerId: PeerId, a: Data, maxLayer: Int32, versions: [String], isVideo: Bool) -> Signal<RequestCallSessionResult, NoError> {
     return validatedEncryptionConfig(postbox: postbox, network: network)
     |> mapToSignal { config -> Signal<RequestCallSessionResult, NoError> in
         return postbox.transaction { transaction -> Signal<RequestCallSessionResult, NoError> in
@@ -1056,12 +1079,17 @@ private func requestCallSession(postbox: Postbox, network: Network, peerId: Peer
                 
                 let gAHash = MTSha256(ga)!
                 
-                return network.request(Api.functions.phone.requestCall(flags: 0, userId: inputUser, randomId: Int32(bitPattern: arc4random()), gAHash: Buffer(data: gAHash), protocol: .phoneCallProtocol(flags: (1 << 0) | (1 << 1), minLayer: minLayer, maxLayer: maxLayer, libraryVersions: versions)))
+                var callFlags: Int32 = 0
+                if isVideo {
+                    callFlags |= 1 << 0
+                }
+                
+                return network.request(Api.functions.phone.requestCall(flags: callFlags, userId: inputUser, randomId: Int32(bitPattern: arc4random()), gAHash: Buffer(data: gAHash), protocol: .phoneCallProtocol(flags: (1 << 0) | (1 << 1), minLayer: minLayer, maxLayer: maxLayer, libraryVersions: versions)))
                 |> map { result -> RequestCallSessionResult in
                     switch result {
                         case let .phoneCall(phoneCall, _):
                             switch phoneCall {
-                                case let .phoneCallRequested(flags, id, accessHash, _, _, _, _, _):
+                                case let .phoneCallRequested(_, id, accessHash, _, _, _, _, _):
                                     return .success(id: id, accessHash: accessHash, config: config, gA: ga, remoteConfirmationTimestamp: nil)
                                 case let .phoneCallWaiting(_, id, accessHash, _, _, _, _, receiveDate):
                                     return .success(id: id, accessHash: accessHash, config: config, gA: ga, remoteConfirmationTimestamp: receiveDate)
@@ -1118,7 +1146,7 @@ private enum DropCallSessionReason {
     case missed
 }
 
-private func dropCallSession(network: Network, addUpdates: @escaping (Api.Updates) -> Void, stableId: CallSessionStableId, accessHash: Int64, reason: DropCallSessionReason) -> Signal<(Bool, Bool), NoError> {
+private func dropCallSession(network: Network, addUpdates: @escaping (Api.Updates) -> Void, stableId: CallSessionStableId, accessHash: Int64, isVideo: Bool, reason: DropCallSessionReason) -> Signal<(Bool, Bool), NoError> {
     var mappedReason: Api.PhoneCallDiscardReason
     var duration: Int32 = 0
     switch reason {
@@ -1134,7 +1162,13 @@ private func dropCallSession(network: Network, addUpdates: @escaping (Api.Update
         case .missed:
             mappedReason = .phoneCallDiscardReasonMissed
     }
-    return network.request(Api.functions.phone.discardCall(flags: 0, peer: Api.InputPhoneCall.inputPhoneCall(id: stableId, accessHash: accessHash), duration: duration, reason: mappedReason, connectionId: 0))
+    
+    var callFlags: Int32 = 0
+    if isVideo {
+        callFlags |= 1 << 0
+    }
+    
+    return network.request(Api.functions.phone.discardCall(flags: callFlags, peer: Api.InputPhoneCall.inputPhoneCall(id: stableId, accessHash: accessHash), duration: duration, reason: mappedReason, connectionId: 0))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.Updates?, NoError> in
         return .single(nil)

@@ -15,9 +15,16 @@
 @property (nonatomic, assign) NSTimeInterval trimStartValue;
 @property (nonatomic, assign) NSTimeInterval trimEndValue;
 
+@property (nonatomic, assign) bool hasDotPicker;
+- (void)setDotVideoView:(UIView *)dotVideoView;
+- (void)setDotImage:(UIImage *)dotImage;
+
 @property (nonatomic, assign) NSTimeInterval maximumLength;
 
+@property (nonatomic, assign) bool disableZoom;
+@property (nonatomic, assign) bool disableTimeDisplay;
 
+@property (nonatomic, readonly) bool isScrubbing;
 @property (nonatomic, assign) bool isPlaying;
 @property (nonatomic, assign) NSTimeInterval value;
 - (void)setValue:(NSTimeInterval)value resetPosition:(bool)resetPosition;
@@ -33,9 +40,15 @@
 - (void)ignoreThumbnails;
 - (void)resetThumbnails;
 
-- (void)setThumbnailImage:(UIImage *)image forTimestamp:(NSTimeInterval)timestamp isSummaryThubmnail:(bool)isSummaryThumbnail;
+- (void)updateThumbnails;
+
+- (void)setThumbnailImage:(UIImage *)image forTimestamp:(NSTimeInterval)timestamp index:(NSInteger)index isSummaryThubmnail:(bool)isSummaryThumbnail;
 
 - (void)setRecipientName:(NSString *)recipientName;
+
+- (CGPoint)scrubberPositionForPosition:(NSTimeInterval)position;
+
+- (void)_updateScrubberAnimationsAndResetCurrentPosition:(bool)resetCurrentPosition;
 
 @end
 

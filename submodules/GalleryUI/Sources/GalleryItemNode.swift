@@ -21,10 +21,12 @@ open class GalleryItemNode: ASDisplayNode {
     }
     
     public var toggleControlsVisibility: () -> Void = { }
+    public var updateControlsVisibility: (Bool) -> Void = { _ in }
     public var dismiss: () -> Void = { }
     public var beginCustomDismiss: () -> Void = { }
     public var completeCustomDismiss: () -> Void = { }
     public var baseNavigationController: () -> NavigationController? = { return nil }
+    public var alternativeDismiss: () -> Bool = { return false }
     
     override public init() {
         super.init()
@@ -80,7 +82,10 @@ open class GalleryItemNode: ASDisplayNode {
     open func visibilityUpdated(isVisible: Bool) {
     }
     
-    open func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
+    open func controlsVisibilityUpdated(isVisible: Bool) {
+    }
+    
+    open func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
     }
     
     open func animateOut(to node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {

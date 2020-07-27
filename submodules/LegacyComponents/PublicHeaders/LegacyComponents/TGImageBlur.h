@@ -16,7 +16,7 @@ UIImage *TGReducedAttachmentImage(UIImage *source, CGSize originalSize, bool att
 UIImage *TGBlurredBackgroundImage(UIImage *source, CGSize size);
 UIImage *TGRoundImage(UIImage *source, CGSize size);
 UIImage *TGBlurredAlphaImage(UIImage *source, CGSize size);
-UIImage *TGBlurredRectangularImage(UIImage *source, CGSize size, CGSize renderSize, uint32_t *averageColor, void (^pixelProcessingBlock)(void *, int, int, int));
+UIImage *TGBlurredRectangularImage(UIImage *source, bool more, CGSize size, CGSize renderSize, uint32_t *averageColor, void (^pixelProcessingBlock)(void *, int, int, int));
 
 UIImage *TGCropBackdropImage(UIImage *source, CGSize size);
 UIImage *TGCameraPositionSwitchImage(UIImage *source, CGSize size);

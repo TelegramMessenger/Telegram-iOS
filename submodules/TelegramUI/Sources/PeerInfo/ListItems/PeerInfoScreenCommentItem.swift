@@ -31,18 +31,18 @@ private final class PeerInfoScreenCommentItemNode: PeerInfoScreenItemNode {
         self.addSubnode(self.textNode)
     }
     
-    override func update(width: CGFloat, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenCommentItem else {
             return 10.0
         }
         
         self.item = item
         
-        let sideInset: CGFloat = 16.0
+        let sideInset: CGFloat = 16.0 + safeInsets.left
         let verticalInset: CGFloat = 7.0
         
         self.textNode.maximumNumberOfLines = 0
-        self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(14.0), textColor: presentationData.theme.list.freeTextColor)
+        self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize), textColor: presentationData.theme.list.freeTextColor)
         
         let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
         
