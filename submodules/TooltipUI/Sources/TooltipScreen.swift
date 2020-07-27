@@ -89,12 +89,12 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             break
         case .chatListPress:
             if let path = getAppBundle().path(forResource: "ChatListFoldersTooltip", ofType: "json") {
-                self.animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: Int(70 * UIScreenScale), height: Int(70 * UIScreenScale), playbackMode: .once, mode: .direct)
+                self.animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: Int(70 * UIScreenScale), height: Int(70 * UIScreenScale), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 self.animatedStickerNode.automaticallyLoadFirstFrame = true
             }
         case .info:
             if let path = getAppBundle().path(forResource: "anim_infotip", ofType: "json") {
-                self.animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: Int(70 * UIScreenScale), height: Int(70 * UIScreenScale), playbackMode: .once, mode: .direct)
+                self.animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: Int(70 * UIScreenScale), height: Int(70 * UIScreenScale), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 self.animatedStickerNode.automaticallyLoadFirstFrame = true
             }
         }

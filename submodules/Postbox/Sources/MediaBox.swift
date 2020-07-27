@@ -239,6 +239,11 @@ public final class MediaBox {
         return "\(self.basePath)/\(cacheString)/\(fileNameForId(id)):\(representation.uniqueId)"
     }
     
+    public func shortLivedResourceCachePathPrefix(_ id: MediaResourceId) -> String {
+        let cacheString = "short-cache"
+        return "\(self.basePath)/\(cacheString)/\(fileNameForId(id))"
+    }
+    
     public func storeResourceData(_ id: MediaResourceId, data: Data, synchronous: Bool = false) {
         let begin = {
             let paths = self.storePathsForId(id)
