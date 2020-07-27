@@ -78,7 +78,7 @@ enum ChatMessageBubbleContentTapAction {
     case instantPage
     case wallpaper
     case theme
-    case call(PeerId)
+    case call(peerId: PeerId, isVideo: Bool)
     case openMessage
     case timecode(Double, String)
     case tooltip(String, ASDisplayNode?, CGRect?)

@@ -33,12 +33,16 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     
     private var iconNode: TransformImageNode?
     private var statusNode: SemanticStatusNode?
+    private var playbackAudioLevelView: VoiceBlobView?
+    private var displayLinkAnimator: ConstantDisplayLinkAnimator?
     private var streamingStatusNode: RadialStatusNode?
     private var tapRecognizer: UITapGestureRecognizer?
     
     private let statusDisposable = MetaDisposable()
     private let playbackStatusDisposable = MetaDisposable()
     private let playbackStatus = Promise<MediaPlayerStatus>()
+    
+    private let audioLevelEventsDisposable = MetaDisposable()
     
     private var playerUpdateTimer: SwiftSignalKit.Timer?
     private var playerStatus: MediaPlayerStatus? {
@@ -50,6 +54,30 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     self.stopTimer()
                 }
                 self.updateStatus(animated: true)
+            }
+        }
+    }
+    
+    private var inputAudioLevel: CGFloat = 0.0
+    private var currentAudioLevel: CGFloat = 0.0
+    
+    var visibility: Bool = false {
+        didSet {
+            if self.visibility != oldValue {
+                if self.visibility {
+                    if self.displayLinkAnimator == nil {
+                        self.displayLinkAnimator = ConstantDisplayLinkAnimator(update: { [weak self] in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.currentAudioLevel = strongSelf.currentAudioLevel * 0.9 + strongSelf.inputAudioLevel * 0.1
+                            strongSelf.playbackAudioLevelView?.tick(strongSelf.currentAudioLevel)
+                        })
+                    }
+                    self.displayLinkAnimator?.isPaused = false
+                } else {
+                    self.displayLinkAnimator?.isPaused = true
+                }
             }
         }
     }
@@ -120,6 +148,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.statusDisposable.dispose()
         self.playbackStatusDisposable.dispose()
         self.fetchDisposable.dispose()
+        self.audioLevelEventsDisposable.dispose()
     }
     
     override func didLoad() {
@@ -204,6 +233,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 
                 var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
                 var updatedStatusSignal: Signal<(FileMediaResourceStatus, MediaResourceStatus?), NoError>?
+                var updatedAudioLevelEventsSignal: Signal<Float, NoError>?
                 var updatedPlaybackStatusSignal: Signal<MediaPlayerStatus, NoError>?
                 var updatedFetchControls: FetchControls?
                 
@@ -241,11 +271,13 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         |> map { resourceStatus, actualFetchStatus -> (FileMediaResourceStatus, MediaResourceStatus?) in
                             return (resourceStatus, actualFetchStatus)
                         }
+                        updatedAudioLevelEventsSignal = messageFileMediaPlaybackAudioLevelEvents(context: context, file: file, message: message, isRecentActions: isRecentActions)
                     } else {
                         updatedStatusSignal = messageFileMediaResourceStatus(context: context, file: file, message: message, isRecentActions: isRecentActions)
                         |> map { resourceStatus -> (FileMediaResourceStatus, MediaResourceStatus?) in
                             return (resourceStatus, nil)
                         }
+                        updatedAudioLevelEventsSignal = messageFileMediaPlaybackAudioLevelEvents(context: context, file: file, message: message, isRecentActions: isRecentActions)
                     }
                     updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: context, file: file, message: message, isRecentActions: isRecentActions)
                 }
@@ -577,8 +609,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 } else {
                                     waveformColor = messageTheme.mediaInactiveControlColor
                                 }
-                                strongSelf.waveformNode.setup(color: waveformColor, waveform: audioWaveform)
-                                strongSelf.waveformForegroundNode.setup(color: messageTheme.mediaActiveControlColor, waveform: audioWaveform)
+                                strongSelf.waveformNode.setup(color: waveformColor, gravity: .bottom, waveform: audioWaveform)
+                                strongSelf.waveformForegroundNode.setup(color: messageTheme.mediaActiveControlColor, gravity: .bottom, waveform: audioWaveform)
                             } else if let waveformScrubbingNode = strongSelf.waveformScrubbingNode {
                                 strongSelf.waveformScrubbingNode = nil
                                 waveformScrubbingNode.removeFromSupernode()
@@ -622,6 +654,17 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 }))
                             }
                             
+                            if let updatedAudioLevelEventsSignal = updatedAudioLevelEventsSignal {
+                                strongSelf.audioLevelEventsDisposable.set((updatedAudioLevelEventsSignal
+                                |> deliverOnMainQueue).start(next: { value in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.inputAudioLevel = CGFloat(value)
+                                    strongSelf.playbackAudioLevelView?.updateLevel(CGFloat(value))
+                                }))
+                            }
+                            
                             if let updatedPlaybackStatusSignal = updatedPlaybackStatusSignal {
                                 strongSelf.playbackStatus.set(updatedPlaybackStatusSignal)
                                 strongSelf.playbackStatusDisposable.set((updatedPlaybackStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status in
@@ -636,6 +679,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             strongSelf.waveformNode.displaysAsynchronously = !presentationData.isPreview
                             strongSelf.statusNode?.displaysAsynchronously = !presentationData.isPreview
                             strongSelf.statusNode?.frame = progressFrame
+                            strongSelf.playbackAudioLevelView?.frame = progressFrame.insetBy(dx: -20.0, dy: -20.0)
                             strongSelf.progressFrame = progressFrame
                             strongSelf.streamingCacheStatusFrame = streamingCacheStatusFrame
                             strongSelf.fileIconImage = fileIconImage
@@ -816,6 +860,14 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             let statusNode = SemanticStatusNode(backgroundNodeColor: backgroundNodeColor, foregroundNodeColor: foregroundNodeColor)
             self.statusNode = statusNode
             statusNode.frame = progressFrame
+            
+            if self.playbackAudioLevelView == nil, false {
+                let playbackAudioLevelView = VoiceBlobView(frame: progressFrame.insetBy(dx: -20.0, dy: -20.0))
+                playbackAudioLevelView.setColor(presentationData.theme.theme.chat.inputPanel.actionControlFillColor)
+                self.playbackAudioLevelView = playbackAudioLevelView
+                self.view.addSubview(playbackAudioLevelView)
+            }
+            
             self.addSubnode(statusNode)
         } else if let statusNode = self.statusNode {
             statusNode.backgroundNodeColor = backgroundNodeColor

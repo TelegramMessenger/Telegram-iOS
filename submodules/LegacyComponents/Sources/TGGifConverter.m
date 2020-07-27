@@ -81,6 +81,7 @@ const CGFloat TGGifConverterMaximumSide = 720.0f;
             CGFloat renderWidth = CGFloor(sourceWidth / blockSize) * blockSize;
             CGFloat renderHeight = CGFloor(sourceHeight * renderWidth / sourceWidth);
             
+            CGSize renderSize = CGSizeMake(renderWidth, renderHeight);
             CGSize targetSize = TGFitSizeF(CGSizeMake(renderWidth, renderHeight), CGSizeMake(TGGifConverterMaximumSide, TGGifConverterMaximumSide));
             
             NSDictionary *videoCleanApertureSettings = @
@@ -152,11 +153,11 @@ const CGFloat TGGifConverterMaximumSide = 720.0f;
                         
                         if (gifProperties != NULL)
                         {
-                            CVPixelBufferRef pxBuffer = [self newBufferFrom:imgRef size:targetSize withPixelBufferPool:adaptor.pixelBufferPool andAttributes:adaptor.sourcePixelBufferAttributes];
+                            CVPixelBufferRef pxBuffer = [self newBufferFrom:imgRef size:renderSize withPixelBufferPool:adaptor.pixelBufferPool andAttributes:adaptor.sourcePixelBufferAttributes];
                             if (pxBuffer != NULL)
                             {
                                 if (previewImage == nil) {
-                                    previewImage = TGScaleImageToPixelSize([[UIImage alloc] initWithCGImage:imgRef], targetSize);
+                                    previewImage = TGScaleImageToPixelSize([[UIImage alloc] initWithCGImage:imgRef], renderSize);
                                 }
                                 float frameDuration = 0.1f;
                                 NSNumber *delayTimeUnclampedProp = CFDictionaryGetValue(gifProperties, kCGImagePropertyGIFUnclampedDelayTime);

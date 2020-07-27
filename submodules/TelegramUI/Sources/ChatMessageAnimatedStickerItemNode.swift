@@ -39,6 +39,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var animationNode: GenericAnimatedStickerNode?
     private var didSetUpAnimationNode = false
     private var isPlaying = false
+    private var animateGreeting = false
+    private weak var greetingStickerParentNode: ASDisplayNode?
+    private weak var greetingStickerListNode: ASDisplayNode?
+    private var greetingCompletion: (() -> Void)?
     
     private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
     private var swipeToReplyFeedback: HapticFeedback?
@@ -234,22 +238,34 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             self.animationNode = animationNode
         } else {
-            let animationNode = AnimatedStickerNode()
-            animationNode.started = { [weak self] in
-                if let strongSelf = self {
-                    strongSelf.imageNode.alpha = 0.0
-                    
-                    if let item = strongSelf.item {
-                        if let _ = strongSelf.emojiFile {
-                            item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
+            let animationNode: AnimatedStickerNode
+            if let (node, parentNode, listNode, greetingCompletion)  = item.controllerInteraction.greetingStickerNode(), let greetingStickerNode = node as? AnimatedStickerNode {
+                animationNode = greetingStickerNode
+                self.imageNode.alpha = 0.0
+                self.animateGreeting = true
+                self.greetingStickerParentNode = parentNode
+                self.greetingStickerListNode = listNode
+                self.greetingCompletion = greetingCompletion
+                self.dateAndStatusNode.alpha = 0.0
+            } else {
+                animationNode = AnimatedStickerNode()
+                animationNode.started = { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.imageNode.alpha = 0.0
+                        
+                        if let item = strongSelf.item {
+                            if let _ = strongSelf.emojiFile {
+                                item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
+                            }
                         }
                     }
                 }
             }
+            
             self.animationNode = animationNode
         }
         
-        if let animationNode = self.animationNode {
+        if let animationNode = self.animationNode, !self.animateGreeting {
             self.contextSourceNode.contentNode.insertSubnode(animationNode, aboveSubnode: self.imageNode)
         }
     }
@@ -745,8 +761,43 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                     
                     strongSelf.imageNode.frame = updatedContentFrame
-                    strongSelf.animationNode?.frame = updatedContentFrame.insetBy(dx: imageInset, dy: imageInset)
-                    if let animationNode = strongSelf.animationNode as? AnimatedStickerNode {
+                    
+                    let animationNodeFrame = updatedContentFrame.insetBy(dx: imageInset, dy: imageInset)
+                    if let animationNode = strongSelf.animationNode, let parentNode = strongSelf.greetingStickerParentNode, strongSelf.animateGreeting {
+                        strongSelf.animateGreeting = false
+                        
+                        let initialFrame = animationNode.view.convert(animationNode.bounds, to: parentNode.view)
+                        parentNode.addSubnode(animationNode)
+                        animationNode.frame = initialFrame
+                        
+                        var targetPosition = initialFrame.center.y
+                        if let listNode = strongSelf.greetingStickerListNode as? ListView {
+                            targetPosition = listNode.frame.height - listNode.insets.top - animationNodeFrame.height / 2.0 - 12.0
+                        }
+                        
+                        let targetScale = animationNodeFrame.width / initialFrame.width
+                        animationNode.layer.animateScale(from: 1.0, to: targetScale, duration: 0.3, removeOnCompletion: false)
+                        animationNode.layer.animatePosition(from: initialFrame.center, to: CGPoint(x: animationNodeFrame.midX, y: targetPosition), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak self] finished in
+                            if let strongSelf = self {
+                                animationNode.layer.removeAllAnimations()
+                                strongSelf.animationNode?.frame = animationNodeFrame
+                                strongSelf.contextSourceNode.contentNode.insertSubnode(animationNode, aboveSubnode: strongSelf.imageNode)
+                                
+                                if let animationNode = strongSelf.animationNode as? AnimatedStickerNode {
+                                    animationNode.updateLayout(size: updatedContentFrame.insetBy(dx: imageInset, dy: imageInset).size)
+                                }
+                                
+                                strongSelf.dateAndStatusNode.alpha = 1.0
+                                strongSelf.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                
+                                strongSelf.greetingCompletion?()
+                            }
+                        })
+                        
+                    } else if strongSelf.animationNode?.supernode === strongSelf.contextSourceNode.contentNode {
+                        strongSelf.animationNode?.frame = animationNodeFrame
+                    }
+                    if let animationNode = strongSelf.animationNode as? AnimatedStickerNode, strongSelf.animationNode?.supernode === strongSelf.contextSourceNode.contentNode {
                         animationNode.updateLayout(size: updatedContentFrame.insetBy(dx: imageInset, dy: imageInset).size)
                     }
                     imageApply()

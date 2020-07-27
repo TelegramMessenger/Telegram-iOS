@@ -9,23 +9,21 @@ genrule(
     srcs = [
         "build-webrtc-buck.sh",
         "webrtc-ios",
-        "patch.sh",
     ],
     bash =
 """
     set -x
     echo "SRCDIR=$SRCDIR"
 
-    OUT_DIR="ios"
-
     BUILD_ARCH=arm64
 
-    BUILD_DIR="$SRCDIR/$BUILD_ARCH"
+    BUILD_DIR_ARM64="$SRCDIR/$BUILD_ARCH"
+
+    BUILD_DIR="$BUILD_DIR_ARM64"
     rm -rf "$BUILD_DIR"
     mkdir -p "$BUILD_DIR"
 
     mkdir -p "$BUILD_DIR/webrtc-ios"
-    cp -R "$SRCDIR/webrtc-ios/.git" "$BUILD_DIR/webrtc-ios/.git"
     cp -R "$SRCDIR/webrtc-ios/src" "$BUILD_DIR/webrtc-ios/src"
 
     DEPOT_TOOLS_PATH="$(location //third-party:depot_tools_sources)"
@@ -33,7 +31,28 @@ genrule(
     rm -rf "$BUILD_DIR/depot_tools"
     cp -R "$DEPOT_TOOLS_PATH" "$BUILD_DIR/"
 
-    cp "$SRCDIR/patch.sh" "$BUILD_DIR/"
+    rm -rf "$BUILD_DIR/openssl"
+    cp -R "$(location //submodules/openssl:openssl_build_merged)" "$BUILD_DIR/openssl/"
+    cp -R "$(location //submodules/openssl:openssl_libssl_merged)" "$BUILD_DIR/libssl/"
+
+    sh $SRCDIR/build-webrtc-buck.sh "$BUILD_DIR" $BUILD_ARCH
+
+    BUILD_ARCH=arm
+
+    BUILD_DIR_ARMV7="$SRCDIR/$BUILD_ARCH"
+
+    BUILD_DIR="$BUILD_DIR_ARMV7"
+
+    rm -rf "$BUILD_DIR"
+    mkdir -p "$BUILD_DIR"
+
+    mkdir -p "$BUILD_DIR/webrtc-ios"
+    cp -R "$SRCDIR/webrtc-ios/src" "$BUILD_DIR/webrtc-ios/src"
+
+    DEPOT_TOOLS_PATH="$(location //third-party:depot_tools_sources)"
+
+    rm -rf "$BUILD_DIR/depot_tools"
+    cp -R "$DEPOT_TOOLS_PATH" "$BUILD_DIR/"
 
     rm -rf "$BUILD_DIR/openssl"
     cp -R "$(location //submodules/openssl:openssl_build_merged)" "$BUILD_DIR/openssl/"
@@ -42,7 +61,7 @@ genrule(
     sh $SRCDIR/build-webrtc-buck.sh "$BUILD_DIR" $BUILD_ARCH
 
     mkdir -p "$OUT"
-    cp "$BUILD_DIR/webrtc-ios/src/out/$OUT_DIR/obj/sdk/libframework_objc_static.a" "$OUT/"
+    lipo -create "$BUILD_DIR_ARMV7/webrtc-ios/src/out/ios/obj/sdk/libframework_objc_static.a" "$BUILD_DIR_ARM64/webrtc-ios/src/out/ios_64/obj/sdk/libframework_objc_static.a" -output "$OUT/libframework_objc_static.a"
 """,
     out = "libwebrtc",
     visibility = ["PUBLIC"]

@@ -60,7 +60,7 @@ final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
         }
     }
     
-    var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
+    func image(synchronous: Bool) -> (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
         switch self.thumbnail {
             case let .image(imageReference):
                 if let representation = largestImageRepresentation(imageReference.media.representations) {
@@ -101,7 +101,7 @@ class ChatImageGalleryItem: GalleryItem {
         self.present = present
     }
     
-    func node() -> GalleryItemNode {
+    func node(synchronous: Bool) -> GalleryItemNode {
         let node = ChatImageGalleryItemNode(context: self.context, presentationData: self.presentationData, performAction: self.performAction, openActionOptions: self.openActionOptions, present: self.present)
         
         for media in self.message.media {
@@ -131,7 +131,7 @@ class ChatImageGalleryItem: GalleryItem {
         return node
     }
     
-    func updateNode(node: GalleryItemNode) {
+    func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? ChatImageGalleryItemNode, let location = self.location {
             node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").0))
             
@@ -424,7 +424,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         }))
     }
     
-    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
+    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         let contentNode = self.tilingNode ?? self.imageNode
         
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: contentNode.view)

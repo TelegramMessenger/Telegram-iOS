@@ -479,20 +479,12 @@ public class Window1 {
                     } else {
                         screenHeight = strongSelf.windowLayout.size.height
                     }
-                    
-                    /*if abs(strongSelf.windowLayout.size.height - UIScreen.main.bounds.height) > 41.0 {
-                        if abs(portraitLayoutSize.height - portraitScreenSize.height) > 41.0 || abs(portraitLayoutSize.width - portraitScreenSize.width) > 41.0 {
-                            screenHeight = strongSelf.windowLayout.size.height
-                        } else {
-                            screenHeight = UIScreen.main.bounds.height
-                        }
-                    } else if abs(strongSelf.windowLayout.size.height - UIScreen.main.bounds.height) > 39.0 {
+                } else {
+                    if keyboardFrame.minX > 0.0 {
                         screenHeight = UIScreen.main.bounds.height
                     } else {
-                        screenHeight = strongSelf.windowLayout.size.height
-                    }*/
-                } else {
-                    screenHeight = UIScreen.main.bounds.width
+                        screenHeight = UIScreen.main.bounds.width
+                    }
                 }
                 
                 var keyboardHeight: CGFloat

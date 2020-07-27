@@ -9,6 +9,7 @@ import Display
 import MobileCoreServices
 import DeviceAccess
 import AccountContext
+import LegacyComponents
 
 public enum FetchMediaDataState {
     case progress(Float)

@@ -38,64 +38,8 @@
         if (_backingFetchResult == nil)
         {
             PHFetchOptions *options = [[PHFetchOptions alloc] init];
-            //if (_assetType != TGMediaPickerAssetAnyType)
-            //    options.predicate = [NSPredicate predicateWithFormat:@"mediaType = %i", [TGMediaAssetsLibrary _assetMediaTypeForAssetType:_assetType]];
-            
             _backingFetchResult = [PHAsset fetchAssetsInAssetCollection:_backingAssetCollection options:options];
         }
-    }
-    return self;
-}
-
-- (instancetype)initWithALAssetsGroup:(ALAssetsGroup *)assetsGroup
-{
-    bool isCameraRoll = ([[assetsGroup valueForProperty:ALAssetsGroupPropertyType] integerValue] == ALAssetsGroupSavedPhotos);
-    TGMediaAssetGroupSubtype subtype = isCameraRoll ? TGMediaAssetGroupSubtypeCameraRoll : TGMediaAssetGroupSubtypeNone;
-    return [self initWithALAssetsGroup:assetsGroup subtype:subtype];
-}
-
-- (instancetype)initWithALAssetsGroup:(ALAssetsGroup *)assetsGroup subtype:(TGMediaAssetGroupSubtype)subtype
-{
-    self = [super init];
-    if (self != nil)
-    {
-        _backingAssetsGroup = assetsGroup;
-        _subtype = subtype;
-        
-        if (subtype == TGMediaAssetGroupSubtypeVideos)
-        {
-            _title = TGLocalized(@"MediaPicker.Videos");
-            
-            [self.backingAssetsGroup setAssetsFilter:[ALAssetsFilter allVideos]];
-            _cachedAssetCount = @(self.backingAssetsGroup.numberOfAssets);
-            [self.backingAssetsGroup setAssetsFilter:[ALAssetsFilter allAssets]];
-        }
-        else
-        {
-            _isCameraRoll = ([[assetsGroup valueForProperty:ALAssetsGroupPropertyType] integerValue] == ALAssetsGroupSavedPhotos);
-            if (_isCameraRoll)
-            {
-                _subtype = TGMediaAssetGroupSubtypeCameraRoll;
-            }
-            else
-            {
-                _isPhotoStream = ([[assetsGroup valueForProperty:ALAssetsGroupPropertyType] integerValue] == ALAssetsGroupPhotoStream);
-                _subtype = _isPhotoStream ? TGMediaAssetGroupSubtypeMyPhotoStream : TGMediaAssetGroupSubtypeRegular;
-            }
-        }
-        
-        NSMutableArray *latestAssets = [[NSMutableArray alloc] init];
-        [assetsGroup enumerateAssetsWithOptions:NSEnumerationReverse usingBlock:^(ALAsset *asset, __unused NSUInteger index, BOOL *stop)
-        {
-            if (asset != nil && (_subtype != TGMediaAssetGroupSubtypeVideos || [[asset valueForProperty:ALAssetPropertyType] isEqualToString:ALAssetTypeVideo]))
-            {
-                [latestAssets addObject:[[TGMediaAsset alloc] initWithALAsset:asset]];
-            }
-            if (latestAssets.count == 3 && stop != NULL)
-                *stop = true;
-        }];
-        
-        _latestAssets = latestAssets;
     }
     return self;
 }
@@ -104,9 +48,6 @@
 {
     if (self.backingAssetCollection != nil)
         return self.backingAssetCollection.localIdentifier;
-    else if (_backingAssetsGroup != nil)
-        return [self.backingAssetsGroup valueForProperty:ALAssetsGroupPropertyPersistentID];
-    
     return _identifier;
 }
 
@@ -116,9 +57,6 @@
         return _title;
     if (_backingAssetCollection != nil)
         return _backingAssetCollection.localizedTitle;
-    if (_backingAssetsGroup != nil)
-        return [_backingAssetsGroup valueForProperty:ALAssetsGroupPropertyName];
-    
     return nil;
 }
 
@@ -128,18 +66,6 @@
     {
         return self.backingFetchResult.count;
     }
-    else if (self.backingAssetsGroup != nil)
-    {
-        if (self.subtype == TGMediaAssetGroupSubtypeVideos)
-        {
-            if (_cachedAssetCount != nil)
-                return _cachedAssetCount.integerValue;
-            
-            return -1;
-        }
-        return self.backingAssetsGroup.numberOfAssets;
-    }
-    
     return 0;
 }
 
@@ -153,15 +79,7 @@
     {
         if (_isCameraRoll)
             return TGMediaAssetGroupSubtypeCameraRoll;
-    }
-    else if (self.backingAssetsGroup != nil)
-    {
-        if (_isCameraRoll)
-            return TGMediaAssetGroupSubtypeCameraRoll;
-        else if (_subtype != TGMediaAssetGroupSubtypeNone)
-            return _subtype;
-    }
-    
+    }    
     return TGMediaAssetGroupSubtypeRegular;
 }
 

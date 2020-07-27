@@ -15,7 +15,6 @@ genrule(
     name = "webrtc_build",
     srcs = [
         "build-webrtc-bazel.sh",
-        "patch.sh",
         ":webrtc_sources",
         "//third-party:depot_tools_sources",
         "//submodules/openssl:openssl_include",
@@ -61,9 +60,6 @@ genrule(
 
         rm -f "$$BUILD_DIR/build-webrtc-bazel.sh"
         cp $(location build-webrtc-bazel.sh) "$$BUILD_DIR/"
-
-        rm -f "$$BUILD_DIR/patch.sh"
-        cp $(location patch.sh) "$$BUILD_DIR/"
 
         sh $$BUILD_DIR/build-webrtc-bazel.sh "$$BUILD_DIR" $$BUILD_ARCH
     """ + "\n".join([

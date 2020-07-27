@@ -42,6 +42,7 @@ private enum DebugControllerSection: Int32 {
     case logs
     case logging
     case experiments
+    case videoExperiments
     case info
 }
 
@@ -69,7 +70,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case photoPreview(PresentationTheme, Bool)
     case knockoutWallpaper(PresentationTheme, Bool)
     case alternativeFolderTabs(Bool)
+    case playerEmbedding(Bool)
+    case playlistPlayback(Bool)
     case videoCalls(Bool)
+    case videoCallsInfo(PresentationTheme, String)
     case hostInfo(PresentationTheme, String)
     case versionInfo(PresentationTheme)
     
@@ -83,8 +87,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .alternativeFolderTabs, .videoCalls:
+        case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .alternativeFolderTabs, .playerEmbedding, .playlistPlayback:
             return DebugControllerSection.experiments.rawValue
+        case .videoCalls, .videoCallsInfo:
+            return DebugControllerSection.videoExperiments.rawValue
         case .hostInfo, .versionInfo:
             return DebugControllerSection.info.rawValue
         }
@@ -138,12 +144,18 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 22
         case .alternativeFolderTabs:
             return 23
-        case .videoCalls:
+        case .playerEmbedding:
             return 24
-        case .hostInfo:
+        case .playlistPlayback:
             return 25
-        case .versionInfo:
+        case .videoCalls:
             return 26
+        case .videoCallsInfo:
+            return 27
+        case .hostInfo:
+            return 28
+        case .versionInfo:
+            return 29
         }
     }
     
@@ -541,8 +553,28 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .playerEmbedding(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Player Embedding", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        settings.playerEmbedding = value
+                        return settings
+                    })
+                }).start()
+            })
+        case let .playlistPlayback(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Playlist Playback", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        settings.playlistPlayback = value
+                        return settings
+                    })
+                }).start()
+            })
         case let .videoCalls(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Video", value: value, sectionId: self.section, style: .blocks, updated: { value in
+            return ItemListSwitchItem(presentationData: presentationData, title: "Experimental Feature", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
@@ -551,6 +583,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .videoCallsInfo(_, text):
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .hostInfo(theme, string):
             return ItemListTextItem(presentationData: presentationData, text: .plain(string), sectionId: self.section)
         case let .versionInfo(theme):
@@ -591,13 +625,13 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.resetHoles(presentationData.theme))
     entries.append(.reindexUnread(presentationData.theme))
     entries.append(.optimizeDatabase(presentationData.theme))
-    entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
+    //entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
     entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
     entries.append(.alternativeFolderTabs(experimentalSettings.foldersTabAtBottom))
-    #if DEBUG
-    // There was no time to un-merge the experimental branch. Nothing to see here yet.
+    entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
+    entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
     entries.append(.videoCalls(experimentalSettings.videoCalls))
-    #endif
+    entries.append(.videoCallsInfo(presentationData.theme, "Enables experimental transmission of electromagnetic radiation synchronized with pressure waves. Needs to be enabled on both sides."))
 
     if let backupHostOverride = networkSettings?.backupHostOverride {
         entries.append(.hostInfo(presentationData.theme, "Host: \(backupHostOverride)"))

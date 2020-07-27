@@ -384,7 +384,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
                     NSData *imageData = [AVCaptureStillImageOutput jpegStillImageNSDataRepresentation:imageDataSampleBuffer];
                     UIImage *image = [[UIImage alloc] initWithData:imageData];
                     
-                    if (self.cameraMode == PGCameraModeSquare)
+                    if (self.cameraMode == PGCameraModeSquarePhoto || self.cameraMode == PGCameraModeSquareVideo || self.cameraMode == PGCameraModeSquareSwing)
                     {
                         CGFloat shorterSide = MIN(image.size.width, image.size.height);
                         CGFloat longerSide = MAX(image.size.width, image.size.height);
@@ -636,7 +636,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
 - (bool)flashActive
 {
-    if (self.cameraMode == PGCameraModeVideo || self.cameraMode == PGCameraModeClip)
+    if (self.cameraMode == PGCameraModeVideo || self.cameraMode == PGCameraModeSquareVideo || self.cameraMode == PGCameraModeSquareSwing)
         return self.captureSession.videoDevice.torchActive;
     
     return self.captureSession.videoDevice.flashActive;
@@ -644,7 +644,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
 - (bool)flashAvailable
 {
-    if (self.cameraMode == PGCameraModeVideo || self.cameraMode == PGCameraModeClip)
+    if (self.cameraMode == PGCameraModeVideo || self.cameraMode == PGCameraModeSquareVideo || self.cameraMode == PGCameraModeSquareSwing)
         return self.captureSession.videoDevice.torchAvailable;
     
     return self.captureSession.videoDevice.flashAvailable;

@@ -11,6 +11,7 @@ public enum ChartType {
     case lines
     case twoAxis
     case pie
+    case area
     case bars
     case step
     case twoAxisStep
@@ -76,7 +77,9 @@ public func createChartController(_ data: String, type: ChartType, getDetailsDat
                     controller = TwoAxisLinesChartController(chartsCollection: collection)
                     controller.isZoomable = false
                 case .pie:
-                    controller = PercentPieChartController(chartsCollection: collection)
+                    controller = PercentPieChartController(chartsCollection: collection, initiallyZoomed: true)
+                case .area:
+                    controller = PercentPieChartController(chartsCollection: collection, initiallyZoomed: false)
                 case .bars:
                     controller = StackedBarsChartController(chartsCollection: collection)
                     controller.isZoomable = false

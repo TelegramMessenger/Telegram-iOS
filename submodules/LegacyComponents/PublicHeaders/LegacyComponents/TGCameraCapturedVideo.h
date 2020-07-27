@@ -15,7 +15,7 @@
 
 
 - (instancetype)initWithURL:(NSURL *)url;
-- (instancetype)initWithAsset:(TGMediaAsset *)asset;
+- (instancetype)initWithAsset:(TGMediaAsset *)asset livePhoto:(bool)livePhoto;
 
 - (void)_cleanUp;
 

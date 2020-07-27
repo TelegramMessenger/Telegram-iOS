@@ -224,6 +224,10 @@ public extension CALayer {
         self.animate(from: NSNumber(value: Float(from)), to: NSNumber(value: Float(to)), keyPath: "transform.scale", timingFunction: timingFunction, duration: duration, delay: delay, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, completion: completion)
     }
     
+    func animateScaleY(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+        self.animate(from: NSNumber(value: Float(from)), to: NSNumber(value: Float(to)), keyPath: "transform.scale.y", timingFunction: timingFunction, duration: duration, delay: delay, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, completion: completion)
+    }
+    
     func animateRotation(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
         self.animate(from: NSNumber(value: Float(from)), to: NSNumber(value: Float(to)), keyPath: "transform.rotation.z", timingFunction: timingFunction, duration: duration, delay: delay, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, completion: completion)
     }
@@ -238,14 +242,14 @@ public extension CALayer {
         self.animate(from: NSValue(cgPoint: from), to: NSValue(cgPoint: to), keyPath: "position", timingFunction: timingFunction, duration: duration, delay: delay, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
     }
     
-    func animateBounds(from: CGRect, to: CGRect, duration: Double, timingFunction: String, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    func animateBounds(from: CGRect, to: CGRect, duration: Double, delay: Double = 0.0, timingFunction: String, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if from == to && !force {
             if let completion = completion {
                 completion(true)
             }
             return
         }
-        self.animate(from: NSValue(cgRect: from), to: NSValue(cgRect: to), keyPath: "bounds", timingFunction: timingFunction, duration: duration, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
+        self.animate(from: NSValue(cgRect: from), to: NSValue(cgRect: to), keyPath: "bounds", timingFunction: timingFunction, duration: duration, delay: delay, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
     }
     
     func animateBoundsOriginXAdditive(from: CGFloat, to: CGFloat, duration: Double, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
@@ -268,7 +272,7 @@ public extension CALayer {
         self.animateKeyframes(values: values.map { NSValue(cgPoint: $0) }, duration: duration, keyPath: "position")
     }
     
-    func animateFrame(from: CGRect, to: CGRect, duration: Double, timingFunction: String, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    func animateFrame(from: CGRect, to: CGRect, duration: Double, delay: Double = 0.0, timingFunction: String, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if from == to && !force {
             if let completion = completion {
                 completion(true)
@@ -302,14 +306,14 @@ public extension CALayer {
             toBounds = CGRect()
         }
         
-        self.animatePosition(from: fromPosition, to: toPosition, duration: duration, timingFunction: timingFunction, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, force: force, completion: { value in
+        self.animatePosition(from: fromPosition, to: toPosition, duration: duration, delay: delay, timingFunction: timingFunction, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, force: force, completion: { value in
             if !value {
                 interrupted = true
             }
             completedPosition = true
             partialCompletion()
         })
-        self.animateBounds(from: fromBounds, to: toBounds, duration: duration, timingFunction: timingFunction, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, force: force, completion: { value in
+        self.animateBounds(from: fromBounds, to: toBounds, duration: duration, delay: delay, timingFunction: timingFunction, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, force: force, completion: { value in
             if !value {
                 interrupted = true
             }

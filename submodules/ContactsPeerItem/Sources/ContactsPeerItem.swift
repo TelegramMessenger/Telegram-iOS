@@ -666,6 +666,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         case .destructive:
                             color = item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor
                             textColor = item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor
+                        case .accent:
+                            color = item.presentationData.theme.list.itemDisclosureActions.accent.fillColor
+                            textColor = item.presentationData.theme.list.itemDisclosureActions.accent.foregroundColor
                     }
                     mappedOptions.append(ItemListRevealOption(key: index, title: option.title, icon: .none, color: color, textColor: textColor))
                     index += 1

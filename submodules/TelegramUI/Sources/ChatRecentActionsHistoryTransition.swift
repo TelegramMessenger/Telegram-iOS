@@ -219,8 +219,9 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 peers[peer.id] = peer
                 
                 var photo: TelegramMediaImage?
-                if !new.isEmpty {
-                    photo = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: new, immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
+                let (newPhoto, newVideo) = new
+                if !newPhoto.isEmpty || !newVideo.isEmpty {
+                    photo = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: newPhoto, videoRepresentations: newVideo, immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
                 }
                 
                 let action = TelegramMediaActionType.photoUpdated(image: photo)

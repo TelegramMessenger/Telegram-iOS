@@ -369,7 +369,7 @@ static const char *Api1__Serializer_Key = "Api1__Serializer";
                return nil;
             return [Api1_Photo photoEmptyWithPid:pid];
         } copy];
-        parsers[@((int32_t)0xd07504a5)] = [^id (NSData *_data, NSUInteger* _offset, __unused id metaInfo)
+        parsers[@((int32_t)0xfb197a65)] = [^id (NSData *_data, NSUInteger* _offset, __unused id metaInfo)
         {
             NSNumber * flags = nil;
             if ((flags = [Api1__Environment parseObject:_data offset:_offset implicitSignature:(int32_t)0xa8509bda metaInfo:nil]) == nil)

@@ -359,7 +359,7 @@ public final class SecretMediaPreviewController: ViewController {
                     centralItemNode.activateAsInitial()
                     
                     if presentationArguments.animated {
-                        centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface)
+                        centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface, completion: {})
                     }
                     
                     self._hiddenMedia.set(.single((message.id, media)))

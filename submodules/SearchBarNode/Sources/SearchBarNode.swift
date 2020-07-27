@@ -336,12 +336,14 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
     private let fieldStyle: SearchBarStyle
+    private let forceSeparator: Bool
     private var theme: SearchBarNodeTheme?
     private var strings: PresentationStrings?
     private let cancelText: String?
     
-    public init(theme: SearchBarNodeTheme, strings: PresentationStrings, fieldStyle: SearchBarStyle = .legacy, cancelText: String? = nil) {
+    public init(theme: SearchBarNodeTheme, strings: PresentationStrings, fieldStyle: SearchBarStyle = .legacy, forceSeparator: Bool = false, cancelText: String? = nil) {
         self.fieldStyle = fieldStyle
+        self.forceSeparator = forceSeparator
         self.cancelText = cancelText
         
         self.backgroundNode = ASDisplayNode()
@@ -406,7 +408,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         }
         if self.theme != theme {
             self.backgroundNode.backgroundColor = theme.background
-            if self.fieldStyle != .modern {
+            if self.fieldStyle != .modern || self.forceSeparator {
                 self.separatorNode.backgroundColor = theme.separator
             }
             self.textBackgroundNode.backgroundColor = theme.inputFill

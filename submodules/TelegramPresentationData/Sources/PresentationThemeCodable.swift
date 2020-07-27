@@ -7,7 +7,10 @@ import TelegramUIPreferences
 
 private func decodeColor<Key>(_ values: KeyedDecodingContainer<Key>, _ key: Key, decoder: Decoder? = nil, fallbackKey: String? = nil) throws -> UIColor {
     if let decoder = decoder as? PresentationThemeDecoding, let fallbackKey = fallbackKey {
-        let key = (decoder.codingPath.map { $0.stringValue } + [key.stringValue]).joined(separator: ".")
+        var codingPath = decoder.codingPath.map { $0.stringValue }
+        codingPath.append(key.stringValue)
+        
+        let key = codingPath.joined(separator: ".")
         decoder.fallbackKeys[key] = fallbackKey
     }
     
@@ -1021,9 +1024,17 @@ extension PresentationThemeBubbleColorComponents: Codable {
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         let codingPath = decoder.codingPath.map { $0.stringValue }.joined(separator: ".")
+        
+        var fillColor = try decodeColor(values, .bg)
+        var gradientColor = try decodeColor(values, .gradientBg, decoder: decoder, fallbackKey: "\(codingPath).bg")
+        if gradientColor.rgb != fillColor.rgb {
+            fillColor = fillColor.withAlphaComponent(1.0)
+            gradientColor = gradientColor.withAlphaComponent(1.0)
+        }
+        
         self.init(
-            fill: try decodeColor(values, .bg),
-            gradientFill: try decodeColor(values, .gradientBg, decoder: decoder, fallbackKey: codingPath + ".bg"),
+            fill: fillColor,
+            gradientFill: gradientColor,
             highlightedFill: try decodeColor(values, .highlightedBg),
             stroke: try decodeColor(values, .stroke),
             shadow: try? values.decode(PresentationThemeBubbleShadow.self, forKey: .shadow)
@@ -1162,7 +1173,7 @@ extension PresentationThemePartedColors: Codable {
             accentControlDisabledColor: (try? decodeColor(values, .accentControlDisabled)) ?? accentControlColor.withAlphaComponent(0.5),
             mediaActiveControlColor: try decodeColor(values, .mediaActiveControl),
             mediaInactiveControlColor: try decodeColor(values, .mediaInactiveControl),
-            mediaControlInnerBackgroundColor: try decodeColor(values, .mediaControlInnerBg, decoder: decoder, fallbackKey: codingPath + ".bubble.withWp.bg"),
+            mediaControlInnerBackgroundColor: try decodeColor(values, .mediaControlInnerBg, decoder: decoder, fallbackKey: "\(codingPath).bubble.withWp.bg"),
             pendingActivityColor: try decodeColor(values, .pendingActivity),
             fileTitleColor: try decodeColor(values, .fileTitle),
             fileDescriptionColor: try decodeColor(values, .fileDescription),
@@ -1389,7 +1400,7 @@ extension PresentationThemeChatInputPanel: Codable {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         let codingPath = decoder.codingPath.map { $0.stringValue }.joined(separator: ".")
         self.init(panelBackgroundColor: try decodeColor(values, .panelBg),
-                  panelBackgroundColorNoWallpaper: try decodeColor(values, .panelBg, decoder: decoder, fallbackKey: codingPath + ".panelBgNoWallpaper"),
+                  panelBackgroundColorNoWallpaper: try decodeColor(values, .panelBg, decoder: decoder, fallbackKey: "\(codingPath).panelBgNoWallpaper"),
                   panelSeparatorColor: try decodeColor(values, .panelSeparator),
                   panelControlAccentColor: try decodeColor(values, .panelControlAccent),
                   panelControlColor: try decodeColor(values, .panelControl),

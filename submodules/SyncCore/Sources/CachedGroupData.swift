@@ -49,6 +49,7 @@ public final class CachedGroupData: CachedPeerData {
     public let flags: CachedGroupFlags
     public let hasScheduledMessages: Bool
     public let invitedBy: PeerId?
+    public let photo: TelegramMediaImage?
     
     public let peerIds: Set<PeerId>
     public let messageIds: Set<MessageId>
@@ -66,9 +67,10 @@ public final class CachedGroupData: CachedPeerData {
         self.flags = CachedGroupFlags()
         self.hasScheduledMessages = false
         self.invitedBy = nil
+        self.photo = nil
     }
     
-    public init(participants: CachedGroupParticipants?, exportedInvitation: ExportedInvitation?, botInfos: [CachedPeerBotInfo], peerStatusSettings: PeerStatusSettings?, pinnedMessageId: MessageId?, about: String?, flags: CachedGroupFlags, hasScheduledMessages: Bool, invitedBy: PeerId?) {
+    public init(participants: CachedGroupParticipants?, exportedInvitation: ExportedInvitation?, botInfos: [CachedPeerBotInfo], peerStatusSettings: PeerStatusSettings?, pinnedMessageId: MessageId?, about: String?, flags: CachedGroupFlags, hasScheduledMessages: Bool, invitedBy: PeerId?, photo: TelegramMediaImage?) {
         self.participants = participants
         self.exportedInvitation = exportedInvitation
         self.botInfos = botInfos
@@ -78,6 +80,7 @@ public final class CachedGroupData: CachedPeerData {
         self.flags = flags
         self.hasScheduledMessages = hasScheduledMessages
         self.invitedBy = invitedBy
+        self.photo = photo
         
         var messageIds = Set<MessageId>()
         if let pinnedMessageId = self.pinnedMessageId {
@@ -105,8 +108,10 @@ public final class CachedGroupData: CachedPeerData {
         self.participants = participants
         self.exportedInvitation = decoder.decodeObjectForKey("i", decoder: { ExportedInvitation(decoder: $0) }) as? ExportedInvitation
         self.botInfos = decoder.decodeObjectArrayWithDecoderForKey("b") as [CachedPeerBotInfo]
-        if let value = decoder.decodeOptionalInt32ForKey("pcs") {
-            self.peerStatusSettings = PeerStatusSettings(rawValue: value)
+        if let legacyValue = decoder.decodeOptionalInt32ForKey("pcs") {
+            self.peerStatusSettings = PeerStatusSettings(flags: PeerStatusSettings.Flags(rawValue: legacyValue), geoDistance: nil)
+        } else if let peerStatusSettings = decoder.decodeObjectForKey("pss", decoder: { PeerStatusSettings(decoder: $0) }) as? PeerStatusSettings {
+            self.peerStatusSettings = peerStatusSettings
         } else {
             self.peerStatusSettings = nil
         }
@@ -120,6 +125,12 @@ public final class CachedGroupData: CachedPeerData {
         self.hasScheduledMessages = decoder.decodeBoolForKey("hsm", orElse: false)
         
         self.invitedBy = decoder.decodeOptionalInt64ForKey("invBy").flatMap(PeerId.init)
+        
+        if let photo = decoder.decodeObjectForKey("ph", decoder: { TelegramMediaImage(decoder: $0) }) as? TelegramMediaImage {
+            self.photo = photo
+        } else {
+            self.photo = nil
+        }
         
         var messageIds = Set<MessageId>()
         if let pinnedMessageId = self.pinnedMessageId {
@@ -153,9 +164,9 @@ public final class CachedGroupData: CachedPeerData {
         }
         encoder.encodeObjectArray(self.botInfos, forKey: "b")
         if let peerStatusSettings = self.peerStatusSettings {
-            encoder.encodeInt32(peerStatusSettings.rawValue, forKey: "pcs")
+            encoder.encodeObject(peerStatusSettings, forKey: "pss")
         } else {
-            encoder.encodeNil(forKey: "pcs")
+            encoder.encodeNil(forKey: "pss")
         }
         if let pinnedMessageId = self.pinnedMessageId {
             encoder.encodeInt64(pinnedMessageId.peerId.toInt64(), forKey: "pm.p")
@@ -179,6 +190,12 @@ public final class CachedGroupData: CachedPeerData {
         } else {
             encoder.encodeNil(forKey: "invBy")
         }
+        
+        if let photo = self.photo {
+            encoder.encodeObject(photo, forKey: "ph")
+        } else {
+            encoder.encodeNil(forKey: "ph")
+        }
     }
     
     public func isEqual(to: CachedPeerData) -> Bool {
@@ -190,38 +207,42 @@ public final class CachedGroupData: CachedPeerData {
     }
     
     public func withUpdatedParticipants(_ participants: CachedGroupParticipants?) -> CachedGroupData {
-        return CachedGroupData(participants: participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: self.invitedBy)
+        return CachedGroupData(participants: participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: self.invitedBy, photo: self.photo)
     }
     
     public func withUpdatedExportedInvitation(_ exportedInvitation: ExportedInvitation?) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: self.invitedBy)
+        return CachedGroupData(participants: self.participants, exportedInvitation: exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: self.invitedBy, photo: self.photo)
     }
     
     public func withUpdatedBotInfos(_ botInfos: [CachedPeerBotInfo]) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: self.invitedBy)
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: self.invitedBy, photo: self.photo)
     }
     
     public func withUpdatedPeerStatusSettings(_ peerStatusSettings: PeerStatusSettings?) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: self.invitedBy)
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: self.invitedBy, photo: self.photo)
     }
 
     public func withUpdatedPinnedMessageId(_ pinnedMessageId: MessageId?) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: pinnedMessageId, about: self.about, flags: self.flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: self.invitedBy)
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: pinnedMessageId, about: self.about, flags: self.flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: self.invitedBy, photo: self.photo)
     }
     
     public func withUpdatedAbout(_ about: String?) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: about, flags: self.flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: self.invitedBy)
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: about, flags: self.flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: self.invitedBy, photo: self.photo)
     }
     
     public func withUpdatedFlags(_ flags: CachedGroupFlags) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: self.invitedBy)
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: self.invitedBy, photo: self.photo)
     }
     
     public func withUpdatedHasScheduledMessages(_ hasScheduledMessages: Bool) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags, hasScheduledMessages: hasScheduledMessages, invitedBy: self.invitedBy)
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags, hasScheduledMessages: hasScheduledMessages, invitedBy: self.invitedBy, photo: self.photo)
     }
     
     public func withUpdatedInvitedBy(_ invitedBy: PeerId?) -> CachedGroupData {
-        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: invitedBy)
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: invitedBy, photo: self.photo)
+    }
+    
+    public func withUpdatedPhoto(_ photo: TelegramMediaImage?) -> CachedGroupData {
+        return CachedGroupData(participants: self.participants, exportedInvitation: self.exportedInvitation, botInfos: self.botInfos, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, about: self.about, flags: self.flags, hasScheduledMessages: self.hasScheduledMessages, invitedBy: self.invitedBy, photo: photo)
     }
 }

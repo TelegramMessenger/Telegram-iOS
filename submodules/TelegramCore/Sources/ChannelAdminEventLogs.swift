@@ -36,7 +36,7 @@ public enum AdminLogEventAction {
     case changeTitle(prev: String, new: String)
     case changeAbout(prev: String, new: String)
     case changeUsername(prev: String, new: String)
-    case changePhoto(prev: [TelegramMediaImageRepresentation], new: [TelegramMediaImageRepresentation])
+    case changePhoto(prev: ([TelegramMediaImageRepresentation], [TelegramMediaImage.VideoRepresentation]), new: ([TelegramMediaImageRepresentation], [TelegramMediaImage.VideoRepresentation]))
     case toggleInvites(Bool)
     case toggleSignatures(Bool)
     case updatePinned(Message?)
@@ -149,7 +149,9 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                                     case let .channelAdminLogEventActionChangeUsername(prev, new):
                                         action = .changeUsername(prev: prev, new: new)
                                     case let .channelAdminLogEventActionChangePhoto(prev, new):
-                                        action = .changePhoto(prev: telegramMediaImageFromApiPhoto(prev)?.representations ?? [], new: telegramMediaImageFromApiPhoto(new)?.representations ?? [])
+                                        let previousImage = telegramMediaImageFromApiPhoto(prev)
+                                        let newImage = telegramMediaImageFromApiPhoto(new)
+                                        action = .changePhoto(prev: (previousImage?.representations ?? [], previousImage?.videoRepresentations ?? []) , new: (newImage?.representations ?? [], newImage?.videoRepresentations ?? []))
                                     case let .channelAdminLogEventActionToggleInvites(new):
                                         action = .toggleInvites(boolFromApiValue(new))
                                     case let .channelAdminLogEventActionToggleSignatures(new):

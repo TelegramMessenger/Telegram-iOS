@@ -32,10 +32,10 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
     
     var displayActionsPanel = false
     if !chatPresentationInterfaceState.peerIsBlocked && !chatPresentationInterfaceState.isScheduledMessages, let contactStatus = chatPresentationInterfaceState.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
-        if !peerStatusSettings.isEmpty {
+        if !peerStatusSettings.flags.isEmpty {
             if contactStatus.canAddContact && peerStatusSettings.contains(.canAddContact) {
                 displayActionsPanel = true
-            } else if peerStatusSettings.contains(.canReport) || peerStatusSettings.contains(.canBlock) {
+            } else if peerStatusSettings.contains(.canReport) || peerStatusSettings.contains(.canBlock) || peerStatusSettings.contains(.autoArchived) {
                 displayActionsPanel = true
             } else if peerStatusSettings.contains(.canShareContact) {
                 displayActionsPanel = true

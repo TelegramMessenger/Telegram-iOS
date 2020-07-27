@@ -448,7 +448,7 @@ public func resolveUrlImpl(account: Account, url: String) -> Signal<ResolvedUrl,
             }
         }
     }
-    let baseTelegraPhPaths = ["telegra.ph/", "t.me/iv?"]
+    let baseTelegraPhPaths = ["telegra.ph/", "te.legra.ph/", "graph.org/", "t.me/iv?"]
     for basePath in baseTelegraPhPaths {
         for scheme in schemes {
             let basePrefix = scheme + basePath

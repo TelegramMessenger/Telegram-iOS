@@ -20,6 +20,11 @@ private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "C
 private let nameFont = Font.medium(15.0)
 private let dateFont = Font.regular(14.0)
 
+enum AvatarGalleryItemFooterContent {
+    case info
+    case own(Bool)
+}
+
 final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     private let context: AccountContext
     private var presentationData: PresentationData
@@ -30,9 +35,14 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     private let actionButton: UIButton
     private let nameNode: ASTextNode
     private let dateNode: ASTextNode
+    private let mainNode: ASTextNode
+    private let setMainButton: HighlightableButtonNode
     
     private var currentNameText: String?
     private var currentDateText: String?
+    private var currentTypeText: String?
+    
+    private var validLayout: (CGSize, LayoutMetrics, CGFloat, CGFloat, CGFloat, CGFloat)?
     
     var delete: (() -> Void)? {
         didSet {
@@ -42,6 +52,8 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     
     var share: ((GalleryControllerInteraction) -> Void)?
     
+    var setMain: (() -> Void)?
+    
     init(context: AccountContext, presentationData: PresentationData) {
         self.context = context
         self.presentationData = presentationData
@@ -50,6 +62,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         
         self.deleteButton = UIButton()
         self.deleteButton.isHidden = true
+        
         self.actionButton = UIButton()
         
         self.deleteButton.setImage(deleteImage, for: [.normal])
@@ -65,6 +78,14 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         self.dateNode.isUserInteractionEnabled = false
         self.dateNode.displaysAsynchronously = false
         
+        self.setMainButton = HighlightableButtonNode()
+        self.setMainButton.isHidden = true
+        
+        self.mainNode = ASTextNode()
+        self.mainNode.maximumNumberOfLines = 1
+        self.mainNode.isUserInteractionEnabled = false
+        self.mainNode.displaysAsynchronously = false
+        
         super.init()
         
         self.view.addSubview(self.deleteButton)
@@ -72,21 +93,33 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         
         self.addSubnode(self.nameNode)
         self.addSubnode(self.dateNode)
+        self.addSubnode(self.setMainButton)
+        self.addSubnode(self.mainNode)
         
         self.deleteButton.addTarget(self, action: #selector(self.deleteButtonPressed), for: [.touchUpInside])
         self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), for: [.touchUpInside])
+        self.setMainButton.addTarget(self, action: #selector(self.setMainButtonPressed), forControlEvents: .touchUpInside)
     }
-    
-    deinit {
-    }
-    
-    func setEntry(_ entry: AvatarGalleryEntry) {
+        
+    func setEntry(_ entry: AvatarGalleryEntry, content: AvatarGalleryItemFooterContent) {
         var nameText: String?
         var dateText: String?
+        var typeText: String?
+        var buttonText: String?
         switch entry {
-            case let .image(_, _, _, peer, date, _, _):
+            case let .image(_, _, _, videoRepresentations, peer, date, _, _, _, _):
                 nameText = peer?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""
-                dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: date)
+                if let date = date {
+                    dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: date)
+                }
+                
+                if (!videoRepresentations.isEmpty) {
+                    typeText = self.strings.ProfilePhoto_MainVideo
+                    buttonText = self.strings.ProfilePhoto_SetMainVideo
+                } else {
+                    typeText = self.strings.ProfilePhoto_MainPhoto
+                    buttonText = self.strings.ProfilePhoto_SetMainPhoto
+                }
             default:
                 break
         }
@@ -107,9 +140,35 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
                 self.dateNode.attributedText = nil
             }
         }
+        
+        if self.currentTypeText != typeText {
+            self.currentTypeText = typeText
+            
+            self.mainNode.attributedText = NSAttributedString(string: typeText ?? "", font: Font.regular(17.0), textColor: UIColor(rgb: 0x808080))
+            self.setMainButton.setAttributedTitle(NSAttributedString(string: buttonText ?? "", font: Font.regular(17.0), textColor: .white), for: .normal)
+            
+            if let validLayout = self.validLayout {
+                let _ = self.updateLayout(size: validLayout.0, metrics: validLayout.1, leftInset: validLayout.2, rightInset: validLayout.3, bottomInset: validLayout.4, contentInset: validLayout.5, transition: .immediate)
+            }
+        }
+        
+        switch content {
+            case .info:
+                self.nameNode.isHidden = false
+                self.dateNode.isHidden = false
+                self.mainNode.isHidden = true
+                self.setMainButton.isHidden = true
+            case let .own(isMainPhoto):
+                self.nameNode.isHidden = true
+                self.dateNode.isHidden = true
+                self.mainNode.isHidden = !isMainPhoto
+                self.setMainButton.isHidden = isMainPhoto
+        }
     }
     
     override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+        self.validLayout = (size, metrics, leftInset, rightInset, bottomInset, contentInset)
+        
         let width = size.width
         var panelHeight: CGFloat = 44.0 + bottomInset
         panelHeight += contentInset
@@ -117,8 +176,9 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         self.actionButton.frame = CGRect(origin: CGPoint(x: leftInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         self.deleteButton.frame = CGRect(origin: CGPoint(x: width - 44.0 - rightInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         
-        let nameSize = self.nameNode.measure(CGSize(width: width - 44.0 * 2.0 - 8.0 * 2.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude))
-        let dateSize = self.dateNode.measure(CGSize(width: width - 44.0 * 2.0 - 8.0 * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        let constrainedSize = CGSize(width: width - 44.0 * 2.0 - 8.0 * 2.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude)
+        let nameSize = self.nameNode.measure(constrainedSize)
+        let dateSize = self.dateNode.measure(constrainedSize)
         
         if nameSize.height.isZero {
             self.dateNode.frame = CGRect(origin: CGPoint(x: floor((width - dateSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - dateSize.height) / 2.0)), size: dateSize)
@@ -128,6 +188,12 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
             self.dateNode.frame = CGRect(origin: CGPoint(x: floor((width - dateSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - dateSize.height - nameSize.height - labelsSpacing) / 2.0) + nameSize.height + labelsSpacing), size: dateSize)
         }
         
+        let mainSize = self.mainNode.measure(constrainedSize)
+        self.mainNode.frame = CGRect(origin: CGPoint(x: floor((width - mainSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - mainSize.height) / 2.0)), size: mainSize)
+        
+        let mainButtonSize = self.setMainButton.measure(constrainedSize)
+        self.setMainButton.frame = CGRect(origin: CGPoint(x: floor((width - mainButtonSize.width) / 2.0), y: panelHeight - bottomInset - 44.0 + floor((44.0 - mainButtonSize.height) / 2.0)), size: mainButtonSize)
+        
         return panelHeight
     }
     
@@ -136,6 +202,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         self.actionButton.alpha = 1.0
         self.nameNode.alpha = 1.0
         self.dateNode.alpha = 1.0
+        self.setMainButton.alpha = 1.0
     }
     
     override func animateOut(toHeight: CGFloat, nextContentNode: GalleryFooterContentNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
@@ -143,32 +210,21 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         self.actionButton.alpha = 0.0
         self.nameNode.alpha = 0.0
         self.dateNode.alpha = 0.0
+        self.setMainButton.alpha = 0.0
         completion()
     }
     
     @objc private func deleteButtonPressed() {
-        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-        let actionSheet = ActionSheetController(presentationData: presentationData)
-        let items: [ActionSheetItem] = [
-            ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: { [weak self, weak actionSheet] in
-                actionSheet?.dismissAnimated()
-                self?.delete?()
-            })
-        ]
-        
-        actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
-                                   ActionSheetItemGroup(items: [
-                                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                        actionSheet?.dismissAnimated()
-                                    })
-                                    ])
-            ])
-        self.controllerInteraction?.presentController(actionSheet, nil)
+        self.delete?()
     }
     
     @objc private func actionButtonPressed() {
         if let controllerInteraction = self.controllerInteraction {
             self.share?(controllerInteraction)
         }
+    }
+    
+    @objc private func setMainButtonPressed() {
+        self.setMain?()
     }
 }

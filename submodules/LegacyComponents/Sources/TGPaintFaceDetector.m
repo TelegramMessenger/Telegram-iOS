@@ -3,6 +3,9 @@
 #import <LegacyComponents/TGPaintUtils.h>
 #import <ImageIO/ImageIO.h>
 
+#import "TGMediaEditingContext.h"
+#import "UIImage+TG.h"
+
 @interface TGPaintFace ()
 
 + (instancetype)faceWithBounds:(CGRect)bounds angle:(CGFloat)angle leftEye:(TGPaintFaceEye *)leftEye rightEye:(TGPaintFaceEye *)rightEye mouth:(TGPaintFaceMouth *)mouth;
@@ -25,6 +28,41 @@
 
 
 @implementation TGPaintFaceDetector
+
++ (SSignal *)detectFacesInItem:(id<TGMediaEditableItem>)item editingContext:(TGMediaEditingContext *)editingContext
+{
+    CGSize originalSize = item.originalSize;
+        
+    SSignal *cachedFaces = [editingContext facesForItem:item];
+    SSignal *cachedSignal = [cachedFaces mapToSignal:^SSignal *(id result)
+    {
+        if (result == nil)
+            return [SSignal fail:nil];
+        return [SSignal single:result];
+    }];
+    
+    SSignal *imageSignal = [item screenImageSignal:0];
+    SSignal *detectSignal = [[[imageSignal filter:^bool(UIImage *image)
+                               {
+        if (![image isKindOfClass:[UIImage class]])
+            return false;
+        
+        if (image.degraded)
+            return false;
+        
+        return true;
+    }] take:1] mapToSignal:^SSignal *(UIImage *image) {
+        return [[TGPaintFaceDetector detectFacesInImage:image originalSize:originalSize] startOn:[SQueue concurrentDefaultQueue]];
+    }];
+    
+    return [[[cachedSignal catch:^SSignal *(__unused id error)
+       {
+        return detectSignal;
+    }] deliverOn:[SQueue mainQueue]] onNext:^(NSArray *next)
+     {
+        [editingContext setFaces:next forItem:item];
+    }];
+}
 
 + (SSignal *)detectFacesInImage:(UIImage *)image originalSize:(CGSize)originalSize
 {

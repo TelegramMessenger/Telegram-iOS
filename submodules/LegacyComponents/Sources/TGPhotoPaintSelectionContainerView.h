@@ -1,5 +1,5 @@
-#import "TGPhotoPaintSparseView.h"
+#import "TGPhotoEditorSparseView.h"
 
-@interface TGPhotoPaintSelectionContainerView : TGPhotoPaintSparseView
+@interface TGPhotoPaintSelectionContainerView : TGPhotoEditorSparseView
 
 @end

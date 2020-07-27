@@ -844,6 +844,9 @@ static id<LegacyComponentsContext> _defaultContext = nil;
         
         CGRect keyboardFrame = [[[notification userInfo] objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
         CGFloat keyboardHeight = MIN(keyboardFrame.size.height, keyboardFrame.size.width);
+        if (CGRectGetMaxY(keyboardFrame) < [UIScreen mainScreen].bounds.size.height) {
+            keyboardHeight = 0.0f;
+        }
         double duration = ([[[notification userInfo] objectForKey:UIKeyboardAnimationDurationUserInfoKey] doubleValue]);
         
         if ([self isViewLoaded] && !_viewControllerHasEverAppeared && ([self findFirstResponder:self.view] == nil && ![self willCaptureInputShortly]))

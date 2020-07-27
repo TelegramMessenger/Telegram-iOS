@@ -43,6 +43,11 @@
     return true;
 }
 
+- (bool)requiresFaces
+{
+    return false;
+}
+
 - (NSInteger)order
 {
     return _order;

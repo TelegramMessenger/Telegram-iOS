@@ -49,9 +49,10 @@ public class ItemListMultilineInputItem: ListViewItem, ItemListItem {
     let maxLength: ItemListMultilineInputItemTextLimit?
     let minimalHeight: CGFloat?
     let inlineAction: ItemListMultilineInputInlineAction?
+    let noInsets: Bool
     public let tag: ItemListItemTag?
     
-    public init(presentationData: ItemListPresentationData, text: String, placeholder: String, maxLength: ItemListMultilineInputItemTextLimit?, sectionId: ItemListSectionId, style: ItemListStyle, capitalization: Bool = true, autocorrection: Bool = true, returnKeyType: UIReturnKeyType = .default, minimalHeight: CGFloat? = nil, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> Void)? = nil, updatedFocus: ((Bool) -> Void)? = nil, tag: ItemListItemTag? = nil, action: (() -> Void)? = nil, inlineAction: ItemListMultilineInputInlineAction? = nil) {
+    public init(presentationData: ItemListPresentationData, text: String, placeholder: String, maxLength: ItemListMultilineInputItemTextLimit?, sectionId: ItemListSectionId, style: ItemListStyle, capitalization: Bool = true, autocorrection: Bool = true, returnKeyType: UIReturnKeyType = .default, minimalHeight: CGFloat? = nil, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> Void)? = nil, updatedFocus: ((Bool) -> Void)? = nil, tag: ItemListItemTag? = nil, action: (() -> Void)? = nil, inlineAction: ItemListMultilineInputInlineAction? = nil, noInsets: Bool = false) {
         self.presentationData = presentationData
         self.text = text
         self.placeholder = placeholder
@@ -69,6 +70,7 @@ public class ItemListMultilineInputItem: ListViewItem, ItemListItem {
         self.tag = tag
         self.action = action
         self.inlineAction = inlineAction
+        self.noInsets = noInsets
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -241,7 +243,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
             }
             
             let contentSize = CGSize(width: params.width, height: contentHeight)
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = item.noInsets ? UIEdgeInsets() : itemListNeighborsGroupedInsets(neighbors)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
@@ -303,7 +305,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
                         strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
                     }
                     
-                    let hasCorners = itemListHasRoundedBlockLayout(params)
+                    let hasCorners = itemListHasRoundedBlockLayout(params) && !item.noInsets
                     var hasTopCorners = false
                     var hasBottomCorners = false
                     switch neighbors.top {
@@ -325,8 +327,10 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
                     
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
-                    strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
-                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
+                    if !item.noInsets {
+                        strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
+                        strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
+                    }
                     
                     if strongSelf.textNode.attributedPlaceholderText == nil || !strongSelf.textNode.attributedPlaceholderText!.isEqual(to: attributedPlaceholderText) {
                         strongSelf.textNode.attributedPlaceholderText = attributedPlaceholderText

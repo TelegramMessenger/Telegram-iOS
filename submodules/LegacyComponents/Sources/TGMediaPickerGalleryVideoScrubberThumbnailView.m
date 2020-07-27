@@ -7,9 +7,6 @@
 @interface TGMediaPickerGalleryVideoScrubberThumbnailView ()
 {
     CGSize _originalSize;
-    CGRect _cropRect;
-    UIImageOrientation _cropOrientation;
-    bool _cropMirrored;
     
     UIImageView *_imageView;
     UIView *_stripeView;
@@ -52,9 +49,49 @@
 - (void)setFrame:(CGRect)frame
 {
     [super setFrame:frame];
+        
+    [self updateCropping];
+}
+
+- (void)setImage:(UIImage *)image
+{
+    _image = image;
+    _imageView.image = image;
+}
+
+- (void)setImage:(UIImage *)image animated:(bool)animated
+{
+    if (animated) {
+        UIView *snapshotView = [self snapshotViewAfterScreenUpdates:false];
+        [self addSubview:snapshotView];
+        
+        [self setImage:image];
+        
+        [UIView animateWithDuration:0.2f animations:^
+        {
+            snapshotView.alpha = 0.0f;
+        } completion:^(__unused BOOL finished)
+        {
+            [snapshotView removeFromSuperview];
+        }];
+    } else {
+        [self setImage:image];
+    }
+}
+
+- (void)updateCropping {
+    [self updateCropping:false];
+}
     
-    if (_imageView == nil)
+- (void)updateCropping:(bool)animated {
+    if (_imageView.image == nil || _cropRect.size.width < FLT_EPSILON)
         return;
+    
+    UIView *snapshotView;
+    if (animated) {
+        snapshotView = [self snapshotViewAfterScreenUpdates:false];
+        [self addSubview:snapshotView];
+    }
     
     CGAffineTransform transform = CGAffineTransformMakeRotation(TGRotationForOrientation(_cropOrientation));
     if (_cropMirrored)
@@ -79,11 +116,22 @@
         cropRect = CGRectMake(originalSize.width - cropRect.size.width - cropRect.origin.x, originalSize.height - cropRect.size.height - cropRect.origin.y, cropRect.size.width, cropRect.size.height);
     }
     
-    CGFloat ratio = frame.size.width / cropRect.size.width;
+    CGFloat ratio = self.bounds.size.width / cropRect.size.width;
     _imageView.frame = CGRectMake(-cropRect.origin.x * ratio, -cropRect.origin.y * ratio, originalSize.width * ratio, originalSize.height * ratio);
     
     CGFloat thickness = 1.0f - TGRetinaPixel;
-    _stripeView.frame = CGRectMake(frame.size.width - thickness, 0, thickness, frame.size.height);
+    _stripeView.frame = CGRectMake(self.bounds.size.width - thickness, 0, thickness, self.bounds.size.height);
+    
+    if (snapshotView != nil)
+    {
+        [UIView animateWithDuration:0.2f animations:^
+        {
+            snapshotView.alpha = 0.0f;
+        } completion:^(__unused BOOL finished)
+        {
+            [snapshotView removeFromSuperview];
+        }];
+    }
 }
 
 @end

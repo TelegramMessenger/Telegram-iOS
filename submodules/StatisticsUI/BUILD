@@ -26,6 +26,8 @@ swift_library(
         "//submodules/GraphCore:GraphCore",
         "//submodules/GraphUI:GraphUI",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/ItemListPeerItem:ItemListPeerItem",
+        "//submodules/ItemListPeerActionItem:ItemListPeerActionItem",
     ],
     visibility = [
         "//visibility:public",

@@ -15,11 +15,12 @@ public func requestAccountPrivacySettings(account: Account) -> Signal<AccountPri
     let phoneNumberPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyPhoneNumber))
     let phoneDiscoveryPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyAddedByPhone))
     let autoremoveTimeout = account.network.request(Api.functions.account.getAccountTTL())
-    return combineLatest(lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, phoneNumberPrivacy, phoneDiscoveryPrivacy, autoremoveTimeout)
+    let globalPrivacySettings = account.network.request(Api.functions.account.getGlobalPrivacySettings())
+    return combineLatest(lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, phoneNumberPrivacy, phoneDiscoveryPrivacy, autoremoveTimeout, globalPrivacySettings)
     |> `catch` { _ in
         return .complete()
     }
-    |> mapToSignal { lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, phoneNumberPrivacy, phoneDiscoveryPrivacy, autoremoveTimeout -> Signal<AccountPrivacySettings, NoError> in
+    |> mapToSignal { lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, phoneNumberPrivacy, phoneDiscoveryPrivacy, autoremoveTimeout, globalPrivacySettings -> Signal<AccountPrivacySettings, NoError> in
         let accountTimeoutSeconds: Int32
         switch autoremoveTimeout {
             case let .accountDaysTTL(days):
@@ -119,14 +120,33 @@ public func requestAccountPrivacySettings(account: Account) -> Signal<AccountPri
             peerMap[peer.peer.id] = peer
         }
         
+        let automaticallyArchiveAndMuteNonContacts: Bool
+        switch globalPrivacySettings {
+        case let .globalPrivacySettings(_, archiveAndMuteNewNoncontactPeers):
+            if let archiveAndMuteNewNoncontactPeers = archiveAndMuteNewNoncontactPeers {
+                automaticallyArchiveAndMuteNonContacts = archiveAndMuteNewNoncontactPeers == .boolTrue
+            } else {
+                automaticallyArchiveAndMuteNonContacts = false
+            }
+        }
+        
         return account.postbox.transaction { transaction -> AccountPrivacySettings in
             updatePeers(transaction: transaction, peers: peers.map { $0.peer }, update: { _, updated in
                 return updated
             })
             
-            return AccountPrivacySettings(presence: SelectivePrivacySettings(apiRules: lastSeenRules, peers: peerMap), groupInvitations: SelectivePrivacySettings(apiRules: groupRules, peers: peerMap), voiceCalls: SelectivePrivacySettings(apiRules: voiceRules, peers: peerMap), voiceCallsP2P: SelectivePrivacySettings(apiRules: voiceP2PRules, peers: peerMap), profilePhoto: SelectivePrivacySettings(apiRules: profilePhotoRules, peers: peerMap), forwards: SelectivePrivacySettings(apiRules: forwardRules, peers: peerMap), phoneNumber: SelectivePrivacySettings(apiRules: phoneNumberRules, peers: peerMap), phoneDiscoveryEnabled: phoneDiscoveryValue, accountRemovalTimeout: accountTimeoutSeconds)
+            return AccountPrivacySettings(presence: SelectivePrivacySettings(apiRules: lastSeenRules, peers: peerMap), groupInvitations: SelectivePrivacySettings(apiRules: groupRules, peers: peerMap), voiceCalls: SelectivePrivacySettings(apiRules: voiceRules, peers: peerMap), voiceCallsP2P: SelectivePrivacySettings(apiRules: voiceP2PRules, peers: peerMap), profilePhoto: SelectivePrivacySettings(apiRules: profilePhotoRules, peers: peerMap), forwards: SelectivePrivacySettings(apiRules: forwardRules, peers: peerMap), phoneNumber: SelectivePrivacySettings(apiRules: phoneNumberRules, peers: peerMap), phoneDiscoveryEnabled: phoneDiscoveryValue, automaticallyArchiveAndMuteNonContacts: automaticallyArchiveAndMuteNonContacts, accountRemovalTimeout: accountTimeoutSeconds)
         }
     }
+}
+
+public func updateAccountAutoArchiveChats(account: Account, value: Bool) -> Signal<Never, NoError> {
+    
+    return account.network.request(Api.functions.account.setGlobalPrivacySettings(
+        settings: .globalPrivacySettings(flags: 1 << 0, archiveAndMuteNewNoncontactPeers: value ? .boolTrue : .boolFalse)
+    ))
+    |> retryRequest
+    |> ignoreValues
 }
 
 public func updateAccountRemovalTimeout(account: Account, timeout: Int32) -> Signal<Void, NoError> {

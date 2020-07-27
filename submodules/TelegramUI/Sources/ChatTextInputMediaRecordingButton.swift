@@ -155,6 +155,7 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
 
 final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButton, TGModernConversationInputMicButtonDelegate {
     private var theme: PresentationTheme
+    private let strings: PresentationStrings
     
     var mode: ChatTextInputMediaRecordingButtonMode = .audio
     var account: Account?
@@ -166,6 +167,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     var offsetRecordingControls: () -> Void = { }
     var switchMode: () -> Void = { }
     var updateLocked: (Bool) -> Void = { _ in }
+    var updateCancelTranslation: () -> Void = { }
     
     private var modeTimeoutTimer: SwiftSignalKit.Timer?
     
@@ -174,6 +176,7 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     private var recordingOverlay: ChatTextInputAudioRecordingOverlay?
     private var startTouchLocation: CGPoint?
     private(set) var controlsOffset: CGFloat = 0.0
+    private(set) var cancelTranslation: CGFloat = 0.0
     
     private var micLevelDisposable: MetaDisposable?
     
@@ -228,14 +231,27 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
                 if self.hasRecorder {
                     self.animateIn()
                 } else {
-                    self.animateOut()
+                    self.animateOut(false)
                 }
             }
         }
     }
     
-    init(theme: PresentationTheme, presentController: @escaping (ViewController) -> Void) {
+    private lazy var micDecoration: (UIView & TGModernConversationInputMicButtonDecoration) = {
+        let blobView = VoiceBlobView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 220.0, height: 220.0)))
+        blobView.setColor(self.theme.chat.inputPanel.actionControlFillColor)
+        return blobView
+    }()
+    
+    private lazy var micLock: (UIView & TGModernConversationInputMicButtonLock) = {
+        let lockView = LockView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 60.0)), theme: self.theme, strings: self.strings)
+        lockView.addTarget(self, action: #selector(handleStopTap), for: .touchUpInside)
+        return lockView
+    }()
+    
+    init(theme: PresentationTheme, strings: PresentationStrings, presentController: @escaping (ViewController) -> Void) {
         self.theme = theme
+        self.strings = strings
         self.innerIconView = UIImageView()
         self.presentController = presentController
          
@@ -313,6 +329,8 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         }
         
         self.pallete = legacyInputMicPalette(from: theme)
+        self.micDecoration.setColor(self.theme.chat.inputPanel.actionControlFillColor)
+        (self.micLock as? LockView)?.updateTheme(theme)
     }
     
     deinit {
@@ -368,6 +386,11 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
         self.offsetRecordingControls()
     }
     
+    func micButtonInteractionUpdateCancelTranslation(_ translation: CGFloat) {
+        self.cancelTranslation = translation
+        self.updateCancelTranslation()
+    }
+    
     func micButtonInteractionLocked() {
         self.updateLocked(true)
     }
@@ -388,7 +411,38 @@ final class ChatTextInputMediaRecordingButton: TGModernConversationInputMicButto
     }
     
     func micButtonDecoration() -> (UIView & TGModernConversationInputMicButtonDecoration)! {
-        return CombinedWaveView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 640.0, height: 640.0)), color: self.theme.chat.inputPanel.actionControlFillColor)
+        return micDecoration
+    }
+    
+    func micButtonLock() -> (UIView & TGModernConversationInputMicButtonLock)! {
+        return micLock
+    }
+    
+    @objc private func handleStopTap() {
+        micButtonInteractionStopped()
+    }
+    
+    override func animateIn() {
+        super.animateIn()
+        
+        micDecoration.startAnimating()
+
+        innerIconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+        innerIconView.layer.animateScale(from: 1.0, to: 0.3, duration: 0.15, removeOnCompletion: false)
+    }
+
+    override func animateOut(_ toSmallSize: Bool) {
+        super.animateOut(toSmallSize)
+        
+        micDecoration.stopAnimating()
+        
+        if toSmallSize {
+            micDecoration.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.03, delay: 0.15, removeOnCompletion: false)
+        } else {
+            micDecoration.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false)
+            innerIconView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, removeOnCompletion: false)
+            innerIconView.layer.animateScale(from: 0.3, to: 1.0, duration: 0.15, removeOnCompletion: false)
+        }
     }
     
     private var previousSize = CGSize()

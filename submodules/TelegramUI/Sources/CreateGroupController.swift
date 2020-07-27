@@ -26,6 +26,7 @@ import PeerInfoUI
 import MapResourceToAvatarSizes
 import ItemListAddressItem
 import ItemListVenueItem
+import LegacyMediaPickerUI
 
 private struct CreateGroupArguments {
     let context: AccountContext
@@ -383,6 +384,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
     let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
     
     let uploadedAvatar = Promise<UploadedPeerPhotoData>()
+    var uploadedVideoAvatar: (Promise<UploadedPeerPhotoData?>, Double?)? = nil
     
     let addressPromise = Promise<String?>(nil)
     let venuesPromise = Promise<[TelegramMediaMap]?>(nil)
@@ -480,7 +482,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                     return $0.avatar
                 }
                 if let _ = updatingAvatar {
-                    return updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: uploadedAvatar.get(), mapResourceToAvatarSizes: { resource, representations in
+                    return updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: uploadedAvatar.get(), video: uploadedVideoAvatar?.0.get(), videoStartTimestamp: uploadedVideoAvatar?.1, mapResourceToAvatarSizes: { resource, representations in
                         return mapResourceToAvatarSizes(postbox: context.account.postbox, resource: resource, representations: representations)
                     })
                     |> ignoreValues
@@ -569,12 +571,13 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             endEditingImpl?()
             presentControllerImpl?(legacyController, nil)
             
-            let completedImpl: (UIImage) -> Void = { image in
+            let completedGroupPhotoImpl: (UIImage) -> Void = { image in
                 if let data = image.jpegData(compressionQuality: 0.6) {
                     let resource = LocalFileMediaResource(fileId: arc4random64())
                     context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                     let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource)
                     uploadedAvatar.set(uploadedPeerPhoto(postbox: context.account.postbox, network: context.account.network, resource: resource))
+                    uploadedVideoAvatar = nil
                     updateState { current in
                         var current = current
                         current.avatar = .image(representation, false)
@@ -583,18 +586,138 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                 }
             }
             
-            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: stateValue.with({ $0.avatar }) != nil, hasViewButton: false, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: true)!
+            let completedGroupVideoImpl: (UIImage, Any?, TGVideoEditAdjustments?) -> Void = { image, asset, adjustments in
+                if let data = image.jpegData(compressionQuality: 0.6) {
+                    let photoResource = LocalFileMediaResource(fileId: arc4random64())
+                    context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
+                    let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource)
+                    updateState { state in
+                        var state = state
+                        state.avatar = .image(representation, true)
+                        return state
+                    }
+                    
+                    var videoStartTimestamp: Double? = nil
+                    if let adjustments = adjustments, adjustments.videoStartValue > 0.0 {
+                        videoStartTimestamp = adjustments.videoStartValue - adjustments.trimStartValue
+                    }
+                    
+                    let signal = Signal<TelegramMediaResource?, UploadPeerPhotoError> { subscriber in
+                        
+                        let entityRenderer: LegacyPaintEntityRenderer? = adjustments.flatMap { adjustments in
+                            if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
+                                return LegacyPaintEntityRenderer(account: context.account, adjustments: adjustments)
+                            } else {
+                                return nil
+                            }
+                        }
+                        let uploadInterface = LegacyLiveUploadInterface(account: context.account)
+                        let signal: SSignal
+                        if let asset = asset as? AVAsset {
+                            signal = TGMediaVideoConverter.convert(asset, adjustments: adjustments, watcher: uploadInterface, entityRenderer: entityRenderer)!
+                        } else if let url = asset as? URL, let data = try? Data(contentsOf: url, options: [.mappedRead]), let image = UIImage(data: data), let entityRenderer = entityRenderer {
+                            let durationSignal: SSignal = SSignal(generator: { subscriber in
+                                let disposable = (entityRenderer.duration()).start(next: { duration in
+                                    subscriber?.putNext(duration)
+                                    subscriber?.putCompletion()
+                                })
+                                
+                                return SBlockDisposable(block: {
+                                    disposable.dispose()
+                                })
+                            })
+                            signal = durationSignal.map(toSignal: { duration -> SSignal? in
+                                if let duration = duration as? Double {
+                                    return TGMediaVideoConverter.renderUIImage(image, duration: duration, adjustments: adjustments, watcher: nil, entityRenderer: entityRenderer)!
+                                } else {
+                                    return SSignal.single(nil)
+                                }
+                            })
+                           
+                        } else {
+                            signal = SSignal.complete()
+                        }
+                        
+                        let signalDisposable = signal.start(next: { next in
+                            if let result = next as? TGMediaVideoConversionResult {
+                                if let image = result.coverImage, let data = image.jpegData(compressionQuality: 0.7) {
+                                    context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
+                                }
+                                
+                                if let timestamp = videoStartTimestamp {
+                                    videoStartTimestamp = max(0.0, min(timestamp, result.duration - 0.05))
+                                }
+                                                                
+                                var value = stat()
+                                if stat(result.fileURL.path, &value) == 0 {
+                                    if let data = try? Data(contentsOf: result.fileURL) {
+                                        let resource: TelegramMediaResource
+                                        if let liveUploadData = result.liveUploadData as? LegacyLiveUploadInterfaceResult {
+                                            resource = LocalFileMediaResource(fileId: liveUploadData.id)
+                                        } else {
+                                            resource = LocalFileMediaResource(fileId: arc4random64())
+                                        }
+                                        context.account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                                        subscriber.putNext(resource)
+                                    }
+                                }
+                                subscriber.putCompletion()
+                            }
+                        }, error: { _ in
+                        }, completed: nil)
+                        
+                        let disposable = ActionDisposable {
+                            signalDisposable?.dispose()
+                        }
+                        
+                        return ActionDisposable {
+                            disposable.dispose()
+                        }
+                    }
+                    
+                    uploadedAvatar.set(uploadedPeerPhoto(postbox: context.account.postbox, network: context.account.network, resource: photoResource))
+                    
+                    let promise = Promise<UploadedPeerPhotoData?>()
+                    promise.set(signal
+                    |> `catch` { _ -> Signal<TelegramMediaResource?, NoError> in
+                        return .single(nil)
+                    }
+                    |> mapToSignal { resource -> Signal<UploadedPeerPhotoData?, NoError> in
+                        if let resource = resource {
+                            return uploadedPeerVideo(postbox: context.account.postbox, network: context.account.network, messageMediaPreuploadManager: context.account.messageMediaPreuploadManager, resource: resource) |> map(Optional.init)
+                        } else {
+                            return .single(nil)
+                        }
+                    } |> afterNext { next in
+                        if let next = next, next.isCompleted {
+                            updateState { state in
+                                var state = state
+                                state.avatar = .image(representation, false)
+                                return state
+                            }
+                        }
+                    })
+                    uploadedVideoAvatar = (promise, videoStartTimestamp)
+                }
+            }
+            
+            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: stateValue.with({ $0.avatar }) != nil, hasViewButton: false, personalPhoto: false, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
             let _ = currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { assetsController in
                 let controller = WebSearchController(context: context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: title, completion: { result in
                     assetsController?.dismiss()
-                    completedImpl(result)
+                    completedGroupPhotoImpl(result)
                 }))
                 presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
             mixin.didFinishWithImage = { image in
                 if let image = image {
-                    completedImpl(image)
+                    completedGroupPhotoImpl(image)
+                }
+            }
+            mixin.didFinishWithVideo = { image, asset, adjustments in
+                if let image = image, let asset = asset {
+                    completedGroupVideoImpl(image, asset, adjustments)
                 }
             }
             if stateValue.with({ $0.avatar }) != nil {

@@ -23,7 +23,7 @@ final class PaneSearchBarPlaceholderItem: GridItem {
     let activate: () -> Void
     
     let section: GridSection? = nil
-    let fillsRowWithHeight: CGFloat? = 56.0
+    let fillsRowWithHeight: (CGFloat, Bool)? = (56.0, true)
     
     init(theme: PresentationTheme, strings: PresentationStrings, type: PaneSearchBarType, activate: @escaping () -> Void) {
         self.theme = theme

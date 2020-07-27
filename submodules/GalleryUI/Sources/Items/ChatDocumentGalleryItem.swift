@@ -28,7 +28,7 @@ class ChatDocumentGalleryItem: GalleryItem {
         self.location = location
     }
     
-    func node() -> GalleryItemNode {
+    func node(synchronous: Bool) -> GalleryItemNode {
         let node = ChatDocumentGalleryItemNode(context: self.context, presentationData: self.presentationData)
         
         for media in self.message.media {
@@ -51,7 +51,7 @@ class ChatDocumentGalleryItem: GalleryItem {
         return node
     }
     
-    func updateNode(node: GalleryItemNode) {
+    func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? ChatDocumentGalleryItemNode, let location = self.location {
             node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").0))
             node.setMessage(self.message)
@@ -311,7 +311,7 @@ class ChatDocumentGalleryItemNode: ZoomableContentGalleryItemNode, WKNavigationD
         return self._title.get()
     }
     
-    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
+    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.webView)
         let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.webView.superview)
         

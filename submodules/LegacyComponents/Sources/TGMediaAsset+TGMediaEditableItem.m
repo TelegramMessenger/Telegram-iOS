@@ -20,6 +20,11 @@
     return self.dimensions;
 }
 
+- (NSTimeInterval)originalDuration
+{
+    return self.videoDuration;
+}
+
 - (SSignal *)thumbnailImageSignal
 {
     CGFloat scale = MIN(2.0f, TGScreenScaling());

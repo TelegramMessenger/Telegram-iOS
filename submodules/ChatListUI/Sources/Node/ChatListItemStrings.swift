@@ -54,7 +54,13 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
             peer = chatPeer.chatMainPeer
         }
         
-        messageText = messages[0].text
+        messageText = ""
+        for message in messages {
+            if !message.text.isEmpty {
+                messageText = message.text
+                break
+            }
+        }
         
         var textIsReady = false
         if messages.count > 1 {
@@ -101,6 +107,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                 case let .Audio(isVoice, _, title, performer, _):
                                     if !message.text.isEmpty {
                                         messageText = "🎤 \(messageText)"
+                                        processed = true
                                     } else if isVoice {
                                         if message.text.isEmpty {
                                             messageText = strings.Message_Audio
@@ -188,7 +195,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                         messageText = invoice.title
                     case let action as TelegramMediaAction:
                         switch action.action {
-                            case let .phoneCall(_, discardReason, _):
+                            case let .phoneCall(_, discardReason, _, isVideo):
                                 hideAuthor = !isPeerGroup
                                 let incoming = message.flags.contains(.Incoming)
                                 if let discardReason = discardReason {
@@ -204,9 +211,17 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                 
                                 if messageText.isEmpty {
                                     if incoming {
-                                        messageText = strings.Notification_CallIncoming
+                                        if isVideo {
+                                            messageText = strings.Notification_VideoCallIncoming
+                                        } else {
+                                            messageText = strings.Notification_CallIncoming
+                                        }
                                     } else {
-                                        messageText = strings.Notification_CallOutgoing
+                                        if isVideo {
+                                            messageText = strings.Notification_VideoCallOutgoing
+                                        } else {
+                                            messageText = strings.Notification_CallOutgoing
+                                        }
                                     }
                                 }
                             default:

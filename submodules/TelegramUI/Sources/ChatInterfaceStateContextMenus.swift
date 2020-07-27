@@ -406,15 +406,37 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         if data.messageActions.options.contains(.rateCall) {
             var callId: CallId?
             for media in message.media {
-                if let action = media as? TelegramMediaAction, case let .phoneCall(id, discardReason, _) = action.action {
+                if let action = media as? TelegramMediaAction, case let .phoneCall(id, discardReason, _, _) = action.action {
                     if discardReason != .busy && discardReason != .missed {
                         if let logName = callLogNameForId(id: id, account: context.account) {
+                            let logsPath = callLogsPath(account: context.account)
+                            let logPath = logsPath + "/" + logName
                             let start = logName.index(logName.startIndex, offsetBy: "\(id)".count + 1)
                             let end = logName.index(logName.endIndex, offsetBy: -4)
                             let accessHash = logName[start..<end]
                             if let accessHash = Int64(accessHash) {
                                 callId = CallId(id: id, accessHash: accessHash)
                             }
+                            
+                            actions.append(.action(ContextMenuActionItem(text: "Share Statistics", icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.actionSheet.primaryTextColor)
+                            }, action: { _, f in
+                                f(.dismissWithoutContent)
+                                
+                                let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
+                                controller.peerSelected = { [weak controller] peerId in
+                                    if let strongController = controller {
+                                        strongController.dismiss()
+                                        
+                                        let id = arc4random64()
+                                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: logPath, randomId: id), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: "CallStats.log")])
+                                        let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                                        
+                                        let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
+                                    }
+                                }
+                                controllerInteraction.navigationController()?.pushViewController(controller)
+                            })))
                         }
                     }
                     break

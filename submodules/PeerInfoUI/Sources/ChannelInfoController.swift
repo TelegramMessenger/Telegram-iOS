@@ -754,7 +754,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                     }
                 }
                                 
-                let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: false, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: true)!
+                let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: false, personalPhoto: false, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: true)!
                 let _ = currentAvatarMixin.swap(mixin)
                 mixin.requestSearchController = { assetsController in
                     let controller = WebSearchController(context: context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { result in
@@ -774,7 +774,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                         if let profileImage = peer?.smallProfileImage {
                             return $0.withUpdatedUpdatingAvatar(.image(profileImage, false))
                         } else {
-                            return $0.withUpdatedUpdatingAvatar(.none)
+                            return $0.withUpdatedUpdatingAvatar(ItemListAvatarAndNameInfoItemUpdatingAvatar.none)
                         }
                     }
                     updateAvatarDisposable.set((updatePeerPhoto(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, accountPeerId: context.account.peerId, peerId: peerId, photo: nil, mapResourceToAvatarSizes: { resource, representations in
@@ -849,43 +849,6 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
             pushControllerImpl?(controller)
         }
     }, openStats: {
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        var urlSignal = channelStatsUrl(postbox: context.account.postbox, network: context.account.network, peerId: peerId, params: "", darkTheme: presentationData.theme.rootController.keyboardColor.keyboardAppearance == .dark)
-        
-        var cancelImpl: (() -> Void)?
-        let progressSignal = Signal<Never, NoError> { subscriber in
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
-                cancelImpl?()
-            }))
-            presentControllerImpl?(controller, nil)
-            return ActionDisposable { [weak controller] in
-                Queue.mainQueue().async() {
-                    controller?.dismiss()
-                }
-            }
-        }
-        |> runOn(Queue.mainQueue())
-        |> delay(0.05, queue: Queue.mainQueue())
-        let progressDisposable = progressSignal.start()
-        
-        urlSignal = urlSignal
-        |> afterDisposed {
-            Queue.mainQueue().async {
-                progressDisposable.dispose()
-            }
-        }
-        cancelImpl = {
-            statsUrlDisposable.set(nil)
-        }
-        
-        statsUrlDisposable.set((urlSignal
-        |> deliverOnMainQueue).start(next: { url in
-            pushControllerImpl?(ChannelStatsController(context: context, url: url, peerId: peerId))
-        }, error: { _ in
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-        }))
     }, openAdmins: {
         pushControllerImpl?(channelAdminsController(context: context, peerId: peerId))
     }, openMembers: {
