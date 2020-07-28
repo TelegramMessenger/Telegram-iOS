@@ -24,10 +24,110 @@ private enum ResourceFileData {
 }
 
 public func largestRepresentationForPhoto(_ photo: TelegramMediaImage) -> TelegramMediaImageRepresentation? {
+    if let progressiveRepresentation = progressiveImageRepresentation(photo.representations) {
+        return progressiveRepresentation
+    }
     return photo.representationForDisplayAtSize(PixelDimensions(width: 1280, height: 1280))
 }
 
+private let progressiveRangeMap: [(Int, [Int])] = [
+    (100, [0]),
+    (400, [2]),
+    (600, [4, 5]),
+    (Int(Int32.max), [4, 5, 8, 9])
+]
+
+public func representationFetchRangeForDisplayAtSize(representation: TelegramMediaImageRepresentation, dimension: Int) -> Range<Int>? {
+    if representation.progressiveSizes.count > 1 {
+        var largestByteSize = Int(representation.progressiveSizes[0])
+        for (maxDimension, byteSizes) in progressiveRangeMap {
+            largestByteSize = Int(representation.progressiveSizes[byteSizes.last!])
+            if maxDimension >= dimension {
+                break
+            }
+        }
+        return 0 ..< largestByteSize
+    }
+    return nil
+}
+
 public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaReference, fullRepresentationSize: CGSize = CGSize(width: 1280.0, height: 1280.0), autoFetchFullSize: Bool = false, tryAdditionalRepresentations: Bool = false, synchronousLoad: Bool = false, useMiniThumbnailIfAvailable: Bool = false) -> Signal<Tuple4<Data?, Data?, ChatMessagePhotoQuality, Bool>, NoError> {
+    if let progressiveRepresentation = progressiveImageRepresentation(photoReference.media.representations), progressiveRepresentation.progressiveSizes.count == 10 {
+        enum SizeSource {
+            case miniThumbnail(data: Data)
+            case image(size: Int)
+        }
+        
+        var sources: [SizeSource] = []
+        if let miniThumbnail = photoReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail) {
+            sources.append(.miniThumbnail(data: miniThumbnail))
+        }
+        let thumbnailByteSize = Int(progressiveRepresentation.progressiveSizes[0])
+        var largestByteSize = Int(progressiveRepresentation.progressiveSizes[0])
+        for (maxDimension, byteSizes) in progressiveRangeMap {
+            if Int(fullRepresentationSize.width) > 100 && maxDimension <= 100 {
+                continue
+            }
+            sources.append(contentsOf: byteSizes.map { sizeIndex -> SizeSource in
+                return .image(size: Int(progressiveRepresentation.progressiveSizes[sizeIndex]))
+            })
+            largestByteSize = Int(progressiveRepresentation.progressiveSizes[byteSizes.last!])
+            if maxDimension >= Int(fullRepresentationSize.width) {
+                break
+            }
+        }
+        
+        return Signal { subscriber in
+            let signals: [Signal<(SizeSource, Data?), NoError>] = sources.map { source -> Signal<(SizeSource, Data?), NoError> in
+                switch source {
+                case let .miniThumbnail(data):
+                    return .single((source, data))
+                case let .image(size):
+                    return postbox.mediaBox.resourceData(progressiveRepresentation.resource, size: Int(progressiveRepresentation.progressiveSizes.last!), in: 0 ..< size, mode: .incremental, notifyAboutIncomplete: true, attemptSynchronously: synchronousLoad)
+                    |> map { (data, _) -> (SizeSource, Data?) in
+                        return (source, data)
+                    }
+                }
+            }
+            
+            let dataDisposable = combineLatest(signals).start(next: { results in
+                var foundData = false
+                loop: for i in (0 ..< results.count).reversed() {
+                    let isLastSize = i == results.count - 1
+                    switch results[i].0 {
+                    case .image:
+                        if let data = results[i].1, data.count != 0 {
+                            subscriber.putNext(Tuple4(nil, data, .full, isLastSize))
+                            foundData = true
+                            if isLastSize {
+                                subscriber.putCompletion()
+                            }
+                            break loop
+                        }
+                    case let .miniThumbnail(thumbnailData):
+                        subscriber.putNext(Tuple4(thumbnailData, nil, .blurred, false))
+                        foundData = true
+                        break loop
+                    }
+                }
+                if !foundData {
+                    subscriber.putNext(Tuple4(nil, nil, .blurred, false))
+                }
+            })
+            var fetchDisposable: Disposable?
+            if autoFetchFullSize {
+                fetchDisposable = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: photoReference.resourceReference(progressiveRepresentation.resource), range: (0 ..< largestByteSize, .default), statsCategory: .image).start()
+            } else if useMiniThumbnailIfAvailable {
+                fetchDisposable = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: photoReference.resourceReference(progressiveRepresentation.resource), range: (0 ..< thumbnailByteSize, .default), statsCategory: .image).start()
+            }
+            
+            return ActionDisposable {
+                dataDisposable.dispose()
+                fetchDisposable?.dispose()
+            }
+        }
+    }
+    
     if let smallestRepresentation = smallestImageRepresentation(photoReference.media.representations), let largestRepresentation = photoReference.media.representationForDisplayAtSize(PixelDimensions(width: Int32(fullRepresentationSize.width), height: Int32(fullRepresentationSize.height))), let fullRepresentation = largestImageRepresentation(photoReference.media.representations) {
         let maybeFullSize = postbox.mediaBox.resourceData(largestRepresentation.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: synchronousLoad)
         let maybeLargestSize = postbox.mediaBox.resourceData(fullRepresentation.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: synchronousLoad)
@@ -1158,7 +1258,9 @@ public func mediaGridMessagePhoto(account: Account, photoReference: ImageMediaRe
     let useMiniThumbnailIfAvailable: Bool = fullRepresentationSize.width < 40.0
     var updatedFullRepresentationSize = fullRepresentationSize
     if useMiniThumbnailIfAvailable, let largest = largestImageRepresentation(photoReference.media.representations) {
-        updatedFullRepresentationSize = largest.dimensions.cgSize
+        if progressiveImageRepresentation(photoReference.media.representations) == nil {
+            updatedFullRepresentationSize = largest.dimensions.cgSize
+        }
     }
     let signal = chatMessagePhotoDatas(postbox: account.postbox, photoReference: photoReference, fullRepresentationSize: updatedFullRepresentationSize, autoFetchFullSize: true, tryAdditionalRepresentations: useMiniThumbnailIfAvailable, synchronousLoad: synchronousLoad, useMiniThumbnailIfAvailable: useMiniThumbnailIfAvailable)
     
@@ -1541,9 +1643,31 @@ public func internalMediaGridMessageVideo(postbox: Postbox, videoReference: File
     }
 }
 
-public func chatMessagePhotoStatus(context: AccountContext, messageId: MessageId, photoReference: ImageMediaReference) -> Signal<MediaResourceStatus, NoError> {
+public func chatMessagePhotoStatus(context: AccountContext, messageId: MessageId, photoReference: ImageMediaReference, displayAtSize: Int = 1000) -> Signal<MediaResourceStatus, NoError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
-        return context.fetchManager.fetchStatus(category: .image, location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: largestRepresentation.resource)
+        if let range = representationFetchRangeForDisplayAtSize(representation: largestRepresentation, dimension: displayAtSize) {
+            return combineLatest(
+                context.fetchManager.fetchStatus(category: .image, location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: largestRepresentation.resource),
+                context.account.postbox.mediaBox.resourceRangesStatus(largestRepresentation.resource)
+            )
+            |> map { status, rangeStatus -> MediaResourceStatus in
+                if rangeStatus.contains(integersIn: range) {
+                    return .Local
+                }
+                
+                switch status {
+                case .Local:
+                    return .Local
+                case .Remote:
+                    return .Remote
+                case let .Fetching(isActive, progress):
+                    return .Fetching(isActive: isActive, progress: max(progress, 0.0))
+                }
+            }
+            |> distinctUntilChanged
+        } else {
+            return context.fetchManager.fetchStatus(category: .image, location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: largestRepresentation.resource)
+        }
     } else {
         return .never()
     }
@@ -1560,15 +1684,19 @@ public func standaloneChatMessagePhotoInteractiveFetched(account: Account, photo
     }
 }
 
-public func chatMessagePhotoInteractiveFetched(context: AccountContext, photoReference: ImageMediaReference, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<FetchResourceSourceType, FetchResourceError> {
+public func chatMessagePhotoInteractiveFetched(context: AccountContext, photoReference: ImageMediaReference, displayAtSize: Int = 1000, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<FetchResourceSourceType, FetchResourceError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
-        return fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: photoReference.resourceReference(largestRepresentation.resource), statsCategory: .image, reportResultStatus: true)
+        var fetchRange: (Range<Int>, MediaBoxFetchPriority)?
+        if let range = representationFetchRangeForDisplayAtSize(representation: largestRepresentation, dimension: displayAtSize) {
+            fetchRange = (range, .default)
+        }
+        
+        return fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: photoReference.resourceReference(largestRepresentation.resource), range: fetchRange, statsCategory: .image, reportResultStatus: true)
         |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
             if case .remote = type, let peerType = storeToDownloadsPeerType {
                 return storeDownloadedMedia(storeManager: context.downloadedMediaStoreManager, media: photoReference.abstract, peerType: peerType)
                 |> castError(FetchResourceError.self)
                 |> mapToSignal { _ -> Signal<FetchResourceSourceType, FetchResourceError> in
-                    return .complete()
                 }
                 |> then(.single(type))
             }

@@ -69,6 +69,15 @@ public func imageRepresentationLargerThan(_ representations: [TelegramMediaImage
     }
 }
 
+public func progressiveImageRepresentation(_ representations: [TelegramMediaImageRepresentation]) -> TelegramMediaImageRepresentation? {
+    for representation in representations {
+        if representation.progressiveSizes.count > 1 {
+            return representation
+        }
+    }
+    return nil
+}
+
 public func parseMediaData(data: Data) -> Media? {
     let buffer = BufferReader(Buffer(data: data))
     var parseBuffer: Buffer?

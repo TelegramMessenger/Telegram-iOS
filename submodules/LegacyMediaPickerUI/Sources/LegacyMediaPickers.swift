@@ -265,7 +265,7 @@ public func legacyEnqueueGifMessage(account: Account, data: Data) -> Signal<Enqu
             if let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
                 let resource = LocalFileMediaResource(fileId: arc4random64())
                 account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
-                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource))
+                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource, progressiveSizes: []))
             }
             
             var randomId: Int64 = 0
@@ -312,7 +312,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                 let thumbnailImage = TGScaleImageToPixelSize(thumbnail, thumbnailSize)!
                                 if let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
                                     account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
-                                    representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource))
+                                    representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource, progressiveSizes: []))
                                 }
                             }
                             switch data {
@@ -324,26 +324,9 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                     if let scaledImage = TGScaleImageToPixelSize(image, scaledSize) {
                                         if let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.6) {
                                             let _ = try? scaledImageData.write(to: URL(fileURLWithPath: tempFilePath))
-                                            #if DEBUG
-                                                if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
-                                                    if false, let heicData = compressImage(scaledImage, quality: 0.65) {
-                                                        print("scaledImageData \(scaledImageData.count), heicData \(heicData.count)")
-                                                        var randomId: Int64 = 0
-                                                        arc4random_buf(&randomId, 8)
-                                                        let _ = try? heicData.write(to: URL(fileURLWithPath: tempFilePath + ".heic"))
-                                                        let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath + ".heic", randomId: randomId)
-                                                        let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "image/heic", size: nil, attributes: [.FileName(fileName: "image.heic")])
-                                                        var attributes: [MessageAttribute] = []
-                                                        if let timer = item.timer, timer > 0 && timer <= 60 {
-                                                            attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
-                                                        }
-                                                        messages.append(.message(text: caption ?? "", attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId))
-                                                    }
-                                                }
-                                            #endif
 
                                             let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath, randomId: randomId)
-                                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledSize), resource: resource))
+                                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledSize), resource: resource, progressiveSizes: []))
                                             
                                             var imageFlags: TelegramMediaImageFlags = []
                                                                                         
@@ -375,7 +358,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                     let size = CGSize(width: CGFloat(asset.pixelWidth), height: CGFloat(asset.pixelHeight))
                                     let scaledSize = size.aspectFittedOrSmaller(CGSize(width: 1280.0, height: 1280.0))
                                     let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: arc4random64())
-                                    representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledSize), resource: resource))
+                                    representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledSize), resource: resource, progressiveSizes: []))
                                     
                                     let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
                                     var attributes: [MessageAttribute] = []
@@ -442,7 +425,7 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                 let thumbnailImage = TGScaleImageToPixelSize(thumbnail, thumbnailSize)!
                                 if let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
                                     account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
-                                    previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource))
+                                    previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource, progressiveSizes: []))
                                 }
                             }
                             
