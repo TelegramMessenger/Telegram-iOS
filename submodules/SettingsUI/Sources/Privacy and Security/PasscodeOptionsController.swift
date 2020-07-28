@@ -244,6 +244,30 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                     transaction.setAccessChallengeData(challenge)
                 }).start()
                 
+                let _ = context.sharedContext.accountManager.transaction({
+                    transaction -> Void in
+                    let records = transaction.getAllRecords()
+                    let hiddenRecords = records.filter {
+                        var attributes = $0.attributes
+                        return attributes.contains { $0 is HiddenAccountAttribute } ?? false
+                    }
+                    
+                    let _ = (context.sharedContext.activeAccounts
+                    |> map { _, accounts, _ -> [Account] in
+                            let activeAccounts = accounts.map { $0.1 }
+                        
+                            for record in hiddenRecords {
+                                if let account = activeAccounts.first(where: { $0.id == record.id }) {
+                                    changeChatsAndChannelsNotifications(unmute: true, atAccount: account)
+                                }
+                            }
+                        
+                            return activeAccounts
+                        }
+                    ).start()
+                    
+                }).start()
+                                
                 let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
                     passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(challenge)))
                 })

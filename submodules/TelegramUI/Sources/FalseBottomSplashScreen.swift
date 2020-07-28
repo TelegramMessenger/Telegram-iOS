@@ -13,7 +13,7 @@ import PresentationDataUtils
 
 public enum FalseBottomSplashMode {
     case hideAccount
-    case addOneMoreAcount
+    case addOneMoreAccount
     case setMasterPasscode
     case setSecretPasscode
     case accountWasHidden
@@ -101,19 +101,19 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
 
         switch mode {
         case .hideAccount:
-            title = "Hide Account"
-            text = NSAttributedString(string: "Access different accounts depending on the passcode you enter", font: textFont, textColor: textColor)
-            buttonText = "Enable"
+            title = presentationData.strings.FalseBottom_HideAccount_Title
+            text = NSAttributedString(string: presentationData.strings.FalseBottom_HideAccount_Text, font: textFont, textColor: textColor)
+            buttonText = presentationData.strings.FalseBottom_HideAccount_Button
             
             if let path = getAppBundle().path(forResource: "TwoFactorSetupIntro", ofType: "tgs") {
                 self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct)
                 self.animationSize = CGSize(width: 124.0, height: 124.0)
                 self.animationNode.visibility = true
             }
-        case .addOneMoreAcount:
-            title = "One More Account"
-            text = NSAttributedString(string: "You have to add one more Telegram account which will always be visible", font: textFont, textColor: textColor)
-            buttonText = "Add Account"
+        case .addOneMoreAccount:
+            title = presentationData.strings.FalseBottom_AddOneMoreAccount_Title
+            text = NSAttributedString(string: presentationData.strings.FalseBottom_AddOneMoreAccount_Text, font: textFont, textColor: textColor)
+            buttonText = presentationData.strings.FalseBottom_AddOneMoreAccount_Button
             
             if let path = getAppBundle().path(forResource: "TwoFactorSetupIntro", ofType: "tgs") {
                 self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct)
@@ -122,9 +122,9 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
         }
             
         case .setMasterPasscode:
-            title = "Shared Passcode"
-            text = NSAttributedString(string: "Set up a shared passcode for all non-hidden accounts", font: textFont, textColor: textColor)
-            buttonText = "Set Passcode"
+            title = presentationData.strings.FalseBottom_SetMasterPasscode_Title
+            text = NSAttributedString(string: presentationData.strings.FalseBottom_SetMasterPasscode_Text, font: textFont, textColor: textColor)
+            buttonText = presentationData.strings.FalseBottom_SetMasterPasscode_Button
             
             if let path = getAppBundle().path(forResource: "TwoFactorSetupIntro", ofType: "tgs") {
                 self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct)
@@ -133,9 +133,9 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             }
             
         case .setSecretPasscode:
-            title = "Hidden passcode"
-            text = NSAttributedString(string: "Set up a passcode for the account you want to hide", font: textFont, textColor: textColor)
-            buttonText = "Set Passcode"
+            title = presentationData.strings.FalseBottom_SetSecretPasscode_Title
+            text = NSAttributedString(string: presentationData.strings.FalseBottom_SetSecretPasscode_Text, font: textFont, textColor: textColor)
+            buttonText = presentationData.strings.FalseBottom_SetSecretPasscode_Button
             
             if let path = getAppBundle().path(forResource: "TwoFactorSetupIntro", ofType: "tgs") {
                 self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct)
@@ -144,9 +144,9 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             }
 
         case .accountWasHidden:
-            title = "Account is hidden"
-            text = NSAttributedString(string: "Now you can open the account you need by entering the corresponding passcode", font: textFont, textColor: textColor)
-            buttonText = "Enter Passcode"
+            title = presentationData.strings.FalseBottom_AccountWasHidden_Title
+            text = NSAttributedString(string: presentationData.strings.FalseBottom_AccountWasHidden_Text, font: textFont, textColor: textColor)
+            buttonText = presentationData.strings.FalseBottom_AccountWasHidden_Button
             
             if let path = getAppBundle().path(forResource: "TwoFactorSetupDone", ofType: "tgs") {
                 self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, mode: .direct)

@@ -43,7 +43,7 @@ private func accountInfo(account: Account) -> Signal<StoredAccountInfo, NoError>
 }
 
 func sharedAccountInfos(accountManager: AccountManager, accounts: Signal<[Account], NoError>) -> Signal<StoredAccountInfos, NoError> {
-    return combineLatest(accountManager.sharedData(keys: [SharedDataKeys.proxySettings]), accounts)
+    return combineLatest(accountManager.sharedData(keys: [SharedDataKeys.proxySettings]), filterPublicAccounts(accounts, accountManager: accountManager))
     |> mapToSignal { sharedData, accounts -> Signal<StoredAccountInfos, NoError> in
         let proxySettings = sharedData.entries[SharedDataKeys.proxySettings] as? ProxySettings
         let proxy = proxySettings?.effectiveActiveServer.flatMap { proxyServer -> AccountProxyConnection? in
@@ -75,5 +75,14 @@ func storeAccountsData(rootPath: String, accounts: StoredAccountInfos) {
     guard let _ = try? data.write(to: URL(fileURLWithPath: rootPath + "/accounts-shared-data")) else {
         Logger.shared.log("storeAccountsData", "Error saving data")
         return
+    }
+}
+
+private func filterPublicAccounts(_ signal: Signal<[Account], NoError>, accountManager: AccountManager) -> Signal<[Account], NoError> {
+    signal |> mapToSignal { accounts in
+        accountManager.transaction { transaction in
+            let hiddenIds = Set(transaction.getAllRecords().filter { $0.attributes.contains(where: { $0 is HiddenAccountAttribute }) }.map { $0.id })
+            return accounts.filter { !hiddenIds.contains($0.id) }
+        }
     }
 }
