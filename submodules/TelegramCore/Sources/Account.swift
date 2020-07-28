@@ -304,6 +304,16 @@ public func setAccountRecordAccessChallengeData(transaction: AccountManagerModif
     }
 }
 
+public func changeChatsAndChannelsNotifications(unmute: Bool, atAccount account: Account) {
+    let _ = updateGlobalNotificationSettingsInteractively(postbox: account.postbox, { settings in
+        var settings = settings
+        settings.privateChats.enabled = unmute
+        settings.groupChats.enabled = unmute
+        settings.channels.enabled = unmute
+        return settings
+    }).start()
+}
+
 public enum TwoStepPasswordDerivation {
     case unknown
     case sha256_sha256_PBKDF2_HMAC_sha512_sha256_srp(salt1: Data, salt2: Data, iterations: Int32, g: Int32, p: Data)
@@ -1240,16 +1250,6 @@ public class Account {
         if let object = Api.parse(Buffer(data: serializedData)) {
             //self.stateManager.addUpdates()
         }
-    }
-    
-    public func notifications(mute: Bool) {
-        let _ = updateGlobalNotificationSettingsInteractively(postbox: postbox, { settings in
-            var settings = settings
-            settings.privateChats.enabled = mute
-            settings.groupChats.enabled = mute
-            settings.channels.enabled = mute
-            return settings
-        }).start()
     }
 }
 

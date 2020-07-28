@@ -2044,7 +2044,7 @@ final class SharedApplicationContext {
                     if hasOtherAccounts {
                         completion()
                     } else {
-                        showSplashScreen(.addOneMoreAcount, true, {
+                        showSplashScreen(.addOneMoreAccount, true, {
                             let isTestingEnvironment = context.context.account.testingEnvironment
                             context.sharedApplicationContext.sharedContext.beginNewAuthAndContinueFalseBottomFlow(testingEnvironment: isTestingEnvironment)
                         })
@@ -2052,7 +2052,7 @@ final class SharedApplicationContext {
                 })
             }
                                                          
-            context.rootController.chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .falseBottom(title: "Hide account", cancel: "Cancel"), elevatedLayout: false, animateInAsReplacement: false, action: { value in
+            context.rootController.chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .falseBottom(title: presentationData.strings.FalseBottom_Toast_HideAccount, cancel: presentationData.strings.Common_Cancel), elevatedLayout: true, animateInAsReplacement: false, action: { value in
                     guard value != .undo else { return false }
                 
                     showSplashScreen(.hideAccount, true, {
@@ -2064,7 +2064,7 @@ final class SharedApplicationContext {
                     })
                     return true
                 }
-            ), in: .current)
+            ), in: .window(.root))
         }))
     }
     
@@ -2157,6 +2157,18 @@ final class SharedApplicationContext {
                             }
                             
                             if let id = id {
+                                let _ = (accountContext.activeAccounts
+                                |> map { _, accounts, _ -> [Account] in
+                                        let activeAccounts = accounts.map { $0.1 }
+                                    
+                                        if let account = activeAccounts.first(where: { $0.id == id }) {
+                                            changeChatsAndChannelsNotifications(unmute: false, atAccount: account)
+                                        }
+                                    
+                                        return activeAccounts
+                                    }
+                                ).start()
+                                
                                 setAccountRecordAccessChallengeData(transaction: transaction, id: id, accessChallengeData: data)
                             }
 
