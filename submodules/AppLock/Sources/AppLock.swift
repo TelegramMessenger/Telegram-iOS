@@ -278,7 +278,7 @@ public final class AppLockContextImpl: AppLockContext {
 
             guard let strongSelf = self, let coveringView = strongSelf.coveringView, let window = strongSelf.window else { return }
             
-            Queue.mainQueue().after(0.01, {
+            Queue.mainQueue().after(0.1, {
                 coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
                 window.coveringView = coveringView
             })
