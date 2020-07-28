@@ -328,6 +328,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         
         self.scrollNode.view.isScrollEnabled = !isStandaloneModal
         
+        let isLandscape = layout.orientation == .landscape
         let containerLayout: ContainerViewLayout
         let containerFrame: CGRect
         let containerScale: CGFloat
@@ -336,7 +337,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             self.panRecognizer?.isEnabled = true
             self.dim.backgroundColor = UIColor(white: 0.0, alpha: 0.25)
             self.container.clipsToBounds = true
-            if isStandaloneModal {
+            if isStandaloneModal || isLandscape {
                 self.container.cornerRadius = 0.0
             } else {
                 self.container.cornerRadius = 10.0
@@ -351,7 +352,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             }
             
             var topInset: CGFloat
-            if isStandaloneModal {
+            if isStandaloneModal || isLandscape {
                 topInset = 0.0
                 containerLayout = layout
                 
