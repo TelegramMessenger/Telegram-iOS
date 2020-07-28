@@ -2119,14 +2119,14 @@ final class SharedApplicationContext {
                             innerCompletion()
                         })
                     }
-                    context.rootController.pushViewController(setupController, animated: true)
+                    context.rootController.replaceTopController(setupController, animated: true)
                 }
                 
                 checkMasterPassode({ isMasterPasscodeSet in
                     if isMasterPasscodeSet {
                         completion()
                     } else {
-                        showSplashScreen(.setMasterPasscode, true, {
+                        showSplashScreen(.setMasterPasscode, false, {
                             setupMasterPasscode(completion)
                         })
                     }
@@ -2185,7 +2185,7 @@ final class SharedApplicationContext {
                     replaceTopControllerImpl(setupController, false)
                 }
                 
-                showSplashScreen(.setSecretPasscode, true, addFalseBottomToCurrentAccount)
+                showSplashScreen(.setSecretPasscode, false, addFalseBottomToCurrentAccount)
             }
 
             showMasterPasscodeScreenIfNeeded(showSecretPasscodeScreen)
