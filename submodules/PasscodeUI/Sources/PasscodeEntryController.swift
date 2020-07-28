@@ -56,7 +56,9 @@ public final class PasscodeEntryController: ViewController {
     private var skipNextBiometricsRequest = false
     
     private var inBackground: Bool = false
+    private var isActive: Bool = false
     private var inBackgroundDisposable: Disposable?
+    private var isActiveDisposable: Disposable?
     
     private let hiddenAccountsAccessChallengeData: [AccountRecordId:PostboxAccessChallengeData]
     
@@ -93,12 +95,21 @@ public final class PasscodeEntryController: ViewController {
                 strongSelf.skipNextBiometricsRequest = false
             }
         })
+        
+        self.isActiveDisposable = (applicationBindings.applicationIsActive
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.isActive = value
+        })
     }
     
     deinit {
         self.presentationDataDisposable?.dispose()
         self.biometricsDisposable.dispose()
         self.inBackgroundDisposable?.dispose()
+        self.isActiveDisposable?.dispose()
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -216,7 +227,11 @@ public final class PasscodeEntryController: ViewController {
         self.view.disablesInteractiveTransitionGestureRecognizer = true
         
         self.controllerNode.activateInput()
-        if self.arguments.animated {
+        if !isActive {
+            self.controllerNode.initialAppearance()
+            self.presentationCompleted?()
+        }
+        else if self.arguments.animated {
             self.controllerNode.animateIn(iconFrame: self.arguments.lockIconInitialFrame(), completion: { [weak self] in
                 self?.presentationCompleted?()
             })
