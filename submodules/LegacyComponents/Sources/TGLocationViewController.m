@@ -71,6 +71,8 @@
     bool _throttle;
     TGLocationPinAnnotationView *_ownLiveLocationView;
     __weak MKAnnotationView *_userLocationView;
+    
+    UIImageView *_headingArrowView;
 }
 @end
 
@@ -162,6 +164,8 @@
     [_liveLocationsDisposable dispose];
     [_reloadDisposable dispose];
     [_frequentUpdatesDisposable dispose];
+    
+    [_locationManager stopUpdatingHeading];
 }
 
 - (void)tg_setRightBarButtonItem:(UIBarButtonItem *)barButtonItem action:(bool)action animated:(bool)animated {
@@ -438,6 +442,36 @@
 {
     [super loadView];
     
+    static UIImage *headingArrowImage = nil;
+    static dispatch_once_t onceToken;
+
+    dispatch_once(&onceToken, ^
+    {
+        UIGraphicsBeginImageContextWithOptions(CGSizeMake(28.0f, 28.0f), false, 0.0f);
+        CGContextRef context = UIGraphicsGetCurrentContext();
+        
+        CGContextClearRect(context, CGRectMake(0, 0, 28, 28));
+        
+        CGContextSetFillColorWithColor(context, UIColorRGB(0x3393fe).CGColor);
+    
+        CGContextMoveToPoint(context, 14, 0);
+        CGContextAddLineToPoint(context, 19, 7);
+        CGContextAddLineToPoint(context, 9, 7);
+        CGContextClosePath(context);
+        CGContextFillPath(context);
+        
+        CGContextSetBlendMode(context, kCGBlendModeClear);
+        CGContextFillEllipseInRect(context, CGRectMake(5.0, 5.0, 18.0, 18.0));
+
+        headingArrowImage = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+    });
+
+    _headingArrowView = [[UIImageView alloc] init];
+    _headingArrowView.hidden = true;
+    _headingArrowView.frame = CGRectMake(0.0, 0.0, 28.0, 28.0);
+    _headingArrowView.image = headingArrowImage;
+    
     _tableView.scrollsToTop = false;
     _mapView.tapEnabled = false;
     
@@ -494,6 +528,8 @@
 - (void)viewWillAppear:(BOOL)animated
 {
     [super viewWillAppear:animated];
+    
+    [_locationManager startUpdatingHeading];
     
     if (self.previewMode && !animated)
     {
@@ -950,6 +986,9 @@
         {
             _userLocationView = view;
             
+            [_userLocationView addSubview:_headingArrowView];
+            _headingArrowView.center = CGPointMake(view.frame.size.width / 2.0, view.frame.size.height / 2.0);
+            
             if (_ownLiveLocationView != nil)
             {
                 [_userLocationView addSubview:_ownLiveLocationView];
@@ -980,6 +1019,14 @@
 - (CLLocationCoordinate2D)locationCoordinate
 {
     return CLLocationCoordinate2DMake(_locationAttachment.latitude, _locationAttachment.longitude);
+}
+
+- (void)locationManager:(CLLocationManager *)manager didUpdateHeading:(CLHeading *)newHeading
+{
+    if (newHeading != nil) {
+        _headingArrowView.hidden = false;
+        _headingArrowView.transform = CGAffineTransformMakeRotation(newHeading.magneticHeading / 180.0 * M_PI);
+    }
 }
 
 #pragma mark -

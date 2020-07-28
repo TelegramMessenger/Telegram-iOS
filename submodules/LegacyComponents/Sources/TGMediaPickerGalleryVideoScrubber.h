@@ -45,8 +45,6 @@
 
 - (void)setThumbnailImage:(UIImage *)image forTimestamp:(NSTimeInterval)timestamp index:(NSInteger)index isSummaryThubmnail:(bool)isSummaryThumbnail;
 
-- (void)setRecipientName:(NSString *)recipientName;
-
 - (CGPoint)scrubberPositionForPosition:(NSTimeInterval)position;
 
 - (void)_updateScrubberAnimationsAndResetCurrentPosition:(bool)resetCurrentPosition;

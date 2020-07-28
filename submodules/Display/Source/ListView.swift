@@ -184,6 +184,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     
     public final var keepMinimalScrollHeightWithTopInset: CGFloat?
     
+    public final var itemNodeHitTest: ((CGPoint) -> Bool)?
+    
     public final var stackFromBottom: Bool = false
     public final var stackFromBottomInsetItemFactor: CGFloat = 0.0
     public final var limitHitTestToNodes: Bool = false
@@ -3876,67 +3878,73 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         
         self.touchesPosition = touchesPosition
-        self.selectionTouchLocation = touches.first!.location(in: self.view)
         
-        self.selectionTouchDelayTimer?.invalidate()
-        self.selectionLongTapDelayTimer?.invalidate()
-        self.selectionLongTapDelayTimer = nil
-        let timer = Timer(timeInterval: 0.08, target: ListViewTimerProxy { [weak self] in
-            if let strongSelf = self, strongSelf.selectionTouchLocation != nil {
-                strongSelf.clearHighlightAnimated(false)
-                
-                if let index = strongSelf.itemIndexAtPoint(strongSelf.touchesPosition) {
-                    var canBeSelectedOrLongTapped = false
-                    for itemNode in strongSelf.itemNodes {
-                        if itemNode.index == index && (strongSelf.items[index].selectable && itemNode.canBeSelected) || itemNode.canBeLongTapped {
-                            canBeSelectedOrLongTapped = true
-                        }
-                    }
+        var processSelection = true
+        if let itemNodeHitTest = self.itemNodeHitTest, !itemNodeHitTest(touchesPosition) {
+            processSelection = false
+        }
+        
+        if processSelection {
+            self.selectionTouchLocation = touches.first!.location(in: self.view)
+            self.selectionTouchDelayTimer?.invalidate()
+            self.selectionLongTapDelayTimer?.invalidate()
+            self.selectionLongTapDelayTimer = nil
+            let timer = Timer(timeInterval: 0.08, target: ListViewTimerProxy { [weak self] in
+                if let strongSelf = self, strongSelf.selectionTouchLocation != nil {
+                    strongSelf.clearHighlightAnimated(false)
                     
-                    if canBeSelectedOrLongTapped {
-                        strongSelf.highlightedItemIndex = index
+                    if let index = strongSelf.itemIndexAtPoint(strongSelf.touchesPosition) {
+                        var canBeSelectedOrLongTapped = false
                         for itemNode in strongSelf.itemNodes {
-                            if itemNode.index == index && itemNode.canBeSelected {
-                                if true {
-                                    if !itemNode.isLayerBacked {
-                                        strongSelf.reorderItemNodeToFront(itemNode)
-                                        for (_, headerNode) in strongSelf.itemHeaderNodes {
-                                            strongSelf.reorderHeaderNodeToFront(headerNode)
+                            if itemNode.index == index && (strongSelf.items[index].selectable && itemNode.canBeSelected) || itemNode.canBeLongTapped {
+                                canBeSelectedOrLongTapped = true
+                            }
+                        }
+                        
+                        if canBeSelectedOrLongTapped {
+                            strongSelf.highlightedItemIndex = index
+                            for itemNode in strongSelf.itemNodes {
+                                if itemNode.index == index && itemNode.canBeSelected {
+                                    if true {
+                                        if !itemNode.isLayerBacked {
+                                            strongSelf.reorderItemNodeToFront(itemNode)
+                                            for (_, headerNode) in strongSelf.itemHeaderNodes {
+                                                strongSelf.reorderHeaderNodeToFront(headerNode)
+                                            }
                                         }
-                                    }
-                                    let itemNodeFrame = itemNode.frame
-                                    let itemNodeBounds = itemNode.bounds
-                                    if strongSelf.items[index].selectable {
-                                        itemNode.setHighlighted(true, at: strongSelf.touchesPosition.offsetBy(dx: -itemNodeFrame.minX + itemNodeBounds.minX, dy: -itemNodeFrame.minY + itemNodeBounds.minY), animated: false)
-                                    }
-                                    
-                                    if itemNode.canBeLongTapped {
-                                        let timer = Timer(timeInterval: 0.3, target: ListViewTimerProxy {
-                                            if let strongSelf = self, strongSelf.highlightedItemIndex == index {
-                                                for itemNode in strongSelf.itemNodes {
-                                                    if itemNode.index == index && itemNode.canBeLongTapped {
-                                                        itemNode.longTapped()
-                                                        strongSelf.clearHighlightAnimated(true)
-                                                        strongSelf.selectionTouchLocation = nil
-                                                        break
+                                        let itemNodeFrame = itemNode.frame
+                                        let itemNodeBounds = itemNode.bounds
+                                        if strongSelf.items[index].selectable {
+                                            itemNode.setHighlighted(true, at: strongSelf.touchesPosition.offsetBy(dx: -itemNodeFrame.minX + itemNodeBounds.minX, dy: -itemNodeFrame.minY + itemNodeBounds.minY), animated: false)
+                                        }
+                                        
+                                        if itemNode.canBeLongTapped {
+                                            let timer = Timer(timeInterval: 0.3, target: ListViewTimerProxy {
+                                                if let strongSelf = self, strongSelf.highlightedItemIndex == index {
+                                                    for itemNode in strongSelf.itemNodes {
+                                                        if itemNode.index == index && itemNode.canBeLongTapped {
+                                                            itemNode.longTapped()
+                                                            strongSelf.clearHighlightAnimated(true)
+                                                            strongSelf.selectionTouchLocation = nil
+                                                            break
+                                                        }
                                                     }
                                                 }
-                                            }
-                                        }, selector: #selector(ListViewTimerProxy.timerEvent), userInfo: nil, repeats: false)
-                                        strongSelf.selectionLongTapDelayTimer = timer
-                                        RunLoop.main.add(timer, forMode: RunLoop.Mode.common)
+                                            }, selector: #selector(ListViewTimerProxy.timerEvent), userInfo: nil, repeats: false)
+                                            strongSelf.selectionLongTapDelayTimer = timer
+                                            RunLoop.main.add(timer, forMode: RunLoop.Mode.common)
+                                        }
                                     }
+                                    break
                                 }
-                                break
                             }
                         }
                     }
                 }
-            }
-        }, selector: #selector(ListViewTimerProxy.timerEvent), userInfo: nil, repeats: false)
-        self.selectionTouchDelayTimer = timer
-        RunLoop.main.add(timer, forMode: RunLoop.Mode.common)
-        
+            }, selector: #selector(ListViewTimerProxy.timerEvent), userInfo: nil, repeats: false)
+            self.selectionTouchDelayTimer = timer
+            RunLoop.main.add(timer, forMode: RunLoop.Mode.common)
+        }
         super.touchesBegan(touches, with: event)
         
         self.updateScroller(transition: .immediate)

@@ -126,7 +126,7 @@
         CGRect rect = CGRectMake(0, 0, 39.0f, 39.0f);
         UIGraphicsBeginImageContextWithOptions(rect.size, false, 0);
         CGContextRef context = UIGraphicsGetCurrentContext();
-        CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.6f).CGColor);
+        CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.3f).CGColor);
         CGContextFillEllipseInRect(context, CGRectInset(rect, 3, 3));
         
         muteBackground = UIGraphicsGetImageFromCurrentImageContext();

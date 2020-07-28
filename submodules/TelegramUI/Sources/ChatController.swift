@@ -570,6 +570,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if strongSelf.presentationInterfaceState.interfaceState.selectionState != nil {
                 return
             }
+            
+            strongSelf.dismissAllTooltips()
+            
             let recognizer: TapLongTapOrDoubleTapGestureRecognizer? = anyRecognizer as? TapLongTapOrDoubleTapGestureRecognizer
             let gesture: ContextGesture? = anyRecognizer as? ContextGesture
             if let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(message.id) {
@@ -1985,7 +1988,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
         }, displaySwipeToReplyHint: {  [weak self] in
             if let strongSelf = self, let validLayout = strongSelf.validLayout, min(validLayout.size.width, validLayout.size.height) > 320.0 {
-                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .swipeToReply(title: strongSelf.presentationData.strings.Conversation_SwipeToReplyHintTitle, text: strongSelf.presentationData.strings.Conversation_SwipeToReplyHintText), elevatedLayout: true, action: { _ in return false }), in: .window(.root))
+                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .swipeToReply(title: strongSelf.presentationData.strings.Conversation_SwipeToReplyHintTitle, text: strongSelf.presentationData.strings.Conversation_SwipeToReplyHintText), elevatedLayout: false, action: { _ in return false }), in: .current)
             }
         }, dismissReplyMarkupMessage: { [weak self] message in
             guard let strongSelf = self, strongSelf.presentationInterfaceState.keyboardButtonsMessage?.id == message.id else {
@@ -2044,6 +2047,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
+            
+            if strongSelf.presentationInterfaceState.interfaceState.selectionState != nil {
+                return
+            }
+            
+            strongSelf.dismissAllTooltips()
+            
             let context = strongSelf.context
             let _ = (context.account.postbox.transaction { transaction -> Peer? in
                 return transaction.getPeer(peer.id)
@@ -5228,18 +5238,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.dismissAllTooltips()
         
-        self.window?.forEachController({ controller in
-            if let controller = controller as? UndoOverlayController {
-                controller.dismissWithCommitAction()
-            }
-        })
-        self.forEachController({ controller in
-            if let controller = controller as? TooltipScreen {
-                controller.dismiss()
-            }
-            return true
-        })
-        
         self.sendMessageActionsController?.dismiss()
         
         if let _ = self.peekData {
@@ -6077,7 +6075,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 disposable.set((signal
                                 |> deliverOnMainQueue).start(completed: { [weak self] in
                                     if let strongSelf = self, let _ = strongSelf.validLayout {
-                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", stringForDeviceType()).0), elevatedLayout: true, action: { _ in return false }), in: .current)
+                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", stringForDeviceType()).0), elevatedLayout: false, action: { _ in return false }), in: .current)
                                     }
                                 }))
 
@@ -7118,12 +7116,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
         }
         if let value = value {
-            self.present(UndoOverlayController(presentationData: self.presentationData, content: .dice(dice: dice, account: self.context.account, text: value, action: canSendMessagesToChat(self.presentationInterfaceState) ? self.presentationData.strings.Conversation_SendDice : nil), elevatedLayout: true, action: { [weak self] action in
+            self.present(UndoOverlayController(presentationData: self.presentationData, content: .dice(dice: dice, account: self.context.account, text: value, action: canSendMessagesToChat(self.presentationInterfaceState) ? self.presentationData.strings.Conversation_SendDice : nil), elevatedLayout: false, action: { [weak self] action in
                 if let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState), action == .undo {
                     strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: dice.emoji)), replyToMessageId: nil, localGroupingKey: nil)])
                 }
                 return false
-            }), in: .window(.root))
+            }), in: .current)
         }
     }
     
@@ -9179,6 +9177,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.silentPostTooltipController?.dismiss()
         self.mediaRecordingModeTooltipController?.dismiss()
         self.mediaRestrictedTooltipController?.dismiss()
+        
+        self.window?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+        })
+        self.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+            if let controller = controller as? TooltipScreen {
+                controller.dismiss()
+            }
+            return true
+        })
     }
     
     private func commitPurposefulAction() {
