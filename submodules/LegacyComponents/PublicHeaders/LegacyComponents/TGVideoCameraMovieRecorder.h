@@ -16,6 +16,7 @@
 - (void)prepareToRecord;
 
 - (void)appendVideoPixelBuffer:(CVPixelBufferRef)pixelBuffer withPresentationTime:(CMTime)presentationTime;
+- (void)appendVideoSampleBuffer:(CMSampleBufferRef)sampleBuffer;
 - (void)appendAudioSampleBuffer:(CMSampleBufferRef)sampleBuffer;
 
 - (void)finishRecording:(void(^)())completed;

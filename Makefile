@@ -1,6 +1,6 @@
 .PHONY : check_env build build_arm64 build_debug_arm64 package package_arm64 app app_arm64 app_debug_arm64 build_buckdebug build_verbose kill_xcode clean project project_buckdebug temp
 
-export BUCK=buck
+export BUCK=~/buck_source/buck/buck-out/gen/programs/buck.pex
 export TELEGRAM_ENV_SET=1
 export DEVELOPMENT_CODE_SIGN_IDENTITY=iPhone Distribution: Digital Fortress LLC (C67CF9S4VU)
 export DISTRIBUTION_CODE_SIGN_IDENTITY=iPhone Distribution: Digital Fortress LLC (C67CF9S4VU)
@@ -42,7 +42,7 @@ export PACKAGE_METHOD=appstore
 include Utils.makefile
 
 
-APP_VERSION="6.2.1"
+APP_VERSION="6.3"
 CORE_COUNT=$(shell sysctl -n hw.logicalcpu)
 CORE_COUNT_MINUS_ONE=$(shell expr ${CORE_COUNT} \- 1)
 

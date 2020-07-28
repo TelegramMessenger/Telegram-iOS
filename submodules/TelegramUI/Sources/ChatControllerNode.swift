@@ -12,6 +12,15 @@ import TextFormat
 import AccountContext
 import TelegramNotices
 import ReactionSelectionNode
+import TelegramUniversalVideoContent
+
+final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
+    let itemNode: OverlayMediaItemNode
+    
+    init(itemNode: OverlayMediaItemNode) {
+        self.itemNode = itemNode
+    }
+}
 
 private final class ChatControllerNodeView: UITracingLayerView, WindowInputAccessoryHeightProvider, PreviewingHostView {
     var inputAccessoryHeight: (() -> CGFloat)?
@@ -56,6 +65,224 @@ private struct ChatControllerNodeDerivedLayoutState {
     var upperInputPositionBound: CGFloat?
 }
 
+private final class ChatEmbeddedTitleContentNode: ASDisplayNode {
+    private let context: AccountContext
+    private let backgroundNode: ASDisplayNode
+    private let statusBarBackgroundNode: ASDisplayNode
+    private let videoNode: OverlayUniversalVideoNode
+    private let disableInternalAnimationIn: Bool
+    private let isUIHiddenUpdated: () -> Void
+    private let unembedWhenPortrait: (OverlayMediaItemNode) -> Bool
+    
+    private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
+    
+    private let dismissed: () -> Void
+    private let interactiveExtensionUpdated: (ContainedViewLayoutTransition) -> Void
+    
+    private(set) var interactiveExtension: CGFloat = 0.0
+    private var freezeInteractiveExtension = false
+    
+    private(set) var isUIHidden: Bool = false
+    
+    var unembedOnLeave: Bool = true
+    
+    init(context: AccountContext, videoNode: OverlayUniversalVideoNode, disableInternalAnimationIn: Bool, interactiveExtensionUpdated: @escaping (ContainedViewLayoutTransition) -> Void, dismissed: @escaping () -> Void, isUIHiddenUpdated: @escaping () -> Void, unembedWhenPortrait: @escaping (OverlayMediaItemNode) -> Bool) {
+        self.dismissed = dismissed
+        self.interactiveExtensionUpdated = interactiveExtensionUpdated
+        self.isUIHiddenUpdated = isUIHiddenUpdated
+        self.unembedWhenPortrait = unembedWhenPortrait
+        self.disableInternalAnimationIn = disableInternalAnimationIn
+        
+        self.context = context
+        
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.backgroundColor = .black
+        
+        self.statusBarBackgroundNode = ASDisplayNode()
+        self.statusBarBackgroundNode.backgroundColor = .black
+        
+        self.videoNode = videoNode
+        
+        super.init()
+        
+        self.clipsToBounds = true
+        
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.statusBarBackgroundNode)
+        
+        self.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
+        
+        self.videoNode.controlsAreShowingUpdated = { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.isUIHidden = !value
+            strongSelf.isUIHiddenUpdated()
+        }
+    }
+    
+    @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+        switch recognizer.state {
+        case .began:
+            break
+        case .changed:
+            let translation = recognizer.translation(in: self.view)
+            
+            func rubberBandingOffset(offset: CGFloat, bandingStart: CGFloat) -> CGFloat {
+                let bandedOffset = offset - bandingStart
+                let range: CGFloat = 600.0
+                let coefficient: CGFloat = 0.4
+                return bandingStart + (1.0 - (1.0 / ((bandedOffset * coefficient / range) + 1.0))) * range
+            }
+            
+            let offset = rubberBandingOffset(offset: translation.y, bandingStart: 0.0)
+            
+            if translation.y > 80.0 {
+                self.freezeInteractiveExtension = true
+                self.expandIntoPiP()
+            } else {
+                self.interactiveExtension = max(0.0, offset)
+                self.interactiveExtensionUpdated(.immediate)
+            }
+        case .cancelled, .ended:
+            if !freezeInteractiveExtension {
+                self.interactiveExtension = 0.0
+                self.interactiveExtensionUpdated(.animated(duration: 0.3, curve: .spring))
+            }
+        default:
+            break
+        }
+    }
+    
+    func calculateHeight(width: CGFloat) -> CGFloat {
+        return self.videoNode.content.dimensions.aspectFilled(CGSize(width: width, height: 16.0)).height
+    }
+    
+    func updateLayout(size: CGSize, actualHeight: CGFloat, topInset: CGFloat, interactiveExtension: CGFloat, transition: ContainedViewLayoutTransition, transitionSurface: ASDisplayNode?, navigationBar: NavigationBar?) {
+        let isFirstTime = self.validLayout == nil
+        
+        self.validLayout = (size, actualHeight, topInset, interactiveExtension)
+        let videoSize = CGSize(width: size.width, height: actualHeight)
+        
+        let videoFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset + interactiveExtension + floor((size.height - actualHeight) / 2.0)), size: CGSize(width: videoSize.width, height: videoSize.height - topInset - interactiveExtension))
+        
+        if isFirstTime, let transitionSurface = transitionSurface {
+            let sourceFrame = self.videoNode.view.convert(self.videoNode.bounds, to: transitionSurface.view)
+            let targetFrame = self.view.convert(videoFrame, to: transitionSurface.view)
+            
+            var navigationBarCopy: UIView?
+            var navigationBarContainer: UIView?
+            var nodeTransition = transition
+            if self.disableInternalAnimationIn {
+                nodeTransition = .immediate
+            } else {
+                self.context.sharedContext.mediaManager.setOverlayVideoNode(nil)
+                transitionSurface.addSubnode(self.videoNode)
+                
+                navigationBarCopy = navigationBar?.view.snapshotView(afterScreenUpdates: true)
+                let navigationBarContainerValue = UIView()
+                navigationBarContainer = navigationBarContainerValue
+                navigationBarContainerValue.frame = targetFrame
+                navigationBarContainerValue.clipsToBounds = true
+                transitionSurface.view.addSubview(navigationBarContainerValue)
+            }
+            
+            if !self.disableInternalAnimationIn {
+                navigationBarContainer?.layer.animateFrame(from: sourceFrame, to: targetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+            }
+            
+            if !self.disableInternalAnimationIn {
+                if let navigationBar = navigationBar, let navigationBarCopy = navigationBarCopy {
+                    let navigationFrame = navigationBar.view.convert(navigationBar.bounds, to: transitionSurface.view)
+                    let navigationSourceFrame = navigationFrame.offsetBy(dx: -sourceFrame.minX, dy: -sourceFrame.minY)
+                    let navigationTargetFrame = navigationFrame.offsetBy(dx: -targetFrame.minX, dy: -targetFrame.minY)
+                    navigationBarCopy.frame = navigationTargetFrame
+                    navigationBarContainer?.addSubview(navigationBarCopy)
+                    
+                    navigationBarCopy.layer.animateFrame(from: navigationSourceFrame, to: navigationTargetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+                    navigationBarCopy.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+                }
+            }
+            
+            self.videoNode.updateRoundCorners(false, transition: nodeTransition)
+            if !self.disableInternalAnimationIn {
+                self.videoNode.showControls()
+            }
+            
+            self.videoNode.updateLayout(targetFrame.size, transition: nodeTransition)
+            self.videoNode.frame = targetFrame
+            if self.disableInternalAnimationIn {
+                self.insertSubnode(self.videoNode, belowSubnode: self.statusBarBackgroundNode)
+            } else {
+                self.videoNode.layer.animateFrame(from: sourceFrame, to: targetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak self] _ in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    navigationBarContainer?.removeFromSuperview()
+                    strongSelf.insertSubnode(strongSelf.videoNode, belowSubnode: strongSelf.statusBarBackgroundNode)
+                    if let (size, actualHeight, topInset, interactiveExtension) = strongSelf.validLayout {
+                        strongSelf.updateLayout(size: size, actualHeight: actualHeight, topInset: topInset, interactiveExtension: interactiveExtension, transition: .immediate, transitionSurface: nil, navigationBar: nil)
+                    }
+                })
+                self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
+         
+            self.videoNode.customClose = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.videoNode.customClose = nil
+                strongSelf.dismissed()
+            }
+        }
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+        transition.updateFrame(node: self.statusBarBackgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: topInset)))
+        
+        if self.videoNode.supernode == self {
+            self.videoNode.layer.transform = CATransform3DIdentity
+            transition.updateFrame(node: self.videoNode, frame: videoFrame)
+        }
+    }
+    
+    func expand(intoLandscape: Bool) {
+        if intoLandscape {
+            let unembedWhenPortrait = self.unembedWhenPortrait
+            self.videoNode.customUnembedWhenPortrait = { videoNode in
+                unembedWhenPortrait(videoNode)
+            }
+        }
+        self.videoNode.expand()
+    }
+    
+    func expandIntoPiP() {
+        let transition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .spring)
+        
+        self.videoNode.customExpand = nil
+        self.videoNode.customClose = nil
+        
+        let previousFrame = self.videoNode.frame
+        self.context.sharedContext.mediaManager.setOverlayVideoNode(self.videoNode)
+        self.videoNode.updateRoundCorners(true, transition: transition)
+        
+        if let targetSuperview = self.videoNode.view.superview {
+            let sourceFrame = self.view.convert(previousFrame, to: targetSuperview)
+            let targetFrame = self.videoNode.frame
+            self.videoNode.frame = sourceFrame
+            self.videoNode.updateLayout(sourceFrame.size, transition: .immediate)
+            
+            transition.updateFrame(node: self.videoNode, frame: targetFrame)
+            self.videoNode.updateLayout(targetFrame.size, transition: transition)
+        }
+        
+        self.dismissed()
+    }
+}
+
+enum ChatEmbeddedTitlePeekContent: Equatable {
+    case none
+    case peek
+}
+
 class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let context: AccountContext
     let chatLocation: ChatLocation
@@ -63,6 +290,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private weak var controller: ChatControllerImpl?
     
     let navigationBar: NavigationBar?
+    private let navigationBarBackroundNode: ASDisplayNode
+    private let navigationBarSeparatorNode: ASDisplayNode
     
     private var backgroundEffectNode: ASDisplayNode?
     private var containerBackgroundNode: ASImageNode?
@@ -204,6 +433,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var onLayoutCompletions: [(ContainedViewLayoutTransition) -> Void] = []
     
+    private var embeddedTitlePeekContent: ChatEmbeddedTitlePeekContent = .none
+    private var embeddedTitleContentNode: ChatEmbeddedTitleContentNode?
+    private var dismissedEmbeddedTitleContentNode: ChatEmbeddedTitleContentNode?
+    var hasEmbeddedTitleContent: Bool {
+        return self.embeddedTitleContentNode != nil
+    }
+    private var didProcessExperimentalEmbedUrl: String?
+    
     init(context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: MediaAutoDownloadSettings, navigationBar: NavigationBar?, controller: ChatControllerImpl?) {
         self.context = context
         self.chatLocation = chatLocation
@@ -247,6 +484,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.navigateButtons = ChatHistoryNavigationButtons(theme: self.chatPresentationInterfaceState.theme)
         self.navigateButtons.accessibilityElementsHidden = true
+        
+        self.navigationBarBackroundNode = ASDisplayNode()
+        self.navigationBarBackroundNode.backgroundColor = chatPresentationInterfaceState.theme.rootController.navigationBar.backgroundColor
+        
+        self.navigationBarSeparatorNode = ASDisplayNode()
+        self.navigationBarSeparatorNode.backgroundColor = chatPresentationInterfaceState.theme.rootController.navigationBar.separatorColor
         
         super.init()
         
@@ -328,6 +571,13 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.addSubnode(self.inputContextPanelContainer)
         
         self.addSubnode(self.navigateButtons)
+        
+        self.addSubnode(self.navigationBarBackroundNode)
+        self.addSubnode(self.navigationBarSeparatorNode)
+        if !self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding {
+            self.navigationBarBackroundNode.isHidden = true
+            self.navigationBarSeparatorNode.isHidden = true
+        }
         
         self.historyNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         
@@ -453,7 +703,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private func updateIsEmpty(_ isEmpty: Bool, animated: Bool) {
         if isEmpty && self.emptyNode == nil {
-            let emptyNode = ChatEmptyNode(accountPeerId: self.context.account.peerId)
+            let emptyNode = ChatEmptyNode(account: self.context.account, interaction: self.interfaceInteraction)
             if let (size, insets) = self.validEmptyNodeLayout {
                 emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, size: size, insets: insets, transition: .immediate)
             }
@@ -472,6 +722,20 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             } else {
                 emptyNode.removeFromSupernode()
             }
+        }
+    }
+    
+    var greetingStickerNode: (ASDisplayNode, ASDisplayNode, ASDisplayNode, () -> Void)? {
+        if let greetingStickerNode = self.emptyNode?.greetingStickerNode {
+            self.historyNode.itemHeaderNodesAlpha = 0.0
+            return (greetingStickerNode, self, self.historyNode, { [weak self] in
+                self?.historyNode.forEachItemHeaderNode { node in
+                    node.alpha = 1.0
+                    node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
+            })
+        } else {
+            return nil
         }
     }
     
@@ -696,11 +960,137 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         } else {
             insets = layout.insets(options: [.input])
         }
-        if case .overlay = self.chatPresentationInterfaceState.mode {
-            insets.top = 44.0
-        } else {
-            insets.top += navigationBarHeight
+        
+        let statusBarHeight = layout.insets(options: [.statusBar]).top
+        
+        func extractExperimentalPlaylistUrl(_ text: String) -> String? {
+            let prefix = "stream: "
+            if text.hasPrefix(prefix) {
+                if let url = URL(string: String(text[text.index(text.startIndex, offsetBy: prefix.count)...])), url.absoluteString.hasSuffix(".m3u8") {
+                    return url.absoluteString
+                } else {
+                    return nil
+                }
+            } else {
+                return nil
+            }
         }
+        
+        if let pinnedMessage = self.chatPresentationInterfaceState.pinnedMessage, self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding, self.context.sharedContext.immediateExperimentalUISettings.playlistPlayback, self.embeddedTitleContentNode == nil, let url = extractExperimentalPlaylistUrl(pinnedMessage.text), self.didProcessExperimentalEmbedUrl != url {
+            self.didProcessExperimentalEmbedUrl = url
+            let context = self.context
+            let baseNavigationController = self.controller?.navigationController as? NavigationController
+            let mediaManager = self.context.sharedContext.mediaManager
+            var expandImpl: (() -> Void)?
+            let content = PlatformVideoContent(id: .instantPage(MediaId(namespace: 0, id: 0), MediaId(namespace: 0, id: 0)), content: .url(url), streamVideo: true, loopVideo: false)
+            let overlayNode = OverlayUniversalVideoNode(postbox: self.context.account.postbox, audioSession: self.context.sharedContext.mediaManager.audioSession, manager: self.context.sharedContext.mediaManager.universalVideoManager, content: content, expand: {
+                expandImpl?()
+            }, close: { [weak mediaManager] in
+                mediaManager?.setOverlayVideoNode(nil)
+            })
+            self.embeddedTitleContentNode = ChatEmbeddedTitleContentNode(context: self.context, videoNode: overlayNode, disableInternalAnimationIn: true, interactiveExtensionUpdated: { [weak self] transition in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.requestLayout(transition)
+            }, dismissed: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let embeddedTitleContentNode = strongSelf.embeddedTitleContentNode {
+                    strongSelf.embeddedTitleContentNode = nil
+                    strongSelf.dismissedEmbeddedTitleContentNode = embeddedTitleContentNode
+                    strongSelf.requestLayout(.animated(duration: 0.25, curve: .spring))
+                    strongSelf.updateHasEmbeddedTitleContent?()
+                }
+            }, isUIHiddenUpdated: { [weak self] in
+                self?.updateHasEmbeddedTitleContent?()
+            }, unembedWhenPortrait: { [weak self] itemNode in
+                guard let strongSelf = self, let itemNode = itemNode as? OverlayUniversalVideoNode else {
+                    return false
+                }
+                strongSelf.unembedWhenPortrait(contentNode: itemNode)
+                return true
+            })
+            self.embeddedTitleContentNode?.unembedOnLeave = false
+            self.updateHasEmbeddedTitleContent?()
+            overlayNode.controlPlay()
+        }
+        
+        if self.chatPresentationInterfaceState.pinnedMessage == nil {
+            self.didProcessExperimentalEmbedUrl = nil
+        }
+        
+        if let embeddedTitleContentNode = self.embeddedTitleContentNode, embeddedTitleContentNode.supernode != nil {
+            if layout.size.width > layout.size.height {
+                self.embeddedTitleContentNode = nil
+                self.dismissedEmbeddedTitleContentNode = embeddedTitleContentNode
+                embeddedTitleContentNode.expand(intoLandscape: true)
+                self.updateHasEmbeddedTitleContent?()
+            }
+        }
+        
+        if let embeddedTitleContentNode = self.embeddedTitleContentNode {
+            let defaultEmbeddedSize = CGSize(width: layout.size.width, height: min(400.0, embeddedTitleContentNode.calculateHeight(width: layout.size.width)) + statusBarHeight + embeddedTitleContentNode.interactiveExtension)
+            
+            let embeddedSize: CGSize
+            if let inputHeight = layout.inputHeight, inputHeight > 100.0 {
+                embeddedSize = CGSize(width: defaultEmbeddedSize.width, height: floor(defaultEmbeddedSize.height * 0.6))
+            } else {
+                embeddedSize = defaultEmbeddedSize
+            }
+            
+            if embeddedTitleContentNode.supernode == nil {
+                self.insertSubnode(embeddedTitleContentNode, aboveSubnode: self.navigationBarBackroundNode)
+                
+                var previousTopInset = insets.top
+                if case .overlay = self.chatPresentationInterfaceState.mode {
+                    previousTopInset = 44.0
+                } else {
+                    previousTopInset += navigationBarHeight
+                }
+                
+                if case .peek = self.embeddedTitlePeekContent {
+                    previousTopInset += 32.0
+                }
+                
+                embeddedTitleContentNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: previousTopInset))
+                transition.updateFrame(node: embeddedTitleContentNode, frame: CGRect(origin: CGPoint(), size: embeddedSize))
+                embeddedTitleContentNode.updateLayout(size: embeddedSize, actualHeight: defaultEmbeddedSize.height, topInset: statusBarHeight, interactiveExtension: embeddedTitleContentNode.interactiveExtension, transition: .immediate, transitionSurface: self, navigationBar: self.navigationBar)
+            } else {
+                transition.updateFrame(node: embeddedTitleContentNode, frame: CGRect(origin: CGPoint(), size: embeddedSize))
+                embeddedTitleContentNode.updateLayout(size: embeddedSize, actualHeight: defaultEmbeddedSize.height, topInset: statusBarHeight, interactiveExtension: embeddedTitleContentNode.interactiveExtension, transition: transition, transitionSurface: self, navigationBar: self.navigationBar)
+            }
+            
+            insets.top += embeddedSize.height
+        } else {
+            if case .overlay = self.chatPresentationInterfaceState.mode {
+                insets.top = 44.0
+            } else {
+                insets.top += navigationBarHeight
+            }
+            
+            if case .peek = self.embeddedTitlePeekContent {
+                insets.top += 32.0
+            }
+        }
+        
+        if let dismissedEmbeddedTitleContentNode = self.dismissedEmbeddedTitleContentNode {
+            self.dismissedEmbeddedTitleContentNode = nil
+            if transition.isAnimated {
+                dismissedEmbeddedTitleContentNode.alpha = 0.0
+                dismissedEmbeddedTitleContentNode.layer.allowsGroupOpacity = true
+                dismissedEmbeddedTitleContentNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, completion: { [weak dismissedEmbeddedTitleContentNode] _ in
+                    dismissedEmbeddedTitleContentNode?.removeFromSupernode()
+                })
+                transition.updateFrame(node: dismissedEmbeddedTitleContentNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: insets.top)))
+            } else {
+                dismissedEmbeddedTitleContentNode.removeFromSupernode()
+            }
+        }
+        
+        transition.updateFrame(node: self.navigationBarBackroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: insets.top)))
+        transition.updateFrame(node: self.navigationBarSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         
         var wrappingInsets = UIEdgeInsets()
         if case .overlay = self.chatPresentationInterfaceState.mode {
@@ -731,6 +1121,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var immediatelyLayoutInputPanelAndAnimateAppearance = false
         var secondaryInputPanelSize: CGSize?
         var immediatelyLayoutSecondaryInputPanelAndAnimateAppearance = false
+        var inputPanelNodeHandlesTransition = false
         
         let inputPanelNodes = inputPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.inputPanelNode, currentSecondaryPanel: self.secondaryInputPanelNode, textInputPanelNode: self.textInputPanelNode, interfaceInteraction: self.interfaceInteraction)
         
@@ -742,11 +1133,18 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                     let _ = inputTextPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: layout.size.height - insets.top - insets.bottom, isSecondary: false, transition: transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics)
                 }
-                dismissedInputPanelNode = self.inputPanelNode
-                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: layout.size.height - insets.top - insets.bottom, isSecondary: false, transition: inputPanelNode.supernode == nil ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics)
+                if let prevInputPanelNode = self.inputPanelNode, inputPanelNode.canHandleTransition(from: prevInputPanelNode) {
+                    inputPanelNodeHandlesTransition = true
+                    inputPanelNode.removeFromSupernode()
+                    inputPanelNode.prevInputPanelNode = prevInputPanelNode
+                    inputPanelNode.addSubnode(prevInputPanelNode)
+                } else {
+                    dismissedInputPanelNode = self.inputPanelNode
+                }
+                let inputPanelHeight = inputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: layout.size.height - insets.top - insets.bottom, isSecondary: false, transition: inputPanelNode.supernode !== self ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics)
                 inputPanelSize = CGSize(width: layout.size.width, height: inputPanelHeight)
                 self.inputPanelNode = inputPanelNode
-                if inputPanelNode.supernode == nil {
+                if inputPanelNode.supernode !== self {
                     immediatelyLayoutInputPanelAndAnimateAppearance = true
                     self.insertSubnode(inputPanelNode, aboveSubnode: self.inputPanelBackgroundNode)
                 }
@@ -1153,25 +1551,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         transition.updateFrame(node: self.navigateButtons, frame: apparentNavigateButtonsFrame)
         
         if let titleAccessoryPanelNode = self.titleAccessoryPanelNode, let titleAccessoryPanelFrame = titleAccessoryPanelFrame, !titleAccessoryPanelNode.frame.equalTo(titleAccessoryPanelFrame) {
-            if immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance {
-                titleAccessoryPanelNode.frame = titleAccessoryPanelFrame.offsetBy(dx: 0.0, dy: -titleAccessoryPanelFrame.size.height)
-            }
-            transition.updateFrame(node: titleAccessoryPanelNode, frame: titleAccessoryPanelFrame)
-        }
-        
-        if let inputPanelNode = self.inputPanelNode, let apparentInputPanelFrame = apparentInputPanelFrame, !inputPanelNode.frame.equalTo(apparentInputPanelFrame) {
-            if immediatelyLayoutInputPanelAndAnimateAppearance {
-                inputPanelNode.frame = apparentInputPanelFrame.offsetBy(dx: 0.0, dy: apparentInputPanelFrame.height + previousInputPanelBackgroundFrame.maxY - apparentInputBackgroundFrame.maxY)
-                inputPanelNode.alpha = 0.0
-            }
-            if !transition.isAnimated {
-                inputPanelNode.layer.removeAllAnimations()
-                if let currentDismissedInputPanelNode = self.currentDismissedInputPanelNode, inputPanelNode is ChatSearchInputPanelNode {
-                    currentDismissedInputPanelNode.layer.removeAllAnimations()
-                }
-            }
-            transition.updateFrame(node: inputPanelNode, frame: apparentInputPanelFrame)
-            transition.updateAlpha(node: inputPanelNode, alpha: 1.0)
+            titleAccessoryPanelNode.frame = titleAccessoryPanelFrame
+            transition.animatePositionAdditive(node: titleAccessoryPanelNode, offset: CGPoint(x: 0.0, y: -titleAccessoryPanelFrame.height))
         }
         
         if let secondaryInputPanelNode = self.secondaryInputPanelNode, let apparentSecondaryInputPanelFrame = apparentSecondaryInputPanelFrame, !secondaryInputPanelNode.frame.equalTo(apparentSecondaryInputPanelFrame) {
@@ -1256,6 +1637,28 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             transition.updateFrame(node: dismissedTitleAccessoryPanelNode, frame: dismissedPanelFrame, completion: { [weak dismissedTitleAccessoryPanelNode] _ in
                 dismissedTitleAccessoryPanelNode?.removeFromSupernode()
             })
+        }
+        
+        if let inputPanelNode = self.inputPanelNode,
+            let apparentInputPanelFrame = apparentInputPanelFrame,
+            !inputPanelNode.frame.equalTo(apparentInputPanelFrame) {
+            if immediatelyLayoutInputPanelAndAnimateAppearance {
+                inputPanelNode.frame = apparentInputPanelFrame.offsetBy(dx: 0.0, dy: apparentInputPanelFrame.height + previousInputPanelBackgroundFrame.maxY - apparentInputBackgroundFrame.maxY)
+                inputPanelNode.alpha = 0.0
+            }
+            if !transition.isAnimated {
+                inputPanelNode.layer.removeAllAnimations()
+                if let currentDismissedInputPanelNode = self.currentDismissedInputPanelNode, inputPanelNode is ChatSearchInputPanelNode {
+                    currentDismissedInputPanelNode.layer.removeAllAnimations()
+                }
+            }
+            if inputPanelNodeHandlesTransition {
+                inputPanelNode.frame = apparentInputPanelFrame
+                inputPanelNode.alpha = 1.0
+            } else {
+                transition.updateFrame(node: inputPanelNode, frame: apparentInputPanelFrame)
+                transition.updateAlpha(node: inputPanelNode, alpha: 1.0)
+            }
         }
         
         if let dismissedInputPanelNode = dismissedInputPanelNode, dismissedInputPanelNode !== self.secondaryInputPanelNode {
@@ -1518,6 +1921,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 self.updatePlainInputSeparator(transition: .immediate)
                 self.inputPanelBackgroundSeparatorNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelSeparatorColor
+                
+                self.navigationBarBackroundNode.backgroundColor = chatPresentationInterfaceState.theme.rootController.navigationBar.backgroundColor
+                self.navigationBarSeparatorNode.backgroundColor = chatPresentationInterfaceState.theme.rootController.navigationBar.separatorColor
             }
             
             let keepSendButtonEnabled = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil || chatPresentationInterfaceState.interfaceState.editMessage != nil
@@ -1565,6 +1971,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.loadingNode.isHidden = false
                 self.emptyNode?.isHidden = false
             }
+            
+            var showNavigateButtons = true
+            if let _ = chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState {
+                showNavigateButtons = false
+            }
+            transition.updateAlpha(node: self.navigateButtons, alpha: showNavigateButtons ? 1.0 : 0.0)
             
             if let openStickersDisposable = self.openStickersDisposable {
                 if case .media = chatPresentationInterfaceState.inputMode {
@@ -1770,6 +2182,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func textInputNode() -> EditableTextNode? {
         return self.textInputPanelNode?.textInputNode
+    }
+    
+    func updateRecordedMediaDeleted(_ isDeleted: Bool) {
+        self.textInputPanelNode?.isMediaDeleted = isDeleted
     }
     
     func frameForVisibleArea() -> CGRect {
@@ -2379,5 +2795,125 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func animateQuizCorrectOptionSelected() {
         self.view.insertSubview(ConfettiView(frame: self.view.bounds), aboveSubview: self.historyNode.view)
+    }
+    
+    func updateEmbeddedTitlePeekContent(content: NavigationControllerDropContent?) {
+        if !self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding {
+            return
+        }
+        
+        guard let (_, navigationHeight) = self.validLayout else {
+            return
+        }
+        var peekContent: ChatEmbeddedTitlePeekContent = .none
+        if let content = content, let item = content.item as? VideoNavigationControllerDropContentItem, let _ = item.itemNode as? OverlayUniversalVideoNode {
+            if content.position.y < navigationHeight + 32.0 {
+                peekContent = .peek
+            }
+        }
+        if self.embeddedTitlePeekContent != peekContent {
+            self.embeddedTitlePeekContent = peekContent
+            self.requestLayout(.animated(duration: 0.3, curve: .spring))
+        }
+    }
+    
+    var isEmbeddedTitleContentHidden: Bool {
+        if let embeddedTitleContentNode = self.embeddedTitleContentNode {
+            return embeddedTitleContentNode.isUIHidden
+        } else {
+            return false
+        }
+    }
+    
+    var updateHasEmbeddedTitleContent: (() -> Void)?
+    
+    func acceptEmbeddedTitlePeekContent(content: NavigationControllerDropContent) -> Bool {
+        if !self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding {
+            return false
+        }
+        
+        guard let (_, navigationHeight) = self.validLayout else {
+            return false
+        }
+        if content.position.y >= navigationHeight + 32.0 {
+            return false
+        }
+        if let item = content.item as? VideoNavigationControllerDropContentItem, let itemNode = item.itemNode as? OverlayUniversalVideoNode {
+            let embeddedTitleContentNode = ChatEmbeddedTitleContentNode(context: self.context, videoNode: itemNode, disableInternalAnimationIn: false, interactiveExtensionUpdated: { [weak self] transition in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.requestLayout(transition)
+            }, dismissed: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let embeddedTitleContentNode = strongSelf.embeddedTitleContentNode {
+                    strongSelf.embeddedTitleContentNode = nil
+                    strongSelf.dismissedEmbeddedTitleContentNode = embeddedTitleContentNode
+                    strongSelf.requestLayout(.animated(duration: 0.25, curve: .spring))
+                    strongSelf.updateHasEmbeddedTitleContent?()
+                }
+            }, isUIHiddenUpdated: { [weak self] in
+                self?.updateHasEmbeddedTitleContent?()
+            }, unembedWhenPortrait: { [weak self] itemNode in
+                guard let strongSelf = self, let itemNode = itemNode as? OverlayUniversalVideoNode else {
+                    return false
+                }
+                strongSelf.unembedWhenPortrait(contentNode: itemNode)
+                return true
+            })
+            self.embeddedTitleContentNode = embeddedTitleContentNode
+            self.embeddedTitlePeekContent = .none
+            self.updateHasEmbeddedTitleContent?()
+            DispatchQueue.main.async {
+                self.requestLayout(.animated(duration: 0.25, curve: .spring))
+            }
+            
+            return true
+        }
+        return false
+    }
+    
+    private func unembedWhenPortrait(contentNode: OverlayUniversalVideoNode) {
+        let embeddedTitleContentNode = ChatEmbeddedTitleContentNode(context: self.context, videoNode: contentNode, disableInternalAnimationIn: true, interactiveExtensionUpdated: { [weak self] transition in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.requestLayout(transition)
+        }, dismissed: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            if let embeddedTitleContentNode = strongSelf.embeddedTitleContentNode {
+                strongSelf.embeddedTitleContentNode = nil
+                strongSelf.dismissedEmbeddedTitleContentNode = embeddedTitleContentNode
+                strongSelf.requestLayout(.animated(duration: 0.25, curve: .spring))
+                strongSelf.updateHasEmbeddedTitleContent?()
+            }
+        }, isUIHiddenUpdated: { [weak self] in
+            self?.updateHasEmbeddedTitleContent?()
+        }, unembedWhenPortrait: { [weak self] itemNode in
+            guard let strongSelf = self, let itemNode = itemNode as? OverlayUniversalVideoNode else {
+                return false
+            }
+            strongSelf.unembedWhenPortrait(contentNode: itemNode)
+            return true
+        })
+        
+        self.embeddedTitleContentNode = embeddedTitleContentNode
+        self.embeddedTitlePeekContent = .none
+        self.updateHasEmbeddedTitleContent?()
+        self.requestLayout(.immediate)
+    }
+    
+    func willNavigateAway() {
+        if let embeddedTitleContentNode = self.embeddedTitleContentNode, embeddedTitleContentNode.unembedOnLeave {
+            self.embeddedTitleContentNode = nil
+            self.dismissedEmbeddedTitleContentNode = embeddedTitleContentNode
+            embeddedTitleContentNode.expandIntoPiP()
+            self.requestLayout(.animated(duration: 0.25, curve: .spring))
+            self.updateHasEmbeddedTitleContent?()
+        }
     }
 }

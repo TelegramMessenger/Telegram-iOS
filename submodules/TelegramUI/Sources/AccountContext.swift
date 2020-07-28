@@ -204,7 +204,7 @@ public final class AccountContextImpl: AccountContext {
         }
         
         if let locationManager = self.sharedContextImpl.locationManager, sharedContext.applicationBindings.isMainApp && !temp {
-            self.peersNearbyManager = PeersNearbyManagerImpl(account: account, locationManager: locationManager)
+            self.peersNearbyManager = PeersNearbyManagerImpl(account: account, locationManager: locationManager, inForeground: sharedContext.applicationBindings.applicationInForeground)
         } else {
             self.peersNearbyManager = nil
         }

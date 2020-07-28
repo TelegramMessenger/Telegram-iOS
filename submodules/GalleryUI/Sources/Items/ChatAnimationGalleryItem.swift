@@ -31,7 +31,7 @@ class ChatAnimationGalleryItem: GalleryItem {
         self.location = location
     }
     
-    func node() -> GalleryItemNode {
+    func node(synchronous: Bool) -> GalleryItemNode {
         let node = ChatAnimationGalleryItemNode(context: self.context, presentationData: self.presentationData)
 
         for media in self.message.media {
@@ -46,7 +46,7 @@ class ChatAnimationGalleryItem: GalleryItem {
         return node
     }
     
-    func updateNode(node: GalleryItemNode) {
+    func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? ChatAnimationGalleryItemNode {
             node.setMessage(self.message)
         }
@@ -242,7 +242,7 @@ final class ChatAnimationGalleryItemNode: ZoomableContentGalleryItemNode {
         }))
     }
     
-    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
+    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.containerNode.view)
         let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.containerNode.view.superview)
         

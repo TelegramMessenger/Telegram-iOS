@@ -74,6 +74,8 @@ final class TabBarControllerNode: ASDisplayNode {
         transition.updateAlpha(node: self.disabledOverlayNode, alpha: value ? 0.0 : 1.0)
     }
     
+    var tabBarHidden = false
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, toolbar: Toolbar?, transition: ContainedViewLayoutTransition) {
         var tabBarHeight: CGFloat
         var options: ContainerViewLayoutInsetOptions = []
@@ -87,7 +89,7 @@ final class TabBarControllerNode: ASDisplayNode {
             tabBarHeight = 49.0 + bottomInset
         }
         
-        let tabBarFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - tabBarHeight), size: CGSize(width: layout.size.width, height: tabBarHeight))
+        let tabBarFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - (self.tabBarHidden ? 0.0 : tabBarHeight)), size: CGSize(width: layout.size.width, height: tabBarHeight))
         
         transition.updateFrame(node: self.tabBarNode, frame: tabBarFrame)
         self.tabBarNode.updateLayout(size: layout.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: bottomInset, transition: transition)

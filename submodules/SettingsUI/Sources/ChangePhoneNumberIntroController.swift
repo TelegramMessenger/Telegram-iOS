@@ -84,13 +84,13 @@ private final class ChangePhoneNumberIntroControllerNode: ASDisplayNode {
     }
 }
 
-final class ChangePhoneNumberIntroController: ViewController {
+public final class ChangePhoneNumberIntroController: ViewController {
     private let context: AccountContext
     private var didPlayPresentationAnimation = false
     
     private var presentationData: PresentationData
     
-    init(context: AccountContext, phoneNumber: String) {
+    public init(context: AccountContext, phoneNumber: String) {
         self.context = context
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -110,7 +110,7 @@ final class ChangePhoneNumberIntroController: ViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func loadDisplayNode() {
+    public override func loadDisplayNode() {
         self.displayNode = ChangePhoneNumberIntroControllerNode(presentationData: self.presentationData)
         (self.displayNode as! ChangePhoneNumberIntroControllerNode).dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
@@ -121,7 +121,7 @@ final class ChangePhoneNumberIntroController: ViewController {
         self.displayNodeDidLoad()
     }
     
-    override func viewDidAppear(_ animated: Bool) {
+    public override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         /*if !self.didPlayPresentationAnimation {

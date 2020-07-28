@@ -53,6 +53,28 @@ final class ChatTextInputAudioRecordingTimeNode: ASDisplayNode {
         }
     }
     
+    private var durationDisposable: MetaDisposable?
+    
+    var videoRecordingStatus: InstantVideoControllerRecordingStatus? {
+        didSet {
+            if self.videoRecordingStatus !== oldValue {
+                if self.durationDisposable == nil {
+                    durationDisposable = MetaDisposable()
+                }
+                
+                if let videoRecordingStatus = self.videoRecordingStatus {
+                    self.durationDisposable?.set(videoRecordingStatus.duration.start(next: { [weak self] duration in
+                        Queue.mainQueue().async { [weak self] in
+                            self?.timestamp = duration
+                        }
+                    }))
+                } else if self.audioRecorder == nil {
+                    self.durationDisposable?.set(nil)
+                }
+            }
+        }
+    }
+    
     private var theme: PresentationTheme
     
     init(theme: PresentationTheme) {

@@ -213,7 +213,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                 }
                 
                 let mediaAccessoryPanel = MediaNavigationAccessoryPanel(context: self.context)
-                mediaAccessoryPanel.containerNode.headerNode.displayScrubber = type != .voice
+                mediaAccessoryPanel.containerNode.headerNode.displayScrubber = item.playbackData?.type != .instantVideo
                 mediaAccessoryPanel.close = { [weak self] in
                     if let strongSelf = self, let (_, _, _, _, type, _) = strongSelf.playlistStateAndType {
                         strongSelf.context.sharedContext.mediaManager.setPlaylist(nil, type: type, control: SharedMediaPlayerControlAction.playback(.pause))

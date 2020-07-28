@@ -120,6 +120,34 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         self.fetchStatusDisposable.dispose()
     }
     
+    var collapsed: Bool = false
+    func setCollapsed(_ collapsed: Bool, animated: Bool) {
+        guard self.collapsed != collapsed else {
+            return
+        }
+        
+        self.collapsed = collapsed
+        
+        let alpha: CGFloat = collapsed ? 0.0 : 1.0
+        self.leftTimestampNode.alpha = alpha
+        self.rightTimestampNode.alpha = alpha
+        self.infoNode.alpha = alpha
+        self.updateScrubberVisibility(animated: animated)
+    }
+    
+    private func updateScrubberVisibility(animated: Bool) {
+        var collapsed = self.collapsed
+        var alpha: CGFloat = 1.0
+        if let playbackStatus = self.playbackStatus, playbackStatus.duration <= 30.0 {
+        } else {
+            alpha = self.collapsed ? 0.0 : 1.0
+            collapsed = false
+        }
+        self.scrubberNode.setCollapsed(collapsed, animated: animated)
+        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .linear) : .immediate
+        transition.updateAlpha(node: self.scrubberNode, alpha: alpha)
+    }
+    
     func setStatusSignal(_ status: Signal<MediaPlayerStatus, NoError>?) {
         let mappedStatus: Signal<MediaPlayerStatus, NoError>?
         if let status = status {
@@ -223,7 +251,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         self.containerLayout = (size, leftInset, rightInset)
         
         let scrubberHeight: CGFloat = 14.0
-        let scrubberInset: CGFloat
+        var scrubberInset: CGFloat
         let leftTimestampOffset: CGFloat
         let rightTimestampOffset: CGFloat
         let infoOffset: CGFloat
@@ -248,7 +276,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         let infoSize = self.infoNode.measure(infoConstrainedSize)
         self.infoNode.bounds = CGRect(origin: CGPoint(), size: infoSize)
         transition.updatePosition(node: self.infoNode, position: CGPoint(x: size.width / 2.0, y: infoOffset + infoSize.height / 2.0))
-        self.infoNode.alpha = size.width < size.height ? 1.0 : 0.0
+        self.infoNode.alpha = size.width < size.height && !self.collapsed ? 1.0 : 0.0
         
         self.scrubberNode.frame = CGRect(origin: CGPoint(x: scrubberInset, y: 6.0), size: CGSize(width: size.width - leftInset - rightInset - scrubberInset * 2.0, height: scrubberHeight))
     }

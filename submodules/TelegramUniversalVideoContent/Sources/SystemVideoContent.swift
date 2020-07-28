@@ -44,7 +44,7 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
     private let playbackCompletedListeners = Bag<() -> Void>()
     
     private var initializedStatus = false
-    private var statusValue = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: false), soundEnabled: true)
+    private var statusValue = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: false, progress: 0.0), soundEnabled: true)
     private var isBuffering = true
     private let _status = ValuePromise<MediaPlayerStatus>()
     var status: Signal<MediaPlayerStatus, NoError> {
@@ -169,7 +169,7 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
             let isPlaying = !self.player.rate.isZero
             let status: MediaPlayerPlaybackStatus
             if self.isBuffering {
-                status = .buffering(initial: false, whilePlaying: isPlaying)
+                status = .buffering(initial: false, whilePlaying: isPlaying, progress: 0.0)
             } else {
                 status = isPlaying ? .playing : .paused
             }
@@ -180,7 +180,7 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
             let status: MediaPlayerPlaybackStatus
             self.isBuffering = true
             if self.isBuffering {
-                status = .buffering(initial: false, whilePlaying: isPlaying)
+                status = .buffering(initial: false, whilePlaying: isPlaying, progress: 0.0)
             } else {
                 status = isPlaying ? .playing : .paused
             }
@@ -191,7 +191,7 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
             let status: MediaPlayerPlaybackStatus
             self.isBuffering = false
             if self.isBuffering {
-                status = .buffering(initial: false, whilePlaying: isPlaying)
+                status = .buffering(initial: false, whilePlaying: isPlaying, progress: 0.0)
             } else {
                 status = isPlaying ? .playing : .paused
             }
@@ -219,7 +219,7 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
     func play() {
         assert(Queue.mainQueue().isCurrent())
         if !self.initializedStatus {
-            self._status.set(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: self.seekId, status: .buffering(initial: true, whilePlaying: true), soundEnabled: true))
+            self._status.set(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: self.seekId, status: .buffering(initial: true, whilePlaying: true, progress: 0.0), soundEnabled: true))
         }
         if !self.hasAudioSession {
             self.audioSessionDisposable.set(self.audioSessionManager.push(audioSessionType: .play, activate: { [weak self] _ in

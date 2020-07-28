@@ -56,13 +56,13 @@ private func arePeerNearbyArraysEqual(_ lhs: [PeerNearbyEntry], _ rhs: [PeerNear
 private final class PeersNearbyControllerArguments {
     let context: AccountContext
     let toggleVisibility: (Bool) -> Void
-    let openProfile: (Peer) -> Void
+    let openProfile: (Peer, Int32) -> Void
     let openChat: (Peer) -> Void
     let openCreateGroup: (Double, Double, String?) -> Void
     let contextAction: (Peer, ASDisplayNode, ContextGesture?) -> Void
     let expandUsers: () -> Void
     
-    init(context: AccountContext, toggleVisibility: @escaping (Bool) -> Void, openProfile: @escaping (Peer) -> Void, openChat: @escaping (Peer) -> Void, openCreateGroup: @escaping (Double, Double, String?) -> Void, contextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, expandUsers: @escaping () -> Void) {
+    init(context: AccountContext, toggleVisibility: @escaping (Bool) -> Void, openProfile: @escaping (Peer, Int32) -> Void, openChat: @escaping (Peer) -> Void, openCreateGroup: @escaping (Double, Double, String?) -> Void, contextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, expandUsers: @escaping () -> Void) {
         self.context = context
         self.toggleVisibility = toggleVisibility
         self.openProfile = openProfile
@@ -212,17 +212,6 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    private func stringForDistance(_ distance: Int32) -> String {
-        let distance = max(1, distance)
-        let formatter = MKDistanceFormatter()
-        formatter.unitStyle = .abbreviated
-        var result = formatter.string(fromDistance: Double(distance))
-        if result.hasPrefix("0 ") {
-            result = result.replacingOccurrences(of: "0 ", with: "1 ")
-        }
-        return result
-    }
-    
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! PeersNearbyControllerArguments
         switch self {
@@ -237,14 +226,14 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
                     arguments.toggleVisibility(!stop)
                 })
             case let .user(_, _, strings, dateTimeFormat, nameDisplayOrder, peer):
-                var text = strings.Map_DistanceAway(stringForDistance(peer.distance)).0
+                var text = strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).0
                 let isSelfPeer = peer.peer.0.id == arguments.context.account.peerId
                 if isSelfPeer {
                     text = strings.PeopleNearby_VisibleUntil(humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: peer.expires)).0
                 }
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: .text(text), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: !isSelfPeer, sectionId: self.section, action: {
                     if !isSelfPeer {
-                        arguments.openProfile(peer.peer.0)
+                        arguments.openProfile(peer.peer.0, peer.distance)
                     }
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: nil, contextAction: nil, hasTopGroupInset: false, tag: nil)
             case let .expand(theme, title):
@@ -262,9 +251,9 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
             case let .group(_, _, strings, dateTimeFormat, nameDisplayOrder, peer, highlighted):
                 var text: ItemListPeerItemText
                 if let cachedData = peer.peer.1 as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount {
-                    text = .text("\(strings.Map_DistanceAway(stringForDistance(peer.distance)).0), \(memberCount > 0 ? strings.Conversation_StatusMembers(memberCount) : strings.PeopleNearby_NoMembers)")
+                    text = .text("\(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).0), \(memberCount > 0 ? strings.Conversation_StatusMembers(memberCount) : strings.PeopleNearby_NoMembers)")
                 } else {
-                    text = .text(strings.Map_DistanceAway(stringForDistance(peer.distance)).0)
+                    text = .text(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).0)
                 }
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: text, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, highlighted: highlighted, selectable: true, sectionId: self.section, action: {
                     arguments.openChat(peer.peer.0)
@@ -276,9 +265,9 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
             case let .channel(_, _, strings, dateTimeFormat, nameDisplayOrder, peer, highlighted):
                 var text: ItemListPeerItemText
                 if let cachedData = peer.peer.1 as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount {
-                    text = .text("\(strings.Map_DistanceAway(stringForDistance(peer.distance)).0), \(strings.Conversation_StatusSubscribers(memberCount))")
+                    text = .text("\(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).0), \(strings.Conversation_StatusSubscribers(memberCount))")
                 } else {
-                    text = .text(strings.Map_DistanceAway(stringForDistance(peer.distance)).0)
+                    text = .text(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).0)
                 }
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: text, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, highlighted: highlighted, selectable: true, sectionId: self.section, action: {
                     arguments.openChat(peer.peer.0)
@@ -466,7 +455,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
     var replaceTopControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     var presentInGlobalOverlayImpl: ((ViewController) -> Void)?
-    var navigateToProfileImpl: ((Peer) -> Void)?
+    var navigateToProfileImpl: ((Peer, Int32) -> Void)?
     var navigateToChatImpl: ((Peer) -> Void)?
     
     let actionsDisposable = DisposableSet()
@@ -499,8 +488,8 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         } else {
             let _ = updatePeersNearbyVisibility(account: context.account, update: .invisible, background: false).start()
         }
-    }, openProfile: { peer in
-        navigateToProfileImpl?(peer)
+    }, openProfile: { peer, distance in
+        navigateToProfileImpl?(peer, distance)
     }, openChat: { peer in
         navigateToChatImpl?(peer)
     }, openCreateGroup: { latitude, longitude, address in
@@ -654,8 +643,8 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
     controller.didDisappear = { [weak controller] _ in
         controller?.clearItemNodesHighlight(animated: true)
     }
-    navigateToProfileImpl = { [weak controller] peer in
-        if let navigationController = controller?.navigationController as? NavigationController, let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .nearbyPeer, avatarInitiallyExpanded: peer.largeProfileImage != nil, fromChat: false) {
+    navigateToProfileImpl = { [weak controller] peer, distance in
+        if let navigationController = controller?.navigationController as? NavigationController, let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .nearbyPeer(distance: distance), avatarInitiallyExpanded: peer.largeProfileImage != nil, fromChat: false) {
             navigationController.pushViewController(controller)
         }
     }

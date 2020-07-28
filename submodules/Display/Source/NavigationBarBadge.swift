@@ -45,6 +45,7 @@ public final class NavigationBarBadgeNode: ASDisplayNode {
         self.textColor = textColor
         self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: fillColor, strokeColor: strokeColor, strokeWidth: 1.0)
         self.textNode.attributedText = NSAttributedString(string: self.text, font: self.font, textColor: self.textColor)
+        self.textNode.redrawIfPossible()
     }
     
     override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {

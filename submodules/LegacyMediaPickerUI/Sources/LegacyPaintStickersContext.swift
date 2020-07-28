@@ -269,14 +269,14 @@ private class LegacyPaintTextEntity: LegacyPaintEntity {
 }
 
 public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRenderer {
-    private let account: Account
+    private let account: Account?
     private let queue = Queue()
 
     private let entities: [LegacyPaintEntity]
     private let originalSize: CGSize
     private let cropRect: CGRect?
     
-    public init(account: Account, adjustments: TGMediaEditAdjustments) {
+    public init(account: Account?, adjustments: TGMediaEditAdjustments) {
         self.account = account
         self.originalSize = adjustments.originalSize
         self.cropRect = adjustments.cropRect.isEmpty ? nil : adjustments.cropRect
@@ -285,7 +285,7 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
         if let paintingData = adjustments.paintingData, let paintingEntities = paintingData.entities {
             for paintingEntity in paintingEntities {
                 if let sticker = paintingEntity as? TGPhotoPaintStickerEntity {
-                    if let entity = LegacyPaintStickerEntity(account: account, entity: sticker) {
+                    if let account = account, let entity = LegacyPaintStickerEntity(account: account, entity: sticker) {
                         entities.append(entity)
                     }
                 } else if let text = paintingEntity as? TGPhotoPaintTextEntity {

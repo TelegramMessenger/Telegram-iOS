@@ -14,7 +14,7 @@ final class GenericEmbedImplementation: WebEmbedImplementation {
     
     init(url: String) {
         self.url = url
-        self.status = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: true), soundEnabled: true)
+        self.status = MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .buffering(initial: true, whilePlaying: true, progress: 0.0), soundEnabled: true)
     }
     
     func setup(_ webView: WKWebView, userContentController: WKUserContentController, evaluateJavaScript: @escaping (String, ((Any?) -> Void)?) -> Void, updateStatus: @escaping (MediaPlayerStatus) -> Void, onPlaybackStarted: @escaping () -> Void) {
@@ -43,8 +43,12 @@ final class GenericEmbedImplementation: WebEmbedImplementation {
         self.onPlaybackStarted = onPlaybackStarted
         updateStatus(self.status)
         
-        let html = String(format: htmlTemplate, self.url)
-        webView.loadHTMLString(html, baseURL: URL(string: "about:blank"))
+        if self.url.contains("player.twitch.tv/"), let url = URL(string: self.url) {
+            webView.load(URLRequest(url: url))
+        } else {
+            let html = String(format: htmlTemplate, self.url)
+            webView.loadHTMLString(html, baseURL: URL(string: "about:blank"))
+        }
         
         userContentController.addUserScript(WKUserScript(source: userScript, injectionTime: .atDocumentEnd, forMainFrameOnly: false))
         

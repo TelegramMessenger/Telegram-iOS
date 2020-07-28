@@ -59,12 +59,12 @@ private extension CallListViewEntry {
 
 final class CallListNodeInteraction {
     let setMessageIdWithRevealedOptions: (MessageId?, MessageId?) -> Void
-    let call: (PeerId) -> Void
+    let call: (PeerId, Bool) -> Void
     let openInfo: (PeerId, [Message]) -> Void
     let delete: ([MessageId]) -> Void
     let updateShowCallsTab: (Bool) -> Void
     
-    init(setMessageIdWithRevealedOptions: @escaping (MessageId?, MessageId?) -> Void, call: @escaping (PeerId) -> Void, openInfo: @escaping (PeerId, [Message]) -> Void, delete: @escaping ([MessageId]) -> Void, updateShowCallsTab: @escaping (Bool) -> Void) {
+    init(setMessageIdWithRevealedOptions: @escaping (MessageId?, MessageId?) -> Void, call: @escaping (PeerId, Bool) -> Void, openInfo: @escaping (PeerId, [Message]) -> Void, delete: @escaping ([MessageId]) -> Void, updateShowCallsTab: @escaping (Bool) -> Void) {
         self.setMessageIdWithRevealedOptions = setMessageIdWithRevealedOptions
         self.call = call
         self.openInfo = openInfo
@@ -113,7 +113,7 @@ private func mappedInsertEntries(context: AccountContext, presentationData: Item
     return entries.map { entry -> ListViewInsertItem in
         switch entry.entry {
             case let .displayTab(theme, text, value):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: 0, style: .blocks, updated: { value in
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, noCorners: true, sectionId: 0, style: .blocks, updated: { value in
                     nodeInteraction.updateShowCallsTab(value)
                 }), directionHint: entry.directionHint)
             case let .displayTabInfo(theme, text):
@@ -130,7 +130,7 @@ private func mappedUpdateEntries(context: AccountContext, presentationData: Item
     return entries.map { entry -> ListViewUpdateItem in
         switch entry.entry {
             case let .displayTab(theme, text, value):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: 0, style: .blocks, updated: { value in
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, noCorners: true, sectionId: 0, style: .blocks, updated: { value in
                     nodeInteraction.updateShowCallsTab(value)
                 }), directionHint: entry.directionHint)
             case let .displayTabInfo(theme, text):
@@ -190,14 +190,14 @@ final class CallListControllerNode: ASDisplayNode {
     private let rightOverlayNode: ASDisplayNode
     private let emptyTextNode: ASTextNode
     
-    private let call: (PeerId) -> Void
+    private let call: (PeerId, Bool) -> Void
     private let openInfo: (PeerId, [Message]) -> Void
     private let emptyStateUpdated: (Bool) -> Void
     
     private let emptyStatePromise = Promise<Bool>()
     private let emptyStateDisposable = MetaDisposable()
     
-    init(context: AccountContext, mode: CallListControllerMode, presentationData: PresentationData, call: @escaping (PeerId) -> Void, openInfo: @escaping (PeerId, [Message]) -> Void, emptyStateUpdated: @escaping (Bool) -> Void) {
+    init(context: AccountContext, mode: CallListControllerMode, presentationData: PresentationData, call: @escaping (PeerId, Bool) -> Void, openInfo: @escaping (PeerId, [Message]) -> Void, emptyStateUpdated: @escaping (Bool) -> Void) {
         self.context = context
         self.mode = mode
         self.presentationData = presentationData
@@ -248,8 +248,8 @@ final class CallListControllerNode: ASDisplayNode {
                     }
                 }
             }
-        }, call: { [weak self] peerId in
-            self?.call(peerId)
+        }, call: { [weak self] peerId, isVideo in
+            self?.call(peerId, isVideo)
         }, openInfo: { [weak self] peerId, messages in
             self?.openInfo(peerId, messages)
         }, delete: { [weak self] messageIds in

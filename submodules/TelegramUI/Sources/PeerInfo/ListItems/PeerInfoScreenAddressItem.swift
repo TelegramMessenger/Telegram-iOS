@@ -63,7 +63,7 @@ private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
         self.addSubnode(self.selectionNode)
     }
     
-    override func update(width: CGFloat, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenAddressItem else {
             return 10.0
         }
@@ -72,13 +72,13 @@ private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
         
         self.selectionNode.pressed = item.action
         
-        let sideInset: CGFloat = 16.0
+        let sideInset: CGFloat = 16.0 + safeInsets.left
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
         let addressItem = ItemListAddressItem(theme: presentationData.theme, label: item.label, text: item.text, imageSignal: item.imageSignal, sectionId: 0, style: .blocks, displayDecorations: false, action: nil, longTapAction: item.longTapAction, linkItemAction: item.linkItemAction)
         
-        let params = ListViewItemLayoutParams(width: width, leftInset: 0.0, rightInset: 0.0, availableHeight: 1000.0)
+        let params = ListViewItemLayoutParams(width: width, leftInset: safeInsets.left, rightInset: safeInsets.right, availableHeight: 1000.0)
         
         let itemNode: ItemListAddressItemNode
         if let current = self.itemNode {

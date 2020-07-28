@@ -35,13 +35,13 @@ class WebSearchVideoGalleryItem: GalleryItem {
         self.controllerInteraction = controllerInteraction
     }
     
-    func node() -> GalleryItemNode {
+    func node(synchronous: Bool) -> GalleryItemNode {
         let node = WebSearchVideoGalleryItemNode(context: self.context, presentationData: self.presentationData, controllerInteraction: self.controllerInteraction)
         node.setupItem(self)
         return node
     }
     
-    func updateNode(node: GalleryItemNode) {
+    func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? WebSearchVideoGalleryItemNode {
             node.setupItem(self)
         }
@@ -198,7 +198,7 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             switch value.status {
                                 case .playing:
                                     isPaused = false
-                                case let .buffering(_, whilePlaying):
+                                case let .buffering(_, whilePlaying, _):
                                     initialBuffering = true
                                     isPaused = !whilePlaying
                                     var isStreaming = false
@@ -291,7 +291,7 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
-    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
+    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         guard let videoNode = self.videoNode else {
             return
         }

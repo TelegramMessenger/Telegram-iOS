@@ -298,6 +298,19 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         return self.fileId
     }
     
+    public var indexableText: String? {
+        var result = ""
+        for attribute in self.attributes {
+            if case let .FileName(fileName) = attribute {
+                if !result.isEmpty {
+                    result.append(" ")
+                }
+                result.append(fileName)
+            }
+        }
+        return result.isEmpty ? nil : result
+    }
+    
     public init(fileId: MediaId, partialReference: PartialMediaReference?, resource: TelegramMediaResource, previewRepresentations: [TelegramMediaImageRepresentation], videoThumbnails: [TelegramMediaFile.VideoThumbnail], immediateThumbnailData: Data?, mimeType: String, size: Int?, attributes: [TelegramMediaFileAttribute]) {
         self.fileId = fileId
         self.partialReference = partialReference

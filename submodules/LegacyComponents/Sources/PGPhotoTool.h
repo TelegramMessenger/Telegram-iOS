@@ -42,6 +42,7 @@ typedef enum
 
 @property (nonatomic, readonly) bool isSimple;
 @property (nonatomic, readonly) bool isAvialableForVideo;
+@property (nonatomic, readonly) bool requiresFaces;
 
 @property (nonatomic, weak) PGPhotoToolComposer *toolComposer;
 

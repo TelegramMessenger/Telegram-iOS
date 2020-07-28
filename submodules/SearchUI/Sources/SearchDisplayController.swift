@@ -15,6 +15,7 @@ public final class SearchDisplayController {
     private let searchBar: SearchBarNode
     private let mode: SearchDisplayControllerMode
     public let contentNode: SearchDisplayControllerContentNode
+    private var hasSeparator: Bool
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
@@ -22,10 +23,11 @@ public final class SearchDisplayController {
     
     private var isSearchingDisposable: Disposable?
     
-    public init(presentationData: PresentationData, mode: SearchDisplayControllerMode = .navigation, placeholder: String? = nil, contentNode: SearchDisplayControllerContentNode, cancel: @escaping () -> Void) {
-        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: false), strings: presentationData.strings, fieldStyle: .modern)
+    public init(presentationData: PresentationData, mode: SearchDisplayControllerMode = .navigation, placeholder: String? = nil, hasSeparator: Bool = false, contentNode: SearchDisplayControllerContentNode, cancel: @escaping () -> Void) {
+        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: hasSeparator), strings: presentationData.strings, fieldStyle: .modern, forceSeparator: hasSeparator)
         self.mode = mode
         self.contentNode = contentNode
+        self.hasSeparator = hasSeparator
         
         self.searchBar.textUpdated = { [weak contentNode] text, _ in
             contentNode?.searchTextUpdated(text: text)
@@ -68,7 +70,7 @@ public final class SearchDisplayController {
     }
     
     public func updatePresentationData(_ presentationData: PresentationData) {
-        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: false), strings: presentationData.strings)
+        self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: self.hasSeparator), strings: presentationData.strings)
         self.contentNode.updatePresentationData(presentationData)
     }
     

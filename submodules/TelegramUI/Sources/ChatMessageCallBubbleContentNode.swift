@@ -76,8 +76,10 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                 var titleString: String?
                 var callDuration: Int32?
                 var callSuccessful = true
+                var isVideo = false
                 for media in item.message.media {
-                    if let action = media as? TelegramMediaAction, case let .phoneCall(_, discardReason, duration) = action.action {
+                    if let action = media as? TelegramMediaAction, case let .phoneCall(_, discardReason, duration, isVideoValue) = action.action {
+                        isVideo = isVideoValue
                         callDuration = duration
                         if let discardReason = discardReason {
                             switch discardReason {
@@ -98,9 +100,17 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                 if titleString == nil {
                     let baseString: String
                     if message.flags.contains(.Incoming) {
-                        baseString = item.presentationData.strings.Notification_CallIncoming
+                        if isVideo {
+                            baseString = item.presentationData.strings.Notification_VideoCallIncoming
+                        } else {
+                            baseString = item.presentationData.strings.Notification_CallIncoming
+                        }
                     } else {
-                        baseString = item.presentationData.strings.Notification_CallOutgoing
+                        if isVideo {
+                            baseString = item.presentationData.strings.Notification_VideoCallOutgoing
+                        } else {
+                            baseString = item.presentationData.strings.Notification_CallOutgoing
+                        }
                     }
                     
                     titleString = baseString
@@ -203,7 +213,13 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
     
     @objc func callButtonPressed() {
         if let item = self.item {
-            item.controllerInteraction.callPeer(item.message.id.peerId)
+            var isVideo = false
+            for media in item.message.media {
+                if let action = media as? TelegramMediaAction, case let .phoneCall(_, _, _, isVideoValue) = action.action {
+                    isVideo = isVideoValue
+                }
+            }
+            item.controllerInteraction.callPeer(item.message.id.peerId, isVideo)
         }
     }
     
@@ -211,7 +227,13 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
         if self.buttonNode.frame.contains(point) {
             return .ignore
         } else if self.bounds.contains(point), let item = self.item {
-            return .call(item.message.id.peerId)
+            var isVideo = false
+            for media in item.message.media {
+                if let action = media as? TelegramMediaAction, case let .phoneCall(_, _, _, isVideoValue) = action.action {
+                    isVideo = isVideoValue
+                }
+            }
+            return .call(peerId: item.message.id.peerId, isVideo: isVideo)
         } else {
             return .none
         }

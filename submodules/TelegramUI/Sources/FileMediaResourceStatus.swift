@@ -33,6 +33,18 @@ func messageFileMediaPlaybackStatus(context: AccountContext, file: TelegramMedia
     }
 }
 
+func messageFileMediaPlaybackAudioLevelEvents(context: AccountContext, file: TelegramMediaFile, message: Message, isRecentActions: Bool) -> Signal<Float, NoError> {
+    guard let playerType = peerMessageMediaPlayerType(message) else {
+        return .never()
+    }
+    
+    if let (playlistId, itemId) = peerMessagesMediaPlaylistAndItemId(message, isRecentActions: isRecentActions) {
+        return context.sharedContext.mediaManager.filteredPlayerAudioLevelEvents(accountId: context.account.id, playlistId: playlistId, itemId: itemId, type: playerType)
+    } else {
+        return .never()
+    }
+}
+
 func messageFileMediaResourceStatus(context: AccountContext, file: TelegramMediaFile, message: Message, isRecentActions: Bool, isSharedMedia: Bool = false) -> Signal<FileMediaResourceStatus, NoError> {
     let playbackStatus = internalMessageFileMediaPlaybackStatus(context: context, file: file, message: message, isRecentActions: isRecentActions) |> map { status -> MediaPlayerPlaybackStatus? in
         return status?.status
@@ -48,7 +60,7 @@ func messageFileMediaResourceStatus(context: AccountContext, file: TelegramMedia
                         mediaStatus = .playbackStatus(.playing)
                     case .paused:
                         mediaStatus = .playbackStatus(.paused)
-                    case let .buffering(_, whilePlaying):
+                    case let .buffering(_, whilePlaying, _):
                         if whilePlaying {
                             mediaStatus = .playbackStatus(.playing)
                         } else {
@@ -72,7 +84,7 @@ func messageFileMediaResourceStatus(context: AccountContext, file: TelegramMedia
                         mediaStatus = .playbackStatus(.playing)
                     case .paused:
                         mediaStatus = .playbackStatus(.paused)
-                    case let .buffering(_, whilePlaying):
+                    case let .buffering(_, whilePlaying, _):
                         if whilePlaying {
                             mediaStatus = .playbackStatus(.playing)
                         } else {

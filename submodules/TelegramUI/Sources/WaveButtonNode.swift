@@ -26,7 +26,7 @@ private struct Constants {
     static let idleRotationDiff: CGFloat = 0.1 * idleRotationSpeed
 }
 
-class CombinedWaveView: UIView, TGModernConversationInputMicButtonDecoration {
+class CombinedWaveView: UIView {
     private let bigWaveView: WaveView
     private let smallWaveView: WaveView
     
@@ -35,7 +35,7 @@ class CombinedWaveView: UIView, TGModernConversationInputMicButtonDecoration {
     init(frame: CGRect, color: UIColor) {
         let n = 12
         let bounds = CGRect(origin: CGPoint(), size: frame.size)
-        self.bigWaveView = WaveView(frame: bounds, n: n, amplitudeRadius: 40.0, isBig: true, color: color.withAlphaComponent(0.3))
+        self.bigWaveView = WaveView(frame: bounds, n: n, amplitudeRadius: 30.0, isBig: true, color: color.withAlphaComponent(0.3))
         self.smallWaveView = WaveView(frame: bounds, n: n, amplitudeRadius: 35.0, isBig: false, color: color.withAlphaComponent(0.15))
         
         super.init(frame: frame)
@@ -46,7 +46,7 @@ class CombinedWaveView: UIView, TGModernConversationInputMicButtonDecoration {
         self.bigWaveView.amplitudeWaveDif = 0.02 * Constants.sineWaveSpeed * CGFloat.pi / 180.0
         
         self.smallWaveView.amplitudeWaveDif = 0.026 * Constants.sineWaveSpeed
-        self.smallWaveView.amplitudeRadius = 20.0 + 20.0 * Constants.smallWaveRadius
+        self.smallWaveView.amplitudeRadius = 10.0 + 20.0 * Constants.smallWaveRadius
         self.smallWaveView.maxScale = 0.3 * Constants.smallWaveScale
         self.smallWaveView.scaleSpeed = 0.001 * Constants.smallWaveScaleSpeed
         self.smallWaveView.fling = Constants.flingDistance
@@ -60,16 +60,19 @@ class CombinedWaveView: UIView, TGModernConversationInputMicButtonDecoration {
     }
     
     func updateLevel(_ level: CGFloat) {
-        let level = level * 0.45
+        let level = level * 0.2
         self.level = level
         self.bigWaveView.setLevel(level)
         self.smallWaveView.setLevel(level)
     }
     
     func tick(_ level: CGFloat) {
-        let radius = 56.0 + 30.0 * level * 0.45
+        let radius = 56.0 + 30.0 * level * 0.2
         self.bigWaveView.tick(circleRadius: radius)
         self.smallWaveView.tick(circleRadius: radius)
+    }
+    
+    func setColor(_ color: UIColor) {
     }
 }
 

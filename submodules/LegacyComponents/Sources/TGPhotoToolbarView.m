@@ -42,49 +42,19 @@
         _buttonsWrapperView = [[UIView alloc] initWithFrame:_backgroundView.bounds];
         [_backgroundView addSubview:_buttonsWrapperView];
         
-        _cancelButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 49, 49)];
+        CGSize buttonSize = CGSizeMake(49.0f, 49.0f);
+        _cancelButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, buttonSize.width, buttonSize.height)];
         _cancelButton.exclusiveTouch = true;
         _cancelButton.adjustsImageWhenHighlighted = false;
-        
-        UIImage *cancelImage = nil;
-        switch (backButton)
-        {
-            case TGPhotoEditorBackButtonCancel:
-                cancelImage = TGTintedImage([UIImage imageNamed:@"Editor/Cancel"], [UIColor whiteColor]);
-                break;
-                
-            default:
-                cancelImage = TGComponentsImageNamed(@"PhotoPickerBackIcon");
-                break;
-        }
-        [_cancelButton setImage:cancelImage forState:UIControlStateNormal];
+        [self setBackButtonType:backButton];
         [_cancelButton addTarget:self action:@selector(cancelButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         [_backgroundView addSubview:_cancelButton];
         
-        UIImage *doneImage = nil;
-        CGSize buttonSize = CGSizeMake(49.0f, 49.0f);
-        switch (doneButton)
-        {
-            case TGPhotoEditorDoneButtonCheck:
-                doneImage = TGTintedImage([UIImage imageNamed:@"Editor/Commit"], [UIColor whiteColor]);
-                break;
-                
-            default:
-            {
-                TGMediaAssetsPallete *pallete = nil;
-                if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(mediaAssetsPallete)])
-                    pallete = [[LegacyComponentsGlobals provider] mediaAssetsPallete];
-                
-                doneImage = pallete != nil ? pallete.sendIconImage : TGComponentsImageNamed(@"PhotoPickerSendIcon");
-            }
-                break;
-        }
         
         _doneButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, buttonSize.width, buttonSize.height)];
         _doneButton.exclusiveTouch = true;
         _doneButton.adjustsImageWhenHighlighted = false;
-        
-        [_doneButton setImage:doneImage forState:UIControlStateNormal];
+        [self setDoneButtonType:doneButton];
         [_doneButton addTarget:self action:@selector(doneButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         [_backgroundView addSubview:_doneButton];
         
@@ -93,6 +63,55 @@
         [_doneButton addGestureRecognizer:_longPressGestureRecognizer];
     }
     return self;
+}
+
+- (void)setBackButtonType:(TGPhotoEditorBackButton)backButtonType {
+    _backButtonType = backButtonType;
+    
+    UIImage *cancelImage = nil;
+    switch (backButtonType)
+    {
+        case TGPhotoEditorBackButtonCancel:
+            cancelImage = TGTintedImage([UIImage imageNamed:@"Editor/Cancel"], [UIColor whiteColor]);
+            break;
+            
+        default:
+            cancelImage = TGComponentsImageNamed(@"PhotoPickerBackIcon");
+            break;
+    }
+    [_cancelButton setImage:cancelImage forState:UIControlStateNormal];
+}
+
+- (void)setDoneButtonType:(TGPhotoEditorDoneButton)doneButtonType {
+    _doneButtonType = doneButtonType;
+    
+    UIImage *doneImage;
+    switch (doneButtonType)
+    {
+        case TGPhotoEditorDoneButtonCheck:
+            doneImage = TGTintedImage([UIImage imageNamed:@"Editor/Commit"], [UIColor whiteColor]);
+            break;
+            
+        case TGPhotoEditorDoneButtonDone:
+        {
+            TGMediaAssetsPallete *pallete = nil;
+            if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(mediaAssetsPallete)])
+                pallete = [[LegacyComponentsGlobals provider] mediaAssetsPallete];
+            
+            doneImage = pallete != nil ? pallete.doneIconImage : TGTintedImage([UIImage imageNamed:@"Editor/Commit"], [UIColor whiteColor]);
+            break;
+        }
+        default:
+        {
+            TGMediaAssetsPallete *pallete = nil;
+            if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(mediaAssetsPallete)])
+                pallete = [[LegacyComponentsGlobals provider] mediaAssetsPallete];
+            
+            doneImage = pallete != nil ? pallete.sendIconImage : TGComponentsImageNamed(@"PhotoPickerSendIcon");
+        }
+            break;
+    }
+    [_doneButton setImage:doneImage forState:UIControlStateNormal];
 }
 
 - (UIButton *)doneButton

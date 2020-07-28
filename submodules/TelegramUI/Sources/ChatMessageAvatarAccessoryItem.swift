@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Postbox
+import AsyncDisplayKit
 import Display
 import TelegramCore
 import SyncCore
@@ -17,16 +18,18 @@ final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
     private let messageReference: MessageReference?
     private let messageTimestamp: Int32
     private let emptyColor: UIColor
+    private let controllerInteraction: ChatControllerInteraction
     
     private let day: Int32
     
-    init(context: AccountContext, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, messageTimestamp: Int32, emptyColor: UIColor) {
+    init(context: AccountContext, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, messageTimestamp: Int32, emptyColor: UIColor, controllerInteraction: ChatControllerInteraction) {
         self.context = context
         self.peerId = peerId
         self.peer = peer
         self.messageReference = messageReference
         self.messageTimestamp = messageTimestamp
         self.emptyColor = emptyColor
+        self.controllerInteraction = controllerInteraction
         
         var t: time_t = time_t(messageTimestamp)
         var timeinfo: tm = tm()
@@ -47,29 +50,57 @@ final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
         let node = ChatMessageAvatarAccessoryItemNode()
         node.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
         if let peer = self.peer {
-            node.setPeer(context: self.context, theme: self.context.sharedContext.currentPresentationData.with({ $0 }).theme, synchronousLoad: synchronous, peer: peer, authorOfMessage: self.messageReference, emptyColor: self.emptyColor)
+            node.setPeer(context: self.context, theme: self.context.sharedContext.currentPresentationData.with({ $0 }).theme, synchronousLoad: synchronous, peer: peer, authorOfMessage: self.messageReference, emptyColor: self.emptyColor, controllerInteraction: self.controllerInteraction)
         }
         return node
     }
 }
 
 final class ChatMessageAvatarAccessoryItemNode: ListViewAccessoryItemNode {
+    var controllerInteraction: ChatControllerInteraction?
+    var peer: Peer?
+    
+    let containerNode: ContextControllerSourceNode
     let avatarNode: AvatarNode
     
+    var contextActionIsEnabled: Bool = true {
+        didSet {
+            if self.contextActionIsEnabled != oldValue {
+                self.containerNode.isGestureEnabled = self.contextActionIsEnabled
+            }
+        }
+    }
+    
     override init() {
-        let isLayerBacked = !smartInvertColorsEnabled()
+        self.containerNode = ContextControllerSourceNode()
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
         
         self.avatarNode = AvatarNode(font: avatarFont)
-        self.avatarNode.isLayerBacked = isLayerBacked
-        self.avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
+        self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
+        self.avatarNode.frame = self.containerNode.bounds
+        self.avatarNode.isUserInteractionEnabled = false
         
         super.init()
         
-        self.isLayerBacked = isLayerBacked
-        self.addSubnode(self.avatarNode)
+        self.isLayerBacked = false
+        
+        self.addSubnode(self.containerNode)
+        self.containerNode.addSubnode(self.avatarNode)
+        
+        self.containerNode.activated = { [weak self] gesture, _ in
+            guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction, let peer = strongSelf.peer else {
+                return
+            }
+            strongSelf.controllerInteraction?.openPeerContextMenu(peer, strongSelf.containerNode, strongSelf.containerNode.bounds, gesture)
+        }
     }
     
-    func setPeer(context: AccountContext, theme: PresentationTheme, synchronousLoad:Bool, peer: Peer, authorOfMessage: MessageReference?, emptyColor: UIColor) {
+    func setPeer(context: AccountContext, theme: PresentationTheme, synchronousLoad:Bool, peer: Peer, authorOfMessage: MessageReference?, emptyColor: UIColor, controllerInteraction: ChatControllerInteraction) {
+        self.controllerInteraction = controllerInteraction
+        self.peer = peer
+        
+        self.contextActionIsEnabled = peer.smallProfileImage != nil
+        
         var overrideImage: AvatarNodeImageOverride?
         if peer.isDeleted {
             overrideImage = .deletedIcon

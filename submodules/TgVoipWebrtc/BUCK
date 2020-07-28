@@ -1,31 +1,48 @@
 load("//Config:buck_rule_macros.bzl", "static_library", "glob_map", "glob_sub_map", "merge_maps")
 
+webrtc_include_prefix = "-I../../" if native.read_config("custom", "mode") == "project" else "-I"
+
 static_library(
     name = "TgVoipWebrtc",
     srcs = glob([
         "Sources/**/*.m",
         "Sources/**/*.mm",
-        "Impl/*.cpp",
+        "tgcalls/tgcalls/**/*.cpp",
+        "tgcalls/tgcalls/**/*.mm",
+        "tgcalls/tgcalls/**/*.m",
+    ], exclude = [
+        "tgcalls/tgcalls/legacy/**",
+        "tgcalls/tgcalls/platform/tdesktop/**",
+        "tgcalls/tgcalls/platform/windows/**",
+        "tgcalls/tgcalls/platform/darwin/VideoCameraCapturerMac.*",
+        "tgcalls/tgcalls/platform/darwin/VideoMetalViewMac.*",
     ]),
     has_cpp = True,
     headers = merge_maps([
         glob_sub_map("PublicHeaders/", [
             "PublicHeaders/**/*.h",
         ]),
-        glob_sub_map("Impl/", [
-            "Impl/*.h",
+        glob_sub_map("tgcalls/tgcalls/", [
+            "tgcalls/tgcalls/**/*.h",
         ]),
     ]),
     exported_headers = glob([
         "PublicHeaders/**/*.h",
     ]),
     compiler_flags = [
-        "-Ithird-party/webrtc/webrtc-ios/src",
-        "-Ithird-party/webrtc/webrtc-ios/src/third_party/abseil-cpp",
-        "-Ithird-party/submodules/TgVoipWebrtc/PublicHeaders",
+        webrtc_include_prefix + "third-party/webrtc/webrtc-ios/src",
+        webrtc_include_prefix + "third-party/webrtc/webrtc-ios/src/third_party/abseil-cpp",
+        webrtc_include_prefix + "third-party/webrtc/webrtc-ios/src/sdk/objc",
+        webrtc_include_prefix + "third-party/webrtc/webrtc-ios/src/sdk/objc/base",
+        webrtc_include_prefix + "third-party/webrtc/webrtc-ios/src/sdk/objc/components/renderer/metal",
+        webrtc_include_prefix + "third-party/webrtc/webrtc-ios/src/sdk/objc/components/renderer/opengl",
+        webrtc_include_prefix + "third-party/webrtc/webrtc-ios/src/sdk/objc/components/video_codec",
+        webrtc_include_prefix + "third-party/webrtc/webrtc-ios/src/third_party/libyuv/include",
+        webrtc_include_prefix + "third-party/submodules/TgVoipWebrtc/PublicHeaders",
         "-DWEBRTC_IOS",
         "-DWEBRTC_MAC",
         "-DWEBRTC_POSIX",
+        "-DRTC_ENABLE_VP9",
     ],
     deps = [
         "//submodules/MtProtoKit:MtProtoKit#shared",

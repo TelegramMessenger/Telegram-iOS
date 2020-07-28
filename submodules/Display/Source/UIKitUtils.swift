@@ -377,15 +377,21 @@ private func makeSubtreeSnapshot(layer: CALayer, keepTransform: Bool = false) ->
     view.layer.contentsGravity = layer.contentsGravity
     view.layer.masksToBounds = layer.masksToBounds
     if let mask = layer.mask {
-        let maskLayer = CALayer()
-        maskLayer.contents = mask.contents
-        maskLayer.contentsRect = mask.contentsRect
-        maskLayer.contentsScale = mask.contentsScale
-        maskLayer.contentsCenter = mask.contentsCenter
-        maskLayer.contentsGravity = mask.contentsGravity
-        maskLayer.frame = mask.frame
-        maskLayer.bounds = mask.bounds
-        view.layer.mask = maskLayer
+        if let shapeMask = mask as? CAShapeLayer {
+            let maskLayer = CAShapeLayer()
+            maskLayer.path = shapeMask.path
+            view.layer.mask = maskLayer
+        } else {
+            let maskLayer = CALayer()
+            maskLayer.contents = mask.contents
+            maskLayer.contentsRect = mask.contentsRect
+            maskLayer.contentsScale = mask.contentsScale
+            maskLayer.contentsCenter = mask.contentsCenter
+            maskLayer.contentsGravity = mask.contentsGravity
+            maskLayer.frame = mask.frame
+            maskLayer.bounds = mask.bounds
+            view.layer.mask = maskLayer
+        }
     }
     view.layer.cornerRadius = layer.cornerRadius
     view.layer.backgroundColor = layer.backgroundColor

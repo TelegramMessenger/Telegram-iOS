@@ -12,11 +12,17 @@ typedef enum
     TGMediaVideoConversionPresetCompressedHigh,
     TGMediaVideoConversionPresetCompressedVeryHigh,
     TGMediaVideoConversionPresetAnimation,
-    TGMediaVideoConversionPresetVideoMessage
+    TGMediaVideoConversionPresetVideoMessage,
+    TGMediaVideoConversionPresetProfileLow,
+    TGMediaVideoConversionPresetProfile,
+    TGMediaVideoConversionPresetProfileHigh,
+    TGMediaVideoConversionPresetProfileVeryHigh,
+    TGMediaVideoConversionPresetPassthrough
 } TGMediaVideoConversionPreset;
 
 @interface TGVideoEditAdjustments : NSObject <TGMediaEditAdjustments>
 
+@property (nonatomic, readonly) NSTimeInterval videoStartValue;
 @property (nonatomic, readonly) NSTimeInterval trimStartValue;
 @property (nonatomic, readonly) NSTimeInterval trimEndValue;
 @property (nonatomic, readonly) TGMediaVideoConversionPreset preset;
@@ -30,8 +36,9 @@ typedef enum
 - (NSDictionary *)dictionary;
 
 - (instancetype)editAdjustmentsWithPreset:(TGMediaVideoConversionPreset)preset maxDuration:(NSTimeInterval)maxDuration;
+- (instancetype)editAdjustmentsWithPreset:(TGMediaVideoConversionPreset)preset videoStartValue:(NSTimeInterval)videoStartValue trimStartValue:(NSTimeInterval)trimStartValue trimEndValue:(NSTimeInterval)trimEndValue;
 + (instancetype)editAdjustmentsWithOriginalSize:(CGSize)originalSize preset:(TGMediaVideoConversionPreset)preset;
-+ (instancetype)editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)values;
++ (instancetype)editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)values preset:(TGMediaVideoConversionPreset)preset;
 + (instancetype)editAdjustmentsWithDictionary:(NSDictionary *)dictionary;
 
 + (instancetype)editAdjustmentsWithOriginalSize:(CGSize)originalSize

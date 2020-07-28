@@ -46,8 +46,8 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
             switch action.action {
             case let .photoUpdated(image):
                 if let peer = messageMainPeer(message), let image = image {
-                    let promise: Promise<[AvatarGalleryEntry]> = Promise([AvatarGalleryEntry.image(image.imageId, image.reference, image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), peer, message.timestamp, nil, message.id)])
-                    let galleryController = AvatarGalleryController(context: context, peer: peer, remoteEntries: promise, replaceRootController: { controller, ready in
+                    let promise: Promise<[AvatarGalleryEntry]> = Promise([AvatarGalleryEntry.image(image.imageId, image.reference, image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), peer, message.timestamp, nil, message.id, image.immediateThumbnailData, "action")])
+                    let galleryController = AvatarGalleryController(context: context, peer: peer, sourceCorners: .roundRect(15.5), remoteEntries: promise, skipInitial: true, replaceRootController: { controller, ready in
                         
                     })
                     return .chatAvatars(galleryController, image)
@@ -148,7 +148,7 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                     } else if ext == "wav" || ext == "opus" {
                         return .audio(file)
                     } else if ext == "json", let fileSize = file.size, fileSize < 1024 * 1024 {
-                        if let path = context.account.postbox.mediaBox.completedResourcePath(file.resource), let _ = LOTComposition(filePath: path) {
+                        if let path = context.account.postbox.mediaBox.completedResourcePath(file.resource), let composition = LOTComposition(filePath: path), composition.timeDuration > 0.0 {
                             let gallery = GalleryController(context: context, source: .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                                 navigationController?.replaceTopController(controller, animated: false, ready: ready)
                                 }, baseNavigationController: navigationController, actionInteraction: actionInteraction)

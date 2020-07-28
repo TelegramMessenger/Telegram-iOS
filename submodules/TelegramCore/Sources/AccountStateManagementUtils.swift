@@ -1510,7 +1510,7 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
                             case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, notifySettings, pts, _, folderId):
                                 let peerId = peer.peerId
                                 
-                                updatedState.setNeedsHoleFromPreviousState(peerId: peerId, namespace: Namespaces.Message.Cloud)
+                                updatedState.setNeedsHoleFromPreviousState(peerId: peerId, namespace: Namespaces.Message.Cloud, validateChannelPts: pts)
                                 
                                 if topMessage != 0 {
                                     topMessageIds.insert(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: topMessage))
@@ -1590,7 +1590,7 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
 }
 
 func keepPollingChannel(postbox: Postbox, network: Network, peerId: PeerId, stateManager: AccountStateManager) -> Signal<Void, NoError> {
-    return postbox.transaction { transaction -> Signal<Void, NoError> in
+    let signal: Signal<Void, NoError> = postbox.transaction { transaction -> Signal<Void, NoError> in
         if let accountState = (transaction.getState() as? AuthorizedAccountState)?.state, let peer = transaction.getPeer(peerId) {
             var channelStates: [PeerId: AccountStateChannelState] = [:]
             if let channelState = transaction.getPeerChatState(peerId) as? ChannelState {
@@ -1635,6 +1635,9 @@ func keepPollingChannel(postbox: Postbox, network: Network, peerId: PeerId, stat
     }
     |> switchToLatest
     |> restart
+    
+    return signal
+    |> delay(1.0, queue: .concurrentDefaultQueue())
 }
 
 private func resetChannels(network: Network, peers: [Peer], state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
@@ -1751,7 +1754,11 @@ private func resetChannels(network: Network, peers: [Peer], state: AccountMutabl
         
         for message in storeMessages {
             if case let .Id(id) = message.id, id.namespace == Namespaces.Message.Cloud {
-                updatedState.setNeedsHoleFromPreviousState(peerId: id.peerId, namespace: id.namespace)
+                var channelPts: Int32?
+                if let state = channelStates[id.peerId] {
+                    channelPts = state.pts
+                }
+                updatedState.setNeedsHoleFromPreviousState(peerId: id.peerId, namespace: id.namespace, validateChannelPts: channelPts)
                 channelSynchronizedUntilMessage[id.peerId] = id.id
             }
         }
@@ -1841,7 +1848,11 @@ private func pollChannel(network: Network, peer: Peer, state: AccountMutableStat
                         updatedState.mergeUsers(users)
                         
                         for apiMessage in newMessages {
-                            if let message = StoreMessage(apiMessage: apiMessage) {
+                            if var message = StoreMessage(apiMessage: apiMessage) {
+                                var attributes = message.attributes
+                                attributes.append(ChannelMessageStateVersionAttribute(pts: pts))
+                                message = message.withUpdatedAttributes(attributes)
+                                
                                 if let preCachedResources = apiMessage.preCachedResources {
                                     for (resource, data) in preCachedResources {
                                         updatedState.addPreCachedResource(resource, data: data)
@@ -1941,10 +1952,14 @@ private func pollChannel(network: Network, peer: Peer, state: AccountMutableStat
                             updatedState.mergeChats(chats)
                             updatedState.mergeUsers(users)
                             
-                            updatedState.setNeedsHoleFromPreviousState(peerId: peer.peerId, namespace: Namespaces.Message.Cloud)
+                            updatedState.setNeedsHoleFromPreviousState(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, validateChannelPts: pts)
                         
                             for apiMessage in messages {
-                                if let message = StoreMessage(apiMessage: apiMessage) {
+                                if var message = StoreMessage(apiMessage: apiMessage) {
+                                    var attributes = message.attributes
+                                    attributes.append(ChannelMessageStateVersionAttribute(pts: pts))
+                                    message = message.withUpdatedAttributes(attributes)
+                                    
                                     if let preCachedResources = apiMessage.preCachedResources {
                                         for (resource, data) in preCachedResources {
                                             updatedState.addPreCachedResource(resource, data: data)
@@ -2175,9 +2190,14 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     var syncChatListFilters = false
     
     var holesFromPreviousStateMessageIds: [MessageId] = []
+    var clearHolesFromPreviousStateForChannelMessagesWithPts: [PeerIdAndMessageNamespace: Int32] = [:]
     
     for (peerId, namespaces) in finalState.state.namespacesWithHolesFromPreviousState {
-        for namespace in namespaces {
+        for (namespace, namespaceState) in namespaces {
+            if let pts = namespaceState.validateChannelPts {
+                clearHolesFromPreviousStateForChannelMessagesWithPts[PeerIdAndMessageNamespace(peerId: peerId, namespace: namespace)] = pts
+            }
+            
             var topId: Int32?
             if namespace == Namespaces.Message.Cloud, let channelState = transaction.getPeerChatState(peerId) as? ChannelState {
                 if let synchronizedUntilMessageId = channelState.synchronizedUntilMessageId {
@@ -2837,6 +2857,37 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
             Logger.shared.log("State", "not adding hole for peer \(messageId.peerId), \(upperId) >= \(messageId.id) = false")
         }
     }
+    
+    // could be the reason for unbounded slowdown, needs investigation
+    /*for (peerIdAndNamespace, pts) in clearHolesFromPreviousStateForChannelMessagesWithPts {
+        var upperMessageId: Int32?
+        var lowerMessageId: Int32?
+        transaction.scanMessageAttributes(peerId: peerIdAndNamespace.peerId, namespace: peerIdAndNamespace.namespace, { id, attributes in
+            for attribute in attributes {
+                if let attribute = attribute as? ChannelMessageStateVersionAttribute {
+                    if attribute.pts >= pts {
+                        if upperMessageId == nil {
+                            upperMessageId = id.id
+                        }
+                        if let lowerMessageIdValue = lowerMessageId {
+                            lowerMessageId = min(id.id, lowerMessageIdValue)
+                        } else {
+                            lowerMessageId = id.id
+                        }
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+            }
+            return false
+        })
+        if let upperMessageId = upperMessageId, let lowerMessageId = lowerMessageId {
+            if upperMessageId != lowerMessageId {
+                transaction.removeHole(peerId: peerIdAndNamespace.peerId, namespace: peerIdAndNamespace.namespace, space: .everywhere, range: lowerMessageId ... upperMessageId)
+            }
+        }
+    }*/
     
     if !peerActivityTimestamps.isEmpty {
         updatePeerPresenceLastActivities(transaction: transaction, accountPeerId: accountPeerId, activities: peerActivityTimestamps)

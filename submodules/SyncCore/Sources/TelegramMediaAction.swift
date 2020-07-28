@@ -38,7 +38,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case historyScreenshot
     case messageAutoremoveTimeoutUpdated(Int32)
     case gameScore(gameId: Int64, score: Int32)
-    case phoneCall(callId: Int64, discardReason: PhoneCallDiscardReason?, duration: Int32?)
+    case phoneCall(callId: Int64, discardReason: PhoneCallDiscardReason?, duration: Int32?, isVideo: Bool)
     case paymentSent(currency: String, totalAmount: Int64)
     case customText(text: String, entities: [MessageTextEntity])
     case botDomainAccessGranted(domain: String)
@@ -80,7 +80,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 if let value = decoder.decodeOptionalInt32ForKey("dr") {
                     discardReason = PhoneCallDiscardReason(rawValue: value)
                 }
-                self = .phoneCall(callId: decoder.decodeInt64ForKey("i", orElse: 0), discardReason: discardReason, duration: decoder.decodeInt32ForKey("d", orElse: 0))
+                self = .phoneCall(callId: decoder.decodeInt64ForKey("i", orElse: 0), discardReason: discardReason, duration: decoder.decodeInt32ForKey("d", orElse: 0), isVideo: decoder.decodeInt32ForKey("vc", orElse: 0) != 0)
             case 15:
                 self = .paymentSent(currency: decoder.decodeStringForKey("currency", orElse: ""), totalAmount: decoder.decodeInt64ForKey("ta", orElse: 0))
             case 16:
@@ -152,7 +152,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 encoder.encodeInt32(15, forKey: "_rawValue")
                 encoder.encodeString(currency, forKey: "currency")
                 encoder.encodeInt64(totalAmount, forKey: "ta")
-            case let .phoneCall(callId, discardReason, duration):
+            case let .phoneCall(callId, discardReason, duration, isVideo):
                 encoder.encodeInt32(14, forKey: "_rawValue")
                 encoder.encodeInt64(callId, forKey: "i")
                 if let discardReason = discardReason {
@@ -165,6 +165,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 } else {
                     encoder.encodeNil(forKey: "d")
                 }
+                encoder.encodeInt32(isVideo ? 1 : 0, forKey: "vc")
             case let .customText(text, entities):
                 encoder.encodeInt32(16, forKey: "_rawValue")
                 encoder.encodeString(text, forKey: "text")

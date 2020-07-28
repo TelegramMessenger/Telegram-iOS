@@ -945,6 +945,10 @@ public final class Transaction {
         self.postbox?.scanMessages(peerId: peerId, namespace: namespace, tag: tag, f)
     }
     
+    public func scanMessageAttributes(peerId: PeerId, namespace: MessageId.Namespace, _ f: (MessageId, [MessageAttribute]) -> Bool) {
+        self.postbox?.scanMessageAttributes(peerId: peerId, namespace: namespace, f)
+    }
+    
     public func invalidateMessageHistoryTagsSummary(peerId: PeerId, namespace: MessageId.Namespace, tagMask: MessageTags) {
         assert(!self.disposed)
         self.postbox?.invalidateMessageHistoryTagsSummary(peerId: peerId, namespace: namespace, tagMask: tagMask)
@@ -1043,7 +1047,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
 
             #if DEBUG
             //debugSaveState(basePath: basePath, name: "previous1")
-            //debugRestoreState(basePath: basePath, name: "previous1")
+            debugRestoreState(basePath: basePath, name: "previous1")
             #endif
             
             let startTime = CFAbsoluteTimeGetCurrent()
@@ -3164,6 +3168,24 @@ public final class Postbox {
             }
             if let last = indices.last {
                 index = last
+            } else {
+                break
+            }
+        }
+    }
+    
+    fileprivate func scanMessageAttributes(peerId: PeerId, namespace: MessageId.Namespace, _ f: (MessageId, [MessageAttribute]) -> Bool) {
+        var index = MessageIndex.upperBound(peerId: peerId, namespace: namespace)
+        while true {
+            let messages = self.messageHistoryTable.fetch(peerId: peerId, namespace: namespace, tag: nil, from: index, includeFrom: false, to: MessageIndex.lowerBound(peerId: peerId, namespace: namespace), limit: 32)
+            for message in messages {
+                let attributes = MessageHistoryTable.renderMessageAttributes(message)
+                if !f(message.id, attributes) {
+                    break
+                }
+            }
+            if let last = messages.last {
+                index = last.index
             } else {
                 break
             }

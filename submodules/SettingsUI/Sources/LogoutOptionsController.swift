@@ -129,7 +129,7 @@ private func logoutOptionsEntries(presentationData: PresentationData, canAddAcco
     return entries
 }
 
-func logoutOptionsController(context: AccountContext, navigationController: NavigationController, canAddAccounts: Bool, phoneNumber: String) -> ViewController {
+public func logoutOptionsController(context: AccountContext, navigationController: NavigationController, canAddAccounts: Bool, phoneNumber: String) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var replaceTopControllerImpl: ((ViewController) -> Void)?
@@ -250,6 +250,7 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
     }
     
     let controller = ItemListController(context: context, state: signal, tabBarItem: nil)
+    controller.navigationPresentation = .modal
     pushControllerImpl = { [weak navigationController] value in
         navigationController?.pushViewController(value, animated: false)
     }
