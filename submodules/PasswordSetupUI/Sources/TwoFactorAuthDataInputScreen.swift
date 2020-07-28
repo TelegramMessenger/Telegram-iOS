@@ -700,14 +700,14 @@ private final class TwoFactorDataInputScreenNode: ViewControllerTracingNode, UIS
         case .emailConfirmation:
             if let path = getAppBundle().path(forResource: "TwoFactorSetupMail", ofType: "tgs") {
                 let animatedStickerNode = AnimatedStickerNode()
-                animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 272, height: 272, playbackMode: .once, mode: .direct)
+                animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 272, height: 272, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 animatedStickerNode.visibility = true
                 self.animatedStickerNode = animatedStickerNode
             }
         case .passwordHint:
             if let path = getAppBundle().path(forResource: "TwoFactorSetupHint", ofType: "tgs") {
                 let animatedStickerNode = AnimatedStickerNode()
-                animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 272, height: 272, playbackMode: .once, mode: .direct)
+                animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 272, height: 272, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 animatedStickerNode.visibility = true
                 self.animatedStickerNode = animatedStickerNode
             }

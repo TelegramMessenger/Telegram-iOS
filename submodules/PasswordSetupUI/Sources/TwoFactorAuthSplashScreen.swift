@@ -112,7 +112,7 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
             buttonText = self.presentationData.strings.TwoFactorSetup_Intro_Action
             
             if let path = getAppBundle().path(forResource: "TwoFactorSetupIntro", ofType: "tgs") {
-                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct)
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 self.animationSize = CGSize(width: 124.0, height: 124.0)
                 self.animationNode.visibility = true
             }
@@ -122,7 +122,7 @@ private final class TwoFactorAuthSplashScreenNode: ViewControllerTracingNode {
             buttonText = self.presentationData.strings.TwoFactorSetup_Done_Action
             
             if let path = getAppBundle().path(forResource: "TwoFactorSetupDone", ofType: "tgs") {
-                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, mode: .direct)
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, mode: .direct(cachePathPrefix: nil))
                 self.animationSize = CGSize(width: 124.0, height: 124.0)
                 self.animationNode.visibility = true
             }

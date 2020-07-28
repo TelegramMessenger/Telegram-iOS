@@ -126,7 +126,7 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
                             animationName = "ChatListNewFolder"
                         }
                         if let path = getAppBundle().path(forResource: animationName, ofType: "tgs") {
-                            strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 192, height: 192, playbackMode: .once, mode: .direct)
+                            strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 192, height: 192, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                             strongSelf.animationNode.visibility = true
                         }
                     }

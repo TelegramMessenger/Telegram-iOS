@@ -5,8 +5,10 @@ import Display
 import AsyncDisplayKit
 import RLottieBinding
 import GZip
+import YuvConversion
 
 private let sharedQueue = Queue()
+private let sharedStoreQueue = Queue.concurrentDefaultQueue()
 
 private class AnimatedStickerNodeDisplayEvents: ASDisplayNode {
     private var value: Bool = false
@@ -46,7 +48,7 @@ private class AnimatedStickerNodeDisplayEvents: ASDisplayNode {
 
 public enum AnimatedStickerMode {
     case cached
-    case direct
+    case direct(cachePathPrefix: String?)
 }
 
 public enum AnimatedStickerPlaybackPosition {
@@ -267,11 +269,321 @@ public final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource 
     }
 }
 
+private func wrappedWrite(_ fd: Int32, _ data: UnsafeRawPointer, _ count: Int) -> Int {
+    return write(fd, data, count)
+}
+
+private func wrappedRead(_ fd: Int32, _ data: UnsafeMutableRawPointer, _ count: Int) -> Int {
+    return read(fd, data, count)
+}
+
+//TODO: separate ManagedFile into its own module
+private final class ManagedFileImpl {
+    enum Mode {
+        case read
+        case readwrite
+        case append
+    }
+    
+    private let queue: Queue?
+    private let fd: Int32
+    private let mode: Mode
+    
+    init?(queue: Queue?, path: String, mode: Mode) {
+        if let queue = queue {
+            assert(queue.isCurrent())
+        }
+        self.queue = queue
+        self.mode = mode
+        let fileMode: Int32
+        let accessMode: UInt16
+        switch mode {
+            case .read:
+                fileMode = O_RDONLY
+                accessMode = S_IRUSR
+            case .readwrite:
+                fileMode = O_RDWR | O_CREAT
+                accessMode = S_IRUSR | S_IWUSR
+            case .append:
+                fileMode = O_WRONLY | O_CREAT | O_APPEND
+                accessMode = S_IRUSR | S_IWUSR
+        }
+        let fd = open(path, fileMode, accessMode)
+        if fd >= 0 {
+            self.fd = fd
+        } else {
+            return nil
+        }
+    }
+    
+    deinit {
+        if let queue = self.queue {
+            assert(queue.isCurrent())
+        }
+        close(self.fd)
+    }
+    
+    public func write(_ data: UnsafeRawPointer, count: Int) -> Int {
+        if let queue = self.queue {
+            assert(queue.isCurrent())
+        }
+        return wrappedWrite(self.fd, data, count)
+    }
+    
+    public func read(_ data: UnsafeMutableRawPointer, _ count: Int) -> Int {
+        if let queue = self.queue {
+            assert(queue.isCurrent())
+        }
+        return wrappedRead(self.fd, data, count)
+    }
+    
+    public func readData(count: Int) -> Data {
+        if let queue = self.queue {
+            assert(queue.isCurrent())
+        }
+        var result = Data(count: count)
+        result.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int8>) -> Void in
+            let readCount = self.read(bytes, count)
+            assert(readCount == count)
+        }
+        return result
+    }
+    
+    public func seek(position: Int64) {
+        if let queue = self.queue {
+            assert(queue.isCurrent())
+        }
+        lseek(self.fd, position, SEEK_SET)
+    }
+    
+    public func truncate(count: Int64) {
+        if let queue = self.queue {
+            assert(queue.isCurrent())
+        }
+        ftruncate(self.fd, count)
+    }
+    
+    public func getSize() -> Int? {
+        if let queue = self.queue {
+            assert(queue.isCurrent())
+        }
+        var value = stat()
+        if fstat(self.fd, &value) == 0 {
+            return Int(value.st_size)
+        } else {
+            return nil
+        }
+    }
+    
+    public func sync() {
+        if let queue = self.queue {
+            assert(queue.isCurrent())
+        }
+        fsync(self.fd)
+    }
+}
+
+private func compressFrame(width: Int, height: Int, rgbData: Data) -> Data? {
+    let bytesPerRow = rgbData.count / height
+    
+    let yuvaPixelsPerAlphaRow = (Int(width) + 1) & (~1)
+    assert(yuvaPixelsPerAlphaRow % 2 == 0)
+    
+    let yuvaLength = Int(width) * Int(height) * 2 + yuvaPixelsPerAlphaRow * Int(height) / 2
+    var yuvaFrameData = malloc(yuvaLength)!
+    defer {
+        free(yuvaFrameData)
+    }
+    memset(yuvaFrameData, 0, yuvaLength)
+    
+    var compressedFrameData = Data(count: yuvaLength)
+    let compressedFrameDataLength = compressedFrameData.count
+    
+    let scratchData = malloc(compression_encode_scratch_buffer_size(COMPRESSION_LZFSE))!
+    defer {
+        free(scratchData)
+    }
+    
+    var rgbData = rgbData
+    rgbData.withUnsafeMutableBytes { (buffer: UnsafeMutableRawBufferPointer) -> Void in
+        if let baseAddress = buffer.baseAddress {
+            encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), baseAddress.assumingMemoryBound(to: UInt8.self), Int32(width), Int32(height), Int32(bytesPerRow))
+        }
+    }
+    
+    var maybeResultSize: Int?
+    
+    compressedFrameData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+        let length = compression_encode_buffer(bytes, compressedFrameDataLength, yuvaFrameData.assumingMemoryBound(to: UInt8.self), yuvaLength, scratchData, COMPRESSION_LZFSE)
+        maybeResultSize = length
+    }
+    
+    guard let resultSize = maybeResultSize else {
+        return nil
+    }
+    compressedFrameData.count = resultSize
+    return compressedFrameData
+}
+
+private final class AnimatedStickerDirectFrameSourceCache {
+    private let queue: Queue
+    private let storeQueue: Queue
+    private let file: ManagedFileImpl
+    private let frameCount: Int
+    private let width: Int
+    private let height: Int
+    
+    private var isStoringFrames = Set<Int>()
+    
+    private var scratchBuffer: Data
+    private var decodeBuffer: Data
+    
+    init?(queue: Queue, pathPrefix: String, width: Int, height: Int, frameCount: Int) {
+        self.queue = queue
+        self.storeQueue = sharedStoreQueue
+        
+        self.frameCount = frameCount
+        self.width = width
+        self.height = height
+        
+        let path = "\(pathPrefix)_\(width):\(height).stickerframecache"
+        var file = ManagedFileImpl(queue: queue, path: path, mode: .readwrite)
+        if let file = file {
+            self.file = file
+        } else {
+            let _ = try? FileManager.default.removeItem(atPath: path)
+            file = ManagedFileImpl(queue: queue, path: path, mode: .readwrite)
+            if let file = file {
+                self.file = file
+            } else {
+                return nil
+            }
+        }
+        
+        self.scratchBuffer = Data(count: compression_decode_scratch_buffer_size(COMPRESSION_LZFSE))
+        
+        let yuvaPixelsPerAlphaRow = (Int(width) + 1) & (~1)
+        let yuvaLength = Int(width) * Int(height) * 2 + yuvaPixelsPerAlphaRow * Int(height) / 2
+        self.decodeBuffer = Data(count: yuvaLength)
+        
+        self.initializeFrameTable()
+    }
+    
+    private func initializeFrameTable() {
+        if let size = self.file.getSize(), size >= self.frameCount * 4 * 2 {
+        } else {
+            self.file.truncate(count: 0)
+            for _ in 0 ..< self.frameCount {
+                var zero: Int32 = 0
+                let _ = self.file.write(&zero, count: 4)
+                let _ = self.file.write(&zero, count: 4)
+            }
+        }
+    }
+    
+    private func readFrameRange(index: Int) -> Range<Int>? {
+        if index < 0 || index >= self.frameCount {
+            return nil
+        }
+        
+        self.file.seek(position: Int64(index * 4 * 2))
+        var offset: Int32 = 0
+        var length: Int32 = 0
+        if self.file.read(&offset, 4) != 4 {
+            return nil
+        }
+        if self.file.read(&length, 4) != 4 {
+            return nil
+        }
+        if length == 0 {
+            return nil
+        }
+        if length < 0 || offset < 0 {
+            return nil
+        }
+        return (Int(offset) ..< Int(offset + length))
+    }
+    
+    func storeUncompressedRgbFrame(index: Int, rgbData: Data) {
+        if index < 0 || index >= self.frameCount {
+            return
+        }
+        if self.isStoringFrames.contains(index) {
+            return
+        }
+        self.isStoringFrames.insert(index)
+        
+        let width = self.width
+        let height = self.height
+        
+        let queue = self.queue
+        self.storeQueue.async { [weak self] in
+            let compressedData = compressFrame(width: width, height: height, rgbData: rgbData)
+            
+            queue.async {
+                guard let strongSelf = self else {
+                    return
+                }
+                guard let currentSize = strongSelf.file.getSize() else {
+                    return
+                }
+                guard let compressedData = compressedData else {
+                    return
+                }
+                
+                strongSelf.file.seek(position: Int64(index * 4 * 2))
+                var offset = Int32(currentSize)
+                var length = Int32(compressedData.count)
+                let _ = strongSelf.file.write(&offset, count: 4)
+                let _ = strongSelf.file.write(&length, count: 4)
+                strongSelf.file.seek(position: Int64(currentSize))
+                compressedData.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) -> Void in
+                    if let baseAddress = buffer.baseAddress {
+                        let _ = strongSelf.file.write(baseAddress, count: Int(length))
+                    }
+                }
+            }
+        }
+    }
+    
+    func readUncompressedYuvFrame(index: Int) -> Data? {
+        if index < 0 || index >= self.frameCount {
+            return nil
+        }
+        guard let range = self.readFrameRange(index: index) else {
+            return nil
+        }
+        self.file.seek(position: Int64(range.lowerBound))
+        let length = range.upperBound - range.lowerBound
+        let compressedData = self.file.readData(count: length)
+        if compressedData.count != length {
+            return nil
+        }
+        
+        var frameData: Data?
+        
+        let decodeBufferLength = self.decodeBuffer.count
+        
+        compressedData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+            self.scratchBuffer.withUnsafeMutableBytes { (scratchBytes: UnsafeMutablePointer<UInt8>) -> Void in
+                self.decodeBuffer.withUnsafeMutableBytes { (decodeBytes: UnsafeMutablePointer<UInt8>) -> Void in
+                    let resultLength = compression_decode_buffer(decodeBytes, decodeBufferLength, bytes, length, UnsafeMutableRawPointer(scratchBytes), COMPRESSION_LZFSE)
+                    
+                    frameData = Data(bytes: decodeBytes, count: resultLength)
+                }
+            }
+        }
+        
+        return frameData
+    }
+}
+
 private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource {
     private let queue: Queue
     private let data: Data
     private let width: Int
     private let height: Int
+    private let cache: AnimatedStickerDirectFrameSourceCache?
     private let bytesPerRow: Int
     let frameCount: Int
     let frameRate: Int
@@ -282,7 +594,7 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
         return self.currentFrame % self.frameCount
     }
     
-    init?(queue: Queue, data: Data, width: Int, height: Int) {
+    init?(queue: Queue, data: Data, width: Int, height: Int, cachePathPrefix: String?) {
         self.queue = queue
         self.data = data
         self.width = width
@@ -294,8 +606,13 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
             return nil
         }
         self.animation = animation
-        self.frameCount = Int(animation.frameCount)
+        let frameCount = Int(animation.frameCount)
+        self.frameCount = frameCount
         self.frameRate = Int(animation.frameRate)
+        
+        self.cache = cachePathPrefix.flatMap { cachePathPrefix in
+            AnimatedStickerDirectFrameSourceCache(queue: queue, pathPrefix: cachePathPrefix, width: width, height: height, frameCount: frameCount)
+        }
     }
     
     deinit {
@@ -306,12 +623,19 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
         let frameIndex = self.currentFrame % self.frameCount
         self.currentFrame += 1
         if draw {
-            var frameData = Data(count: self.bytesPerRow * self.height)
-            frameData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-                memset(bytes, 0, self.bytesPerRow * self.height)
-                self.animation.renderFrame(with: Int32(frameIndex), into: bytes, width: Int32(self.width), height: Int32(self.height), bytesPerRow: Int32(self.bytesPerRow))
+            if let cache = self.cache, let yuvData = cache.readUncompressedYuvFrame(index: frameIndex) {
+                return AnimatedStickerFrame(data: yuvData, type: .yuva, width: self.width, height: self.height, bytesPerRow: 0, index: frameIndex, isLastFrame: frameIndex == self.frameCount - 1)
+            } else {
+                var frameData = Data(count: self.bytesPerRow * self.height)
+                frameData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                    memset(bytes, 0, self.bytesPerRow * self.height)
+                    self.animation.renderFrame(with: Int32(frameIndex), into: bytes, width: Int32(self.width), height: Int32(self.height), bytesPerRow: Int32(self.bytesPerRow))
+                }
+                if let cache = self.cache {
+                    cache.storeUncompressedRgbFrame(index: frameIndex, rgbData: frameData)
+                }
+                return AnimatedStickerFrame(data: frameData, type: .argb, width: self.width, height: self.height, bytesPerRow: self.bytesPerRow, index: frameIndex, isLastFrame: frameIndex == self.frameCount - 1)
             }
-            return AnimatedStickerFrame(data: frameData, type: .argb, width: self.width, height: self.height, bytesPerRow: self.bytesPerRow, index: frameIndex, isLastFrame: frameIndex == self.frameCount - 1)
         } else {
             return nil
         }
@@ -409,7 +733,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
     private let timer = Atomic<SwiftSignalKit.Timer?>(value: nil)
     private let frameSource = Atomic<QueueLocalObject<AnimatedStickerFrameSourceWrapper>?>(value: nil)
     
-    private var directData: (Data, String, Int, Int)?
+    private var directData: (Data, String, Int, Int, String?)?
     private var cachedData: (Data, Bool)?
     
     private var renderer: (AnimationRenderer & ASDisplayNode)?
@@ -479,13 +803,13 @@ public final class AnimatedStickerNode: ASDisplayNode {
         }
         self.playbackMode = playbackMode
         switch mode {
-        case .direct:
+        case let .direct(cachePathPrefix):
             let f: (String) -> Void = { [weak self] path in
                 guard let strongSelf = self else {
                     return
                 }
                 if let directData = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
-                    strongSelf.directData = (directData, path, width, height)
+                    strongSelf.directData = (directData, path, width, height, cachePathPrefix)
                 }
                 if case let .still(position) = playbackMode {
                     strongSelf.seekTo(position)
@@ -568,7 +892,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                 if maybeFrameSource == nil {
                     let notifyUpdated: (() -> Void)? = nil
                     if let directData = directData {
-                        maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3)
+                        maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4)
                     } else if let (cachedData, cachedDataComplete) = cachedData {
                         if #available(iOS 9.0, *) {
                             maybeFrameSource = AnimatedStickerCachedFrameSource(queue: queue, data: cachedData, complete: cachedDataComplete, notifyUpdated: {
@@ -640,7 +964,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                 var maybeFrameSource: AnimatedStickerFrameSource?
                 let notifyUpdated: (() -> Void)? = nil
                 if let directData = directData {
-                    maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3)
+                    maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4)
                 } else if let (cachedData, cachedDataComplete) = cachedData {
                     if #available(iOS 9.0, *) {
                         maybeFrameSource = AnimatedStickerCachedFrameSource(queue: queue, data: cachedData, complete: cachedDataComplete, notifyUpdated: {
@@ -730,7 +1054,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
             } else {
                 var maybeFrameSource: AnimatedStickerFrameSource?
                 if let directData = directData {
-                    maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3)
+                    maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4)
                     if case .end = position {
                         maybeFrameSource?.skipToEnd()
                     }

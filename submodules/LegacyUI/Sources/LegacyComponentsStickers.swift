@@ -198,7 +198,7 @@ final class LegacyStickerImageDataSource: TGImageDataSource {
             var previewRepresentations: [TelegramMediaImageRepresentation] = []
             if let legacyThumbnailUri = args["legacyThumbnailUri"] as? String, let data = Data(base64Encoded: legacyThumbnailUri, options: []) {
                 if let resource = PostboxDecoder(buffer: MemoryBuffer(data: data)).decodeRootObject() as? TelegramMediaResource {
-                    previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 140, height: 140), resource: resource))
+                    previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 140, height: 140), resource: resource, progressiveSizes: []))
                 }
             }
             

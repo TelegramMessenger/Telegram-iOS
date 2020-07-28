@@ -216,6 +216,23 @@ final class MediaBoxPartialFile {
         self.currentFetch?.1.dispose()
     }
     
+    static func extractPartialData(path: String, metaPath: String, range: Range<Int32>) -> Data? {
+        guard let metadataFd = ManagedFile(queue: nil, path: metaPath, mode: .read) else {
+            return nil
+        }
+        guard let fd = ManagedFile(queue: nil, path: path, mode: .read) else {
+            return nil
+        }
+        guard let fileMap = MediaBoxFileMap(fd: metadataFd) else {
+            return nil
+        }
+        guard let clippedRange = fileMap.contains(range) else {
+            return nil
+        }
+        fd.seek(position: Int64(clippedRange.lowerBound))
+        return fd.readData(count: Int(clippedRange.upperBound - clippedRange.lowerBound))
+    }
+    
     var storedSize: Int32 {
         assert(self.queue.isCurrent())
         return self.fileMap.sum
@@ -582,7 +599,7 @@ final class MediaBoxPartialFile {
     
     private func immediateStatus(size: Int32?) -> MediaResourceStatus {
         let status: MediaResourceStatus
-        if self.fullRangeRequests.isEmpty {
+        if self.fullRangeRequests.isEmpty && self.currentFetch == nil {
             if let truncationSize = self.fileMap.truncationSize, self.fileMap.sum == truncationSize {
                 status = .Local
             } else {
@@ -633,6 +650,7 @@ final class MediaBoxPartialFile {
         if intervals.isEmpty {
             if let (_, disposable) = self.currentFetch {
                 self.currentFetch = nil
+                self.updateStatuses()
                 disposable.dispose()
             }
         } else {
@@ -642,6 +660,7 @@ final class MediaBoxPartialFile {
                 let promise = Promise<[(Range<Int>, MediaBoxFetchPriority)]>()
                 let disposable = MetaDisposable()
                 self.currentFetch = (promise, disposable)
+                self.updateStatuses()
                 disposable.set((fetch(promise.get())
                 |> deliverOn(self.queue)).start(next: { [weak self] data in
                     if let strongSelf = self {
