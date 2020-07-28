@@ -30,8 +30,8 @@ public enum StatsGraph: Equatable {
         switch self {
             case .Empty:
                 return true
-            case let .Failed(error):
-                return error.lowercased().contains("not enough data")
+            case .Failed:
+                return true
             default:
                 return false
         }
