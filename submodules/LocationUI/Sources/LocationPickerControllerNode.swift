@@ -40,7 +40,7 @@ private enum LocationPickerEntry: Comparable, Identifiable {
     case liveLocation(PresentationTheme, String, String, CLLocationCoordinate2D?)
     case header(PresentationTheme, String)
     case venue(PresentationTheme, TelegramMediaMap, Int)
-    case attribution(PresentationTheme)
+    case attribution(PresentationTheme, LocationAttribution)
     
     var stableId: LocationPickerEntryId {
         switch self {
@@ -83,8 +83,8 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .attribution(lhsTheme):
-                if case let .attribution(rhsTheme) = rhs, lhsTheme === rhsTheme {
+            case let .attribution(lhsTheme, lhsAttribution):
+                if case let .attribution(rhsTheme, rhsAttribution) = rhs, lhsTheme === rhsTheme, lhsAttribution == rhsAttribution {
                     return true
                 } else {
                     return false
@@ -131,7 +131,7 @@ private enum LocationPickerEntry: Comparable, Identifiable {
     
     func item(account: Account, presentationData: PresentationData, interaction: LocationPickerInteraction?) -> ListViewItem {
         switch self {
-            case let .location(theme, title, subtitle, venue, coordinate):
+            case let .location(_, title, subtitle, venue, coordinate):
                 let icon: LocationActionListItemIcon
                 if let venue = venue {
                     icon = .venue(venue)
@@ -147,23 +147,23 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                 }, highlighted: { highlighted in
                     interaction?.updateSendActionHighlight(highlighted)
                 })
-            case let .liveLocation(theme, title, subtitle, coordinate):
+            case let .liveLocation(_, title, subtitle, coordinate):
                 return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: account, title: title, subtitle: subtitle, icon: .liveLocation, action: {
                     if let coordinate = coordinate {
                         interaction?.sendLiveLocation(coordinate)
                     }
                 })
-            case let .header(theme, title):
+            case let .header(_, title):
                 return LocationSectionHeaderItem(presentationData: ItemListPresentationData(presentationData), title: title)
-            case let .venue(theme, venue, _):
+            case let .venue(_, venue, _):
                 let venueType = venue.venue?.type ?? ""
                 return ItemListVenueItem(presentationData: ItemListPresentationData(presentationData), account: account, venue: venue, style: .plain, action: {
                     interaction?.sendVenue(venue)
                 }, infoAction: ["home", "work"].contains(venueType) ? {
                     interaction?.openHomeWorkInfo()
                     } : nil)
-            case let .attribution(theme):
-                return LocationAttributionItem(presentationData: ItemListPresentationData(presentationData))
+            case let .attribution(_, attribution):
+                return LocationAttributionItem(presentationData: ItemListPresentationData(presentationData), attribution: attribution)
         }
     }
 }
@@ -496,15 +496,21 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                 
                 entries.append(.header(presentationData.theme, presentationData.strings.Map_ChooseAPlace.uppercased()))
                 
-                var displayedVenues = foundVenues != nil || state.searchingVenuesAround ? foundVenues : venues
+                let displayedVenues = foundVenues != nil || state.searchingVenuesAround ? foundVenues : venues
                 if let venues = displayedVenues {
                     var index: Int = 0
+                    var attribution: LocationAttribution?
                     for venue in venues {
+                        if venue.venue?.provider == "foursquare" {
+                            attribution = .foursquare
+                        } else if venue.venue?.provider == "gplaces" {
+                            attribution = .google
+                        }
                         entries.append(.venue(presentationData.theme, venue, index))
                         index += 1
                     }
-                    if !venues.isEmpty {
-                        entries.append(.attribution(presentationData.theme))
+                    if let attribution = attribution {
+                        entries.append(.attribution(presentationData.theme, attribution))
                     }
                 }
                 let previousEntries = previousEntries.swap(entries)
@@ -574,7 +580,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                 
                 if let (layout, navigationBarHeight) = strongSelf.validLayout {
                     var updateLayout = false
-                    var transition: ContainedViewLayoutTransition = .animated(duration: 0.45, curve: .spring)
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.45, curve: .spring)
                     
                     if previousState.displayingMapModeOptions != state.displayingMapModeOptions {
                         updateLayout = true
