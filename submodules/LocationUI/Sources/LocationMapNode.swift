@@ -68,11 +68,30 @@ private class LocationMapView: MKMapView, UIGestureRecognizerDelegate {
     }
 }
 
+private func generateHeadingArrowImage() -> UIImage? {
+    return generateImage(CGSize(width: 28.0, height: 28.0)) { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        
+        context.setFillColor(UIColor(rgb: 0x3393fe).cgColor)
+        
+        context.move(to: CGPoint(x: 14.0, y: 0.0))
+        context.addLine(to: CGPoint(x: 19.0, y: 7.0))
+        context.addLine(to: CGPoint(x: 9.0, y: 7.0))
+        context.closePath()
+        context.fillPath()
+        
+        context.setBlendMode(.clear)
+        context.fillEllipse(in: bounds.insetBy(dx: 5.0, dy: 5.0))
+    }
+}
+
 final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     private let locationPromise = Promise<CLLocation?>(nil)
     
     private let pickerAnnotationContainerView: PickerAnnotationContainerView
     private weak var userLocationAnnotationView: MKAnnotationView?
+    private var headingArrowView: UIImageView?
     
     private let pinDisposable = MetaDisposable()
     
@@ -102,6 +121,10 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     
     override func didLoad() {
         super.didLoad()
+        
+        self.headingArrowView = UIImageView()
+        self.headingArrowView?.frame = CGRect(origin: CGPoint(), size: CGSize(width: 28.0, height: 28.0))
+        self.headingArrowView?.image = generateHeadingArrowImage()
         
         self.mapView?.interactiveTransitionGestureRecognizerTest = { p in
             if p.x > 44.0 {
@@ -232,6 +255,10 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         for view in views {
             if view.annotation is MKUserLocation {
                 self.userLocationAnnotationView = view
+                if let headingArrowView = self.headingArrowView {
+                    view.addSubview(headingArrowView)
+                    headingArrowView.center = CGPoint(x: view.frame.width / 2.0, y: view.frame.height / 2.0)
+                }
                 if let annotationView = self.customUserLocationAnnotationView {
                     view.addSubview(annotationView)
                 }
@@ -343,6 +370,18 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
             } else {
                 self.customUserLocationAnnotationView?.removeFromSuperview()
                 self.customUserLocationAnnotationView = nil
+            }
+        }
+    }
+    
+    var userHeading: CGFloat? = nil {
+        didSet {
+            if let heading = self.userHeading {
+                self.headingArrowView?.isHidden = false
+                self.headingArrowView?.transform = CGAffineTransform(rotationAngle: CGFloat(heading / 180.0 * CGFloat.pi))
+            } else {
+                self.headingArrowView?.isHidden = true
+                self.headingArrowView?.transform = CGAffineTransform.identity
             }
         }
     }

@@ -17,6 +17,7 @@ import AppBundle
 import CoreLocation
 import Geocoding
 import PhoneNumberFormat
+import DeviceAccess
 
 private struct LocationPickerTransaction {
     let deletions: [ListViewDeleteItem]
@@ -240,12 +241,13 @@ struct LocationPickerState {
     }
 }
 
-final class LocationPickerControllerNode: ViewControllerTracingNode {
+final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationManagerDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
     private let presentationDataPromise: Promise<PresentationData>
     private let mode: LocationPickerMode
     private let interaction: LocationPickerInteraction
+    private let locationManager: LocationManager
     
     private let listNode: ListView
     private let emptyResultsTextNode: ImmediateTextNode
@@ -269,12 +271,13 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     private var listOffset: CGFloat?
         
-    init(context: AccountContext, presentationData: PresentationData, mode: LocationPickerMode, interaction: LocationPickerInteraction) {
+    init(context: AccountContext, presentationData: PresentationData, mode: LocationPickerMode, interaction: LocationPickerInteraction, locationManager: LocationManager) {
         self.context = context
         self.presentationData = presentationData
         self.presentationDataPromise = Promise(presentationData)
         self.mode = mode
         self.interaction = interaction
+        self.locationManager = locationManager
         
         self.state = LocationPickerState()
         self.statePromise = Promise(self.state)
@@ -539,7 +542,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                         switch previousState.selectedLocation {
                             case .none, .venue:
                                 updateMap = true
-                            case let .location(previousCoordinate, address):
+                            case let .location(previousCoordinate, _):
                                 if previousCoordinate != coordinate {
                                     updateMap = true
                                 }
@@ -691,11 +694,20 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                 strongSelf.goToUserLocation()
             }
         }
+        
+        self.locationManager.manager.startUpdatingHeading()
+        self.locationManager.manager.delegate = self
     }
     
     deinit {
         self.disposable?.dispose()
         self.geocodingDisposable.dispose()
+        
+        self.locationManager.manager.stopUpdatingHeading()
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
+        self.headerNode.mapNode.userHeading = CGFloat(newHeading.magneticHeading)
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -727,7 +739,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
     }
     
     private func dequeueTransition() {
-        guard let layout = self.validLayout, let transition = self.enqueuedTransitions.first else {
+        guard let _ = self.validLayout, let transition = self.enqueuedTransitions.first else {
             return
         }
         self.enqueuedTransitions.remove(at: 0)
