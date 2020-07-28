@@ -1,4 +1,430 @@
 public extension Api {
+public struct updates {
+    public enum Difference: TypeConstructorDescription {
+        case differenceEmpty(date: Int32, seq: Int32)
+        case difference(newMessages: [Api.Message], newEncryptedMessages: [Api.EncryptedMessage], otherUpdates: [Api.Update], chats: [Api.Chat], users: [Api.User], state: Api.updates.State)
+        case differenceSlice(newMessages: [Api.Message], newEncryptedMessages: [Api.EncryptedMessage], otherUpdates: [Api.Update], chats: [Api.Chat], users: [Api.User], intermediateState: Api.updates.State)
+        case differenceTooLong(pts: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .differenceEmpty(let date, let seq):
+                    if boxed {
+                        buffer.appendInt32(1567990072)
+                    }
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeInt32(seq, buffer: buffer, boxed: false)
+                    break
+                case .difference(let newMessages, let newEncryptedMessages, let otherUpdates, let chats, let users, let state):
+                    if boxed {
+                        buffer.appendInt32(16030880)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(newMessages.count))
+                    for item in newMessages {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(newEncryptedMessages.count))
+                    for item in newEncryptedMessages {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(otherUpdates.count))
+                    for item in otherUpdates {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    state.serialize(buffer, true)
+                    break
+                case .differenceSlice(let newMessages, let newEncryptedMessages, let otherUpdates, let chats, let users, let intermediateState):
+                    if boxed {
+                        buffer.appendInt32(-1459938943)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(newMessages.count))
+                    for item in newMessages {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(newEncryptedMessages.count))
+                    for item in newEncryptedMessages {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(otherUpdates.count))
+                    for item in otherUpdates {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    intermediateState.serialize(buffer, true)
+                    break
+                case .differenceTooLong(let pts):
+                    if boxed {
+                        buffer.appendInt32(1258196845)
+                    }
+                    serializeInt32(pts, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .differenceEmpty(let date, let seq):
+                return ("differenceEmpty", [("date", date), ("seq", seq)])
+                case .difference(let newMessages, let newEncryptedMessages, let otherUpdates, let chats, let users, let state):
+                return ("difference", [("newMessages", newMessages), ("newEncryptedMessages", newEncryptedMessages), ("otherUpdates", otherUpdates), ("chats", chats), ("users", users), ("state", state)])
+                case .differenceSlice(let newMessages, let newEncryptedMessages, let otherUpdates, let chats, let users, let intermediateState):
+                return ("differenceSlice", [("newMessages", newMessages), ("newEncryptedMessages", newEncryptedMessages), ("otherUpdates", otherUpdates), ("chats", chats), ("users", users), ("intermediateState", intermediateState)])
+                case .differenceTooLong(let pts):
+                return ("differenceTooLong", [("pts", pts)])
+    }
+    }
+    
+        public static func parse_differenceEmpty(_ reader: BufferReader) -> Difference? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.updates.Difference.differenceEmpty(date: _1!, seq: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_difference(_ reader: BufferReader) -> Difference? {
+            var _1: [Api.Message]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
+            }
+            var _2: [Api.EncryptedMessage]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.EncryptedMessage.self)
+            }
+            var _3: [Api.Update]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Update.self)
+            }
+            var _4: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _5: [Api.User]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            var _6: Api.updates.State?
+            if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.updates.State
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.updates.Difference.difference(newMessages: _1!, newEncryptedMessages: _2!, otherUpdates: _3!, chats: _4!, users: _5!, state: _6!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_differenceSlice(_ reader: BufferReader) -> Difference? {
+            var _1: [Api.Message]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
+            }
+            var _2: [Api.EncryptedMessage]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.EncryptedMessage.self)
+            }
+            var _3: [Api.Update]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Update.self)
+            }
+            var _4: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _5: [Api.User]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            var _6: Api.updates.State?
+            if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.updates.State
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.updates.Difference.differenceSlice(newMessages: _1!, newEncryptedMessages: _2!, otherUpdates: _3!, chats: _4!, users: _5!, intermediateState: _6!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_differenceTooLong(_ reader: BufferReader) -> Difference? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.updates.Difference.differenceTooLong(pts: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum State: TypeConstructorDescription {
+        case state(pts: Int32, qts: Int32, date: Int32, seq: Int32, unreadCount: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .state(let pts, let qts, let date, let seq, let unreadCount):
+                    if boxed {
+                        buffer.appendInt32(-1519637954)
+                    }
+                    serializeInt32(pts, buffer: buffer, boxed: false)
+                    serializeInt32(qts, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeInt32(seq, buffer: buffer, boxed: false)
+                    serializeInt32(unreadCount, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .state(let pts, let qts, let date, let seq, let unreadCount):
+                return ("state", [("pts", pts), ("qts", qts), ("date", date), ("seq", seq), ("unreadCount", unreadCount)])
+    }
+    }
+    
+        public static func parse_state(_ reader: BufferReader) -> State? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            _5 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.updates.State.state(pts: _1!, qts: _2!, date: _3!, seq: _4!, unreadCount: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum ChannelDifference: TypeConstructorDescription {
+        case channelDifferenceEmpty(flags: Int32, pts: Int32, timeout: Int32?)
+        case channelDifference(flags: Int32, pts: Int32, timeout: Int32?, newMessages: [Api.Message], otherUpdates: [Api.Update], chats: [Api.Chat], users: [Api.User])
+        case channelDifferenceTooLong(flags: Int32, timeout: Int32?, dialog: Api.Dialog, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .channelDifferenceEmpty(let flags, let pts, let timeout):
+                    if boxed {
+                        buffer.appendInt32(1041346555)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(pts, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(timeout!, buffer: buffer, boxed: false)}
+                    break
+                case .channelDifference(let flags, let pts, let timeout, let newMessages, let otherUpdates, let chats, let users):
+                    if boxed {
+                        buffer.appendInt32(543450958)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(pts, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(timeout!, buffer: buffer, boxed: false)}
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(newMessages.count))
+                    for item in newMessages {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(otherUpdates.count))
+                    for item in otherUpdates {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .channelDifferenceTooLong(let flags, let timeout, let dialog, let messages, let chats, let users):
+                    if boxed {
+                        buffer.appendInt32(-1531132162)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(timeout!, buffer: buffer, boxed: false)}
+                    dialog.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(messages.count))
+                    for item in messages {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .channelDifferenceEmpty(let flags, let pts, let timeout):
+                return ("channelDifferenceEmpty", [("flags", flags), ("pts", pts), ("timeout", timeout)])
+                case .channelDifference(let flags, let pts, let timeout, let newMessages, let otherUpdates, let chats, let users):
+                return ("channelDifference", [("flags", flags), ("pts", pts), ("timeout", timeout), ("newMessages", newMessages), ("otherUpdates", otherUpdates), ("chats", chats), ("users", users)])
+                case .channelDifferenceTooLong(let flags, let timeout, let dialog, let messages, let chats, let users):
+                return ("channelDifferenceTooLong", [("flags", flags), ("timeout", timeout), ("dialog", dialog), ("messages", messages), ("chats", chats), ("users", users)])
+    }
+    }
+    
+        public static func parse_channelDifferenceEmpty(_ reader: BufferReader) -> ChannelDifference? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_3 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.updates.ChannelDifference.channelDifferenceEmpty(flags: _1!, pts: _2!, timeout: _3)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelDifference(_ reader: BufferReader) -> ChannelDifference? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_3 = reader.readInt32() }
+            var _4: [Api.Message]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
+            }
+            var _5: [Api.Update]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Update.self)
+            }
+            var _6: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _7: [Api.User]?
+            if let _ = reader.readInt32() {
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.updates.ChannelDifference.channelDifference(flags: _1!, pts: _2!, timeout: _3, newMessages: _4!, otherUpdates: _5!, chats: _6!, users: _7!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelDifferenceTooLong(_ reader: BufferReader) -> ChannelDifference? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_2 = reader.readInt32() }
+            var _3: Api.Dialog?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Dialog
+            }
+            var _4: [Api.Message]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
+            }
+            var _5: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _6: [Api.User]?
+            if let _ = reader.readInt32() {
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.updates.ChannelDifference.channelDifferenceTooLong(flags: _1!, timeout: _2, dialog: _3!, messages: _4!, chats: _5!, users: _6!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+}
+public extension Api {
 public struct upload {
     public enum WebFile: TypeConstructorDescription {
         case webFile(size: Int32, mimeType: String, fileType: Api.storage.FileType, mtime: Int32, bytes: Buffer)
@@ -3995,17 +4421,31 @@ public extension Api {
                     })
                 }
             
-                public static func getBroadcastStats(flags: Int32, channel: Api.InputChannel, tzOffset: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.BroadcastStats>) {
+                public static func getBroadcastStats(flags: Int32, channel: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.BroadcastStats>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-433058374)
+                    buffer.appendInt32(-1421720550)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     channel.serialize(buffer, true)
-                    serializeInt32(tzOffset, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "stats.getBroadcastStats", parameters: [("flags", flags), ("channel", channel), ("tzOffset", tzOffset)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stats.BroadcastStats? in
+                    return (FunctionDescription(name: "stats.getBroadcastStats", parameters: [("flags", flags), ("channel", channel)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stats.BroadcastStats? in
                         let reader = BufferReader(buffer)
                         var result: Api.stats.BroadcastStats?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.stats.BroadcastStats
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getMegagroupStats(flags: Int32, channel: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.MegagroupStats>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-589330937)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    channel.serialize(buffer, true)
+                    return (FunctionDescription(name: "stats.getMegagroupStats", parameters: [("flags", flags), ("channel", channel)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stats.MegagroupStats? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.stats.MegagroupStats?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.stats.MegagroupStats
                         }
                         return result
                     })
@@ -4982,6 +5422,20 @@ public extension Api {
                     buffer.appendInt32(505748629)
                     peer.serialize(buffer, true)
                     return (FunctionDescription(name: "help.hidePromoData", parameters: [("peer", peer)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func dismissSuggestion(suggestion: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(125807007)
+                    serializeString(suggestion, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "help.dismissSuggestion", parameters: [("suggestion", suggestion)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -6174,6 +6628,34 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func getGlobalPrivacySettings() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.GlobalPrivacySettings>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-349483786)
+                    
+                    return (FunctionDescription(name: "account.getGlobalPrivacySettings", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.GlobalPrivacySettings? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.GlobalPrivacySettings?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.GlobalPrivacySettings
+                        }
+                        return result
+                    })
+                }
+            
+                public static func setGlobalPrivacySettings(settings: Api.GlobalPrivacySettings) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.GlobalPrivacySettings>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(517647042)
+                    settings.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.setGlobalPrivacySettings", parameters: [("settings", settings)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.GlobalPrivacySettings? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.GlobalPrivacySettings?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.GlobalPrivacySettings
+                        }
+                        return result
+                    })
+                }
             }
             public struct wallet {
                 public static func sendLiteRequest(body: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.LiteResponse>) {
@@ -6285,34 +6767,6 @@ public extension Api {
                 }
             }
             public struct photos {
-                public static func updateProfilePhoto(id: Api.InputPhoto) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.UserProfilePhoto>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-256159406)
-                    id.serialize(buffer, true)
-                    return (FunctionDescription(name: "photos.updateProfilePhoto", parameters: [("id", id)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.UserProfilePhoto? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.UserProfilePhoto?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.UserProfilePhoto
-                        }
-                        return result
-                    })
-                }
-            
-                public static func uploadProfilePhoto(file: Api.InputFile) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.photos.Photo>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1328726168)
-                    file.serialize(buffer, true)
-                    return (FunctionDescription(name: "photos.uploadProfilePhoto", parameters: [("file", file)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.photos.Photo? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.photos.Photo?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.photos.Photo
-                        }
-                        return result
-                    })
-                }
-            
                 public static func deletePhotos(id: [Api.InputPhoto]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Int64]>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-2016444625)
@@ -6343,6 +6797,37 @@ public extension Api {
                         var result: Api.photos.Photos?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.photos.Photos
+                        }
+                        return result
+                    })
+                }
+            
+                public static func uploadProfilePhoto(flags: Int32, file: Api.InputFile?, video: Api.InputFile?, videoStartTs: Double?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.photos.Photo>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1980559511)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {file!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {video!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeDouble(videoStartTs!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "photos.uploadProfilePhoto", parameters: [("flags", flags), ("file", file), ("video", video), ("videoStartTs", videoStartTs)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.photos.Photo? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.photos.Photo?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.photos.Photo
+                        }
+                        return result
+                    })
+                }
+            
+                public static func updateProfilePhoto(id: Api.InputPhoto) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.photos.Photo>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1926525996)
+                    id.serialize(buffer, true)
+                    return (FunctionDescription(name: "photos.updateProfilePhoto", parameters: [("id", id)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.photos.Photo? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.photos.Photo?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.photos.Photo
                         }
                         return result
                     })

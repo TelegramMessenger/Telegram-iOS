@@ -352,7 +352,7 @@
     
     _itemBeingEdited = item;
 
-    PGPhotoEditorValues *editorValues = (PGPhotoEditorValues *)[item.editingContext adjustmentsForItem:item.editableMediaItem];
+    id<TGMediaEditAdjustments> adjustments = [item.editingContext adjustmentsForItem:item.editableMediaItem];
     
     NSString *caption = [item.editingContext captionForItem:item.editableMediaItem];
 
@@ -364,6 +364,8 @@
     UIImage *image = nil;
     
     TGPhotoEntitiesContainerView *entitiesView = nil;
+    
+    id<TGMediaEditableItem> editableMediaItem = item.editableMediaItem;
     
     bool isVideo = false;
     if ([editorReferenceView isKindOfClass:[UIImageView class]])
@@ -389,13 +391,15 @@
         entitiesView = [videoItemView entitiesView];
         
         isVideo = true;
+        
+        editableMediaItem = videoItemView.editableMediaItem;
     }
     
     if (self.useGalleryImageAsEditableItemImage && self.storeOriginalImageForItem != nil)
         self.storeOriginalImageForItem(item.editableMediaItem, screenImage);
     
     TGPhotoEditorControllerIntent intent = isVideo ? TGPhotoEditorControllerVideoIntent : TGPhotoEditorControllerGenericIntent;
-    TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:_context item:item.editableMediaItem intent:intent adjustments:editorValues caption:caption screenImage:screenImage availableTabs:_interfaceView.currentTabs selectedTab:tab];
+    TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:_context item:editableMediaItem intent:intent adjustments:adjustments caption:caption screenImage:screenImage availableTabs:_interfaceView.currentTabs selectedTab:tab];
     controller.entitiesView = entitiesView;
     controller.editingContext = _editingContext;
     controller.stickersContext = _stickersContext;
@@ -429,7 +433,7 @@
         if (hasChanges)
         {
             if (didFinishEditingItem != nil) {
-                didFinishEditingItem(item.editableMediaItem, adjustments, resultImage, thumbnailImage);
+                didFinishEditingItem(editableMediaItem, adjustments, resultImage, thumbnailImage);
             }
         }
         
@@ -448,7 +452,7 @@
             return;
         
         if (strongSelf.didFinishRenderingFullSizeImage != nil)
-            strongSelf.didFinishRenderingFullSizeImage(item.editableMediaItem, image);
+            strongSelf.didFinishRenderingFullSizeImage(editableMediaItem, image);
     };
     
     controller.captionSet = ^(NSString *caption, NSArray *entities)
@@ -573,7 +577,7 @@
     {
         if (editableItem.isVideo) {
             if ([editableItem isKindOfClass:[TGMediaAsset class]]) {
-                return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem];
+                return [TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)editableItem allowNetworkAccess:true];
             } else if ([editableItem isKindOfClass:[TGCameraCapturedVideo class]]) {
                 return ((TGCameraCapturedVideo *)editableItem).avAsset;
             } else {

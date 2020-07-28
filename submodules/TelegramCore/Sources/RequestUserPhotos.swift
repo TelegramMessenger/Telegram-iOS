@@ -9,20 +9,20 @@ import SyncCore
 
 public struct TelegramPeerPhoto {
     public let image: TelegramMediaImage
-    public let date: Int32
     public let reference: TelegramMediaImageReference?
+    public let date: Int32
     public let index: Int
     public let totalCount: Int
     public let messageId: MessageId?
 }
 
-public func requestPeerPhotos(account:Account, peerId: PeerId) -> Signal<[TelegramPeerPhoto], NoError> {
-    return account.postbox.transaction{ transaction -> Peer? in
+public func requestPeerPhotos(postbox: Postbox, network: Network, peerId: PeerId) -> Signal<[TelegramPeerPhoto], NoError> {
+    return postbox.transaction{ transaction -> Peer? in
         return transaction.getPeer(peerId)
     }
     |> mapToSignal { peer -> Signal<[TelegramPeerPhoto], NoError> in
         if let peer = peer as? TelegramUser, let inputUser = apiInputUser(peer) {
-            return account.network.request(Api.functions.photos.getUserPhotos(userId: inputUser, offset: 0, maxId: 0, limit: 100))
+            return network.request(Api.functions.photos.getUserPhotos(userId: inputUser, offset: 0, maxId: 0, limit: 100))
             |> map {Optional($0)}
             |> mapError {_ in}
             |> `catch` { _ -> Signal<Api.photos.Photos?, NoError> in
@@ -46,12 +46,12 @@ public func requestPeerPhotos(account:Account, peerId: PeerId) -> Signal<[Telegr
                         if let image = telegramMediaImageFromApiPhoto(photos[i]), let reference = image.reference {
                             var date: Int32 = 0
                             switch photos[i] {
-                                case let .photo(_, _, _, _, apiDate, _, _):
+                                case let .photo(_, _, _, _, apiDate, _, _, _):
                                     date = apiDate
                                 case .photoEmpty:
                                     break
                             }
-                            images.append(TelegramPeerPhoto(image: image, date: date, reference: reference, index: i, totalCount: totalCount, messageId: nil))
+                            images.append(TelegramPeerPhoto(image: image, reference: reference, date: date, index: i, totalCount: totalCount, messageId: nil))
                         }
                     }
                     
@@ -61,7 +61,7 @@ public func requestPeerPhotos(account:Account, peerId: PeerId) -> Signal<[Telegr
                 }
             }
         } else if let peer = peer, let inputPeer = apiInputPeer(peer) {
-            return account.network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, filter: .inputMessagesFilterChatPhotos, minDate: 0, maxDate: 0, offsetId: 0, addOffset: 0, limit: 1000, maxId: 0, minId: 0, hash: 0))
+            return network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, filter: .inputMessagesFilterChatPhotos, minDate: 0, maxDate: 0, offsetId: 0, addOffset: 0, limit: 1000, maxId: 0, minId: 0, hash: 0))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
                 return .single(nil)
@@ -90,7 +90,7 @@ public func requestPeerPhotos(account:Account, peerId: PeerId) -> Signal<[Telegr
                             users = []
                     }
                     
-                    return account.postbox.transaction { transaction -> [Message] in
+                    return postbox.transaction { transaction -> [Message] in
                         var peers: [PeerId: Peer] = [:]
                         
                         for user in users {
@@ -121,7 +121,7 @@ public func requestPeerPhotos(account:Account, peerId: PeerId) -> Signal<[Telegr
                                 switch media.action {
                                     case let .photoUpdated(image):
                                         if let image = image {
-                                            photos.append(TelegramPeerPhoto(image: image, date: message.timestamp, reference: nil, index: index, totalCount: messages.count, messageId: message.id))
+                                            photos.append(TelegramPeerPhoto(image: image, reference: nil, date: message.timestamp, index: index, totalCount: messages.count, messageId: message.id))
                                         }
                                     default:
                                         break

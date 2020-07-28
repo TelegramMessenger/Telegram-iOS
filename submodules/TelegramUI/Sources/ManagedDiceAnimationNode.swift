@@ -70,6 +70,10 @@ private func rollingAnimationItem(account: Account, emojis: Signal<[TelegramMedi
             return .single(ManagedAnimationItem(source: .local("Dice_Rolling"), loop: true))
         case "🎯":
             return .single(ManagedAnimationItem(source: .local("Darts_Aiming"), loop: true))
+        case "🏀":
+            return .single(ManagedAnimationItem(source: .local("Basketball_Bouncing"), loop: true))
+        case "⚽️":
+            return .single(ManagedAnimationItem(source: .local("Football_Bouncing"), loop: true))
         default:
             return animationItem(account: account, emojis: emojis, emoji: emoji, value: nil, loop: true)
     }

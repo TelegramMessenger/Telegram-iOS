@@ -57,6 +57,8 @@
 
 @property (nonatomic, assign) CGRect previewViewFrame;
 
+- (instancetype)initWithFrame:(CGRect)frame avatar:(bool)avatar;
+
 - (void)setDocumentFrameHidden:(bool)hidden;
 - (void)setCameraMode:(PGCameraMode)mode;
 - (void)updateForCameraModeChangeWithPreviousMode:(PGCameraMode)previousMode;

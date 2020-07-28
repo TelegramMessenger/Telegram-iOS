@@ -29,7 +29,7 @@ class ChatExternalFileGalleryItem: GalleryItem {
         self.location = location
     }
     
-    func node() -> GalleryItemNode {
+    func node(synchronous: Bool) -> GalleryItemNode {
         let node = ChatExternalFileGalleryItemNode(context: self.context, presentationData: self.presentationData)
         
         for media in self.message.media {
@@ -52,7 +52,7 @@ class ChatExternalFileGalleryItem: GalleryItem {
         return node
     }
     
-    func updateNode(node: GalleryItemNode) {
+    func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? ChatExternalFileGalleryItemNode, let location = self.location {
             node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").0))
             node.setMessage(self.message)
@@ -246,7 +246,7 @@ class ChatExternalFileGalleryItemNode: GalleryItemNode {
         return self._title.get()
     }
     
-    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
+    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.containerNode.view)
         let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.containerNode.view.superview)
         

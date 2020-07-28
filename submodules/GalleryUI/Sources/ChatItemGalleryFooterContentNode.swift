@@ -113,6 +113,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private var nameOrder: PresentationPersonNameOrder
     private var dateTimeFormat: PresentationDateTimeFormat
     
+    private let contentNode: ASDisplayNode
     private let deleteButton: UIButton
     private let actionButton: UIButton
     private let maskNode: ASDisplayNode
@@ -217,6 +218,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
         didSet {
             if let scrubberView = self.scrubberView {
+                scrubberView.setCollapsed(self.visibilityAlpha < 1.0 ? true : false, animated: false)
                 self.view.addSubview(scrubberView)
                 scrubberView.updateScrubbingVisual = { [weak self] value in
                     guard let strongSelf = self else {
@@ -248,6 +250,12 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
     }
     
+    override func setVisibilityAlpha(_ alpha: CGFloat, animated: Bool) {
+        self.visibilityAlpha = alpha
+        self.contentNode.alpha = alpha
+        self.scrubberView?.setCollapsed(alpha < 1.0 ? true : false, animated: animated)
+    }
+    
     init(context: AccountContext, presentationData: PresentationData, present: @escaping (ViewController, Any?) -> Void = { _, _ in }) {
         self.context = context
         self.presentationData = presentationData
@@ -255,6 +263,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.strings = presentationData.strings
         self.nameOrder = presentationData.nameDisplayOrder
         self.dateTimeFormat = presentationData.dateTimeFormat
+        
+        self.contentNode = ASDisplayNode()
         
         self.deleteButton = UIButton()
         self.actionButton = UIButton()
@@ -300,6 +310,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         
         super.init()
         
+        self.addSubnode(self.contentNode)
+        
         self.textNode.highlightAttributeAction = { attributes in
             let highlightedAttributes = [TelegramTextAttributes.URL,
                                          TelegramTextAttributes.PeerMention,
@@ -326,21 +338,21 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             }
         }
         
-        self.view.addSubview(self.deleteButton)
-        self.view.addSubview(self.actionButton)
-        self.addSubnode(self.scrollWrapperNode)
+        self.contentNode.view.addSubview(self.deleteButton)
+        self.contentNode.view.addSubview(self.actionButton)
+        self.contentNode.addSubnode(self.scrollWrapperNode)
         self.scrollWrapperNode.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.textNode)
         
-        self.addSubnode(self.authorNameNode)
-        self.addSubnode(self.dateNode)
+        self.contentNode.addSubnode(self.authorNameNode)
+        self.contentNode.addSubnode(self.dateNode)
         
-        self.addSubnode(self.backwardButton)
-        self.addSubnode(self.forwardButton)
-        self.addSubnode(self.playbackControlButton)
+        self.contentNode.addSubnode(self.backwardButton)
+        self.contentNode.addSubnode(self.forwardButton)
+        self.contentNode.addSubnode(self.playbackControlButton)
         
-        self.addSubnode(self.statusNode)
-        self.addSubnode(self.statusButtonNode)
+        self.contentNode.addSubnode(self.statusNode)
+        self.contentNode.addSubnode(self.statusButtonNode)
         
         self.deleteButton.addTarget(self, action: #selector(self.deleteButtonPressed), for: [.touchUpInside])
         self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), for: [.touchUpInside])
@@ -672,6 +684,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             let textOffset = (Int((imageFrame.size.width - videoFrameTextNode.bounds.width) / 2) / 2) * 2
             videoFrameTextNode.frame = CGRect(origin: CGPoint(x: CGFloat(textOffset), y: imageFrame.size.height - videoFrameTextNode.bounds.height - 5.0), size: videoFrameTextNode.bounds.size)
         }
+        
+        self.contentNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight))
         
         return panelHeight
     }

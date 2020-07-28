@@ -252,7 +252,11 @@ typedef enum
     
     self.view.backgroundColor = [UIColor clearColor];
     
-    CGRect wrapperFrame = TGIsPad() ? CGRectMake(0.0f, 0.0f, self.view.frame.size.width, CGRectGetMaxY(_controlsFrame)): CGRectMake(0.0f, 0.0f, self.view.frame.size.width, CGRectGetMinY(_controlsFrame));
+    CGFloat bottomOffset = self.view.frame.size.height - CGRectGetMaxY(_controlsFrame);
+    if (bottomOffset > 44.0) {
+        bottomOffset = 0.0f;
+    }
+    CGRect wrapperFrame = TGIsPad() ? CGRectMake(0.0f, 0.0f, self.view.frame.size.width, CGRectGetMaxY(_controlsFrame) + bottomOffset): CGRectMake(0.0f, 0.0f, self.view.frame.size.width, CGRectGetMinY(_controlsFrame));
     
     _wrapperView = [[UIView alloc] initWithFrame:wrapperFrame];
     _wrapperView.clipsToBounds = true;
@@ -340,7 +344,7 @@ typedef enum
     [_circleWrapperView addSubview:_ringView];
     
     CGRect controlsFrame = _controlsFrame;
-    controlsFrame.size.width = _wrapperView.frame.size.width;
+//    controlsFrame.size.width = _wrapperView.frame.size.width;
     
     _controlsView = [[TGVideoMessageControls alloc] initWithFrame:controlsFrame assets:_assets slowmodeTimestamp:_slowmodeTimestamp slowmodeView:_slowmodeView];
     _controlsView.pallete = self.pallete;
@@ -624,7 +628,7 @@ typedef enum
     _dismissed = cancelled;
     
     if (self.onDismiss != nil)
-        self.onDismiss(_automaticDismiss);
+        self.onDismiss(_automaticDismiss, cancelled);
     
     if (_player != nil)
         [_player pause];
@@ -681,6 +685,9 @@ typedef enum
 - (bool)stop
 {
     if (!_capturePipeline.isRecording)
+        return false;
+    
+    if (_capturePipeline.videoDuration < 0.33)
         return false;
     
     if ([self.view.window isKindOfClass:[TGVideoMessageCaptureControllerWindow class]]) {
@@ -1045,6 +1052,7 @@ typedef enum
 {
     [_controlsView recordingStarted];
     [_controlsView setDurationString:@"0:00,00"];
+    self.onDuration(0);
     
     _audioRecordingDurationSeconds = 0;
     _audioRecordingDurationMilliseconds = 0.0;
@@ -1078,6 +1086,7 @@ typedef enum
     }
     else
     {
+        self.onDuration(recordingDuration);
         _audioRecordingDurationSeconds = currentDurationSeconds;
         _audioRecordingDurationMilliseconds = currentDurationMilliseconds;
         [_controlsView setDurationString:[[NSString alloc] initWithFormat:@"%d:%02d,%02d", (int)_audioRecordingDurationSeconds / 60, (int)_audioRecordingDurationSeconds % 60, (int)_audioRecordingDurationMilliseconds]];

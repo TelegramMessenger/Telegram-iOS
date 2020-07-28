@@ -21,6 +21,9 @@ open class OverlayMediaItemNode: ASDisplayNode {
     
     open var unminimize: (() -> Void)?
     
+    public var manualExpandEmbed: (() -> Void)?
+    public var customUnembedWhenPortrait: ((OverlayMediaItemNode) -> Bool)?
+    
     open var group: OverlayMediaItemNodeGroup? {
         return nil
     }

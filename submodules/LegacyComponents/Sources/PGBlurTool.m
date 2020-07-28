@@ -179,13 +179,16 @@
 - (void)updatePassParameters
 {
     PGBlurToolValue *value = (PGBlurToolValue *)self.displayValue;
-
     PGPhotoBlurPass *blurPass = (PGPhotoBlurPass *)_pass;
-    blurPass.type = value.type;
-    blurPass.size = value.size;
-    blurPass.point = value.point;
-    blurPass.angle = value.angle;
-    blurPass.falloff = value.falloff;
+    if ([value isKindOfClass:[PGBlurToolValue class]]) {
+        blurPass.type = value.type;
+        blurPass.size = value.size;
+        blurPass.point = value.point;
+        blurPass.angle = value.angle;
+        blurPass.falloff = value.falloff;
+    } else {
+        blurPass.type = PGBlurToolTypeNone;
+    }
 }
 
 - (bool)shouldBeSkipped

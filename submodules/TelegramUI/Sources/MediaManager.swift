@@ -70,24 +70,34 @@ public final class MediaManagerImpl: NSObject, MediaManager {
     
     private var nextPlayerIndex: Int32 = 0
     
+    private let voiceMediaPlayerStateDisposable = MetaDisposable()
     private var voiceMediaPlayer: SharedMediaPlayer? {
         didSet {
             if self.voiceMediaPlayer !== oldValue {
                 if let voiceMediaPlayer = self.voiceMediaPlayer {
                     let account = voiceMediaPlayer.account
-                    self.voiceMediaPlayerStateValue.set(voiceMediaPlayer.playbackState
-                    |> map { state -> (Account, SharedMediaPlayerItemPlaybackStateOrLoading)? in
-                        guard let state = state else {
-                            return nil
+                    self.voiceMediaPlayerStateDisposable.set((voiceMediaPlayer.playbackState
+                    |> deliverOnMainQueue).start(next: { [weak self, weak voiceMediaPlayer] state in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        guard let state = state, let voiceMediaPlayer = voiceMediaPlayer else {
+                            strongSelf.voiceMediaPlayerStateValue.set(.single(nil))
+                            return
                         }
                         if case let .item(item) = state {
-                            return (account, .state(item))
+                            strongSelf.voiceMediaPlayerStateValue.set(.single((account, .state(item))))
+                            let audioLevelValue: (AccountRecordId, SharedMediaPlaylistId, SharedMediaPlaylistItemId, Signal<Float, NoError>)? = (account.id, item.playlistId, item.item.id, voiceMediaPlayer.audioLevel)
+                            strongSelf.voiceMediaPlayerAudioLevelEvents.set(.single(audioLevelValue))
                         } else {
-                            return (account, .loading)
+                            strongSelf.voiceMediaPlayerStateValue.set(.single((account, .loading)))
+                            strongSelf.voiceMediaPlayerAudioLevelEvents.set(.single(nil))
                         }
-                    } |> deliverOnMainQueue)
+                    }))
                 } else {
+                    self.voiceMediaPlayerStateDisposable.set(nil)
                     self.voiceMediaPlayerStateValue.set(.single(nil))
+                    self.voiceMediaPlayerAudioLevelEvents.set(.single(nil))
                 }
             }
         }
@@ -96,6 +106,8 @@ public final class MediaManagerImpl: NSObject, MediaManager {
     var voiceMediaPlayerState: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading)?, NoError> {
         return self.voiceMediaPlayerStateValue.get()
     }
+    
+    private let voiceMediaPlayerAudioLevelEvents = Promise<(AccountRecordId, SharedMediaPlaylistId, SharedMediaPlaylistItemId, Signal<Float, NoError>)?>(nil)
     
     private var musicMediaPlayer: SharedMediaPlayer? {
         didSet {
@@ -137,7 +149,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                     switch value.status.status {
                     case .playing:
                         isPlaying = true
-                    case .buffering(_, true):
+                    case .buffering(_, true, _):
                         isPlaying = true
                     default:
                         break
@@ -217,7 +229,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                     updatedGlobalControlOptions.insert(.next)
                     updatedGlobalControlOptions.insert(.seek)
                     switch state.status.status {
-                        case .playing, .buffering(_, true):
+                        case .playing, .buffering(_, true, _):
                             updatedGlobalControlOptions.insert(.pause)
                         default:
                             updatedGlobalControlOptions.insert(.play)
@@ -371,7 +383,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                 switch state.status.status {
                     case .playing:
                         isPlaying = true
-                    case let .buffering(_, whilePlaying):
+                    case let .buffering(_, whilePlaying, _):
                         isPlaying = whilePlaying
                     default:
                         break
@@ -427,6 +439,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
         self.setPlaylistByTypeDisposables.dispose()
         self.mediaPlaybackStateDisposable.dispose()
         self.globalAudioSessionForegroundDisposable.dispose()
+        self.voiceMediaPlayerStateDisposable.dispose()
     }
     
     public func audioRecorder(beginWithTone: Bool, applicationBindings: TelegramApplicationBindings, beganWithTone: @escaping (Bool) -> Void) -> Signal<ManagedAudioRecorder?, NoError> {
@@ -569,6 +582,26 @@ public final class MediaManagerImpl: NSObject, MediaManager {
         })
     }
     
+    public func filteredPlayerAudioLevelEvents(accountId: AccountRecordId, playlistId: SharedMediaPlaylistId, itemId: SharedMediaPlaylistItemId, type: MediaManagerPlayerType) -> Signal<Float, NoError> {
+        switch type {
+            case .voice:
+                return self.voiceMediaPlayerAudioLevelEvents.get()
+                |> mapToSignal { value -> Signal<Float, NoError> in
+                    guard let value = value else {
+                        return .never()
+                    }
+                    let (accountIdValue, playlistIdValue, itemIdValue, signal) = value
+                    if accountIdValue == accountId && playlistId.isEqual(to: playlistIdValue) && itemId.isEqual(to: itemIdValue) {
+                        return signal
+                    } else {
+                        return .never()
+                    }
+                }
+            case .music:
+                return .never()
+        }
+    }
+    
     @objc func playCommandEvent(_ command: AnyObject) -> MPRemoteCommandHandlerStatus {
         self.playlistControl(.playback(.play), type: nil)
         
@@ -615,5 +648,9 @@ public final class MediaManagerImpl: NSObject, MediaManager {
             self.currentOverlayVideoNode = node
             self.overlayMediaManager.controller?.addNode(node, customTransition: true)
         }
+    }
+    
+    public func hasOverlayVideoNode(_ node: OverlayMediaItemNode) -> Bool {
+        return self.currentOverlayVideoNode === node
     }
 }

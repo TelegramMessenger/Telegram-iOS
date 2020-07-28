@@ -10,7 +10,7 @@ private let maxWidth: CGFloat = 75.0
 
 public protocol GalleryThumbnailItem {
     func isEqual(to: GalleryThumbnailItem) -> Bool
-    var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) { get }
+    func image(synchronous: Bool) -> (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize)
 }
 
 private final class GalleryThumbnailItemNode: ASDisplayNode {
@@ -19,19 +19,19 @@ private final class GalleryThumbnailItemNode: ASDisplayNode {
     
     private let imageSize: CGSize
     
-    init(item: GalleryThumbnailItem) {
+    init(item: GalleryThumbnailItem, synchronous: Bool) {
         self.imageNode = TransformImageNode()
         self.imageContainerNode = ASDisplayNode()
         self.imageContainerNode.clipsToBounds = true
         self.imageContainerNode.cornerRadius = 2.0
-        let (signal, imageSize) = item.image
+        let (signal, imageSize) = item.image(synchronous: synchronous)
         self.imageSize = imageSize
         
         super.init()
         
         self.imageContainerNode.addSubnode(self.imageNode)
         self.addSubnode(self.imageContainerNode)
-        self.imageNode.setSignal(signal)
+        self.imageNode.setSignal(signal, attemptSynchronously: synchronous)
     }
     
     func updateLayout(height: CGFloat, progress: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -57,6 +57,7 @@ public final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDel
     private var itemNodes: [GalleryThumbnailItemNode] = []
     private var centralIndexAndProgress: (Int, CGFloat?)?
     private var currentLayout: CGSize?
+    public var updateSynchronously: Bool = false
     
     private var isPanning: Bool = false
     
@@ -70,6 +71,8 @@ public final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDel
         
         self.scrollNode.view.delegate = self
         self.scrollNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+        self.scrollNode.view.showsHorizontalScrollIndicator = false
+        self.scrollNode.view.showsVerticalScrollIndicator = false
         
         self.addSubnode(self.scrollNode)
     }
@@ -88,13 +91,12 @@ public final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDel
     
     public func updateItems(_ items: [GalleryThumbnailItem], indexes: [Int], centralIndex: Int, progress: CGFloat) {
         self.indexes = indexes
-        var items: [GalleryThumbnailItem] = items.count <= 1 ? [] : items
+        let items: [GalleryThumbnailItem] = items.count <= 1 ? [] : items
         var updated = false
         if self.items.count == items.count {
             for i in 0 ..< self.items.count {
                 if !self.items[i].isEqual(to: items[i]) {
                     updated = true
-                    break
                 }
             }
         } else {
@@ -106,7 +108,7 @@ public final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDel
                 if let index = self.items.firstIndex(where: { $0.isEqual(to: item) }) {
                     itemNodes.append(self.itemNodes[index])
                 } else {
-                    itemNodes.append(GalleryThumbnailItemNode(item: item))
+                    itemNodes.append(GalleryThumbnailItemNode(item: item, synchronous: self.updateSynchronously))
                 }
             }
             

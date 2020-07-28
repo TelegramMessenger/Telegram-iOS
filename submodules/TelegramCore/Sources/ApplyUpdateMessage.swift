@@ -5,6 +5,16 @@ import SwiftSignalKit
 
 import SyncCore
 
+private func copyOrMoveResourceData(from fromResource: MediaResource, to toResource: MediaResource, mediaBox: MediaBox) {
+    if fromResource is CloudFileMediaResource || fromResource is CloudDocumentMediaResource || fromResource is SecretFileMediaResource {
+        mediaBox.copyResourceData(from: fromResource.id, to: toResource.id)
+    } else if let fromResource = fromResource as? LocalFileMediaResource, fromResource.isSecretRelated {
+        mediaBox.copyResourceData(from: fromResource.id, to: toResource.id)
+    } else {
+        mediaBox.moveResourceData(from: fromResource.id, to: toResource.id)
+    }
+}
+
 func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: Bool) {
     if let fromImage = from as? TelegramMediaImage, let toImage = to as? TelegramMediaImage {
         let fromSmallestRepresentation = smallestImageRepresentation(fromImage.representations)
@@ -13,21 +23,21 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: 
             let widthDifference = fromSmallestRepresentation.dimensions.width - toSmallestRepresentation.dimensions.width
             let heightDifference = fromSmallestRepresentation.dimensions.height - toSmallestRepresentation.dimensions.height
             if abs(widthDifference) < leeway && abs(heightDifference) < leeway {
-                postbox.mediaBox.moveResourceData(from: fromSmallestRepresentation.resource.id, to: toSmallestRepresentation.resource.id)
+                copyOrMoveResourceData(from: fromSmallestRepresentation.resource, to: toSmallestRepresentation.resource, mediaBox: postbox.mediaBox)
             }
         }
         if let fromLargestRepresentation = largestImageRepresentation(fromImage.representations), let toLargestRepresentation = largestImageRepresentation(toImage.representations) {
-            postbox.mediaBox.moveResourceData(from: fromLargestRepresentation.resource.id, to: toLargestRepresentation.resource.id)
+            copyOrMoveResourceData(from: fromLargestRepresentation.resource, to: toLargestRepresentation.resource, mediaBox: postbox.mediaBox)
         }
     } else if let fromFile = from as? TelegramMediaFile, let toFile = to as? TelegramMediaFile {
         if let fromPreview = smallestImageRepresentation(fromFile.previewRepresentations), let toPreview = smallestImageRepresentation(toFile.previewRepresentations) {
-            postbox.mediaBox.moveResourceData(from: fromPreview.resource.id, to: toPreview.resource.id)
+            copyOrMoveResourceData(from: fromPreview.resource, to: toPreview.resource, mediaBox: postbox.mediaBox)
         }
         if let fromVideoThumbnail = fromFile.videoThumbnails.first, let toVideoThumbnail = toFile.videoThumbnails.first, fromVideoThumbnail.resource.id.uniqueId != toVideoThumbnail.resource.id.uniqueId {
-            postbox.mediaBox.moveResourceData(from: fromVideoThumbnail.resource.id, to: toVideoThumbnail.resource.id)
+            copyOrMoveResourceData(from: fromVideoThumbnail.resource, to: toVideoThumbnail.resource, mediaBox: postbox.mediaBox)
         }
         if (force || fromFile.size == toFile.size || fromFile.resource.size == toFile.resource.size) && fromFile.mimeType == toFile.mimeType {
-            postbox.mediaBox.moveResourceData(from: fromFile.resource.id, to: toFile.resource.id)
+            copyOrMoveResourceData(from: fromFile.resource, to: toFile.resource, mediaBox: postbox.mediaBox)
         }
     }
 }

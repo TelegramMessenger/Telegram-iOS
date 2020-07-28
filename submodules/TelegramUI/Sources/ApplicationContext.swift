@@ -750,7 +750,7 @@ final class AuthorizedApplicationContext {
         }
     }
     
-    func startCall(peerId: PeerId) {
+    func startCall(peerId: PeerId, isVideo: Bool) {
         guard let appLockContext = self.context.sharedContext.appLockContext as? AppLockContextImpl else {
             return
         }
@@ -763,7 +763,7 @@ final class AuthorizedApplicationContext {
             guard let strongSelf = self else {
                 return
             }
-            let _ = strongSelf.context.sharedContext.callManager?.requestCall(account: strongSelf.context.account, peerId: peerId, endCurrentIfAny: false)
+            let _ = strongSelf.context.sharedContext.callManager?.requestCall(account: strongSelf.context.account, peerId: peerId, isVideo: isVideo, endCurrentIfAny: false)
         }))
     }
     

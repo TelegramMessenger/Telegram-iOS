@@ -95,7 +95,7 @@ private final class FeaturedPackEntry: Identifiable, Comparable {
     
     func item(account: Account, interaction: FeaturedInteraction, isOther: Bool) -> GridItem {
         let info = self.info
-        return StickerPaneSearchGlobalItem(account: account, theme: self.theme, strings: self.strings, listAppearance: true, info: self.info, topItems: self.topItems, grid: false, topSeparator: self.topSeparator, regularInsets: self.regularInsets, installed: self.installed, unread: self.unread, open: {
+        return StickerPaneSearchGlobalItem(account: account, theme: self.theme, strings: self.strings, listAppearance: true, info: self.info, topItems: self.topItems, topSeparator: self.topSeparator, regularInsets: self.regularInsets, installed: self.installed, unread: self.unread, open: {
             interaction.openPack(info)
         }, install: {
             interaction.installPack(info, !self.installed)
@@ -713,14 +713,14 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             searchNode.updateLayout(size: searchNodeFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: insets.bottom + layout.safeInsets.bottom, inputHeight: layout.inputHeight ?? 0.0, deviceMetrics: layout.deviceMetrics, transition: transition)
         }
         
-        let itemSize: CGSize
-        if case .tablet = layout.deviceMetrics.type, layout.size.width > 480.0 {
-            itemSize = CGSize(width: floor(layout.size.width / 2.0), height: 128.0)
-        } else {
-            itemSize = CGSize(width: layout.size.width, height: 128.0)
+        var itemSize = CGSize(width: layout.size.width, height: 128.0)
+        if case .regular = layout.metrics.widthClass, layout.size.width > 480.0 {
+            itemSize.width -= 60.0
+            insets.left += 30.0
+            insets.right += 30.0
         }
         
-        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: UIEdgeInsets(top: insets.top, left: layout.safeInsets.left, bottom: insets.bottom + layout.safeInsets.bottom, right: layout.safeInsets.right), preloadSize: 300.0, type: .fixed(itemSize: itemSize, fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: UIEdgeInsets(top: insets.top, left: insets.left + layout.safeInsets.left, bottom: insets.bottom + layout.safeInsets.bottom, right: insets.right + layout.safeInsets.right), preloadSize: 300.0, type: .fixed(itemSize: itemSize, fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
         transition.updateFrame(node: self.gridNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: layout.size.height)))
         
@@ -1032,7 +1032,7 @@ private enum FeaturedSearchEntry: Identifiable, Comparable {
                 interaction.sendSticker(.standalone(media: stickerItem.file), node, rect)
             })
         case let .global(_, info, topItems, installed, topSeparator):
-            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, listAppearance: false, info: info, topItems: topItems, grid: false, topSeparator: topSeparator, regularInsets: false, installed: installed, unread: false, open: {
+            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, listAppearance: false, info: info, topItems: topItems, topSeparator: topSeparator, regularInsets: false, installed: installed, unread: false, open: {
                 interaction.open(info)
             }, install: {
                 interaction.install(info, topItems, !installed)

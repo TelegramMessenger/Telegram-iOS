@@ -34,8 +34,8 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     controller.scrollToEndOfHistory()
                     let _ = params.navigationController.popToViewController(controller, animated: params.animated)
                     params.completion(controller)
-                } else if params.activateMessageSearch {
-                    controller.activateSearch()
+                } else if let search = params.activateMessageSearch {
+                    controller.activateSearch(domain: search.0, query: search.1)
                     let _ = params.navigationController.popToViewController(controller, animated: params.animated)
                     params.completion(controller)
                 } else {
@@ -67,11 +67,11 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 })
             }
         } else {
-            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, subject: params.subject, botStart: params.botStart, peekData: params.peekData)
+            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, subject: params.subject, botStart: params.botStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData)
         }
         controller.purposefulAction = params.purposefulAction
-        if params.activateMessageSearch {
-            controller.activateSearch()
+        if let search = params.activateMessageSearch {
+            controller.activateSearch(domain: search.0, query: search.1)
         }
         let resolvedKeepStack: Bool
         switch params.keepStack {

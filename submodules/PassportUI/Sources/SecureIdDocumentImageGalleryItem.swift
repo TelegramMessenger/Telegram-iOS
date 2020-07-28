@@ -39,7 +39,7 @@ class SecureIdDocumentGalleryItem: GalleryItem {
         self.delete = delete
     }
     
-    func node() -> GalleryItemNode {
+    func node(synchronous: Bool) -> GalleryItemNode {
         let node = SecureIdDocumentGalleryItemNode(context: self.context, theme: self.theme, strings: self.strings)
         
         node.setResource(secureIdContext: self.secureIdContext, resource: self.resource)
@@ -52,7 +52,7 @@ class SecureIdDocumentGalleryItem: GalleryItem {
         return node
     }
     
-    func updateNode(node: GalleryItemNode) {
+    func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? SecureIdDocumentGalleryItemNode {
             node._title.set(.single(self.strings.Items_NOfM("\(self.location.position + 1)", "\(self.location.totalCount)").0))
             
@@ -138,7 +138,7 @@ final class SecureIdDocumentGalleryItemNode: ZoomableContentGalleryItemNode {
         self.contextAndMedia = (context, secureIdContext, resource)
     }
     
-    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
+    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
         let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view.superview)
         let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)

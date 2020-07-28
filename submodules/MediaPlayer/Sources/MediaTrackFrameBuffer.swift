@@ -3,7 +3,7 @@ import SwiftSignalKit
 import CoreMedia
 
 public enum MediaTrackFrameBufferStatus {
-    case buffering
+    case buffering(progress: Double)
     case full(until: Double)
     case finished(at: Double)
 }
@@ -37,6 +37,7 @@ public final class MediaTrackFrameBuffer {
     private var frames: [MediaTrackDecodableFrame] = []
     private var endOfStream = false
     private var bufferedUntilTime: CMTime?
+    private var isWaitingForLowWaterDuration: Bool = false
     
     init(frameSource: MediaFrameSource, decoder: MediaTrackFrameDecoder, type: MediaTrackFrameType, duration: CMTime, rotationAngle: Double, aspect: Double, stallDuration: Double = 1.0, lowWaterDuration: Double = 2.0, highWaterDuration: Double = 3.0) {
         self.frameSource = frameSource
@@ -97,6 +98,7 @@ public final class MediaTrackFrameBuffer {
     
     private func endOfStreamReached() {
         self.endOfStream = true
+        self.isWaitingForLowWaterDuration = false
         self.statusUpdated()
     }
     
@@ -123,17 +125,24 @@ public final class MediaTrackFrameBuffer {
             if traceEvents {
                 print("buffered duration: \(bufferedDuration), requesting until \(timestamp) + \(self.highWaterDuration - bufferedDuration)")
             }
-            self.frameSource.generateFrames(until: timestamp + self.highWaterDuration)
+            let delayIncrement = 0.3
+            var generateUntil = timestamp + delayIncrement
+            while generateUntil < timestamp + self.highWaterDuration {
+                self.frameSource.generateFrames(until: min(timestamp + self.highWaterDuration, generateUntil))
+                generateUntil += delayIncrement
+            }
             
-            if bufferedDuration > self.stallDuration {
+            if bufferedDuration > self.stallDuration && !self.isWaitingForLowWaterDuration {
                 if traceEvents {
                     print("buffered1 duration: \(bufferedDuration), wait until \(timestamp) + \(self.highWaterDuration - bufferedDuration)")
                 }
                 return .full(until: timestamp + self.highWaterDuration)
             } else {
-                return .buffering
+                self.isWaitingForLowWaterDuration = true
+                return .buffering(progress: max(0.0, bufferedDuration / self.lowWaterDuration))
             }
         } else {
+            self.isWaitingForLowWaterDuration = false
             if traceEvents {
                 print("buffered2 duration: \(bufferedDuration), wait until \(timestamp) + \(bufferedDuration - self.lowWaterDuration)")
             }
@@ -161,7 +170,7 @@ public final class MediaTrackFrameBuffer {
             if self.endOfStream, let decodedFrame = self.decoder.takeRemainingFrame() {
                 return .frame(decodedFrame)
             } else {
-                if let bufferedUntilTime = bufferedUntilTime {
+                if let bufferedUntilTime = self.bufferedUntilTime {
                     if CMTimeCompare(bufferedUntilTime, self.duration) >= 0 || self.endOfStream {
                         return .finished
                     }

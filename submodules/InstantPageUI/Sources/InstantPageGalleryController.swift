@@ -113,7 +113,7 @@ public struct InstantPageGalleryEntry: Equatable {
                     nativeId = .instantPage(self.pageId, file.fileId)
                 }
                 
-                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: NativeVideoContent(id: nativeId, fileReference: .webPage(webPage: WebpageReference(webPage), media: file), streamVideo: isMediaStreamable(media: file) ? .conservative : .none), originData: nil, indexData: indexData, contentInfo: .webPage(webPage, file), caption: caption, credit: credit, fromPlayingVideo: fromPlayingVideo, landscape: landscape, performAction: { _ in }, openActionOptions: { _ in }, storeMediaPlaybackState: { _, _ in }, present: { _, _ in })
+                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: NativeVideoContent(id: nativeId, fileReference: .webPage(webPage: WebpageReference(webPage), media: file), streamVideo: isMediaStreamable(media: file) ? .conservative : .none), originData: nil, indexData: indexData, contentInfo: .webPage(webPage, file, nil), caption: caption, credit: credit, fromPlayingVideo: fromPlayingVideo, landscape: landscape, performAction: { _ in }, openActionOptions: { _ in }, storeMediaPlaybackState: { _, _ in }, present: { _, _ in })
             } else {
                 var representations: [TelegramMediaImageRepresentation] = []
                 representations.append(contentsOf: file.previewRepresentations)
@@ -124,10 +124,24 @@ public struct InstantPageGalleryEntry: Equatable {
                 return InstantImageGalleryItem(context: context, presentationData: presentationData, itemId: self.index, imageReference: .webPage(webPage: WebpageReference(webPage), media: image), caption: caption, credit: credit, location: self.location, openUrl: openUrl, openUrlOptions: openUrlOptions)
             }
         } else if let embedWebpage = self.media.media as? TelegramMediaWebpage, case let .Loaded(webpageContent) = embedWebpage.content {
-            if let content = WebEmbedVideoContent(webPage: embedWebpage, webpageContent: webpageContent) {
-                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: nil, indexData: nil, contentInfo: .webPage(webPage, embedWebpage), caption: NSAttributedString(string: ""), fromPlayingVideo: fromPlayingVideo, landscape: landscape, performAction: { _ in }, openActionOptions: { _ in }, storeMediaPlaybackState: { _, _ in }, present: { _, _ in })
+            if webpageContent.url.hasSuffix(".m3u8") {
+                let content = PlatformVideoContent(id: .instantPage(embedWebpage.webpageId, embedWebpage.webpageId), content: .url(webpageContent.url), streamVideo: true, loopVideo: false)
+                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: nil, indexData: nil, contentInfo: .webPage(webPage, embedWebpage, { makeArguments, navigationController, present in
+                    let gallery = InstantPageGalleryController(context: context, webPage: webPage, entries: [self], centralIndex: 0, replaceRootController: { [weak navigationController] controller, ready in
+                        if let navigationController = navigationController {
+                            navigationController.replaceTopController(controller, animated: false, ready: ready)
+                        }
+                    }, baseNavigationController: navigationController)
+                    present(gallery, InstantPageGalleryControllerPresentationArguments(transitionArguments: { entry -> GalleryTransitionArguments? in
+                        return makeArguments()
+                    }))
+                }), caption: NSAttributedString(string: ""), fromPlayingVideo: fromPlayingVideo, landscape: landscape, performAction: { _ in }, openActionOptions: { _ in }, storeMediaPlaybackState: { _, _ in }, present: { _, _ in })
             } else {
-                preconditionFailure()
+                if let content = WebEmbedVideoContent(webPage: embedWebpage, webpageContent: webpageContent) {
+                    return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: nil, indexData: nil, contentInfo: .webPage(webPage, embedWebpage, nil), caption: NSAttributedString(string: ""), fromPlayingVideo: fromPlayingVideo, landscape: landscape, performAction: { _ in }, openActionOptions: { _ in }, storeMediaPlaybackState: { _, _ in }, present: { _, _ in })
+                } else {
+                    preconditionFailure()
+                }
             }
         } else {
             preconditionFailure()
@@ -169,6 +183,7 @@ public class InstantPageGalleryController: ViewController, StandalonePresentable
     private let centralItemTitle = Promise<String>()
     private let centralItemTitleView = Promise<UIView?>()
     private let centralItemRightBarButtonItem = Promise<UIBarButtonItem?>()
+    private let centralItemRightBarButtonItems = Promise<[UIBarButtonItem]?>(nil)
     private let centralItemNavigationStyle = Promise<GalleryItemNodeNavigationStyle>()
     private let centralItemFooterContentNode = Promise<(GalleryFooterContentNode?, GalleryOverlayContentNode?)>()
     private let centralItemAttributesDisposable = DisposableSet();
@@ -221,7 +236,7 @@ public class InstantPageGalleryController: ViewController, StandalonePresentable
                 if strongSelf.isViewLoaded {
                     strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({
                         $0.item(context: context, webPage: webPage, message: message, presentationData: strongSelf.presentationData, fromPlayingVideo: fromPlayingVideo, landscape: landscape, openUrl: strongSelf.innerOpenUrl, openUrlOptions: strongSelf.openUrlOptions)
-                    }), centralItemIndex: centralIndex, keepFirst: false)
+                    }), centralItemIndex: centralIndex)
                     
                     let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
                         strongSelf?.didSetReady = true
@@ -239,8 +254,15 @@ public class InstantPageGalleryController: ViewController, StandalonePresentable
             self?.navigationItem.titleView = titleView
         }))
         
-        self.centralItemAttributesDisposable.add(self.centralItemRightBarButtonItem.get().start(next: { [weak self] rightBarButtonItem in
-            self?.navigationItem.rightBarButtonItem = rightBarButtonItem
+        self.centralItemAttributesDisposable.add(combineLatest(self.centralItemRightBarButtonItem.get(), self.centralItemRightBarButtonItems.get()).start(next: { [weak self] rightBarButtonItem, rightBarButtonItems in
+            if let rightBarButtonItem = rightBarButtonItem {
+                self?.navigationItem.rightBarButtonItem = rightBarButtonItem
+            } else if let rightBarButtonItems = rightBarButtonItems {
+                self?.navigationItem.rightBarButtonItems = rightBarButtonItems
+            } else {
+                self?.navigationItem.rightBarButtonItem = nil
+                self?.navigationItem.rightBarButtonItems = nil
+            }
         }))
         
         self.centralItemAttributesDisposable.add(self.centralItemFooterContentNode.get().start(next: { [weak self] footerContentNode, _ in
@@ -362,6 +384,11 @@ public class InstantPageGalleryController: ViewController, StandalonePresentable
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
+        self.galleryNode.completeCustomDismiss = { [weak self] in
+            self?._hiddenMedia.set(.single(nil))
+            self?.presentingViewController?.dismiss(animated: false, completion: nil)
+        }
+        
         self.galleryNode.pager.replaceItems(self.entries.map({
             $0.item(context: self.context, webPage: self.webPage, message: self.message, presentationData: self.presentationData, fromPlayingVideo: self.fromPlayingVideo, landscape: self.landscape, openUrl: self.innerOpenUrl, openUrlOptions: self.openUrlOptions)
         }), centralItemIndex: self.centralEntryIndex)
@@ -376,6 +403,7 @@ public class InstantPageGalleryController: ViewController, StandalonePresentable
                         strongSelf.centralItemTitle.set(node.title())
                         strongSelf.centralItemTitleView.set(node.titleView())
                         strongSelf.centralItemRightBarButtonItem.set(node.rightBarButtonItem())
+                        strongSelf.centralItemRightBarButtonItems.set(node.rightBarButtonItems())
                         strongSelf.centralItemNavigationStyle.set(node.navigationStyle())
                         strongSelf.centralItemFooterContentNode.set(node.footerContent())
                     }
@@ -384,6 +412,11 @@ public class InstantPageGalleryController: ViewController, StandalonePresentable
                     strongSelf._hiddenMedia.set(.single(hiddenItem))
                 }
             }
+        }
+        
+        let baseNavigationController = self.baseNavigationController
+        self.galleryNode.baseNavigationController = { [weak baseNavigationController] in
+            return baseNavigationController
         }
         
         let ready = self.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak self] _ in
@@ -401,13 +434,14 @@ public class InstantPageGalleryController: ViewController, StandalonePresentable
             self.centralItemTitle.set(centralItemNode.title())
             self.centralItemTitleView.set(centralItemNode.titleView())
             self.centralItemRightBarButtonItem.set(centralItemNode.rightBarButtonItem())
+            self.centralItemRightBarButtonItems.set(centralItemNode.rightBarButtonItems())
             self.centralItemNavigationStyle.set(centralItemNode.navigationStyle())
             self.centralItemFooterContentNode.set(centralItemNode.footerContent())
             
             if let transitionArguments = presentationArguments.transitionArguments(self.entries[centralItemNode.index]) {
                 nodeAnimatesItself = true
                 centralItemNode.activateAsInitial()
-                centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface)
+                centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface, completion: {})
                 
                 self._hiddenMedia.set(.single(self.entries[centralItemNode.index]))
             }

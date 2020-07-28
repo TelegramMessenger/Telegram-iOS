@@ -5,7 +5,7 @@ set -e
 BUILD_TELEGRAM_VERSION="1"
 
 MACOS_VERSION="10.15"
-XCODE_VERSION="11.2"
+XCODE_VERSION="11.5"
 GUEST_SHELL="bash"
 
 VM_BASE_NAME="macos$(echo $MACOS_VERSION | sed -e 's/\.'/_/g)_Xcode$(echo $XCODE_VERSION | sed -e 's/\.'/_/g)"
@@ -57,7 +57,7 @@ cp "$BUCK" "tools/buck"
 
 BUILD_CONFIGURATION="$1"
 
-if [ "$BUILD_CONFIGURATION" == "hockeyapp" ]; then
+if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ]; then
 	CODESIGNING_SUBPATH="transient-data/codesigning"
 	CODESIGNING_TEAMS_SUBPATH="transient-data/teams"
 elif [ "$BUILD_CONFIGURATION" == "appstore" ]; then
@@ -89,7 +89,7 @@ fi
 
 BASE_DIR=$(pwd)
 
-if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appstore" ]; then
+if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ] || [ "$BUILD_CONFIGURATION" == "appstore" ]; then
 	if [ ! `which setup-telegram-build.sh` ]; then
 		echo "setup-telegram-build.sh not found in PATH $PATH"
 		exit 1
@@ -101,7 +101,13 @@ if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "app
 	source `which setup-telegram-build.sh`
 	setup_telegram_build "$BUILD_CONFIGURATION" "$BASE_DIR/$BUILDBOX_DIR/transient-data"
 	source `which setup-codesigning.sh`
-	setup_codesigning "$BUILD_CONFIGURATION" "$BASE_DIR/$BUILDBOX_DIR/transient-data"
+
+	CODESIGNING_CONFIGURATION="$BUILD_CONFIGURATION"
+	if [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ]; then
+		CODESIGNING_CONFIGURATION="hockeyapp"
+	fi
+
+	setup_codesigning "$CODESIGNING_CONFIGURATION" "$BASE_DIR/$BUILDBOX_DIR/transient-data"
 	if [ "$SETUP_TELEGRAM_BUILD_VERSION" != "$BUILD_TELEGRAM_VERSION" ]; then
 		echo "setup-telegram-build.sh script version doesn't match"
 		exit 1

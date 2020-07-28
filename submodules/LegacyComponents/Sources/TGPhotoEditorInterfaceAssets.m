@@ -135,14 +135,24 @@
     return muteBackground;
 }
 
-+ (UIImage *)gifIcon
++ (UIImage *)muteIcon
 {
     return TGComponentsImageNamed(@"PhotoEditorMute.png");
 }
 
-+ (UIImage *)gifActiveIcon
++ (UIImage *)muteActiveIcon
 {
     return TGTintedImage([self gifIcon], [self accentColor]);
+}
+
++ (UIImage *)gifIcon
+{
+    return TGTintedImage([UIImage imageNamed:@"Editor/Gif"], [self toolbarIconColor]);
+}
+
++ (UIImage *)gifActiveIcon
+{
+    return TGTintedImage([UIImage imageNamed:@"Editor/Gif"], [self accentColor]);
 }
 
 + (UIImage *)groupIcon

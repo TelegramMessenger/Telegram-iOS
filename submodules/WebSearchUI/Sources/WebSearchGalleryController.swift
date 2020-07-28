@@ -139,7 +139,7 @@ class WebSearchGalleryController: ViewController {
                 if strongSelf.isViewLoaded {
                     strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({
                         $0.item(context: context, presentationData: strongSelf.presentationData, controllerInteraction: strongSelf.controllerInteraction)
-                    }), centralItemIndex: centralIndex, keepFirst: false)
+                    }), centralItemIndex: centralIndex)
                     
                     let ready = strongSelf.galleryNode.pager.ready() |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(Void())) |> afterNext { [weak strongSelf] _ in
                         strongSelf?.didSetReady = true
@@ -324,7 +324,7 @@ class WebSearchGalleryController: ViewController {
                 centralItemNode.activateAsInitial()
                 
                 if presentationArguments.animated {
-                    centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface)
+                    centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface, completion: {})
                 }
                 
                 if let checkNode = self.checkNode, let controllerInteraction = self.controllerInteraction, let selectionState = controllerInteraction.selectionState {

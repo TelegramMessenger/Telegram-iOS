@@ -1703,7 +1703,7 @@ UIImage *TGBlurredAlphaImage(UIImage *source, CGSize size)
     return image;
 }
 
-UIImage *TGBlurredRectangularImage(UIImage *source, CGSize size, CGSize renderSize, uint32_t *averageColor, void (^pixelProcessingBlock)(void *, int, int, int))
+UIImage *TGBlurredRectangularImage(UIImage *source, bool more, CGSize size, CGSize renderSize, uint32_t *averageColor, void (^pixelProcessingBlock)(void *, int, int, int))
 {
     CGSize fittedSize = fitSize(size, CGSizeMake(90, 90));
     CGSize fittedRenderSize = CGSizeMake(fittedSize.width / size.width * renderSize.width, fittedSize.height / size.height * renderSize.height);
@@ -1733,7 +1733,12 @@ UIImage *TGBlurredRectangularImage(UIImage *source, CGSize size, CGSize renderSi
     [source drawInRect:CGRectMake((blurredContextSize.width - fittedRenderSize.width) / 2.0f, (blurredContextSize.height - fittedRenderSize.height) / 2.0f, fittedRenderSize.width, fittedRenderSize.height) blendMode:kCGBlendModeCopy alpha:1.0f];
     UIGraphicsPopContext();
     
-    fastBlur((int)blurredContextSize.width, (int)blurredContextSize.height, (int)blurredBytesPerRow, blurredMemory);
+    if (more) {
+        fastBlurMore((int)blurredContextSize.width, (int)blurredContextSize.height, (int)blurredBytesPerRow, blurredMemory);
+        fastBlurMore((int)blurredContextSize.width, (int)blurredContextSize.height, (int)blurredBytesPerRow, blurredMemory);
+    } else {
+        fastBlur((int)blurredContextSize.width, (int)blurredContextSize.height, (int)blurredBytesPerRow, blurredMemory);
+    }
     
     if (averageColor != NULL)
     {
@@ -2283,12 +2288,12 @@ UIImage *TGCropBackdropImage(UIImage *source, CGSize size)
 
 UIImage *TGCameraPositionSwitchImage(UIImage *source, CGSize size)
 {
-    return TGBlurredRectangularImage(source, size, size, NULL, nil);
+    return TGBlurredRectangularImage(source, false, size, size, NULL, nil);
 }
 
 UIImage *TGCameraModeSwitchImage(UIImage *source, CGSize size)
 {
-    return TGBlurredRectangularImage(source, size, size, NULL, nil);
+    return TGBlurredRectangularImage(source, false, size, size, NULL, nil);
 }
 
 UIImage *TGScaleAndCropImageToPixelSize(UIImage *source, CGSize size, CGSize renderSize, uint32_t *averageColor, void (^pixelProcessingBlock)(void *, int, int, int))

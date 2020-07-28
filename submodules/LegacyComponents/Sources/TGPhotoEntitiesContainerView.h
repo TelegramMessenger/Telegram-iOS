@@ -1,11 +1,11 @@
-#import "TGPhotoPaintSparseView.h"
+#import "TGPhotoEditorSparseView.h"
 #import "TGPhotoPaintStickersContext.h"
 
 @class TGPaintingData;
 @class TGPhotoPaintEntity;
 @class TGPhotoPaintEntityView;
 
-@interface TGPhotoEntitiesContainerView : TGPhotoPaintSparseView
+@interface TGPhotoEntitiesContainerView : TGPhotoEditorSparseView
 
 @property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
 

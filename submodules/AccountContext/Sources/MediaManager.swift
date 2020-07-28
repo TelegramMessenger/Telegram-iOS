@@ -27,8 +27,10 @@ public protocol MediaManager: class {
     func playlistControl(_ control: SharedMediaPlayerControlAction, type: MediaManagerPlayerType?)
     
     func filteredPlaylistState(accountId: AccountRecordId, playlistId: SharedMediaPlaylistId, itemId: SharedMediaPlaylistItemId, type: MediaManagerPlayerType) -> Signal<SharedMediaPlayerItemPlaybackState?, NoError>
+    func filteredPlayerAudioLevelEvents(accountId: AccountRecordId, playlistId: SharedMediaPlaylistId, itemId: SharedMediaPlaylistItemId, type: MediaManagerPlayerType) -> Signal<Float, NoError>
     
     func setOverlayVideoNode(_ node: OverlayMediaItemNode?)
+    func hasOverlayVideoNode(_ node: OverlayMediaItemNode) -> Bool
     
     func audioRecorder(beginWithTone: Bool, applicationBindings: TelegramApplicationBindings, beganWithTone: @escaping (Bool) -> Void) -> Signal<ManagedAudioRecorder?, NoError>
 }

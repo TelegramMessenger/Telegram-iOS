@@ -328,12 +328,15 @@ private final class CachedChatListSearchResult {
     }
 }
 
+private let playIconImage = UIImage(bundleImageName: "Chat List/MiniThumbnailPlay")?.precomposed()
+
 private final class ChatListMediaPreviewNode: ASDisplayNode {
     private let context: AccountContext
     private let message: Message
     private let media: Media
     
     private let imageNode: TransformImageNode
+    private let playIcon: ASImageNode
     
     private var requestedImage: Bool = false
     private var disposable: Disposable?
@@ -344,10 +347,13 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
         self.media = media
         
         self.imageNode = TransformImageNode()
+        self.playIcon = ASImageNode()
+        self.playIcon.image = playIconImage
         
         super.init()
         
         self.addSubnode(self.imageNode)
+        self.addSubnode(self.playIcon)
     }
     
     deinit {
@@ -355,8 +361,13 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
     }
     
     func updateLayout(size: CGSize, synchronousLoads: Bool) {
+        if let image = self.playIcon.image {
+            self.playIcon.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size)
+        }
+        
         var dimensions = CGSize(width: 100.0, height: 100.0)
         if let image = self.media as? TelegramMediaImage {
+            self.playIcon.isHidden = true
             if let largest = largestImageRepresentation(image.representations) {
                 dimensions = largest.dimensions.cgSize
                 if !self.requestedImage {
@@ -366,6 +377,11 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
                 }
             }
         } else if let file = self.media as? TelegramMediaFile {
+            if file.isAnimated {
+                self.playIcon.isHidden = true
+            } else {
+                self.playIcon.isHidden = false
+            }
             if let mediaDimensions = file.dimensions {
                 dimensions = mediaDimensions.cgSize
                 if !self.requestedImage {
@@ -911,7 +927,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var chatListText: (String, String)?
             var chatListSearchResult: CachedChatListSearchResult?
             
-            let contentImageSize = CGSize(width: 18.0, height: 18.0)
+            let contentImageSide: CGFloat = max(10.0, min(20.0, floor(item.presentationData.fontSize.baseDisplaySize * 18.0 / 17.0)))
+            let contentImageSize = CGSize(width: contentImageSide, height: contentImageSide)
             let contentImageSpacing: CGFloat = 2.0
             let contentImageTrailingSpace: CGFloat = 5.0
             var contentImageSpecs: [(message: Message, media: Media, size: CGSize)] = []
@@ -986,13 +1003,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         } else if let _ = message.peers[message.id.peerId] as? TelegramSecretChat {
                             displayMediaPreviews = false
                         }
-                        if !item.context.sharedContext.immediateExperimentalUISettings.chatListPhotos {
-                            displayMediaPreviews = false
-                        }
                         if displayMediaPreviews {
                             let contentImageFillSize = CGSize(width: 8.0, height: contentImageSize.height)
                             _ = contentImageFillSize
                             for message in messages {
+                                if contentImageSpecs.count >= 3 {
+                                    break
+                                }
                                 inner: for media in message.media {
                                     if let image = media as? TelegramMediaImage {
                                         if let _ = largestImageRepresentation(image.representations) {
@@ -1341,7 +1358,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 animateContent = true
             }
             
-            let measureString = NSAttributedString(string: "A", font: titleFont, textColor: .black)
             let (measureLayout, measureApply) = makeMeasureLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: titleRectWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let titleSpacing: CGFloat = -1.0
@@ -1636,7 +1652,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     inputActivitiesApply?()
                     
-                    var mediaPreviewOffset = textNodeFrame.origin.offsetBy(dx: 1.0, dy: 2.0)
+                    var mediaPreviewOffset = textNodeFrame.origin.offsetBy(dx: 1.0, dy: floor((measureLayout.size.height - contentImageSize.height) / 2.0))
                     var validMediaIds: [MediaId] = []
                     for (message, media, mediaSize) in contentImageSpecs {
                         guard let mediaId = media.id else {
@@ -1827,16 +1843,16 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             textFrame.origin.x = contentRect.origin.x
             transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
             
-            var mediaPreviewOffset = textFrame.origin.offsetBy(dx: 1.0, dy: 2.0)
+            var mediaPreviewOffsetX = textFrame.origin.x + 1.0
             let contentImageSpacing: CGFloat = 2.0
             for (_, media, mediaSize) in self.currentMediaPreviewSpecs {
                 guard let mediaId = media.id else {
                     continue
                 }
                 if let previewNode = self.mediaPreviewNodes[mediaId] {
-                    transition.updateFrame(node: previewNode, frame: CGRect(origin: mediaPreviewOffset, size: mediaSize))
+                    transition.updateFrame(node: previewNode, frame: CGRect(origin: CGPoint(x: mediaPreviewOffsetX, y: previewNode.frame.minY), size: mediaSize))
                 }
-                mediaPreviewOffset.x += mediaSize.width + contentImageSpacing
+                mediaPreviewOffsetX += mediaSize.width + contentImageSpacing
             }
             
             let dateFrame = self.dateNode.frame

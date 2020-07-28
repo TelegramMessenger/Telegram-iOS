@@ -129,6 +129,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     private var suggestLocalizationDisposable = MetaDisposable()
     private var didSuggestLocalization = false
     
+    private let suggestAutoarchiveDisposable = MetaDisposable()
+    private let dismissAutoarchiveDisposable = MetaDisposable()
+    private var didSuggestAutoarchive = false
+    
     private var presentationData: PresentationData
     private let presentationDataValue = Promise<PresentationData>()
     private var presentationDataDisposable: Disposable?
@@ -478,6 +482,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         self.badgeIconDisposable?.dispose()
         self.passcodeLockTooltipDisposable.dispose()
         self.suggestLocalizationDisposable.dispose()
+        self.suggestAutoarchiveDisposable.dispose()
+        self.dismissAutoarchiveDisposable.dispose()
         self.presentationDataDisposable?.dispose()
         self.stateDisposable.dispose()
         self.filterDisposable.dispose()
@@ -1149,6 +1155,35 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     strongSelf.present(controller, in: .window(.root))
                     _ = markSuggestedLocalizationAsSeenInteractively(postbox: strongSelf.context.account.postbox, languageCode: suggestedLocalization.languageCode).start()
                 }
+            }))
+            
+            self.suggestAutoarchiveDisposable.set((getServerProvidedSuggestions(postbox: self.context.account.postbox)
+            |> deliverOnMainQueue).start(next: { [weak self] values in
+                guard let strongSelf = self else {
+                    return
+                }
+                if strongSelf.didSuggestAutoarchive {
+                    return
+                }
+                if !values.contains(.autoarchivePopular) {
+                    return
+                }
+                strongSelf.didSuggestAutoarchive = true
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.ChatList_AutoarchiveSuggestion_Title, text: strongSelf.presentationData.strings.ChatList_AutoarchiveSuggestion_Text, actions: [
+                    TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.dismissAutoarchiveDisposable.set(dismissServerProvidedSuggestion(account: strongSelf.context.account, suggestion: .autoarchivePopular).start())
+                    }),
+                    TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.ChatList_AutoarchiveSuggestion_OpenSettings, action: {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.dismissAutoarchiveDisposable.set(dismissServerProvidedSuggestion(account: strongSelf.context.account, suggestion: .autoarchivePopular).start())
+                        strongSelf.push(strongSelf.context.sharedContext.makePrivacyAndSecurityController(context: strongSelf.context))
+                    })
+                ], actionLayout: .vertical, parseMarkdown: true), in: .window(.root))
             }))
         }
         

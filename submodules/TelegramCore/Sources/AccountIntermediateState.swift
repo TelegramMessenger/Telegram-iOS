@@ -109,6 +109,22 @@ enum AccountStateMutationOperation {
     case UpdateChatListFilter(id: Int32, filter: Api.DialogFilter?)
 }
 
+struct HoleFromPreviousState {
+    var validateChannelPts: Int32?
+    
+    func mergedWith(_ other: HoleFromPreviousState) -> HoleFromPreviousState {
+        var result = self
+        if let pts = self.validateChannelPts, let otherPts = other.validateChannelPts {
+            result.validateChannelPts = max(pts, otherPts)
+        } else if let pts = self.validateChannelPts {
+            result.validateChannelPts = pts
+        } else if let otherPts = other.validateChannelPts {
+            result.validateChannelPts = otherPts
+        }
+        return result
+    }
+}
+
 struct AccountMutableState {
     let initialState: AccountInitialState
     let branchOperationIndex: Int
@@ -122,7 +138,7 @@ struct AccountMutableState {
     var referencedMessageIds: Set<MessageId>
     var storedMessages: Set<MessageId>
     var readInboxMaxIds: [PeerId: MessageId]
-    var namespacesWithHolesFromPreviousState: [PeerId: Set<MessageId.Namespace>]
+    var namespacesWithHolesFromPreviousState: [PeerId: [MessageId.Namespace: HoleFromPreviousState]]
     var updatedOutgoingUniqueMessageIds: [Int64: Int32]
     
     var storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>]
@@ -154,7 +170,7 @@ struct AccountMutableState {
         self.updatedOutgoingUniqueMessageIds = [:]
     }
     
-    init(initialState: AccountInitialState, operations: [AccountStateMutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], channelStates: [PeerId: AccountStateChannelState], peerChatInfos: [PeerId: PeerChatInfo], referencedMessageIds: Set<MessageId>, storedMessages: Set<MessageId>, readInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], namespacesWithHolesFromPreviousState: [PeerId: Set<MessageId.Namespace>], updatedOutgoingUniqueMessageIds: [Int64: Int32], displayAlerts: [(text: String, isDropAuth: Bool)], branchOperationIndex: Int) {
+    init(initialState: AccountInitialState, operations: [AccountStateMutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], channelStates: [PeerId: AccountStateChannelState], peerChatInfos: [PeerId: PeerChatInfo], referencedMessageIds: Set<MessageId>, storedMessages: Set<MessageId>, readInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], namespacesWithHolesFromPreviousState: [PeerId: [MessageId.Namespace: HoleFromPreviousState]], updatedOutgoingUniqueMessageIds: [Int64: Int32], displayAlerts: [(text: String, isDropAuth: Bool)], branchOperationIndex: Int) {
         self.initialState = initialState
         self.operations = operations
         self.state = state
@@ -187,10 +203,14 @@ struct AccountMutableState {
         self.externallyUpdatedPeerId.formUnion(other.externallyUpdatedPeerId)
         for (peerId, namespaces) in other.namespacesWithHolesFromPreviousState {
             if self.namespacesWithHolesFromPreviousState[peerId] == nil {
-                self.namespacesWithHolesFromPreviousState[peerId] = Set()
+                self.namespacesWithHolesFromPreviousState[peerId] = [:]
             }
-            for namespace in namespaces {
-                self.namespacesWithHolesFromPreviousState[peerId]!.insert(namespace)
+            for (namespace, namespaceState) in namespaces {
+                if self.namespacesWithHolesFromPreviousState[peerId]![namespace] == nil {
+                    self.namespacesWithHolesFromPreviousState[peerId]![namespace] = namespaceState
+                } else {
+                    self.namespacesWithHolesFromPreviousState[peerId]![namespace] = self.namespacesWithHolesFromPreviousState[peerId]![namespace]!.mergedWith(namespaceState)
+                }
             }
         }
         self.updatedOutgoingUniqueMessageIds.merge(other.updatedOutgoingUniqueMessageIds, uniquingKeysWith: { lhs, _ in lhs })
@@ -296,11 +316,16 @@ struct AccountMutableState {
         self.addOperation(.UpdateGlobalNotificationSettings(subject, notificationSettings))
     }
     
-    mutating func setNeedsHoleFromPreviousState(peerId: PeerId, namespace: MessageId.Namespace) {
+    mutating func setNeedsHoleFromPreviousState(peerId: PeerId, namespace: MessageId.Namespace, validateChannelPts: Int32?) {
         if self.namespacesWithHolesFromPreviousState[peerId] == nil {
-            self.namespacesWithHolesFromPreviousState[peerId] = Set()
+            self.namespacesWithHolesFromPreviousState[peerId] = [:]
         }
-        self.namespacesWithHolesFromPreviousState[peerId]!.insert(namespace)
+        let namespaceState = HoleFromPreviousState(validateChannelPts: validateChannelPts)
+        if self.namespacesWithHolesFromPreviousState[peerId]![namespace] == nil {
+            self.namespacesWithHolesFromPreviousState[peerId]![namespace] = namespaceState
+        } else {
+            self.namespacesWithHolesFromPreviousState[peerId]![namespace] = self.namespacesWithHolesFromPreviousState[peerId]![namespace]!.mergedWith(namespaceState)
+        }
     }
     
     mutating func mergeChats(_ chats: [Api.Chat]) {

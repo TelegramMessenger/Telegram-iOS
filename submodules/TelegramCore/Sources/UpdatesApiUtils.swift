@@ -6,13 +6,13 @@ import SyncCore
 
 private func collectPreCachedResources(for photo: Api.Photo) -> [(MediaResource, Data)]? {
     switch photo {
-        case let .photo(_, id, accessHash, fileReference, _, sizes, dcId):
+        case let .photo(_, id, accessHash, fileReference, _, sizes, _, dcId):
             for size in sizes {
                 switch size {
                     case let .photoCachedSize(type, location, _, _, bytes):
                         switch location {
                             case let .fileLocationToBeDeprecated(volumeId, localId):
-                                let resource = CloudPhotoSizeMediaResource(datacenterId: dcId, photoId: id, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference.makeData())
+                                let resource = CloudPhotoSizeMediaResource(datacenterId: dcId, photoId: id, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, size: nil, fileReference: fileReference.makeData())
                                 let data = bytes.makeData()
                                 return [(resource, data)]
                         }
@@ -560,7 +560,7 @@ extension Api.EncryptedChat {
                 return PeerId(namespace: Namespaces.Peer.SecretChat, id: id)
             case let .encryptedChatEmpty(id):
                 return PeerId(namespace: Namespaces.Peer.SecretChat, id: id)
-            case let .encryptedChatRequested(id, _, _, _, _, _):
+            case let .encryptedChatRequested(_, _, id, _, _, _, _, _):
                 return PeerId(namespace: Namespaces.Peer.SecretChat, id: id)
             case let .encryptedChatWaiting(id, _, _, _, _):
                 return PeerId(namespace: Namespaces.Peer.SecretChat, id: id)

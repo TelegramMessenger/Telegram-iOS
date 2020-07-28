@@ -373,8 +373,10 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 	{
 		if (self.outputVideoFormatDescription == NULL)
 			[self setupVideoPipelineWithInputFormatDescription:formatDescription];
-		else
+        else {
+//            [_recorder appendVideoSampleBuffer:sampleBuffer];
 			[self renderVideoSampleBuffer:sampleBuffer];
+        }
 	}
 	else if (connection == _audioConnection)
 	{

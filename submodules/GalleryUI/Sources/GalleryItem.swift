@@ -23,7 +23,7 @@ public struct GalleryItemIndexData: Equatable {
 public protocol GalleryItem {
     var id: AnyHashable { get }
     
-    func node() -> GalleryItemNode
-    func updateNode(node: GalleryItemNode)
+    func node(synchronous: Bool) -> GalleryItemNode
+    func updateNode(node: GalleryItemNode, synchronous: Bool)
     func thumbnailItem() -> (Int64, GalleryThumbnailItem)?
 }

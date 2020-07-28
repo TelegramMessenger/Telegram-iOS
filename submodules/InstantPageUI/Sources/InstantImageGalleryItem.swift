@@ -15,7 +15,7 @@ private struct InstantImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account
     let mediaReference: AnyMediaReference
     
-    var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
+    func image(synchronous: Bool) -> (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
         if let imageReferene = mediaReference.concrete(TelegramMediaImage.self), let representation = largestImageRepresentation(imageReferene.media.representations) {
             return (mediaGridMessagePhoto(account: self.account, photoReference: imageReferene), representation.dimensions.cgSize)
         } else if let fileReference = mediaReference.concrete(TelegramMediaFile.self), let dimensions = fileReference.media.dimensions {
@@ -62,7 +62,7 @@ class InstantImageGalleryItem: GalleryItem {
         self.openUrlOptions = openUrlOptions
     }
     
-    func node() -> GalleryItemNode {
+    func node(synchronous: Bool) -> GalleryItemNode {
         let node = InstantImageGalleryItemNode(context: self.context, presentationData: self.presentationData, openUrl: self.openUrl, openUrlOptions: self.openUrlOptions)
         
         node.setImage(imageReference: self.imageReference)
@@ -76,7 +76,7 @@ class InstantImageGalleryItem: GalleryItem {
         return node
     }
     
-    func updateNode(node: GalleryItemNode) {
+    func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? InstantImageGalleryItemNode {
             if let location = self.location {
                 node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.position + 1)", "\(location.totalCount)").0))
@@ -168,7 +168,7 @@ final class InstantImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.footerContentNode.setShareMedia(fileReference.abstract)
     }
     
-    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void) {
+    override func animateIn(from node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
         var transformedFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view)
         let transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: self.imageNode.view.superview)
         let transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)

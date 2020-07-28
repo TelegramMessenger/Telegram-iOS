@@ -101,6 +101,9 @@ public enum PresentationResourceKey: Int32 {
     case chatInstantVideoWithWallpaperBackgroundImage
     case chatInstantVideoWithoutWallpaperBackgroundImage
     
+    case chatActionPhotoWithWallpaperBackgroundImage
+    case chatActionPhotoWithoutWallpaperBackgroundImage
+    
     case chatUnreadBarBackgroundImage
     
     case chatBubbleFileCloudFetchMediaIcon

@@ -172,8 +172,11 @@
         if ([_manager managesWindow]) {
             _contentController = contentController;
             __weak TGOverlayControllerWindow *weakSelf = self;
+            __weak TGViewController *weakParentController = parentController;
             contentController.customDismissBlock = ^{
                 __strong TGOverlayControllerWindow *strongSelf = weakSelf;
+                __strong TGViewController *strongParentController = weakParentController;
+                [strongParentController.associatedWindowStack removeObject:strongSelf];
                 [manager setHidden:true window:strongSelf];
             };
             [_manager bindController:contentController];

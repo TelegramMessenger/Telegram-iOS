@@ -7,16 +7,25 @@ enum PeerInfoScreenActionColor {
     case destructive
 }
 
+enum PeerInfoScreenActionAligmnent {
+    case natural
+    case center
+}
+
 final class PeerInfoScreenActionItem: PeerInfoScreenItem {
     let id: AnyHashable
     let text: String
     let color: PeerInfoScreenActionColor
+    let icon: UIImage?
+    let alignment: PeerInfoScreenActionAligmnent
     let action: (() -> Void)?
     
-    init(id: AnyHashable, text: String, color: PeerInfoScreenActionColor = .accent, action: (() -> Void)?) {
+    init(id: AnyHashable, text: String, color: PeerInfoScreenActionColor = .accent, icon: UIImage? = nil, alignment: PeerInfoScreenActionAligmnent = .natural, action: (() -> Void)?) {
         self.id = id
         self.text = text
         self.color = color
+        self.icon = icon
+        self.alignment = alignment
         self.action = action
     }
     
@@ -27,6 +36,7 @@ final class PeerInfoScreenActionItem: PeerInfoScreenItem {
 
 private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
     private let selectionNode: PeerInfoScreenSelectableBackgroundNode
+    private let iconNode: ASImageNode
     private let textNode: ImmediateTextNode
     private let bottomSeparatorNode: ASDisplayNode
     
@@ -35,6 +45,10 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
     override init() {
         var bringToFrontForHighlightImpl: (() -> Void)?
         self.selectionNode = PeerInfoScreenSelectableBackgroundNode(bringToFrontForHighlight: { bringToFrontForHighlightImpl?() })
+        
+        self.iconNode = ASImageNode()
+        self.iconNode.isLayerBacked = true
+        self.iconNode.displaysAsynchronously = false
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
@@ -54,7 +68,7 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
         self.addSubnode(self.textNode)
     }
     
-    override func update(width: CGFloat, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenActionItem else {
             return 10.0
         }
@@ -63,7 +77,11 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
         
         self.selectionNode.pressed = item.action
         
-        let sideInset: CGFloat = 16.0
+        let sideInset: CGFloat = 16.0 + safeInsets.left
+        let leftInset = (item.icon == nil ? sideInset : sideInset + 29.0 + 16.0)
+        let rightInset = sideInset
+        let separatorInset = item.icon == nil ? sideInset : leftInset - 1.0
+        let titleFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
@@ -76,13 +94,25 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
         }
         
         self.textNode.maximumNumberOfLines = 1
-        self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: textColorValue)
+        self.textNode.attributedText = NSAttributedString(string: item.text, font: titleFont, textColor: textColorValue)
         
-        let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
+        let textSize = self.textNode.updateLayout(CGSize(width: width - (leftInset + rightInset), height: .greatestFiniteMagnitude))
         
-        let textFrame = CGRect(origin: CGPoint(x: sideInset, y: 11.0), size: textSize)
+        let textFrame = CGRect(origin: CGPoint(x: item.alignment == .center ? floorToScreenPixels((width - textSize.width) / 2.0) : leftInset, y: 12.0), size: textSize)
         
-        let height = textSize.height + 22.0
+        let height = textSize.height + 24.0
+        
+        if let icon = item.icon {
+            if self.iconNode.supernode == nil {
+                self.addSubnode(self.iconNode)
+            }
+            self.iconNode.image = generateTintedImage(image: icon, color: textColorValue)
+            let iconFrame = CGRect(origin: CGPoint(x: sideInset, y: floorToScreenPixels((height - icon.size.height) / 2.0)), size: icon.size)
+            transition.updateFrame(node: self.iconNode, frame: iconFrame)
+        } else if self.iconNode.supernode != nil {
+            self.iconNode.image = nil
+            self.iconNode.removeFromSupernode()
+        }
         
         transition.updateFrame(node: self.textNode, frame: textFrame)
         
@@ -90,7 +120,7 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
         self.selectionNode.update(size: CGSize(width: width, height: height + highlightNodeOffset), theme: presentationData.theme, transition: transition)
         transition.updateFrame(node: self.selectionNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -highlightNodeOffset), size: CGSize(width: width, height: height + highlightNodeOffset)))
         
-        transition.updateFrame(node: self.bottomSeparatorNode, frame: CGRect(origin: CGPoint(x: sideInset, y: height - UIScreenPixel), size: CGSize(width: width - sideInset, height: UIScreenPixel)))
+        transition.updateFrame(node: self.bottomSeparatorNode, frame: CGRect(origin: CGPoint(x: separatorInset, y: height - UIScreenPixel), size: CGSize(width: width - separatorInset, height: UIScreenPixel)))
         transition.updateAlpha(node: self.bottomSeparatorNode, alpha: bottomItem == nil ? 0.0 : 1.0)
         
         return height

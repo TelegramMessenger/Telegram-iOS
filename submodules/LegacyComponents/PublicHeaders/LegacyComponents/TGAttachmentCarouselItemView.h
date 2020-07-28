@@ -9,6 +9,7 @@
 @class TGSuggestionContext;
 @class TGViewController;
 @class TGAttachmentCameraView;
+@class TGVideoEditAdjustments;
 @protocol TGModernGalleryTransitionHostScrollView;
 @protocol TGPhotoPaintStickersContext;
 
@@ -44,6 +45,7 @@
 @property (nonatomic, copy) void (^cameraPressed)(TGAttachmentCameraView *cameraView);
 @property (nonatomic, copy) void (^sendPressed)(TGMediaAsset *currentItem, bool asFiles, bool silentPosting, int32_t scheduleTime);
 @property (nonatomic, copy) void (^avatarCompletionBlock)(UIImage *image);
+@property (nonatomic, copy) void (^avatarVideoCompletionBlock)(UIImage *image, AVAsset *asset, TGVideoEditAdjustments *adjustments);
 
 @property (nonatomic, copy) void (^editorOpened)(void);
 @property (nonatomic, copy) void (^editorClosed)(void);

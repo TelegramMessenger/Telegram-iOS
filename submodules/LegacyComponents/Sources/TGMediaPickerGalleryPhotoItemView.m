@@ -23,8 +23,12 @@
 
 #import <LegacyComponents/TGMenuView.h>
 
+#import "TGPaintFaceDetector.h"
+
 @interface TGMediaPickerGalleryPhotoItemView ()
 {
+    SMetaDisposable *_facesDisposable;
+    
     UILabel *_fileInfoLabel;
     
     TGMessageImageViewOverlayView *_progressView;
@@ -57,6 +61,8 @@
     self = [super initWithFrame:frame];
     if (self != nil)
     {
+        _facesDisposable = [[SMetaDisposable alloc] init];
+        
         __weak TGMediaPickerGalleryPhotoItemView *weakSelf = self;
         _imageView = [[TGModernGalleryImageItemImageView alloc] init];
         _imageView.clipsToBounds = true;
@@ -101,6 +107,7 @@
 {
     [_adjustmentsDisposable dispose];
     [_attributesDisposable dispose];
+    [_facesDisposable dispose];
 }
 
 - (void)setHiddenAsBeingEdited:(bool)hidden
@@ -226,8 +233,11 @@
 
         }]];
         
-        if (!item.asFile)
+        if (!item.asFile) {
+            [_facesDisposable setDisposable:[[TGPaintFaceDetector detectFacesInItem:item.editableMediaItem editingContext:item.editingContext] startWithNext:nil]];
+            
             return;
+        }
         
         _fileInfoLabel.text = nil;
         
@@ -411,9 +421,6 @@
             CGRect iconViewFrame = CGRectMake(12, 188 + _safeAreaInset.top, 40, 40);
             [_tooltipContainerView showMenuFromRect:iconViewFrame animated:false];
         }
-        
-        if (self.item.selectionContext != nil)
-            [self.item.selectionContext setItem:self.item.selectableMediaItem selected:true];
     }
 }
 

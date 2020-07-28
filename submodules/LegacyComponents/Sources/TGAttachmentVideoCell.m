@@ -27,13 +27,9 @@ NSString *const TGAttachmentVideoCellIdentifier = @"AttachmentVideoCell";
     self = [super initWithFrame:frame];
     if (self != nil)
     {
-        _iconView = [[UIImageView alloc] init];
-        _iconView.contentMode = UIViewContentModeCenter;
-        [self addSubview:_iconView];
-        
         _durationLabel = [[UILabel alloc] initWithFrame:CGRectZero];
         _durationLabel.backgroundColor = [UIColor clearColor];
-        _durationLabel.font = TGSystemFontOfSize(12);
+        _durationLabel.font = TGBoldSystemFontOfSize(13);
         _durationLabel.textColor = [UIColor whiteColor];
         [self addSubview:_durationLabel];
         
@@ -44,10 +40,7 @@ NSString *const TGAttachmentVideoCellIdentifier = @"AttachmentVideoCell";
         _adjustmentsDisposable = [[SMetaDisposable alloc] init];
         
         if (iosMajorVersion() >= 11)
-        {
-            _iconView.accessibilityIgnoresInvertColors = true;
             _durationLabel.accessibilityIgnoresInvertColors = true;
-        }
     }
     return self;
 }
@@ -66,13 +59,6 @@ NSString *const TGAttachmentVideoCellIdentifier = @"AttachmentVideoCell";
     CGRect durationFrame = _durationLabel.frame;
     durationFrame.size = CGSizeMake(ceil(_durationLabel.frame.size.width), ceil(_durationLabel.frame.size.height));
     _durationLabel.frame = durationFrame;
-    
-    if (asset.subtypes & TGMediaAssetSubtypeVideoTimelapse)
-        _iconView.image = TGComponentsImageNamed(@"ModernMediaItemTimelapseIcon");
-    else if (asset.subtypes & TGMediaAssetSubtypeVideoHighFrameRate)
-        _iconView.image = TGComponentsImageNamed(@"ModernMediaItemSloMoIcon");
-    else
-        _iconView.image = TGComponentsImageNamed(@"ModernMediaItemVideoIcon");
     
     SSignal *adjustmentsSignal = [self.editingContext adjustmentsSignalForItem:self.asset];
     
@@ -155,11 +141,9 @@ NSString *const TGAttachmentVideoCellIdentifier = @"AttachmentVideoCell";
 - (void)layoutSubviews
 {
     [super layoutSubviews];
-    
-    _iconView.frame = CGRectMake(0, self.frame.size.height - 19, 19, 19);
-    
+        
     CGSize durationSize = _durationLabel.frame.size;
-    _durationLabel.frame = CGRectMake(self.frame.size.width - durationSize.width - 4, self.frame.size.height - durationSize.height - 2, durationSize.width, durationSize.height);
+    _durationLabel.frame = CGRectMake(self.frame.size.width - durationSize.width - 3.0, self.frame.size.height - durationSize.height - 1.0, durationSize.width, durationSize.height);
 }
 
 - (UIImage *)transitionImageSquared

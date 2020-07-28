@@ -22,7 +22,10 @@ final class AuthorizationSequenceSignUpController: ViewController {
     var initialName: (String, String) = ("", "")
     private var termsOfService: UnauthorizedAccountTermsOfService?
     
-    var signUpWithName: ((String, String, Data?) -> Void)?
+    var signUpWithName: ((String, String, Data?, Any?, TGVideoEditAdjustments?) -> Void)?
+    
+    var avatarAsset: Any?
+    var avatarAdjustments: TGVideoEditAdjustments?
     
     private let hapticFeedback = HapticFeedback()
     
@@ -83,11 +86,17 @@ final class AuthorizationSequenceSignUpController: ViewController {
         let currentAvatarMixin = Atomic<NSObject?>(value: nil)
         
         self.displayNode = AuthorizationSequenceSignUpControllerNode(theme: self.presentationData.theme, strings: self.presentationData.strings, addPhoto: { [weak self] in
-            presentLegacyAvatarPicker(holder: currentAvatarMixin, signup: true, theme: defaultPresentationTheme, present: { c, a in
+            presentLegacyAvatarPicker(holder: currentAvatarMixin, signup: false, theme: defaultPresentationTheme, present: { c, a in
                 self?.view.endEditing(true)
                 self?.present(c, in: .window(.root), with: a)
             }, openCurrent: nil, completion: { image in
                 self?.controllerNode.currentPhoto = image
+                self?.avatarAsset = nil
+                self?.avatarAdjustments = nil
+            }, videoCompletion: { image, asset, adjustments in
+                self?.controllerNode.currentPhoto = image
+                self?.avatarAsset = asset
+                self?.avatarAdjustments = adjustments
             })
         })
         self.displayNodeDidLoad()
@@ -150,7 +159,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
         if let name = name {
             self.signUpWithName?(name.0, name.1, self.controllerNode.currentPhoto.flatMap({ image in
                 return compressImageToJPEG(image, quality: 0.7)
-            }))
+            }), self.avatarAsset, self.avatarAdjustments)
         }
     }
 }

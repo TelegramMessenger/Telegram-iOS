@@ -32,12 +32,13 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             return TelegramMediaAction(action: .pinnedMessageUpdated)
         case let .messageActionGameScore(gameId, score):
             return TelegramMediaAction(action: .gameScore(gameId: gameId, score: score))
-        case let .messageActionPhoneCall(_, callId, reason, duration):
+        case let .messageActionPhoneCall(flags, callId, reason, duration):
             var discardReason: PhoneCallDiscardReason?
             if let reason = reason {
                 discardReason = PhoneCallDiscardReason(apiReason: reason)
             }
-            return TelegramMediaAction(action: .phoneCall(callId: callId, discardReason: discardReason, duration: duration))
+            let isVideo = (flags & (1 << 2)) != 0
+            return TelegramMediaAction(action: .phoneCall(callId: callId, discardReason: discardReason, duration: duration, isVideo: isVideo))
         case .messageActionEmpty:
             return nil
         case let .messageActionPaymentSent(currency, totalAmount):

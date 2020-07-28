@@ -81,7 +81,6 @@
 #import <LegacyComponents/TGCameraMainTabletView.h>
 #import <LegacyComponents/TGCameraMainView.h>
 #import <LegacyComponents/TGCameraModeControl.h>
-#import <LegacyComponents/TGCameraPhotoPreviewController.h>
 #import <LegacyComponents/TGCameraPreviewView.h>
 #import <LegacyComponents/TGCameraSegmentsView.h>
 #import <LegacyComponents/TGCameraShutterButton.h>
@@ -108,9 +107,6 @@
 #import <LegacyComponents/TGDoubleTapGestureRecognizer.h>
 #import <LegacyComponents/TGEmbedPIPButton.h>
 #import <LegacyComponents/TGEmbedPIPPullArrowView.h>
-#import <LegacyComponents/TGEmbedPlayerControls.h>
-#import <LegacyComponents/TGEmbedPlayerState.h>
-#import <LegacyComponents/TGEmbedPlayerView.h>
 #import <LegacyComponents/TGFont.h>
 #import <LegacyComponents/TGForwardedMessageMediaAttachment.h>
 #import <LegacyComponents/TGFullscreenContainerView.h>
@@ -126,7 +122,6 @@
 #import <LegacyComponents/TGImageManager.h>
 #import <LegacyComponents/TGImageManagerTask.h>
 #import <LegacyComponents/TGImageMediaAttachment.h>
-#import <LegacyComponents/TGImagePickerController.h>
 #import <LegacyComponents/TGImageUtils.h>
 #import <LegacyComponents/TGImageView.h>
 #import <LegacyComponents/TGInputTextTag.h>
@@ -138,7 +133,6 @@
 #import <LegacyComponents/TGKeyCommand.h>
 #import <LegacyComponents/TGKeyCommandController.h>
 #import <LegacyComponents/TGLabel.h>
-#import <LegacyComponents/TGLegacyCameraController.h>
 #import <LegacyComponents/TGLetteredAvatarView.h>
 #import <LegacyComponents/TGListsTableView.h>
 #import <LegacyComponents/TGLiveUploadInterface.h>
@@ -218,7 +212,6 @@
 #import <LegacyComponents/TGModernGalleryDefaultInterfaceView.h>
 #import <LegacyComponents/TGModernGalleryEditableItem.h>
 #import <LegacyComponents/TGModernGalleryEditableItemView.h>
-#import <LegacyComponents/TGModernGalleryEmbeddedStickersHeaderView.h>
 #import <LegacyComponents/TGModernGalleryImageItem.h>
 #import <LegacyComponents/TGModernGalleryImageItemContainerView.h>
 #import <LegacyComponents/TGModernGalleryImageItemImageView.h>
@@ -281,7 +274,6 @@
 #import <LegacyComponents/TGStaticBackdropAreaData.h>
 #import <LegacyComponents/TGStaticBackdropImageData.h>
 #import <LegacyComponents/TGStickerAssociation.h>
-#import <LegacyComponents/TGStickerKeyboardTabPanel.h>
 #import <LegacyComponents/TGStickerPack.h>
 #import <LegacyComponents/TGStickerPackReference.h>
 #import <LegacyComponents/TGStringUtils.h>

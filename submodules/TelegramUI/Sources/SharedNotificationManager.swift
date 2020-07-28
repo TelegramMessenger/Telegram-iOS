@@ -496,7 +496,7 @@ public final class SharedNotificationManager {
                         if isIntegratedWithCallKit {
                             return nil
                         }
-                        if case .ringing = state {
+                        if case .ringing = state.state {
                             return (peer, internalId)
                         } else {
                             return nil
