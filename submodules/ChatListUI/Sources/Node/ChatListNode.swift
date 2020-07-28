@@ -59,7 +59,7 @@ public final class ChatListNodeInteraction {
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let setItemPinned: (PinnedItemId, Bool) -> Void
     let setPeerMuted: (PeerId, Bool) -> Void
-    let deletePeer: (PeerId) -> Void
+    let deletePeer: (PeerId, Bool) -> Void
     let updatePeerGrouping: (PeerId, Bool) -> Void
     let togglePeerMarkedUnread: (PeerId, Bool) -> Void
     let toggleArchivedFolderHiddenByDefault: () -> Void
@@ -70,7 +70,7 @@ public final class ChatListNodeInteraction {
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
     
-    public init(activateSearch: @escaping () -> Void, peerSelected: @escaping (Peer, ChatListNodeEntryPromoInfo?) -> Void, disabledPeerSelected: @escaping (Peer) -> Void, togglePeerSelected: @escaping (PeerId) -> Void, additionalCategorySelected: @escaping (Int) -> Void, messageSelected: @escaping (Peer, Message, ChatListNodeEntryPromoInfo?) -> Void, groupSelected: @escaping (PeerGroupId) -> Void, addContact: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setItemPinned: @escaping (PinnedItemId, Bool) -> Void, setPeerMuted: @escaping (PeerId, Bool) -> Void, deletePeer: @escaping (PeerId) -> Void, updatePeerGrouping: @escaping (PeerId, Bool) -> Void, togglePeerMarkedUnread: @escaping (PeerId, Bool) -> Void, toggleArchivedFolderHiddenByDefault: @escaping () -> Void, hidePsa: @escaping (PeerId) -> Void, activateChatPreview: @escaping (ChatListItem, ASDisplayNode, ContextGesture?) -> Void, present: @escaping (ViewController) -> Void) {
+    public init(activateSearch: @escaping () -> Void, peerSelected: @escaping (Peer, ChatListNodeEntryPromoInfo?) -> Void, disabledPeerSelected: @escaping (Peer) -> Void, togglePeerSelected: @escaping (PeerId) -> Void, additionalCategorySelected: @escaping (Int) -> Void, messageSelected: @escaping (Peer, Message, ChatListNodeEntryPromoInfo?) -> Void, groupSelected: @escaping (PeerGroupId) -> Void, addContact: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, setItemPinned: @escaping (PinnedItemId, Bool) -> Void, setPeerMuted: @escaping (PeerId, Bool) -> Void, deletePeer: @escaping (PeerId, Bool) -> Void, updatePeerGrouping: @escaping (PeerId, Bool) -> Void, togglePeerMarkedUnread: @escaping (PeerId, Bool) -> Void, toggleArchivedFolderHiddenByDefault: @escaping () -> Void, hidePsa: @escaping (PeerId) -> Void, activateChatPreview: @escaping (ChatListItem, ASDisplayNode, ContextGesture?) -> Void, present: @escaping (ViewController) -> Void) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
         self.disabledPeerSelected = disabledPeerSelected
@@ -430,7 +430,7 @@ public final class ChatListNode: ListView {
     public var groupSelected: ((PeerGroupId) -> Void)?
     public var addContact: ((String) -> Void)?
     public var activateSearch: (() -> Void)?
-    public var deletePeerChat: ((PeerId) -> Void)?
+    public var deletePeerChat: ((PeerId, Bool) -> Void)?
     public var updatePeerGrouping: ((PeerId, Bool) -> Void)?
     public var presentAlert: ((String) -> Void)?
     public var present: ((ViewController) -> Void)?
@@ -628,8 +628,8 @@ public final class ChatListNode: ListView {
                 }
                 self?.setCurrentRemovingPeerId(nil)
             })
-        }, deletePeer: { [weak self] peerId in
-            self?.deletePeerChat?(peerId)
+        }, deletePeer: { [weak self] peerId, joined in
+            self?.deletePeerChat?(peerId, joined)
         }, updatePeerGrouping: { [weak self] peerId, group in
             self?.updatePeerGrouping?(peerId, group)
         }, togglePeerMarkedUnread: { [weak self, weak context] peerId, animated in

@@ -1946,7 +1946,15 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     item.interaction.setPeerMuted(item.index.messageIndex.id.peerId, false)
                     close = false
                 case RevealOptionKey.delete.rawValue:
-                    item.interaction.deletePeer(item.index.messageIndex.id.peerId)
+                    var joined = false
+                    if case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _) = item.content, let message = messages.first {
+                        for media in message.media {
+                            if let action = media as? TelegramMediaAction, action.action == .peerJoined {
+                                joined = true
+                            }
+                        }
+                    }
+                    item.interaction.deletePeer(item.index.messageIndex.id.peerId, joined)
                 case RevealOptionKey.archive.rawValue:
                     item.interaction.updatePeerGrouping(item.index.messageIndex.id.peerId, true)
                     close = false
