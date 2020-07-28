@@ -599,7 +599,7 @@ final class MediaBoxPartialFile {
     
     private func immediateStatus(size: Int32?) -> MediaResourceStatus {
         let status: MediaResourceStatus
-        if self.fullRangeRequests.isEmpty {
+        if self.fullRangeRequests.isEmpty && self.currentFetch == nil {
             if let truncationSize = self.fileMap.truncationSize, self.fileMap.sum == truncationSize {
                 status = .Local
             } else {
@@ -650,6 +650,7 @@ final class MediaBoxPartialFile {
         if intervals.isEmpty {
             if let (_, disposable) = self.currentFetch {
                 self.currentFetch = nil
+                self.updateStatuses()
                 disposable.dispose()
             }
         } else {
@@ -659,6 +660,7 @@ final class MediaBoxPartialFile {
                 let promise = Promise<[(Range<Int>, MediaBoxFetchPriority)]>()
                 let disposable = MetaDisposable()
                 self.currentFetch = (promise, disposable)
+                self.updateStatuses()
                 disposable.set((fetch(promise.get())
                 |> deliverOn(self.queue)).start(next: { [weak self] data in
                     if let strongSelf = self {
