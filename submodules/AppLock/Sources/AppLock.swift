@@ -26,7 +26,7 @@ private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: Loc
             if timestamp.bootTimestamp != applicationActivityTimestamp.bootTimestamp {
                 return true
             }
-            if timestamp.uptime >= applicationActivityTimestamp.uptime + autolockTimeout {
+            if timestamp.uptime > applicationActivityTimestamp.uptime + autolockTimeout {
                 return true
             }
         } else {
@@ -265,7 +265,9 @@ public final class AppLockContextImpl: AppLockContext {
             guard let strongSelf = self, !value else { return }
             
             if strongSelf.displayedAccountsFilter.unlockedHiddenAccountRecordId == nil {
-                if let coveringView = strongSelf.coveringView, let window = strongSelf.window {
+                if strongSelf.currentStateValue.autolockTimeout == 1 {
+                    strongSelf.lock()
+                } else if let coveringView = strongSelf.coveringView, let window = strongSelf.window {
                     coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
                     window.coveringView = coveringView
                 }
@@ -278,10 +280,14 @@ public final class AppLockContextImpl: AppLockContext {
 
             guard let strongSelf = self, let coveringView = strongSelf.coveringView, let window = strongSelf.window else { return }
             
-            Queue.mainQueue().after(0.1, {
-                coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
-                window.coveringView = coveringView
-            })
+            if strongSelf.currentStateValue.autolockTimeout == 1 {
+                strongSelf.lock()
+            } else {
+                Queue.mainQueue().after(0.1, {
+                    coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
+                    window.coveringView = coveringView
+                })
+            }
         })
         
         let _ = (self.autolockTimeout.get()
@@ -297,7 +303,7 @@ public final class AppLockContextImpl: AppLockContext {
     private func updateTimestampRenewTimer(shouldRun: Bool) {
         if shouldRun {
             if self.timestampRenewTimer == nil {
-                let timestampRenewTimer = SwiftSignalKit.Timer(timeout: 5.0, repeat: true, completion: { [weak self] in
+                let timestampRenewTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
                     guard let strongSelf = self else {
                         return
                     }
