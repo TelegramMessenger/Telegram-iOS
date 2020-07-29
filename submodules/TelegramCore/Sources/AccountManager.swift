@@ -260,7 +260,7 @@ public final class DisplayedAccountsFilterImpl: DisplayedAccountsFilter {
             }
             return (record, order)
         }
-        let sortedRecords = recordsWithOrder.sorted(by: { $0.1 < $1.1 })
+        let sortedRecords = recordsWithOrder.sorted(by: { $0.1 > $1.1 })
             .map { $0.0 }
         
         var result = [AccountRecord]()
