@@ -2112,7 +2112,7 @@ final class SharedApplicationContext {
                             
                             transaction.setAccessChallengeData(data)
                             
-                            updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(0).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
+                            updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(1 * 60 * 60).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
                         }) |> deliverOnMainQueue).start(next: { _ in
                         }, error: { _ in
                         }, completed: {
@@ -2171,8 +2171,6 @@ final class SharedApplicationContext {
                                 
                                 setAccountRecordAccessChallengeData(transaction: transaction, id: id, accessChallengeData: data)
                             }
-
-                            updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(0).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
                         }) |> deliverOnMainQueue).start(next: { _ in
                         }, error: { _ in
                         }, completed: {
