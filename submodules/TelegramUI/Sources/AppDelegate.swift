@@ -2081,11 +2081,13 @@ final class SharedApplicationContext {
             let showSplashScreen: (FalseBottomSplashMode, Bool, @escaping () -> Void) -> Void = { mode, push, action in
                 let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
                 let controller = FalseBottomSplashScreen(presentationData: presentationData, mode: mode)
-                controller.buttonPressed = action
+                controller.buttonPressed = {
+                    action()
+                }
                 if push {
                     context.rootController.pushViewController(controller, animated: true)
                 } else {
-                    replaceTopControllerImpl(controller, true)
+                    context.rootController.replaceAllButRootController(controller, animated: true)
                 }
             }
                 
@@ -2119,14 +2121,14 @@ final class SharedApplicationContext {
                             innerCompletion()
                         })
                     }
-                    context.rootController.replaceTopController(setupController, animated: true)
+                    context.rootController.pushViewController(setupController, animated: true)
                 }
                 
                 checkMasterPassode({ isMasterPasscodeSet in
                     if isMasterPasscodeSet {
                         completion()
                     } else {
-                        showSplashScreen(.setMasterPasscode, false, {
+                        showSplashScreen(.setMasterPasscode, true, {
                             setupMasterPasscode(completion)
                         })
                     }
@@ -2136,10 +2138,6 @@ final class SharedApplicationContext {
             let showSecretPasscodeScreen: () -> Void = {
                 let addFalseBottomToCurrentAccount: () -> Void = {
                     let accountContext = context.sharedApplicationContext.sharedContext
-                    
-                    let popToRoot: () -> Void = {
-                        context.rootController.popToRoot(animated: true)
-                    }
                     
                     let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits4), isChangeModeAllowed: false)
                     setupController.complete = { passcode, numerical in
@@ -2177,13 +2175,17 @@ final class SharedApplicationContext {
                         }, error: { _ in
                         }, completed: {
                             updateHiddenAccountsAccessChallengeData(manager: accountContext.accountManager)
-                            showSplashScreen(.accountWasHidden, false, {
+                            
+                            let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
+                            let controller = FalseBottomSplashScreen(presentationData: presentationData, mode: .accountWasHidden)
+                            controller.buttonPressed = { [weak controller] in
                                 accountContext.appLockContext.lock()
-                                popToRoot()
-                            })
+                            }
+                            context.rootController.presentOverlay(controller: controller, inGlobal: true, blockInteraction: true)
+                            
                         })
                     }
-                    replaceTopControllerImpl(setupController, false)
+                    context.rootController.pushViewController(setupController, animated: true)
                 }
                 
                 showSplashScreen(.setSecretPasscode, false, addFalseBottomToCurrentAccount)
