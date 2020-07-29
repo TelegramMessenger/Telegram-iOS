@@ -260,7 +260,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                         
                             for record in hiddenRecords {
                                 if let account = activeAccounts.first(where: { $0.id == record.id }) {
-                                    changeChatsAndChannelsNotifications(unmute: true, atAccount: account)
+                                    changeChatsAndChannelsNotifications(unmute: false, atAccount: account)
                                 }
                             }
                         
