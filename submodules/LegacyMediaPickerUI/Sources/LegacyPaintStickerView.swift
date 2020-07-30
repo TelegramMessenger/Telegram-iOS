@@ -10,6 +10,8 @@ import StickerResources
 import LegacyComponents
 
 class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
+    var started: ((Double) -> Void)?
+    
     private let context: AccountContext
     private let file: TelegramMediaFile
     private var currentSize: CGSize?
@@ -63,8 +65,16 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
                 if self.animationNode == nil {
                     let animationNode = AnimatedStickerNode()
                     self.animationNode = animationNode
-                    animationNode.started = { [weak self] in
+                    animationNode.started = { [weak self, weak animationNode] in
                         self?.imageNode.isHidden = true
+                        
+                        if let animationNode = animationNode {
+                            let _ = (animationNode.status
+                            |> take(1)
+                            |> deliverOnMainQueue).start(next: { [weak self] status in
+                                self?.started?(status.duration)
+                            })
+                        }
                     }
                     self.addSubnode(animationNode)
                 }
@@ -113,6 +123,30 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
                 |> deliverOn(Queue.concurrentDefaultQueue())).start())
             }
         }
+    }
+    
+    func seek(to timestamp: Double) {
+        self.isVisible = false
+        self.isPlaying = false
+        self.animationNode?.seekTo(.timestamp(timestamp))
+    }
+    
+    func play() {
+        self.isVisible = true
+        self.isPlaying = true
+        self.animationNode?.play()
+    }
+    
+    func pause() {
+        self.isVisible = false
+        self.isPlaying = false
+        self.animationNode?.pause()
+    }
+    
+    func resetToStart() {
+        self.isVisible = false
+        self.isPlaying = false
+        self.animationNode?.seekTo(.timestamp(0.0))
     }
     
     override func layoutSubviews() {

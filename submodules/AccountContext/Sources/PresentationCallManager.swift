@@ -69,15 +69,29 @@ public struct PresentationCallState: Equatable {
 }
 
 public final class PresentationCallVideoView {
+    public enum Orientation {
+        case rotation0
+        case rotation90
+        case rotation180
+        case rotation270
+    }
+    
     public let view: UIView
     public let setOnFirstFrameReceived: ((() -> Void)?) -> Void
     
+    public let getOrientation: () -> Orientation
+    public let setOnOrientationUpdated: (((Orientation) -> Void)?) -> Void
+    
     public init(
         view: UIView,
-        setOnFirstFrameReceived: @escaping ((() -> Void)?) -> Void
+        setOnFirstFrameReceived: @escaping ((() -> Void)?) -> Void,
+        getOrientation: @escaping () -> Orientation,
+        setOnOrientationUpdated: @escaping (((Orientation) -> Void)?) -> Void
     ) {
         self.view = view
         self.setOnFirstFrameReceived = setOnFirstFrameReceived
+        self.getOrientation = getOrientation
+        self.setOnOrientationUpdated = setOnOrientationUpdated
     }
 }
 

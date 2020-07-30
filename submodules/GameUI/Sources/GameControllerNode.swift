@@ -62,6 +62,16 @@ final class GameControllerNode: ViewControllerTracingNode {
         }, name: "performAction")
         
         configuration.userContentController = userController
+        
+        configuration.allowsInlineMediaPlayback = true
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+            configuration.mediaTypesRequiringUserActionForPlayback = []
+        } else if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
+            configuration.requiresUserActionForMediaPlayback = false
+        } else {
+            configuration.mediaPlaybackRequiresUserAction = false
+        }
+        
         let webView = WKWebView(frame: CGRect(), configuration: configuration)
         if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
             webView.allowsLinkPreview = false

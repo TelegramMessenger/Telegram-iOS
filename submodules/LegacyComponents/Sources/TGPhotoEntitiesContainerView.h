@@ -14,6 +14,10 @@
 @property (nonatomic, copy) void (^entityRemoved)(TGPhotoPaintEntityView *);
 
 - (void)updateVisibility:(bool)visible;
+- (void)seekTo:(double)timestamp;
+- (void)play;
+- (void)pause;
+- (void)resetToStart;
 
 - (UIColor *)colorAtPoint:(CGPoint)point;
 

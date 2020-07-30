@@ -19,6 +19,7 @@
 - (void)setDotVideoView:(UIView *)dotVideoView;
 - (void)setDotImage:(UIImage *)dotImage;
 
+@property (nonatomic, assign) NSTimeInterval minimumLength;
 @property (nonatomic, assign) NSTimeInterval maximumLength;
 
 @property (nonatomic, assign) bool disableZoom;

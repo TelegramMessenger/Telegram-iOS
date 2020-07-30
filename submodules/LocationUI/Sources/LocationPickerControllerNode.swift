@@ -17,6 +17,7 @@ import AppBundle
 import CoreLocation
 import Geocoding
 import PhoneNumberFormat
+import DeviceAccess
 
 private struct LocationPickerTransaction {
     let deletions: [ListViewDeleteItem]
@@ -40,7 +41,7 @@ private enum LocationPickerEntry: Comparable, Identifiable {
     case liveLocation(PresentationTheme, String, String, CLLocationCoordinate2D?)
     case header(PresentationTheme, String)
     case venue(PresentationTheme, TelegramMediaMap, Int)
-    case attribution(PresentationTheme)
+    case attribution(PresentationTheme, LocationAttribution)
     
     var stableId: LocationPickerEntryId {
         switch self {
@@ -83,8 +84,8 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .attribution(lhsTheme):
-                if case let .attribution(rhsTheme) = rhs, lhsTheme === rhsTheme {
+            case let .attribution(lhsTheme, lhsAttribution):
+                if case let .attribution(rhsTheme, rhsAttribution) = rhs, lhsTheme === rhsTheme, lhsAttribution == rhsAttribution {
                     return true
                 } else {
                     return false
@@ -131,7 +132,7 @@ private enum LocationPickerEntry: Comparable, Identifiable {
     
     func item(account: Account, presentationData: PresentationData, interaction: LocationPickerInteraction?) -> ListViewItem {
         switch self {
-            case let .location(theme, title, subtitle, venue, coordinate):
+            case let .location(_, title, subtitle, venue, coordinate):
                 let icon: LocationActionListItemIcon
                 if let venue = venue {
                     icon = .venue(venue)
@@ -147,23 +148,23 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                 }, highlighted: { highlighted in
                     interaction?.updateSendActionHighlight(highlighted)
                 })
-            case let .liveLocation(theme, title, subtitle, coordinate):
+            case let .liveLocation(_, title, subtitle, coordinate):
                 return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: account, title: title, subtitle: subtitle, icon: .liveLocation, action: {
                     if let coordinate = coordinate {
                         interaction?.sendLiveLocation(coordinate)
                     }
                 })
-            case let .header(theme, title):
+            case let .header(_, title):
                 return LocationSectionHeaderItem(presentationData: ItemListPresentationData(presentationData), title: title)
-            case let .venue(theme, venue, _):
+            case let .venue(_, venue, _):
                 let venueType = venue.venue?.type ?? ""
                 return ItemListVenueItem(presentationData: ItemListPresentationData(presentationData), account: account, venue: venue, style: .plain, action: {
                     interaction?.sendVenue(venue)
                 }, infoAction: ["home", "work"].contains(venueType) ? {
                     interaction?.openHomeWorkInfo()
                     } : nil)
-            case let .attribution(theme):
-                return LocationAttributionItem(presentationData: ItemListPresentationData(presentationData))
+            case let .attribution(_, attribution):
+                return LocationAttributionItem(presentationData: ItemListPresentationData(presentationData), attribution: attribution)
         }
     }
 }
@@ -240,12 +241,13 @@ struct LocationPickerState {
     }
 }
 
-final class LocationPickerControllerNode: ViewControllerTracingNode {
+final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationManagerDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
     private let presentationDataPromise: Promise<PresentationData>
     private let mode: LocationPickerMode
     private let interaction: LocationPickerInteraction
+    private let locationManager: LocationManager
     
     private let listNode: ListView
     private let emptyResultsTextNode: ImmediateTextNode
@@ -269,12 +271,13 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     private var listOffset: CGFloat?
         
-    init(context: AccountContext, presentationData: PresentationData, mode: LocationPickerMode, interaction: LocationPickerInteraction) {
+    init(context: AccountContext, presentationData: PresentationData, mode: LocationPickerMode, interaction: LocationPickerInteraction, locationManager: LocationManager) {
         self.context = context
         self.presentationData = presentationData
         self.presentationDataPromise = Promise(presentationData)
         self.mode = mode
         self.interaction = interaction
+        self.locationManager = locationManager
         
         self.state = LocationPickerState()
         self.statePromise = Promise(self.state)
@@ -496,15 +499,21 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                 
                 entries.append(.header(presentationData.theme, presentationData.strings.Map_ChooseAPlace.uppercased()))
                 
-                var displayedVenues = foundVenues != nil || state.searchingVenuesAround ? foundVenues : venues
+                let displayedVenues = foundVenues != nil || state.searchingVenuesAround ? foundVenues : venues
                 if let venues = displayedVenues {
                     var index: Int = 0
+                    var attribution: LocationAttribution?
                     for venue in venues {
+                        if venue.venue?.provider == "foursquare" {
+                            attribution = .foursquare
+                        } else if venue.venue?.provider == "gplaces" {
+                            attribution = .google
+                        }
                         entries.append(.venue(presentationData.theme, venue, index))
                         index += 1
                     }
-                    if !venues.isEmpty {
-                        entries.append(.attribution(presentationData.theme))
+                    if let attribution = attribution {
+                        entries.append(.attribution(presentationData.theme, attribution))
                     }
                 }
                 let previousEntries = previousEntries.swap(entries)
@@ -533,7 +542,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                         switch previousState.selectedLocation {
                             case .none, .venue:
                                 updateMap = true
-                            case let .location(previousCoordinate, address):
+                            case let .location(previousCoordinate, _):
                                 if previousCoordinate != coordinate {
                                     updateMap = true
                                 }
@@ -574,7 +583,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                 
                 if let (layout, navigationBarHeight) = strongSelf.validLayout {
                     var updateLayout = false
-                    var transition: ContainedViewLayoutTransition = .animated(duration: 0.45, curve: .spring)
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.45, curve: .spring)
                     
                     if previousState.displayingMapModeOptions != state.displayingMapModeOptions {
                         updateLayout = true
@@ -685,11 +694,20 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
                 strongSelf.goToUserLocation()
             }
         }
+        
+        self.locationManager.manager.startUpdatingHeading()
+        self.locationManager.manager.delegate = self
     }
     
     deinit {
         self.disposable?.dispose()
         self.geocodingDisposable.dispose()
+        
+        self.locationManager.manager.stopUpdatingHeading()
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
+        self.headerNode.mapNode.userHeading = CGFloat(newHeading.magneticHeading)
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -721,7 +739,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode {
     }
     
     private func dequeueTransition() {
-        guard let layout = self.validLayout, let transition = self.enqueuedTransitions.first else {
+        guard let _ = self.validLayout, let transition = self.enqueuedTransitions.first else {
             return
         }
         self.enqueuedTransitions.remove(at: 0)

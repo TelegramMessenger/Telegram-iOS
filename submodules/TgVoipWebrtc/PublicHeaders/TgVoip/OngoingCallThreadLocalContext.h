@@ -41,6 +41,13 @@ typedef NS_ENUM(int32_t, OngoingCallRemoteVideoStateWebrtc) {
     OngoingCallRemoteVideoStateActive
 };
 
+typedef NS_ENUM(int32_t, OngoingCallVideoOrientationWebrtc) {
+    OngoingCallVideoOrientation0,
+    OngoingCallVideoOrientation90,
+    OngoingCallVideoOrientation180,
+    OngoingCallVideoOrientation270
+};
+
 typedef NS_ENUM(int32_t, OngoingCallNetworkTypeWebrtc) {
     OngoingCallNetworkTypeWifi,
     OngoingCallNetworkTypeCellularGprs,
@@ -87,7 +94,10 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 
 @protocol OngoingCallThreadLocalContextWebrtcVideoView <NSObject>
 
+@property (nonatomic, readonly) OngoingCallVideoOrientationWebrtc orientation;
+
 - (void)setOnFirstFrameReceived:(void (^ _Nullable)())onFirstFrameReceived;
+- (void)setOnOrientationUpdated:(void (^ _Nullable)(OngoingCallVideoOrientationWebrtc))onOrientationUpdated;
 
 @end
 

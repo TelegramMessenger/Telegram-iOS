@@ -974,9 +974,13 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                     optionsMap[id]!.insert(.deleteLocally)
                 } else if let peer = transaction.getPeer(id.peerId) {
                     var isAction = false
+                    var isDice = false
                     for media in message.media {
                         if media is TelegramMediaAction || media is TelegramMediaExpiredContent {
                             isAction = true
+                        }
+                        if media is TelegramMediaDice {
+                            isDice = true
                         }
                     }
                     if let channel = peer as? TelegramChannel {
@@ -1063,6 +1067,11 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                             canDeleteGlobally = true
                         } else if limitsConfiguration.canRemoveIncomingMessagesInPrivateChats {
                             canDeleteGlobally = true
+                        }
+                        
+                        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+                        if isDice && Int64(message.timestamp) + 60 * 60 * 24 > Int64(timestamp) {
+                            canDeleteGlobally = false
                         }
                         if message.flags.contains(.Incoming) {
                             hadPersonalIncoming = true

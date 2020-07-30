@@ -22,8 +22,6 @@
 #import <LegacyComponents/PGCamera.h>
 #import <LegacyComponents/PGCameraCaptureSession.h>
 #import <LegacyComponents/PGCameraDeviceAngleSampler.h>
-#import <LegacyComponents/PGCameraMomentSegment.h>
-#import <LegacyComponents/PGCameraMomentSession.h>
 #import <LegacyComponents/PGCameraMovieWriter.h>
 #import <LegacyComponents/PGCameraShotMetadata.h>
 #import <LegacyComponents/PGCameraVolumeButtonHandler.h>

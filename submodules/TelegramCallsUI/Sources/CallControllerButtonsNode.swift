@@ -17,7 +17,7 @@ enum CallControllerButtonsSpeakerMode {
 enum CallControllerButtonsMode: Equatable {
     enum VideoState: Equatable {
         case notAvailable
-        case possible
+        case possible(Bool)
         case outgoingRequested
         case incomingRequested
         case active
@@ -52,7 +52,7 @@ private enum ButtonDescription: Equatable {
     
     case accept
     case end(EndType)
-    case enableCamera(Bool)
+    case enableCamera(Bool, Bool)
     case switchCamera
     case soundOutput(SoundOutput)
     case mute(Bool)
@@ -203,12 +203,15 @@ final class CallControllerButtonsNode: ASDisplayNode {
             switch videoState {
             case .active, .possible, .incomingRequested, .outgoingRequested:
                 let isCameraActive: Bool
-                if case .possible = videoState {
+                let isCameraEnabled: Bool
+                if case let .possible(value) = videoState {
                     isCameraActive = false
+                    isCameraEnabled = value
                 } else {
                     isCameraActive = !self.isCameraPaused
+                    isCameraEnabled = true
                 }
-                topButtons.append(.enableCamera(isCameraActive))
+                topButtons.append(.enableCamera(isCameraActive, isCameraEnabled))
                 topButtons.append(.mute(self.isMuted))
                 if case .possible = videoState {
                     topButtons.append(.soundOutput(soundOutput))
@@ -252,10 +255,13 @@ final class CallControllerButtonsNode: ASDisplayNode {
             switch videoState {
             case .active, .incomingRequested, .outgoingRequested:
                 let isCameraActive: Bool
-                if case .possible = videoState {
+                let isCameraEnabled: Bool
+                if case let .possible(value) = videoState {
                     isCameraActive = false
+                    isCameraEnabled = value
                 } else {
                     isCameraActive = !self.isCameraPaused
+                    isCameraEnabled = true
                 }
                 
                 var topButtons: [ButtonDescription] = []
@@ -272,7 +278,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
                     soundOutput = .bluetooth
                 }
                 
-                topButtons.append(.enableCamera(isCameraActive))
+                topButtons.append(.enableCamera(isCameraActive, isCameraEnabled))
                 topButtons.append(.mute(isMuted))
                 topButtons.append(.switchCamera)
                 topButtons.append(.end(.end))
@@ -304,7 +310,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
                     soundOutput = .bluetooth
                 }
                 
-                topButtons.append(.enableCamera(false))
+                topButtons.append(.enableCamera(false, true))
                 topButtons.append(.mute(self.isMuted))
                 topButtons.append(.soundOutput(soundOutput))
                 
@@ -373,10 +379,11 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 case .end:
                     buttonText = strings.Call_End
                 }
-            case let .enableCamera(isEnabled):
+            case let .enableCamera(isActivated, isEnabled):
                 buttonContent = CallControllerButtonItemNode.Content(
-                    appearance: .blurred(isFilled: isEnabled),
-                    image: .camera
+                    appearance: .blurred(isFilled: isActivated),
+                    image: .camera,
+                    isEnabled: isEnabled
                 )
                 buttonText = strings.Call_Camera
             case .switchCamera:
