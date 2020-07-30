@@ -882,15 +882,22 @@ public final class DeviceContactDataManagerImpl: DeviceContactDataManager {
         }
     }
     
-    public func createContactWithData(_ contactData: DeviceContactExtendedData) -> Signal<(DeviceContactStableId, DeviceContactExtendedData)?, NoError> {
+    public func createContactWithData(_ contactData: DeviceContactExtendedData, account: Account) -> Signal<(DeviceContactStableId, DeviceContactExtendedData)?, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
-            self.impl.with({ impl in
-                impl.createContactWithData(contactData, completion: { next in
-                    subscriber.putNext(next)
-                    subscriber.putCompletion()
+            if account.isHidden {
+                let id = DeviceContactStableId(contactData.middleName)
+                let next = (id, contactData)
+                subscriber.putNext(next)
+                subscriber.putCompletion()
+            } else {
+                self.impl.with({ impl in
+                    impl.createContactWithData(contactData, completion: { next in
+                        subscriber.putNext(next)
+                        subscriber.putCompletion()
+                    })
                 })
-            })
+            }
             return disposable
         }
     }
