@@ -5140,6 +5140,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             })
         }
         
+        if self.isSettings {
+            contentHeight = max(contentHeight, layout.size.height + 140.0 + (self.headerNode.twoLineInfo ? 17.0 : 0.0) - layout.intrinsicInsets.bottom)
+        }
         self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: contentHeight)
         if self.isSettings {
             self.scrollNode.view.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0)
