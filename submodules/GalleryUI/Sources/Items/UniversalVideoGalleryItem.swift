@@ -1121,7 +1121,34 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         let fromTransform: CATransform3D
         let toTransform: CATransform3D
         
-        if let interactiveMediaNode = node.0 as? GalleryItemTransitionNode, interactiveMediaNode.isAvailableForGalleryTransition(), videoNode.hasAttachedContext {
+        if let instantNode = node.0 as? GalleryItemTransitionNode, instantNode.isAvailableForInstantPageTransition(), videoNode.hasAttachedContext {
+            copyView.removeFromSuperview()
+            
+            let previousFrame = videoNode.frame
+            let previousSuperview = videoNode.view.superview
+            addToTransitionSurface(videoNode.view)
+            videoNode.view.superview?.bringSubviewToFront(videoNode.view)
+            
+            if let previousSuperview = previousSuperview {
+                videoNode.frame = previousSuperview.convert(previousFrame, to: videoNode.view.superview)
+                transformedSuperFrame = transformedSuperFrame.offsetBy(dx: videoNode.position.x - previousFrame.center.x, dy: videoNode.position.y - previousFrame.center.y)
+            }
+            
+            let initialScale: CGFloat = 1.0
+            let targetScale = max(transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height)
+            
+            videoNode.backgroundColor = .clear
+        
+            let transformScale: CGFloat = initialScale * targetScale
+            fromTransform = CATransform3DScale(videoNode.layer.transform, initialScale, initialScale, 1.0)
+            toTransform = CATransform3DScale(videoNode.layer.transform, transformScale, transformScale, 1.0)
+            
+            if videoNode.hasAttachedContext {
+                if self.isPaused || !self.keepSoundOnDismiss {
+                    videoNode.continuePlayingWithoutSound()
+                }
+            }
+        } else if let interactiveMediaNode = node.0 as? GalleryItemTransitionNode, interactiveMediaNode.isAvailableForGalleryTransition(), videoNode.hasAttachedContext {
             copyView.removeFromSuperview()
             
             let previousFrame = videoNode.frame
@@ -1153,33 +1180,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     })
                 }
             }
-        
-            let transformScale: CGFloat = initialScale * targetScale
-            fromTransform = CATransform3DScale(videoNode.layer.transform, initialScale, initialScale, 1.0)
-            toTransform = CATransform3DScale(videoNode.layer.transform, transformScale, transformScale, 1.0)
-            
-            if videoNode.hasAttachedContext {
-                if self.isPaused || !self.keepSoundOnDismiss {
-                    videoNode.continuePlayingWithoutSound()
-                }
-            }
-        } else if let instantNode = node.0 as? GalleryItemTransitionNode, instantNode.isAvailableForInstantPageTransition(), videoNode.hasAttachedContext {
-            copyView.removeFromSuperview()
-            
-            let previousFrame = videoNode.frame
-            let previousSuperview = videoNode.view.superview
-            addToTransitionSurface(videoNode.view)
-            videoNode.view.superview?.bringSubviewToFront(videoNode.view)
-            
-            if let previousSuperview = previousSuperview {
-                videoNode.frame = previousSuperview.convert(previousFrame, to: videoNode.view.superview)
-                transformedSuperFrame = transformedSuperFrame.offsetBy(dx: videoNode.position.x - previousFrame.center.x, dy: videoNode.position.y - previousFrame.center.y)
-            }
-            
-            let initialScale: CGFloat = 1.0
-            let targetScale = max(transformedFrame.size.width / videoNode.layer.bounds.size.width, transformedFrame.size.height / videoNode.layer.bounds.size.height)
-            
-            videoNode.backgroundColor = .clear
         
             let transformScale: CGFloat = initialScale * targetScale
             fromTransform = CATransform3DScale(videoNode.layer.transform, initialScale, initialScale, 1.0)
