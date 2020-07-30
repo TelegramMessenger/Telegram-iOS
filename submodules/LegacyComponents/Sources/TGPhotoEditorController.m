@@ -1982,7 +1982,7 @@
                 generator.requestedTimeToleranceAfter = kCMTimeZero;
                 generator.requestedTimeToleranceBefore = kCMTimeZero;
                 
-                CGImageRef imageRef = [generator copyCGImageAtTime:CMTimeMakeWithSeconds(videoStartValue, NSEC_PER_SEC) actualTime:nil error:NULL];
+                CGImageRef imageRef = [generator copyCGImageAtTime:CMTimeMakeWithSeconds(MIN(videoStartValue, CMTimeGetSeconds(asset.duration) - 0.05), NSEC_PER_SEC) actualTime:nil error:NULL];
                 UIImage *image = [UIImage imageWithCGImage:imageRef];
                 CGImageRelease(imageRef);
                 
