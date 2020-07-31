@@ -31,7 +31,7 @@
         
         _dimensions = CGSizeMake(width, height);
         
-        if ((_frameRate > 60) || _animation->duration() > 7.0) {
+        if (_frameRate > 60) {
             return nil;
         }
     }
@@ -41,6 +41,18 @@
 - (void)renderFrameWithIndex:(int32_t)index into:(uint8_t * _Nonnull)buffer width:(int32_t)width height:(int32_t)height bytesPerRow:(int32_t) bytesPerRow{
     rlottie::Surface surface((uint32_t *)buffer, width, height, bytesPerRow);
     _animation->renderSync(index, surface);
+}
+
+- (void)setFillColorWithKeyPath:(NSString * _Nonnull)keyPath color:(UIColor * _Nonnull)color {
+    CGFloat red = 0.0, green = 0.0, blue = 0.0, alpha = 0.0;
+    [color getRed:&red green:&green blue:&blue alpha:&alpha];
+    _animation->setValue<rlottie::Property::FillColor>(std::string([keyPath UTF8String]), rlottie::Color(float(red), float(green), float(blue)));
+}
+
+- (void)setStrokeColorWithKeyPath:(NSString * _Nonnull)keyPath color:(UIColor * _Nonnull)color {
+    CGFloat red = 0.0, green = 0.0, blue = 0.0, alpha = 0.0;
+    [color getRed:&red green:&green blue:&blue alpha:&alpha];
+    _animation->setValue<rlottie::Property::StrokeColor>(std::string([keyPath UTF8String]), rlottie::Color(float(red), float(green), float(blue)));
 }
 
 @end

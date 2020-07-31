@@ -105,11 +105,15 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             text = NSAttributedString(string: presentationData.strings.FalseBottom_HideAccount_Text, font: textFont, textColor: textColor)
             buttonText = presentationData.strings.FalseBottom_HideAccount_Button
             
-            if let path = getAppBundle().path(forResource: "TwoFactorSetupIntro", ofType: "tgs") {
-                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct)
-                self.animationSize = CGSize(width: 124.0, height: 124.0)
+            if let path = getAppBundle().path(forResource: "FalseBottomAddAccount", ofType: "tgs") {
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 568, height: 640, playbackMode: .loop, mode: .direct, fillColors: [
+                    "Shape Layer 1.**.Fill 1": self.presentationData.theme.list.plainBackgroundColor,
+                    "phone Outlines.**.Fill 1": self.presentationData.theme.list.plainBackgroundColor
+                ])
+                self.animationSize = CGSize(width: 284, height: 320)
                 self.animationNode.visibility = true
             }
+            
         case .addOneMoreAccount:
             title = presentationData.strings.FalseBottom_AddOneMoreAccount_Title
             text = NSAttributedString(string: presentationData.strings.FalseBottom_AddOneMoreAccount_Text, font: textFont, textColor: textColor)

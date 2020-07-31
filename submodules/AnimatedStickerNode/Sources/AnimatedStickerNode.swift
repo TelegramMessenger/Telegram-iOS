@@ -308,6 +308,18 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
     func skipToEnd() {
         self.currentFrame = self.frameCount - 1
     }
+    
+    func setFillColors(_ colors: [String: UIColor]) {
+        for (keypath, color) in colors {
+            animation.setFillColorWithKeyPath(keypath, color: color)
+        }
+    }
+    
+    func setStrokeColors(_ colors: [String: UIColor]) {
+        for (keypath, color) in colors {
+            animation.setFillColorWithKeyPath(keypath, color: color)
+        }
+    }
 }
 
 public final class AnimatedStickerFrameQueue {
@@ -427,6 +439,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
         }
     }
     
+    private var fillColors: [String: UIColor] = [:]
+    private var strokeColors: [String: UIColor] = [:]
+    
     override public init() {
         self.queue = sharedQueue
         self.eventsNode = AnimatedStickerNodeDisplayEvents()
@@ -461,11 +476,13 @@ public final class AnimatedStickerNode: ASDisplayNode {
         self.addSubnode(self.renderer!)
     }
 
-    public func setup(source: AnimatedStickerNodeSource, width: Int, height: Int, playbackMode: AnimatedStickerPlaybackMode = .loop, mode: AnimatedStickerMode) {
+    public func setup(source: AnimatedStickerNodeSource, width: Int, height: Int, playbackMode: AnimatedStickerPlaybackMode = .loop, mode: AnimatedStickerMode, fillColors: [String: UIColor] = [:], strokeColors: [String: UIColor] = [:]) {
         if width < 2 || height < 2 {
             return
         }
         self.playbackMode = playbackMode
+        self.fillColors = fillColors
+        self.strokeColors = strokeColors
         switch mode {
         case .direct:
             let f: (String) -> Void = { [weak self] path in
@@ -551,12 +568,17 @@ public final class AnimatedStickerNode: ASDisplayNode {
             let queue = self.queue
             let timerHolder = self.timer
             let frameSourceHolder = self.frameSource
+            let fillColors = self.fillColors
+            let strokeColors = self.strokeColors
             self.queue.async { [weak self] in
                 var maybeFrameSource: AnimatedStickerFrameSource? = frameSourceHolder.with { $0 }?.syncWith { $0 }?.value
                 if maybeFrameSource == nil {
                     let notifyUpdated: (() -> Void)? = nil
                     if let directData = directData {
-                        maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3)
+                        let directFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3)
+                        directFrameSource?.setFillColors(fillColors)
+                        directFrameSource?.setStrokeColors(strokeColors)
+                        maybeFrameSource = directFrameSource
                     } else if let (cachedData, cachedDataComplete) = cachedData {
                         if #available(iOS 9.0, *) {
                             maybeFrameSource = AnimatedStickerCachedFrameSource(queue: queue, data: cachedData, complete: cachedDataComplete, notifyUpdated: {
@@ -624,11 +646,16 @@ public final class AnimatedStickerNode: ASDisplayNode {
             let queue = self.queue
             let timerHolder = self.timer
             let frameSourceHolder = self.frameSource
+            let fillColors = self.fillColors
+            let strokeColors = self.strokeColors
             self.queue.async { [weak self] in
                 var maybeFrameSource: AnimatedStickerFrameSource?
                 let notifyUpdated: (() -> Void)? = nil
                 if let directData = directData {
-                    maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3)
+                    let directFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3)
+                    directFrameSource?.setFillColors(fillColors)
+                    directFrameSource?.setStrokeColors(strokeColors)
+                    maybeFrameSource = directFrameSource
                 } else if let (cachedData, cachedDataComplete) = cachedData {
                     if #available(iOS 9.0, *) {
                         maybeFrameSource = AnimatedStickerCachedFrameSource(queue: queue, data: cachedData, complete: cachedDataComplete, notifyUpdated: {
@@ -711,10 +738,15 @@ public final class AnimatedStickerNode: ASDisplayNode {
         let cachedData = self.cachedData
         let queue = self.queue
         let timerHolder = self.timer
+        let fillColors = self.fillColors
+        let strokeColors = self.strokeColors
         self.queue.async { [weak self] in
             var maybeFrameSource: AnimatedStickerFrameSource?
             if let directData = directData {
-                maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3)
+                let directFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3)
+                directFrameSource?.setFillColors(fillColors)
+                directFrameSource?.setStrokeColors(strokeColors)
+                maybeFrameSource = directFrameSource
                 if position == .end {
                     maybeFrameSource?.skipToEnd()
                 }
