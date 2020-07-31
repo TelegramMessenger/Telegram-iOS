@@ -820,7 +820,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 switch fetchStatus {
                     case let .Fetching(_, progress):
                         let adjustedProgress = max(progress, 0.027)
-                        state = .progress(value: CGFloat(adjustedProgress), cancelEnabled: true)
+                        state = .progress(value: CGFloat(adjustedProgress), cancelEnabled: true, appearance: nil)
                     case .Local:
                         if isAudio {
                             state = .play

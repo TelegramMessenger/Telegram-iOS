@@ -105,7 +105,7 @@ public struct OngoingCallContextState: Equatable {
         case notAvailable
         case possible
         case outgoingRequested
-        case incomingRequested
+        case incomingRequested(sendsVideo: Bool)
         case active
     }
     
@@ -561,9 +561,14 @@ public final class OngoingCallContext {
                             ))
                         }
                     }
+                    
+                    let screenSize = UIScreen.main.bounds.size
+                    let portraitSize = CGSize(width: min(screenSize.width, screenSize.height), height: max(screenSize.width, screenSize.height))
+                    let preferredAspectRatio = portraitSize.width / portraitSize.height
+                    
                     let context = OngoingCallThreadLocalContextWebrtc(version: version, queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, rtcServers: rtcServers, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescriptionWebrtc(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescriptionWebrtc), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath, sendSignalingData: { [weak callSessionManager] data in
                         callSessionManager?.sendSignalingData(internalId: internalId, data: data)
-                    }, videoCapturer: video?.impl)
+                    }, videoCapturer: video?.impl, preferredAspectRatio: Float(preferredAspectRatio))
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
                     context.stateChanged = { [weak callSessionManager] state, videoState, remoteVideoState in
@@ -577,7 +582,9 @@ public final class OngoingCallContext {
                             case .possible:
                                 mappedVideoState = .possible
                             case .incomingRequested:
-                                mappedVideoState = .incomingRequested
+                                mappedVideoState = .incomingRequested(sendsVideo: false)
+                            case .incomingRequestedAndActive:
+                                mappedVideoState = .incomingRequested(sendsVideo: true)
                             case .outgoingRequested:
                                 mappedVideoState = .outgoingRequested
                             case .active:

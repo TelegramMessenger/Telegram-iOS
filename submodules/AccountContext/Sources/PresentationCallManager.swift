@@ -48,7 +48,7 @@ public struct PresentationCallState: Equatable {
         case notAvailable
         case possible
         case outgoingRequested
-        case incomingRequested
+        case incomingRequested(sendsVideo: Bool)
         case active
     }
     

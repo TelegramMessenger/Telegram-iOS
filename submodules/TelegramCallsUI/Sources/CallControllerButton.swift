@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import AppBundle
+import SemanticStatusNode
 
 private let labelFont = Font.regular(13.0)
 
@@ -32,18 +33,22 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
         var appearance: Appearance
         var image: Image
         var isEnabled: Bool
+        var hasProgress: Bool
         
-        init(appearance: Appearance, image: Image, isEnabled: Bool = true) {
+        init(appearance: Appearance, image: Image, isEnabled: Bool = true, hasProgress: Bool = false) {
             self.appearance = appearance
             self.image = image
             self.isEnabled = isEnabled
+            self.hasProgress = hasProgress
         }
     }
     
     private let contentContainer: ASDisplayNode
     private let effectView: UIVisualEffectView
+    private let contentBackgroundNode: ASImageNode
     private let contentNode: ASImageNode
     private let overlayHighlightNode: ASImageNode
+    private var statusNode: SemanticStatusNode?
     private let textNode: ImmediateTextNode
     
     private let largeButtonSize: CGFloat = 72.0
@@ -59,6 +64,9 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
         self.effectView.layer.cornerRadius = self.largeButtonSize / 2.0
         self.effectView.clipsToBounds = true
         self.effectView.isUserInteractionEnabled = false
+        
+        self.contentBackgroundNode = ASImageNode()
+        self.contentBackgroundNode.isUserInteractionEnabled = false
         
         self.contentNode = ASImageNode()
         self.contentNode.isUserInteractionEnabled = false
@@ -79,6 +87,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
         self.addSubnode(self.textNode)
         
         self.contentContainer.view.addSubview(self.effectView)
+        self.contentContainer.addSubnode(self.contentBackgroundNode)
         self.contentContainer.addSubnode(self.contentNode)
         self.contentContainer.addSubnode(self.overlayHighlightNode)
         
@@ -88,9 +97,13 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
             }
             if highlighted {
                 strongSelf.overlayHighlightNode.alpha = 1.0
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .spring)
+                transition.updateSublayerTransformScale(node: strongSelf, scale: 0.9)
             } else {
                 strongSelf.overlayHighlightNode.alpha = 0.0
                 strongSelf.overlayHighlightNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.5, curve: .spring)
+                transition.updateSublayerTransformScale(node: strongSelf, scale: 1.0)
             }
         }
     }
@@ -101,11 +114,33 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
         let isSmall = self.largeButtonSize > size.width
         
         self.effectView.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.largeButtonSize, height: self.largeButtonSize))
+        self.contentBackgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.largeButtonSize, height: self.largeButtonSize))
         self.contentNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.largeButtonSize, height: self.largeButtonSize))
         self.overlayHighlightNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.largeButtonSize, height: self.largeButtonSize))
         
         if self.currentContent != content {
             self.currentContent = content
+            
+            if content.hasProgress {
+                if self.statusNode == nil {
+                    let statusNode = SemanticStatusNode(backgroundNodeColor: .white, foregroundNodeColor: .clear)
+                    self.statusNode = statusNode
+                    self.contentContainer.insertSubnode(statusNode, belowSubnode: self.contentNode)
+                    statusNode.transitionToState(.progress(value: nil, cancelEnabled: false, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 4.0, lineWidth: 3.0)), animated: false, completion: {})
+                }
+                if let statusNode = self.statusNode {
+                    statusNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.largeButtonSize, height: self.largeButtonSize))
+                    if transition.isAnimated {
+                        statusNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                        statusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
+                }
+            } else if let statusNode = self.statusNode {
+                self.statusNode = nil
+                transition.updateAlpha(node: statusNode, alpha: 0.0, completion: { [weak statusNode] _ in
+                    statusNode?.removeFromSupernode()
+                })
+            }
             
             switch content.appearance {
             case .blurred:
@@ -117,19 +152,29 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
             self.alpha = content.isEnabled ? 1.0 : 0.7
             self.isUserInteractionEnabled = content.isEnabled
             
+            let contentBackgroundImage: UIImage? = nil
+            
             let contentImage = generateImage(CGSize(width: self.largeButtonSize, height: self.largeButtonSize), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 
                 var fillColor: UIColor = .clear
+                var imageColor: UIColor = .white
                 var drawOverMask = false
                 context.setBlendMode(.normal)
                 var imageScale: CGFloat = 1.0
                 switch content.appearance {
                 case let .blurred(isFilled):
-                    if isFilled {
-                        fillColor = .white
-                        drawOverMask = true
+                    if content.hasProgress {
+                        fillColor = .clear
+                        imageColor = .black
+                        drawOverMask = false
                         context.setBlendMode(.copy)
+                    } else {
+                        if isFilled {
+                            fillColor = .white
+                            drawOverMask = true
+                            context.setBlendMode(.copy)
+                        }
                     }
                     let smallButtonSize: CGFloat = 60.0
                     imageScale = self.largeButtonSize / smallButtonSize
@@ -149,19 +194,19 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                 
                 switch content.image {
                 case .camera:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallCameraButton"), color: .white)
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallCameraButton"), color: imageColor)
                 case .mute:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallMuteButton"), color: .white)
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallMuteButton"), color: imageColor)
                 case .flipCamera:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallSwitchCameraButton"), color: .white)
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallSwitchCameraButton"), color: imageColor)
                 case .bluetooth:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallBluetoothButton"), color: .white)
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallBluetoothButton"), color: imageColor)
                 case .speaker:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallSpeakerButton"), color: .white)
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallSpeakerButton"), color: imageColor)
                 case .accept:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAcceptButton"), color: .white)
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAcceptButton"), color: imageColor)
                 case .end:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallDeclineButton"), color: .white)
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallDeclineButton"), color: imageColor)
                 }
             
                 if let image = image {
@@ -180,6 +225,14 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                     }
                 }
             })
+            
+            if transition.isAnimated, let contentBackgroundImage = contentBackgroundImage, let previousContent = self.contentBackgroundNode.image {
+                self.contentBackgroundNode.image = contentBackgroundImage
+                self.contentBackgroundNode.layer.animate(from: previousContent.cgImage!, to: contentBackgroundImage.cgImage!, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
+            } else {
+                self.contentBackgroundNode.image = contentBackgroundImage
+            }
+            
             if transition.isAnimated, let contentImage = contentImage, let previousContent = self.contentNode.image {
                 self.contentNode.image = contentImage
                 self.contentNode.layer.animate(from: previousContent.cgImage!, to: contentImage.cgImage!, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)

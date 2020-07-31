@@ -294,7 +294,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
-- (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy rtcServers:(NSArray<VoipRtcServerWebrtc *> * _Nonnull)rtcServers networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescriptionWebrtc * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath sendSignalingData:(void (^)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer {
+- (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy rtcServers:(NSArray<VoipRtcServerWebrtc *> * _Nonnull)rtcServers networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescriptionWebrtc * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath sendSignalingData:(void (^)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer preferredAspectRatio:(float)preferredAspectRatio {
     self = [super init];
     if (self != nil) {
         _version = version;
@@ -381,7 +381,8 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .enableAGC = true,
             .enableCallUpgrade = false,
             .logPath = logPath.length == 0 ? "" : std::string(logPath.UTF8String),
-            .maxApiLayer = [OngoingCallThreadLocalContextWebrtc maxLayer]
+            .maxApiLayer = [OngoingCallThreadLocalContextWebrtc maxLayer],
+            .preferredAspectRatio = preferredAspectRatio
         };
         
         auto encryptionKeyValue = std::make_shared<std::array<uint8_t, 256>>();
@@ -418,6 +419,9 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                                 break;
                             case tgcalls::VideoState::IncomingRequested:
                                 mappedVideoState = OngoingCallVideoStateIncomingRequested;
+                                break;
+                            case tgcalls::VideoState::IncomingRequestedAndActive:
+                                mappedVideoState = OngoingCallVideoStateIncomingRequestedAndActive;
                                 break;
                             case tgcalls::VideoState::Active:
                                 mappedVideoState = OngoingCallVideoStateActive;

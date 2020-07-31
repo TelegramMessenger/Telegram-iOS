@@ -463,8 +463,8 @@ public final class PresentationCallImpl: PresentationCall {
                 mappedVideoState = .possible
             case .outgoingRequested:
                 mappedVideoState = .outgoingRequested
-            case .incomingRequested:
-                mappedVideoState = .incomingRequested
+            case let .incomingRequested(sendsVideo):
+                mappedVideoState = .incomingRequested(sendsVideo: sendsVideo)
             case .active:
                 mappedVideoState = .active
                 self.videoWasActive = true
