@@ -33,20 +33,20 @@ public final class PasscodeSetupController: ViewController {
     
     private let isChangeModeAllowed: Bool
     
-    public init(context: SharedAccountContext, mode: PasscodeSetupControllerMode, isChangeModeAllowed: Bool = true) {
+    public init(context: SharedAccountContext, mode: PasscodeSetupControllerMode, isChangeModeAllowed: Bool = true, isOpaqueNavigationBar: Bool = false) {
         self.context = context
         self.mode = mode
         self.isChangeModeAllowed = isChangeModeAllowed
         self.presentationData = context.currentPresentationData.with { $0 }
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData, hideBackground: isOpaqueNavigationBar, hideBadge: false))
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.nextAction = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
         
-        self.title = self.presentationData.strings.PasscodeSettings_Title
+        self.title = isOpaqueNavigationBar ? "" : self.presentationData.strings.PasscodeSettings_Title
     }
     
     required public init(coder aDecoder: NSCoder) {

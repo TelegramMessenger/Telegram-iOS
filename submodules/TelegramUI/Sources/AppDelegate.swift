@@ -2102,7 +2102,7 @@ final class SharedApplicationContext {
                 
                 let setupMasterPasscode: (@escaping () -> Void) -> Void = { innerCompletion in
                     let accountContext = context.sharedApplicationContext.sharedContext
-                    let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits6))
+                    let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits6), isOpaqueNavigationBar: true)
                     setupController.complete = { passcode, numerical in
                         let _ = (accountContext.accountManager.transaction({ transaction -> Void in
                             var data = transaction.getAccessChallengeData()
@@ -2139,7 +2139,7 @@ final class SharedApplicationContext {
                 let addFalseBottomToCurrentAccount: () -> Void = {
                     let accountContext = context.sharedApplicationContext.sharedContext
                     
-                    let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits4), isChangeModeAllowed: false)
+                    let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits4), isChangeModeAllowed: false, isOpaqueNavigationBar: true)
                     setupController.complete = { passcode, numerical in
                         let _ = (accountContext.accountManager.transaction({ transaction -> Void in
                             var data = transaction.getAccessChallengeData()
