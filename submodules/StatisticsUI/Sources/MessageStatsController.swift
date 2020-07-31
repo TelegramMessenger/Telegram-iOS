@@ -209,7 +209,7 @@ public func messageStatsController(context: AccountContext, messageId: MessageId
     
     let previousData = Atomic<MessageStats?>(value: nil)
     
-    let searchSignal = searchMessages(account: context.account, location: .publicForwards(messageId), query: "", state: nil)
+    let searchSignal = searchMessages(account: context.account, location: .publicForwards(messageId: messageId, datacenterId: Int(datacenterId)), query: "", state: nil)
     |> map(Optional.init)
     |> afterNext { result in
         if let result = result {
