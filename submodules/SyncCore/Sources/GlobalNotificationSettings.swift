@@ -4,26 +4,34 @@ public struct MessageNotificationSettings: PostboxCoding, Equatable {
     public var enabled: Bool
     public var displayPreviews: Bool
     public var sound: PeerMessageSound
+    public var tempEnabled: Bool
     
     public static var defaultSettings: MessageNotificationSettings {
         return MessageNotificationSettings(enabled: true, displayPreviews: true, sound: .bundledModern(id: 0))
+    }
+    
+    public static var muteSettings: MessageNotificationSettings {
+        return MessageNotificationSettings(enabled: false, displayPreviews: false, sound: .none)
     }
     
     public init(enabled: Bool, displayPreviews: Bool, sound: PeerMessageSound) {
         self.enabled = enabled
         self.displayPreviews = displayPreviews
         self.sound = sound
+        self.tempEnabled = false
     }
     
     public init(decoder: PostboxDecoder) {
         self.enabled = decoder.decodeInt32ForKey("e", orElse: 0) != 0
         self.displayPreviews = decoder.decodeInt32ForKey("p", orElse: 0) != 0
+        self.tempEnabled = decoder.decodeInt32ForKey("te", orElse: 0) != 0
         self.sound = PeerMessageSound.decodeInline(decoder)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.enabled ? 1 : 0, forKey: "e")
         encoder.encodeInt32(self.displayPreviews ? 1 : 0, forKey: "p")
+        encoder.encodeInt32(self.tempEnabled ? 1 : 0, forKey: "te")
         self.sound.encodeInline(encoder)
     }
 }
@@ -36,6 +44,10 @@ public struct GlobalNotificationSettingsSet: PostboxCoding, Equatable {
     
     public static var defaultSettings: GlobalNotificationSettingsSet {
         return GlobalNotificationSettingsSet(privateChats: MessageNotificationSettings.defaultSettings, groupChats: .defaultSettings, channels: .defaultSettings, contactsJoined: true)
+    }
+    
+    public static var muteSettings: GlobalNotificationSettingsSet {
+        return GlobalNotificationSettingsSet(privateChats: .muteSettings, groupChats: .muteSettings, channels: .muteSettings, contactsJoined: true)
     }
     
     public init(privateChats: MessageNotificationSettings, groupChats: MessageNotificationSettings, channels: MessageNotificationSettings, contactsJoined: Bool) {

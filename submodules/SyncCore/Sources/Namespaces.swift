@@ -193,6 +193,7 @@ public extension PeerSummaryCounterTags {
 
 private enum PreferencesKeyValues: Int32 {
     case globalNotifications = 0
+    case tempGlobalNotifications = 44
     case suggestedLocalization = 3
     case limitsConfiguration = 4
     case coreSettings = 7
