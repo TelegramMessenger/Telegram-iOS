@@ -10,7 +10,7 @@ public enum SearchMessagesLocation: Equatable {
     case general
     case group(PeerGroupId)
     case peer(peerId: PeerId, fromId: PeerId?, tags: MessageTags?)
-    case publicForwards(MessageId)
+    case publicForwards(messageId: MessageId, datacenterId: Int?)
 }
 
 private struct SearchMessagesPeerState: Equatable {
@@ -291,7 +291,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                     return .single((nil, nil))
                 }
             }
-        case let .publicForwards(messageId):
+        case let .publicForwards(messageId, datacenterId):
             remoteSearchResult = account.postbox.transaction { transaction -> (Api.InputChannel?, Int32, MessageIndex?, Api.InputPeer) in
                 let sourcePeer = transaction.getPeer(messageId.peerId)
                 let inputChannel = sourcePeer.flatMap { apiInputChannel($0) }
@@ -311,7 +311,18 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                     return .complete()
                 }
                 
-                return account.network.request(Api.functions.stats.getMessagePublicForwards(channel: inputChannel, msgId: messageId.id, offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit), automaticFloodWait: false)
+                let request = Api.functions.stats.getMessagePublicForwards(channel: inputChannel, msgId: messageId.id, offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit)
+                let signal: Signal<Api.messages.Messages, MTRpcError>
+                if let datacenterId = datacenterId, account.network.datacenterId != datacenterId {
+                    signal = account.network.download(datacenterId: datacenterId, isMedia: false, tag: nil)
+                    |> castError(MTRpcError.self)
+                    |> mapToSignal { worker in
+                        return worker.request(request)
+                    }
+                } else {
+                    signal = account.network.request(request, automaticFloodWait: false)
+                }
+                return signal
                 |> map { result -> (Api.messages.Messages?, Api.messages.Messages?) in
                     return (result, nil)
                 }
