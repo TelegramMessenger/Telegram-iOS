@@ -184,9 +184,7 @@
 }
 
 - (void)cleanup
-{
-    [_diskCache cleanup];
-    
+{    
     [[NSFileManager defaultManager] removeItemAtPath:_fullSizeResultsUrl.path error:nil];
     [[NSFileManager defaultManager] removeItemAtPath:_paintingImagesUrl.path error:nil];
     [[NSFileManager defaultManager] removeItemAtPath:_paintingDatasUrl.path error:nil];

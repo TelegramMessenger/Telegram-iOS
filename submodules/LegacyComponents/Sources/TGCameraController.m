@@ -19,6 +19,7 @@
 #import <LegacyComponents/TGCameraMainPhoneView.h>
 #import <LegacyComponents/TGCameraMainTabletView.h>
 #import "TGCameraFocusCrosshairsControl.h"
+#import "TGCameraRectangleView.h"
 
 #import <LegacyComponents/TGFullscreenContainerView.h>
 #import <LegacyComponents/TGPhotoEditorController.h>
@@ -52,6 +53,8 @@
 #import "TGCameraCapturedVideo.h"
 
 #import "PGPhotoEditor.h"
+#import "PGRectangleDetector.h"
+#import "TGWarpedView.h"
 
 #import "TGAnimationUtils.h"
 
@@ -108,9 +111,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     TGCameraMainView *_interfaceView;
     UIView *_overlayView;
     TGCameraFocusCrosshairsControl *_focusControl;
-    
-    TGModernGalleryVideoView *_segmentPreviewView;
-    bool _previewingSegment;
+    TGCameraRectangleView *_rectangleView;
     
     UISwipeGestureRecognizer *_photoSwipeGestureRecognizer;
     UISwipeGestureRecognizer *_videoSwipeGestureRecognizer;
@@ -277,6 +278,11 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     [_focusControl setInterfaceOrientation:interfaceOrientation animated:false];
     [_overlayView addSubview:_focusControl];
     
+    _rectangleView = [[TGCameraRectangleView alloc] initWithFrame:_overlayView.bounds];
+    _rectangleView.previewView = _previewView;
+    _rectangleView.hidden = true;
+    [_overlayView addSubview:_rectangleView];
+    
     if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
     {
         _panGestureRecognizer = [[TGModernGalleryZoomableScrollViewSwipeGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
@@ -356,7 +362,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         if (strongSelf == nil)
             return;
         
-        [strongSelf->_camera setCameraMode:mode];
+        [strongSelf _updateCameraMode:mode updateInterface:false];
     };
     
     _interfaceView.flashModeChanged = ^(PGCameraFlashMode mode)
@@ -474,6 +480,25 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     [self _configureCamera];
 }
 
+- (void)_updateCameraMode:(PGCameraMode)mode updateInterface:(bool)updateInterface {
+    [_camera setCameraMode:mode];
+    if (updateInterface)
+        [_interfaceView setCameraMode:mode];
+    
+    _focusControl.hidden = mode == PGCameraModePhotoScan;
+    _rectangleView.hidden = mode != PGCameraModePhotoScan;
+    
+    if (mode == PGCameraModePhotoScan) {
+        [self _createContextsIfNeeded];
+        
+        if (_items.count == 0) {
+            [_interfaceView setToastMessage:@"Position the document in view" animated:true];
+        } else {
+            
+        }
+    }
+}
+
 - (void)_configureCamera
 {
     __weak TGCameraController *weakSelf = self;
@@ -510,9 +535,11 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         strongSelf.view.userInteractionEnabled = false;
         
         PGCameraMode currentMode = strongSelf->_camera.cameraMode;
-        bool generalModeNotChanged = (mode == PGCameraModePhoto && currentMode == PGCameraModeSquarePhoto) || (mode == PGCameraModeSquarePhoto && currentMode == PGCameraModePhoto) || (mode == PGCameraModeVideo && currentMode == PGCameraModeSquareVideo) || (mode == PGCameraModeSquareVideo && currentMode == PGCameraModeVideo);
-        
-        if ((mode == PGCameraModeVideo || mode == PGCameraModeSquareVideo) && !generalModeNotChanged)
+        bool generalModeNotChanged = [PGCamera isPhotoCameraMode:mode] == [PGCamera isPhotoCameraMode:currentMode];
+        if (strongSelf->_camera.captureSession.currentCameraPosition == PGCameraPositionFront && mode == PGCameraModePhotoScan) {
+            generalModeNotChanged = false;
+        }
+        if ([PGCamera isVideoCameraMode:mode] && !generalModeNotChanged)
         {
             [[LegacyComponentsGlobals provider] pauseMusicPlayback];
         }
@@ -565,6 +592,21 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 {
                     [[[LegacyComponentsGlobals provider] accessChecker] checkMicrophoneAuthorizationStatusForIntent:TGMicrophoneAccessIntentVideo alertDismissCompletion:nil];
                     strongSelf->_shownMicrophoneAlert = true;
+                }
+                
+                if (strongSelf->_camera.cameraMode == PGCameraModePhotoScan) {
+                    strongSelf->_camera.captureSession.rectangleDetector.update = ^(bool capture, PGRectangle *rectangle) {
+                        __strong TGCameraController *strongSelf = weakSelf;
+                        if (strongSelf == nil)
+                            return;
+                        
+                        TGDispatchOnMainThread(^{
+                            [strongSelf->_rectangleView drawRectangle:rectangle];
+                            if (capture) {
+                                [strongSelf _makeScan:rectangle];
+                            }
+                        });
+                    };
                 }
             }
         });
@@ -870,9 +912,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             }];
         };
         _camera.autoStartVideoRecording = true;
-        
-        [_camera setCameraMode:PGCameraModeVideo];
-        [_interfaceView setCameraMode:PGCameraModeVideo];
+        [self _updateCameraMode:PGCameraModeVideo updateInterface:true];
     }
     else if (_camera.cameraMode == PGCameraModeVideo)
     {
@@ -952,7 +992,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     __weak TGCameraController *weakSelf = self;
     PGCameraMode cameraMode = _camera.cameraMode;
-    if (cameraMode == PGCameraModePhoto || cameraMode == PGCameraModeSquarePhoto)
+    if (cameraMode == PGCameraModePhoto || cameraMode == PGCameraModeSquarePhoto || cameraMode == PGCameraModePhotoScan)
     {
         _camera.disabled = true;
 
@@ -969,7 +1009,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             _buttonHandler.enabled = false;
             [_buttonHandler ignoreEventsFor:1.5f andDisable:true];
         }
-        
+                
         [_camera takePhotoWithCompletion:^(UIImage *result, PGCameraShotMetadata *metadata)
         {
             __strong TGCameraController *strongSelf = weakSelf;
@@ -1040,6 +1080,140 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             [_buttonHandler ignoreEventsFor:1.0f andDisable:[self willPresentResultController]];
         }
     }
+}
+
+- (void)_makeScan:(PGRectangle *)rectangle
+{
+    if (_shutterIsBusy)
+        return;
+    
+    _camera.disabled = true;
+    _shutterIsBusy = true;
+    
+    __weak TGCameraController *weakSelf = self;
+    [_camera takePhotoWithCompletion:^(UIImage *result, PGCameraShotMetadata *metadata)
+    {
+        __strong TGCameraController *strongSelf = weakSelf;
+        if (strongSelf == nil)
+            return;
+        
+        TGDispatchOnMainThread(^
+        {
+            [strongSelf->_interfaceView setToastMessage:nil animated:true];
+            
+            strongSelf->_shutterIsBusy = false;
+            
+            [strongSelf->_rectangleView drawRectangle:nil];
+            strongSelf->_rectangleView.enabled = false;
+            
+            TGDispatchAfter(2.0, dispatch_get_main_queue(), ^{
+                strongSelf->_rectangleView.enabled = true;
+            });
+            
+            TGCameraCapturedPhoto *capturedPhoto = [[TGCameraCapturedPhoto alloc] initWithImage:result rectangle:rectangle];
+            [strongSelf addResultItem:capturedPhoto];
+            
+            PGRectangle *cropRectangle = [[rectangle rotate90] transform:CGAffineTransformMakeScale(result.size.width, result.size.height)];
+            PGRectangle *convertedRectangle = [cropRectangle sort];
+            convertedRectangle = [convertedRectangle cartesian:result.size.height];
+            
+            CIImage *ciImage = [[CIImage alloc] initWithImage:result];
+            CIImage *croppedImage = [ciImage imageByApplyingFilter:@"CIPerspectiveCorrection" withInputParameters:@{
+                @"inputTopLeft": [CIVector vectorWithCGPoint:convertedRectangle.topLeft],
+                @"inputTopRight": [CIVector vectorWithCGPoint:convertedRectangle.topRight],
+                @"inputBottomLeft": [CIVector vectorWithCGPoint:convertedRectangle.bottomLeft],
+                @"inputBottomRight": [CIVector vectorWithCGPoint:convertedRectangle.bottomRight]
+            }];
+            CIImage *enhancedImage = [croppedImage imageByApplyingFilter:@"CIDocumentEnhancer" withInputParameters:@{}];
+            
+            CIContext *context = [CIContext contextWithOptions:nil];
+            UIImage *editedImage = [UIImage imageWithCGImage:[context createCGImage:enhancedImage fromRect:enhancedImage.extent]];
+            UIImage *thumbnailImage = TGScaleImage(editedImage, TGScaleToFillSize(editedImage.size, TGPhotoThumbnailSizeForCurrentScreen()));
+            [strongSelf->_editingContext setImage:editedImage thumbnailImage:thumbnailImage forItem:capturedPhoto synchronous:true];
+            [strongSelf->_editingContext setAdjustments:[PGPhotoEditorValues editorValuesWithOriginalSize:result.size cropRectangle:cropRectangle cropOrientation:UIImageOrientationUp cropSize:editedImage.size enhanceDocument:true paintingData:nil] forItem:capturedPhoto];
+            
+            [strongSelf _playScanAnimation:editedImage rectangle:rectangle completion:^{
+                [strongSelf->_selectedItemsModel addSelectedItem:capturedPhoto];
+                [strongSelf->_selectionContext setItem:capturedPhoto selected:true];
+                [strongSelf->_interfaceView setResults:[strongSelf->_items copy]];
+                
+                TGDispatchAfter(0.5, dispatch_get_main_queue(), ^{
+                    [strongSelf->_interfaceView setToastMessage:@"Ready for next scan" animated:true];
+                });
+            }];
+            
+            strongSelf->_camera.disabled = false;
+        });
+    }];
+}
+
+- (void)_playScanAnimation:(UIImage *)image rectangle:(PGRectangle *)rectangle completion:(void(^)(void))completion
+{
+    TGWarpedView *warpedView = [[TGWarpedView alloc] initWithImage:image];
+    warpedView.layer.anchorPoint = CGPointMake(0, 0);
+    warpedView.frame = _rectangleView.frame;
+    [_rectangleView.superview addSubview:warpedView];
+    
+    CGAffineTransform transform = CGAffineTransformMakeScale(_previewView.frame.size.width, _previewView.frame.size.height);
+    PGRectangle *displayRectangle = [[[rectangle rotate90] transform:transform] sort];
+    [warpedView transformToFitQuadTopLeft:displayRectangle.topLeft topRight:displayRectangle.topRight bottomLeft:displayRectangle.bottomLeft bottomRight:displayRectangle.bottomRight];
+    
+    CGFloat inset = 16.0f;
+    CGSize targetSize = TGScaleToFit(image.size, CGSizeMake(_previewView.frame.size.width - inset * 2.0, _previewView.frame.size.height - inset * 2.0));
+    CGRect targetRect = CGRectMake(floor((_previewView.frame.size.width - targetSize.width) / 2.0), floor((_previewView.frame.size.height - targetSize.height) / 2.0), targetSize.width, targetSize.height);
+    
+    [UIView animateWithDuration:0.3 delay:0.0 options:(7 << 16) animations:^{
+        [warpedView transformToFitQuadTopLeft:CGPointMake(targetRect.origin.x, targetRect.origin.y) topRight:CGPointMake(targetRect.origin.x + targetRect.size.width, targetRect.origin.y) bottomLeft:CGPointMake(targetRect.origin.x, targetRect.origin.y + targetRect.size.height) bottomRight:CGPointMake(targetRect.origin.x + targetRect.size.width, targetRect.origin.y + targetRect.size.height)];
+    } completion:^(BOOL finished) {
+        UIImageView *outView = [[UIImageView alloc] initWithImage:image];
+        outView.frame = targetRect;
+        [warpedView.superview addSubview:outView];
+        [warpedView removeFromSuperview];
+        
+        TGDispatchAfter(0.2, dispatch_get_main_queue(), ^{
+            CGPoint sourcePoint = outView.center;
+            CGPoint targetPoint = CGPointMake(_previewView.frame.size.width - 44.0, _previewView.frame.size.height - 44.0);
+            CGPoint midPoint = CGPointMake((sourcePoint.x + targetPoint.x) / 2.0, sourcePoint.y - 30.0);
+            
+            CGFloat x1 = sourcePoint.x;
+            CGFloat y1 = sourcePoint.y;
+            CGFloat x2 = midPoint.x;
+            CGFloat y2 = midPoint.y;
+            CGFloat x3 = targetPoint.x;
+            CGFloat y3 = targetPoint.y;
+
+            CGFloat a = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / ((x1 - x2) * (x1 - x3) * (x2 - x3));
+            CGFloat b = (x1 * x1 * (y2 - y3) + x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1)) / ((x1 - x2) * (x1 - x3) * (x2 - x3));
+            CGFloat c = (x2 * x2 * (x3 * y1 - x1 * y3) + x2 * (x1 * x1 * y3 - x3 * x3 * y1) + x1 * x3 * (x3 - x1) * y2) / ((x1 - x2) * (x1 - x3) * (x2 - x3));
+            
+            [UIView animateWithDuration:0.3 animations:^{
+                outView.transform = CGAffineTransformMakeScale(0.1, 0.1);
+            } completion:^(BOOL finished) {
+                [outView removeFromSuperview];
+            }];
+            
+            TGDispatchAfter(0.28, dispatch_get_main_queue(), ^{
+                completion();
+            });
+            
+            CAKeyframeAnimation *animation = [CAKeyframeAnimation animationWithKeyPath:@"position"];
+            NSMutableArray *values = [[NSMutableArray alloc] init];
+            NSMutableArray *keyTimes = [[NSMutableArray alloc] init];
+            for (NSInteger i = 0; i < 10; i++) {
+                CGFloat k = (CGFloat)i / (CGFloat)(10 - 1);
+                CGFloat x = sourcePoint.x * (1.0 - k) + targetPoint.x * k;
+                CGFloat y = a * x * x + b * x + c;
+                
+                [values addObject:[NSValue valueWithCGPoint:CGPointMake(x, y)]];
+                [keyTimes addObject:@(k)];
+            }
+            animation.values = values;
+            animation.keyTimes = keyTimes;
+            animation.duration = 0.35;
+            animation.removedOnCompletion = false;
+            [outView.layer addAnimation:animation forKey:@"position"];
+        });
+    }];
 }
 
 - (void)cancelPressed
@@ -1164,27 +1338,34 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     return galleryItems;
 }
 
+- (void)_createContextsIfNeeded
+{
+    TGMediaEditingContext *editingContext = _editingContext;
+    if (editingContext == nil)
+    {
+        editingContext = [[TGMediaEditingContext alloc] init];
+        if (self.forcedCaption != nil)
+            [editingContext setForcedCaption:self.forcedCaption entities:self.forcedEntities];
+        _editingContext = editingContext;
+        _interfaceView.editingContext = editingContext;
+    }
+    TGMediaSelectionContext *selectionContext = _selectionContext;
+    if (selectionContext == nil)
+    {
+        selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:self.allowGrouping selectionLimit:100];
+        if (self.allowGrouping)
+            selectionContext.grouping = true;
+        _selectionContext = selectionContext;
+    }
+}
+
 - (void)presentResultControllerForItem:(id<TGMediaEditableItem, TGMediaSelectableItem>)editableItemValue completion:(void (^)(void))completion
 {
     __block id<TGMediaEditableItem, TGMediaSelectableItem> editableItem = editableItemValue;
     UIViewController *(^begin)(id<LegacyComponentsContext>) = ^(id<LegacyComponentsContext> windowContext) {
+        [self _createContextsIfNeeded];
         TGMediaEditingContext *editingContext = _editingContext;
-        if (editingContext == nil)
-        {
-            editingContext = [[TGMediaEditingContext alloc] init];
-            if (self.forcedCaption != nil)
-                [editingContext setForcedCaption:self.forcedCaption entities:self.forcedEntities];
-            _editingContext = editingContext;
-            _interfaceView.editingContext = editingContext;
-        }
         TGMediaSelectionContext *selectionContext = _selectionContext;
-        if (selectionContext == nil)
-        {
-            selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:self.allowGrouping selectionLimit:100];
-            if (self.allowGrouping)
-                selectionContext.grouping = true;
-            _selectionContext = selectionContext;
-        }
         
         if (editableItem == nil)
             editableItem = _items.lastObject;
@@ -1971,6 +2152,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     self.view.userInteractionEnabled = false;
     
     _focusControl.active = false;
+    _rectangleView.hidden = true;
     
     [UIView animateWithDuration:0.3f animations:^
     {
@@ -2238,21 +2420,27 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     PGCameraMode newMode = PGCameraModeUndefined;
     if (gestureRecognizer == _photoSwipeGestureRecognizer)
     {
-        newMode = PGCameraModePhoto;
+        if (_camera.cameraMode == PGCameraModePhoto && _intent == TGCameraControllerGenericIntent)
+            newMode = PGCameraModePhotoScan;
+        else if (_camera.cameraMode != PGCameraModePhotoScan)
+            newMode = PGCameraModePhoto;
     }
     else if (gestureRecognizer == _videoSwipeGestureRecognizer)
     {
-        if (_intent == TGCameraControllerAvatarIntent) {
-            newMode = PGCameraModeSquareVideo;
+        if (_camera.cameraMode == PGCameraModePhotoScan) {
+            if (_items.count == 0)
+                newMode = PGCameraModePhoto;
         } else {
-            newMode = PGCameraModeVideo;
+            if (_intent == TGCameraControllerAvatarIntent) {
+                newMode = PGCameraModeSquareVideo;
+            } else {
+                newMode = PGCameraModeVideo;
+            }
         }
     }
     
-    if (newMode != PGCameraModeUndefined && _camera.cameraMode != newMode)
-    {
-        [_camera setCameraMode:newMode];
-        [_interfaceView setCameraMode:newMode];
+    if (newMode != PGCameraModeUndefined && _camera.cameraMode != newMode) {
+        [self _updateCameraMode:newMode updateInterface:true];
     }
 }
 
@@ -2441,11 +2629,22 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     if (selectedItems.count == 0 && currentItem != nil)
         [selectedItems addObject:currentItem];
     
-    if (storeAssets)
-    {
+    bool isScan = false;
+    for (id<TGMediaEditableItem> item in selectedItems) {
+        if ([item isKindOfClass:[TGCameraCapturedPhoto class]] && ((TGCameraCapturedPhoto *)item).rectangle != nil) {
+            isScan = true;
+            break;
+        }
+    }
+    
+    if (storeAssets && !isScan) {
         NSMutableArray *fullSizeSignals = [[NSMutableArray alloc] init];
         for (id<TGMediaEditableItem> item in selectedItems)
         {
+            if ([item isKindOfClass:[TGCameraCapturedPhoto class]] && ((TGCameraCapturedPhoto *)item).rectangle != nil) {
+                isScan = true;
+            }
+            
             if ([editingContext timerForItem:item] == nil)
             {
                 SSignal *saveMedia = [SSignal defer:^SSignal *
@@ -2565,9 +2764,15 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                     dict[@"timer"] = timer;
                 else if (groupedId != nil && !hasAnyTimers)
                     dict[@"groupedId"] = groupedId;
-
-                id generatedItem = descriptionGenerator(dict, caption, entities, nil);
-                return generatedItem;
+                
+                if (isScan) {
+                    if (caption != nil)
+                        dict[@"caption"] = caption;
+                    return dict;
+                } else {
+                    id generatedItem = descriptionGenerator(dict, caption, entities, nil);
+                    return generatedItem;
+                }
             }];
             
             SSignal *assetSignal = inlineSignal;
@@ -2593,12 +2798,13 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                     return [SSignal complete];
                 }] onCompletion:^
                 {
-                    __strong TGMediaEditingContext *strongEditingContext = editingContext;
-                    [strongEditingContext description];
+                    
                 }];
+            } else {
+                NSLog(@"Editing context is nil");
             }
             
-            [signals addObject:[[imageSignal map:^NSDictionary *(UIImage *image)
+            [signals addObject:[[[imageSignal map:^NSDictionary *(UIImage *image)
             {
                 NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
                 dict[@"type"] = @"editedPhoto";
@@ -2645,11 +2851,19 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 else if (groupedId != nil && !hasAnyTimers)
                     dict[@"groupedId"] = groupedId;
                 
-                id generatedItem = descriptionGenerator(dict, caption, entities, nil);
-                return generatedItem;
+                if (isScan) {
+                    if (caption != nil)
+                        dict[@"caption"] = caption;
+                    return dict;
+                } else {
+                    id generatedItem = descriptionGenerator(dict, caption, entities, nil);
+                    return generatedItem;
+                }
             }] catch:^SSignal *(__unused id error)
             {
                 return inlineSignal;
+            }] onCompletion:^{
+                [editingContext description];
             }]];
             
             i++;
@@ -2732,6 +2946,54 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             groupedId = @([TGCameraController generateGroupedId]);
         }
     }
+    
+    if (isScan) {
+        SSignal *scanSignal = [[SSignal combineSignals:signals] map:^NSDictionary *(NSArray *results) {
+            NSMutableData *data = [[NSMutableData alloc] init];
+            UIImage *previewImage = nil;
+            UIGraphicsBeginPDFContextToData(data, CGRectZero, nil);
+            for (NSDictionary *dict in results) {
+                if ([dict[@"type"] isEqual:@"editedPhoto"]) {
+                    UIImage *image = dict[@"image"];
+                    if (previewImage == nil) {
+                        previewImage = image;
+                    }
+                    if (image != nil) {
+                        CGRect rect = CGRectMake(0, 0, image.size.width, image.size.height);
+                        UIGraphicsBeginPDFPageWithInfo(rect, nil);
+                        CGContextRef pdfContext = UIGraphicsGetCurrentContext();
+                        
+                        CGContextTranslateCTM(pdfContext, 0, image.size.height);
+                        CGContextScaleCTM(pdfContext, 1.0, -1.0);
+                        
+                        NSData *jpegData = UIImageJPEGRepresentation(image, 0.65);
+                        CGDataProviderRef dataProvider = CGDataProviderCreateWithCFData((__bridge CFDataRef)jpegData);
+                        CGImageRef cgImage = CGImageCreateWithJPEGDataProvider(dataProvider, NULL, true, kCGRenderingIntentDefault);
+                        CGContextDrawImage(pdfContext, rect, cgImage);
+                        
+                        CGDataProviderRelease(dataProvider);
+                        CGImageRelease(cgImage);
+                    }
+                }
+            }
+            UIGraphicsEndPDFContext();
+            
+            NSString *filePath = [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"scan_%x.pdf", (int)arc4random()]];
+            [data writeToFile:filePath atomically:true];
+            
+            NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+            dict[@"type"] = @"file";
+            dict[@"previewImage"] = previewImage;
+            dict[@"tempFileUrl"] = [NSURL fileURLWithPath:filePath];
+            dict[@"fileName"] = @"Document Scan.pdf";
+            dict[@"mimeType"] = @"application/pdf";
+            
+            id generatedItem = descriptionGenerator(dict, dict[@"caption"], nil, nil);
+            return generatedItem;
+        }];
+        signals = [NSMutableArray arrayWithObject:scanSignal];
+    }
+    
     return signals;
 }
 

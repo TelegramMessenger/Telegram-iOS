@@ -412,8 +412,8 @@
 
 - (void)updateExposureIndicatorPositionForOrientation:(UIInterfaceOrientation)orientation
 {
-    CGRect defaultPositionFrame = _exposureClipView.frame = CGRectMake(45 + _focusIndicatorImageView.frame.size.width + 5, 45 + (_focusIndicatorImageView.frame.size.height - 144) / 2, 25, 144);;
-    CGRect mirroredPositionFrame = _exposureClipView.frame = CGRectMake(15, 45 + (_focusIndicatorImageView.frame.size.height - 144) / 2, 25, 144);;
+    CGRect defaultPositionFrame = CGRectMake(45 + _focusIndicatorImageView.frame.size.width + 5, 45 + (_focusIndicatorImageView.frame.size.height - 144) / 2, 25, 144);
+    CGRect mirroredPositionFrame = CGRectMake(15, 45 + (_focusIndicatorImageView.frame.size.height - 144) / 2, 25, 144);
     switch (orientation)
     {
         case UIInterfaceOrientationPortraitUpsideDown:

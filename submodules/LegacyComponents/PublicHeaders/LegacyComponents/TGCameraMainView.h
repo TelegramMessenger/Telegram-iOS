@@ -10,7 +10,7 @@
 @class TGCameraFlipButton;
 @class TGCameraTimeCodeView;
 @class TGCameraZoomView;
-@class TGCameraSegmentsView;
+@class TGCameraToastView;
 @class TGMediaPickerPhotoCounterButton;
 @class TGMediaPickerPhotoStripView;
 @class TGMediaPickerGallerySelectedItemsModel;
@@ -25,6 +25,8 @@
     
     TGCameraFlipButton *_flipButton;
     TGCameraTimeCodeView *_timecodeView;
+    
+    TGCameraToastView *_toastView;
     
     TGMediaPickerPhotoCounterButton *_photoCounterButton;
     TGMediaPickerPhotoStripView *_selectedPhotosView;
@@ -51,8 +53,6 @@
 @property (nonatomic, copy) void(^resultPressed)(NSInteger index);
 @property (nonatomic, copy) void(^itemRemoved)(NSInteger index);
 
-@property (nonatomic, copy) void (^deleteSegmentButtonPressed)(void);
-
 @property (nonatomic, copy) NSTimeInterval(^requestedVideoRecordingDuration)(void);
 
 @property (nonatomic, assign) CGRect previewViewFrame;
@@ -63,6 +63,8 @@
 - (void)setCameraMode:(PGCameraMode)mode;
 - (void)updateForCameraModeChangeWithPreviousMode:(PGCameraMode)previousMode;
 - (void)updateForCameraModeChangeAfterResize;
+
+- (void)setToastMessage:(NSString *)message animated:(bool)animated;
 
 - (void)setFlashMode:(PGCameraFlashMode)mode;
 - (void)setFlashActive:(bool)active;

@@ -1223,8 +1223,10 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
             NSTimeInterval currentTime = editorController.currentTime;
             __strong TGPhotoStickerEntityView *strongStickerView = weakStickerView;
             if (strongStickerView != nil) {
-                [strongStickerView seekTo:currentTime];
-                [strongStickerView play];
+                if(!isnan(currentTime)) {
+                    [strongStickerView seekTo:currentTime];
+                    [strongStickerView play];
+                }
             }
         }
     };

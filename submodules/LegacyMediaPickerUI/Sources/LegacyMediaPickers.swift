@@ -372,10 +372,21 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                         case let .file(data, thumbnail, mimeType, name, caption):
                             switch data {
                                 case let .tempFile(path):
+                                    var previewRepresentations: [TelegramMediaImageRepresentation] = []
+                                    if let thumbnail = thumbnail {
+                                        let resource = LocalFileMediaResource(fileId: arc4random64())
+                                        let thumbnailSize = thumbnail.size.aspectFitted(CGSize(width: 320.0, height: 320.0))
+                                        let thumbnailImage = TGScaleImageToPixelSize(thumbnail, thumbnailSize)!
+                                        if let thumbnailData = thumbnailImage.jpegData(compressionQuality: 0.4) {
+                                            account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnailData)
+                                            previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailSize), resource: resource, progressiveSizes: []))
+                                        }
+                                    }
+                                    
                                     var randomId: Int64 = 0
                                     arc4random_buf(&randomId, 8)
                                     let resource = LocalFileReferenceMediaResource(localFilePath: path, randomId: randomId)
-                                    let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: nil, attributes: [.FileName(fileName: name)])
+                                    let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: nil, attributes: [.FileName(fileName: name)])
                                     messages.append(.message(text: caption ?? "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId))
                                 case let .asset(asset):
                                     var randomId: Int64 = 0

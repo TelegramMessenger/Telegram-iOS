@@ -5715,3 +5715,5 @@ Any member of this group will be able to see messages in the channel.";
 "Stats.MessageOverview" = "Overview";
 "Stats.MessageInteractionsTitle" = "Interactions";
 "Stats.MessagePublicForwardsTitle" = "Public Shares";
+
+"Camera.ScanMode" = "SCAN";

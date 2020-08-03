@@ -30,17 +30,16 @@
         super.hidden = false;
         self.userInteractionEnabled = false;
         
-        [UIView animateWithDuration:0.25f
-                         animations:^
-         {
-             self.alpha = hidden ? 0.0f : 1.0f;
-         } completion:^(BOOL finished)
-         {
-             self.userInteractionEnabled = true;
+        [UIView animateWithDuration:0.25f animations:^
+        {
+            self.alpha = hidden ? 0.0f : 1.0f;
+        } completion:^(BOOL finished)
+        {
+            self.userInteractionEnabled = true;
              
-             if (finished)
-                 self.hidden = hidden;
-         }];
+            if (finished)
+                self.hidden = hidden;
+        }];
     }
     else
     {

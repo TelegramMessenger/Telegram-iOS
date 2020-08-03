@@ -11,6 +11,7 @@
 + (UIColor *)transparentPanelBackgroundColor;
 + (UIColor *)transparentOverlayBackgroundColor;
 
-+ (UIFont *)normalFontOfSize:(CGFloat)size;
++ (UIFont *)regularFontOfSize:(CGFloat)size;
++ (UIFont *)boldFontOfSize:(CGFloat)size;
 
 @end

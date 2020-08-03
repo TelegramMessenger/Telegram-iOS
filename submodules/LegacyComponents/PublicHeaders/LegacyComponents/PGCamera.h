@@ -26,7 +26,8 @@ typedef enum
     PGCameraModeVideo,
     PGCameraModeSquarePhoto,
     PGCameraModeSquareVideo,
-    PGCameraModeSquareSwing
+    PGCameraModeSquareSwing,
+    PGCameraModePhotoScan
 } PGCameraMode;
 
 typedef enum
@@ -131,5 +132,8 @@ typedef enum
 
 + (PGCameraAuthorizationStatus)cameraAuthorizationStatus;
 + (PGMicrophoneAuthorizationStatus)microphoneAuthorizationStatus;
+
++ (bool)isPhotoCameraMode:(PGCameraMode)mode;
++ (bool)isVideoCameraMode:(PGCameraMode)mode;
 
 @end

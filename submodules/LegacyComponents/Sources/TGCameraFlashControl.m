@@ -63,7 +63,7 @@ const CGFloat TGCameraFlashControlHeight = 44.0f;
         _autoButton.exclusiveTouch = true;
         _autoButton.hitTestEdgeInsets = UIEdgeInsetsMake(-10, -15, -10, -15);
         _autoButton.tag = PGCameraFlashModeAuto;
-        _autoButton.titleLabel.font = [TGCameraInterfaceAssets normalFontOfSize:13];
+        _autoButton.titleLabel.font = [TGCameraInterfaceAssets regularFontOfSize:13];
         [_autoButton setAttributedTitle:[[NSAttributedString alloc] initWithString:TGLocalized(@"Camera.FlashAuto") attributes:@{ NSForegroundColorAttributeName: [TGCameraInterfaceAssets normalColor], NSKernAttributeName: @2 }] forState:UIControlStateNormal];
         [_autoButton setAttributedTitle:[[NSAttributedString alloc] initWithString:TGLocalized(@"Camera.FlashAuto") attributes:@{ NSForegroundColorAttributeName: [TGCameraInterfaceAssets accentColor], NSKernAttributeName: @2 }] forState:UIControlStateSelected];
         [_autoButton setAttributedTitle:[_autoButton attributedTitleForState:UIControlStateSelected] forState:UIControlStateHighlighted | UIControlStateSelected];
@@ -78,7 +78,7 @@ const CGFloat TGCameraFlashControlHeight = 44.0f;
         _onButton.exclusiveTouch = true;
         _onButton.hitTestEdgeInsets = UIEdgeInsetsMake(-10, -15, -10, -15);
         _onButton.tag = PGCameraFlashModeOn;
-        _onButton.titleLabel.font = [TGCameraInterfaceAssets normalFontOfSize:13];
+        _onButton.titleLabel.font = [TGCameraInterfaceAssets regularFontOfSize:13];
         [_onButton setAttributedTitle:[[NSAttributedString alloc] initWithString:TGLocalized(@"Camera.FlashOn") attributes:@{ NSForegroundColorAttributeName: [TGCameraInterfaceAssets normalColor], NSKernAttributeName: @2 }] forState:UIControlStateNormal];
         [_onButton setAttributedTitle:[[NSAttributedString alloc] initWithString:TGLocalized(@"Camera.FlashOn") attributes:@{ NSForegroundColorAttributeName: [TGCameraInterfaceAssets accentColor], NSKernAttributeName: @2 }] forState:UIControlStateSelected];
         [_onButton setAttributedTitle:[_onButton attributedTitleForState:UIControlStateSelected] forState:UIControlStateHighlighted | UIControlStateSelected];
@@ -93,7 +93,7 @@ const CGFloat TGCameraFlashControlHeight = 44.0f;
         _offButton.exclusiveTouch = true;
         _offButton.hitTestEdgeInsets = UIEdgeInsetsMake(-10, -15, -10, -15);
         _offButton.tag = PGCameraFlashModeOff;
-        _offButton.titleLabel.font = [TGCameraInterfaceAssets normalFontOfSize:13];
+        _offButton.titleLabel.font = [TGCameraInterfaceAssets regularFontOfSize:13];
         [_offButton setAttributedTitle:[[NSAttributedString alloc] initWithString:TGLocalized(@"Camera.FlashOff") attributes:@{ NSForegroundColorAttributeName: [TGCameraInterfaceAssets normalColor], NSKernAttributeName: @2 }] forState:UIControlStateNormal];
         [_offButton setAttributedTitle:[[NSAttributedString alloc] initWithString:TGLocalized(@"Camera.FlashOff") attributes:@{ NSForegroundColorAttributeName: [TGCameraInterfaceAssets accentColor], NSKernAttributeName: @2 }] forState:UIControlStateSelected];
         [_offButton setAttributedTitle:[_offButton attributedTitleForState:UIControlStateSelected] forState:UIControlStateHighlighted | UIControlStateSelected];
@@ -605,9 +605,7 @@ const CGFloat TGCameraFlashControlHeight = 44.0f;
 {
     CGSize size = title.size;
     CGFloat width = CGCeil(size.width);
-    if (iosMajorVersion() < 7)
-        width += 2;
-    return CGSizeMake(width, 20);
+    return CGSizeMake(width + 2.0, 20);
 }
 
 @end

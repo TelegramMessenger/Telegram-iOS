@@ -5,10 +5,11 @@
 #import <LegacyComponents/TGModernButton.h>
 
 #import "TGCameraShutterButton.h"
+#import "TGCameraFlipButton.h"
 #import "TGCameraModeControl.h"
 #import "TGCameraTimeCodeView.h"
 #import "TGCameraZoomView.h"
-#import "TGCameraSegmentsView.h"
+#import "TGCameraToastView.h"
 
 #import "TGMediaPickerPhotoCounterButton.h"
 #import "TGMediaPickerPhotoStripView.h"
@@ -37,15 +38,22 @@
     [self updateForCameraModeChangeWithPreviousMode:previousMode];
 }
 
+- (void)setToastMessage:(NSString *)message animated:(bool)animated
+{
+    [_toastView setText:message animated:animated];
+}
+
 - (void)updateForCameraModeChangeWithPreviousMode:(PGCameraMode)__unused previousMode
 {
     switch (_modeControl.cameraMode)
     {
         case PGCameraModePhoto:
         case PGCameraModeSquarePhoto:
+        case PGCameraModePhotoScan:
         {
             [_shutterButton setButtonMode:TGCameraShutterButtonNormalMode animated:true];
             [_timecodeView setHidden:true animated:true];
+            [_flipButton setHidden:_modeControl.cameraMode == PGCameraModePhotoScan animated:true];
         }
             break;
             
