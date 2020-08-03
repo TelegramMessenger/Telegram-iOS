@@ -49,6 +49,8 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
     }
     private var didSetReady = false
     
+    public var viewControllersPromise = ValuePromise<[ViewController]>()
+    
     public init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), presentationData: PresentationData, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String, authorizationCompleted: @escaping () -> Void) {
         self.sharedContext = sharedContext
         self.account = account
@@ -857,6 +859,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
             self.didSetReady = true
             self._ready.set(.single(true))
         }
+        self.viewControllersPromise.set(viewControllers.compactMap { $0 as? ViewController })
     }
     
     public func applyConfirmationCode(_ code: Int) {

@@ -27,6 +27,32 @@ public final class TelegramRootController: NavigationController {
     private var permissionsDisposable: Disposable?
     private var presentationDataDisposable: Disposable?
     private var presentationData: PresentationData
+    
+    public var falseBottomAuthViewControllersSignal: Signal<[ViewController], NoError>? {
+        didSet {
+            self.falseBottomAuthViewControllersDisposable?.dispose()
+            self.falseBottomAuthViewControllersDisposable = falseBottomAuthViewControllersSignal?.start(next: { [weak self] viewControllers in
+                guard let strongSelf = self else { return }
+                
+                let ownControllers = strongSelf.viewControllers.compactMap { $0 as? ViewController}.filter { !strongSelf.falseBottomAuthViewControllers.contains($0) }
+                let controllers = ownControllers + viewControllers
+                strongSelf.falseBottomAuthViewControllers = viewControllers
+                
+                for controller in controllers {
+                    guard let controller = controller as? AuthorizationSequencePhoneEntryController else { continue }
+                    
+                    controller.view.layer.removeAnimation(forKey: "opacity")
+                    
+                    controller.navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: strongSelf.presentationData.strings.Common_Back, target: strongSelf, action: #selector(strongSelf.backPressed))
+                }
+                strongSelf.setViewControllers(controllers, animated: true)
+                strongSelf.allowInteractiveDismissal = false
+            })
+        }
+    }
+    
+    private var falseBottomAuthViewControllers = [ViewController]()
+    private var falseBottomAuthViewControllersDisposable: Disposable?
         
     public init(context: AccountContext) {
         self.context = context
@@ -77,6 +103,7 @@ public final class TelegramRootController: NavigationController {
     deinit {
         self.permissionsDisposable?.dispose()
         self.presentationDataDisposable?.dispose()
+        self.falseBottomAuthViewControllersDisposable?.dispose()
     }
     
     public func addRootControllers(showCallsTab: Bool) {
@@ -172,5 +199,9 @@ public final class TelegramRootController: NavigationController {
         }
         controller.view.endEditing(true)
         presentedLegacyShortcutCamera(context: self.context, saveCapturedMedia: false, saveEditedPhotos: false, mediaGrouping: true, parentController: controller)
+    }
+    
+    @objc private func backPressed() {
+        popViewController(animated: true)
     }
 }

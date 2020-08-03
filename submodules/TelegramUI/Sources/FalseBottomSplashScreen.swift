@@ -40,6 +40,7 @@ public final class FalseBottomSplashScreen: ViewController {
         self.navigationBar?.intrinsicCanTransitionInline = false
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.navigationPresentation = .modalInLargeLayout
     }
     
     required init(coder aDecoder: NSCoder) {

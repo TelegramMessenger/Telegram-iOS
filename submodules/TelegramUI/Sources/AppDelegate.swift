@@ -243,6 +243,8 @@ final class SharedApplicationContext {
     
     private let deviceToken = Promise<Data?>(nil)
     
+    private var falseBottomAddAccountFlowInProgress = false
+    
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         precondition(!testIsLaunched)
         testIsLaunched = true
@@ -1230,14 +1232,21 @@ final class SharedApplicationContext {
             if let context = context {
                 let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
                 let statusController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
-                self.mainWindow.present(statusController, on: .root)
+                if !self.falseBottomAddAccountFlowInProgress || self.contextValue == nil {
+                    self.mainWindow.present(statusController, on: .root)
+                }
                 let isReady: Signal<Bool, NoError> = context.isReady.get()
                 authContextReadyDisposable.set((isReady
                 |> filter { $0 }
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { _ in
-                    statusController.dismiss()
-                    self.mainWindow.present(context.rootController, on: .root)
+                    if self.falseBottomAddAccountFlowInProgress, let authorizedContext = self.contextValue {
+                        self.falseBottomAddAccountFlowInProgress = false
+                        authorizedContext.rootController.falseBottomAuthViewControllersSignal = context.rootController.viewControllersPromise.get()
+                    } else {
+                        statusController.dismiss()
+                        self.mainWindow.present(context.rootController, on: .root)
+                    }
                 }))
             } else {
                 authContextReadyDisposable.set(nil)
@@ -2029,12 +2038,15 @@ final class SharedApplicationContext {
                 } else {
                     replaceTopControllerImpl(controller, true)
                 }
+                context.rootController.allowInteractiveDismissal = false
             }
             
             let showOtherAccountScreenIfNeeded: (@escaping () -> Void) -> Void = { completion in
                 let checkOtherAccounts: (@escaping (Bool) -> Void) -> Void = { completion in
                     let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> Bool in
-                        return transaction.getRecords().count > 1
+                        return transaction.getAllRecords().filter({
+                            !$0.attributes.contains(where: { $0 is HiddenAccountAttribute }) && !$0.attributes.contains(where: { $0 is LoggedOutAccountAttribute })
+                        }).count > 1
                     } |> deliverOnMainQueue).start(next: { result in
                         completion(result)
                     })
@@ -2044,7 +2056,10 @@ final class SharedApplicationContext {
                     if hasOtherAccounts {
                         completion()
                     } else {
-                        showSplashScreen(.addOneMoreAccount, true, {
+                        showSplashScreen(.addOneMoreAccount, true, { [weak self] in
+                            guard let strongSelf = self else { return }
+                            
+                            strongSelf.falseBottomAddAccountFlowInProgress = true
                             let isTestingEnvironment = context.context.account.testingEnvironment
                             context.sharedApplicationContext.sharedContext.beginNewAuthAndContinueFalseBottomFlow(testingEnvironment: isTestingEnvironment)
                         })
@@ -2055,6 +2070,7 @@ final class SharedApplicationContext {
             context.rootController.chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .falseBottom(title: presentationData.strings.FalseBottom_Toast_HideAccount, cancel: presentationData.strings.Common_Cancel), elevatedLayout: true, animateInAsReplacement: false, action: { value in
                     guard value == .info else { return false }
                 
+                    context.rootController.allowInteractiveDismissal = false
                     showSplashScreen(.hideAccount, true, {
                         showOtherAccountScreenIfNeeded { [weak self] in
                             guard let strongSelf = self else { return }
@@ -2076,6 +2092,7 @@ final class SharedApplicationContext {
             
             let replaceTopControllerImpl: (ViewController, Bool) -> Void = { c, animated in
                 context.rootController.replaceTopController(c, animated: animated)
+                context.rootController.allowInteractiveDismissal = false
             }
             
             let showSplashScreen: (FalseBottomSplashMode, Bool, @escaping () -> Void) -> Void = { mode, push, action in
@@ -2089,6 +2106,7 @@ final class SharedApplicationContext {
                 } else {
                     context.rootController.replaceAllButRootController(controller, animated: true)
                 }
+                context.rootController.allowInteractiveDismissal = false
             }
                 
             let showMasterPasscodeScreenIfNeeded: (@escaping () -> Void) -> Void = { completion in
@@ -2122,6 +2140,7 @@ final class SharedApplicationContext {
                         })
                     }
                     context.rootController.pushViewController(setupController, animated: true)
+                    context.rootController.allowInteractiveDismissal = false
                 }
                 
                 checkMasterPassode({ isMasterPasscodeSet in
@@ -2180,9 +2199,16 @@ final class SharedApplicationContext {
                             let controller = FalseBottomSplashScreen(presentationData: presentationData, mode: .accountWasHidden)
                             controller.buttonPressed = { [weak controller] in
                                 accountContext.appLockContext.lock()
+                                context.rootController.popToRoot(animated: true)
+                                context.rootController.allowInteractiveDismissal = true
                             }
-                            context.rootController.presentOverlay(controller: controller, inGlobal: true, blockInteraction: true)
-                            
+                            controller.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
+                            context.rootController.pushViewController(controller, animated: true, completion: {
+                                guard let root = context.rootController.viewControllers.first, let top = context.rootController.viewControllers.last else { return }
+                                
+                                context.rootController.setViewControllers([root, top], animated: false)
+                                context.rootController.allowInteractiveDismissal = false
+                            })
                         })
                     }
                     context.rootController.pushViewController(setupController, animated: true)
