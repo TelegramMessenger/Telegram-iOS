@@ -283,7 +283,8 @@ public final class AppLockContextImpl: AppLockContext {
             if strongSelf.currentStateValue.autolockTimeout == 1 {
                 strongSelf.lock()
             } else {
-                Queue.mainQueue().after(0.1, {
+                Queue.mainQueue().after(0.01, {
+                    coveringView.updateSnapshot(nil)
                     coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
                     window.coveringView = coveringView
                 })
