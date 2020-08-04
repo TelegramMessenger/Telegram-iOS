@@ -1216,7 +1216,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
             if (![editorController isKindOfClass:[TGPhotoEditorController class]])
                 return;
             
-            if (hasStickers) {
+            if (!hasStickers) {
                 [editorController setMinimalVideoDuration:duration];
             }
             

@@ -1422,7 +1422,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.context = context
         self.peerId = peerId
         self.isOpenedFromChat = isOpenedFromChat
-        self.videoCallsEnabled = context.sharedContext.immediateExperimentalUISettings.videoCalls
+        self.videoCallsEnabled = VideoCallsConfiguration(appConfiguration: context.currentAppConfiguration.with { $0 }).areVideoCallsEnabled
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.nearbyPeerDistance = nearbyPeerDistance
         self.callMessages = callMessages
@@ -3153,7 +3153,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             return
         }
             
-        let callResult = self.context.sharedContext.callManager?.requestCall(account: self.context.account, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
+        let callResult = self.context.sharedContext.callManager?.requestCall(context: self.context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
         if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
             if currentPeerId == peer.id {
                 self.context.sharedContext.navigateToCurrentCall()
@@ -3170,7 +3170,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             guard let strongSelf = self else {
                                 return
                             }
-                            let _ = strongSelf.context.sharedContext.callManager?.requestCall(account: strongSelf.context.account, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
+                            let _ = strongSelf.context.sharedContext.callManager?.requestCall(context: strongSelf.context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
                         })]), in: .window(.root))
                     }
                 })
@@ -3885,7 +3885,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         let resource = LocalFileMediaResource(fileId: arc4random64())
         self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource)
+        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [])
         
         self.state = self.state.withUpdatingAvatar(.image(representation))
         if let (layout, navigationHeight) = self.validLayout {
@@ -3930,7 +3930,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         let photoResource = LocalFileMediaResource(fileId: arc4random64())
         self.context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
-        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource)
+        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [])
         
         self.state = self.state.withUpdatingAvatar(.image(representation))
         if let (layout, navigationHeight) = self.validLayout {

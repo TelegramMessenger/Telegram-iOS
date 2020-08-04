@@ -4788,6 +4788,7 @@ Any member of this group will be able to see messages in the channel.";
 "ContactList.Context.SendMessage" = "Send Message";
 "ContactList.Context.StartSecretChat" = "Start Secret Chat";
 "ContactList.Context.Call" = "Call";
+"ContactList.Context.VideoCall" = "Video Call";
 
 "Theme.Context.Apply" = "Apply";
 
@@ -5332,7 +5333,7 @@ Any member of this group will be able to see messages in the channel.";
 "PeerInfo.ButtonMessage" = "Message";
 "PeerInfo.ButtonDiscuss" = "Discuss";
 "PeerInfo.ButtonCall" = "Call";
-"PeerInfo.ButtonVideoCall" = "Video Call";
+"PeerInfo.ButtonVideoCall" = "Video";
 "PeerInfo.ButtonMute" = "Mute";
 "PeerInfo.ButtonUnmute" = "Unmute";
 "PeerInfo.ButtonMore" = "More";
@@ -5710,3 +5711,8 @@ Any member of this group will be able to see messages in the channel.";
 "Cache.MaximumCacheSize" = "Maximum Cache Size";
 "Cache.NoLimit" = "No Limit";
 "Cache.MaximumCacheSizeHelp" = "If your cache size exceeds this limit, the oldest media will be deleted.\n\nAll media will stay in the Telegram cloud and can be re-downloaded if you need it again.";
+
+"Stats.MessageTitle" = "Message Statistics";
+"Stats.MessageOverview" = "Overview";
+"Stats.MessageInteractionsTitle" = "Interactions";
+"Stats.MessagePublicForwardsTitle" = "Public Shares";

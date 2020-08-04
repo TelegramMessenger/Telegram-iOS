@@ -1,0 +1,191 @@
+!include x64.nsh
+Name "@CMAKE_PROJECT_NAME@ SDK for @INST_PLATFORM@"
+OutFile "@CMAKE_CURRENT_BINARY_DIR@\${BUILDDIR}@INST_NAME@.exe"
+InstallDir "@INST_DIR@"
+
+SetCompressor bzip2
+
+Page directory
+Page instfiles
+
+UninstPage uninstConfirm
+UninstPage instfiles
+
+Section "@CMAKE_PROJECT_NAME@ SDK for @INST_PLATFORM@ (required)"
+!ifdef WIN64
+	${If} ${RunningX64}
+	${DisableX64FSRedirection}
+	${Endif}
+!endif
+	SectionIn RO
+!ifdef GCC
+	IfFileExists $SYSDIR/libturbojpeg.dll exists 0
+!else
+	IfFileExists $SYSDIR/turbojpeg.dll exists 0
+!endif
+	goto notexists
+	exists:
+!ifdef GCC
+	MessageBox MB_OK "An existing version of the @CMAKE_PROJECT_NAME@ SDK for @INST_PLATFORM@ is already installed.  Please uninstall it first."
+!else
+	MessageBox MB_OK "An existing version of the @CMAKE_PROJECT_NAME@ SDK for @INST_PLATFORM@ or the TurboJPEG SDK is already installed.  Please uninstall it first."
+!endif
+	quit
+
+	notexists:
+	SetOutPath $SYSDIR
+!ifdef GCC
+	File "@CMAKE_CURRENT_BINARY_DIR@\libturbojpeg.dll"
+!else
+	File "@CMAKE_CURRENT_BINARY_DIR@\${BUILDDIR}turbojpeg.dll"
+!endif
+	SetOutPath $INSTDIR\bin
+!ifdef GCC
+	File "@CMAKE_CURRENT_BINARY_DIR@\libturbojpeg.dll"
+!else
+	File "@CMAKE_CURRENT_BINARY_DIR@\${BUILDDIR}turbojpeg.dll"
+!endif
+!ifdef GCC
+	File "@CMAKE_CURRENT_BINARY_DIR@\libjpeg-@SO_MAJOR_VERSION@.dll"
+!else
+	File "@CMAKE_CURRENT_BINARY_DIR@\${BUILDDIR}jpeg@SO_MAJOR_VERSION@.dll"
+!endif
+	File "@CMAKE_CURRENT_BINARY_DIR@\${BUILDDIR}cjpeg.exe"
+	File "@CMAKE_CURRENT_BINARY_DIR@\${BUILDDIR}djpeg.exe"
+	File "@CMAKE_CURRENT_BINARY_DIR@\${BUILDDIR}jpegtran.exe"
+	File "@CMAKE_CURRENT_BINARY_DIR@\${BUILDDIR}tjbench.exe"
+	File "@CMAKE_CURRENT_BINARY_DIR@\${BUILDDIR}rdjpgcom.exe"
+	File "@CMAKE_CURRENT_BINARY_DIR@\${BUILDDIR}wrjpgcom.exe"
+	SetOutPath $INSTDIR\lib
+!ifdef GCC
+	File "@CMAKE_CURRENT_BINARY_DIR@\libturbojpeg.dll.a"
+	File "@CMAKE_CURRENT_BINARY_DIR@\libturbojpeg.a"
+	File "@CMAKE_CURRENT_BINARY_DIR@\libjpeg.dll.a"
+	File "@CMAKE_CURRENT_BINARY_DIR@\libjpeg.a"
+!else
+	File "@CMAKE_CURRENT_BINARY_DIR@\${BUILDDIR}turbojpeg.lib"
+	File "@CMAKE_CURRENT_BINARY_DIR@\${BUILDDIR}turbojpeg-static.lib"
+	File "@CMAKE_CURRENT_BINARY_DIR@\${BUILDDIR}jpeg.lib"
+	File "@CMAKE_CURRENT_BINARY_DIR@\${BUILDDIR}jpeg-static.lib"
+!endif
+	SetOutPath $INSTDIR\lib\pkgconfig
+	File "@CMAKE_CURRENT_BINARY_DIR@\pkgscripts\libjpeg.pc"
+	File "@CMAKE_CURRENT_BINARY_DIR@\pkgscripts\libturbojpeg.pc"
+!ifdef JAVA
+	SetOutPath $INSTDIR\classes
+	File "@CMAKE_CURRENT_BINARY_DIR@\java\turbojpeg.jar"
+!endif
+	SetOutPath $INSTDIR\include
+	File "@CMAKE_CURRENT_BINARY_DIR@\jconfig.h"
+	File "@CMAKE_CURRENT_SOURCE_DIR@\jerror.h"
+	File "@CMAKE_CURRENT_SOURCE_DIR@\jmorecfg.h"
+	File "@CMAKE_CURRENT_SOURCE_DIR@\jpeglib.h"
+	File "@CMAKE_CURRENT_SOURCE_DIR@\turbojpeg.h"
+	SetOutPath $INSTDIR\doc
+	File "@CMAKE_CURRENT_SOURCE_DIR@\README.ijg"
+	File "@CMAKE_CURRENT_SOURCE_DIR@\README.md"
+	File "@CMAKE_CURRENT_SOURCE_DIR@\LICENSE.md"
+	File "@CMAKE_CURRENT_SOURCE_DIR@\example.txt"
+	File "@CMAKE_CURRENT_SOURCE_DIR@\libjpeg.txt"
+	File "@CMAKE_CURRENT_SOURCE_DIR@\structure.txt"
+	File "@CMAKE_CURRENT_SOURCE_DIR@\usage.txt"
+	File "@CMAKE_CURRENT_SOURCE_DIR@\wizard.txt"
+	File "@CMAKE_CURRENT_SOURCE_DIR@\tjexample.c"
+	File "@CMAKE_CURRENT_SOURCE_DIR@\java\TJExample.java"
+!ifdef GCC
+	SetOutPath $INSTDIR\man\man1
+	File "@CMAKE_CURRENT_SOURCE_DIR@\cjpeg.1"
+	File "@CMAKE_CURRENT_SOURCE_DIR@\djpeg.1"
+	File "@CMAKE_CURRENT_SOURCE_DIR@\jpegtran.1"
+	File "@CMAKE_CURRENT_SOURCE_DIR@\rdjpgcom.1"
+	File "@CMAKE_CURRENT_SOURCE_DIR@\wrjpgcom.1"
+!endif
+
+	WriteRegStr HKLM "SOFTWARE\@INST_REG_NAME@ @VERSION@" "Install_Dir" "$INSTDIR"
+
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\@INST_REG_NAME@ @VERSION@" "DisplayName" "@CMAKE_PROJECT_NAME@ SDK v@VERSION@ for @INST_PLATFORM@"
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\@INST_REG_NAME@ @VERSION@" "UninstallString" '"$INSTDIR\uninstall_@VERSION@.exe"'
+	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\@INST_REG_NAME@ @VERSION@" "NoModify" 1
+	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\@INST_REG_NAME@ @VERSION@" "NoRepair" 1
+	WriteUninstaller "uninstall_@VERSION@.exe"
+SectionEnd
+
+Section "Uninstall"
+!ifdef WIN64
+	${If} ${RunningX64}
+	${DisableX64FSRedirection}
+	${Endif}
+!endif
+
+	SetShellVarContext all
+
+	DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\@INST_REG_NAME@ @VERSION@"
+	DeleteRegKey HKLM "SOFTWARE\@INST_REG_NAME@ @VERSION@"
+
+!ifdef GCC
+	Delete $INSTDIR\bin\libjpeg-@SO_MAJOR_VERSION@.dll
+	Delete $INSTDIR\bin\libturbojpeg.dll
+	Delete $SYSDIR\libturbojpeg.dll
+	Delete $INSTDIR\lib\libturbojpeg.dll.a
+	Delete $INSTDIR\lib\libturbojpeg.a
+	Delete $INSTDIR\lib\libjpeg.dll.a
+	Delete $INSTDIR\lib\libjpeg.a
+!else
+	Delete $INSTDIR\bin\jpeg@SO_MAJOR_VERSION@.dll
+	Delete $INSTDIR\bin\turbojpeg.dll
+	Delete $SYSDIR\turbojpeg.dll
+	Delete $INSTDIR\lib\jpeg.lib
+	Delete $INSTDIR\lib\jpeg-static.lib
+	Delete $INSTDIR\lib\turbojpeg.lib
+	Delete $INSTDIR\lib\turbojpeg-static.lib
+!endif
+	Delete $INSTDIR\lib\pkgconfig\libjpeg.pc
+	Delete $INSTDIR\lib\pkgconfig\libturbojpeg.pc
+!ifdef JAVA
+	Delete $INSTDIR\classes\turbojpeg.jar
+!endif
+	Delete $INSTDIR\bin\cjpeg.exe
+	Delete $INSTDIR\bin\djpeg.exe
+	Delete $INSTDIR\bin\jpegtran.exe
+	Delete $INSTDIR\bin\tjbench.exe
+	Delete $INSTDIR\bin\rdjpgcom.exe
+	Delete $INSTDIR\bin\wrjpgcom.exe
+	Delete $INSTDIR\include\jconfig.h
+	Delete $INSTDIR\include\jerror.h
+	Delete $INSTDIR\include\jmorecfg.h
+	Delete $INSTDIR\include\jpeglib.h
+	Delete $INSTDIR\include\turbojpeg.h
+	Delete $INSTDIR\uninstall_@VERSION@.exe
+	Delete $INSTDIR\doc\README.ijg
+	Delete $INSTDIR\doc\README.md
+	Delete $INSTDIR\doc\LICENSE.md
+	Delete $INSTDIR\doc\example.txt
+	Delete $INSTDIR\doc\libjpeg.txt
+	Delete $INSTDIR\doc\structure.txt
+	Delete $INSTDIR\doc\usage.txt
+	Delete $INSTDIR\doc\wizard.txt
+	Delete $INSTDIR\doc\tjexample.c
+	Delete $INSTDIR\doc\TJExample.java
+!ifdef GCC
+	Delete $INSTDIR\man\man1\cjpeg.1
+	Delete $INSTDIR\man\man1\djpeg.1
+	Delete $INSTDIR\man\man1\jpegtran.1
+	Delete $INSTDIR\man\man1\rdjpgcom.1
+	Delete $INSTDIR\man\man1\wrjpgcom.1
+!endif
+
+	RMDir "$INSTDIR\include"
+	RMDir "$INSTDIR\lib\pkgconfig"
+	RMDir "$INSTDIR\lib"
+	RMDir "$INSTDIR\doc"
+!ifdef GCC
+	RMDir "$INSTDIR\man\man1"
+	RMDir "$INSTDIR\man"
+!endif
+!ifdef JAVA
+	RMDir "$INSTDIR\classes"
+!endif
+	RMDir "$INSTDIR\bin"
+	RMDir "$INSTDIR"
+
+SectionEnd

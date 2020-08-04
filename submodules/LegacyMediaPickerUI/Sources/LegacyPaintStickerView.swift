@@ -117,7 +117,7 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
                 let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                 let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0))
                 let source = AnimatedStickerResourceSource(account: self.context.account, resource: self.file.resource)
-                self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct)
+                self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
             
                 self.cachedDisposable.set((source.cachedDataPath(width: 384, height: 384)
                 |> deliverOn(Queue.concurrentDefaultQueue())).start())

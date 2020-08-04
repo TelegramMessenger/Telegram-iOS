@@ -4,11 +4,21 @@ import AsyncDisplayKit
 import Display
 
 public enum SemanticStatusNodeState: Equatable {
+    public struct ProgressAppearance: Equatable {
+        public var inset: CGFloat
+        public var lineWidth: CGFloat
+        
+        public init(inset: CGFloat, lineWidth: CGFloat) {
+            self.inset = inset
+            self.lineWidth = lineWidth
+        }
+    }
+    
     case none
     case download
     case play
     case pause
-    case progress(value: CGFloat?, cancelEnabled: Bool)
+    case progress(value: CGFloat?, cancelEnabled: Bool, appearance: ProgressAppearance?)
     case customIcon(UIImage)
 }
 
@@ -224,12 +234,14 @@ private final class SemanticStatusNodeProgressContext: SemanticStatusNodeStateCo
         let transitionFraction: CGFloat
         let value: CGFloat?
         let displayCancel: Bool
+        let appearance: SemanticStatusNodeState.ProgressAppearance?
         let timestamp: Double
         
-        init(transitionFraction: CGFloat, value: CGFloat?, displayCancel: Bool, timestamp: Double) {
+        init(transitionFraction: CGFloat, value: CGFloat?, displayCancel: Bool, appearance: SemanticStatusNodeState.ProgressAppearance?, timestamp: Double) {
             self.transitionFraction = transitionFraction
             self.value = value
             self.displayCancel = displayCancel
+            self.appearance = appearance
             self.timestamp = timestamp
             
             super.init()
@@ -252,22 +264,49 @@ private final class SemanticStatusNodeProgressContext: SemanticStatusNodeStateCo
                 context.setStrokeColor(foregroundColor.withAlphaComponent(foregroundColor.alpha * self.transitionFraction).cgColor)
             }
             
-            var progress = self.value ?? 0.1
-            var startAngle = -CGFloat.pi / 2.0
-            var endAngle = CGFloat(progress) * 2.0 * CGFloat.pi + startAngle
-            
-            if progress > 1.0 {
-                progress = 2.0 - progress
-                let tmp = startAngle
-                startAngle = endAngle
-                endAngle = tmp
+            var progress: CGFloat
+            var startAngle: CGFloat
+            var endAngle: CGFloat
+            if let value = self.value {
+                progress = value
+                startAngle = -CGFloat.pi / 2.0
+                endAngle = CGFloat(progress) * 2.0 * CGFloat.pi + startAngle
+                
+                if progress > 1.0 {
+                    progress = 2.0 - progress
+                    let tmp = startAngle
+                    startAngle = endAngle
+                    endAngle = tmp
+                }
+                progress = min(1.0, progress)
+            } else {
+                progress = CGFloat(1.0 + self.timestamp.remainder(dividingBy: 2.0))
+                
+                startAngle = -CGFloat.pi / 2.0
+                endAngle = CGFloat(progress) * 2.0 * CGFloat.pi + startAngle
+                
+                if progress > 1.0 {
+                    progress = 2.0 - progress
+                    let tmp = startAngle
+                    startAngle = endAngle
+                    endAngle = tmp
+                }
+                progress = min(1.0, progress)
             }
-            progress = min(1.0, progress)
             
-            let lineWidth: CGFloat = max(1.6, 2.25 * factor)
+            let lineWidth: CGFloat
+            if let appearance = self.appearance {
+                lineWidth = appearance.lineWidth
+            } else {
+                lineWidth = max(1.6, 2.25 * factor)
+            }
             
             let pathDiameter: CGFloat
-            pathDiameter = diameter - lineWidth - 2.5 * 2.0
+            if let appearance = self.appearance {
+                pathDiameter = diameter - lineWidth - appearance.inset * 2.0
+            } else {
+                pathDiameter = diameter - lineWidth - 2.5 * 2.0
+            }
             
             var angle = self.timestamp.truncatingRemainder(dividingBy: Double.pi * 2.0)
             angle *= 4.0
@@ -317,15 +356,17 @@ private final class SemanticStatusNodeProgressContext: SemanticStatusNodeStateCo
     
     var value: CGFloat?
     let displayCancel: Bool
+    let appearance: SemanticStatusNodeState.ProgressAppearance?
     var transition: SemanticStatusNodeProgressTransition?
     
     var isAnimating: Bool {
         return true
     }
     
-    init(value: CGFloat?, displayCancel: Bool) {
+    init(value: CGFloat?, displayCancel: Bool, appearance: SemanticStatusNodeState.ProgressAppearance?) {
         self.value = value
         self.displayCancel = displayCancel
+        self.appearance = appearance
     }
     
     func drawingState(transitionFraction: CGFloat) -> SemanticStatusNodeStateDrawingState {
@@ -341,7 +382,7 @@ private final class SemanticStatusNodeProgressContext: SemanticStatusNodeStateCo
         } else {
             resolvedValue = nil
         }
-        return DrawingState(transitionFraction: transitionFraction, value: resolvedValue, displayCancel: self.displayCancel, timestamp: timestamp)
+        return DrawingState(transitionFraction: transitionFraction, value: resolvedValue, displayCancel: self.displayCancel, appearance: self.appearance, timestamp: timestamp)
     }
     
     func updateValue(value: CGFloat?) {
@@ -386,12 +427,12 @@ private extension SemanticStatusNodeState {
             } else {
                 return SemanticStatusNodeIconContext(icon: icon)
             }
-        case let .progress(value, cancelEnabled):
+        case let .progress(value, cancelEnabled, appearance):
             if let current = current as? SemanticStatusNodeProgressContext, current.displayCancel == cancelEnabled {
                 current.updateValue(value: value)
                 return current
             } else {
-                return SemanticStatusNodeProgressContext(value: value, displayCancel: cancelEnabled)
+                return SemanticStatusNodeProgressContext(value: value, displayCancel: cancelEnabled, appearance: appearance)
             }
         }
     }

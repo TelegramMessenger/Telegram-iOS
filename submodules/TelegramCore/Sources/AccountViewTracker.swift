@@ -599,20 +599,34 @@ public final class AccountViewTracker {
                                             return account.postbox.transaction { transaction -> Void in
                                                 for i in 0 ..< messageIds.count {
                                                     if i < viewCounts.count {
-                                                        transaction.updateMessage(messageIds[i], update: { currentMessage in
-                                                            let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
-                                                            var attributes = currentMessage.attributes
-                                                            loop: for j in 0 ..< attributes.count {
-                                                                if let attribute = attributes[j] as? ViewCountMessageAttribute {
-                                                                    if attribute.count >= Int(viewCounts[i]) {
-                                                                        return .skip
+                                                        let views = viewCounts[i]
+                                                        do {
+                                                            transaction.updateMessage(messageIds[i], update: { currentMessage in
+                                                                let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+                                                                var attributes = currentMessage.attributes
+                                                                loop: for j in 0 ..< attributes.count {
+                                                                    if let attribute = attributes[j] as? ViewCountMessageAttribute {
+                                                                        attributes[j] = ViewCountMessageAttribute(count: max(attribute.count, Int(views)))
                                                                     }
-                                                                    attributes[j] = ViewCountMessageAttribute(count: max(attribute.count, Int(viewCounts[i])))
-                                                                    break loop
                                                                 }
-                                                            }
-                                                            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
-                                                        })
+                                                                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                                            })
+                                                        }
+                                                        /*if case let .messageViews(views, forwards) = viewCounts[i] {
+                                                            transaction.updateMessage(messageIds[i], update: { currentMessage in
+                                                                let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+                                                                var attributes = currentMessage.attributes
+                                                                loop: for j in 0 ..< attributes.count {
+                                                                    if let attribute = attributes[j] as? ViewCountMessageAttribute {
+                                                                        attributes[j] = ViewCountMessageAttribute(count: max(attribute.count, Int(views)))
+                                                                    }
+                                                                    if let _ = attributes[j] as? ForwardCountMessageAttribute {
+                                                                        attributes[j] = ForwardCountMessageAttribute(count: Int(forwards))
+                                                                    }
+                                                                }
+                                                                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                                            })
+                                                        }*/
                                                     }
                                                 }
                                             }

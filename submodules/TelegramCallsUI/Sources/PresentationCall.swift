@@ -169,6 +169,7 @@ public final class PresentationCallImpl: PresentationCall {
     public let isOutgoing: Bool
     public var isVideo: Bool
     public var isVideoPossible: Bool
+    public let enableHighBitrateVideoCalls: Bool
     public let peer: Peer?
     
     private let serializedData: String?
@@ -257,7 +258,8 @@ public final class PresentationCallImpl: PresentationCall {
         currentNetworkType: NetworkType,
         updatedNetworkType: Signal<NetworkType, NoError>,
         startWithVideo: Bool,
-        isVideoPossible: Bool
+        isVideoPossible: Bool,
+        enableHighBitrateVideoCalls: Bool
     ) {
         self.account = account
         self.audioSession = audioSession
@@ -286,6 +288,7 @@ public final class PresentationCallImpl: PresentationCall {
         self.isVideoPossible = isVideoPossible
         self.peer = peer
         self.isVideo = startWithVideo
+        self.enableHighBitrateVideoCalls = enableHighBitrateVideoCalls
         if self.isVideo {
             self.videoCapturer = OngoingCallVideoCapturer()
             self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: .outgoingRequested, remoteVideoState: .active))
@@ -463,8 +466,8 @@ public final class PresentationCallImpl: PresentationCall {
                 mappedVideoState = .possible
             case .outgoingRequested:
                 mappedVideoState = .outgoingRequested
-            case .incomingRequested:
-                mappedVideoState = .incomingRequested
+            case let .incomingRequested(sendsVideo):
+                mappedVideoState = .incomingRequested(sendsVideo: sendsVideo)
             case .active:
                 mappedVideoState = .active
                 self.videoWasActive = true
@@ -569,7 +572,7 @@ public final class PresentationCallImpl: PresentationCall {
                 if let _ = audioSessionControl, !wasActive || previousControl == nil {
                     let logName = "\(id.id)_\(id.accessHash)"
                     
-                    let ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, auxiliaryServers: auxiliaryServers, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, derivedState: self.derivedState, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: connections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, audioSessionActive: self.audioSessionActive.get(), logName: logName)
+                    let ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, derivedState: self.derivedState, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: connections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, enableHighBitrateVideoCalls: self.enableHighBitrateVideoCalls, audioSessionActive: self.audioSessionActive.get(), logName: logName)
                     self.ongoingContext = ongoingContext
                     ongoingContext.setIsMuted(self.isMutedValue)
                     
@@ -811,6 +814,7 @@ public final class PresentationCallImpl: PresentationCall {
             if let view = view {
                 let setOnFirstFrameReceived = view.setOnFirstFrameReceived
                 let setOnOrientationUpdated = view.setOnOrientationUpdated
+                let setOnIsMirroredUpdated = view.setOnIsMirroredUpdated
                 completion(PresentationCallVideoView(
                     view: view.view,
                     setOnFirstFrameReceived: { f in
@@ -848,6 +852,11 @@ public final class PresentationCallImpl: PresentationCall {
                                 mappedValue = .rotation270
                             }
                             f?(mappedValue)
+                        }
+                    },
+                    setOnIsMirroredUpdated: { f in
+                        setOnIsMirroredUpdated { value in
+                            f?(value)
                         }
                     }
                 ))
@@ -867,6 +876,7 @@ public final class PresentationCallImpl: PresentationCall {
             if let view = view {
                 let setOnFirstFrameReceived = view.setOnFirstFrameReceived
                 let setOnOrientationUpdated = view.setOnOrientationUpdated
+                let setOnIsMirroredUpdated = view.setOnIsMirroredUpdated
                 completion(PresentationCallVideoView(
                     view: view.view,
                     setOnFirstFrameReceived: { f in
@@ -905,8 +915,12 @@ public final class PresentationCallImpl: PresentationCall {
                             }
                             f?(mappedValue)
                         }
+                    },
+                    setOnIsMirroredUpdated: { f in
+                        setOnIsMirroredUpdated { value in
+                            f?(value)
+                        }
                     }
-
                 ))
             } else {
                 completion(nil)
