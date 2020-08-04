@@ -277,7 +277,7 @@ public final class CallListController: ViewController {
                     return
                 }
             
-                let callResult = strongSelf.context.sharedContext.callManager?.requestCall(account: strongSelf.context.account, peerId: peerId, isVideo: isVideo, endCurrentIfAny: false)
+                let callResult = strongSelf.context.sharedContext.callManager?.requestCall(context: strongSelf.context, peerId: peerId, isVideo: isVideo, endCurrentIfAny: false)
                 if let callResult = callResult {
                     if case let .alreadyInProgress(currentPeerId) = callResult {
                         if currentPeerId == peerId {
@@ -291,7 +291,7 @@ public final class CallListController: ViewController {
                                     if let strongSelf = self, let peer = peer, let current = current {
                                         strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                                             if let strongSelf = self {
-                                                let _ = strongSelf.context.sharedContext.callManager?.requestCall(account: strongSelf.context.account, peerId: peerId, isVideo: isVideo, endCurrentIfAny: true)
+                                                let _ = strongSelf.context.sharedContext.callManager?.requestCall(context: strongSelf.context, peerId: peerId, isVideo: isVideo, endCurrentIfAny: true)
                                                 began?()
                                             }
                                         })]), in: .window(.root))

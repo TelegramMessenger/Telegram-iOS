@@ -1219,7 +1219,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return
                     }
                     
-                    let callResult = context.sharedContext.callManager?.requestCall(account: context.account, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
+                    let callResult = context.sharedContext.callManager?.requestCall(context: context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
                     if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
                         if currentPeerId == peer.id {
                             context.sharedContext.navigateToCurrentCall()
@@ -1231,7 +1231,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             |> deliverOnMainQueue).start(next: { peer, current in
                                 if let peer = peer, let current = current {
                                     strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                        let _ = context.sharedContext.callManager?.requestCall(account: context.account, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
+                                        let _ = context.sharedContext.callManager?.requestCall(context: context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
                                     })]), in: .window(.root))
                                 }
                             })
@@ -2922,7 +2922,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 } else if let cachedData = combinedInitialData.cachedData as? CachedUserData {
                     peerIsBlocked = cachedData.isBlocked
-                    callsAvailable = cachedData.callsAvailable
+                    callsAvailable = cachedData.voiceCallsAvailable
                     callsPrivate = cachedData.callsPrivate
                     pinnedMessageId = cachedData.pinnedMessageId
                 } else if let cachedData = combinedInitialData.cachedData as? CachedGroupData {
@@ -3063,7 +3063,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 } else if let cachedData = cachedData as? CachedUserData {
                     peerIsBlocked = cachedData.isBlocked
-                    callsAvailable = cachedData.callsAvailable
+                    callsAvailable = cachedData.voiceCallsAvailable
                     callsPrivate = cachedData.callsPrivate
                     pinnedMessageId = cachedData.pinnedMessageId
                 } else if let cachedData = cachedData as? CachedGroupData {

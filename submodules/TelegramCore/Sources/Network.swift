@@ -403,12 +403,12 @@ public struct NetworkInitializationArguments {
     public let languagesCategory: String
     public let appVersion: String
     public let voipMaxLayer: Int32
-    public let voipVersions: [String]
+    public let voipVersions: [CallSessionManagerImplementationVersion]
     public let appData: Signal<Data?, NoError>
     public let autolockDeadine: Signal<Int32?, NoError>
     public let encryptionProvider: EncryptionProvider
     
-    public init(apiId: Int32, apiHash: String, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, voipVersions: [String], appData: Signal<Data?, NoError>, autolockDeadine: Signal<Int32?, NoError>, encryptionProvider: EncryptionProvider) {
+    public init(apiId: Int32, apiHash: String, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, voipVersions: [CallSessionManagerImplementationVersion], appData: Signal<Data?, NoError>, autolockDeadine: Signal<Int32?, NoError>, encryptionProvider: EncryptionProvider) {
         self.apiId = apiId
         self.apiHash = apiHash
         self.languagesCategory = languagesCategory

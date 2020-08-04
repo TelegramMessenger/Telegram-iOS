@@ -1422,7 +1422,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.context = context
         self.peerId = peerId
         self.isOpenedFromChat = isOpenedFromChat
-        self.videoCallsEnabled = context.sharedContext.immediateExperimentalUISettings.videoCalls
+        self.videoCallsEnabled = VideoCallsConfiguration(appConfiguration: context.currentAppConfiguration.with { $0 }).areVideoCallsEnabled
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.nearbyPeerDistance = nearbyPeerDistance
         self.callMessages = callMessages
@@ -3153,7 +3153,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             return
         }
             
-        let callResult = self.context.sharedContext.callManager?.requestCall(account: self.context.account, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
+        let callResult = self.context.sharedContext.callManager?.requestCall(context: self.context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
         if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
             if currentPeerId == peer.id {
                 self.context.sharedContext.navigateToCurrentCall()
@@ -3170,7 +3170,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             guard let strongSelf = self else {
                                 return
                             }
-                            let _ = strongSelf.context.sharedContext.callManager?.requestCall(account: strongSelf.context.account, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
+                            let _ = strongSelf.context.sharedContext.callManager?.requestCall(context: strongSelf.context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
                         })]), in: .window(.root))
                     }
                 })

@@ -193,7 +193,11 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                 case let .userFull(userFull):
                                     let botInfo = userFull.botInfo.flatMap(BotInfo.init(apiBotInfo:))
                                     let isBlocked = (userFull.flags & (1 << 0)) != 0
-                                    let callsAvailable = (userFull.flags & (1 << 4)) != 0
+                                    let voiceCallsAvailable = (userFull.flags & (1 << 4)) != 0
+                                    var videoCallsAvailable = (userFull.flags & (1 << 13)) != 0
+                                    #if DEBUG
+                                    videoCallsAvailable = true
+                                    #endif
                                     let callsPrivate = (userFull.flags & (1 << 5)) != 0
                                     let canPinMessages = (userFull.flags & (1 << 7)) != 0
                                     let pinnedMessageId = userFull.pinnedMsgId.flatMap({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) })
@@ -205,7 +209,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                         hasScheduledMessages = true
                                     }
                                 
-                                    return previous.withUpdatedAbout(userFull.about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(userFull.commonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedCallsAvailable(callsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedCanPinMessages(canPinMessages).withUpdatedPeerStatusSettings(peerStatusSettings).withUpdatedPinnedMessageId(pinnedMessageId).withUpdatedHasScheduledMessages(hasScheduledMessages)
+                                    return previous.withUpdatedAbout(userFull.about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(userFull.commonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedVoiceCallsAvailable(voiceCallsAvailable).withUpdatedVideoCallsAvailable(videoCallsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedCanPinMessages(canPinMessages).withUpdatedPeerStatusSettings(peerStatusSettings).withUpdatedPinnedMessageId(pinnedMessageId).withUpdatedHasScheduledMessages(hasScheduledMessages)
                             }
                         })
                         return true

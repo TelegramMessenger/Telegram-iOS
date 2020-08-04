@@ -292,7 +292,8 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 }
             }
         case let .publicForwards(messageId, datacenterId):
-            remoteSearchResult = account.postbox.transaction { transaction -> (Api.InputChannel?, Int32, MessageIndex?, Api.InputPeer) in
+            remoteSearchResult = .single((nil, nil))
+            /*remoteSearchResult = account.postbox.transaction { transaction -> (Api.InputChannel?, Int32, MessageIndex?, Api.InputPeer) in
                 let sourcePeer = transaction.getPeer(messageId.peerId)
                 let inputChannel = sourcePeer.flatMap { apiInputChannel($0) }
                 
@@ -329,7 +330,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 |> `catch` { _ -> Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError> in
                     return .single((nil, nil))
                 }
-        }
+        }*/
     }
     
     return remoteSearchResult

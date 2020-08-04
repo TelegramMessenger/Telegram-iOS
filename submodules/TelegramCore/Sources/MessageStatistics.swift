@@ -39,7 +39,8 @@ public struct MessageStatsContextState: Equatable {
 }
 
 private func requestMessageStats(postbox: Postbox, network: Network, datacenterId: Int32, messageId: MessageId, dark: Bool = false) -> Signal<MessageStats?, NoError> {
-    return postbox.transaction { transaction -> (Peer, Message)? in
+    return .single(nil)
+    /*return postbox.transaction { transaction -> (Peer, Message)? in
         if let peer = transaction.getPeer(messageId.peerId), let message = transaction.getMessage(messageId) {
             return (peer, message)
         } else {
@@ -86,7 +87,7 @@ private func requestMessageStats(postbox: Postbox, network: Network, datacenterI
             }
         }
         |> retryRequest
-    }
+    }*/
 }
 
 private final class MessageStatsContextImpl {
