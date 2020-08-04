@@ -491,9 +491,9 @@ private final class CallSessionManagerContext {
         
         if randomStatus == 0 {
             var isVideoPossible = self.videoVersions().contains(where: { versions.contains($0) })
-            #if DEBUG
+            //#if DEBUG
             isVideoPossible = true
-            #endif
+            //#endif
             
             let internalId = CallSessionInternalId()
             let context = CallSessionContext(peerId: peerId, isOutgoing: false, type: isVideo ? .video : .audio, isVideoPossible: isVideoPossible, state: .ringing(id: stableId, accessHash: accessHash, gAHash: gAHash, b: b, versions: versions))
