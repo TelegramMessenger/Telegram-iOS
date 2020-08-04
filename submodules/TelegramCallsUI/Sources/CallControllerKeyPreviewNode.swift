@@ -32,7 +32,7 @@ final class CallControllerKeyPreviewNode: ASDisplayNode {
         
         super.init()
         
-        self.keyTextNode.attributedText = NSAttributedString(string: keyText, attributes: [NSAttributedString.Key.font: Font.regular(58.0), NSAttributedString.Key.kern: 9.0 as NSNumber])
+        self.keyTextNode.attributedText = NSAttributedString(string: keyText, attributes: [NSAttributedString.Key.font: Font.regular(58.0), NSAttributedString.Key.kern: 11.0 as NSNumber])
         
         self.infoTextNode.attributedText = NSAttributedString(string: infoText, font: Font.regular(14.0), textColor: UIColor.white, paragraphAlignment: .center)
         
@@ -53,7 +53,7 @@ final class CallControllerKeyPreviewNode: ASDisplayNode {
         let keyTextSize = self.keyTextNode.measure(CGSize(width: 300.0, height: 300.0))
         transition.updateFrame(node: self.keyTextNode, frame: CGRect(origin: CGPoint(x: floor((size.width - keyTextSize.width) / 2) + 6.0, y: floor((size.height - keyTextSize.height) / 2) - 50.0), size: keyTextSize))
         
-        let infoTextSize = self.infoTextNode.measure(CGSize(width: size.width - 20.0, height: CGFloat.greatestFiniteMagnitude))
+        let infoTextSize = self.infoTextNode.measure(CGSize(width: size.width - 32.0, height: CGFloat.greatestFiniteMagnitude))
         transition.updateFrame(node: self.infoTextNode, frame: CGRect(origin: CGPoint(x: floor((size.width - infoTextSize.width) / 2.0), y: floor((size.height - infoTextSize.height) / 2.0) + 30.0), size: infoTextSize))
     }
     

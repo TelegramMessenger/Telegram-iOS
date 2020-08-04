@@ -31,7 +31,8 @@ enum CallControllerButtonsMode: Equatable {
 private enum ButtonDescription: Equatable {
     enum Key: Hashable {
         case accept
-        case end
+        case acceptOrEnd
+        case decline
         case enableCamera
         case switchCamera
         case soundOutput
@@ -60,9 +61,13 @@ private enum ButtonDescription: Equatable {
     var key: Key {
         switch self {
         case .accept:
-            return .accept
-        case .end:
-            return .end
+            return .acceptOrEnd
+        case let .end(type):
+            if type == .decline {
+                return .decline
+            } else {
+                return .acceptOrEnd
+            }
         case .enableCamera:
             return .enableCamera
         case .switchCamera:
@@ -85,9 +90,9 @@ final class CallControllerButtonsNode: ASDisplayNode {
     var isMuted = false
     var isCameraPaused = false
     
-    var accept: (() -> Void)?
+    var acceptOrEnd: (() -> Void)?
+    var decline: (() -> Void)?
     var mute: (() -> Void)?
-    var end: (() -> Void)?
     var speaker: (() -> Void)?
     var toggleVideo: (() -> Void)?
     var rotateCamera: (() -> Void)?
@@ -230,14 +235,14 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 topButtons.append(.soundOutput(soundOutput))
             }
             
-            let topButtonsContentWidth = CGFloat(topButtons.count) * smallButtonSize
+            let topButtonsContentWidth = CGFloat(topButtons.count) * largeButtonSize
             let topButtonsAvailableSpacingWidth = width - topButtonsContentWidth - minSmallButtonSideInset * 2.0
             let topButtonsSpacing = min(maxSmallButtonSpacing, topButtonsAvailableSpacingWidth / CGFloat(topButtons.count - 1))
-            let topButtonsWidth = CGFloat(topButtons.count) * smallButtonSize + CGFloat(topButtons.count - 1) * topButtonsSpacing
+            let topButtonsWidth = CGFloat(topButtons.count) * largeButtonSize + CGFloat(topButtons.count - 1) * topButtonsSpacing
             var topButtonsLeftOffset = floor((width - topButtonsWidth) / 2.0)
             for button in topButtons {
-                buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: topButtonsLeftOffset, y: 0.0), size: CGSize(width: smallButtonSize, height: smallButtonSize))))
-                topButtonsLeftOffset += smallButtonSize + topButtonsSpacing
+                buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: topButtonsLeftOffset, y: 0.0), size: CGSize(width: largeButtonSize, height: largeButtonSize))))
+                topButtonsLeftOffset += largeButtonSize + topButtonsSpacing
             }
             
             if case .incomingRinging = mappedState {
@@ -253,11 +258,11 @@ final class CallControllerButtonsNode: ASDisplayNode {
             let bottomButtonsWidth = CGFloat(bottomButtons.count) * largeButtonSize + CGFloat(bottomButtons.count - 1) * bottomButtonsSpacing
             var bottomButtonsLeftOffset = floor((width - bottomButtonsWidth) / 2.0)
             for button in bottomButtons {
-                buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: bottomButtonsLeftOffset, y: smallButtonSize + topBottomSpacing), size: CGSize(width: largeButtonSize, height: largeButtonSize))))
+                buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: bottomButtonsLeftOffset, y: largeButtonSize + topBottomSpacing), size: CGSize(width: largeButtonSize, height: largeButtonSize))))
                 bottomButtonsLeftOffset += largeButtonSize + bottomButtonsSpacing
             }
             
-            height = smallButtonSize + topBottomSpacing + largeButtonSize + max(bottomInset + 32.0, 46.0)
+            height = largeButtonSize + topBottomSpacing + largeButtonSize + max(bottomInset + 32.0, 46.0)
         case .active:
             switch videoState {
             case .active, .incomingRequested, .outgoingRequested:
@@ -345,14 +350,14 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 topButtons.append(.mute(self.isMuted))
                 topButtons.append(.soundOutput(soundOutput))
                 
-                let topButtonsContentWidth = CGFloat(topButtons.count) * smallButtonSize
+                let topButtonsContentWidth = CGFloat(topButtons.count) * largeButtonSize
                 let topButtonsAvailableSpacingWidth = width - topButtonsContentWidth - minSmallButtonSideInset * 2.0
                 let topButtonsSpacing = min(maxSmallButtonSpacing, topButtonsAvailableSpacingWidth / CGFloat(topButtons.count - 1))
-                let topButtonsWidth = CGFloat(topButtons.count) * smallButtonSize + CGFloat(topButtons.count - 1) * topButtonsSpacing
+                let topButtonsWidth = CGFloat(topButtons.count) * largeButtonSize + CGFloat(topButtons.count - 1) * topButtonsSpacing
                 var topButtonsLeftOffset = floor((width - topButtonsWidth) / 2.0)
                 for button in topButtons {
-                    buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: topButtonsLeftOffset, y: 0.0), size: CGSize(width: smallButtonSize, height: smallButtonSize))))
-                    topButtonsLeftOffset += smallButtonSize + topButtonsSpacing
+                    buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: topButtonsLeftOffset, y: 0.0), size: CGSize(width: largeButtonSize, height: largeButtonSize))))
+                    topButtonsLeftOffset += largeButtonSize + topButtonsSpacing
                 }
                 
                 bottomButtons.append(.end(.outgoing))
@@ -363,11 +368,11 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 let bottomButtonsWidth = CGFloat(bottomButtons.count) * largeButtonSize + CGFloat(bottomButtons.count - 1) * bottomButtonsSpacing
                 var bottomButtonsLeftOffset = floor((width - bottomButtonsWidth) / 2.0)
                 for button in bottomButtons {
-                    buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: bottomButtonsLeftOffset, y: smallButtonSize + topBottomSpacing), size: CGSize(width: largeButtonSize, height: largeButtonSize))))
+                    buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: bottomButtonsLeftOffset, y: largeButtonSize + topBottomSpacing), size: CGSize(width: largeButtonSize, height: largeButtonSize))))
                     bottomButtonsLeftOffset += largeButtonSize + bottomButtonsSpacing
                 }
                 
-                height = smallButtonSize + topBottomSpacing + largeButtonSize + max(bottomInset + 32.0, 46.0)
+                height = largeButtonSize + topBottomSpacing + largeButtonSize + max(bottomInset + 32.0, 46.0)
             }
         }
         
@@ -457,7 +462,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
                     buttonDelay = delayIncrement * 1.0
                 case .switchCamera:
                     buttonDelay = delayIncrement * 2.0
-                case .end:
+                case .acceptOrEnd:
                     buttonDelay = delayIncrement * 3.0
                 default:
                     break
@@ -475,17 +480,11 @@ final class CallControllerButtonsNode: ASDisplayNode {
             if !validKeys.contains(key) {
                 removedKeys.append(key)
                 if animated {
-                    if case .accept = key {
-                        if let endButton = self.buttonNodes[.end] {
-                            transition.updateFrame(node: button, frame: endButton.frame)
-                            if let content = button.currentContent {
-                                button.update(size: endButton.frame.size, content: content, text: button.currentText, transition: transition)
-                            }
-                            transition.updateTransformScale(node: button, scale: 0.1)
-                            transition.updateAlpha(node: button, alpha: 0.0, completion: { [weak button] _ in
-                                button?.removeFromSupernode()
-                            })
-                        }
+                    if case .decline = key {
+                        transition.updateTransformScale(node: button, scale: 0.1)
+                        transition.updateAlpha(node: button, alpha: 0.0, completion: { [weak button] _ in
+                            button?.removeFromSupernode()
+                        })
                     } else {
                         transition.updateAlpha(node: button, alpha: 0.0, completion: { [weak button] _ in
                             button?.removeFromSupernode()
@@ -508,9 +507,11 @@ final class CallControllerButtonsNode: ASDisplayNode {
             if button === listButton {
                 switch key {
                 case .accept:
-                    self.accept?()
-                case .end:
-                    self.end?()
+                    self.acceptOrEnd?()
+                case .acceptOrEnd:
+                    self.acceptOrEnd?()
+                case .decline:
+                    self.decline?()
                 case .enableCamera:
                     self.toggleVideo?()
                 case .switchCamera:

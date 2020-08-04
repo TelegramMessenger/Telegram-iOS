@@ -85,10 +85,26 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                             switch discardReason {
                                 case .busy, .disconnect:
                                     callSuccessful = false
-                                    titleString = item.presentationData.strings.Notification_CallCanceled
+                                    if isVideo {
+                                        titleString = item.presentationData.strings.Notification_VideoCallCanceled
+                                    } else {
+                                        titleString = item.presentationData.strings.Notification_CallCanceled
+                                    }
                                 case .missed:
                                     callSuccessful = false
-                                    titleString = incoming ? item.presentationData.strings.Notification_CallMissed : item.presentationData.strings.Notification_CallCanceled
+                                    if incoming {
+                                        if isVideo {
+                                            titleString = item.presentationData.strings.Notification_VideoCallMissed
+                                        } else {
+                                            titleString = item.presentationData.strings.Notification_CallMissed
+                                        }
+                                    } else {
+                                        if isVideo {
+                                            titleString = item.presentationData.strings.Notification_VideoCallCanceled
+                                        } else {
+                                            titleString = item.presentationData.strings.Notification_CallCanceled
+                                        }
+                                    }
                                 case .hangup:
                                     break
                             }
@@ -99,7 +115,7 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 if titleString == nil {
                     let baseString: String
-                    if message.flags.contains(.Incoming) {
+                    if incoming {
                         if isVideo {
                             baseString = item.presentationData.strings.Notification_VideoCallIncoming
                         } else {

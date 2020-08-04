@@ -285,7 +285,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     private var debugNode: CallDebugNode?
     
     private var keyTextData: (Data, String)?
-    private let keyButtonNode: HighlightableButtonNode
+    private let keyButtonNode: CallControllerKeyButton
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     private var disableActionsUntilTimestamp: Double = 0.0
@@ -366,7 +366,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         self.videoPausedNode.alpha = 0.0
         
         self.buttonsNode = CallControllerButtonsNode(strings: self.presentationData.strings)
-        self.keyButtonNode = HighlightableButtonNode()
+        self.keyButtonNode = CallControllerKeyButton()
         
         super.init()
         
@@ -409,23 +409,28 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         self.buttonsNode.speaker = { [weak self] in
             self?.beginAudioOuputSelection?()
         }
-        
-        self.buttonsNode.end = { [weak self] in
-            self?.endCall?()
-        }
-        
-        self.buttonsNode.accept = { [weak self] in
+                
+        self.buttonsNode.acceptOrEnd = { [weak self] in
             guard let strongSelf = self, let callState = strongSelf.callState else {
                 return
             }
             switch callState.state {
             case .active, .connecting, .reconnecting:
-                strongSelf.call.acceptVideo()
+                switch callState.videoState {
+                case .incomingRequested:
+                    strongSelf.call.acceptVideo()
+                default:
+                    self?.endCall?()
+                }
             case .ringing:
                 strongSelf.acceptCall?()
             default:
                 break
             }
+        }
+        
+        self.buttonsNode.decline = { [weak self] in
+            self?.endCall?()
         }
         
         self.buttonsNode.toggleVideo = { [weak self] in
@@ -744,12 +749,13 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 if self.keyTextData?.0 != keyVisualHash {
                     let text = stringForEmojiHashOfData(keyVisualHash, 4)!
                     self.keyTextData = (keyVisualHash, text)
-                    
-                    self.keyButtonNode.setAttributedTitle(NSAttributedString(string: text, attributes: [NSAttributedString.Key.font: Font.regular(22.0), NSAttributedString.Key.kern: 2.5 as NSNumber]), for: [])
+
+                    self.keyButtonNode.key = text
                     
                     let keyTextSize = self.keyButtonNode.measure(CGSize(width: 200.0, height: 200.0))
-                    self.keyButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                     self.keyButtonNode.frame = CGRect(origin: self.keyButtonNode.frame.origin, size: keyTextSize)
+                    
+                    self.keyButtonNode.animateIn()
                     
                     if let (layout, navigationBarHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
@@ -1520,6 +1526,9 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.debugNode != nil {
+            return super.hitTest(point, with: event)
+        }
         if self.containerTransformationNode.frame.contains(point) {
             return self.containerTransformationNode.view.hitTest(self.view.convert(point, to: self.containerTransformationNode.view), with: event)
         }

@@ -34,6 +34,7 @@ enum CallControllerStatusValue: Equatable {
 
 final class CallControllerStatusNode: ASDisplayNode {
     private let titleNode: TextNode
+    private let statusContainerNode: ASDisplayNode
     private let statusNode: TextNode
     private let statusMeasureNode: TextNode
     private let receptionNode: CallControllerReceptionNode
@@ -46,6 +47,21 @@ final class CallControllerStatusNode: ASDisplayNode {
             if self.status != oldValue {
                 self.statusTimer?.invalidate()
                 
+                if let snapshotView = self.statusContainerNode.view.snapshotView(afterScreenUpdates: false) {
+                    snapshotView.frame = self.statusContainerNode.frame
+                    self.view.insertSubview(snapshotView, belowSubview: self.statusContainerNode.view)
+                    
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                    snapshotView.layer.animateScale(from: 1.0, to: 0.3, duration: 0.3, removeOnCompletion: false)
+                    snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: snapshotView.frame.height / 2.0), duration: 0.3, delay: 0.0, removeOnCompletion: false, additive: true)
+                    
+                    self.statusContainerNode.layer.animateScale(from: 0.3, to: 1.0, duration: 0.3)
+                    self.statusContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                    self.statusContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -snapshotView.frame.height / 2.0), to: CGPoint(), duration: 0.3, delay: 0.0, additive: true)
+                }
+                                
                 if case .timer = self.status {
                     self.statusTimer = SwiftSignalKit.Timer(timeout: 0.5, repeat: true, completion: { [weak self] in
                         if let strongSelf = self, let validLayoutWidth = strongSelf.validLayoutWidth {
@@ -90,6 +106,7 @@ final class CallControllerStatusNode: ASDisplayNode {
     
     override init() {
         self.titleNode = TextNode()
+        self.statusContainerNode = ASDisplayNode()
         self.statusNode = TextNode()
         self.statusNode.displaysAsynchronously = false
         self.statusMeasureNode = TextNode()
@@ -106,9 +123,10 @@ final class CallControllerStatusNode: ASDisplayNode {
         self.isUserInteractionEnabled = false
         
         self.addSubnode(self.titleNode)
-        self.addSubnode(self.statusNode)
-        self.addSubnode(self.receptionNode)
-        self.addSubnode(self.logoNode)
+        self.addSubnode(self.statusContainerNode)
+        self.statusContainerNode.addSubnode(self.statusNode)
+        self.statusContainerNode.addSubnode(self.receptionNode)
+        self.statusContainerNode.addSubnode(self.logoNode)
     }
     
     deinit {
@@ -168,12 +186,13 @@ final class CallControllerStatusNode: ASDisplayNode {
         let _ = statusMeasureApply()
         
         self.titleNode.frame = CGRect(origin: CGPoint(x: floor((constrainedWidth - titleLayout.size.width) / 2.0), y: 0.0), size: titleLayout.size)
-        self.statusNode.frame = CGRect(origin: CGPoint(x: floor((constrainedWidth - statusMeasureLayout.size.width) / 2.0) + statusOffset, y: titleLayout.size.height + spacing), size: statusLayout.size)
-        self.receptionNode.frame = CGRect(origin: CGPoint(x: self.statusNode.frame.minX - receptionNodeSize.width, y: titleLayout.size.height + spacing + 9.0), size: receptionNodeSize)
+        self.statusContainerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: titleLayout.size.height + spacing), size: CGSize(width: constrainedWidth, height: statusLayout.size.height))
+        self.statusNode.frame = CGRect(origin: CGPoint(x: floor((constrainedWidth - statusMeasureLayout.size.width) / 2.0) + statusOffset, y: 0.0), size: statusLayout.size)
+        self.receptionNode.frame = CGRect(origin: CGPoint(x: self.statusNode.frame.minX - receptionNodeSize.width, y: 9.0), size: receptionNodeSize)
         self.logoNode.isHidden = !statusDisplayLogo
         if let image = self.logoNode.image, let firstLineRect = statusMeasureLayout.linesRects().first {
             let firstLineOffset = floor((statusMeasureLayout.size.width - firstLineRect.width) / 2.0)
-            self.logoNode.frame = CGRect(origin: CGPoint(x: self.statusNode.frame.minX + firstLineOffset - image.size.width - 7.0, y: self.statusNode.frame.minY + 5.0), size: image.size)
+            self.logoNode.frame = CGRect(origin: CGPoint(x: self.statusNode.frame.minX + firstLineOffset - image.size.width - 7.0, y: 5.0), size: image.size)
         }
         
         return titleLayout.size.height + spacing + statusLayout.size.height

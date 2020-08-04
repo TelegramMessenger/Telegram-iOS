@@ -357,7 +357,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     }, openSettings: {
                         openSettings()
                     }, { value in
-                        if isVideo {
+                        if isVideo && value {
                             DeviceAccess.authorizeAccess(to: .camera, presentationData: presentationData, present: { c, a in
                                 present(c, a)
                             }, openSettings: {
@@ -434,7 +434,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             }, openSettings: {
                 openSettings()
             }, { value in
-                if isVideo {
+                if isVideo && value {
                     DeviceAccess.authorizeAccess(to: .camera, presentationData: presentationData, present: { c, a in
                         present(c, a)
                     }, openSettings: {

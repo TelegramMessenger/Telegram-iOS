@@ -119,6 +119,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
         self.overlayHighlightNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.largeButtonSize, height: self.largeButtonSize))
         
         if self.currentContent != content {
+            let previousContent = self.currentContent
             self.currentContent = content
             
             if content.hasProgress {
@@ -176,8 +177,8 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                             context.setBlendMode(.copy)
                         }
                     }
-                    let smallButtonSize: CGFloat = 60.0
-                    imageScale = self.largeButtonSize / smallButtonSize
+//                    let smallButtonSize: CGFloat = 60.0
+//                    imageScale = self.largeButtonSize / smallButtonSize
                 case let .color(color):
                     switch color {
                     case .red:
@@ -233,7 +234,21 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                 self.contentBackgroundNode.image = contentBackgroundImage
             }
             
-            if transition.isAnimated, let contentImage = contentImage, let previousContent = self.contentNode.image {
+            if transition.isAnimated, let previousContent = previousContent, previousContent.image == .accept && content.image == .end {
+                let rotation = CGFloat.pi / 4.0 * 3.0
+                
+                if let snapshotView = self.contentNode.view.snapshotContentTree() {
+                    snapshotView.frame = self.contentNode.view.frame
+                    self.contentContainer.view.addSubview(snapshotView)
+                    
+                    snapshotView.layer.animateRotation(from: 0.0, to: rotation, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.4, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                }
+                self.contentNode.image = contentImage
+                self.contentNode.layer.animateRotation(from: -rotation, to: 0.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+            } else if transition.isAnimated, let contentImage = contentImage, let previousContent = self.contentNode.image {
                 self.contentNode.image = contentImage
                 self.contentNode.layer.animate(from: previousContent.cgImage!, to: contentImage.cgImage!, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
             } else {
