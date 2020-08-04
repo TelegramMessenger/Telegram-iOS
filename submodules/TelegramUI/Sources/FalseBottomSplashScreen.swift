@@ -197,7 +197,7 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let sideInset: CGFloat = 32.0
         let buttonSideInset: CGFloat = 48.0
-        let iconSpacing: CGFloat = 8.0
+        let iconSpacing: CGFloat = 35.0
         let titleSpacing: CGFloat = 19.0
         let buttonHeight: CGFloat = 50.0
         
