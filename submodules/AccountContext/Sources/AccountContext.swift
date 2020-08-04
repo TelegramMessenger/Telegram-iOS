@@ -647,6 +647,7 @@ public protocol AccountContext: class {
     
     var currentLimitsConfiguration: Atomic<LimitsConfiguration> { get }
     var currentContentSettings: Atomic<ContentSettings> { get }
+    var currentAppConfiguration: Atomic<AppConfiguration> { get }
     
     func storeSecureIdPassword(password: String)
     func getStoredSecureIdPassword() -> String?

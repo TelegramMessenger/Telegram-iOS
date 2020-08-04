@@ -1253,8 +1253,8 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.addReadMessagesContents((PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), messages))
             case let .updateChannelMessageViews(channelId, id, views):
                 updatedState.addUpdateMessageImpressionCount(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: id), count: views)
-            case let .updateChannelMessageForwards(channelId, id, forwards):
-                updatedState.addUpdateMessageForwardsCount(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: id), count: forwards)
+            /*case let .updateChannelMessageForwards(channelId, id, forwards):
+                updatedState.addUpdateMessageForwardsCount(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: id), count: forwards)*/
             case let .updateNewStickerSet(stickerset):
                 updatedState.addUpdateInstalledStickerPacks(.add(stickerset))
             case let .updateStickerSetsOrder(flags, order):
@@ -1898,8 +1898,8 @@ private func pollChannel(network: Network, peer: Peer, state: AccountMutableStat
                                     updatedState.addReadMessagesContents((peer.id, messages))
                                 case let .updateChannelMessageViews(_, id, views):
                                     updatedState.addUpdateMessageImpressionCount(id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), count: views)
-                                case let .updateChannelMessageForwards(_, id, views):
-                                    updatedState.addUpdateMessageForwardsCount(id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), count: views)
+                                /*case let .updateChannelMessageForwards(_, id, views):
+                                    updatedState.addUpdateMessageForwardsCount(id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), count: views)*/
                                 case let .updateChannelWebPage(_, apiWebpage, _, _):
                                     switch apiWebpage {
                                         case let .webPageEmpty(id):

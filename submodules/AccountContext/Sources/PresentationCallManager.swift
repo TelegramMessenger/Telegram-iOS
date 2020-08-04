@@ -81,17 +81,20 @@ public final class PresentationCallVideoView {
     
     public let getOrientation: () -> Orientation
     public let setOnOrientationUpdated: (((Orientation) -> Void)?) -> Void
+    public let setOnIsMirroredUpdated: (((Bool) -> Void)?) -> Void
     
     public init(
         view: UIView,
         setOnFirstFrameReceived: @escaping ((() -> Void)?) -> Void,
         getOrientation: @escaping () -> Orientation,
-        setOnOrientationUpdated: @escaping (((Orientation) -> Void)?) -> Void
+        setOnOrientationUpdated: @escaping (((Orientation) -> Void)?) -> Void,
+        setOnIsMirroredUpdated: @escaping (((Bool) -> Void)?) -> Void
     ) {
         self.view = view
         self.setOnFirstFrameReceived = setOnFirstFrameReceived
         self.getOrientation = getOrientation
         self.setOnOrientationUpdated = setOnOrientationUpdated
+        self.setOnIsMirroredUpdated = setOnIsMirroredUpdated
     }
 }
 
@@ -133,5 +136,5 @@ public protocol PresentationCall: class {
 public protocol PresentationCallManager: class {
     var currentCallSignal: Signal<PresentationCall?, NoError> { get }
     
-    func requestCall(account: Account, peerId: PeerId, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult
+    func requestCall(context: AccountContext, peerId: PeerId, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult
 }

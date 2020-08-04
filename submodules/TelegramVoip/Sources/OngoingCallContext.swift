@@ -8,19 +8,24 @@ import TelegramUIPreferences
 
 import TgVoip
 import TgVoipWebrtc
-//import TgVoipWebrtcCustom
 
-private func callConnectionDescription(_ connection: CallSessionConnection) -> OngoingCallConnectionDescription {
-    return OngoingCallConnectionDescription(connectionId: connection.id, ip: connection.ip, ipv6: connection.ipv6, port: connection.port, peerTag: connection.peerTag)
+private func callConnectionDescription(_ connection: CallSessionConnection) -> OngoingCallConnectionDescription? {
+    switch connection {
+    case let .reflector(reflector):
+        return OngoingCallConnectionDescription(connectionId: reflector.id, ip: reflector.ip, ipv6: reflector.ipv6, port: reflector.port, peerTag: reflector.peerTag)
+    case .webRtcReflector:
+        return nil
+    }
 }
 
-private func callConnectionDescriptionWebrtc(_ connection: CallSessionConnection) -> OngoingCallConnectionDescriptionWebrtc {
-    return OngoingCallConnectionDescriptionWebrtc(connectionId: connection.id, ip: connection.ip, ipv6: connection.ipv6, port: connection.port, peerTag: connection.peerTag)
+private func callConnectionDescriptionWebrtc(_ connection: CallSessionConnection) -> OngoingCallConnectionDescriptionWebrtc? {
+    switch connection {
+    case .reflector:
+        return nil
+    case let .webRtcReflector(reflector):
+        return OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: reflector.hasStun, hasTurn: reflector.hasTurn, ip: reflector.ip.isEmpty ? reflector.ipv6 : reflector.ip, port: reflector.port, username: reflector.username, password: reflector.password)
+    }
 }
-
-/*private func callConnectionDescriptionWebrtcCustom(_ connection: CallSessionConnection) -> OngoingCallConnectionDescriptionWebrtcCustom {
-    return OngoingCallConnectionDescriptionWebrtcCustom(connectionId: connection.id, ip: connection.ip, ipv6: connection.ipv6, port: connection.port, peerTag: connection.peerTag)
-}*/
 
 private let callLogsLimit = 20
 
@@ -323,6 +328,9 @@ public final class OngoingCallVideoCapturer {
                         return .rotation0
                     },
                     setOnOrientationUpdated: { _ in
+                    },
+                    setOnIsMirroredUpdated: { [weak view] f in
+                        view?.setOnIsMirroredUpdated(f)
                     }
                 ))
             } else {
@@ -437,17 +445,20 @@ public final class OngoingCallContextPresentationCallVideoView {
     public let setOnFirstFrameReceived: ((() -> Void)?) -> Void
     public let getOrientation: () -> OngoingCallVideoOrientation
     public let setOnOrientationUpdated: (((OngoingCallVideoOrientation) -> Void)?) -> Void
+    public let setOnIsMirroredUpdated: (((Bool) -> Void)?) -> Void
     
     public init(
         view: UIView,
         setOnFirstFrameReceived: @escaping ((() -> Void)?) -> Void,
         getOrientation: @escaping () -> OngoingCallVideoOrientation,
-        setOnOrientationUpdated: @escaping (((OngoingCallVideoOrientation) -> Void)?) -> Void
+        setOnOrientationUpdated: @escaping (((OngoingCallVideoOrientation) -> Void)?) -> Void,
+        setOnIsMirroredUpdated: @escaping (((Bool) -> Void)?) -> Void
     ) {
         self.view = view
         self.setOnFirstFrameReceived = setOnFirstFrameReceived
         self.getOrientation = getOrientation
         self.setOnOrientationUpdated = setOnOrientationUpdated
+        self.setOnIsMirroredUpdated = setOnIsMirroredUpdated
     }
 }
 
@@ -503,15 +514,17 @@ public final class OngoingCallContext {
         return OngoingCallThreadLocalContext.maxLayer()
     }
     
-    public static func versions(includeExperimental: Bool, includeReference: Bool) -> [String] {
-        var result: [String] = [OngoingCallThreadLocalContext.version()]
+    public static func versions(includeExperimental: Bool, includeReference: Bool) -> [(version: String, supportsVideo: Bool)] {
+        var result: [(version: String, supportsVideo: Bool)] = [(OngoingCallThreadLocalContext.version(), false)]
         if includeExperimental {
-            result.append(contentsOf: OngoingCallThreadLocalContextWebrtc.versions(withIncludeReference: includeReference))
+            result.append(contentsOf: OngoingCallThreadLocalContextWebrtc.versions(withIncludeReference: includeReference).map { version -> (version: String, supportsVideo: Bool) in
+                return (version, true)
+            })
         }
         return result
     }
 
-    public init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, auxiliaryServers: [AuxiliaryServer], initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, key: Data, isOutgoing: Bool, video: OngoingCallVideoCapturer?, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, allowP2P: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String) {
+    public init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, key: Data, isOutgoing: Bool, video: OngoingCallVideoCapturer?, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, allowP2P: Bool, enableHighBitrateVideoCalls: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String) {
         let _ = setupLogs
         OngoingCallThreadLocalContext.applyServerConfig(serializedData)
         
@@ -540,35 +553,33 @@ public final class OngoingCallContext {
                             break
                         }
                     }
-                    var rtcServers: [VoipRtcServerWebrtc] = []
-                    for server in auxiliaryServers {
-                        switch server.connection {
-                        case .stun:
-                            rtcServers.append(VoipRtcServerWebrtc(
-                                host: server.host,
-                                port: Int32(clamping: server.port),
-                                username: "",
-                                password: "",
-                                isTurn: false
-                            ))
-                        case let .turn(username, password):
-                            rtcServers.append(VoipRtcServerWebrtc(
-                                host: server.host,
-                                port: Int32(clamping: server.port),
-                                username: username,
-                                password: password,
-                                isTurn: true
-                            ))
-                        }
-                    }
                     
                     let screenSize = UIScreen.main.bounds.size
                     let portraitSize = CGSize(width: min(screenSize.width, screenSize.height), height: max(screenSize.width, screenSize.height))
                     let preferredAspectRatio = portraitSize.width / portraitSize.height
                     
-                    let context = OngoingCallThreadLocalContextWebrtc(version: version, queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, rtcServers: rtcServers, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescriptionWebrtc(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescriptionWebrtc), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath, sendSignalingData: { [weak callSessionManager] data in
+                    
+                    let unfilteredConnections = [connections.primary] + connections.alternatives
+                    var processedConnections: [CallSessionConnection] = []
+                    var filteredConnections: [OngoingCallConnectionDescriptionWebrtc] = []
+                    for connection in unfilteredConnections {
+                        if processedConnections.contains(connection) {
+                            continue
+                        }
+                        processedConnections.append(connection)
+                        if let mapped = callConnectionDescriptionWebrtc(connection) {
+                            if mapped.ip.isEmpty {
+                                continue
+                            }
+                            filteredConnections.append(mapped)
+                        }
+                    }
+                    let primaryConnection = filteredConnections.first!
+                    let restConnections = Array(filteredConnections[1...])
+                    
+                    let context = OngoingCallThreadLocalContextWebrtc(version: version, queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, primaryConnection: primaryConnection, alternativeConnections: restConnections, maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath, sendSignalingData: { [weak callSessionManager] data in
                         callSessionManager?.sendSignalingData(internalId: internalId, data: data)
-                    }, videoCapturer: video?.impl, preferredAspectRatio: Float(preferredAspectRatio))
+                    }, videoCapturer: video?.impl, preferredAspectRatio: Float(preferredAspectRatio), enableHighBitrateVideoCalls: enableHighBitrateVideoCalls)
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
                     context.stateChanged = { [weak callSessionManager] state, videoState, remoteVideoState in
@@ -628,7 +639,7 @@ public final class OngoingCallContext {
                             break
                         }
                     }
-                    let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForType(initialNetworkType), dataSaving: ongoingDataSavingForType(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescription(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescription), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath)
+                    let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForType(initialNetworkType), dataSaving: ongoingDataSavingForType(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescription(connections.primary)!, alternativeConnections: connections.alternatives.compactMap(callConnectionDescription), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath)
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
                     context.stateChanged = { state in
@@ -774,6 +785,11 @@ public final class OngoingCallContext {
                             setOnOrientationUpdated: { [weak view] f in
                                 view?.setOnOrientationUpdated { value in
                                     f?(OngoingCallVideoOrientation(value))
+                                }
+                            },
+                            setOnIsMirroredUpdated: { [weak view] f in
+                                view?.setOnIsMirroredUpdated { value in
+                                    f?(value)
                                 }
                             }
                         ))
