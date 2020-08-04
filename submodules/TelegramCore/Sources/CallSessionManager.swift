@@ -831,7 +831,7 @@ private final class CallSessionManagerContext {
                 }
             }
         case let .phoneCallRequested(flags, id, accessHash, date, adminId, _, gAHash, requestedProtocol):
-            let isVideo = (flags & (1 << 5)) != 0
+            let isVideo = (flags & (1 << 6)) != 0
             let versions: [String]
             switch requestedProtocol {
             case let .phoneCallProtocol(_, _, _, libraryVersions):
