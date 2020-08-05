@@ -335,6 +335,7 @@ private final class FalseBottomAnimationSource: AnimatedStickerNodeSource {
         case .setMasterPasscode:
             fileName = "FalseBottomSetMasterPasscode"
             replacements = [
+                "0,0,0,1": theme.list.plainBackgroundColor,
                 "0.125,0.125,0.125,1": elementBackgroundColor,
                 "0.1254902035,0.1254902035,0.1254902035,1": elementBackgroundColor,
                 "0.164705882353,0.325490196078,0.509803921569,1": brightElementColor1,
