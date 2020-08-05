@@ -10,6 +10,7 @@ import AnimatedStickerNode
 import AccountContext
 import TelegramPresentationData
 import PresentationDataUtils
+import GZip
 
 public enum FalseBottomSplashMode {
     case hideAccount
@@ -99,6 +100,7 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
         
         let textFont = Font.regular(16.0)
         let textColor = self.presentationData.theme.list.itemPrimaryTextColor
+        let source = FalseBottomAnimationSource(mode: mode, theme: presentationData.theme)
 
         switch mode {
         case .hideAccount:
@@ -106,12 +108,9 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             text = NSAttributedString(string: presentationData.strings.FalseBottom_HideAccount_Text, font: textFont, textColor: textColor)
             buttonText = presentationData.strings.FalseBottom_HideAccount_Button
             
-            if let path = getAppBundle().path(forResource: "FalseBottomAddAccount", ofType: "tgs") {
-                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 568, height: 640, playbackMode: .loop, mode: .direct, fillColors: [
-                    "Shape Layer 1.**.Fill 1": self.presentationData.theme.list.plainBackgroundColor,
-                    "phone Outlines.**.Fill 1": self.presentationData.theme.list.plainBackgroundColor
-                ])
-                self.animationSize = CGSize(width: 284, height: 320)
+            if let source = source {
+                self.animationNode.setup(source: source, width: 528, height: 348, playbackMode: .loop, mode: .direct)
+                self.animationSize = CGSize(width: 264.0, height: 174.0)
                 self.animationNode.visibility = true
             }
             
@@ -120,9 +119,9 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             text = NSAttributedString(string: presentationData.strings.FalseBottom_AddOneMoreAccount_Text, font: textFont, textColor: textColor)
             buttonText = presentationData.strings.FalseBottom_AddOneMoreAccount_Button
             
-            if let path = getAppBundle().path(forResource: "TwoFactorSetupIntro", ofType: "tgs") {
-                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct)
-                self.animationSize = CGSize(width: 124.0, height: 124.0)
+            if let source = source {
+                self.animationNode.setup(source: source, width: 174, height: 348, playbackMode: .loop, mode: .direct)
+                self.animationSize = CGSize(width: 87.0, height: 174.0)
                 self.animationNode.visibility = true
         }
             
@@ -131,9 +130,9 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             text = NSAttributedString(string: presentationData.strings.FalseBottom_SetMasterPasscode_Text, font: textFont, textColor: textColor)
             buttonText = presentationData.strings.FalseBottom_SetMasterPasscode_Button
             
-            if let path = getAppBundle().path(forResource: "TwoFactorSetupIntro", ofType: "tgs") {
-                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct)
-                self.animationSize = CGSize(width: 124.0, height: 124.0)
+            if let source = source {
+                self.animationNode.setup(source: source, width: 528, height: 348, playbackMode: .loop, mode: .direct)
+                self.animationSize = CGSize(width: 264.0, height: 174.0)
                 self.animationNode.visibility = true
             }
             
@@ -142,8 +141,8 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             text = NSAttributedString(string: presentationData.strings.FalseBottom_SetSecretPasscode_Text, font: textFont, textColor: textColor)
             buttonText = presentationData.strings.FalseBottom_SetSecretPasscode_Button
             
-            if let path = getAppBundle().path(forResource: "TwoFactorSetupIntro", ofType: "tgs") {
-                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct)
+            if let source = source {
+                self.animationNode.setup(source: source, width: 248, height: 248, playbackMode: .loop, mode: .direct)
                 self.animationSize = CGSize(width: 124.0, height: 124.0)
                 self.animationNode.visibility = true
             }
@@ -153,8 +152,8 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             text = NSAttributedString(string: presentationData.strings.FalseBottom_AccountWasHidden_Text, font: textFont, textColor: textColor)
             buttonText = presentationData.strings.FalseBottom_AccountWasHidden_Button
             
-            if let path = getAppBundle().path(forResource: "TwoFactorSetupDone", ofType: "tgs") {
-                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, mode: .direct)
+            if let source = source {
+                self.animationNode.setup(source: source, width: 248, height: 248, playbackMode: .loop, mode: .direct)
                 self.animationSize = CGSize(width: 124.0, height: 124.0)
                 self.animationNode.visibility = true
             }
@@ -236,5 +235,155 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
         transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
         let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: titleFrame.maxY + titleSpacing), size: textSize)
         transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
+    }
+}
+
+private extension UIColor {
+    var lottieColor: String {
+        let (r, g, b, _) = rgba
+        return "\(r),\(g),\(b),1"
+    }
+    
+    func interpolated(to color: UIColor, percentage: CGFloat) -> UIColor {
+        let fromHSBA = hsba
+        let toHSBA = color.hsba
+        let h = fromHSBA.h.interpolated(to: toHSBA.h, percentage: percentage)
+        let s = fromHSBA.s.interpolated(to: toHSBA.s, percentage: percentage)
+        let b = fromHSBA.b.interpolated(to: toHSBA.b, percentage: percentage)
+        let a = fromHSBA.a.interpolated(to: toHSBA.a, percentage: percentage)
+        return UIColor(hue: h, saturation: s, brightness:b, alpha: a)
+    }
+    
+    var hsba: (h: CGFloat, s: CGFloat, b: CGFloat, a: CGFloat) {
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        getHue(&h, saturation: &s, brightness:&b, alpha: &a)
+        return (h, s, b, a)
+    }
+    
+    var rgba: (h: CGFloat, s: CGFloat, b: CGFloat, a: CGFloat) {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        getRed(&r, green: &g, blue:&b, alpha: &a)
+        return (r, g, b, a)
+    }
+    
+    var grayscale: UIColor {
+        let (r, g, b, a) = rgba
+        return UIColor(white: 0.299 * r + 0.587 * g + 0.114 * b, alpha: a)
+    }
+    
+    var complement: UIColor {
+        let (h, s, b, a) = hsba
+        var newHue = h > 0.5 ? h - 0.5 : h + 0.5
+        return UIColor(hue: newHue, saturation: s, brightness:b, alpha: a)
+    }
+}
+
+private extension CGFloat {
+    func interpolated(to value: CGFloat, percentage: CGFloat) -> CGFloat {
+        let delta = value - self
+        return self + delta * percentage
+    }
+}
+
+private final class FalseBottomAnimationSource: AnimatedStickerNodeSource {
+    public let path: String
+    
+    public init?(mode: FalseBottomSplashMode, theme: PresentationTheme) {
+        let fileName: String
+        let replacements: [String:UIColor]
+        
+        let outlineColor = theme.list.itemPrimaryTextColor
+        let elementBackgroundColor = theme.list.plainBackgroundColor.interpolated(to: outlineColor, percentage: 0.25).grayscale
+        let middleColor1 = elementBackgroundColor.interpolated(to: outlineColor, percentage: 0.15).grayscale
+        let middleColor2 = elementBackgroundColor.interpolated(to: outlineColor, percentage: 0.23).grayscale
+        let middleColor3 = elementBackgroundColor.interpolated(to: outlineColor, percentage: 0.56).grayscale
+        let brightElementColor1: UIColor
+        let brightElementColor2: UIColor
+        let buttonColor = theme.list.itemCheckColors.fillColor
+        if buttonColor.hsba.s > 0.5 {
+            brightElementColor1 = buttonColor
+            brightElementColor2 = buttonColor.complement
+        } else {
+            // TODO: -- account for backround to make these high contrast
+            brightElementColor1 = UIColor(hue: 0.59, saturation: 0.7, brightness: 0.7, alpha: 1)
+            brightElementColor2 = UIColor(hue: 0.25, saturation: 0.7, brightness: 0.6, alpha: 1)
+        }
+        
+        switch mode {
+        case .hideAccount:
+            fileName = "FalseBottomHideAccount"
+            replacements = [
+                "0.125,0.125,0.125,1": elementBackgroundColor,
+                "0.1254902035,0.1254902035,0.1254902035,1": elementBackgroundColor,
+                "0.152941182256,0.32549020648,0.509803950787,1": brightElementColor1,
+                "0.164705887437,0.32549020648,0.509803950787,1": brightElementColor1,
+                "0.1882353127,0.1882353127,0.196078449488,1": middleColor1,
+                "0.219999994016,0.224000010771,0.231000010173,1": middleColor2,
+                "0.352999997606,0.352999997606,0.352999997606,1": middleColor3,
+                "0.364705890417,0.443137288094,0.298039227724,1": brightElementColor2,
+                "0.372549027205,0.462745130062,0.301960796118,1": brightElementColor2,
+                "0.552941203117,0.556862771511,0.57647061348,1": outlineColor,
+                "0.552999997606,0.556999954523,0.57599995931,1": outlineColor
+            ]
+            
+        case .addOneMoreAccount:
+            fileName = "FalseBottomAddOneMoreAccount"
+            replacements = [
+                "0.125,0.125,0.125,1": elementBackgroundColor,
+                "0.552999997606,0.556999954523,0.57599995931,1": outlineColor
+            ]
+            
+        case .setMasterPasscode:
+            fileName = "FalseBottomSetMasterPasscode"
+            replacements = [
+                "0.125,0.125,0.125,1": elementBackgroundColor,
+                "0.1254902035,0.1254902035,0.1254902035,1": elementBackgroundColor,
+                "0.164705882353,0.325490196078,0.509803921569,1": brightElementColor1,
+                "0.164705887437,0.32549020648,0.509803950787,1": brightElementColor1,
+                "0.165000002992,0.325,0.510000011968,1": brightElementColor1,
+                "0.1882353127,0.1882353127,0.196078449488,1": middleColor1,
+                "0.219999994016,0.224000010771,0.231000010173,1": middleColor2,
+                "0.352999997606,0.352999997606,0.352999997606,1": middleColor3,
+                "0.372549027205,0.46274510026,0.301960796118,1": brightElementColor2,
+                "0.372549027205,0.462745130062,0.301960796118,1": brightElementColor2,
+                "0.552941203117,0.556862771511,0.57647061348,1": outlineColor,
+                "0.552999997606,0.556999954523,0.57599995931,1": outlineColor
+            ]
+            
+        case .setSecretPasscode:
+            fileName = "TwoFactorSetupIntro"
+            replacements = [:]
+            
+        case .accountWasHidden:
+            fileName = "TwoFactorSetupDone"
+            replacements = [:]
+        }
+        guard let path = getAppBundle().path(forResource: fileName, ofType: "tgs"),
+            let rawData = try? Data(contentsOf: URL(fileURLWithPath: path)) else { return nil }
+        
+        let data = TGGUnzipData(rawData, 8 * 1024 * 1024) ?? rawData
+        
+        guard var string = String(data: data, encoding: .utf8) else { return nil }
+        
+        for (key, value) in replacements {
+            string = string.replacingOccurrences(of: key, with: value.lottieColor)
+        }
+        
+        let newPath = NSTemporaryDirectory() + "/" + fileName + "_colored.tgs"
+        do {
+            try string.write(to: URL(fileURLWithPath: newPath), atomically: true, encoding: .utf8)
+        } catch {
+            return nil
+        }
+        
+        self.path = newPath
+    }
+    
+    public func directDataPath() -> Signal<String, NoError> {
+        return .single(self.path)
+    }
+    
+    public func cachedDataPath(width: Int, height: Int) -> Signal<(String, Bool), NoError> {
+        return .never()
     }
 }
