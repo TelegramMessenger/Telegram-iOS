@@ -292,8 +292,8 @@ private final class FalseBottomAnimationSource: AnimatedStickerNodeSource {
         let fileName: String
         let replacements: [String:UIColor]
         
-        let outlineColor = theme.list.itemPrimaryTextColor
-        let elementBackgroundColor = theme.list.plainBackgroundColor.interpolated(to: outlineColor, percentage: 0.25).grayscale
+        let outlineColor = theme.list.itemPrimaryTextColor.interpolated(to: theme.list.plainBackgroundColor, percentage: 0.45).grayscale
+        let elementBackgroundColor = theme.list.plainBackgroundColor.interpolated(to: theme.list.itemPrimaryTextColor, percentage: 0.125).grayscale
         let middleColor1 = elementBackgroundColor.interpolated(to: outlineColor, percentage: 0.15).grayscale
         let middleColor2 = elementBackgroundColor.interpolated(to: outlineColor, percentage: 0.23).grayscale
         let middleColor3 = elementBackgroundColor.interpolated(to: outlineColor, percentage: 0.56).grayscale
@@ -304,9 +304,8 @@ private final class FalseBottomAnimationSource: AnimatedStickerNodeSource {
             brightElementColor1 = buttonColor
             brightElementColor2 = buttonColor.complement
         } else {
-            // TODO: -- account for backround to make these high contrast
-            brightElementColor1 = UIColor(hue: 0.59, saturation: 0.7, brightness: 0.7, alpha: 1)
-            brightElementColor2 = UIColor(hue: 0.25, saturation: 0.7, brightness: 0.6, alpha: 1)
+            brightElementColor1 = UIColor(red: 0.165, green: 0.325, blue: 0.51, alpha: 1.0)
+            brightElementColor2 = UIColor(red: 0.373, green: 0.463, blue: 0.302, alpha: 1.0)
         }
         
         switch mode {
