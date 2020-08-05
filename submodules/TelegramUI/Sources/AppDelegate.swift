@@ -1147,7 +1147,19 @@ final class SharedApplicationContext {
                     }
                     print("Launch to ready took \((CFAbsoluteTimeGetCurrent() - launchStartTime) * 1000.0) ms")
                     
-                    self.mainWindow.viewController = context.rootController
+                    if let oldRootController = self.mainWindow.viewController as? TelegramRootController,
+                        oldRootController.viewControllers.contains(where: { $0 is FalseBottomSplashScreen }),
+                        let newTopController = context.rootController.viewControllers.last as? ViewController,
+                        let newRootViewController = context.rootController.viewControllers.first {
+                        let oldFalseBottomStack = oldRootController.viewControllers.dropFirst()
+                            context.rootController.setViewControllers([newRootViewController] + oldFalseBottomStack, animated: false)
+                        self.mainWindow.viewController = context.rootController
+                        context.rootController.pushViewController(newTopController, animated: true, completion: {
+                            context.rootController.setViewControllers([newRootViewController, newTopController], animated: false)
+                        })
+                    } else {
+                        self.mainWindow.viewController = context.rootController
+                    }
                     if firstTime {
                         let layer = context.rootController.view.layer
                         layer.allowsGroupOpacity = true
@@ -2214,7 +2226,7 @@ final class SharedApplicationContext {
                     context.rootController.pushViewController(setupController, animated: true)
                 }
                 
-                showSplashScreen(.setSecretPasscode, false, addFalseBottomToCurrentAccount)
+                showSplashScreen(.setSecretPasscode, true, addFalseBottomToCurrentAccount)
             }
 
             showMasterPasscodeScreenIfNeeded(showSecretPasscodeScreen)
