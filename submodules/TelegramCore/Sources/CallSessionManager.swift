@@ -308,7 +308,7 @@ private final class CallSessionContext {
 }
 
 private func selectVersionOnAccept(localVersions: [CallSessionManagerImplementationVersion], remoteVersions: [String]) -> [String]? {
-    let filteredVersions = localVersions.map(\.version).filter(remoteVersions.contains)
+    let filteredVersions = localVersions.map({ $0.version }).filter(remoteVersions.contains)
     if filteredVersions.isEmpty {
         return nil
     } else {
@@ -626,7 +626,7 @@ private final class CallSessionManagerContext {
         if let context = self.contexts[internalId] {
             switch context.state {
                 case let .ringing(id, accessHash, gAHash, b, remoteVersions):
-                    let acceptVersions = self.versions.map(\.version)
+                    let acceptVersions = self.versions.map({ $0.version })
                     context.state = .accepting(id: id, accessHash: accessHash, gAHash: gAHash, b: b, disposable: (acceptCallSession(postbox: self.postbox, network: self.network, stableId: id, accessHash: accessHash, b: b, maxLayer: self.maxLayer, versions: acceptVersions) |> deliverOn(self.queue)).start(next: { [weak self] result in
                         if let strongSelf = self, let context = strongSelf.contexts[internalId] {
                             if case .accepting = context.state {

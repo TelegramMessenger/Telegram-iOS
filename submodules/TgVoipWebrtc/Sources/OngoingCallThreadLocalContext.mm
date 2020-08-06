@@ -15,6 +15,8 @@
 #import "platform/darwin/VideoMetalViewMac.h"
 #define GLVideoView VideoMetalView
 #define UIViewContentModeScaleAspectFill kCAGravityResizeAspectFill
+#define UIViewContentModeScaleAspect kCAGravityResizeAspect
+
 #else
 #import "platform/darwin/VideoMetalView.h"
 #import "platform/darwin/GLVideoView.h"
@@ -219,6 +221,9 @@
     NSData *_lastDerivedState;
     
     void (^_sendSignalingData)(NSData *);
+    
+    float _remotePreferredAspectRatio;
+
 }
 
 - (void)controllerStateChanged:(tgcalls::State)state videoState:(OngoingCallVideoStateWebrtc)videoState;
@@ -313,6 +318,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         _callRingTimeout = 90.0;
         _callConnectTimeout = 30.0;
         _callPacketTimeout = 10.0;
+        _remotePreferredAspectRatio = 0;
         _networkType = networkType;
         _sendSignalingData = [sendSignalingData copy];
         _videoCapturer = videoCapturer;
@@ -452,8 +458,19 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                         if (strongSelf->_remoteVideoState != remoteVideoState) {
                             strongSelf->_remoteVideoState = remoteVideoState;
                             if (strongSelf->_stateChanged) {
-                                strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState);
+                                strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remotePreferredAspectRatio);
                             }
+                        }
+                    }
+                }];
+            },
+            .remotePrefferedAspectRatioUpdated = [weakSelf, queue](float value) {
+                [queue dispatch:^{
+                    __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
+                    if (strongSelf) {
+                        strongSelf->_remotePreferredAspectRatio = value;
+                        if (strongSelf->_stateChanged) {
+                            strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remotePreferredAspectRatio);
                         }
                     }
                 }];
@@ -565,7 +582,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         _videoState = videoState;
         
         if (_stateChanged) {
-            _stateChanged(_state, _videoState, _remoteVideoState);
+            _stateChanged(_state, _videoState, _remoteVideoState, _remotePreferredAspectRatio);
         }
     }
 }
@@ -585,6 +602,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         _sendSignalingData(data);
     }
 }
+
 
 - (void)addSignalingData:(NSData *)data {
     if (_tgVoip) {
@@ -616,7 +634,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         dispatch_async(dispatch_get_main_queue(), ^{
             if ([VideoMetalView isSupported]) {
                 VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
-                remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+                remoteRenderer.videoContentMode = UIViewContentModeScaleAspect;
                 
                 std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
                 __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
