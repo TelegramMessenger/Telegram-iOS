@@ -434,8 +434,10 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 case .incomingRequested:
                     strongSelf.call.acceptVideo()
                 default:
-                    self?.endCall?()
+                    strongSelf.endCall?()
                 }
+            case .requesting:
+                strongSelf.endCall?()
             case .ringing:
                 strongSelf.acceptCall?()
             default:
@@ -761,7 +763,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 if !self.statusNode.subtitle.isEmpty {
                     text += "\n\(self.statusNode.subtitle)"
                 }
-                statusValue = .text(string: text, displayLogo: true)
+                statusValue = .text(string: text, displayLogo: false)
             case .active(let timestamp, let reception, let keyVisualHash), .reconnecting(let timestamp, let reception, let keyVisualHash):
                 let strings = self.presentationData.strings
                 var isReconnecting = false
@@ -799,7 +801,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                     if !self.statusNode.subtitle.isEmpty {
                         text += "\n\(self.statusNode.subtitle)"
                     }
-                    statusValue = .text(string: text, displayLogo: true)
+                    statusValue = .text(string: text, displayLogo: false)
                 /*case .outgoingRequested:
                     statusValue = .text(string: self.presentationData.strings.Call_StatusRequesting, displayLogo: false)*/
                 }
