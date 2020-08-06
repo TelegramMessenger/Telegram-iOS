@@ -29,7 +29,7 @@ func switchToAuthorizedAccount(transaction: AccountManagerModifier, account: Una
         for attribute in currentAuthAttribues {
             if let attribute = attribute as? ContinueFalseBottomFlowAttribute {
                 account.continueFalseBottomFlowAccountRecordId = attribute.accountRecordId
-            } else if attribute is HiddenAccountAttribute {
+            } else if attribute is HiddenAccountAttribute || attribute is PhoneNumberAccountAttribute {
                 attributes.append(attribute)
             }
         }

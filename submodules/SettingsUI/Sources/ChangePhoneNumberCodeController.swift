@@ -272,6 +272,20 @@ func changePhoneNumberCodeController(context: AccountContext, phoneNumber: Strin
                 }
                 presentControllerImpl?(textAlertController(context: context, title: nil, text: alertText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }, completed: {
+                let _ = context.sharedContext.accountManager.transaction { transaction -> Void in
+                    guard let (id, attributes) = transaction.getCurrent() else { return }
+                    
+                    var newAttributes = attributes.filter { !($0 is PhoneNumberAccountAttribute) }
+                    let phoneNumberAttribute = PhoneNumberAccountAttribute(phoneNumber: formatPhoneNumber(phoneNumber))
+                    newAttributes.append(phoneNumberAttribute)
+                    
+                    transaction.updateRecord(id) { record in
+                        guard let record = record else { return nil }
+                        
+                        return AccountRecord(id: record.id, attributes: newAttributes, temporarySessionId: record.temporarySessionId)
+                    }
+                }.start()
+                
                 updateState {
                     return $0.withUpdatedChecking(false)
                 }
