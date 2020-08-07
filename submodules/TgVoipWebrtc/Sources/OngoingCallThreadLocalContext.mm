@@ -146,7 +146,7 @@
 }
 
 - (void)setIsVideoEnabled:(bool)isVideoEnabled {
-    _interface->setIsVideoEnabled(isVideoEnabled);
+    _interface->setState(isVideoEnabled ? tgcalls::VideoState::Active : tgcalls::VideoState::Paused);
 }
 
 - (std::shared_ptr<tgcalls::VideoCaptureInterface>)getInterface {
@@ -161,14 +161,14 @@
             remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
             
             std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
-            interface->setVideoOutput(sink);
+            interface->setOutput(sink);
             
             completion(remoteRenderer);
         } else {
             GLVideoView *remoteRenderer = [[GLVideoView alloc] initWithFrame:CGRectZero];
             
             std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
-            interface->setVideoOutput(sink);
+            interface->setOutput(sink);
             
             completion(remoteRenderer);
         }
@@ -214,6 +214,7 @@
     bool _connectedOnce;
     OngoingCallRemoteBatteryLevelWebrtc _remoteBatteryLevel;
     OngoingCallRemoteVideoStateWebrtc _remoteVideoState;
+    OngoingCallRemoteAudioStateWebrtc _remoteAudioState;
     OngoingCallVideoOrientationWebrtc _remoteVideoOrientation;
     __weak UIView<OngoingCallThreadLocalContextWebrtcVideoViewImpl> *_currentRemoteVideoRenderer;
     OngoingCallThreadLocalContextVideoCapturer *_videoCapturer;
@@ -227,7 +228,7 @@
 
 }
 
-- (void)controllerStateChanged:(tgcalls::State)state videoState:(OngoingCallVideoStateWebrtc)videoState;
+- (void)controllerStateChanged:(tgcalls::State)state;
 - (void)signalBarsChanged:(int32_t)signalBars;
 
 @end
@@ -306,7 +307,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
-- (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescriptionWebrtc * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath sendSignalingData:(void (^)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer preferredAspectRatio:(float)preferredAspectRatio enableHighBitrateVideoCalls:(bool)enableHighBitrateVideoCalls {
+- (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing connections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)connections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath sendSignalingData:(void (^)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer preferredAspectRatio:(float)preferredAspectRatio enableHighBitrateVideoCalls:(bool)enableHighBitrateVideoCalls {
     self = [super init];
     if (self != nil) {
         _version = version;
@@ -324,12 +325,12 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         _sendSignalingData = [sendSignalingData copy];
         _videoCapturer = videoCapturer;
         if (videoCapturer != nil) {
-            _videoState = OngoingCallVideoStateOutgoingRequested;
-            _remoteVideoState = OngoingCallRemoteVideoStateActive;
+            _videoState = OngoingCallVideoStateActive;
         } else {
-            _videoState = OngoingCallVideoStatePossible;
-            _remoteVideoState = OngoingCallRemoteVideoStateActive;
+            _videoState = OngoingCallVideoStateInactive;
         }
+        _remoteVideoState = OngoingCallRemoteVideoStateInactive;
+        _remoteAudioState = OngoingCallRemoteAudioStateActive;
         
         _remoteVideoOrientation = OngoingCallVideoOrientation0;
         
@@ -346,8 +347,6 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             proxyObject->password = proxy.password.UTF8String ?: "";
             proxyValue = std::unique_ptr<tgcalls::Proxy>(proxyObject);
         }
-        
-        NSArray<OngoingCallConnectionDescriptionWebrtc *> *connections = [@[primaryConnection] arrayByAddingObjectsFromArray:alternativeConnections];
         
         std::vector<tgcalls::RtcServer> parsedRtcServers;
         for (OngoingCallConnectionDescriptionWebrtc *connection in connections) {
@@ -382,7 +381,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .enableNS = true,
             .enableAGC = true,
             .enableCallUpgrade = false,
-            .logPath = logPath.length == 0 ? "" : std::string(logPath.UTF8String),
+            .logPath = "", //logPath.length == 0 ? "" : std::string(logPath.UTF8String),
             .maxApiLayer = [OngoingCallThreadLocalContextWebrtc maxLayer],
             .preferredAspectRatio = preferredAspectRatio,
             .enableHighBitrateVideo = enableHighBitrateVideoCalls
@@ -408,30 +407,11 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .initialNetworkType = callControllerNetworkTypeForType(networkType),
             .encryptionKey = encryptionKey,
             .videoCapture = [_videoCapturer getInterface],
-            .stateUpdated = [weakSelf, queue](tgcalls::State state, tgcalls::VideoState videoState) {
+            .stateUpdated = [weakSelf, queue](tgcalls::State state) {
                 [queue dispatch:^{
                     __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
                     if (strongSelf) {
-                        OngoingCallVideoStateWebrtc mappedVideoState;
-                        switch (videoState) {
-                            case tgcalls::VideoState::Possible:
-                                mappedVideoState = OngoingCallVideoStatePossible;
-                                break;
-                            case tgcalls::VideoState::OutgoingRequested:
-                                mappedVideoState = OngoingCallVideoStateOutgoingRequested;
-                                break;
-                            case tgcalls::VideoState::IncomingRequested:
-                                mappedVideoState = OngoingCallVideoStateIncomingRequested;
-                                break;
-                            case tgcalls::VideoState::IncomingRequestedAndActive:
-                                mappedVideoState = OngoingCallVideoStateIncomingRequestedAndActive;
-                                break;
-                            case tgcalls::VideoState::Active:
-                                mappedVideoState = OngoingCallVideoStateActive;
-                                break;
-                        }
-                        
-                        [strongSelf controllerStateChanged:state videoState:mappedVideoState];
+                        [strongSelf controllerStateChanged:state];
                     }
                 }];
             },
@@ -446,20 +426,42 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                     }
                 }];
             },
-            .remoteVideoIsActiveUpdated = [weakSelf, queue](bool isActive) {
+            .remoteMediaStateUpdated = [weakSelf, queue](tgcalls::AudioState audioState, tgcalls::VideoState videoState) {
                 [queue dispatch:^{
                     __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
                     if (strongSelf) {
+                        OngoingCallRemoteAudioStateWebrtc remoteAudioState;
                         OngoingCallRemoteVideoStateWebrtc remoteVideoState;
-                        if (isActive) {
-                            remoteVideoState = OngoingCallRemoteVideoStateActive;
-                        } else {
-                            remoteVideoState = OngoingCallRemoteVideoStateInactive;
+                        switch (audioState) {
+                            case tgcalls::AudioState::Muted:
+                                remoteAudioState = OngoingCallRemoteAudioStateMuted;
+                                break;
+                            case tgcalls::AudioState::Active:
+                                remoteAudioState = OngoingCallRemoteAudioStateActive;
+                                break;
+                            default:
+                                remoteAudioState = OngoingCallRemoteAudioStateMuted;
+                                break;
                         }
-                        if (strongSelf->_remoteVideoState != remoteVideoState) {
+                        switch (videoState) {
+                            case tgcalls::VideoState::Inactive:
+                                remoteVideoState = OngoingCallRemoteVideoStateInactive;
+                                break;
+                            case tgcalls::VideoState::Paused:
+                                remoteVideoState = OngoingCallRemoteVideoStatePaused;
+                                break;
+                            case tgcalls::VideoState::Active:
+                                remoteVideoState = OngoingCallRemoteVideoStateActive;
+                                break;
+                            default:
+                                remoteVideoState = OngoingCallRemoteVideoStateInactive;
+                                break;
+                        }
+                        if (strongSelf->_remoteVideoState != remoteVideoState || strongSelf->_remoteAudioState != remoteAudioState) {
                             strongSelf->_remoteVideoState = remoteVideoState;
+                            strongSelf->_remoteAudioState = remoteAudioState;
                             if (strongSelf->_stateChanged) {
-                                strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remoteBatteryLevel, strongSelf->_remotePreferredAspectRatio);
+                                strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remoteAudioState, strongSelf->_remoteBatteryLevel, strongSelf->_remotePreferredAspectRatio);
                             }
                         }
                     }
@@ -478,7 +480,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                         if (strongSelf->_remoteBatteryLevel != remoteBatteryLevel) {
                             strongSelf->_remoteBatteryLevel = remoteBatteryLevel;
                             if (strongSelf->_stateChanged) {
-                                strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remoteBatteryLevel, strongSelf->_remotePreferredAspectRatio);
+                                strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remoteAudioState, strongSelf->_remoteBatteryLevel, strongSelf->_remotePreferredAspectRatio);
                             }
                         }
                     }
@@ -490,7 +492,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                     if (strongSelf) {
                         strongSelf->_remotePreferredAspectRatio = value;
                         if (strongSelf->_stateChanged) {
-                            strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remoteBatteryLevel, strongSelf->_remotePreferredAspectRatio);
+                            strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remoteAudioState, strongSelf->_remoteBatteryLevel, strongSelf->_remotePreferredAspectRatio);
                         }
                     }
                 }];
@@ -507,7 +509,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         });
         
         _state = OngoingCallStateInitializing;
-        _signalBars = -1;
+        _signalBars = 4;
     }
     return self;
 }
@@ -581,7 +583,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
-- (void)controllerStateChanged:(tgcalls::State)state videoState:(OngoingCallVideoStateWebrtc)videoState {
+- (void)controllerStateChanged:(tgcalls::State)state {
     OngoingCallStateWebrtc callState = OngoingCallStateInitializing;
     switch (state) {
         case tgcalls::State::Established:
@@ -597,12 +599,11 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             break;
     }
     
-    if (_state != callState || _videoState != videoState) {
+    if (_state != callState) {
         _state = callState;
-        _videoState = videoState;
         
         if (_stateChanged) {
-            _stateChanged(_state, _videoState, _remoteVideoState, _remoteBatteryLevel, _remotePreferredAspectRatio);
+            _stateChanged(_state, _videoState, _remoteVideoState, _remoteAudioState, _remoteBatteryLevel, _remotePreferredAspectRatio);
         }
     }
 }
@@ -654,7 +655,11 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         dispatch_async(dispatch_get_main_queue(), ^{
             if ([VideoMetalView isSupported]) {
                 VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
-                remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFit;
+                #if TARGET_OS_IPHONE
+                remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+                #else
+                remoteRenderer.videoContentMode = UIViewContentModeScaleAspect;
+                #endif
                 
                 std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
                 __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
@@ -685,15 +690,29 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 - (void)requestVideo:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer {
     if (_tgVoip && _videoCapturer == nil) {
         _videoCapturer = videoCapturer;
-        _tgVoip->requestVideo([_videoCapturer getInterface]);
+        _tgVoip->setVideoCapture([_videoCapturer getInterface]);
+        
+        _videoState = OngoingCallVideoStateActive;
+        if (_stateChanged) {
+            _stateChanged(_state, _videoState, _remoteVideoState, _remoteAudioState, _remoteBatteryLevel, _remotePreferredAspectRatio);
+        }
     }
 }
 
-- (void)acceptVideo:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer {
-    if (_tgVoip && _videoCapturer == nil) {
-        _videoCapturer = videoCapturer;
-        _tgVoip->requestVideo([_videoCapturer getInterface]);
+- (void)disableVideo {
+    if (_tgVoip) {
+        _videoCapturer = nil;
+        _tgVoip->setVideoCapture(nullptr);
+        
+        _videoState = OngoingCallVideoStateInactive;
+        if (_stateChanged) {
+            _stateChanged(_state, _videoState, _remoteVideoState, _remoteAudioState, _remoteBatteryLevel, _remotePreferredAspectRatio);
+        }
     }
+}
+
+- (void)remotePrefferedAspectRatioUpdated:(float)remotePrefferedAspectRatio {
+    
 }
 
 @end
