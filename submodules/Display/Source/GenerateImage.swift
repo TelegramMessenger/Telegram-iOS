@@ -396,8 +396,6 @@ public func generateGradientImage(size: CGSize, colors: [UIColor], locations: [C
         let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
         
         context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
-        
-        context.restoreGState()
     }
     
     let image = UIGraphicsGetImageFromCurrentImageContext()!

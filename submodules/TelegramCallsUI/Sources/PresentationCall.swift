@@ -295,7 +295,7 @@ public final class PresentationCallImpl: PresentationCall {
         self.enableHighBitrateVideoCalls = enableHighBitrateVideoCalls
         if self.isVideo {
             self.videoCapturer = OngoingCallVideoCapturer()
-            self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: .active, remoteVideoState: .inactive, remoteAudioState: .active, remoteBatteryLevel: .normal))
+            self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: .active, remoteVideoState: .active, remoteAudioState: .active, remoteBatteryLevel: .normal))
         } else {
             self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: self.isVideoPossible ? .inactive : .notAvailable, remoteVideoState: .inactive, remoteAudioState: .active, remoteBatteryLevel: .normal))
         }
@@ -511,7 +511,11 @@ public final class PresentationCallImpl: PresentationCall {
                     mappedVideoState = .notAvailable
                 }
             }
-            mappedRemoteVideoState = .inactive
+            if let previousRemoteVideoState = self.previousRemoteVideoState {
+                mappedRemoteVideoState = previousRemoteVideoState
+            } else {
+                mappedRemoteVideoState = self.isVideo ? .active : .inactive
+            }
             if let previousRemoteAudioState = self.previousRemoteAudioState {
                 mappedRemoteAudioState = previousRemoteAudioState
             } else {
@@ -555,9 +559,9 @@ public final class PresentationCallImpl: PresentationCall {
                 self.callWasActive = true
                 presentationState = PresentationCallState(state: .connecting(nil), videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState, remoteAudioState: mappedRemoteAudioState, remoteBatteryLevel: mappedRemoteBatteryLevel)
             case .dropping:
-                presentationState = PresentationCallState(state: .terminating, videoState: mappedVideoState, remoteVideoState: .inactive, remoteAudioState: mappedRemoteAudioState, remoteBatteryLevel: mappedRemoteBatteryLevel)
+                presentationState = PresentationCallState(state: .terminating, videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState, remoteAudioState: mappedRemoteAudioState, remoteBatteryLevel: mappedRemoteBatteryLevel)
             case let .terminated(id, reason, options):
-                presentationState = PresentationCallState(state: .terminated(id, reason, self.callWasActive && (options.contains(.reportRating) || self.shouldPresentCallRating)), videoState: mappedVideoState, remoteVideoState: .inactive, remoteAudioState: mappedRemoteAudioState, remoteBatteryLevel: mappedRemoteBatteryLevel)
+                presentationState = PresentationCallState(state: .terminated(id, reason, self.callWasActive && (options.contains(.reportRating) || self.shouldPresentCallRating)), videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState, remoteAudioState: mappedRemoteAudioState, remoteBatteryLevel: mappedRemoteBatteryLevel)
             case let .requesting(ringing):
                 presentationState = PresentationCallState(state: .requesting(ringing), videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState, remoteAudioState: mappedRemoteAudioState, remoteBatteryLevel: mappedRemoteBatteryLevel)
             case let .active(_, _, keyVisualHash, _, _, _, _):
