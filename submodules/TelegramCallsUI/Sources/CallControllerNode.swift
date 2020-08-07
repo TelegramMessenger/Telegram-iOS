@@ -654,9 +654,11 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                             strongSelf.incomingVideoNodeValue = incomingVideoNode
                             if let expandedVideoNode = strongSelf.expandedVideoNode {
                                 strongSelf.minimizedVideoNode = expandedVideoNode
+                                strongSelf.containerNode.insertSubnode(incomingVideoNode, belowSubnode: expandedVideoNode)
+                            } else {
+                                strongSelf.containerNode.insertSubnode(incomingVideoNode, belowSubnode: strongSelf.dimNode)
                             }
                             strongSelf.expandedVideoNode = incomingVideoNode
-                            strongSelf.containerNode.insertSubnode(incomingVideoNode, belowSubnode: strongSelf.dimNode)
                             strongSelf.updateButtonsMode(transition: .animated(duration: 0.4, curve: .spring))
                         }
                         
