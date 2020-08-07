@@ -1226,6 +1226,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         } else {
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             let _ = (context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
+                                return (transaction.getPeer(peerId), currentPeerId.flatMap(transaction.getPeer))
+                            } |> deliverOnMainQueue).start(next: { [weak self] peer, current in
+                                if let peer = peer {
+                                    if let strongSelf = self, let current = current {
+                                        strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                                            if let strongSelf = self {
+                                                let _ = strongSelf.context.sharedContext.callManager?.requestCall(context: context, peerId: peerId, isVideo: isVideo, endCurrentIfAny: true)
+                                            }
+                                        })]), in: .window(.root))
+                                    } else {
+                                        strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_ExternalCallInProgressMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                                        })]), in: .window(.root))
+                                    }
+                                }
+                            })
+                            
+                            /*let _ = (context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
                                 return (transaction.getPeer(peer.id), transaction.getPeer(currentPeerId))
                             }
                             |> deliverOnMainQueue).start(next: { peer, current in
@@ -1234,7 +1251,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         let _ = context.sharedContext.callManager?.requestCall(context: context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
                                     })]), in: .window(.root))
                                 }
-                            })
+                            })*/
                         }
                     }
                 })

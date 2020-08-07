@@ -15,12 +15,12 @@ enum CallControllerButtonsSpeakerMode {
 }
 
 enum CallControllerButtonsMode: Equatable {
-    enum VideoState: Equatable {
-        case notAvailable
-        case possible(isEnabled: Bool, isInitializing: Bool)
-        case outgoingRequested(isInitializing: Bool)
-        case incomingRequested(sendsVideo: Bool)
-        case active
+    struct VideoState: Equatable {
+        var isAvailable: Bool
+        var isCameraActive: Bool
+        var canChangeStatus: Bool
+        var hasVideo: Bool
+        var isInitializingCamera: Bool
     }
     
     case active(speakerMode: CallControllerButtonsSpeakerMode, videoState: VideoState)
@@ -88,7 +88,6 @@ final class CallControllerButtonsNode: ASDisplayNode {
     private var validLayout: (CGFloat, CGFloat)?
     
     var isMuted = false
-    var isCameraPaused = false
     
     var acceptOrEnd: (() -> Void)?
     var decline: (() -> Void)?
@@ -179,16 +178,8 @@ final class CallControllerButtonsNode: ASDisplayNode {
         case .outgoingRinging:
             mappedState = .outgoingRinging
         case let .active(_, videoStateValue):
-            switch videoStateValue {
-            case let .incomingRequested(sendsVideo):
-                mappedState = .active
-                videoState = .incomingRequested(sendsVideo: sendsVideo)
-            case let .outgoingRequested(isInitializing):
-                mappedState = .active
-                videoState = .outgoingRequested(isInitializing: isInitializing)
-            case .active, .possible, .notAvailable:
-                mappedState = .active
-            }
+            mappedState = .active
+            videoState = videoStateValue
         }
         
         var buttons: [PlacedButton] = []
@@ -209,28 +200,27 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 soundOutput = .bluetooth
             }
             
-            switch videoState {
-            case .active, .possible, .incomingRequested, .outgoingRequested:
+            if videoState.isAvailable {
                 let isCameraActive: Bool
                 let isCameraEnabled: Bool
                 let isCameraInitializing: Bool
-                if case let .possible(value, isInitializing) = videoState {
-                    isCameraActive = false
-                    isCameraEnabled = value
-                    isCameraInitializing = isInitializing
+                if videoState.hasVideo {
+                    isCameraActive = videoState.isCameraActive
+                    isCameraEnabled = videoState.canChangeStatus
+                    isCameraInitializing = videoState.isInitializingCamera
                 } else {
-                    isCameraActive = !self.isCameraPaused
-                    isCameraEnabled = true
-                    isCameraInitializing = false
+                    isCameraActive = false
+                    isCameraEnabled = videoState.canChangeStatus
+                    isCameraInitializing = videoState.isInitializingCamera
                 }
                 topButtons.append(.enableCamera(isCameraActive, isCameraEnabled, isCameraInitializing))
                 topButtons.append(.mute(self.isMuted))
-                if case .possible = videoState {
-                    topButtons.append(.soundOutput(soundOutput))
-                } else {
+                if videoState.hasVideo {
                     topButtons.append(.switchCamera)
+                } else {
+                    topButtons.append(.soundOutput(soundOutput))
                 }
-            case .notAvailable:
+            } else {
                 topButtons.append(.mute(self.isMuted))
                 topButtons.append(.soundOutput(soundOutput))
             }
@@ -264,23 +254,18 @@ final class CallControllerButtonsNode: ASDisplayNode {
             
             height = largeButtonSize + topBottomSpacing + largeButtonSize + max(bottomInset + 32.0, 46.0)
         case .active:
-            switch videoState {
-            case .active, .incomingRequested, .outgoingRequested:
+            if videoState.hasVideo {
                 let isCameraActive: Bool
                 let isCameraEnabled: Bool
-                var isCameraInitializing: Bool
-                if case .incomingRequested = videoState {
-                    isCameraActive = false
-                    isCameraEnabled = true
-                    isCameraInitializing = false
-                } else if case let .possible(value, isInitializing) = videoState {
-                    isCameraActive = false
-                    isCameraEnabled = value
-                    isCameraInitializing = isInitializing
+                let isCameraInitializing: Bool
+                if videoState.hasVideo {
+                    isCameraActive = videoState.isCameraActive
+                    isCameraEnabled = videoState.canChangeStatus
+                    isCameraInitializing = videoState.isInitializingCamera
                 } else {
-                    isCameraActive = !self.isCameraPaused
-                    isCameraEnabled = true
-                    isCameraInitializing = false
+                    isCameraActive = false
+                    isCameraEnabled = videoState.canChangeStatus
+                    isCameraInitializing = videoState.isInitializingCamera
                 }
                 
                 var topButtons: [ButtonDescription] = []
@@ -295,10 +280,6 @@ final class CallControllerButtonsNode: ASDisplayNode {
                     soundOutput = .builtin
                 case .bluetooth:
                     soundOutput = .bluetooth
-                }
-                
-                if case let .outgoingRequested(isInitializing) = videoState {
-                    isCameraInitializing = isInitializing
                 }
                 
                 topButtons.append(.enableCamera(isCameraActive, isCameraEnabled, isCameraInitializing))
@@ -317,21 +298,21 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 }
                 
                 height = smallButtonSize + max(bottomInset + 19.0, 46.0)
-            case .notAvailable, .possible:
+            } else {
                 var topButtons: [ButtonDescription] = []
                 var bottomButtons: [ButtonDescription] = []
                 
                 let isCameraActive: Bool
                 let isCameraEnabled: Bool
-                var isCameraInitializing: Bool
-                if case let .possible(value, isInitializing) = videoState {
-                    isCameraActive = false
-                    isCameraEnabled = value
-                    isCameraInitializing = isInitializing
+                let isCameraInitializing: Bool
+                if videoState.hasVideo {
+                    isCameraActive = videoState.isCameraActive
+                    isCameraEnabled = videoState.canChangeStatus
+                    isCameraInitializing = videoState.isInitializingCamera
                 } else {
                     isCameraActive = false
-                    isCameraEnabled = true
-                    isCameraInitializing = false
+                    isCameraEnabled = videoState.canChangeStatus
+                    isCameraInitializing = videoState.isInitializingCamera
                 }
                 
                 let soundOutput: ButtonDescription.SoundOutput

@@ -10,6 +10,7 @@ import TelegramAudio
 import TelegramVoip
 import TelegramUIPreferences
 import AccountContext
+import CallKit
 
 private func callKitIntegrationIfEnabled(_ integration: CallKitIntegration?, settings: VoiceCallSettings?) -> CallKitIntegration?  {
     let enabled = settings?.enableSystemIntegration ?? true
@@ -341,9 +342,23 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
     
     public func requestCall(context: AccountContext, peerId: PeerId, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult {
         let account = context.account
+
+        var alreadyInCall: Bool = false
+        var alreadyInCallWithPeerId: PeerId?
         
-        if let call = self.currentCall, !endCurrentIfAny {
-            return .alreadyInProgress(call.peerId)
+        if let call = self.currentCall {
+            alreadyInCall = true
+            alreadyInCallWithPeerId = call.peerId
+        } else {
+            if #available(iOS 10.0, *) {
+                if CXCallObserver().calls.contains(where: { $0.hasEnded == false }) {
+                    alreadyInCall = true
+                }
+            }
+        }
+        
+        if alreadyInCall, !endCurrentIfAny {
+            return .alreadyInProgress(alreadyInCallWithPeerId)
         }
         if let _ = callKitIntegrationIfEnabled(self.callKitIntegration, settings: self.callSettings) {
             let begin: () -> Void = { [weak self] in
@@ -460,12 +475,12 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 return .single(false)
             }
             
-            let request = account.postbox.transaction { transaction -> VideoCallsConfiguration in
+            let request = account.postbox.transaction { transaction -> (VideoCallsConfiguration, CachedUserData?) in
                 let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration) as? AppConfiguration ?? AppConfiguration.defaultValue
-                return VideoCallsConfiguration(appConfiguration: appConfiguration)
+                return (VideoCallsConfiguration(appConfiguration: appConfiguration), transaction.getPeerCachedData(peerId: peerId) as? CachedUserData)
             }
-            |> mapToSignal { callsConfiguration -> Signal<CallSessionInternalId, NoError> in
-                let isVideoPossible: Bool
+            |> mapToSignal { callsConfiguration, cachedUserData -> Signal<CallSessionInternalId, NoError> in
+                var isVideoPossible: Bool
                 switch callsConfiguration.videoCallsSupport {
                 case .disabled:
                     isVideoPossible = isVideo
@@ -474,15 +489,23 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 case .onlyVideo:
                     isVideoPossible = isVideo
                 }
+                if let cachedUserData = cachedUserData, cachedUserData.videoCallsAvailable {
+                } else {
+                    isVideoPossible = false
+                }
                 
                 return account.callSessionManager.request(peerId: peerId, isVideo: isVideo, enableVideo: isVideoPossible, internalId: internalId)
             }
             
+            let cachedUserData = account.postbox.transaction { transaction -> CachedUserData? in
+                return transaction.getPeerCachedData(peerId: peerId) as? CachedUserData
+            }
+            
             return (combineLatest(queue: .mainQueue(), request, networkType |> take(1), account.postbox.peerView(id: peerId) |> map { peerView -> Bool in
                 return peerView.peerIsContact
-            } |> take(1), account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState, PreferencesKeys.appConfiguration]) |> take(1), accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings]) |> take(1))
+            } |> take(1), account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, ApplicationSpecificPreferencesKeys.voipDerivedState, PreferencesKeys.appConfiguration]) |> take(1), accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings]) |> take(1), cachedUserData)
             |> deliverOnMainQueue
-            |> beforeNext { internalId, currentNetworkType, isContact, preferences, sharedData in
+            |> beforeNext { internalId, currentNetworkType, isContact, preferences, sharedData, cachedUserData in
                 if let strongSelf = self, accessEnabled {
                     if let currentCall = strongSelf.currentCall {
                         currentCall.rejectBusy()
@@ -494,7 +517,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     let appConfiguration = preferences.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? AppConfiguration.defaultValue
                     
                     let callsConfiguration = VideoCallsConfiguration(appConfiguration: appConfiguration)
-                    let isVideoPossible: Bool
+                    var isVideoPossible: Bool
                     switch callsConfiguration.videoCallsSupport {
                     case .disabled:
                         isVideoPossible = isVideo
@@ -502,6 +525,10 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         isVideoPossible = true
                     case .onlyVideo:
                         isVideoPossible = isVideo
+                    }
+                    if let cachedUserData = cachedUserData, cachedUserData.videoCallsAvailable {
+                    } else {
+                        isVideoPossible = false
                     }
                     
                     let experimentalSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings ?? .defaultSettings

@@ -215,7 +215,9 @@
 "PUSH_AUTH_REGION" = "New login|from unrecognized device %1$@, location: %2$@";
 
 "PUSH_PHONE_CALL_REQUEST" = "%1$@|is calling you!";
+"PUSH_VIDEO_CALL_REQUEST" = "%1$@|is calling you!";
 "PUSH_PHONE_CALL_MISSED" = "%1$@|You missed a call";
+"PUSH_VIDEO_CALL_MISSED" = "%1$@|You missed a video call";
 
 "PUSH_MESSAGE_GAME_SCORE" = "%1$@ scored %3$@ in game %2$@";
 "PUSH_MESSAGE_VIDEOS" = "%1$@ sent you %2$@ videos";
@@ -2472,6 +2474,7 @@ Unused sets are archived when you add more.";
 
 "Call.CallInProgressTitle" = "Call in Progress";
 "Call.CallInProgressMessage" = "Finish call with %1$@ and start a new one with %2$@?";
+"Call.ExternalCallInProgressMessage" = "Please finish the current call first.";
 
 "Call.Message" = "Message";
 

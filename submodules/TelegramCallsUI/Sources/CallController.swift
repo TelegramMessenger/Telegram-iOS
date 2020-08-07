@@ -22,7 +22,6 @@ protocol CallControllerNodeProtocol: class {
     var beginAudioOuputSelection: (() -> Void)? { get set }
     var acceptCall: (() -> Void)? { get set }
     var endCall: (() -> Void)? { get set }
-    var setIsVideoPaused: ((Bool) -> Void)? { get set }
     var back: (() -> Void)? { get set }
     var presentCallRating: ((CallId) -> Void)? { get set }
     var callEnded: ((Bool) -> Void)? { get set }
@@ -205,10 +204,6 @@ public final class CallController: ViewController {
         
         self.controllerNode.endCall = { [weak self] in
             let _ = self?.call.hangUp()
-        }
-        
-        self.controllerNode.setIsVideoPaused = { [weak self] isPaused in
-            self?.call.setOutgoingVideoIsPaused(isPaused)
         }
         
         self.controllerNode.back = { [weak self] in

@@ -3158,7 +3158,25 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             if currentPeerId == peer.id {
                 self.context.sharedContext.navigateToCurrentCall()
             } else {
+                let presentationData = self.presentationData
                 let _ = (self.context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
+                    return (transaction.getPeer(peer.id), currentPeerId.flatMap(transaction.getPeer))
+                } |> deliverOnMainQueue).start(next: { [weak self] peer, current in
+                    if let peer = peer {
+                        if let strongSelf = self, let current = current {
+                            strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                                if let strongSelf = self {
+                                    let _ = strongSelf.context.sharedContext.callManager?.requestCall(context: strongSelf.context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
+                                }
+                            })]), in: .window(.root))
+                        } else if let strongSelf = self {
+                            strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_ExternalCallInProgressMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                            })]), in: .window(.root))
+                        }
+                    }
+                })
+                
+                /*let _ = (self.context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
                     return (transaction.getPeer(peer.id), transaction.getPeer(currentPeerId))
                 }
                 |> deliverOnMainQueue).start(next: { [weak self] peer, current in
@@ -3173,7 +3191,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             let _ = strongSelf.context.sharedContext.callManager?.requestCall(context: strongSelf.context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
                         })]), in: .window(.root))
                     }
-                })
+                })*/
             }
         }
     }

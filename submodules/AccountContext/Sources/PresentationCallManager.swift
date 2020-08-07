@@ -8,7 +8,7 @@ import TelegramAudio
 
 public enum RequestCallResult {
     case requested
-    case alreadyInProgress(PeerId)
+    case alreadyInProgress(PeerId?)
 }
 
 public struct CallAuxiliaryServer {
@@ -46,25 +46,32 @@ public struct PresentationCallState: Equatable {
     
     public enum VideoState: Equatable {
         case notAvailable
-        case possible
-        case outgoingRequested
-        case incomingRequested(sendsVideo: Bool)
+        case inactive
         case active
+        case paused
     }
     
     public enum RemoteVideoState: Equatable {
         case inactive
         case active
+        case paused
+    }
+    
+    public enum RemoteAudioState: Equatable {
+        case active
+        case muted
     }
     
     public var state: State
     public var videoState: VideoState
     public var remoteVideoState: RemoteVideoState
+    public var remoteAudioState: RemoteAudioState
     
-    public init(state: State, videoState: VideoState, remoteVideoState: RemoteVideoState) {
+    public init(state: State, videoState: VideoState, remoteVideoState: RemoteVideoState, remoteAudioState: RemoteAudioState) {
         self.state = state
         self.videoState = videoState
         self.remoteVideoState = remoteVideoState
+        self.remoteAudioState = remoteAudioState
     }
 }
 
@@ -123,7 +130,7 @@ public protocol PresentationCall: class {
     func toggleIsMuted()
     func setIsMuted(_ value: Bool)
     func requestVideo()
-    func acceptVideo()
+    func disableVideo()
     func setOutgoingVideoIsPaused(_ isPaused: Bool)
     func switchVideoCamera()
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
