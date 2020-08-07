@@ -909,18 +909,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         self.switchingData = (settingsController as? (ViewController & SettingsController), chatListController as? ChatListController, chatsBadge)
         
-        let _ = self.accountManager.transaction({ transaction -> Bool in
-            if transaction.getCurrent()?.0 != id {
-                transaction.setCurrentId(id)
-                return true
-            } else {
-                return false
-            }
-        }).start(next: { value in
-            if !value {
-                self.switchingData = (nil, nil, nil)
-            }
-        })
+        let _ = self.accountManager.transaction({ transaction in
+            transaction.setCurrentId(id)
+        }).start()
     }
     
     public func navigateToChat(accountId: AccountRecordId, peerId: PeerId, messageId: MessageId?) {
