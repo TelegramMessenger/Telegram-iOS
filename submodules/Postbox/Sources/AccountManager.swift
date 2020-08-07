@@ -61,6 +61,7 @@ final class AccountManagerImpl {
     private var currentUpdatedAccessChallengeData: PostboxAccessChallengeData?
     
     private var recordsViews = Bag<(MutableAccountRecordsView, ValuePipe<AccountRecordsView>)>()
+    private var allRecordsViews = Bag<(MutableAccountRecordsView, ValuePipe<AccountRecordsView>)>()
     
     private var sharedDataViews = Bag<(MutableAccountSharedDataView, ValuePipe<AccountSharedDataView>)>()
     private var noticeEntryViews = Bag<(MutableNoticeEntryView, ValuePipe<NoticeEntryView>)>()
@@ -269,6 +270,12 @@ final class AccountManagerImpl {
                     pipe.putNext(AccountRecordsView(view))
                 }
             }
+            
+            for (view, pipe) in self.allRecordsViews.copyItems() {
+                if view.replay(operations: self.currentRecordOperations, metadataOperations: self.currentMetadataOperations) {
+                    pipe.putNext(AccountRecordsView(view))
+                }
+            }
         }
         
         if !self.currentUpdatedSharedDataKeys.isEmpty {
@@ -314,6 +321,13 @@ final class AccountManagerImpl {
         |> switchToLatest
     }
     
+    fileprivate func allAccountRecords() -> Signal<AccountRecordsView, NoError> {
+        return self.transaction(ignoreDisabled: false, { transaction -> Signal<AccountRecordsView, NoError> in
+            return self.allAccountRecordsInternal(transaction: transaction)
+        })
+        |> switchToLatest
+    }
+    
     fileprivate func sharedData(keys: Set<ValueBoxKey>) -> Signal<AccountSharedDataView, NoError> {
         return self.transaction(ignoreDisabled: false, { transaction -> Signal<AccountSharedDataView, NoError> in
             return self.sharedDataInternal(transaction: transaction, keys: keys)
@@ -333,6 +347,29 @@ final class AccountManagerImpl {
             return self.accessChallengeDataInternal(transaction: transaction)
         })
         |> switchToLatest
+    }
+    
+    private func allAccountRecordsInternal(transaction: AccountManagerModifier) -> Signal<AccountRecordsView, NoError> {
+        assert(self.queue.isCurrent())
+        let mutableView = MutableAccountRecordsView(getRecords: {
+            return self.currentAtomicState.records.map { $0.1 }
+        }, currentId: self.currentAtomicState.currentRecordId, currentAuth: self.currentAtomicState.currentAuthRecord)
+        let pipe = ValuePipe<AccountRecordsView>()
+        let index = self.allRecordsViews.add((mutableView, pipe))
+        
+        let queue = self.queue
+        return (.single(AccountRecordsView(mutableView))
+        |> then(pipe.signal()))
+        |> `catch` { _ -> Signal<AccountRecordsView, NoError> in
+            return .complete()
+        }
+        |> afterDisposed { [weak self] in
+            queue.async {
+                if let strongSelf = self {
+                    strongSelf.allRecordsViews.remove(index)
+                }
+            }
+        }
     }
     
     private func accountRecordsInternal(transaction: AccountManagerModifier) -> Signal<AccountRecordsView, NoError> {
@@ -528,6 +565,20 @@ public final class AccountManager {
             let disposable = MetaDisposable()
             self.impl.with { impl in
                 disposable.set(impl.accountRecords().start(next: { next in
+                    subscriber.putNext(next)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public func allAccountRecords() -> Signal<AccountRecordsView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.allAccountRecords().start(next: { next in
                     subscriber.putNext(next)
                 }, completed: {
                     subscriber.putCompletion()

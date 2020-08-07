@@ -437,7 +437,7 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
                 }
             }
         }).start()
-        let disposable = accountManager.accountRecords().start(next: { view in
+        let disposable = accountManager.allAccountRecords().start(next: { view in
             var disposeList: [(AccountRecordId, MetaDisposable)] = []
             var beginList: [(AccountRecordId, [AccountRecordAttribute], MetaDisposable)] = []
             let _ = loggedOutAccounts.modify { disposables in
