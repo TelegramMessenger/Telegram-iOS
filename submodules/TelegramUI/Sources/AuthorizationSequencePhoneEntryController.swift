@@ -180,30 +180,6 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
                 actions.append(TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {}))
                 self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.Login_PhoneNumberAlreadyAuthorized, actions: actions), in: .window(.root))
             } else {
-                let _ = (sharedContext.accountManager.transaction { transaction -> [AccountRecordId] in
-                    guard let auth = transaction.getCurrentAuth() else { return [] }
-                    
-                    let phoneNumberAttribute = PhoneNumberAccountAttribute(phoneNumber: logInNumber)
-                    transaction.setCurrentAuthAttributes(auth.attributes + [phoneNumberAttribute])
-                    
-                    let idsWithSameNumber = transaction.getAllRecords().filter { record in
-                        for attribute in record.attributes {
-                            if let attribute = attribute as? PhoneNumberAccountAttribute {
-                                return attribute.phoneNumber == logInNumber
-                            }
-                        }
-                        return false
-                    }
-                    .map { $0.id }
-                    
-                    return idsWithSameNumber
-                } |> deliverOnMainQueue).start(next: { [weak self] idsWithSameNumber in
-                    guard let strongSelf = self else { return }
-                    
-                    for id in idsWithSameNumber {
-                        let _ = (logoutFromAccount(id: id, accountManager: strongSelf.sharedContext.accountManager, alreadyLoggedOutRemotely: false) |> deliverOnMainQueue).start()
-                    }
-                })
                 self.loginWithNumber?(self.controllerNode.currentNumber, self.controllerNode.syncContacts)
             }
         } else {
