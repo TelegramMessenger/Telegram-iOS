@@ -1175,11 +1175,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         break
                     }
                 }
-                let shareController = ShareController(context: strongSelf.context, subject: .messages(messages), openStats: { [weak self] in
-                    if let strongSelf = self, let cachedChannelData = strongSelf.peerView?.cachedData as? CachedChannelData {
-                        strongSelf.push(messageStatsController(context: strongSelf.context, messageId: id, cachedPeerData: cachedChannelData))
-                    }
-                }, shares: shares)
+                let shareController = ShareController(context: strongSelf.context, subject: .messages(messages))
                 shareController.dismissed = { shared in
                     if shared {
                         self?.commitPurposefulAction()
