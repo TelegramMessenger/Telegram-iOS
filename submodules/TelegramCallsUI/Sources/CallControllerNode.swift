@@ -925,24 +925,29 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         }
         
         var toastContent: CallControllerToastContent = []
-        if self.hasVideoNodes && [.inactive, .paused].contains(callState.remoteVideoState) {
-            toastContent.insert(.camera)
-        }
-        if case .muted = callState.remoteAudioState {
-            toastContent.insert(.microphone)
+        if callState.state.isOrWasActive {
+            if self.hasVideoNodes && [.inactive, .paused].contains(callState.remoteVideoState) {
+                toastContent.insert(.camera)
+            }
+            if case .muted = callState.remoteAudioState {
+                toastContent.insert(.microphone)
+            }
+            if case .low = callState.remoteBatteryLevel {
+                toastContent.insert(.battery)
+            }
         }
         if self.isMuted, let (availableOutputs, _) = self.audioOutputState, availableOutputs.count > 2 {
             toastContent.insert(.mute)
-        }
-        if case .low = callState.remoteBatteryLevel {
-            toastContent.insert(.battery)
         }
         self.toastContent = toastContent
         
         self.updateButtonsMode()
         self.updateDimVisibility()
         
-        if self.incomingVideoViewRequested && !self.outgoingVideoViewRequested && !self.displayedCameraTooltip {
+        if self.incomingVideoViewRequested && self.outgoingVideoViewRequested {
+            self.displayedCameraTooltip = true
+        }
+        if self.incomingVideoViewRequested && !self.outgoingVideoViewRequested && !self.displayedCameraTooltip && toastContent.isEmpty {
             self.displayedCameraTooltip = true
             Queue.mainQueue().after(2.0) {
                 self.displayCameraTooltip()

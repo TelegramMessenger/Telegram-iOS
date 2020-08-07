@@ -42,6 +42,15 @@ public struct PresentationCallState: Equatable {
         case reconnecting(Double, Int32?, Data)
         case terminating
         case terminated(CallId?, CallSessionTerminationReason?, Bool)
+        
+        public var isOrWasActive: Bool {
+            switch self {
+                case .active, .terminating, .terminated:
+                    return true
+                default:
+                    return false
+            }
+        }
     }
     
     public enum VideoState: Equatable {
