@@ -81,19 +81,21 @@ public struct StoredAccountInfo: Codable {
 public struct StoredAccountInfos: Codable {
     public let proxy: AccountProxyConnection?
     public let accounts: [StoredAccountInfo]
+    public let hiddenNotificationKeys: [String: AccountNotificationKey]?
     
-    public init(proxy: AccountProxyConnection?, accounts: [StoredAccountInfo]) {
+    public init(proxy: AccountProxyConnection?, accounts: [StoredAccountInfo], hiddenNotificationKeys: [String: AccountNotificationKey]?) {
         self.proxy = proxy
         self.accounts = accounts
+        self.hiddenNotificationKeys = hiddenNotificationKeys
     }
 }
 
 public func loadAccountsData(rootPath: String) -> StoredAccountInfos {
     guard let data = try? Data(contentsOf: URL(fileURLWithPath: rootPath + "/accounts-shared-data")) else {
-        return StoredAccountInfos(proxy: nil, accounts: [])
+        return StoredAccountInfos(proxy: nil, accounts: [], hiddenNotificationKeys: nil)
     }
     guard let value = try? JSONDecoder().decode(StoredAccountInfos.self, from: data) else {
-        return StoredAccountInfos(proxy: nil, accounts: [])
+        return StoredAccountInfos(proxy: nil, accounts: [], hiddenNotificationKeys: nil)
     }
     return value
 }

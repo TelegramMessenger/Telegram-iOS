@@ -458,6 +458,46 @@ static void reportMemory() {
             [self completeWithBestAttemptContent];
         }
     } else {
+        int64_t accountId = 0;
+        NSDictionary *decryptedHiddenPayload = decryptedHiddenAccountNotificationPayload(accountInfos.hiddenNotificationKeys, encryptedData, &accountId);
+        
+        if (decryptedHiddenPayload != nil) {
+            NSMutableDictionary *userInfo = nil;
+            if (_bestAttemptContent.userInfo != nil) {
+                userInfo = [[NSMutableDictionary alloc] initWithDictionary:_bestAttemptContent.userInfo];
+            } else {
+                userInfo = [[NSMutableDictionary alloc] init];
+            }
+            userInfo[@"accountId"] = @(accountId);
+            
+            NSString *messageIdString = decryptedHiddenPayload[@"msg_id"];
+            if ([messageIdString isKindOfClass:[NSString class]]) {
+                userInfo[@"msg_id"] = messageIdString;
+            }
+            
+            NSString *fromIdString = decryptedHiddenPayload[@"from_id"];
+            if ([fromIdString isKindOfClass:[NSString class]]) {
+                userInfo[@"from_id"] = fromIdString;
+            }
+            
+            NSString *chatIdString = decryptedHiddenPayload[@"chat_id"];
+            if ([chatIdString isKindOfClass:[NSString class]]) {
+                userInfo[@"chat_id"] = chatIdString;
+            }
+            
+            NSString *channelIdString = decryptedHiddenPayload[@"channel_id"];
+            if ([channelIdString isKindOfClass:[NSString class]]) {
+                userInfo[@"channel_id"] = channelIdString;
+            }
+            
+            NSString *encryptionIdString = decryptedHiddenPayload[@"encryption_id"];
+            if ([encryptionIdString isKindOfClass:[NSString class]]) {
+                userInfo[@"encryption_id"] = encryptionIdString;
+            }
+            
+            _bestAttemptContent.userInfo = userInfo;
+        }
+        
         [self completeWithBestAttemptContent];
     }
 }

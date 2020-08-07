@@ -4,6 +4,7 @@ import TelegramCore
 import SyncCore
 import Postbox
 import LightweightAccountData
+import BuildConfig
 
 private func accountInfo(account: Account) -> Signal<StoredAccountInfo, NoError> {
     let peerName = account.postbox.transaction { transaction -> String in
@@ -59,10 +60,39 @@ func sharedAccountInfos(accountManager: AccountManager, accounts: Signal<[Accoun
             }
             return AccountProxyConnection(host: proxyServer.host, port: proxyServer.port, username: username, password: password, secret: secret)
         }
+
+        var rootPath: String?
+        var encryptionParameters: ValueBoxEncryptionParameters?
         
-        return combineLatest(accounts.map(accountInfo))
-        |> map { infos -> StoredAccountInfos in
-            return StoredAccountInfos(proxy: proxy, accounts: infos)
+        let baseAppBundleId = Bundle.main.bundleIdentifier!
+        let appGroupName = "group.\(baseAppBundleId)"
+        let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
+        if let appGroupUrl = maybeAppGroupUrl {
+            rootPath = rootPathForBasePath(appGroupUrl.path)
+            let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath!, baseAppBundleId: baseAppBundleId)
+            encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
+        }
+        
+        let hiddenNotificationKeys = accountManager.transaction({ transaction -> [AccountRecordId] in
+            return transaction.getAllRecords()
+                .filter { $0.attributes.contains(where: { $0 is HiddenAccountAttribute }) }
+                .map { $0.id }
+        }) |> mapToSignal { hiddenAccountIds in
+            return combineLatest(hiddenAccountIds.compactMap { id -> Signal<(String, AccountNotificationKey)?, NoError>? in
+                guard let rootPath = rootPath, let encryptionParameters = encryptionParameters else { return nil }
+                
+                return masterNotificationsKey(rootPath: rootPath, id: id, encryptionParameters: encryptionParameters)
+                |> map { key in
+                    guard let key = key else { return nil }
+                    
+                    return ("\(id.int64)", AccountNotificationKey(id: key.id, data: key.data))
+                }
+            })
+        } |> take(1)
+        
+        return combineLatest(combineLatest(accounts.map(accountInfo)), hiddenNotificationKeys)
+        |> map { infos, hiddenNotificationKeys -> StoredAccountInfos in
+            return StoredAccountInfos(proxy: proxy, accounts: infos, hiddenNotificationKeys: Dictionary(uniqueKeysWithValues: hiddenNotificationKeys.compactMap { $0 }))
         }
     }
 }
