@@ -556,7 +556,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         if self.outgoingVideoNodeValue != nil || self.incomingVideoNodeValue != nil || self.candidateOutgoingVideoNodeValue != nil || self.candidateIncomingVideoNodeValue != nil {
             if let audioOutputState = self.audioOutputState, let currentOutput = audioOutputState.currentOutput {
                 switch currentOutput {
-                case .headphones:
+                case .headphones, .speaker:
                     break
                 case let .port(port) where port.type == .bluetooth:
                     break
