@@ -74,6 +74,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSaving) {
 - (NSData * _Nonnull)getDerivedState;
 
 - (void)setIsMuted:(bool)isMuted;
+- (void)setIsLowBatteryLevel:(bool)isLowBatteryLevel;
 - (void)setNetworkType:(OngoingCallNetworkType)networkType;
 
 @end

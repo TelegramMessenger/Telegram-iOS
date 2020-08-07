@@ -15,7 +15,7 @@
 #import "platform/darwin/VideoMetalViewMac.h"
 #define GLVideoView VideoMetalView
 #define UIViewContentModeScaleAspectFill kCAGravityResizeAspectFill
-#define UIViewContentModeScaleAspect kCAGravityResizeAspect
+#define UIViewContentModeScaleAspectFit kCAGravityResizeAspect
 
 #else
 #import "platform/darwin/VideoMetalView.h"
@@ -212,6 +212,7 @@
     OngoingCallStateWebrtc _state;
     OngoingCallVideoStateWebrtc _videoState;
     bool _connectedOnce;
+    OngoingCallRemoteBatteryLevelWebrtc _remoteBatteryLevel;
     OngoingCallRemoteVideoStateWebrtc _remoteVideoState;
     OngoingCallRemoteAudioStateWebrtc _remoteAudioState;
     OngoingCallVideoOrientationWebrtc _remoteVideoOrientation;
@@ -460,7 +461,26 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                             strongSelf->_remoteVideoState = remoteVideoState;
                             strongSelf->_remoteAudioState = remoteAudioState;
                             if (strongSelf->_stateChanged) {
-                                strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remoteAudioState, strongSelf->_remotePreferredAspectRatio);
+                                strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remoteAudioState, strongSelf->_remoteBatteryLevel, strongSelf->_remotePreferredAspectRatio);
+                            }
+                        }
+                    }
+                }];
+            },
+            .remoteBatteryLevelIsLowUpdated = [weakSelf, queue](bool isLow) {
+                [queue dispatch:^{
+                    __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
+                    if (strongSelf) {
+                        OngoingCallRemoteBatteryLevelWebrtc remoteBatteryLevel;
+                        if (isLow) {
+                            remoteBatteryLevel = OngoingCallRemoteBatteryLevelLow;
+                        } else {
+                            remoteBatteryLevel = OngoingCallRemoteBatteryLevelNormal;
+                        }
+                        if (strongSelf->_remoteBatteryLevel != remoteBatteryLevel) {
+                            strongSelf->_remoteBatteryLevel = remoteBatteryLevel;
+                            if (strongSelf->_stateChanged) {
+                                strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remoteAudioState, strongSelf->_remoteBatteryLevel, strongSelf->_remotePreferredAspectRatio);
                             }
                         }
                     }
@@ -472,7 +492,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                     if (strongSelf) {
                         strongSelf->_remotePreferredAspectRatio = value;
                         if (strongSelf->_stateChanged) {
-                            strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remoteAudioState, strongSelf->_remotePreferredAspectRatio);
+                            strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remoteAudioState, strongSelf->_remoteBatteryLevel, strongSelf->_remotePreferredAspectRatio);
                         }
                     }
                 }];
@@ -583,7 +603,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         _state = callState;
         
         if (_stateChanged) {
-            _stateChanged(_state, _videoState, _remoteVideoState, _remoteAudioState, _remotePreferredAspectRatio);
+            _stateChanged(_state, _videoState, _remoteVideoState, _remoteAudioState, _remoteBatteryLevel, _remotePreferredAspectRatio);
         }
     }
 }
@@ -674,7 +694,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         
         _videoState = OngoingCallVideoStateActive;
         if (_stateChanged) {
-            _stateChanged(_state, _videoState, _remoteVideoState, _remoteAudioState, _remotePreferredAspectRatio);
+            _stateChanged(_state, _videoState, _remoteVideoState, _remoteAudioState, _remoteBatteryLevel, _remotePreferredAspectRatio);
         }
     }
 }
@@ -686,7 +706,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         
         _videoState = OngoingCallVideoStateInactive;
         if (_stateChanged) {
-            _stateChanged(_state, _videoState, _remoteVideoState, _remoteAudioState, _remotePreferredAspectRatio);
+            _stateChanged(_state, _videoState, _remoteVideoState, _remoteAudioState, _remoteBatteryLevel, _remotePreferredAspectRatio);
         }
     }
 }

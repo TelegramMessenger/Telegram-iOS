@@ -124,10 +124,16 @@ public struct OngoingCallContextState: Equatable {
         case muted
     }
     
+    public enum RemoteBatteryLevel: Equatable {
+        case normal
+        case low
+    }
+    
     public let state: State
     public let videoState: VideoState
     public let remoteVideoState: RemoteVideoState
     public let remoteAudioState: RemoteAudioState
+    public let remoteBatteryLevel: RemoteBatteryLevel
 }
 
 private final class OngoingCallThreadLocalContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueue, OngoingCallThreadLocalContextQueueWebrtc /*, OngoingCallThreadLocalContextQueueWebrtcCustom*/ {
@@ -586,7 +592,7 @@ public final class OngoingCallContext {
                     }, videoCapturer: video?.impl, preferredAspectRatio: Float(preferredAspectRatio), enableHighBitrateVideoCalls: enableHighBitrateVideoCalls)
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
-                    context.stateChanged = { [weak callSessionManager] state, videoState, remoteVideoState, remoteAudioState, _ in
+                    context.stateChanged = { [weak callSessionManager] state, videoState, remoteVideoState, remoteAudioState, remoteBatteryLevel, _ in
                         queue.async {
                             guard let strongSelf = self else {
                                 return
@@ -623,11 +629,20 @@ public final class OngoingCallContext {
                             @unknown default:
                                 mappedRemoteAudioState = .active
                             }
+                            let mappedRemoteBatteryLevel: OngoingCallContextState.RemoteBatteryLevel
+                            switch remoteBatteryLevel {
+                            case .normal:
+                                mappedRemoteBatteryLevel = .normal
+                            case .low:
+                                mappedRemoteBatteryLevel = .low
+                            @unknown default:
+                                mappedRemoteBatteryLevel = .normal
+                            }
                             if case .active = mappedVideoState, !strongSelf.didReportCallAsVideo {
                                 strongSelf.didReportCallAsVideo = true
                                 callSessionManager?.updateCallType(internalId: internalId, type: .video)
                             }
-                            strongSelf.contextState.set(.single(OngoingCallContextState(state: mappedState, videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState, remoteAudioState: mappedRemoteAudioState)))
+                            strongSelf.contextState.set(.single(OngoingCallContextState(state: mappedState, videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState, remoteAudioState: mappedRemoteAudioState, remoteBatteryLevel: mappedRemoteBatteryLevel)))
                         }
                     }
                     strongSelf.receptionPromise.set(.single(4))
@@ -655,7 +670,7 @@ public final class OngoingCallContext {
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
                     context.stateChanged = { state in
-                        self?.contextState.set(.single(OngoingCallContextState(state: OngoingCallContextState.State(state), videoState: .notAvailable, remoteVideoState: .inactive, remoteAudioState: .active)))
+                        self?.contextState.set(.single(OngoingCallContextState(state: OngoingCallContextState.State(state), videoState: .notAvailable, remoteVideoState: .inactive, remoteAudioState: .active, remoteBatteryLevel: .normal)))
                     }
                     context.signalBarsChanged = { signalBars in
                         self?.receptionPromise.set(.single(signalBars))

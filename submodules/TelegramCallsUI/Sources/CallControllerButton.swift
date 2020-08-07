@@ -18,6 +18,14 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
             
             case blurred(isFilled: Bool)
             case color(Color)
+            
+            var isFilled: Bool {
+                if case let .blurred(isFilled) = self {
+                    return isFilled
+                } else {
+                    return false
+                }
+            }
         }
         
         enum Image {
@@ -26,6 +34,8 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
             case flipCamera
             case bluetooth
             case speaker
+            case airpods
+            case airpodsPro
             case accept
             case end
         }
@@ -150,7 +160,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                 self.effectView.isHidden = true
             }
             
-            self.alpha = content.isEnabled ? 1.0 : 0.7
+            transition.updateAlpha(node: self, alpha: content.isEnabled ? 1.0 : 0.4)
             self.isUserInteractionEnabled = content.isEnabled
             
             let contentBackgroundImage: UIImage? = nil
@@ -204,6 +214,10 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallBluetoothButton"), color: imageColor)
                 case .speaker:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallSpeakerButton"), color: imageColor)
+                case .airpods:
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAirpodsButton"), color: imageColor)
+                case .airpodsPro:
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAirpodsProButton"), color: imageColor)
                 case .accept:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Call/CallAcceptButton"), color: imageColor)
                 case .end:
@@ -226,6 +240,11 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                     }
                 }
             })
+            
+//            if transition.isAnimated, let previousContent = previousContent, content.image == .camera, !previousContent.appearance.isFilled && content.appearance.isFilled {
+//                self.contentBackgroundNode.image = contentBackgroundImage
+//                self.contentBackgroundNode.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 1.25, damping: 105.0)
+//            }
             
             if transition.isAnimated, let contentBackgroundImage = contentBackgroundImage, let previousContent = self.contentBackgroundNode.image {
                 self.contentBackgroundNode.image = contentBackgroundImage

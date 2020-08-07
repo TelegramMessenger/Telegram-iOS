@@ -57,7 +57,7 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
     
     var toggleMute: (() -> Void)?
     var setCurrentAudioOutput: ((AudioSessionOutput) -> Void)?
-    var beginAudioOuputSelection: (() -> Void)?
+    var beginAudioOuputSelection: ((Bool) -> Void)?
     var acceptCall: (() -> Void)?
     var endCall: (() -> Void)?
     var setIsVideoPaused: ((Bool) -> Void)?
@@ -65,6 +65,7 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
     var presentCallRating: ((CallId) -> Void)?
     var callEnded: ((Bool) -> Void)?
     var dismissedInteractively: (() -> Void)?
+    var present: ((ViewController) -> Void)?
     
     init(sharedContext: SharedAccountContext, account: Account, presentationData: PresentationData, statusBar: StatusBar, debugInfo: Signal<(String, String), NoError>, shouldStayHiddenUntilConnection: Bool = false, easyDebugAccess: Bool, call: PresentationCall) {
         self.sharedContext = sharedContext
@@ -139,7 +140,7 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
         }
         
         self.buttonsNode.speaker = { [weak self] in
-            self?.beginAudioOuputSelection?()
+            self?.beginAudioOuputSelection?(false)
         }
         
         self.buttonsNode.end = { [weak self] in

@@ -317,7 +317,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     contactListNode.activateSearch = { [weak self] in
                         self?.requestActivateSearch?()
                     }
-                    contactListNode.openPeer = { [weak self] peer in
+                    contactListNode.openPeer = { [weak self] peer, _ in
                         if case let .peer(peer, _, _) = peer {
                             self?.requestOpenPeer?(peer.id)
                         }

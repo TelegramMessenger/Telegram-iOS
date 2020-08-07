@@ -23,6 +23,7 @@ swift_library(
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/TelegramCallsUI/CallsEmoji:CallsEmoji",
         "//submodules/SemanticStatusNode:SemanticStatusNode",
+        "//submodules/TooltipUI:TooltipUI",
     ],
     visibility = [
         "//visibility:public",

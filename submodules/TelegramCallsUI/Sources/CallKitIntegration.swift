@@ -132,7 +132,7 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     private static func providerConfiguration() -> CXProviderConfiguration {
         let providerConfiguration = CXProviderConfiguration(localizedName: "Telegram")
         
-        providerConfiguration.supportsVideo = false
+        providerConfiguration.supportsVideo = true
         providerConfiguration.maximumCallsPerCallGroup = 1
         providerConfiguration.maximumCallGroups = 1
         providerConfiguration.supportedHandleTypes = [.phoneNumber, .generic]

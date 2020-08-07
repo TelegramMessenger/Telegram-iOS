@@ -275,7 +275,7 @@ public class ContactsController: ViewController {
             self?.activateSearch()
         }
         
-        self.contactsNode.contactListNode.openPeer = { peer in
+        self.contactsNode.contactListNode.openPeer = { peer, _ in
             openPeer(peer, false)
         }
         

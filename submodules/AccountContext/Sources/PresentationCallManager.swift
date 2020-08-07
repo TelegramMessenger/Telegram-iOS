@@ -62,16 +62,23 @@ public struct PresentationCallState: Equatable {
         case muted
     }
     
+    public enum RemoteBatteryLevel: Equatable {
+        case normal
+        case low
+    }
+    
     public var state: State
     public var videoState: VideoState
     public var remoteVideoState: RemoteVideoState
     public var remoteAudioState: RemoteAudioState
+    public var remoteBatteryLevel: RemoteBatteryLevel
     
-    public init(state: State, videoState: VideoState, remoteVideoState: RemoteVideoState, remoteAudioState: RemoteAudioState) {
+    public init(state: State, videoState: VideoState, remoteVideoState: RemoteVideoState, remoteAudioState: RemoteAudioState, remoteBatteryLevel: RemoteBatteryLevel) {
         self.state = state
         self.videoState = videoState
         self.remoteVideoState = remoteVideoState
         self.remoteAudioState = remoteAudioState
+        self.remoteBatteryLevel = remoteBatteryLevel
     }
 }
 

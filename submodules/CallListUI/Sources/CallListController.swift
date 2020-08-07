@@ -11,7 +11,6 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import AlertUI
-import PresentationDataUtils
 import AppBundle
 import LocalizedPeerData
 
@@ -201,18 +200,18 @@ public final class CallListController: ViewController {
     }
     
     @objc func callPressed() {
-        self.beginCallImpl(isVideo: false)
+        self.beginCallImpl()
     }
     
-    private func beginCallImpl(isVideo: Bool) {
-        let controller = self.context.sharedContext.makeContactSelectionController(ContactSelectionControllerParams(context: self.context, title: { $0.Calls_NewCall }))
+    private func beginCallImpl() {
+        let controller = self.context.sharedContext.makeContactSelectionController(ContactSelectionControllerParams(context: self.context, title: { $0.Calls_NewCall }, displayCallIcons: true))
         controller.navigationPresentation = .modal
         self.createActionDisposable.set((controller.result
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak controller, weak self] peer in
             controller?.dismissSearch()
-            if let strongSelf = self, let contactPeer = peer, case let .peer(peer, _, _) = contactPeer {
-                strongSelf.call(peer.id, isVideo: isVideo, began: {
+            if let strongSelf = self, let (contactPeer, action) = peer, case let .peer(peer, _, _) = contactPeer {
+                strongSelf.call(peer.id, isVideo: action == .videoCall, began: {
                     if let strongSelf = self {
                         let _ = (strongSelf.context.sharedContext.hasOngoingCall.get()
                         |> filter { $0 }

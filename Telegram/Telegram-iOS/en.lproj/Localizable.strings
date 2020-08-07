@@ -3028,7 +3028,7 @@ Unused sets are archived when you add more.";
 
 "InfoPlist.NSContactsUsageDescription" = "Telegram will continuously upload your contacts to its heavily encrypted cloud servers to let you connect with your friends across all your devices.";
 "InfoPlist.NSLocationWhenInUseUsageDescription" = "When you send your location to your friends, Telegram needs access to show them a map.";
-"InfoPlist.NSCameraUsageDescription" = "We need this so that you can take and share photos and videos.";
+"InfoPlist.NSCameraUsageDescription" = "We need this so that you can take and share photos and videos, as well as make video calls.";
 "InfoPlist.NSPhotoLibraryUsageDescription" = "We need this so that you can share photos and videos from your photo library.";
 "InfoPlist.NSPhotoLibraryAddUsageDescription" = "We need this so that you can save photos and videos to your photo library.";
 "InfoPlist.NSMicrophoneUsageDescription" = "We need this so that you can record and share voice messages and videos with sound.";
@@ -5721,3 +5721,15 @@ Any member of this group will be able to see messages in the channel.";
 "Stats.MessageOverview" = "Overview";
 "Stats.MessageInteractionsTitle" = "Interactions";
 "Stats.MessagePublicForwardsTitle" = "Public Shares";
+
+"Call.CameraTooltip" = "Tap here to turn on your camera";
+"Call.CameraConfirmationText" = "Switch to video call?";
+"Call.CameraConfirmationConfirm" = "Switch";
+
+"Call.YourMicrophoneOff" = "Your microphone is off";
+"Call.MicrophoneOff" = "%@'s microphone is off";
+"Call.CameraOff" = "%@'s camera is off";
+"Call.BatteryLow" = "%@'s battery level is low";
+
+"Call.Audio" = "audio";
+"Call.AudioRouteMute" = "Mute Yourself";

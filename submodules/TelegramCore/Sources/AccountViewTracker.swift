@@ -1332,11 +1332,13 @@ public final class AccountViewTracker {
                 if lhsTimestamp != rhsTimestamp {
                     return false
                 }
+                var lhsVideo = false
                 var lhsMissed = false
                 var lhsOther = false
                 inner: for media in lhs.media {
                     if let action = media as? TelegramMediaAction {
-                        if case let .phoneCall(_, discardReason, _, _) = action.action {
+                        if case let .phoneCall(_, discardReason, _, video) = action.action {
+                            lhsVideo = video
                             if lhs.flags.contains(.Incoming), let discardReason = discardReason, case .missed = discardReason {
                                 lhsMissed = true
                             } else {
@@ -1346,11 +1348,13 @@ public final class AccountViewTracker {
                         }
                     }
                 }
+                var rhsVideo = false
                 var rhsMissed = false
                 var rhsOther = false
                 inner: for media in rhs.media {
                     if let action = media as? TelegramMediaAction {
-                        if case let .phoneCall(_, discardReason, _, _) = action.action {
+                        if case let .phoneCall(_, discardReason, _, video) = action.action {
+                            rhsVideo = video
                             if rhs.flags.contains(.Incoming), let discardReason = discardReason, case .missed = discardReason {
                                 rhsMissed = true
                             } else {
@@ -1360,7 +1364,7 @@ public final class AccountViewTracker {
                         }
                     }
                 }
-                if lhsMissed != rhsMissed || lhsOther != rhsOther {
+                if lhsMissed != rhsMissed || lhsOther != rhsOther || lhsVideo != rhsVideo {
                     return false
                 }
                 return true

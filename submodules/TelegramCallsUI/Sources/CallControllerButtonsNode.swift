@@ -6,12 +6,18 @@ import SwiftSignalKit
 import MediaPlayer
 import TelegramPresentationData
 
-enum CallControllerButtonsSpeakerMode {
+enum CallControllerButtonsSpeakerMode: Equatable {
+    enum BluetoothType: Equatable {
+        case generic
+        case airpods
+        case airpodsPro
+    }
+    
     case none
     case builtin
     case speaker
     case headphones
-    case bluetooth
+    case bluetooth(BluetoothType)
 }
 
 enum CallControllerButtonsMode: Equatable {
@@ -23,9 +29,9 @@ enum CallControllerButtonsMode: Equatable {
         var isInitializingCamera: Bool
     }
     
-    case active(speakerMode: CallControllerButtonsSpeakerMode, videoState: VideoState)
-    case incoming(speakerMode: CallControllerButtonsSpeakerMode, videoState: VideoState)
-    case outgoingRinging(speakerMode: CallControllerButtonsSpeakerMode, videoState: VideoState)
+    case active(speakerMode: CallControllerButtonsSpeakerMode, hasAudioRouteMenu: Bool, videoState: VideoState)
+    case incoming(speakerMode: CallControllerButtonsSpeakerMode, hasAudioRouteMenu: Bool, videoState: VideoState)
+    case outgoingRinging(speakerMode: CallControllerButtonsSpeakerMode, hasAudioRouteMenu: Bool, videoState: VideoState)
 }
 
 private enum ButtonDescription: Equatable {
@@ -43,6 +49,8 @@ private enum ButtonDescription: Equatable {
         case builtin
         case speaker
         case bluetooth
+        case airpods
+        case airpodsPro
     }
     
     enum EndType {
@@ -54,7 +62,7 @@ private enum ButtonDescription: Equatable {
     case accept
     case end(EndType)
     case enableCamera(Bool, Bool, Bool)
-    case switchCamera
+    case switchCamera(Bool)
     case soundOutput(SoundOutput)
     case mute(Bool)
     
@@ -159,10 +167,12 @@ final class CallControllerButtonsNode: ASDisplayNode {
         
         let speakerMode: CallControllerButtonsSpeakerMode
         var videoState: CallControllerButtonsMode.VideoState
+        let hasAudioRouteMenu: Bool
         switch mode {
-        case .incoming(let speakerModeValue, let videoStateValue), .outgoingRinging(let speakerModeValue, let videoStateValue), .active(let speakerModeValue, let videoStateValue):
+        case .incoming(let speakerModeValue, let hasAudioRouteMenuValue, let videoStateValue), .outgoingRinging(let speakerModeValue, let hasAudioRouteMenuValue, let videoStateValue), .active(let speakerModeValue, let hasAudioRouteMenuValue, let videoStateValue):
             speakerMode = speakerModeValue
             videoState = videoStateValue
+            hasAudioRouteMenu = hasAudioRouteMenuValue
         }
         
         enum MappedState {
@@ -177,7 +187,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
             mappedState = .incomingRinging
         case .outgoingRinging:
             mappedState = .outgoingRinging
-        case let .active(_, videoStateValue):
+        case let .active(_, _, videoStateValue):
             mappedState = .active
             videoState = videoStateValue
         }
@@ -190,14 +200,21 @@ final class CallControllerButtonsNode: ASDisplayNode {
             
             let soundOutput: ButtonDescription.SoundOutput
             switch speakerMode {
-            case .none, .builtin:
-                soundOutput = .builtin
-            case .speaker:
-                soundOutput = .speaker
-            case .headphones:
-                soundOutput = .bluetooth
-            case .bluetooth:
-                soundOutput = .bluetooth
+                case .none, .builtin:
+                    soundOutput = .builtin
+                case .speaker:
+                    soundOutput = .speaker
+                case .headphones:
+                    soundOutput = .bluetooth
+                case let .bluetooth(type):
+                    switch type {
+                        case .generic:
+                            soundOutput = .bluetooth
+                        case .airpods:
+                            soundOutput = .airpods
+                        case .airpodsPro:
+                            soundOutput = .airpodsPro
+                }
             }
             
             if videoState.isAvailable {
@@ -213,12 +230,17 @@ final class CallControllerButtonsNode: ASDisplayNode {
                     isCameraEnabled = videoState.canChangeStatus
                     isCameraInitializing = videoState.isInitializingCamera
                 }
-                topButtons.append(.enableCamera(isCameraActive, isCameraEnabled, isCameraInitializing))
-                topButtons.append(.mute(self.isMuted))
-                if videoState.hasVideo {
-                    topButtons.append(.switchCamera)
-                } else {
+                topButtons.append(.enableCamera(isCameraActive, false, isCameraInitializing))
+                if !videoState.hasVideo {
+                    topButtons.append(.mute(self.isMuted))
                     topButtons.append(.soundOutput(soundOutput))
+                } else {
+                    if hasAudioRouteMenu {
+                        topButtons.append(.soundOutput(soundOutput))
+                    } else {
+                        topButtons.append(.mute(self.isMuted))
+                    }
+                    topButtons.append(.switchCamera(isCameraActive && !isCameraInitializing))
                 }
             } else {
                 topButtons.append(.mute(self.isMuted))
@@ -272,19 +294,30 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 
                 let soundOutput: ButtonDescription.SoundOutput
                 switch speakerMode {
-                case .none, .builtin:
-                    soundOutput = .builtin
-                case .speaker:
-                    soundOutput = .speaker
-                case .headphones:
-                    soundOutput = .builtin
-                case .bluetooth:
-                    soundOutput = .bluetooth
+                    case .none, .builtin:
+                        soundOutput = .builtin
+                    case .speaker:
+                        soundOutput = .speaker
+                    case .headphones:
+                        soundOutput = .builtin
+                    case let .bluetooth(type):
+                        switch type {
+                            case .generic:
+                                soundOutput = .bluetooth
+                            case .airpods:
+                                soundOutput = .airpods
+                            case .airpodsPro:
+                                soundOutput = .airpodsPro
+                    }
                 }
                 
                 topButtons.append(.enableCamera(isCameraActive, isCameraEnabled, isCameraInitializing))
-                topButtons.append(.mute(isMuted))
-                topButtons.append(.switchCamera)
+                if hasAudioRouteMenu {
+                    topButtons.append(.soundOutput(soundOutput))
+                } else {
+                    topButtons.append(.mute(isMuted))
+                }
+                topButtons.append(.switchCamera(isCameraActive && !isCameraInitializing))
                 topButtons.append(.end(.end))
                 
                 let topButtonsContentWidth = CGFloat(topButtons.count) * smallButtonSize
@@ -317,14 +350,21 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 
                 let soundOutput: ButtonDescription.SoundOutput
                 switch speakerMode {
-                case .none, .builtin:
-                    soundOutput = .builtin
-                case .speaker:
-                    soundOutput = .speaker
-                case .headphones:
-                    soundOutput = .bluetooth
-                case .bluetooth:
-                    soundOutput = .bluetooth
+                    case .none, .builtin:
+                        soundOutput = .builtin
+                    case .speaker:
+                        soundOutput = .speaker
+                    case .headphones:
+                        soundOutput = .bluetooth
+                    case let .bluetooth(type):
+                        switch type {
+                            case .generic:
+                                soundOutput = .bluetooth
+                            case .airpods:
+                                soundOutput = .airpods
+                            case .airpodsPro:
+                                soundOutput = .airpodsPro
+                    }
                 }
                 
                 topButtons.append(.enableCamera(isCameraActive, isCameraEnabled, isCameraInitializing))
@@ -404,15 +444,17 @@ final class CallControllerButtonsNode: ASDisplayNode {
                     hasProgress: isInitializing
                 )
                 buttonText = strings.Call_Camera
-            case .switchCamera:
+            case let .switchCamera(isEnabled):
                 buttonContent = CallControllerButtonItemNode.Content(
                     appearance: .blurred(isFilled: false),
-                    image: .flipCamera
+                    image: .flipCamera,
+                    isEnabled: isEnabled
                 )
                 buttonText = strings.Call_Flip
             case let .soundOutput(value):
                 let image: CallControllerButtonItemNode.Content.Image
                 var isFilled = false
+                var title: String = strings.Call_Speaker
                 switch value {
                 case .builtin:
                     image = .speaker
@@ -421,12 +463,19 @@ final class CallControllerButtonsNode: ASDisplayNode {
                     isFilled = true
                 case .bluetooth:
                     image = .bluetooth
+                    title = strings.Call_Audio
+                case .airpods:
+                    image = .airpods
+                    title = strings.Call_Audio
+                case .airpodsPro:
+                    image = .airpodsPro
+                    title = strings.Call_Audio
                 }
                 buttonContent = CallControllerButtonItemNode.Content(
                     appearance: .blurred(isFilled: isFilled),
                     image: image
                 )
-                buttonText = strings.Call_Speaker
+                buttonText = title
             case let .mute(isMuted):
                 buttonContent = CallControllerButtonItemNode.Content(
                     appearance: .blurred(isFilled: isMuted),
