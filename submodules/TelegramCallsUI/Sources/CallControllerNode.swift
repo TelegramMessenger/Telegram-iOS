@@ -55,7 +55,7 @@ private final class CallVideoNode: ASDisplayNode {
         self.videoTransformContainer.view.addSubview(self.videoView.view)
         self.addSubnode(self.videoTransformContainer)
         
-        self.videoView.setOnFirstFrameReceived { [weak self] in
+        self.videoView.setOnFirstFrameReceived { [weak self] _ in
             Queue.mainQueue().async {
                 guard let strongSelf = self else {
                     return

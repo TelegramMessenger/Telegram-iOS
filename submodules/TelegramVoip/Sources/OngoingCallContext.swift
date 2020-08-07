@@ -448,14 +448,14 @@ private extension OngoingCallVideoOrientation {
 
 public final class OngoingCallContextPresentationCallVideoView {
     public let view: UIView
-    public let setOnFirstFrameReceived: ((() -> Void)?) -> Void
+    public let setOnFirstFrameReceived: (((Float) -> Void)?) -> Void
     public let getOrientation: () -> OngoingCallVideoOrientation
     public let setOnOrientationUpdated: (((OngoingCallVideoOrientation) -> Void)?) -> Void
     public let setOnIsMirroredUpdated: (((Bool) -> Void)?) -> Void
     
     public init(
         view: UIView,
-        setOnFirstFrameReceived: @escaping ((() -> Void)?) -> Void,
+        setOnFirstFrameReceived: @escaping (((Float) -> Void)?) -> Void,
         getOrientation: @escaping () -> OngoingCallVideoOrientation,
         setOnOrientationUpdated: @escaping (((OngoingCallVideoOrientation) -> Void)?) -> Void,
         setOnIsMirroredUpdated: @escaping (((Bool) -> Void)?) -> Void
@@ -586,7 +586,7 @@ public final class OngoingCallContext {
                     }, videoCapturer: video?.impl, preferredAspectRatio: Float(preferredAspectRatio), enableHighBitrateVideoCalls: enableHighBitrateVideoCalls)
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
-                    context.stateChanged = { [weak callSessionManager] state, videoState, remoteVideoState, remoteAudioState in
+                    context.stateChanged = { [weak callSessionManager] state, videoState, remoteVideoState, remoteAudioState, _ in
                         queue.async {
                             guard let strongSelf = self else {
                                 return

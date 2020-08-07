@@ -15,6 +15,8 @@
 #import "platform/darwin/VideoMetalViewMac.h"
 #define GLVideoView VideoMetalView
 #define UIViewContentModeScaleAspectFill kCAGravityResizeAspectFill
+#define UIViewContentModeScaleAspect kCAGravityResizeAspect
+
 #else
 #import "platform/darwin/VideoMetalView.h"
 #import "platform/darwin/GLVideoView.h"
@@ -220,6 +222,9 @@
     NSData *_lastDerivedState;
     
     void (^_sendSignalingData)(NSData *);
+    
+    float _remotePreferredAspectRatio;
+
 }
 
 - (void)controllerStateChanged:(tgcalls::State)state;
@@ -314,6 +319,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         _callRingTimeout = 90.0;
         _callConnectTimeout = 30.0;
         _callPacketTimeout = 10.0;
+        _remotePreferredAspectRatio = 0;
         _networkType = networkType;
         _sendSignalingData = [sendSignalingData copy];
         _videoCapturer = videoCapturer;
@@ -454,7 +460,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                             strongSelf->_remoteVideoState = remoteVideoState;
                             strongSelf->_remoteAudioState = remoteAudioState;
                             if (strongSelf->_stateChanged) {
-                                strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remoteAudioState);
+                                strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remoteAudioState, strongSelf->_remotePreferredAspectRatio);
                             }
                         }
                     }
@@ -464,7 +470,10 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                 [queue dispatch:^{
                     __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
                     if (strongSelf) {
-                        [strongSelf remotePrefferedAspectRatioUpdated:value];
+                        strongSelf->_remotePreferredAspectRatio = value;
+                        if (strongSelf->_stateChanged) {
+                            strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remoteAudioState, strongSelf->_remotePreferredAspectRatio);
+                        }
                     }
                 }];
             },
@@ -574,7 +583,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         _state = callState;
         
         if (_stateChanged) {
-            _stateChanged(_state, _videoState, _remoteVideoState, _remoteAudioState);
+            _stateChanged(_state, _videoState, _remoteVideoState, _remoteAudioState, _remotePreferredAspectRatio);
         }
     }
 }
@@ -594,6 +603,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         _sendSignalingData(data);
     }
 }
+
 
 - (void)addSignalingData:(NSData *)data {
     if (_tgVoip) {
@@ -625,7 +635,11 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         dispatch_async(dispatch_get_main_queue(), ^{
             if ([VideoMetalView isSupported]) {
                 VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
+                #if TARGET_OS_IPHONE
                 remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+                #else
+                remoteRenderer.videoContentMode = UIViewContentModeScaleAspect;
+                #endif
                 
                 std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
                 __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
@@ -660,7 +674,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         
         _videoState = OngoingCallVideoStateActive;
         if (_stateChanged) {
-            _stateChanged(_state, _videoState, _remoteVideoState, _remoteAudioState);
+            _stateChanged(_state, _videoState, _remoteVideoState, _remoteAudioState, _remotePreferredAspectRatio);
         }
     }
 }
@@ -672,7 +686,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         
         _videoState = OngoingCallVideoStateInactive;
         if (_stateChanged) {
-            _stateChanged(_state, _videoState, _remoteVideoState, _remoteAudioState);
+            _stateChanged(_state, _videoState, _remoteVideoState, _remoteAudioState, _remotePreferredAspectRatio);
         }
     }
 }

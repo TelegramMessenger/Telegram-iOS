@@ -84,7 +84,7 @@ public final class PresentationCallVideoView {
     }
     
     public let view: UIView
-    public let setOnFirstFrameReceived: ((() -> Void)?) -> Void
+    public let setOnFirstFrameReceived: (((Float) -> Void)?) -> Void
     
     public let getOrientation: () -> Orientation
     public let setOnOrientationUpdated: (((Orientation) -> Void)?) -> Void
@@ -92,7 +92,7 @@ public final class PresentationCallVideoView {
     
     public init(
         view: UIView,
-        setOnFirstFrameReceived: @escaping ((() -> Void)?) -> Void,
+        setOnFirstFrameReceived: @escaping (((Float) -> Void)?) -> Void,
         getOrientation: @escaping () -> Orientation,
         setOnOrientationUpdated: @escaping (((Orientation) -> Void)?) -> Void,
         setOnIsMirroredUpdated: @escaping (((Bool) -> Void)?) -> Void
