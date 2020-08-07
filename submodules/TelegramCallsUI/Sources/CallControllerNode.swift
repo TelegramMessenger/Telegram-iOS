@@ -923,11 +923,14 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         }
         
         var toastContent: CallControllerToastContent = []
-        if case .inactive = callState.remoteVideoState {
+        if self.hasVideoNodes && [.inactive, .paused].contains(callState.remoteVideoState) {
             toastContent.insert(.camera)
         }
         if case .muted = callState.remoteAudioState {
             toastContent.insert(.microphone)
+        }
+        if self.isMuted, let (availableOutputs, _) = self.audioOutputState, availableOutputs.count > 2 {
+            toastContent.insert(.mute)
         }
         if case .low = callState.remoteBatteryLevel {
             toastContent.insert(.battery)
