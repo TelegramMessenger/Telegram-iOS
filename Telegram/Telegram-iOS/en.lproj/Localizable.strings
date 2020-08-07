@@ -5718,3 +5718,15 @@ Any member of this group will be able to see messages in the channel.";
 "Stats.MessageOverview" = "Overview";
 "Stats.MessageInteractionsTitle" = "Interactions";
 "Stats.MessagePublicForwardsTitle" = "Public Shares";
+
+"Call.CameraTooltip" = "Tap here to turn on your camera";
+"Call.CameraConfirmationText" = "Switch to video call?";
+"Call.CameraConfirmationConfirm" = "Switch";
+
+"Call.YourMicrophoneOff" = "Your microphone is off";
+"Call.MicrophoneOff" = "%@'s microphone is off";
+"Call.CameraOff" = "%@'s camera is off";
+"Call.BatteryLow" = "%@'s battery level is low";
+
+"Call.Audio" = "audio";
+"Call.AudioRouteMute" = "Mute Yourself";

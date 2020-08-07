@@ -6682,7 +6682,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.effectiveNavigationController?.pushViewController(contactsController)
         self.controllerNavigationDisposable.set((contactsController.result
         |> deliverOnMainQueue).start(next: { [weak self] peer in
-            if let strongSelf = self, let peer = peer {
+            if let strongSelf = self, let (peer, _) = peer {
                 let dataSignal: Signal<(Peer?,  DeviceContactExtendedData?), NoError>
                 switch peer {
                     case let .peer(contact, _, _):

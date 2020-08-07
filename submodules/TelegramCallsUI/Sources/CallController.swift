@@ -19,12 +19,13 @@ protocol CallControllerNodeProtocol: class {
     
     var toggleMute: (() -> Void)? { get set }
     var setCurrentAudioOutput: ((AudioSessionOutput) -> Void)? { get set }
-    var beginAudioOuputSelection: (() -> Void)? { get set }
+    var beginAudioOuputSelection: ((Bool) -> Void)? { get set }
     var acceptCall: (() -> Void)? { get set }
     var endCall: (() -> Void)? { get set }
     var setIsVideoPaused: ((Bool) -> Void)? { get set }
     var back: (() -> Void)? { get set }
     var presentCallRating: ((CallId) -> Void)? { get set }
+    var present: ((ViewController) -> Void)? { get set }
     var callEnded: ((Bool) -> Void)? { get set }
     var dismissedInteractively: (() -> Void)? { get set }
     
@@ -149,7 +150,7 @@ public final class CallController: ViewController {
             self?.call.setCurrentAudioOutput(output)
         }
         
-        self.controllerNode.beginAudioOuputSelection = { [weak self] in
+        self.controllerNode.beginAudioOuputSelection = { [weak self] hasMute in
             guard let strongSelf = self, let (availableOutputs, currentOutput) = strongSelf.audioOutputState else {
                 return
             }
@@ -174,13 +175,20 @@ public final class CallController: ViewController {
                             title = UIDevice.current.model
                         case .speaker:
                             title = strongSelf.presentationData.strings.Call_AudioRouteSpeaker
-                            icon = UIImage(bundleImageName: "Call/CallRouteSpeaker")
+                            icon = generateScaledImage(image: UIImage(bundleImageName: "Call/CallSpeakerButton"), size: CGSize(width: 48.0, height: 48.0), opaque: false)
                         case .headphones:
                             title = strongSelf.presentationData.strings.Call_AudioRouteHeadphones
                         case let .port(port):
                             title = port.name
                             if port.type == .bluetooth {
-                                icon = UIImage(bundleImageName: "Call/CallRouteBluetooth")
+                                var image = UIImage(bundleImageName: "Call/CallBluetoothButton")
+                                let portName = port.name.lowercased()
+                                if portName.contains("airpods pro") {
+                                    image = UIImage(bundleImageName: "Call/CallAirpodsProButton")
+                                } else if portName.contains("airpods") {
+                                    image = UIImage(bundleImageName: "Call/CallAirpodsButton")
+                                }
+                                icon = generateScaledImage(image: image, size: CGSize(width: 48.0, height: 48.0), opaque: false)
                             }
                     }
                     items.append(CallRouteActionSheetItem(title: title, icon: icon, selected: output == currentOutput, action: { [weak actionSheet] in
@@ -189,8 +197,15 @@ public final class CallController: ViewController {
                     }))
                 }
                 
+                if hasMute {
+                    items.append(CallRouteActionSheetItem(title: strongSelf.presentationData.strings.Call_AudioRouteMute, icon:  generateScaledImage(image: UIImage(bundleImageName: "Call/CallMuteButton"), size: CGSize(width: 48.0, height: 48.0), opaque: false), selected: strongSelf.isMuted, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        self?.call.toggleIsMuted()
+                    }))
+                }
+                
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Call_AudioRouteHide, color: .accent, font: .bold, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                         })
                     ])
@@ -233,6 +248,12 @@ public final class CallController: ViewController {
                     })
                     strongSelf.present(controller, in: .window(.root))
                 })
+            }
+        }
+        
+        self.controllerNode.present = { [weak self] controller in
+            if let strongSelf = self {
+                strongSelf.present(controller, in: .window(.root))
             }
         }
         

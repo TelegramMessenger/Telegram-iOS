@@ -57,14 +57,21 @@ public struct PresentationCallState: Equatable {
         case active
     }
     
+    public enum RemoteBatteryLevel: Equatable {
+        case normal
+        case low
+    }
+    
     public var state: State
     public var videoState: VideoState
     public var remoteVideoState: RemoteVideoState
+    public var remoteBatteryLevel: RemoteBatteryLevel
     
-    public init(state: State, videoState: VideoState, remoteVideoState: RemoteVideoState) {
+    public init(state: State, videoState: VideoState, remoteVideoState: RemoteVideoState, remoteBatteryLevel: RemoteBatteryLevel) {
         self.state = state
         self.videoState = videoState
         self.remoteVideoState = remoteVideoState
+        self.remoteBatteryLevel = remoteBatteryLevel
     }
 }
 
@@ -77,7 +84,7 @@ public final class PresentationCallVideoView {
     }
     
     public let view: UIView
-    public let setOnFirstFrameReceived: ((() -> Void)?) -> Void
+    public let setOnFirstFrameReceived: (((Float) -> Void)?) -> Void
     
     public let getOrientation: () -> Orientation
     public let setOnOrientationUpdated: (((Orientation) -> Void)?) -> Void
@@ -85,7 +92,7 @@ public final class PresentationCallVideoView {
     
     public init(
         view: UIView,
-        setOnFirstFrameReceived: @escaping ((() -> Void)?) -> Void,
+        setOnFirstFrameReceived: @escaping (((Float) -> Void)?) -> Void,
         getOrientation: @escaping () -> Orientation,
         setOnOrientationUpdated: @escaping (((Orientation) -> Void)?) -> Void,
         setOnIsMirroredUpdated: @escaping (((Bool) -> Void)?) -> Void

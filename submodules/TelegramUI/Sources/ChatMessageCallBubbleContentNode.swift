@@ -151,9 +151,17 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 var buttonImage: UIImage?
                 if incoming {
-                    buttonImage = PresentationResourcesChat.chatBubbleIncomingCallButtonImage(item.presentationData.theme.theme)
+                    if isVideo {
+                        buttonImage = PresentationResourcesChat.chatBubbleIncomingVideoCallButtonImage(item.presentationData.theme.theme)
+                    } else {
+                        buttonImage = PresentationResourcesChat.chatBubbleIncomingCallButtonImage(item.presentationData.theme.theme)
+                    }
                 } else {
-                    buttonImage = PresentationResourcesChat.chatBubbleOutgoingCallButtonImage(item.presentationData.theme.theme)
+                    if isVideo {
+                        buttonImage = PresentationResourcesChat.chatBubbleOutgoingVideoCallButtonImage(item.presentationData.theme.theme)
+                    } else {
+                        buttonImage = PresentationResourcesChat.chatBubbleOutgoingCallButtonImage(item.presentationData.theme.theme)
+                    }
                 }
                 
                 let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, reactionCount: 0)

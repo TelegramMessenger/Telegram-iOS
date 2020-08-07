@@ -419,6 +419,12 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
+- (void)setIsLowBatteryLevel:(bool)isLowBatteryLevel {
+    if (_tgVoip) {
+        _tgVoip->setIsLowBatteryLevel(isLowBatteryLevel);
+    }
+}
+
 - (void)setNetworkType:(OngoingCallNetworkType)networkType {
     if (_networkType != networkType) {
         _networkType = networkType;

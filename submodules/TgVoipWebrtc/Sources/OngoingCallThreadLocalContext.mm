@@ -15,7 +15,7 @@
 #import "platform/darwin/VideoMetalViewMac.h"
 #define GLVideoView VideoMetalView
 #define UIViewContentModeScaleAspectFill kCAGravityResizeAspectFill
-#define UIViewContentModeScaleAspect kCAGravityResizeAspect
+#define UIViewContentModeScaleAspectFit kCAGravityResizeAspect
 
 #else
 #import "platform/darwin/VideoMetalView.h"
@@ -212,6 +212,7 @@
     OngoingCallStateWebrtc _state;
     OngoingCallVideoStateWebrtc _videoState;
     bool _connectedOnce;
+    OngoingCallRemoteBatteryLevelWebrtc _remoteBatteryLevel;
     OngoingCallRemoteVideoStateWebrtc _remoteVideoState;
     OngoingCallVideoOrientationWebrtc _remoteVideoOrientation;
     __weak UIView<OngoingCallThreadLocalContextWebrtcVideoViewImpl> *_currentRemoteVideoRenderer;
@@ -458,7 +459,26 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                         if (strongSelf->_remoteVideoState != remoteVideoState) {
                             strongSelf->_remoteVideoState = remoteVideoState;
                             if (strongSelf->_stateChanged) {
-                                strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remotePreferredAspectRatio);
+                                strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remoteBatteryLevel, strongSelf->_remotePreferredAspectRatio);
+                            }
+                        }
+                    }
+                }];
+            },
+            .remoteBatteryLevelIsLowUpdated = [weakSelf, queue](bool isLow) {
+                [queue dispatch:^{
+                    __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
+                    if (strongSelf) {
+                        OngoingCallRemoteBatteryLevelWebrtc remoteBatteryLevel;
+                        if (isLow) {
+                            remoteBatteryLevel = OngoingCallRemoteBatteryLevelLow;
+                        } else {
+                            remoteBatteryLevel = OngoingCallRemoteBatteryLevelNormal;
+                        }
+                        if (strongSelf->_remoteBatteryLevel != remoteBatteryLevel) {
+                            strongSelf->_remoteBatteryLevel = remoteBatteryLevel;
+                            if (strongSelf->_stateChanged) {
+                                strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remoteBatteryLevel, strongSelf->_remotePreferredAspectRatio);
                             }
                         }
                     }
@@ -470,7 +490,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                     if (strongSelf) {
                         strongSelf->_remotePreferredAspectRatio = value;
                         if (strongSelf->_stateChanged) {
-                            strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remotePreferredAspectRatio);
+                            strongSelf->_stateChanged(strongSelf->_state, strongSelf->_videoState, strongSelf->_remoteVideoState, strongSelf->_remoteBatteryLevel, strongSelf->_remotePreferredAspectRatio);
                         }
                     }
                 }];
@@ -582,7 +602,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         _videoState = videoState;
         
         if (_stateChanged) {
-            _stateChanged(_state, _videoState, _remoteVideoState, _remotePreferredAspectRatio);
+            _stateChanged(_state, _videoState, _remoteVideoState, _remoteBatteryLevel, _remotePreferredAspectRatio);
         }
     }
 }
@@ -634,7 +654,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         dispatch_async(dispatch_get_main_queue(), ^{
             if ([VideoMetalView isSupported]) {
                 VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
-                remoteRenderer.videoContentMode = UIViewContentModeScaleAspect;
+                remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFit;
                 
                 std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
                 __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;

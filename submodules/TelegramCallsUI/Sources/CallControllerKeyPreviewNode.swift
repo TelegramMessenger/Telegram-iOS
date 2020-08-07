@@ -83,7 +83,7 @@ final class CallControllerKeyPreviewNode: ASDisplayNode {
     }
     
     func animateOut(to rect: CGRect, toNode: ASDisplayNode, completion: @escaping () -> Void) {
-        self.keyTextNode.layer.animatePosition(from: self.keyTextNode.layer.position, to: CGPoint(x: rect.midX, y: rect.midY), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+        self.keyTextNode.layer.animatePosition(from: self.keyTextNode.layer.position, to: CGPoint(x: rect.midX + 2.0, y: rect.midY), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
             completion()
         })
         self.keyTextNode.layer.animateScale(from: 1.0, to: rect.size.width / self.keyTextNode.frame.size.width, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)

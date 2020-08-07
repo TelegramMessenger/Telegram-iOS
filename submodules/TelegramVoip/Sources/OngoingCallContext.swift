@@ -119,9 +119,15 @@ public struct OngoingCallContextState: Equatable {
         case active
     }
     
+    public enum RemoteBatteryLevel: Equatable {
+        case normal
+        case low
+    }
+    
     public let state: State
     public let videoState: VideoState
     public let remoteVideoState: RemoteVideoState
+    public let remoteBatteryLevel: RemoteBatteryLevel
 }
 
 private final class OngoingCallThreadLocalContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueue, OngoingCallThreadLocalContextQueueWebrtc /*, OngoingCallThreadLocalContextQueueWebrtcCustom*/ {
@@ -442,14 +448,14 @@ private extension OngoingCallVideoOrientation {
 
 public final class OngoingCallContextPresentationCallVideoView {
     public let view: UIView
-    public let setOnFirstFrameReceived: ((() -> Void)?) -> Void
+    public let setOnFirstFrameReceived: (((Float) -> Void)?) -> Void
     public let getOrientation: () -> OngoingCallVideoOrientation
     public let setOnOrientationUpdated: (((OngoingCallVideoOrientation) -> Void)?) -> Void
     public let setOnIsMirroredUpdated: (((Bool) -> Void)?) -> Void
     
     public init(
         view: UIView,
-        setOnFirstFrameReceived: @escaping ((() -> Void)?) -> Void,
+        setOnFirstFrameReceived: @escaping (((Float) -> Void)?) -> Void,
         getOrientation: @escaping () -> OngoingCallVideoOrientation,
         setOnOrientationUpdated: @escaping (((OngoingCallVideoOrientation) -> Void)?) -> Void,
         setOnIsMirroredUpdated: @escaping (((Bool) -> Void)?) -> Void
@@ -582,7 +588,7 @@ public final class OngoingCallContext {
                     }, videoCapturer: video?.impl, preferredAspectRatio: Float(preferredAspectRatio), enableHighBitrateVideoCalls: enableHighBitrateVideoCalls)
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
-                    context.stateChanged = { [weak callSessionManager] state, videoState, remoteVideoState in
+                    context.stateChanged = { [weak callSessionManager] state, videoState, remoteVideoState, remoteBatteryLevel, aspectRatio in
                         queue.async {
                             guard let strongSelf = self else {
                                 return
@@ -612,11 +618,20 @@ public final class OngoingCallContext {
                             @unknown default:
                                 mappedRemoteVideoState = .inactive
                             }
+                            let mappedRemoteBatteryLevel: OngoingCallContextState.RemoteBatteryLevel
+                            switch remoteBatteryLevel {
+                            case .normal:
+                                mappedRemoteBatteryLevel = .normal
+                            case .low:
+                                mappedRemoteBatteryLevel = .low
+                            @unknown default:
+                                mappedRemoteBatteryLevel = .normal
+                            }
                             if case .active = mappedVideoState, !strongSelf.didReportCallAsVideo {
                                 strongSelf.didReportCallAsVideo = true
                                 callSessionManager?.updateCallType(internalId: internalId, type: .video)
                             }
-                            strongSelf.contextState.set(.single(OngoingCallContextState(state: mappedState, videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState)))
+                            strongSelf.contextState.set(.single(OngoingCallContextState(state: mappedState, videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState, remoteBatteryLevel: mappedRemoteBatteryLevel)))
                         }
                     }
                     context.signalBarsChanged = { signalBars in
@@ -643,7 +658,7 @@ public final class OngoingCallContext {
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
                     context.stateChanged = { state in
-                        self?.contextState.set(.single(OngoingCallContextState(state: OngoingCallContextState.State(state), videoState: .notAvailable, remoteVideoState: .inactive)))
+                        self?.contextState.set(.single(OngoingCallContextState(state: OngoingCallContextState.State(state), videoState: .notAvailable, remoteVideoState: .inactive, remoteBatteryLevel: .normal)))
                     }
                     context.signalBarsChanged = { signalBars in
                         self?.receptionPromise.set(.single(signalBars))

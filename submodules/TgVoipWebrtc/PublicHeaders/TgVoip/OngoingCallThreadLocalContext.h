@@ -44,6 +44,11 @@ typedef NS_ENUM(int32_t, OngoingCallRemoteVideoStateWebrtc) {
     OngoingCallRemoteVideoStateActive
 };
 
+typedef NS_ENUM(int32_t, OngoingCallRemoteBatteryLevelWebrtc) {
+    OngoingCallRemoteBatteryLevelNormal,
+    OngoingCallRemoteBatteryLevelLow
+};
+
 typedef NS_ENUM(int32_t, OngoingCallVideoOrientationWebrtc) {
     OngoingCallVideoOrientation0,
     OngoingCallVideoOrientation90,
@@ -111,7 +116,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 + (int32_t)maxLayer;
 + (NSArray<NSString *> * _Nonnull)versionsWithIncludeReference:(bool)includeReference;
 
-@property (nonatomic, copy) void (^ _Nullable stateChanged)(OngoingCallStateWebrtc, OngoingCallVideoStateWebrtc, OngoingCallRemoteVideoStateWebrtc, float);
+@property (nonatomic, copy) void (^ _Nullable stateChanged)(OngoingCallStateWebrtc, OngoingCallVideoStateWebrtc, OngoingCallRemoteVideoStateWebrtc, OngoingCallRemoteBatteryLevelWebrtc, float);
 @property (nonatomic, copy) void (^ _Nullable signalBarsChanged)(int32_t);
 
 - (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing primaryConnection:(OngoingCallConnectionDescriptionWebrtc * _Nonnull)primaryConnection alternativeConnections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)alternativeConnections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath sendSignalingData:(void (^ _Nonnull)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer preferredAspectRatio:(float)preferredAspectRatio enableHighBitrateVideoCalls:(bool)enableHighBitrateVideoCalls;

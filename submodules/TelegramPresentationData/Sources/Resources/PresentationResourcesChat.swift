@@ -723,6 +723,18 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatBubbleIncomingVideoCallButtonImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleIncomingVideoCallButtonImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Info/VideoCallButton"), color: theme.chat.message.incoming.accentControlColor)
+        })
+    }
+    
+    public static func chatBubbleOutgoingVideoCallButtonImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleOutgoingVideoCallButtonImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Info/VideoCallButton"), color: theme.chat.message.outgoing.accentControlColor)
+        })
+    }
+    
     public static func chatInputSearchPanelUpImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputSearchPanelUpImage.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Search/UpButton"), color: theme.chat.inputPanel.panelControlAccentColor)

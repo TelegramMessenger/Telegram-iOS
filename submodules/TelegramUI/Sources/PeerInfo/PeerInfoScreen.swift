@@ -4425,7 +4425,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             if let contactsController = contactsController as? ContactSelectionController {
                 selectAddMemberDisposable.set((contactsController.result
                 |> deliverOnMainQueue).start(next: { [weak contactsController] memberPeer in
-                    guard let memberPeer = memberPeer else {
+                    guard let (memberPeer, _) = memberPeer else {
                         return
                     }
                     

@@ -1896,7 +1896,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 if let contactsController = contactsController as? ContactSelectionController {
                     selectAddMemberDisposable.set((contactsController.result
                     |> deliverOnMainQueue).start(next: { [weak contactsController] memberPeer in
-                        guard let memberPeer = memberPeer else {
+                        guard let (memberPeer, _) = memberPeer else {
                             return
                         }
                         
