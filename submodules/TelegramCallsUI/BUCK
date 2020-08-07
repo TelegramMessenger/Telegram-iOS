@@ -22,6 +22,7 @@ static_library(
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/TelegramCallsUI/CallsEmoji:CallsEmoji",
         "//submodules/SemanticStatusNode:SemanticStatusNode",
+        "//submodules/TooltipUI:TooltipUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

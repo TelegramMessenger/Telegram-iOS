@@ -615,7 +615,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         if self.outgoingVideoNodeValue != nil || self.incomingVideoNodeValue != nil || self.candidateOutgoingVideoNodeValue != nil || self.candidateIncomingVideoNodeValue != nil {
             if let audioOutputState = self.audioOutputState, let currentOutput = audioOutputState.currentOutput {
                 switch currentOutput {
-                case .headphones:
+                case .headphones, .speaker:
                     break
                 case let .port(port) where port.type == .bluetooth:
                     break
@@ -654,9 +654,11 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                             strongSelf.incomingVideoNodeValue = incomingVideoNode
                             if let expandedVideoNode = strongSelf.expandedVideoNode {
                                 strongSelf.minimizedVideoNode = expandedVideoNode
+                                strongSelf.containerNode.insertSubnode(incomingVideoNode, belowSubnode: expandedVideoNode)
+                            } else {
+                                strongSelf.containerNode.insertSubnode(incomingVideoNode, belowSubnode: strongSelf.dimNode)
                             }
                             strongSelf.expandedVideoNode = incomingVideoNode
-                            strongSelf.containerNode.insertSubnode(incomingVideoNode, belowSubnode: strongSelf.dimNode)
                             strongSelf.updateButtonsMode(transition: .animated(duration: 0.4, curve: .spring))
                         }
                         
