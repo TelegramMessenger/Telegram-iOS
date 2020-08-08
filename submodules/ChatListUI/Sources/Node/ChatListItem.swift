@@ -1306,6 +1306,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 let (size, apply) = inputActivitiesLayout(CGSize(width: rawContentWidth - badgeSize, height: 40.0), item.presentationData, item.presentationData.theme.chatList.messageTextColor, item.index.messageIndex.id.peerId, inputActivities)
                 inputActivitiesSize = size
                 inputActivitiesApply = apply
+            } else {
+                let (size, apply) = inputActivitiesLayout(CGSize(width: rawContentWidth - badgeSize, height: 40.0), item.presentationData, item.presentationData.theme.chatList.messageTextColor, item.index.messageIndex.id.peerId, [])
+                inputActivitiesSize = size
+                inputActivitiesApply = apply
             }
             
             var online = false
