@@ -953,7 +953,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                         }
                     }
                 } else {
-                    self.displayToastsAfterTimestamp = CACurrentMediaTime() + 2.0
+                    self.displayToastsAfterTimestamp = CACurrentMediaTime() + 1.5
                 }
             }
             if self.isMuted, let (availableOutputs, _) = self.audioOutputState, availableOutputs.count > 2 {
@@ -1457,6 +1457,8 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if !self.pictureInPictureTransitionFraction.isZero {
+                self.view.window?.endEditing(true)
+                
                 if let (layout, navigationHeight) = self.validLayout {
                     self.pictureInPictureTransitionFraction = 0.0
                     

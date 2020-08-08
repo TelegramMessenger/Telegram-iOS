@@ -634,9 +634,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 if let strongSelf = self {
                     let resolvedText: CallStatusText
                     if let state = state {
-                        if [.active, .paused].contains(state.videoState) || [.active, .paused].contains(state.remoteVideoState) {
-                            resolvedText = .none
-                        } else {
+//                        if [.active, .paused].contains(state.videoState) || [.active, .paused].contains(state.remoteVideoState) {
+//                            resolvedText = .none
+//                        } else {
                             switch state.state {
                                 case .connecting, .requesting, .terminating, .ringing, .waiting:
                                     resolvedText = .inProgress(nil)
@@ -645,7 +645,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                                 case .active(let timestamp, _, _), .reconnecting(let timestamp, _, _):
                                     resolvedText = .inProgress(timestamp)
                             }
-                        }
+//                        }
                     } else {
                         resolvedText = .none
                     }

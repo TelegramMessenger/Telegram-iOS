@@ -188,6 +188,8 @@ public final class PresentationCallImpl: PresentationCall {
     private var receptionDisposable: Disposable?
     private var reportedIncomingCall = false
     
+    private var batteryLevelDisposable: Disposable?
+    
     private var callWasActive = false
     private var shouldPresentCallRating = false
     
@@ -415,6 +417,7 @@ public final class PresentationCallImpl: PresentationCall {
         self.sessionStateDisposable?.dispose()
         self.ongoingContextStateDisposable?.dispose()
         self.receptionDisposable?.dispose()
+        self.batteryLevelDisposable?.dispose()
         self.audioSessionDisposable?.dispose()
         
         if let dropCallKitCallTimer = self.dropCallKitCallTimer {
@@ -628,6 +631,35 @@ public final class PresentationCallImpl: PresentationCall {
                             } else {
                                 strongSelf.reception = reception
                             }
+                        }
+                    })
+                    
+                    func batteryLevelIsLowSignal() -> Signal<Bool, NoError> {
+                        return Signal { subscriber in
+                            let device = UIDevice.current
+                            device.isBatteryMonitoringEnabled = true
+                            
+                            var previousBatteryLevelIsLow = false
+                            let timer = SwiftSignalKit.Timer(timeout: 30.0, repeat: true, completion: {
+                                let batteryLevelIsLow = device.batteryLevel < 0.1 && device.batteryState != .charging
+                                if batteryLevelIsLow != previousBatteryLevelIsLow {
+                                    previousBatteryLevelIsLow = batteryLevelIsLow
+                                    subscriber.putNext(batteryLevelIsLow)
+                                }
+                            }, queue: Queue.mainQueue())
+                            timer.start()
+                            
+                            return ActionDisposable {
+                                device.isBatteryMonitoringEnabled = false
+                                timer.invalidate()
+                            }
+                        }
+                    }
+                    
+                    self.batteryLevelDisposable = (batteryLevelIsLowSignal()
+                    |> deliverOnMainQueue).start(next: { [weak self] batteryLevelIsLow in
+                        if let strongSelf = self, let ongoingContext = strongSelf.ongoingContext {
+                            ongoingContext.setIsLowBatteryLevel(batteryLevelIsLow)
                         }
                     })
                     
