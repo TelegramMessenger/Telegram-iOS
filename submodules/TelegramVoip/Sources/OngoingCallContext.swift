@@ -725,6 +725,18 @@ public final class OngoingCallContext {
         }
     }
     
+    private func withContextThenDeallocate(_ f: @escaping (OngoingCallThreadLocalContextProtocol) -> Void) {
+        self.queue.async {
+            if let contextRef = self.contextRef {
+                let context = contextRef.takeUnretainedValue()
+                f(context.context)
+                
+                self.contextRef?.release()
+                self.contextRef = nil
+            }
+        }
+    }
+    
     public func beginTermination() {
         self.withContext { context in
             context.nativeBeginTermination()
@@ -735,7 +747,7 @@ public final class OngoingCallContext {
         let account = self.account
         let logPath = self.logPath
         
-        self.withContext { context in
+        self.withContextThenDeallocate { context in
             context.nativeStop { debugLog, bytesSentWifi, bytesReceivedWifi, bytesSentMobile, bytesReceivedMobile in
                 debugLogValue.set(.single(debugLog))
                 let delta = NetworkUsageStatsConnectionsEntry(
