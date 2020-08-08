@@ -167,6 +167,9 @@ public final class CallController: ViewController {
                 let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                 var items: [ActionSheetItem] = []
                 for output in availableOutputs {
+                    if hasMute, case .builtin = output {
+                        continue
+                    }
                     let title: String
                     var icon: UIImage?
                     switch output {
