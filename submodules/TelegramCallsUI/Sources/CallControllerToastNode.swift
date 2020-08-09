@@ -272,25 +272,23 @@ private class CallControllerToastItemNode: ASDisplayNode {
             } else {
                 self.iconNode.image = image
             }
+                  
+            self.textNode.attributedText = NSAttributedString(string: content.text, font: Font.regular(17.0), textColor: .white)
             
-            if previousContent?.text != content.text {
-                self.textNode.attributedText = NSAttributedString(string: content.text, font: Font.regular(17.0), textColor: .white)
-                
-                let iconSize = CGSize(width: 44.0, height: 28.0)
-                let iconSpacing: CGFloat = 2.0
-                let textSize = self.textNode.updateLayout(CGSize(width: width - inset * 2.0 - iconSize.width - iconSpacing, height: 100.0))
-                
-                let backgroundSize = CGSize(width: iconSize.width + iconSpacing + textSize.width + 6.0 * 2.0, height: max(28.0, textSize.height + 4.0 * 2.0))
-                let backgroundFrame = CGRect(origin: CGPoint(x: floor((width - backgroundSize.width) / 2.0), y: 0.0), size: backgroundSize)
-                
-                transition.updateFrame(node: self.clipNode, frame: backgroundFrame)
-                transition.updateFrame(view: self.effectView, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
-                
-                self.iconNode.frame = CGRect(origin: CGPoint(), size: iconSize)
-                self.textNode.frame = CGRect(origin: CGPoint(x: iconSize.width + iconSpacing, y: 4.0), size: textSize)
-                
-                self.currentHeight = backgroundSize.height
-            }
+            let iconSize = CGSize(width: 44.0, height: 28.0)
+            let iconSpacing: CGFloat = 2.0
+            let textSize = self.textNode.updateLayout(CGSize(width: width - inset * 2.0 - iconSize.width - iconSpacing, height: 100.0))
+            
+            let backgroundSize = CGSize(width: iconSize.width + iconSpacing + textSize.width + 6.0 * 2.0, height: max(28.0, textSize.height + 4.0 * 2.0))
+            let backgroundFrame = CGRect(origin: CGPoint(x: floor((width - backgroundSize.width) / 2.0), y: 0.0), size: backgroundSize)
+            
+            transition.updateFrame(node: self.clipNode, frame: backgroundFrame)
+            transition.updateFrame(view: self.effectView, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
+            
+            self.iconNode.frame = CGRect(origin: CGPoint(), size: iconSize)
+            self.textNode.frame = CGRect(origin: CGPoint(x: iconSize.width + iconSpacing, y: 4.0), size: textSize)
+            
+            self.currentHeight = backgroundSize.height
         }
         return self.currentHeight ?? 28.0
     }

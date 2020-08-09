@@ -259,7 +259,7 @@ final class WalletContextImpl: WalletContext {
     
     func authorizeAccessToCamera(completion: @escaping () -> Void) {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-        DeviceAccess.authorizeAccess(to: .camera, presentationData: presentationData, present: { c, a in
+        DeviceAccess.authorizeAccess(to: .camera(.video), presentationData: presentationData, present: { c, a in
             c.presentationArguments = a
             self.context.sharedContext.mainWindow?.present(c, on: .root)
         }, openSettings: { [weak self] in

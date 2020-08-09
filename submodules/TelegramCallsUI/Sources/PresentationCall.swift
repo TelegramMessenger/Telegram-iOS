@@ -789,7 +789,7 @@ public final class PresentationCallImpl: PresentationCall {
             }
             if value {
                 if strongSelf.isVideo {
-                    DeviceAccess.authorizeAccess(to: .camera, presentationData: presentationData, present: { c, a in
+                    DeviceAccess.authorizeAccess(to: .camera(.videoCall), presentationData: presentationData, present: { c, a in
                         present(c, a)
                     }, openSettings: {
                         openSettings()

@@ -134,7 +134,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
             
             if content.hasProgress {
                 if self.statusNode == nil {
-                    let statusNode = SemanticStatusNode(backgroundNodeColor: .white, foregroundNodeColor: .clear)
+                    let statusNode = SemanticStatusNode(backgroundNodeColor: .white, foregroundNodeColor: .clear, hollow: true)
                     self.statusNode = statusNode
                     self.contentContainer.insertSubnode(statusNode, belowSubnode: self.contentNode)
                     statusNode.transitionToState(.progress(value: nil, cancelEnabled: false, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 4.0, lineWidth: 3.0)), animated: false, completion: {})
@@ -168,18 +168,19 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
             let contentImage = generateImage(CGSize(width: self.largeButtonSize, height: self.largeButtonSize), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 
+                var ellipseRect = CGRect(origin: CGPoint(), size: size)
                 var fillColor: UIColor = .clear
-                var imageColor: UIColor = .white
+                let imageColor: UIColor = .white
                 var drawOverMask = false
                 context.setBlendMode(.normal)
-                var imageScale: CGFloat = 1.0
+                let imageScale: CGFloat = 1.0
                 switch content.appearance {
                 case let .blurred(isFilled):
                     if content.hasProgress {
-                        fillColor = .clear
-                        imageColor = .black
-                        drawOverMask = false
+                        fillColor = .white
+                        drawOverMask = true
                         context.setBlendMode(.copy)
+                        ellipseRect = ellipseRect.insetBy(dx: 7.0, dy: 7.0)
                     } else {
                         if isFilled {
                             fillColor = .white
@@ -187,8 +188,6 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                             context.setBlendMode(.copy)
                         }
                     }
-//                    let smallButtonSize: CGFloat = 60.0
-//                    imageScale = self.largeButtonSize / smallButtonSize
                 case let .color(color):
                     switch color {
                     case .red:
@@ -199,7 +198,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                 }
                 
                 context.setFillColor(fillColor.cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                context.fillEllipse(in: ellipseRect)
                 
                 var image: UIImage?
                 
@@ -240,11 +239,6 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                     }
                 }
             })
-            
-//            if transition.isAnimated, let previousContent = previousContent, content.image == .camera, !previousContent.appearance.isFilled && content.appearance.isFilled {
-//                self.contentBackgroundNode.image = contentBackgroundImage
-//                self.contentBackgroundNode.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 1.25, damping: 105.0)
-//            }
             
             if transition.isAnimated, let contentBackgroundImage = contentBackgroundImage, let previousContent = self.contentBackgroundNode.image {
                 self.contentBackgroundNode.image = contentBackgroundImage
