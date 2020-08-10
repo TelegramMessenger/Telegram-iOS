@@ -29,6 +29,7 @@
 #define IPHONE_8Plus_NAMESTRING         @"iPhone 8 Plus"
 #define IPHONE_X_NAMESTRING             @"iPhone X"
 #define IPHONE_SE_NAMESTRING            @"iPhone SE"
+#define IPHONE_SE2_NAMESTRING           @"iPhone SE (2nd gen)"
 #define IPHONE_XS_NAMESTRING            @"iPhone XS"
 #define IPHONE_XSMAX_NAMESTRING         @"iPhone XS Max"
 #define IPHONE_XR_NAMESTRING            @"iPhone XR"
@@ -96,7 +97,7 @@ typedef enum {
     UIDevice5SiPhone,
     UIDevice6iPhone,
     UIDevice6PlusiPhone,
-    UIDevice6siPhone,
+    UIDevice6SiPhone,
     UIDevice6SPlusiPhone,
     UIDevice7iPhone,
     UIDevice7PlusiPhone,
@@ -104,6 +105,7 @@ typedef enum {
     UIDevice8PlusiPhone,
     UIDeviceXiPhone,
     UIDeviceSEPhone,
+    UIDeviceSE2Phone,
     UIDeviceXSiPhone,
     UIDeviceXSMaxiPhone,
     UIDeviceXRiPhone,
@@ -587,7 +589,7 @@ NSString *suffix = @"";
         case UIDevice5SiPhone: return IPHONE_5S_NAMESTRING;
         case UIDevice6iPhone: return IPHONE_6_NAMESTRING;
         case UIDevice6PlusiPhone: return IPHONE_6Plus_NAMESTRING;
-        case UIDevice6siPhone: return IPHONE_6S_NAMESTRING;
+        case UIDevice6SiPhone: return IPHONE_6S_NAMESTRING;
         case UIDevice6SPlusiPhone: return IPHONE_6SPlus_NAMESTRING;
         case UIDevice7iPhone: return IPHONE_7_NAMESTRING;
         case UIDevice7PlusiPhone: return IPHONE_7Plus_NAMESTRING;
@@ -595,6 +597,7 @@ NSString *suffix = @"";
         case UIDevice8PlusiPhone: return IPHONE_8Plus_NAMESTRING;
         case UIDeviceXiPhone: return IPHONE_X_NAMESTRING;
         case UIDeviceSEPhone: return IPHONE_SE_NAMESTRING;
+        case UIDeviceSE2Phone: return IPHONE_SE2_NAMESTRING;
         case UIDeviceXSiPhone: return IPHONE_XS_NAMESTRING;
         case UIDeviceXSMaxiPhone: return IPHONE_XSMAX_NAMESTRING;
         case UIDeviceXRiPhone: return IPHONE_XR_NAMESTRING;
@@ -675,7 +678,7 @@ NSString *suffix = @"";
     
     if ([platform isEqualToString:@"iPhone7,1"])    return UIDevice6PlusiPhone;
     if ([platform isEqualToString:@"iPhone7,2"])    return UIDevice6iPhone;
-    if ([platform isEqualToString:@"iPhone8,1"])    return UIDevice6siPhone;
+    if ([platform isEqualToString:@"iPhone8,1"])    return UIDevice6SiPhone;
     if ([platform isEqualToString:@"iPhone8,2"])    return UIDevice6SPlusiPhone;
     if ([platform isEqualToString:@"iPhone9,1"])    return UIDevice7iPhone;
     if ([platform isEqualToString:@"iPhone9,3"])    return UIDevice7iPhone;
@@ -696,6 +699,7 @@ NSString *suffix = @"";
     if ([platform isEqualToString:@"iPhone12,1"])    return UIDevice11iPhone;
     if ([platform isEqualToString:@"iPhone12,3"])    return UIDevice11ProiPhone;
     if ([platform isEqualToString:@"iPhone12,5"])    return UIDevice11ProMaxiPhone;
+    if ([platform isEqualToString:@"iPhone12,8"])    return UIDeviceSE2Phone;
     
     if ([platform isEqualToString:@"iPhone8,4"])    return UIDeviceSEPhone;
     
