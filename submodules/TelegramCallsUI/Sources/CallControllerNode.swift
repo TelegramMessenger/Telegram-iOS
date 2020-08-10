@@ -30,6 +30,8 @@ private final class CallVideoNode: ASDisplayNode {
     private let videoView: PresentationCallVideoView
     
     private var effectView: UIVisualEffectView?
+    private let videoPausedNode: ImmediateTextNode
+    
     private var isBlurred: Bool = false
     private var currentCornerRadius: CGFloat = 0.0
     
@@ -41,7 +43,7 @@ private final class CallVideoNode: ASDisplayNode {
     
     private(set) var currentOrientation: PresentationCallVideoView.Orientation
     
-    init(videoView: PresentationCallVideoView, assumeReadyAfterTimeout: Bool, isReadyUpdated: @escaping () -> Void, orientationUpdated: @escaping () -> Void, isFlippedUpdated: @escaping (CallVideoNode) -> Void) {
+    init(videoView: PresentationCallVideoView, disabledText: String?, assumeReadyAfterTimeout: Bool, isReadyUpdated: @escaping () -> Void, orientationUpdated: @escaping () -> Void, isFlippedUpdated: @escaping (CallVideoNode) -> Void) {
         self.isReadyUpdated = isReadyUpdated
         self.isFlippedUpdated = isFlippedUpdated
         
@@ -53,6 +55,10 @@ private final class CallVideoNode: ASDisplayNode {
         
         self.currentOrientation = videoView.getOrientation()
         
+        self.videoPausedNode = ImmediateTextNode()
+        self.videoPausedNode.alpha = 0.0
+        self.videoPausedNode.maximumNumberOfLines = 3
+        
         super.init()
         
         if #available(iOS 13.0, *) {
@@ -62,6 +68,11 @@ private final class CallVideoNode: ASDisplayNode {
         
         self.videoTransformContainer.view.addSubview(self.videoView.view)
         self.addSubnode(self.videoTransformContainer)
+        
+        if let disabledText = disabledText {
+            self.videoPausedNode.attributedText = NSAttributedString(string: disabledText, font: Font.regular(17.0), textColor: .white)
+            self.addSubnode(self.videoPausedNode)
+        }
         
         self.videoView.setOnFirstFrameReceived { [weak self] aspectRatio in
             Queue.mainQueue().async {
@@ -200,6 +211,9 @@ private final class CallVideoNode: ASDisplayNode {
             }
         }
         
+        let videoPausedSize = self.videoPausedNode.updateLayout(CGSize(width: size.width - 16.0, height: 100.0))
+        transition.updateFrame(node: self.videoPausedNode, frame: CGRect(origin: CGPoint(x: floor((size.width - videoPausedSize.width) / 2.0), y: floor((size.height - videoPausedSize.height) / 2.0)), size: videoPausedSize))
+        
         let previousVideoFrame = self.videoTransformContainer.frame
         self.videoTransformContainer.bounds = CGRect(origin: CGPoint(), size: size)
         if transition.isAnimated && !videoFrame.height.isZero && !previousVideoFrame.height.isZero {
@@ -244,6 +258,7 @@ private final class CallVideoNode: ASDisplayNode {
             }
             if animated {
                 UIView.animate(withDuration: 0.3, animations: {
+                    self.videoPausedNode.alpha = 1.0
                     self.effectView?.effect = UIBlurEffect(style: light ? .light : .dark)
                 })
             } else {
@@ -252,6 +267,7 @@ private final class CallVideoNode: ASDisplayNode {
         } else if let effectView = self.effectView {
             self.effectView = nil
             UIView.animate(withDuration: 0.3, animations: {
+                self.videoPausedNode.alpha = 0.0
                 effectView.effect = nil
             }, completion: { [weak effectView] _ in
                 effectView?.removeFromSuperview()
@@ -315,6 +331,9 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     private var isRequestingVideo: Bool = false
     private var animateRequestedVideoOnce: Bool = false
     
+    private var hiddenUIForActiveVideoCallOnce: Bool = false
+    private var hideUIForActiveVideoCallTimer: SwiftSignalKit.Timer?
+    
     private var displayedCameraConfirmation: Bool = false
     private var displayedCameraTooltip: Bool = false
     
@@ -327,7 +346,6 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     private let backButtonArrowNode: ASImageNode
     private let backButtonNode: HighlightableButtonNode
     private let statusNode: CallControllerStatusNode
-    private let videoPausedNode: ImmediateTextNode
     private let toastNode: CallControllerToastContainerNode
     private let buttonsNode: CallControllerButtonsNode
     private var keyPreviewNode: CallControllerKeyPreviewNode?
@@ -343,6 +361,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     var isMuted: Bool = false {
         didSet {
             self.buttonsNode.isMuted = self.isMuted
+            self.updateToastContent()
             if let (layout, navigationBarHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
             }
@@ -364,6 +383,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     var callEnded: ((Bool) -> Void)?
     var dismissedInteractively: (() -> Void)?
     var present: ((ViewController) -> Void)?
+    var dismissAllTooltips: (() -> Void)?
     
     private var toastContent: CallControllerToastContent?
     private var displayToastsAfterTimestamp: Double?
@@ -416,9 +436,6 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         
         self.statusNode = CallControllerStatusNode()
         
-        self.videoPausedNode = ImmediateTextNode()
-        self.videoPausedNode.alpha = 0.0
-        
         self.buttonsNode = CallControllerButtonsNode(strings: self.presentationData.strings)
         self.toastNode = CallControllerToastContainerNode(strings: self.presentationData.strings)
         self.keyButtonNode = CallControllerKeyButton()
@@ -451,7 +468,6 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         self.containerNode.addSubnode(self.imageNode)
         self.containerNode.addSubnode(self.dimNode)
         self.containerNode.addSubnode(self.statusNode)
-        self.containerNode.addSubnode(self.videoPausedNode)
         self.containerNode.addSubnode(self.buttonsNode)
         self.containerNode.addSubnode(self.toastNode)
         self.containerNode.addSubnode(self.keyButtonNode)
@@ -460,6 +476,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         
         self.buttonsNode.mute = { [weak self] in
             self?.toggleMute?()
+            self?.cancelScheduledUIHiding()
         }
         
         self.buttonsNode.speaker = { [weak self] in
@@ -467,6 +484,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 return
             }
             strongSelf.beginAudioOuputSelection?(strongSelf.hasVideoNodes)
+            strongSelf.cancelScheduledUIHiding()
         }
                 
         self.buttonsNode.acceptOrEnd = { [weak self] in
@@ -476,6 +494,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
             switch callState.state {
             case .active, .connecting, .reconnecting:
                 strongSelf.endCall?()
+                strongSelf.cancelScheduledUIHiding()
             case .requesting:
                 strongSelf.endCall?()
             case .ringing:
@@ -517,6 +536,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                     }
                 } else {
                     strongSelf.call.disableVideo()
+                    strongSelf.cancelScheduledUIHiding()
                 }
             default:
                 break
@@ -537,6 +557,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                     strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                 }
             }
+            strongSelf.cancelScheduledUIHiding()
         }
         
         self.keyButtonNode.addTarget(self, action: #selector(self.keyPressed), forControlEvents: .touchUpInside)
@@ -553,7 +574,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     }
     
     func displayCameraTooltip() {
-        guard let location = self.buttonsNode.videoButtonFrame().flatMap({ frame -> CGRect in
+        guard self.pictureInPictureTransitionFraction.isZero, let location = self.buttonsNode.videoButtonFrame().flatMap({ frame -> CGRect in
             return self.buttonsNode.view.convert(frame, to: self.view)
         }) else {
             return
@@ -604,8 +625,6 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                     self.updateCallState(callState)
                 }
             }
-            
-            self.videoPausedNode.attributedText = NSAttributedString(string: self.presentationData.strings.Call_RemoteVideoPaused(peer.compactDisplayTitle).0, font: Font.regular(17.0), textColor: .white)
             
             if let (layout, navigationBarHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
@@ -671,9 +690,12 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                             }
                             strongSelf.expandedVideoNode = incomingVideoNode
                             strongSelf.updateButtonsMode(transition: .animated(duration: 0.4, curve: .spring))
+                            
+                            strongSelf.updateDimVisibility()
+                            strongSelf.maybeScheduleUIHidingForActiveVideoCall()
                         }
                         
-                        let incomingVideoNode = CallVideoNode(videoView: incomingVideoView, assumeReadyAfterTimeout: false, isReadyUpdated: {
+                        let incomingVideoNode = CallVideoNode(videoView: incomingVideoView, disabledText: strongSelf.presentationData.strings.Call_RemoteVideoPaused(strongSelf.peer?.compactDisplayTitle ?? "").0, assumeReadyAfterTimeout: false, isReadyUpdated: {
                             if delayUntilInitialized {
                                 Queue.mainQueue().after(0.1, {
                                     applyNode()
@@ -752,9 +774,12 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                                 strongSelf.containerNode.insertSubnode(outgoingVideoNode, belowSubnode: strongSelf.dimNode)
                             }
                             strongSelf.updateButtonsMode(transition: .animated(duration: 0.4, curve: .spring))
+                            
+                            strongSelf.updateDimVisibility()
+                            strongSelf.maybeScheduleUIHidingForActiveVideoCall()
                         }
                         
-                        let outgoingVideoNode = CallVideoNode(videoView: outgoingVideoView, assumeReadyAfterTimeout: true, isReadyUpdated: {
+                        let outgoingVideoNode = CallVideoNode(videoView: outgoingVideoView, disabledText: nil, assumeReadyAfterTimeout: true, isReadyUpdated: {
                             if delayUntilInitialized {
                                 Queue.mainQueue().after(0.4, {
                                     applyNode()
@@ -832,15 +857,6 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                     isActive = true
                 }
                 incomingVideoNode.updateIsBlurred(isBlurred: !isActive)
-                if isActive != self.videoPausedNode.alpha.isZero {
-                    if isActive {
-                        self.videoPausedNode.alpha = 0.0
-                        self.videoPausedNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
-                    } else {
-                        self.videoPausedNode.alpha = 1.0
-                        self.videoPausedNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                    }
-                }
             }
         }
                 
@@ -904,8 +920,8 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                     }
                 }
                 
-                statusValue = .timer({ value in
-                    if isReconnecting {
+                statusValue = .timer({ value, measure in
+                    if isReconnecting || (self.outgoingVideoViewRequested && value == "00:00" && !measure) {
                         return strings.Call_StatusConnecting
                     } else {
                         return value
@@ -935,6 +951,34 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
             }
         }
         
+        self.updateToastContent()
+        self.updateButtonsMode()
+        self.updateDimVisibility()
+        
+        if self.incomingVideoViewRequested && self.outgoingVideoViewRequested {
+            self.displayedCameraTooltip = true
+            self.displayedCameraConfirmation = true
+        }
+        if self.incomingVideoViewRequested && !self.outgoingVideoViewRequested && !self.displayedCameraTooltip && (self.toastContent?.isEmpty ?? true) {
+            self.displayedCameraTooltip = true
+            Queue.mainQueue().after(2.0) {
+                self.displayCameraTooltip()
+            }
+        }
+        
+        if case let .terminated(id, _, reportRating) = callState.state, let callId = id {
+            let presentRating = reportRating || self.forceReportRating
+            if presentRating {
+                self.presentCallRating?(callId)
+            }
+            self.callEnded?(presentRating)
+        }
+    }
+    
+    private func updateToastContent() {
+        guard let callState = self.callState else {
+            return
+        }
         if case .terminating = callState.state {
         } else if case .terminated = callState.state {
         } else {
@@ -961,27 +1005,6 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
             }
             self.toastContent = toastContent
         }
-        
-        self.updateButtonsMode()
-        self.updateDimVisibility()
-        
-        if self.incomingVideoViewRequested && self.outgoingVideoViewRequested {
-            self.displayedCameraTooltip = true
-        }
-        if self.incomingVideoViewRequested && !self.outgoingVideoViewRequested && !self.displayedCameraTooltip && (self.toastContent?.isEmpty ?? true) {
-            self.displayedCameraTooltip = true
-            Queue.mainQueue().after(2.0) {
-                self.displayCameraTooltip()
-            }
-        }
-        
-        if case let .terminated(id, _, reportRating) = callState.state, let callId = id {
-            let presentRating = reportRating || self.forceReportRating
-            if presentRating {
-                self.presentCallRating?(callId)
-            }
-            self.callEnded?(presentRating)
-        }
     }
     
     private func updateDimVisibility(transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)) {
@@ -998,8 +1021,8 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         if visible != currentVisible {
             let color = visible ? UIColor(rgb: 0x000000, alpha: 0.3) : UIColor.clear
             let image: UIImage? = visible ? nil : generateGradientImage(size: CGSize(width: 1.0, height: 640.0), colors: [UIColor.black.withAlphaComponent(0.3), UIColor.clear, UIColor.clear, UIColor.black.withAlphaComponent(0.3)], locations: [0.0, 0.22, 0.7, 1.0])
-            if transition.isAnimated {
-                UIView.transition(with: self.dimNode.view, duration: 0.3, options: .transitionCrossDissolve, animations: {
+            if case let .animated(duration, _) = transition {
+                UIView.transition(with: self.dimNode.view, duration: duration, options: .transitionCrossDissolve, animations: {
                     self.dimNode.backgroundColor = color
                     self.dimNode.image = image
                 }, completion: nil)
@@ -1007,8 +1030,41 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 self.dimNode.backgroundColor = color
                 self.dimNode.image = image
             }
-            self.statusNode.isHidden = !visible
         }
+        self.statusNode.setVisible(visible || self.keyPreviewNode != nil, transition: transition)
+    }
+    
+    private func maybeScheduleUIHidingForActiveVideoCall() {
+        guard let callState = self.callState, case .active = callState.state, self.incomingVideoNodeValue != nil && self.outgoingVideoNodeValue != nil, !self.hiddenUIForActiveVideoCallOnce && self.keyPreviewNode == nil else {
+            return
+        }
+        
+        let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
+            if let strongSelf = self {
+                var updated = false
+                if let callState = strongSelf.callState, !strongSelf.isUIHidden {
+                    switch callState.state {
+                        case .active, .connecting, .reconnecting:
+                            strongSelf.isUIHidden = true
+                            updated = true
+                        default:
+                            break
+                    }
+                }
+                if updated, let (layout, navigationBarHeight) = strongSelf.validLayout {
+                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                }
+                strongSelf.hideUIForActiveVideoCallTimer = nil
+            }
+        }, queue: Queue.mainQueue())
+        timer.start()
+        self.hideUIForActiveVideoCallTimer = timer
+        self.hiddenUIForActiveVideoCallOnce = true
+    }
+    
+    private func cancelScheduledUIHiding() {
+        self.hideUIForActiveVideoCallTimer?.invalidate()
+        self.hideUIForActiveVideoCallTimer = nil
     }
     
     private var buttonsTerminationMode: CallControllerButtonsMode?
@@ -1299,9 +1355,6 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: 0.0, y: statusOffset), size: CGSize(width: layout.size.width, height: statusHeight)))
         transition.updateAlpha(node: self.statusNode, alpha: overlayAlpha)
         
-        let videoPausedSize = self.videoPausedNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: 100.0))
-        transition.updateFrame(node: self.videoPausedNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - videoPausedSize.width) / 2.0), y: floor((layout.size.height - videoPausedSize.height) / 2.0)), size: videoPausedSize))
-        
         transition.updateFrame(node: self.toastNode, frame: CGRect(origin: CGPoint(x: 0.0, y: toastOriginY), size: CGSize(width: layout.size.width, height: toastHeight)))
         transition.updateFrame(node: self.buttonsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: buttonsOriginY), size: CGSize(width: layout.size.width, height: buttonsHeight)))
         transition.updateAlpha(node: self.buttonsNode, alpha: overlayAlpha)
@@ -1424,6 +1477,8 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 self.keyButtonNode.isHidden = true
                 keyPreviewNode.animateIn(from: self.keyButtonNode.frame, fromNode: self.keyButtonNode)
             }
+            
+            self.updateDimVisibility()
         }
     }
     
@@ -1434,6 +1489,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 self?.keyButtonNode.isHidden = false
                 keyPreviewNode?.removeFromSupernode()
             })
+            self.updateDimVisibility()
         } else if self.hasVideoNodes {
             if let (layout, navigationHeight) = self.validLayout {
                 self.pictureInPictureTransitionFraction = 1.0
@@ -1669,7 +1725,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 }
                 if self.pictureInPictureTransitionFraction.isZero, let expandedVideoNode = self.expandedVideoNode, let minimizedVideoNode = self.minimizedVideoNode, minimizedVideoNode.frame.contains(location), expandedVideoNode.frame != minimizedVideoNode.frame {
                     self.minimizedVideoInitialPosition = minimizedVideoNode.position
-                } else if let _ = self.minimizedVideoNode {
+                } else if self.hasVideoNodes {
                     self.minimizedVideoInitialPosition = nil
                     if !self.pictureInPictureTransitionFraction.isZero {
                         self.pictureInPictureGestureState = .dragging(initialPosition: self.containerTransformationNode.position, draggingPosition: self.containerTransformationNode.position)
@@ -1679,6 +1735,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 } else {
                     self.pictureInPictureGestureState = .none
                 }
+                self.dismissAllTooltips?()
             case .changed:
                 if let minimizedVideoNode = self.minimizedVideoNode, let minimizedVideoInitialPosition = self.minimizedVideoInitialPosition {
                     let translation = recognizer.translation(in: self.view)

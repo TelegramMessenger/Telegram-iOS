@@ -451,12 +451,14 @@ private final class SemanticStatusNodeTransitionDrawingState {
 private final class SemanticStatusNodeDrawingState: NSObject {
     let background: UIColor
     let foreground: UIColor
+    let hollow: Bool
     let transitionState: SemanticStatusNodeTransitionDrawingState?
     let drawingState: SemanticStatusNodeStateDrawingState
     
-    init(background: UIColor, foreground: UIColor, transitionState: SemanticStatusNodeTransitionDrawingState?, drawingState: SemanticStatusNodeStateDrawingState) {
+    init(background: UIColor, foreground: UIColor, hollow: Bool, transitionState: SemanticStatusNodeTransitionDrawingState?, drawingState: SemanticStatusNodeStateDrawingState) {
         self.background = background
         self.foreground = foreground
+        self.hollow = hollow
         self.transitionState = transitionState
         self.drawingState = drawingState
         
@@ -495,6 +497,8 @@ public final class SemanticStatusNode: ASControlNode {
         }
     }
     
+    private let hollow: Bool
+    
     private var animator: ConstantDisplayLinkAnimator?
     
     private var hasState: Bool = false
@@ -502,9 +506,10 @@ public final class SemanticStatusNode: ASControlNode {
     private var transtionContext: SemanticStatusNodeTransitionContext?
     private var stateContext: SemanticStatusNodeStateContext
     
-    public init(backgroundNodeColor: UIColor, foregroundNodeColor: UIColor) {
+    public init(backgroundNodeColor: UIColor, foregroundNodeColor: UIColor, hollow: Bool = false) {
         self.backgroundNodeColor = backgroundNodeColor
         self.foregroundNodeColor = foregroundNodeColor
+        self.hollow = hollow
         self.state = .none
         self.stateContext = self.state.context(current: nil)
         
@@ -584,7 +589,7 @@ public final class SemanticStatusNode: ASControlNode {
             transitionState = SemanticStatusNodeTransitionDrawingState(transition: t, drawingState: transitionContext.previousStateContext.drawingState(transitionFraction: 1.0 - t))
         }
         
-        return SemanticStatusNodeDrawingState(background: self.backgroundNodeColor, foreground: self.foregroundNodeColor, transitionState: transitionState, drawingState: self.stateContext.drawingState(transitionFraction: transitionFraction))
+        return SemanticStatusNodeDrawingState(background: self.backgroundNodeColor, foreground: self.foregroundNodeColor, hollow: self.hollow, transitionState: transitionState, drawingState: self.stateContext.drawingState(transitionFraction: transitionFraction))
     }
     
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -606,5 +611,10 @@ public final class SemanticStatusNode: ASControlNode {
             transitionState.drawingState.draw(context: context, size: bounds.size, foregroundColor: parameters.foreground)
         }
         parameters.drawingState.draw(context: context, size: bounds.size, foregroundColor: parameters.foreground)
+        
+        if parameters.hollow {
+            context.setBlendMode(.clear)
+            context.fillEllipse(in: bounds.insetBy(dx: 8.0, dy: 8.0))
+        }
     }
 }

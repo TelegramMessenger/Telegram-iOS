@@ -641,7 +641,7 @@ public final class PresentationCallImpl: PresentationCall {
                             
                             var previousBatteryLevelIsLow = false
                             let timer = SwiftSignalKit.Timer(timeout: 30.0, repeat: true, completion: {
-                                let batteryLevelIsLow = device.batteryLevel < 0.1 && device.batteryState != .charging
+                                let batteryLevelIsLow = device.batteryLevel >= 0.0 && device.batteryLevel < 0.1 && device.batteryState != .charging
                                 if batteryLevelIsLow != previousBatteryLevelIsLow {
                                     previousBatteryLevelIsLow = batteryLevelIsLow
                                     subscriber.putNext(batteryLevelIsLow)
@@ -789,7 +789,7 @@ public final class PresentationCallImpl: PresentationCall {
             }
             if value {
                 if strongSelf.isVideo {
-                    DeviceAccess.authorizeAccess(to: .camera, presentationData: presentationData, present: { c, a in
+                    DeviceAccess.authorizeAccess(to: .camera(.videoCall), presentationData: presentationData, present: { c, a in
                         present(c, a)
                     }, openSettings: {
                         openSettings()
