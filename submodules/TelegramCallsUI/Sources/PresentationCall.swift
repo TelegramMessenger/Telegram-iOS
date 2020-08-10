@@ -641,7 +641,7 @@ public final class PresentationCallImpl: PresentationCall {
                             
                             var previousBatteryLevelIsLow = false
                             let timer = SwiftSignalKit.Timer(timeout: 30.0, repeat: true, completion: {
-                                let batteryLevelIsLow = device.batteryLevel < 0.1 && device.batteryState != .charging
+                                let batteryLevelIsLow = device.batteryLevel >= 0.0 && device.batteryLevel < 0.1 && device.batteryState != .charging
                                 if batteryLevelIsLow != previousBatteryLevelIsLow {
                                     previousBatteryLevelIsLow = batteryLevelIsLow
                                     subscriber.putNext(batteryLevelIsLow)
