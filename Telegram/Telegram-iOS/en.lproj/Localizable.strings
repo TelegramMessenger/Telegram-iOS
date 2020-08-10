@@ -5728,3 +5728,8 @@ Any member of this group will be able to see messages in the channel.";
 "FalseBottom.AccountWasHidden.Title" = "Account is hidden";
 "FalseBottom.AccountWasHidden.Text" = "Now you can open the account you need by entering the first or the second passcode.";
 "FalseBottom.AccountWasHidden.Button" = "Enter passcode";
+
+"NotificationSettings.LocalAccountNotificationsSection" = "CURRENT ACCOUNT ON THIS DEVICE";
+"NotificationSettings.LocalAccountNotifications" = "Enable notifications";
+"NotificationSettings.LocalAccountNotificationsInfoOn" = "Turn this off to disable all notifications for the current acount on this device";
+"NotificationSettings.LocalAccountNotificationsInfoOff" = "Turn this on to enable all notifications for the current acount on this device";

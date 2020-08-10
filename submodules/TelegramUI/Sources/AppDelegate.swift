@@ -41,6 +41,7 @@ import AccountUtils
 import CoreSpotlight
 import PasscodeUI
 import LocalAuth
+import TelegramUIPreferences
 
 #if canImport(BackgroundTasks)
 import BackgroundTasks
@@ -2186,17 +2187,7 @@ final class SharedApplicationContext {
                             }
                             
                             if let id = id {
-                                let _ = (accountContext.activeAccounts
-                                |> map { _, accounts, _ -> [Account] in
-                                        let activeAccounts = accounts.map { $0.1 }
-                                    
-                                        if let account = activeAccounts.first(where: { $0.id == id }) {
-                                            changeChatsAndChannelsNotifications(unmute: false, atAccount: account)
-                                        }
-                                    
-                                        return activeAccounts
-                                    }
-                                ).start()
+                                setAccountPushNotificationsEnabledOnThisDevice(accountIds: [id: false], transaction: transaction)
                                 
                                 setAccountRecordAccessChallengeData(transaction: transaction, id: id, accessChallengeData: data)
                                 

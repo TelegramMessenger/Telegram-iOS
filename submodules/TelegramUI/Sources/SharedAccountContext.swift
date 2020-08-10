@@ -156,6 +156,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private var spotlightDataContext: SpotlightDataContext?
     private var widgetDataContext: WidgetDataContext?
     
+    private let networkArguments: NetworkInitializationArguments
+    private let encryptionParameters: ValueBoxEncryptionParameters
+    private let rootPath: String
+    
     public init(mainWindow: Window1?, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, legacyCache: LegacyCache?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }) {
         assert(Queue.mainQueue().isCurrent())
         
@@ -169,6 +173,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.navigateToChatImpl = navigateToChat
         self.displayUpgradeProgress = displayUpgradeProgress
         self.appLockContext = appLockContext
+        
+        self.networkArguments = networkArguments
+        self.encryptionParameters = encryptionParameters
+        self.rootPath = rootPath
         
         self.accountManager.mediaBox.fetchCachedResourceRepresentation = { (resource, representation) -> Signal<CachedMediaResourceRepresentationResult, NoError> in
             return fetchCachedSharedResourceRepresentation(accountManager: accountManager, resource: resource, representation: representation)
@@ -760,6 +768,40 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
     }
     
+    public func initializeAccount(id: AccountRecordId) -> Signal<Account, NoError> {
+        accountManager.transaction { transaction -> (backupData: AccountBackupData?, isTestingEnvironment: Bool) in
+            var backupData: AccountBackupData?
+            var isTestingEnvironment = false
+            transaction.updateRecord(id) { record in
+                guard let record = record else { return nil }
+                
+                for attribute in record.attributes {
+                    if let attribute = attribute as? AccountEnvironmentAttribute, case .test = attribute.environment {
+                        isTestingEnvironment = true
+                    } else if let attribute = attribute as? AccountBackupDataAttribute {
+                        backupData = attribute.data
+                    }
+                }
+                return record
+            }
+            return (backupData, isTestingEnvironment)
+        } |> mapToSignal { [weak self] backupData, isTestingEnvironment -> Signal<AccountResult, NoError> in
+            guard let strongSelf = self else { return .never() }
+            
+            return accountWithId(accountManager: strongSelf.accountManager, networkArguments: strongSelf.networkArguments, id: id, encryptionParameters: strongSelf.encryptionParameters, supplementary: !strongSelf.applicationBindings.isMainApp, rootPath: strongSelf.rootPath, beginWithTestingEnvironment: isTestingEnvironment, backupData: backupData, auxiliaryMethods: telegramAccountAuxiliaryMethods)
+        } |> mapToSignal { result -> Signal<Account, NoError> in
+            switch result {
+                case let .authorized(account):
+                    setupAccount(account, fetchCachedResourceRepresentation: fetchCachedResourceRepresentation, transformOutgoingMessageMedia: transformOutgoingMessageMedia, preFetchedResourcePath: { resource in
+                        return nil
+                    })
+                    return .single(account)
+                default:
+                    return .never()
+            }
+        }
+    }
+    
     public func updateNotificationTokensRegistration() {
         let sandbox: Bool
         #if DEBUG
@@ -769,9 +811,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         #endif
         
         let settings = self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
-        |> map { sharedData -> (allAccounts: Bool, includeMuted: Bool) in
+            |> map { sharedData -> (allAccounts: Bool, includeMuted: Bool, disabledNotificationsAccountRecords: [AccountRecordId]) in
             let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
-            return (settings.displayNotificationsFromAllAccounts, false)
+                return (settings.displayNotificationsFromAllAccounts, false, settings.disabledNotificationsAccountRecords)
         }
         |> distinctUntilChanged(isEqual: { lhs, rhs in
             if lhs.allAccounts != rhs.allAccounts {
@@ -780,15 +822,32 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             if lhs.includeMuted != rhs.includeMuted {
                 return false
             }
+            if lhs.disabledNotificationsAccountRecords != rhs.disabledNotificationsAccountRecords {
+                return false
+            }
             return true
         })
         
-        self.registeredNotificationTokensDisposable.set((combineLatest(queue: .mainQueue(), settings, self.activeAccounts)
-        |> mapToSignal { settings, activeAccountsAndInfo -> Signal<Never, NoError> in
+        let hiddenAccounts = self.accountManager.allAccountRecords()
+        |> map { $0.records }
+        |> distinctUntilChanged(isEqual: { lhs, rhs in
+            return lhs == rhs
+        })
+        |> deliverOnMainQueue
+        |> mapToSignal { [weak self] records -> Signal<[Account], NoError> in
+            guard let strongSelf = self else { return .never() }
+            
+            let hiddenIds = strongSelf.accountManager.displayedAccountsFilter.filterHidden(records).map { $0.id }
+            return combineLatest(hiddenIds.map(strongSelf.initializeAccount(id:)))
+        }
+        
+        self.registeredNotificationTokensDisposable.set((combineLatest(queue: .mainQueue(), settings, self.activeAccounts, hiddenAccounts)
+        |> mapToSignal { settings, activeAccountsAndInfo, hiddenAccounts -> Signal<Never, NoError> in
             let (primary, activeAccounts, _) = activeAccountsAndInfo
             var applied: [Signal<Never, NoError>] = []
-            var activeProductionUserIds = activeAccounts.map({ $0.1 }).filter({ !$0.testingEnvironment }).map({ $0.peerId.id })
-            var activeTestingUserIds = activeAccounts.map({ $0.1 }).filter({ $0.testingEnvironment }).map({ $0.peerId.id })
+            let allAccounts = activeAccounts.map { $0.1 } + hiddenAccounts
+            var activeProductionUserIds = allAccounts.filter({ !$0.testingEnvironment && !settings.disabledNotificationsAccountRecords.contains($0.id) }).map({ $0.peerId.id })
+            var activeTestingUserIds = allAccounts.filter({ $0.testingEnvironment && !settings.disabledNotificationsAccountRecords.contains($0.id) }).map({ $0.peerId.id })
             
             let allProductionUserIds = activeProductionUserIds
             let allTestingUserIds = activeTestingUserIds
@@ -808,7 +867,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             }
             
-            for (_, account, _) in activeAccounts {
+            for account in allAccounts {
                 let appliedAps: Signal<Never, NoError>
                 let appliedVoip: Signal<Never, NoError>
                 
