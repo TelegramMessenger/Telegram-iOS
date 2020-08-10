@@ -1045,7 +1045,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 if let callState = strongSelf.callState, !strongSelf.isUIHidden {
                     switch callState.state {
                         case .active, .connecting, .reconnecting:
-                            strongSelf.isUIHidden = false
+                            strongSelf.isUIHidden = true
                             updated = true
                         default:
                             break
