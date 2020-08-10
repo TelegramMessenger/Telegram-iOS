@@ -15,7 +15,7 @@
 #import "platform/darwin/VideoMetalViewMac.h"
 #define GLVideoView VideoMetalView
 #define UIViewContentModeScaleAspectFill kCAGravityResizeAspectFill
-#define UIViewContentModeScaleAspectFit kCAGravityResizeAspect
+#define UIViewContentModeScaleAspect kCAGravityResizeAspect
 
 #else
 #import "platform/darwin/VideoMetalView.h"
