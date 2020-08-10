@@ -5731,5 +5731,5 @@ Any member of this group will be able to see messages in the channel.";
 
 "NotificationSettings.LocalAccountNotificationsSection" = "CURRENT ACCOUNT ON THIS DEVICE";
 "NotificationSettings.LocalAccountNotifications" = "Enable notifications";
-"NotificationSettings.LocalAccountNotificationsInfoOn" = "Turn this off to disable all notifications for the current acount on this device";
-"NotificationSettings.LocalAccountNotificationsInfoOff" = "Turn this on to enable all notifications for the current acount on this device";
+"NotificationSettings.LocalAccountNotificationsInfoOn" = "Turn this off to disable all notifications for the current account on this device.";
+"NotificationSettings.LocalAccountNotificationsInfoOff" = "Turn this on to enable all notifications for the current account on this device.";
