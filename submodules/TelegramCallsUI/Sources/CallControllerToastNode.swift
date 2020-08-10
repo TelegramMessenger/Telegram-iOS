@@ -49,6 +49,7 @@ struct CallControllerToastContent: OptionSet {
 
 final class CallControllerToastContainerNode: ASDisplayNode {
     private var toastNodes: [ToastDescription.Key: CallControllerToastItemNode] = [:]
+    private var visibleToastNodes: [CallControllerToastItemNode] = []
     
     private let strings: PresentationStrings
     
@@ -76,7 +77,6 @@ final class CallControllerToastContainerNode: ASDisplayNode {
         self.appliedContent = content
         
         let spacing: CGFloat = 18.0
-        let bottomSpacing: CGFloat = 22.0
     
         var height: CGFloat = 0.0
         var toasts: [ToastDescription] = []
@@ -107,6 +107,7 @@ final class CallControllerToastContainerNode: ASDisplayNode {
                 toastNode = CallControllerToastItemNode()
                 self.toastNodes[toast.key] = toastNode
                 self.addSubnode(toastNode)
+                self.visibleToastNodes.append(toastNode)
                 toastTransition = .immediate
                 animateIn = transition.isAnimated
             }
@@ -142,15 +143,16 @@ final class CallControllerToastContainerNode: ASDisplayNode {
         }
         
         var removedKeys: [ToastDescription.Key] = []
-        for (key, toast) in self.toastNodes {
+        for (key, toastNode) in self.toastNodes {
             if !validKeys.contains(key) {
                 removedKeys.append(key)
+                self.visibleToastNodes.removeAll { $0 === toastNode }
                 if animated {
-                    toast.animateOut(transition: transition) { [weak toast] in
-                        toast?.removeFromSupernode()
+                    toastNode.animateOut(transition: transition) { [weak toastNode] in
+                        toastNode?.removeFromSupernode()
                     }
                 } else {
-                    toast.removeFromSupernode()
+                    toastNode.removeFromSupernode()
                 }
             }
         }
@@ -158,11 +160,7 @@ final class CallControllerToastContainerNode: ASDisplayNode {
             self.toastNodes.removeValue(forKey: key)
         }
         
-        guard let subnodes = self.subnodes else {
-            return 0.0
-        }
-        
-        for case let toastNode as CallControllerToastItemNode in subnodes.reversed() {
+        for toastNode in self.visibleToastNodes {
             if let content = toastNode.currentContent, let (transition, toastHeight, animateIn) = transitions[content.key] {
                 transition.updateFrame(node: toastNode, frame: CGRect(x: 0.0, y: height, width: width, height: toastHeight))
                 height += toastHeight + spacing
@@ -175,7 +173,6 @@ final class CallControllerToastContainerNode: ASDisplayNode {
         if height > 0.0 {
             height -= spacing
         }
-        height += bottomSpacing
         
         return height
     }
@@ -275,32 +272,41 @@ private class CallControllerToastItemNode: ASDisplayNode {
             } else {
                 self.iconNode.image = image
             }
+                  
+            self.textNode.attributedText = NSAttributedString(string: content.text, font: Font.regular(17.0), textColor: .white)
             
-            if previousContent?.text != content.text {
-                self.textNode.attributedText = NSAttributedString(string: content.text, font: Font.regular(17.0), textColor: .white)
-                
-                let iconSize = CGSize(width: 44.0, height: 28.0)
-                let iconSpacing: CGFloat = 2.0
-                let textSize = self.textNode.updateLayout(CGSize(width: width - inset * 2.0 - iconSize.width - iconSpacing, height: 100.0))
-                
-                let backgroundSize = CGSize(width: iconSize.width + iconSpacing + textSize.width + 6.0 * 2.0, height: max(28.0, textSize.height + 4.0 * 2.0))
-                let backgroundFrame = CGRect(origin: CGPoint(x: floor((width - backgroundSize.width) / 2.0), y: 0.0), size: backgroundSize)
-                
-                transition.updateFrame(node: self.clipNode, frame: backgroundFrame)
-                transition.updateFrame(view: self.effectView, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
-                
-                self.iconNode.frame = CGRect(origin: CGPoint(), size: iconSize)
-                self.textNode.frame = CGRect(origin: CGPoint(x: iconSize.width + iconSpacing, y: 4.0), size: textSize)
-                
-                self.currentHeight = backgroundSize.height
-            }
+            let iconSize = CGSize(width: 44.0, height: 28.0)
+            let iconSpacing: CGFloat = 2.0
+            let textSize = self.textNode.updateLayout(CGSize(width: width - inset * 2.0 - iconSize.width - iconSpacing, height: 100.0))
+            
+            let backgroundSize = CGSize(width: iconSize.width + iconSpacing + textSize.width + 6.0 * 2.0, height: max(28.0, textSize.height + 4.0 * 2.0))
+            let backgroundFrame = CGRect(origin: CGPoint(x: floor((width - backgroundSize.width) / 2.0), y: 0.0), size: backgroundSize)
+            
+            transition.updateFrame(node: self.clipNode, frame: backgroundFrame)
+            transition.updateFrame(view: self.effectView, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
+            
+            self.iconNode.frame = CGRect(origin: CGPoint(), size: iconSize)
+            self.textNode.frame = CGRect(origin: CGPoint(x: iconSize.width + iconSpacing, y: 4.0), size: textSize)
+            
+            self.currentHeight = backgroundSize.height
         }
         return self.currentHeight ?? 28.0
     }
     
     func animateIn() {
+        let targetFrame = self.clipNode.frame
+        let initialFrame = CGRect(x: floor((self.frame.width - 44.0) / 2.0), y: 0.0, width: 44.0, height: 28.0)
+        
+        self.clipNode.frame = initialFrame
+//        self.effectView.frame = CGRect(origin: CGPoint(), size: initialFrame.size)
+        
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45, damping: 105.0, completion: { _ in
+            self.clipNode.frame = targetFrame
+//            self.effectView.frame = CGRect(origin: CGPoint(), size: targetFrame.size)
             
+            self.clipNode.layer.animateFrame(from: initialFrame, to: targetFrame, duration: 0.35, timingFunction: kCAMediaTimingFunctionSpring)
+//            self.effectView.layer.animateFrame(from: initialFrame, to: targetFrame, duration: 0.35, timingFunction: kCAMediaTimingFunctionSpring)
         })
     }
     

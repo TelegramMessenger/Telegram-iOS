@@ -5639,7 +5639,7 @@ Any member of this group will be able to see messages in the channel.";
 "PrivacySettings.AutoArchive" = "Archive and Mute";
 "PrivacySettings.AutoArchiveInfo" = "Automatically archive and mute new chats, groups and channels from non-contacts.";
 
-"Call.RemoteVideoPaused" = "%@'s video paused";
+"Call.RemoteVideoPaused" = "%@'s video is paused";
 
 "Settings.SetProfilePhotoOrVideo" = "Set Photo or Video";
 "Settings.SetNewProfilePhotoOrVideo" = "Set New Photo or Video";
@@ -5733,3 +5733,5 @@ Any member of this group will be able to see messages in the channel.";
 
 "Call.Audio" = "audio";
 "Call.AudioRouteMute" = "Mute Yourself";
+
+"AccessDenied.VideoCallCamera" = "Telegram needs access to your camera to make video calls.\n\nPlease go to Settings > Privacy > Camera and set Telegram to ON.";

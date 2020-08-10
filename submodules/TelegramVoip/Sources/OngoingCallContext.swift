@@ -262,6 +262,7 @@ private func ongoingDataSavingForTypeWebrtc(_ type: VoiceCallDataSaving) -> Ongo
 private protocol OngoingCallThreadLocalContextProtocol: class {
     func nativeSetNetworkType(_ type: NetworkType)
     func nativeSetIsMuted(_ value: Bool)
+    func nativeSetIsLowBatteryLevel(_ value: Bool)
     func nativeRequestVideo(_ capturer: OngoingCallVideoCapturer)
     func nativeDisableVideo()
     func nativeStop(_ completion: @escaping (String?, Int64, Int64, Int64, Int64) -> Void)
@@ -293,6 +294,9 @@ extension OngoingCallThreadLocalContext: OngoingCallThreadLocalContextProtocol {
     
     func nativeSetIsMuted(_ value: Bool) {
         self.setIsMuted(value)
+    }
+    
+    func nativeSetIsLowBatteryLevel(_ value: Bool) {
     }
     
     func nativeRequestVideo(_ capturer: OngoingCallVideoCapturer) {
@@ -371,6 +375,10 @@ extension OngoingCallThreadLocalContextWebrtc: OngoingCallThreadLocalContextProt
     
     func nativeSetIsMuted(_ value: Bool) {
         self.setIsMuted(value)
+    }
+    
+    func nativeSetIsLowBatteryLevel(_ value: Bool) {
+        self.setIsLowBatteryLevel(value)
     }
     
     func nativeRequestVideo(_ capturer: OngoingCallVideoCapturer) {
@@ -707,12 +715,24 @@ public final class OngoingCallContext {
         self.audioSessionDisposable.dispose()
         self.networkTypeDisposable?.dispose()
     }
-    
+        
     private func withContext(_ f: @escaping (OngoingCallThreadLocalContextProtocol) -> Void) {
         self.queue.async {
             if let contextRef = self.contextRef {
                 let context = contextRef.takeUnretainedValue()
                 f(context.context)
+            }
+        }
+    }
+    
+    private func withContextThenDeallocate(_ f: @escaping (OngoingCallThreadLocalContextProtocol) -> Void) {
+        self.queue.async {
+            if let contextRef = self.contextRef {
+                let context = contextRef.takeUnretainedValue()
+                f(context.context)
+                
+                self.contextRef?.release()
+                self.contextRef = nil
             }
         }
     }
@@ -727,7 +747,7 @@ public final class OngoingCallContext {
         let account = self.account
         let logPath = self.logPath
         
-        self.withContext { context in
+        self.withContextThenDeallocate { context in
             context.nativeStop { debugLog, bytesSentWifi, bytesReceivedWifi, bytesSentMobile, bytesReceivedMobile in
                 debugLogValue.set(.single(debugLog))
                 let delta = NetworkUsageStatsConnectionsEntry(
@@ -763,6 +783,12 @@ public final class OngoingCallContext {
     public func setIsMuted(_ value: Bool) {
         self.withContext { context in
             context.nativeSetIsMuted(value)
+        }
+    }
+    
+    public func setIsLowBatteryLevel(_ value: Bool) {
+        self.withContext { context in
+            context.nativeSetIsLowBatteryLevel(value)
         }
     }
     

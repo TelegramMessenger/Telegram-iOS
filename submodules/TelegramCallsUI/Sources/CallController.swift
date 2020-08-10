@@ -13,6 +13,7 @@ import TelegramAudio
 import AccountContext
 import TelegramNotices
 import AppBundle
+import TooltipUI
 
 protocol CallControllerNodeProtocol: class {
     var isMuted: Bool { get set }
@@ -27,6 +28,7 @@ protocol CallControllerNodeProtocol: class {
     var present: ((ViewController) -> Void)? { get set }
     var callEnded: ((Bool) -> Void)? { get set }
     var dismissedInteractively: (() -> Void)? { get set }
+    var dismissAllTooltips: (() -> Void)? { get set }
     
     func updateAudioOutputs(availableOutputs: [AudioSessionOutput], currentOutput: AudioSessionOutput?)
     func updateCallState(_ callState: PresentationCallState)
@@ -167,6 +169,9 @@ public final class CallController: ViewController {
                 let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                 var items: [ActionSheetItem] = []
                 for output in availableOutputs {
+                    if hasMute, case .builtin = output {
+                        continue
+                    }
                     let title: String
                     var icon: UIImage?
                     switch output {
@@ -249,6 +254,17 @@ public final class CallController: ViewController {
         self.controllerNode.present = { [weak self] controller in
             if let strongSelf = self {
                 strongSelf.present(controller, in: .window(.root))
+            }
+        }
+        
+        self.controllerNode.dismissAllTooltips = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.forEachController({ controller in
+                    if let controller = controller as? TooltipScreen {
+                        controller.dismiss()
+                    }
+                    return true
+                })
             }
         }
         

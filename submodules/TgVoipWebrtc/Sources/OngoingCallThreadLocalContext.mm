@@ -515,6 +515,10 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 }
 
 - (void)dealloc {
+    if (InternalVoipLoggingFunction) {
+        InternalVoipLoggingFunction(@"OngoingCallThreadLocalContext: dealloc");
+    }
+    
     assert([_queue isCurrent]);
     if (_tgVoip != NULL) {
         [self stop:nil];
@@ -530,7 +534,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         return;
     }
     tgcalls::FinalState finalState = _tgVoip->stop();
-    _tgVoip = nil;
+    _tgVoip.reset();
     _terminationResult = [[OngoingCallThreadLocalContextWebrtcTerminationResult alloc] initWithFinalState:finalState];
 }
 

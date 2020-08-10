@@ -133,6 +133,12 @@ final class CallControllerStatusNode: ASDisplayNode {
         self.statusTimer?.invalidate()
     }
     
+    func setVisible(_ visible: Bool, transition: ContainedViewLayoutTransition) {
+        let alpha: CGFloat = visible ? 1.0 : 0.0
+        transition.updateAlpha(node: self.titleNode, alpha: alpha)
+        transition.updateAlpha(node: self.statusContainerNode, alpha: alpha)
+    }
+    
     func updateLayout(constrainedWidth: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.validLayoutWidth = constrainedWidth
         

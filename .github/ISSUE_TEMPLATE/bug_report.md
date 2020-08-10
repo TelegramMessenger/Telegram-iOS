@@ -37,4 +37,4 @@ Remove, if not applicable
 
 **iOS version**: `13.X`
 
-**App version:** `5.X`
+**App version:** `7.X`
