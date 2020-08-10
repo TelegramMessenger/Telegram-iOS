@@ -294,6 +294,15 @@ public final class DisplayedAccountsFilterImpl: DisplayedAccountsFilter {
         return result
     }
     
+    public func hasPublicAccounts(accountManager: AccountManager) -> Signal<Bool, NoError> {
+        return accountManager.transaction { transaction in
+            return transaction.getRecords().first(where: {
+                !$0.attributes.contains(where: { $0 is HiddenAccountAttribute }) &&
+                !$0.attributes.contains(where: { $0 is LoggedOutAccountAttribute })
+            }) != nil
+        }
+    }
+    
     deinit {
         unlockedHiddenAccountRecordIdDisposable?.dispose()
     }

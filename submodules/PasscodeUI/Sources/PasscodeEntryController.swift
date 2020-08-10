@@ -61,8 +61,9 @@ public final class PasscodeEntryController: ViewController {
     private var isActiveDisposable: Disposable?
     
     private let hiddenAccountsAccessChallengeData: [AccountRecordId:PostboxAccessChallengeData]
+    private var hasPublicAccounts: Bool = true
     
-    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, appLockContext: AppLockContext, presentationData: PresentationData, presentationDataSignal: Signal<PresentationData, NoError>, challengeData: PostboxAccessChallengeData, hiddenAccountsAccessChallengeData: [AccountRecordId:PostboxAccessChallengeData], biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments) {
+    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, appLockContext: AppLockContext, presentationData: PresentationData, presentationDataSignal: Signal<PresentationData, NoError>, challengeData: PostboxAccessChallengeData, hiddenAccountsAccessChallengeData: [AccountRecordId:PostboxAccessChallengeData], biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments, hasPublicAccountsSignal: Signal<Bool, NoError> = .single(true)) {
         self.applicationBindings = applicationBindings
         self.accountManager = accountManager
         self.appLockContext = appLockContext
@@ -102,6 +103,14 @@ public final class PasscodeEntryController: ViewController {
                 return
             }
             strongSelf.isActive = value
+        })
+        
+        _ = (hasPublicAccountsSignal
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.hasPublicAccounts = value
         })
     }
     
@@ -184,7 +193,7 @@ public final class PasscodeEntryController: ViewController {
             
             var succeed = check(passcode: passcode, challengeData: strongSelf.challengeData)
             
-            if !succeed {
+            if !succeed, strongSelf.hasPublicAccounts {
                 for (id, challengeData) in strongSelf.hiddenAccountsAccessChallengeData {
                     if check(passcode: passcode, challengeData: challengeData) {
                         strongSelf.appLockContext.unlockedHiddenAccountRecordId.set(id)

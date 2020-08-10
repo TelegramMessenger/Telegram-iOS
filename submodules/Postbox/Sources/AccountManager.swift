@@ -32,6 +32,7 @@ public protocol DisplayedAccountsFilter {
     
     func filterDisplayed(_ records: [AccountRecord]) -> [AccountRecord]
     func filterHidden(_ records: [AccountRecord]) -> [AccountRecord]
+    func hasPublicAccounts(accountManager: AccountManager) -> Signal<Bool, NoError>
 }
 
 final class AccountManagerImpl {

@@ -210,7 +210,7 @@ public final class AppLockContextImpl: AppLockContext {
                             } else {
                                 return CGRect()
                             }
-                        }))
+                        }), hasPublicAccountsSignal: displayedAccountsFilter.hasPublicAccounts(accountManager: accountManager))
                         if becameActiveRecently, appInForeground {
                             passcodeController.presentationCompleted = { [weak passcodeController] in
                                 if case .enabled = biometrics {
