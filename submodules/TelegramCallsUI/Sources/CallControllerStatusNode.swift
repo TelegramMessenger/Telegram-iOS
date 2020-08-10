@@ -12,7 +12,7 @@ private let regularStatusFont = Font.regular(18.0)
 
 enum CallControllerStatusValue: Equatable {
     case text(string: String, displayLogo: Bool)
-    case timer((String) -> String, Double)
+    case timer((String, Bool) -> String, Double)
     
     static func ==(lhs: CallControllerStatusValue, rhs: CallControllerStatusValue) -> Bool {
         switch lhs {
@@ -175,8 +175,8 @@ final class CallControllerStatusNode: ASDisplayNode {
                 durationString = String(format: "%02d:%02d", arguments: [(duration / 60) % 60, duration % 60])
                 measureDurationString = "00:00"
             }
-            statusText = format(durationString)
-            statusMeasureText = format(measureDurationString)
+            statusText = format(durationString, false)
+            statusMeasureText = format(measureDurationString, true)
             if self.reception != nil {
                 statusOffset += 8.0
             }

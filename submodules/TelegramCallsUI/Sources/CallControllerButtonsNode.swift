@@ -149,7 +149,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
             }
         }
         
-        let minSmallButtonSideInset: CGFloat = 34.0
+        let minSmallButtonSideInset: CGFloat = width > 320.0 ? 34.0 : 16.0
         let maxSmallButtonSpacing: CGFloat = 34.0
         let smallButtonSize: CGFloat = 60.0
         let topBottomSpacing: CGFloat = 84.0

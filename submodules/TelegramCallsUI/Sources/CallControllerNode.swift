@@ -57,7 +57,7 @@ private final class CallVideoNode: ASDisplayNode {
         
         self.videoPausedNode = ImmediateTextNode()
         self.videoPausedNode.alpha = 0.0
-        self.videoPausedNode.maximumNumberOfLines = 2
+        self.videoPausedNode.maximumNumberOfLines = 3
         
         super.init()
         
@@ -920,8 +920,8 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                     }
                 }
                 
-                statusValue = .timer({ value in
-                    if isReconnecting {
+                statusValue = .timer({ value, measure in
+                    if isReconnecting || (self.outgoingVideoViewRequested && value == "00:00" && !measure) {
                         return strings.Call_StatusConnecting
                     } else {
                         return value
