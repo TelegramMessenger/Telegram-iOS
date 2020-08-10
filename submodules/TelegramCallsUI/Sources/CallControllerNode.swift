@@ -57,7 +57,7 @@ private final class CallVideoNode: ASDisplayNode {
         
         self.videoPausedNode = ImmediateTextNode()
         self.videoPausedNode.alpha = 0.0
-        self.videoPausedNode.maximumNumberOfLines = 2
+        self.videoPausedNode.maximumNumberOfLines = 3
         
         super.init()
         
@@ -331,6 +331,9 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     private var isRequestingVideo: Bool = false
     private var animateRequestedVideoOnce: Bool = false
     
+    private var hiddenUIForActiveVideoCallOnce: Bool = false
+    private var hideUIForActiveVideoCallTimer: SwiftSignalKit.Timer?
+    
     private var displayedCameraConfirmation: Bool = false
     private var displayedCameraTooltip: Bool = false
     
@@ -473,6 +476,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         
         self.buttonsNode.mute = { [weak self] in
             self?.toggleMute?()
+            self?.cancelScheduledUIHiding()
         }
         
         self.buttonsNode.speaker = { [weak self] in
@@ -480,6 +484,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 return
             }
             strongSelf.beginAudioOuputSelection?(strongSelf.hasVideoNodes)
+            strongSelf.cancelScheduledUIHiding()
         }
                 
         self.buttonsNode.acceptOrEnd = { [weak self] in
@@ -489,6 +494,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
             switch callState.state {
             case .active, .connecting, .reconnecting:
                 strongSelf.endCall?()
+                strongSelf.cancelScheduledUIHiding()
             case .requesting:
                 strongSelf.endCall?()
             case .ringing:
@@ -530,6 +536,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                     }
                 } else {
                     strongSelf.call.disableVideo()
+                    strongSelf.cancelScheduledUIHiding()
                 }
             default:
                 break
@@ -550,6 +557,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                     strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                 }
             }
+            strongSelf.cancelScheduledUIHiding()
         }
         
         self.keyButtonNode.addTarget(self, action: #selector(self.keyPressed), forControlEvents: .touchUpInside)
@@ -684,6 +692,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                             strongSelf.updateButtonsMode(transition: .animated(duration: 0.4, curve: .spring))
                             
                             strongSelf.updateDimVisibility()
+                            strongSelf.maybeScheduleUIHidingForActiveVideoCall()
                         }
                         
                         let incomingVideoNode = CallVideoNode(videoView: incomingVideoView, disabledText: strongSelf.presentationData.strings.Call_RemoteVideoPaused(strongSelf.peer?.compactDisplayTitle ?? "").0, assumeReadyAfterTimeout: false, isReadyUpdated: {
@@ -767,6 +776,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                             strongSelf.updateButtonsMode(transition: .animated(duration: 0.4, curve: .spring))
                             
                             strongSelf.updateDimVisibility()
+                            strongSelf.maybeScheduleUIHidingForActiveVideoCall()
                         }
                         
                         let outgoingVideoNode = CallVideoNode(videoView: outgoingVideoView, disabledText: nil, assumeReadyAfterTimeout: true, isReadyUpdated: {
@@ -910,8 +920,8 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                     }
                 }
                 
-                statusValue = .timer({ value in
-                    if isReconnecting {
+                statusValue = .timer({ value, measure in
+                    if isReconnecting || (self.outgoingVideoViewRequested && value == "00:00" && !measure) {
                         return strings.Call_StatusConnecting
                     } else {
                         return value
@@ -1022,6 +1032,39 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
             }
         }
         self.statusNode.setVisible(visible || self.keyPreviewNode != nil, transition: transition)
+    }
+    
+    private func maybeScheduleUIHidingForActiveVideoCall() {
+        guard let callState = self.callState, case .active = callState.state, self.incomingVideoNodeValue != nil && self.outgoingVideoNodeValue != nil, !self.hiddenUIForActiveVideoCallOnce && self.keyPreviewNode == nil else {
+            return
+        }
+        
+        let timer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
+            if let strongSelf = self {
+                var updated = false
+                if let callState = strongSelf.callState, !strongSelf.isUIHidden {
+                    switch callState.state {
+                        case .active, .connecting, .reconnecting:
+                            strongSelf.isUIHidden = true
+                            updated = true
+                        default:
+                            break
+                    }
+                }
+                if updated, let (layout, navigationBarHeight) = strongSelf.validLayout {
+                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                }
+                strongSelf.hideUIForActiveVideoCallTimer = nil
+            }
+        }, queue: Queue.mainQueue())
+        timer.start()
+        self.hideUIForActiveVideoCallTimer = timer
+        self.hiddenUIForActiveVideoCallOnce = true
+    }
+    
+    private func cancelScheduledUIHiding() {
+        self.hideUIForActiveVideoCallTimer?.invalidate()
+        self.hideUIForActiveVideoCallTimer = nil
     }
     
     private var buttonsTerminationMode: CallControllerButtonsMode?

@@ -6,6 +6,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 
 private let labelFont = Font.regular(17.0)
+private let smallLabelFont = Font.regular(15.0)
 
 private enum ToastDescription: Equatable {
     enum Key: Hashable {
@@ -73,7 +74,6 @@ final class CallControllerToastContainerNode: ASDisplayNode {
             transition = .immediate
         }
         
-        let previousContent = self.appliedContent
         self.appliedContent = content
         
         let spacing: CGFloat = 18.0
@@ -249,10 +249,12 @@ private class CallControllerToastItemNode: ASDisplayNode {
     }
     
     func update(width: CGFloat, content: Content, transition: ContainedViewLayoutTransition) -> CGFloat {
-        let inset: CGFloat = 32.0
+        let inset: CGFloat = 30.0
+        let isNarrowScreen = width <= 320.0
+        let font = isNarrowScreen ? smallLabelFont : labelFont
+        let topInset: CGFloat = isNarrowScreen ? 5.0 : 4.0
                 
         if self.currentContent != content || self.currentWidth != width {
-            let previousContent = self.currentContent
             self.currentContent = content
             self.currentWidth = width
             
@@ -273,10 +275,10 @@ private class CallControllerToastItemNode: ASDisplayNode {
                 self.iconNode.image = image
             }
                   
-            self.textNode.attributedText = NSAttributedString(string: content.text, font: Font.regular(17.0), textColor: .white)
+            self.textNode.attributedText = NSAttributedString(string: content.text, font: font, textColor: .white)
             
             let iconSize = CGSize(width: 44.0, height: 28.0)
-            let iconSpacing: CGFloat = 2.0
+            let iconSpacing: CGFloat = isNarrowScreen ? 0.0 : 1.0
             let textSize = self.textNode.updateLayout(CGSize(width: width - inset * 2.0 - iconSize.width - iconSpacing, height: 100.0))
             
             let backgroundSize = CGSize(width: iconSize.width + iconSpacing + textSize.width + 6.0 * 2.0, height: max(28.0, textSize.height + 4.0 * 2.0))
@@ -286,7 +288,7 @@ private class CallControllerToastItemNode: ASDisplayNode {
             transition.updateFrame(view: self.effectView, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
             
             self.iconNode.frame = CGRect(origin: CGPoint(), size: iconSize)
-            self.textNode.frame = CGRect(origin: CGPoint(x: iconSize.width + iconSpacing, y: 4.0), size: textSize)
+            self.textNode.frame = CGRect(origin: CGPoint(x: iconSize.width + iconSpacing, y: topInset), size: textSize)
             
             self.currentHeight = backgroundSize.height
         }

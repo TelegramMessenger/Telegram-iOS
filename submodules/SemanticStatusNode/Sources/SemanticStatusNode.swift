@@ -614,7 +614,7 @@ public final class SemanticStatusNode: ASControlNode {
         
         if parameters.hollow {
             context.setBlendMode(.clear)
-            context.fillEllipse(in: bounds.insetBy(dx: 7.0 - UIScreenPixel, dy: 7.0 - UIScreenPixel))
+            context.fillEllipse(in: bounds.insetBy(dx: 8.0, dy: 8.0))
         }
     }
 }

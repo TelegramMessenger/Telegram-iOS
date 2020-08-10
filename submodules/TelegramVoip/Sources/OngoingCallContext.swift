@@ -18,12 +18,19 @@ private func callConnectionDescription(_ connection: CallSessionConnection) -> O
     }
 }
 
-private func callConnectionDescriptionWebrtc(_ connection: CallSessionConnection) -> OngoingCallConnectionDescriptionWebrtc? {
+private func callConnectionDescriptionsWebrtc(_ connection: CallSessionConnection) -> [OngoingCallConnectionDescriptionWebrtc] {
     switch connection {
     case .reflector:
-        return nil
+        return []
     case let .webRtcReflector(reflector):
-        return OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: reflector.hasStun, hasTurn: reflector.hasTurn, ip: reflector.ip.isEmpty ? reflector.ipv6 : reflector.ip, port: reflector.port, username: reflector.username, password: reflector.password)
+        var result: [OngoingCallConnectionDescriptionWebrtc] = []
+        if !reflector.ip.isEmpty {
+            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: reflector.hasStun, hasTurn: reflector.hasTurn, ip: reflector.ip, port: reflector.port, username: reflector.username, password: reflector.password))
+        }
+        if !reflector.ipv6.isEmpty {
+            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: reflector.hasStun, hasTurn: reflector.hasTurn, ip: reflector.ipv6, port: reflector.port, username: reflector.username, password: reflector.password))
+        }
+        return result
     }
 }
 
@@ -587,12 +594,7 @@ public final class OngoingCallContext {
                             continue
                         }
                         processedConnections.append(connection)
-                        if let mapped = callConnectionDescriptionWebrtc(connection) {
-                            if mapped.ip.isEmpty {
-                                continue
-                            }
-                            filteredConnections.append(mapped)
-                        }
+                        filteredConnections.append(contentsOf: callConnectionDescriptionsWebrtc(connection))
                     }
                     
                     let context = OngoingCallThreadLocalContextWebrtc(version: version, queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, connections: filteredConnections, maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath, sendSignalingData: { [weak callSessionManager] data in
