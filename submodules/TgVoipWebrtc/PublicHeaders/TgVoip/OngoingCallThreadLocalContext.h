@@ -99,7 +99,9 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)setOnFirstFrameReceived:(void (^ _Nullable)(float))onFirstFrameReceived;
 - (void)setOnOrientationUpdated:(void (^ _Nullable)(OngoingCallVideoOrientationWebrtc))onOrientationUpdated;
 - (void)setOnIsMirroredUpdated:(void (^ _Nullable)(bool))onIsMirroredUpdated;
-
+#ifdef WEBRTC_MAC
+- (void)setVideoContentMode:(CALayerContentsGravity _Nonnull )mode;
+#endif
 @end
 
 @interface OngoingCallThreadLocalContextVideoCapturer : NSObject
