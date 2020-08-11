@@ -29,6 +29,7 @@ public protocol DisplayedAccountsFilter {
     var getHiddenAccountsAccessChallengeDataPromise: Promise<[AccountRecordId:PostboxAccessChallengeData]> { get }
     var accountManagerRecordIdPromise: ValuePromise<AccountRecordId?> { get }
     var didFinishChangingAccountPromise: Promise<Void> { get }
+    var currentAccountRecordIdPromise: Promise<AccountRecordId?> { get }
     
     func filterDisplayed(_ records: [AccountRecord]) -> [AccountRecord]
     func filterHidden(_ records: [AccountRecord]) -> [AccountRecord]
@@ -545,6 +546,7 @@ public final class AccountManager {
         })
         self.mediaBox = MediaBox(basePath: basePath + "/media")
         self.displayedAccountsFilter = displayedAccountsFilter
+        displayedAccountsFilter.currentAccountRecordIdPromise.set(self.currentAccountRecord(allocateIfNotExists: false) |> map { $0?.0 })
     }
     
     public func transaction<T>(ignoreDisabled: Bool = false, _ f: @escaping (AccountManagerModifier) -> T) -> Signal<T, NoError> {

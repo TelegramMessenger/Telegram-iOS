@@ -828,32 +828,38 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             return true
         })
         
-        let hiddenAccounts = self.accountManager.allAccountRecords()
+        let allRecords = self.accountManager.allAccountRecords()
         |> map { $0.records }
         |> distinctUntilChanged(isEqual: { lhs, rhs in
             return lhs == rhs
         })
-        |> deliverOnMainQueue
-        |> mapToSignal { [weak self] records -> Signal<[Account], NoError> in
-            guard let strongSelf = self else { return .never() }
+        
+        let allAccounts = combineLatest(queue: .mainQueue(), self.activeAccounts, allRecords)
+            |> mapToSignal { [weak self] activeAccounts, allRecords -> Signal<(primary: Account?, accounts: [Account]), NoError> in
+            guard let strongSelf = self else { return .single((nil, [])) }
             
-            let hiddenIds = strongSelf.accountManager.displayedAccountsFilter.filterHidden(records).map { $0.id }
+            let (primary, accounts, _) = activeAccounts
+                let hiddenIds = allRecords.filter { record in
+                    !record.attributes.contains(where: { $0 is LoggedOutAccountAttribute }) && !accounts.contains(where: { $0.0 == record.id })
+                }.map { $0.id }
             return combineLatest(hiddenIds.map(strongSelf.initializeAccount(id:)))
+            |> map { hiddenAccounts in
+                return (primary, accounts.map { $0.1 } + hiddenAccounts)
+            }
         }
         
-        self.registeredNotificationTokensDisposable.set((combineLatest(queue: .mainQueue(), settings, self.activeAccounts, hiddenAccounts)
-        |> mapToSignal { settings, activeAccountsAndInfo, hiddenAccounts -> Signal<Never, NoError> in
-            let (primary, activeAccounts, _) = activeAccountsAndInfo
+        self.registeredNotificationTokensDisposable.set((combineLatest(queue: .mainQueue(), settings, allAccounts)
+        |> mapToSignal { settings, accounts -> Signal<Never, NoError> in
             var applied: [Signal<Never, NoError>] = []
-            let allAccounts = activeAccounts.map { $0.1 } + hiddenAccounts
+            let (primary, allAccounts) = accounts
             var activeProductionUserIds = allAccounts.filter({ !$0.testingEnvironment && !settings.disabledNotificationsAccountRecords.contains($0.id) }).map({ $0.peerId.id })
             var activeTestingUserIds = allAccounts.filter({ $0.testingEnvironment && !settings.disabledNotificationsAccountRecords.contains($0.id) }).map({ $0.peerId.id })
             
-            let allProductionUserIds = activeProductionUserIds
-            let allTestingUserIds = activeTestingUserIds
+            let allProductionUserIds = allAccounts.filter({ !$0.testingEnvironment }).map({ $0.peerId.id })
+            let allTestingUserIds = allAccounts.filter({ $0.testingEnvironment }).map({ $0.peerId.id })
             
             if !settings.allAccounts {
-                if let primary = primary {
+                if let primary = primary, !settings.disabledNotificationsAccountRecords.contains(primary.id) {
                     if !primary.testingEnvironment {
                         activeProductionUserIds = [primary.peerId.id]
                         activeTestingUserIds = []
