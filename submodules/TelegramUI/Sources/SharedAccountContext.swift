@@ -839,9 +839,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             guard let strongSelf = self else { return .single((nil, [])) }
             
             let (primary, accounts, _) = activeAccounts
-                let hiddenIds = allRecords.filter { record in
-                    !record.attributes.contains(where: { $0 is LoggedOutAccountAttribute }) && !accounts.contains(where: { $0.0 == record.id })
-                }.map { $0.id }
+            let hiddenIds = allRecords.filter { record in
+                !record.attributes.contains(where: { $0 is LoggedOutAccountAttribute }) &&
+                record.attributes.contains(where: { $0 is HiddenAccountAttribute }) &&
+                !accounts.contains(where: { $0.0 == record.id })
+            }.map { $0.id }
             return combineLatest(hiddenIds.map(strongSelf.initializeAccount(id:)))
             |> map { hiddenAccounts in
                 return (primary, accounts.map { $0.1 } + hiddenAccounts)
