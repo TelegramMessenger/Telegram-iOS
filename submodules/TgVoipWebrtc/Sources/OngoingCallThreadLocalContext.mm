@@ -299,15 +299,21 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     return 92;
 }
 
-+ (NSArray<NSString *> * _Nonnull)versionsWithIncludeReference:(bool)includeReference {
-    if (includeReference) {
-        return @[@"2.7.7", @"2.8.8"];
++ (NSArray<NSString *> * _Nonnull)versionsWithIncludeReference:(bool)__unused includeReference {
+    return @[@"2.7.7", @"3.0.0"];
+}
+
++ (tgcalls::ProtocolVersion)protocolVersionFromLibraryVersion:(NSString *)version {
+    if ([version isEqualToString:@"2.7.7"]) {
+        return tgcalls::ProtocolVersion::V0;
+    } else if ([version isEqualToString:@"3.0.0"]) {
+        return tgcalls::ProtocolVersion::V1;
     } else {
-        return @[@"2.7.7"];
+        return tgcalls::ProtocolVersion::V0;
     }
 }
 
-- (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing connections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)connections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath sendSignalingData:(void (^)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer preferredAspectRatio:(float)preferredAspectRatio enableHighBitrateVideoCalls:(bool)enableHighBitrateVideoCalls {
+- (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing connections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)connections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath sendSignalingData:(void (^)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer preferredAspectRatio:(float)preferredAspectRatio preferredVideoCodec:(NSString * _Nullable)preferredVideoCodec {
     self = [super init];
     if (self != nil) {
         _version = version;
@@ -370,6 +376,11 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             }
         }
         
+        std::vector<std::string> preferredVideoCodecs;
+        if (preferredVideoCodec != nil) {
+            preferredVideoCodecs.push_back([preferredVideoCodec UTF8String]);
+        }
+        
         std::vector<tgcalls::Endpoint> endpoints;
         
         tgcalls::Config config = {
@@ -384,7 +395,9 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .logPath = "", //logPath.length == 0 ? "" : std::string(logPath.UTF8String),
             .maxApiLayer = [OngoingCallThreadLocalContextWebrtc maxLayer],
             .preferredAspectRatio = preferredAspectRatio,
-            .enableHighBitrateVideo = enableHighBitrateVideoCalls
+            .enableHighBitrateVideo = true,
+            .preferredVideoCodecs = preferredVideoCodecs,
+            .protocolVersion = [OngoingCallThreadLocalContextWebrtc protocolVersionFromLibraryVersion:version]
         };
         
         auto encryptionKeyValue = std::make_shared<std::array<uint8_t, 256>>();
@@ -396,7 +409,6 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{
             tgcalls::Register<tgcalls::InstanceImpl>();
-            tgcalls::Register<tgcalls::InstanceImplReference>();
         });
         _tgVoip = tgcalls::Meta::Create([version UTF8String], (tgcalls::Descriptor){
             .config = config,

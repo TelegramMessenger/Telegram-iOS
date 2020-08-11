@@ -169,7 +169,7 @@ public final class PresentationCallImpl: PresentationCall {
     public let isOutgoing: Bool
     public var isVideo: Bool
     public var isVideoPossible: Bool
-    public let enableHighBitrateVideoCalls: Bool
+    public let preferredVideoCodec: String?
     public let peer: Peer?
     
     private let serializedData: String?
@@ -265,7 +265,7 @@ public final class PresentationCallImpl: PresentationCall {
         updatedNetworkType: Signal<NetworkType, NoError>,
         startWithVideo: Bool,
         isVideoPossible: Bool,
-        enableHighBitrateVideoCalls: Bool
+        preferredVideoCodec: String?
     ) {
         self.account = account
         self.audioSession = audioSession
@@ -292,9 +292,9 @@ public final class PresentationCallImpl: PresentationCall {
         self.isOutgoing = isOutgoing
         self.isVideo = initialState?.type == .video
         self.isVideoPossible = isVideoPossible
+        self.preferredVideoCodec = preferredVideoCodec
         self.peer = peer
         self.isVideo = startWithVideo
-        self.enableHighBitrateVideoCalls = enableHighBitrateVideoCalls
         if self.isVideo {
             self.videoCapturer = OngoingCallVideoCapturer()
             self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: .active, remoteVideoState: .inactive, remoteAudioState: .active, remoteBatteryLevel: .normal))
@@ -606,7 +606,7 @@ public final class PresentationCallImpl: PresentationCall {
                 if let _ = audioSessionControl, !wasActive || previousControl == nil {
                     let logName = "\(id.id)_\(id.accessHash)"
                     
-                    let ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, derivedState: self.derivedState, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: connections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, enableHighBitrateVideoCalls: self.enableHighBitrateVideoCalls, audioSessionActive: self.audioSessionActive.get(), logName: logName)
+                    let ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, derivedState: self.derivedState, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: connections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, audioSessionActive: self.audioSessionActive.get(), logName: logName, preferredVideoCodec: self.preferredVideoCodec)
                     self.ongoingContext = ongoingContext
                     ongoingContext.setIsMuted(self.isMutedValue)
                     

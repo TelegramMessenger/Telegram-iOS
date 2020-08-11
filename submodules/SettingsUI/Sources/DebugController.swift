@@ -72,7 +72,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case alternativeFolderTabs(Bool)
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
-    case enableHighBitrateVideoCalls(Bool)
+    case preferredVideoCodec(Int, String, String?, Bool)
     case hostInfo(PresentationTheme, String)
     case versionInfo(PresentationTheme)
     
@@ -88,14 +88,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.experiments.rawValue
         case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .alternativeFolderTabs, .playerEmbedding, .playlistPlayback:
             return DebugControllerSection.experiments.rawValue
-        case .enableHighBitrateVideoCalls:
+        case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
         case .hostInfo, .versionInfo:
             return DebugControllerSection.info.rawValue
         }
     }
     
-    var stableId: Int32 {
+    var stableId: Int {
         switch self {
         case .sendLogs:
             return 0
@@ -147,12 +147,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 24
         case .playlistPlayback:
             return 25
-        case .enableHighBitrateVideoCalls:
-            return 26
+        case let .preferredVideoCodec(index, _, _, _):
+            return 26 + index
         case .hostInfo:
-            return 29
+            return 100
         case .versionInfo:
-            return 30
+            return 101
         }
     }
     
@@ -570,12 +570,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case let .enableHighBitrateVideoCalls(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "HD Video Calls", value: value, sectionId: self.section, style: .blocks, updated: { value in
+        case let .preferredVideoCodec(_, title, value, isSelected):
+            return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .right, checked: isSelected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
-                        settings.enableHighBitrateVideoCalls = value
+                        settings.preferredVideoCodec = value
                         return settings
                     })
                 }).start()
@@ -625,7 +625,18 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.alternativeFolderTabs(experimentalSettings.foldersTabAtBottom))
     entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
     entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
-    entries.append(.enableHighBitrateVideoCalls(experimentalSettings.enableHighBitrateVideoCalls))
+    
+    let codecs: [(String, String?)] = [
+        ("No Preference", nil),
+        ("H265", "H265"),
+        ("H264", "H264"),
+        ("VP8", "VP8"),
+        ("VP9", "VP9")
+    ]
+    
+    for i in 0 ..< codecs.count {
+        entries.append(.preferredVideoCodec(i, codecs[i].0, codecs[i].1, experimentalSettings.preferredVideoCodec == codecs[i].1))
+    }
 
     if let backupHostOverride = networkSettings?.backupHostOverride {
         entries.append(.hostInfo(presentationData.theme, "Host: \(backupHostOverride)"))

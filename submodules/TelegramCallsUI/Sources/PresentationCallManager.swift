@@ -314,7 +314,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         updatedNetworkType: firstState.0.networkType,
                         startWithVideo: firstState.2.isVideo,
                         isVideoPossible: firstState.2.isVideoPossible,
-                        enableHighBitrateVideoCalls: experimentalSettings.enableHighBitrateVideoCalls
+                        preferredVideoCodec: experimentalSettings.preferredVideoCodec
                     )
                     strongSelf.updateCurrentCall(call)
                     strongSelf.currentCallPromise.set(.single(call))
@@ -556,7 +556,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         updatedNetworkType: account.networkType,
                         startWithVideo: isVideo,
                         isVideoPossible: isVideoPossible,
-                        enableHighBitrateVideoCalls: experimentalSettings.enableHighBitrateVideoCalls
+                        preferredVideoCodec: experimentalSettings.preferredVideoCodec
                     )
                     strongSelf.updateCurrentCall(call)
                     strongSelf.currentCallPromise.set(.single(call))
