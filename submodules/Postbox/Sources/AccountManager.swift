@@ -128,6 +128,9 @@ final class AccountManagerImpl {
                 for record in displayedAccountsFilter.filterHidden(strongSelf.currentAtomicState.records.map { $0.value }) {
                     operations.append(.set(id: record.id, record: nil))
                 }
+                if let id = strongSelf.currentAtomicState.currentRecordId {
+                    metadataOperations.append(.updateCurrentAccountId(id))
+                }
             }
             
             for (view, pipe) in strongSelf.recordsViews.copyItems() {
@@ -546,7 +549,7 @@ public final class AccountManager {
         })
         self.mediaBox = MediaBox(basePath: basePath + "/media")
         self.displayedAccountsFilter = displayedAccountsFilter
-        displayedAccountsFilter.currentAccountRecordIdPromise.set(self.currentAccountRecord(allocateIfNotExists: false) |> map { $0?.0 })
+        displayedAccountsFilter.currentAccountRecordIdPromise.set(self.accountRecords() |> map { $0.currentRecord?.id })
     }
     
     public func transaction<T>(ignoreDisabled: Bool = false, _ f: @escaping (AccountManagerModifier) -> T) -> Signal<T, NoError> {
