@@ -234,19 +234,6 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
         return PasscodeOptionsData(accessChallenge: accessChallenge, presentationSettings: passcodeSettings)
     })
     
-    func hiddenAccountsNotificationsUnmute(_ unmute: Bool) {
-        let _ = (context.sharedContext.activeAccounts
-        |> map { _, accounts, _ -> [Account] in
-            let activeAccounts = accounts.map { $0.1 }
-            
-            for account in activeAccounts where account.isHidden {
-                changeChatsAndChannelsNotifications(unmute: unmute, atAccount: account)
-            }
-        
-            return activeAccounts
-        }).start()
-    }
-    
     let arguments = PasscodeOptionsControllerArguments(turnPasscodeOff: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationData: presentationData)
@@ -259,8 +246,8 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                     transaction.setAccessChallengeData(challenge)
                 }).start()
                 
-                hiddenAccountsNotificationsUnmute(false)
-                                
+                updatePushNotificationsSettingsAfterOffMasterPasscode(accountManager: context.sharedContext.accountManager)
+                
                 let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
                     passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(challenge)))
                 })
@@ -410,19 +397,6 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
 
 public func passcodeOptionsAccessController(context: AccountContext, animateIn: Bool = true, pushController: ((ViewController) -> Void)?, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
     
-    func setHiddenAccountsNotificationsSettings() {
-        let _ = (context.sharedContext.activeAccounts
-        |> map { _, accounts, _ -> [Account] in
-            let activeAccounts = accounts.map { $0.1 }
-                
-            for account in activeAccounts where account.isHidden {
-                setSavedChatsAndChannelsNotificationsSettings(at: account)
-            }
-                
-            return activeAccounts
-        }).start()
-    }
-    
     return context.sharedContext.accountManager.transaction { transaction -> PostboxAccessChallengeData in
         return transaction.getAccessChallengeData()
     }
@@ -443,7 +417,7 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
                         
                         updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(1 * 60 * 60).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
                         
-                        setHiddenAccountsNotificationsSettings()
+                        updatePushNotificationsSettingsAfterOnMasterPasscode(accountManager: context.sharedContext.accountManager)
                     }) |> deliverOnMainQueue).start(next: { _ in
                     }, error: { _ in
                     }, completed: {
