@@ -2072,7 +2072,7 @@ final class SharedApplicationContext {
                 })
             }
                                                          
-            context.rootController.chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .falseBottom(title: presentationData.strings.FalseBottom_Toast_HideAccount, cancel: presentationData.strings.Common_Cancel), elevatedLayout: true, animateInAsReplacement: false, action: { value in
+            context.rootController.chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .falseBottom(title: presentationData.strings.FalseBottom_Toast_HideAccount, cancel: presentationData.strings.Common_Cancel), elevatedLayout: false, animateInAsReplacement: false, action: { value in
                     guard value == .info else { return false }
                 
                     context.rootController.allowInteractiveDismissal = false
@@ -2085,7 +2085,7 @@ final class SharedApplicationContext {
                     })
                     return true
                 }
-            ), in: .window(.root))
+            ), in: .current)
         }))
     }
     
