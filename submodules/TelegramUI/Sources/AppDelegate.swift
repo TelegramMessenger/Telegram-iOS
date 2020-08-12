@@ -2038,19 +2038,11 @@ final class SharedApplicationContext {
         |> delay(1.0, queue: .mainQueue())).start(next: { context in
             let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
             
-            let replaceTopControllerImpl: (ViewController, Bool) -> Void = { c, animated in
-                context.rootController.replaceTopController(c, animated: animated)
-            }
-            
             let showSplashScreen: (FalseBottomSplashMode, Bool, @escaping () -> Void) -> Void = { mode, push, action in
                 let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
                 let controller = FalseBottomSplashScreen(presentationData: presentationData, mode: mode)
                 controller.buttonPressed = action
-                if push {
-                    context.rootController.pushViewController(controller, animated: true)
-                } else {
-                    replaceTopControllerImpl(controller, true)
-                }
+                context.rootController.pushViewController(controller, animated: true)
                 context.rootController.allowInteractiveDismissal = false
             }
             
@@ -2103,10 +2095,7 @@ final class SharedApplicationContext {
         |> deliverOnMainQueue).start(next: { context in
             let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
             
-            let replaceTopControllerImpl: (ViewController, Bool) -> Void = { c, animated in
-                context.rootController.replaceTopController(c, animated: animated)
-                context.rootController.allowInteractiveDismissal = false
-            }
+            var isFirstSplashScreen = true
             
             let showSplashScreen: (FalseBottomSplashMode, Bool, @escaping () -> Void) -> Void = { mode, push, action in
                 let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
@@ -2114,12 +2103,37 @@ final class SharedApplicationContext {
                 controller.buttonPressed = {
                     action()
                 }
-                if push {
-                    context.rootController.pushViewController(controller, animated: true)
-                } else {
-                    context.rootController.replaceAllButRootController(controller, animated: true)
+                
+                let setViewControllersStack: () -> Void = {
+                    if let root = context.rootController.viewControllers.first {
+                        let baseController = FalseBottomSplashScreen(presentationData: presentationData, mode: .hideAccount)
+                        baseController.buttonPressed = { [weak self] in
+                            guard let strongSelf = self else { return }
+                            
+                            strongSelf.continueFalseBottomFlow()
+                            
+                        }
+                        let newViewControllers = [root, baseController, controller]
+                        context.rootController.setViewControllers(newViewControllers, animated: true)
+                    }
                 }
+                
+                if isFirstSplashScreen {
+                    context.rootController.pushViewController(controller, animated: true)
+                    (context.isReady.get()
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { _ in
+                        setViewControllersStack()
+                    })
+                } else {
+                    context.rootController.pushViewController(controller, animated: true, completion: {
+                        setViewControllersStack()
+                    })
+                }
+                
                 context.rootController.allowInteractiveDismissal = false
+                isFirstSplashScreen = false
             }
                 
             let showMasterPasscodeScreenIfNeeded: (@escaping () -> Void) -> Void = { completion in

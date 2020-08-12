@@ -202,6 +202,12 @@ public final class TelegramRootController: NavigationController {
     }
     
     @objc private func backPressed() {
-        popViewController(animated: true)
+        _ = (self.context.sharedContext.accountManager.transaction { transaction in
+            transaction.removeAuth()
+        } |> deliverOnMainQueue).start(completed: { [weak self] in
+            guard let strongSelf = self else { return }
+            
+            strongSelf.popViewController(animated: true)
+        })
     }
 }

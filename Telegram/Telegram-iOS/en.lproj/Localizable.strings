@@ -5729,6 +5729,10 @@ Any member of this group will be able to see messages in the channel.";
 "FalseBottom.AccountWasHidden.Text" = "Now you can open the account you need by entering the first or the second passcode.";
 "FalseBottom.AccountWasHidden.Button" = "Enter passcode";
 
+"FalseBottom.CancelHide.Text" = "Warning. Account can be hidden only right after adding it. If you decide to hide this account later, you will have to log out from it and log in again. Do you want to stop the process of hiding this account?";
+"FalseBottom.CancelHide.Continue" = "Continue";
+"FalseBottom.CancelHide.Stop" = "Stop";
+
 "NotificationSettings.LocalAccountNotificationsSection" = "CURRENT ACCOUNT ON THIS DEVICE";
 "NotificationSettings.LocalAccountNotifications" = "Enable notifications";
 "NotificationSettings.LocalAccountNotificationsInfoOn" = "Turn this off to disable all notifications for the current account on this device.";
