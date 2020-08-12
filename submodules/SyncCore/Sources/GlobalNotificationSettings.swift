@@ -38,10 +38,6 @@ public struct GlobalNotificationSettingsSet: PostboxCoding, Equatable {
         return GlobalNotificationSettingsSet(privateChats: MessageNotificationSettings.defaultSettings, groupChats: .defaultSettings, channels: .defaultSettings, contactsJoined: true)
     }
     
-    public static var muteSettings: GlobalNotificationSettingsSet {
-        return GlobalNotificationSettingsSet(privateChats: .muteSettings, groupChats: .muteSettings, channels: .muteSettings, contactsJoined: true)
-    }
-    
     public init(privateChats: MessageNotificationSettings, groupChats: MessageNotificationSettings, channels: MessageNotificationSettings, contactsJoined: Bool) {
         self.privateChats = privateChats
         self.groupChats = groupChats
