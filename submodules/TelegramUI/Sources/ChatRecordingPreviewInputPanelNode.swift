@@ -101,7 +101,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         super.init()
         
         self.addSubnode(self.deleteButton)
-        self.deleteButton.addSubnode(binNode)
+        self.deleteButton.addSubnode(self.binNode)
         self.addSubnode(self.waveformBackgroundNode)
         self.addSubnode(self.sendButton)
         self.addSubnode(self.waveformScubberNode)
