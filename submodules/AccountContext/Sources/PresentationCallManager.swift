@@ -40,7 +40,7 @@ public struct PresentationCallState: Equatable {
         case connecting(Data?)
         case active(Double, Int32?, Data)
         case reconnecting(Double, Int32?, Data)
-        case terminating
+        case terminating(CallSessionTerminationReason?)
         case terminated(CallId?, CallSessionTerminationReason?, Bool)
     }
     
