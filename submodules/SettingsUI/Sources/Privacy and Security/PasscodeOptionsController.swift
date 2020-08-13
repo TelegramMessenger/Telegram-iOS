@@ -244,9 +244,8 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                 let challenge = PostboxAccessChallengeData.none
                 let _ = context.sharedContext.accountManager.transaction({ transaction -> Void in
                     transaction.setAccessChallengeData(challenge)
+                    updatePushNotificationsSettingsAfterOffMasterPasscode(transaction: transaction)
                 }).start()
-                
-                updatePushNotificationsSettingsAfterOffMasterPasscode(accountManager: context.sharedContext.accountManager)
                 
                 let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
                     passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(challenge)))
@@ -266,6 +265,8 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                             transaction.setAccessChallengeData(data)
                             
                             updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(1 * 60 * 60).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
+                            
+                            updatePushNotificationsSettingsAfterOnMasterPasscode(transaction: transaction)
                         }) |> deliverOnMainQueue).start(next: { _ in
                         }, error: { _ in
                         }, completed: {
@@ -417,7 +418,7 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
                         
                         updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(1 * 60 * 60).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
                         
-                        updatePushNotificationsSettingsAfterOnMasterPasscode(accountManager: context.sharedContext.accountManager)
+                        updatePushNotificationsSettingsAfterOnMasterPasscode(transaction: transaction)
                     }) |> deliverOnMainQueue).start(next: { _ in
                     }, error: { _ in
                     }, completed: {

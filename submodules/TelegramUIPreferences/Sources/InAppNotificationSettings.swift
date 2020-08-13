@@ -38,13 +38,16 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
     public var displayNameOnLockscreen: Bool
     public var displayNotificationsFromAllAccounts: Bool
     public var disabledNotificationsAccountRecords: [AccountRecordId]
-    public var savedDisabledNotificationsAccountRecords: [AccountRecordId]
+    public var disabledNotificationsAccountRecordsMasterPasscodeSnapshot: [AccountRecordId]
+    public var disabledNotificationsAccountRecordsLogoutSnapshot: [AccountRecordId]
+    public var hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot: Bool
+    public var hasDisabledNotificationsAccountRecordsLogoutSnapshot: Bool
     
     public static var defaultSettings: InAppNotificationSettings {
-        return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true, totalUnreadCountDisplayStyle: .filtered, totalUnreadCountDisplayCategory: .messages, totalUnreadCountIncludeTags: .all, displayNameOnLockscreen: true, displayNotificationsFromAllAccounts: true, disabledNotificationsAccountRecords: [], savedDisabledNotificationsAccountRecords: [])
+        return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true, totalUnreadCountDisplayStyle: .filtered, totalUnreadCountDisplayCategory: .messages, totalUnreadCountIncludeTags: .all, displayNameOnLockscreen: true, displayNotificationsFromAllAccounts: true, disabledNotificationsAccountRecords: [], savedDisabledNotificationsAccountRecords: [], disabledNotificationsAccountRecordsLogoutSnapshot: [], hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot: false, hasDisabledNotificationsAccountRecordsLogoutSnapshot: false)
     }
     
-    public init(playSounds: Bool, vibrate: Bool, displayPreviews: Bool, totalUnreadCountDisplayStyle: TotalUnreadCountDisplayStyle, totalUnreadCountDisplayCategory: TotalUnreadCountDisplayCategory, totalUnreadCountIncludeTags: PeerSummaryCounterTags, displayNameOnLockscreen: Bool, displayNotificationsFromAllAccounts: Bool, disabledNotificationsAccountRecords: [AccountRecordId], savedDisabledNotificationsAccountRecords: [AccountRecordId]) {
+    public init(playSounds: Bool, vibrate: Bool, displayPreviews: Bool, totalUnreadCountDisplayStyle: TotalUnreadCountDisplayStyle, totalUnreadCountDisplayCategory: TotalUnreadCountDisplayCategory, totalUnreadCountIncludeTags: PeerSummaryCounterTags, displayNameOnLockscreen: Bool, displayNotificationsFromAllAccounts: Bool, disabledNotificationsAccountRecords: [AccountRecordId], savedDisabledNotificationsAccountRecords: [AccountRecordId], disabledNotificationsAccountRecordsLogoutSnapshot: [AccountRecordId], hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot: Bool, hasDisabledNotificationsAccountRecordsLogoutSnapshot: Bool) {
         self.playSounds = playSounds
         self.vibrate = vibrate
         self.displayPreviews = displayPreviews
@@ -54,7 +57,10 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
         self.displayNameOnLockscreen = displayNameOnLockscreen
         self.displayNotificationsFromAllAccounts = displayNotificationsFromAllAccounts
         self.disabledNotificationsAccountRecords = disabledNotificationsAccountRecords
-        self.savedDisabledNotificationsAccountRecords = savedDisabledNotificationsAccountRecords
+        self.disabledNotificationsAccountRecordsMasterPasscodeSnapshot = savedDisabledNotificationsAccountRecords
+        self.disabledNotificationsAccountRecordsLogoutSnapshot = disabledNotificationsAccountRecordsLogoutSnapshot
+        self.hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot = hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot
+        self.hasDisabledNotificationsAccountRecordsLogoutSnapshot = hasDisabledNotificationsAccountRecordsLogoutSnapshot
     }
     
     public init(decoder: PostboxDecoder) {
@@ -86,7 +92,10 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
         self.displayNameOnLockscreen = decoder.decodeInt32ForKey("displayNameOnLockscreen", orElse: 1) != 0
         self.displayNotificationsFromAllAccounts = decoder.decodeInt32ForKey("displayNotificationsFromAllAccounts", orElse: 1) != 0
         self.disabledNotificationsAccountRecords = decoder.decodeInt64ArrayForKey("disabledIds").map { AccountRecordId(rawValue: $0) }
-        self.savedDisabledNotificationsAccountRecords = decoder.decodeInt64ArrayForKey("savedDisabledIds").map { AccountRecordId(rawValue: $0) }
+        self.disabledNotificationsAccountRecordsMasterPasscodeSnapshot = decoder.decodeInt64ArrayForKey("disabledIdsMasterPasscodeSnapshot").map { AccountRecordId(rawValue: $0) }
+        self.disabledNotificationsAccountRecordsLogoutSnapshot = decoder.decodeInt64ArrayForKey("disabledIdsLogoutSnapshot").map { AccountRecordId(rawValue: $0) }
+        self.hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot = decoder.decodeInt32ForKey("hasDisabledIdsMasterPasscodeSnapshot", orElse: 0) != 0
+        self.hasDisabledNotificationsAccountRecordsLogoutSnapshot = decoder.decodeInt32ForKey("hasDisabledIdsLogoutSnapshot", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -99,7 +108,10 @@ public struct InAppNotificationSettings: PreferencesEntry, Equatable {
         encoder.encodeInt32(self.displayNameOnLockscreen ? 1 : 0, forKey: "displayNameOnLockscreen")
         encoder.encodeInt32(self.displayNotificationsFromAllAccounts ? 1 : 0, forKey: "displayNotificationsFromAllAccounts")
         encoder.encodeInt64Array(self.disabledNotificationsAccountRecords.map { $0.int64 }, forKey: "disabledIds")
-        encoder.encodeInt64Array(self.disabledNotificationsAccountRecords.map { $0.int64 }, forKey: "savedDisabledIds")
+        encoder.encodeInt64Array(self.disabledNotificationsAccountRecordsMasterPasscodeSnapshot.map { $0.int64 }, forKey: "disabledIdsMasterPasscodeSnapshot")
+        encoder.encodeInt64Array(self.disabledNotificationsAccountRecordsLogoutSnapshot.map { $0.int64 }, forKey: "disabledIdsLogoutSnapshot")
+        encoder.encodeInt32(self.hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot ? 1 : 0, forKey: "hasDisabledIdsMasterPasscodeSnapshot")
+        encoder.encodeInt32(self.hasDisabledNotificationsAccountRecordsLogoutSnapshot ? 1 : 0, forKey: "hasDisabledIdsLogoutSnapshot")
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {
@@ -130,9 +142,9 @@ public func updateInAppNotificationSettingsInteractively(transaction: AccountMan
 }
 
 public func setAccountPushNotificationsEnabledOnThisDevice(accountIds: [AccountRecordId: Bool], accountManager: AccountManager) {
-    let _ = accountManager.transaction { transaction -> Void in
+    let _ = (accountManager.transaction { transaction -> Void in
         setAccountPushNotificationsEnabledOnThisDevice(accountIds: accountIds,transaction: transaction)
-    }.start()
+    } |> deliverOnMainQueue).start()
 }
 
 public func setAccountPushNotificationsEnabledOnThisDevice(accountIds: [AccountRecordId: Bool], transaction: AccountManagerModifier) {
@@ -143,51 +155,82 @@ public func setAccountPushNotificationsEnabledOnThisDevice(accountIds: [AccountR
                 if !settings.disabledNotificationsAccountRecords.contains(accountId) {
                     settings.disabledNotificationsAccountRecords.append(accountId)
                 }
+                if !settings.disabledNotificationsAccountRecordsMasterPasscodeSnapshot.contains(accountId) {
+                    settings.disabledNotificationsAccountRecordsMasterPasscodeSnapshot.append(accountId)
+                }
             } else {
-                settings.disabledNotificationsAccountRecords.removeAll(where: {$0 == accountId })
+                settings.disabledNotificationsAccountRecords.removeAll(where: { $0 == accountId })
+                settings.disabledNotificationsAccountRecordsMasterPasscodeSnapshot.removeAll(where: { $0 == accountId })
             }
         }
         return settings
     })
 }
 
-public func updatePushNotificationsSettingsAfterOffMasterPasscode(accountManager: AccountManager) {
-    func updateInAppNotificationSettings(transaction: AccountManagerModifier, accountIds: [AccountRecordId]) {
-        updateInAppNotificationSettingsInteractively(transaction: transaction, { settings in
-            var settings = settings
-            
-            settings.savedDisabledNotificationsAccountRecords = settings.disabledNotificationsAccountRecords
-            
-            for accountId in accountIds {
-                if !settings.disabledNotificationsAccountRecords.contains(accountId) {
-                    settings.disabledNotificationsAccountRecords.append(accountId)
-                }
-            }
-            return settings
-        })
-    }
-    
-    let _ = accountManager.transaction { transaction in
-        let records = transaction.getAllRecords()
-        
-        let accountIds = records
-            .filter { $0.attributes.contains { $0 is HiddenAccountAttribute } ?? false }
+public func updatePushNotificationsSettingsAfterOffMasterPasscode(transaction: AccountManagerModifier) {
+    let accountIds = transaction.getAllRecords()
+        .filter { $0.attributes.contains { $0 is HiddenAccountAttribute } }
+        .map { $0.id }
+
+    updateInAppNotificationSettingsInteractively(transaction: transaction, { settings in
+        var settings = settings
+
+        if !settings.hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot {
+            settings.disabledNotificationsAccountRecordsMasterPasscodeSnapshot = settings.disabledNotificationsAccountRecords
+            settings.disabledNotificationsAccountRecords = accountIds
+            settings.hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot = true
+        }
+
+        return settings
+    })
+}
+
+public func updatePushNotificationsSettingsAfterOnMasterPasscode(transaction: AccountManagerModifier) {
+    updateInAppNotificationSettingsInteractively(transaction: transaction, { settings in
+        var settings = settings
+
+        if settings.hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot {
+            settings.disabledNotificationsAccountRecords = settings.disabledNotificationsAccountRecordsMasterPasscodeSnapshot
+            settings.disabledNotificationsAccountRecordsMasterPasscodeSnapshot = []
+            settings.hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot = false
+        }
+
+        return settings
+    })
+}
+
+public func updatePushNotificationsSettingsAfterAllPublicLogout(accountManager: AccountManager) {
+    let _ = (accountManager.transaction { transaction in
+        let accountIds = transaction.getAllRecords()
+            .filter { $0.attributes.contains { $0 is HiddenAccountAttribute } }
             .map { $0.id }
         
-        updateInAppNotificationSettings(transaction: transaction, accountIds: accountIds)
-    }.start()
-}
-
-public func updatePushNotificationsSettingsAfterOnMasterPasscode(accountManager: AccountManager) {
-    let _ = accountManager.transaction { transaction -> Void in
         updateInAppNotificationSettingsInteractively(transaction: transaction, { settings in
             var settings = settings
             
-            settings.disabledNotificationsAccountRecords = settings.savedDisabledNotificationsAccountRecords
-            settings.savedDisabledNotificationsAccountRecords = []
+            if !settings.hasDisabledNotificationsAccountRecordsLogoutSnapshot {
+                settings.disabledNotificationsAccountRecordsLogoutSnapshot = settings.disabledNotificationsAccountRecords
+                settings.disabledNotificationsAccountRecords = accountIds
+                settings.hasDisabledNotificationsAccountRecordsLogoutSnapshot = true
+            }
             
             return settings
         })
-    }.start()
+    } |> deliverOnMainQueue).start()
 }
 
+public func updatePushNotificationsSettingsAfterLogin(accountManager: AccountManager) {
+    let _ = (accountManager.transaction { transaction -> Void in
+        updateInAppNotificationSettingsInteractively(transaction: transaction, { settings in
+            var settings = settings
+            
+            if settings.hasDisabledNotificationsAccountRecordsLogoutSnapshot {
+                settings.disabledNotificationsAccountRecords = settings.disabledNotificationsAccountRecordsLogoutSnapshot
+                settings.disabledNotificationsAccountRecordsLogoutSnapshot = []
+                settings.hasDisabledNotificationsAccountRecordsLogoutSnapshot = false
+            }
+            
+            return settings
+        })
+    } |> deliverOnMainQueue).start()
+}

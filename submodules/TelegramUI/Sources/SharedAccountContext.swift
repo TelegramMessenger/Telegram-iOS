@@ -26,6 +26,7 @@ import LocalMediaResources
 import OverlayStatusController
 import AlertUI
 import PresentationDataUtils
+import TelegramUIPreferences
 
 private enum CallStatusText: Equatable {
     case none
@@ -795,6 +796,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     setupAccount(account, fetchCachedResourceRepresentation: fetchCachedResourceRepresentation, transformOutgoingMessageMedia: transformOutgoingMessageMedia, preFetchedResourcePath: { resource in
                         return nil
                     })
+                    account.shouldBeServiceTaskMaster.set(.single(.always))
                     return .single(account)
                 default:
                     return .never()
@@ -822,7 +824,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             if lhs.includeMuted != rhs.includeMuted {
                 return false
             }
-            if lhs.disabledNotificationsAccountRecords != rhs.disabledNotificationsAccountRecords {
+            if lhs.disabledNotificationsAccountRecords.map({ $0.int64 }).sorted() != rhs.disabledNotificationsAccountRecords.map({ $0.int64 }).sorted() {
                 return false
             }
             return true
@@ -831,7 +833,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let allRecords = self.accountManager.allAccountRecords()
         |> map { $0.records }
         |> distinctUntilChanged(isEqual: { lhs, rhs in
-            return lhs == rhs
+            return lhs.map({ $0.id }).sorted() == rhs.map({ $0.id }).sorted()
         })
         
         let allAccounts = combineLatest(queue: .mainQueue(), self.activeAccounts, allRecords)
@@ -844,11 +846,37 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 record.attributes.contains(where: { $0 is HiddenAccountAttribute }) &&
                 !accounts.contains(where: { $0.0 == record.id })
             }.map { $0.id }
-            return combineLatest(hiddenIds.map(strongSelf.initializeAccount(id:)))
-            |> map { hiddenAccounts in
+                
+            let hasPublicAccounts = allRecords.contains(where: { record in
+                !record.attributes.contains(where: { $0 is LoggedOutAccountAttribute }) &&
+                !record.attributes.contains(where: { $0 is HiddenAccountAttribute })
+            })
+
+            if hasPublicAccounts {
+                updatePushNotificationsSettingsAfterLogin(accountManager: strongSelf.accountManager)
+            } else {
+                updatePushNotificationsSettingsAfterAllPublicLogout(accountManager: strongSelf.accountManager)
+            }
+
+            return combineLatest(
+                queue: .mainQueue(),
+                hiddenIds.map(strongSelf.initializeAccount(id:)))
+            |> map { [weak self] hiddenAccounts in
                 return (primary, accounts.map { $0.1 } + hiddenAccounts)
             }
         }
+        |> distinctUntilChanged(isEqual: { lhs, rhs in
+            if (lhs.0 != nil) != (rhs.0 != nil) {
+                return false
+            }
+            if lhs.0?.id != rhs.0?.id {
+                return false
+            }
+            if lhs.1.map({ $0.id.int64 }).sorted() != rhs.1.map({ $0.id.int64 }).sorted() {
+                return false
+            }
+            return true
+        })
         
         self.registeredNotificationTokensDisposable.set((combineLatest(queue: .mainQueue(), settings, allAccounts)
         |> mapToSignal { settings, accounts -> Signal<Never, NoError> in
@@ -909,7 +937,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         } else {
                             encrypt = false
                         }
-                        return registerNotificationToken(account: account, token: token, type: .aps(encrypt: encrypt), sandbox: sandbox, otherAccountUserIds: (account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.peerId.id }), excludeMutedChats: !settings.includeMuted)
+                        return registerNotificationToken(account: account, token: token, type: .aps(encrypt: encrypt), sandbox: sandbox, otherAccountUserIds: (account.testingEnvironment ? allTestingUserIds : allProductionUserIds).filter({ $0 != account.peerId.id }), excludeMutedChats: !settings.includeMuted)
                     }
                     appliedVoip = self.voipNotificationToken
                     |> distinctUntilChanged(isEqual: { $0 == $1 })
