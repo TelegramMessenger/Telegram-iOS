@@ -357,7 +357,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         }
                     }
                 })
-            case let .falseBottom(title, cancel):
+            case let .falseBottom(title):
                 self.iconNode = nil
                 self.iconCheckNode = nil
                 self.animationNode = nil
@@ -365,10 +365,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 
                 self.textNode.attributedText = NSAttributedString(string: title, font: Font.regular(15.0), textColor: .white)
                 
-                displayUndo = true
-                undoText = cancel
-                
                 self.timerTextNodeFont = Font.regular(14.0)
+                displayUndo = false
 
                 self.originalRemainingSeconds = 60
                 self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
