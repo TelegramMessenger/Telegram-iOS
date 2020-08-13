@@ -13,7 +13,7 @@
 
 #ifndef WEBRTC_IOS
 #import "platform/darwin/VideoMetalViewMac.h"
-#define GLVideoView VideoMetalView
+#import "platform/darwin/GLVideoViewMac.h"
 #define UIViewContentModeScaleAspectFill kCAGravityResizeAspectFill
 #define UIViewContentModeScaleAspect kCAGravityResizeAspect
 
@@ -167,6 +167,8 @@
         } else {
             GLVideoView *remoteRenderer = [[GLVideoView alloc] initWithFrame:CGRectZero];
             
+            remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+
             std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
             interface->setOutput(sink);
             
@@ -682,7 +684,11 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                 completion(remoteRenderer);
             } else {
                 GLVideoView *remoteRenderer = [[GLVideoView alloc] initWithFrame:CGRectZero];
-                
+                #if TARGET_OS_IPHONE
+                remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+                #else
+                remoteRenderer.videoContentMode = UIViewContentModeScaleAspect;
+                #endif
                 std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
                 __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
                 if (strongSelf) {
