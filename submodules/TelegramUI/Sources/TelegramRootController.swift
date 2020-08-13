@@ -34,19 +34,37 @@ public final class TelegramRootController: NavigationController {
             self.falseBottomAuthViewControllersDisposable = falseBottomAuthViewControllersSignal?.start(next: { [weak self] viewControllers in
                 guard let strongSelf = self else { return }
                 
-                let ownControllers = strongSelf.viewControllers.compactMap { $0 as? ViewController}.filter { !strongSelf.falseBottomAuthViewControllers.contains($0) }
-                let controllers = ownControllers + viewControllers
-                strongSelf.falseBottomAuthViewControllers = viewControllers
-                
-                for controller in controllers {
-                    guard let controller = controller as? AuthorizationSequencePhoneEntryController else { continue }
+                let setViewControllers: ([UIViewController]) -> Void = { [weak self] controllers in
+                    guard let strongSelf = self else { return }
                     
-                    controller.view.layer.removeAnimation(forKey: "opacity")
-                    
-                    controller.navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: strongSelf.presentationData.strings.Common_Back, target: strongSelf, action: #selector(strongSelf.backPressed))
+                    for controller in controllers {
+                        guard let controller = controller as? AuthorizationSequencePhoneEntryController else { continue }
+                        
+                        controller.view.layer.removeAnimation(forKey: "opacity")
+                        
+                        controller.navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: strongSelf.presentationData.strings.Common_Back, target: strongSelf, action: #selector(strongSelf.backPressed))
+                    }
+                    strongSelf.setViewControllers(controllers, animated: true)
+                    strongSelf.allowInteractiveDismissal = false
                 }
-                strongSelf.setViewControllers(controllers, animated: true)
-                strongSelf.allowInteractiveDismissal = false
+                
+                let ownControllers = strongSelf.viewControllers.compactMap { $0 as? ViewController}.filter { !strongSelf.falseBottomAuthViewControllers.contains($0) }
+                
+                if strongSelf.falseBottomAuthViewControllers.count > 2,
+                    viewControllers.count == 2,
+                    viewControllers.last is AuthorizationSequencePhoneEntryController {
+                    _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction in
+                        transaction.removeAuth()
+                    } |> deliverOnMainQueue).start(completed: { [weak self] in
+                        guard let strongSelf = self else { return }
+                        
+                        setViewControllers(ownControllers)
+                        strongSelf.falseBottomAuthViewControllers = []
+                    })
+                } else {
+                    setViewControllers(ownControllers + viewControllers)
+                    strongSelf.falseBottomAuthViewControllers = viewControllers
+                }
             })
         }
     }
