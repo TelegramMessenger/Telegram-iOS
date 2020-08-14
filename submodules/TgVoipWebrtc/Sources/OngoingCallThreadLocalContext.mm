@@ -159,7 +159,9 @@
         if ([VideoMetalView isSupported]) {
             VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
             remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
-            
+            #if !TARGET_OS_IPHONE
+            [remoteRenderer setIsForceMirrored:YES];
+            #endif
             std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
             interface->setOutput(sink);
             
@@ -168,7 +170,9 @@
             GLVideoView *remoteRenderer = [[GLVideoView alloc] initWithFrame:CGRectZero];
             
             remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
-
+            #if !TARGET_OS_IPHONE
+            [remoteRenderer setIsForceMirrored:YES];
+            #endif
             std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
             interface->setOutput(sink);
             
