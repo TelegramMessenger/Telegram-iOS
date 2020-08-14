@@ -508,7 +508,7 @@ public final class PresentationCallImpl: PresentationCall {
             } else {
                 if self.isVideo {
                     mappedVideoState = .active
-                } else if self.isVideoPossible {
+                } else if self.isVideoPossible && sessionState.isVideoPossible {
                     mappedVideoState = .inactive
                 } else {
                     mappedVideoState = .notAvailable

@@ -186,6 +186,7 @@ public struct CallSession {
     public let isOutgoing: Bool
     public let type: CallType
     public let state: CallSessionState
+    public let isVideoPossible: Bool
 }
 
 public enum CallSessionConnection: Equatable {
@@ -277,7 +278,7 @@ private final class CallSessionContext {
     let peerId: PeerId
     let isOutgoing: Bool
     var type: CallSession.CallType
-    let isVideoPossible: Bool
+    var isVideoPossible: Bool
     var state: CallSessionInternalState
     let subscribers = Bag<(CallSession) -> Void>()
     let signalingSubscribers = Bag<(Data) -> Void>()
@@ -412,7 +413,7 @@ private final class CallSessionManagerContext {
                     let index = context.subscribers.add { next in
                         subscriber.putNext(next)
                     }
-                    subscriber.putNext(CallSession(id: internalId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context)))
+                    subscriber.putNext(CallSession(id: internalId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context), isVideoPossible: context.isVideoPossible))
                     disposable.set(ActionDisposable {
                         queue.async {
                             if let strongSelf = self, let context = strongSelf.contexts[internalId] {
@@ -473,7 +474,7 @@ private final class CallSessionManagerContext {
     
     private func contextUpdated(internalId: CallSessionInternalId) {
         if let context = self.contexts[internalId] {
-            let session = CallSession(id: internalId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context))
+            let session = CallSession(id: internalId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context), isVideoPossible: context.isVideoPossible)
             for subscriber in context.subscribers.copyItems() {
                 subscriber(session)
             }
@@ -526,7 +527,9 @@ private final class CallSessionManagerContext {
                     wasRinging = true
                     let internalReason: DropCallSessionReason
                     switch reason {
-                        case .busy, .hangUp:
+                        case .busy:
+                            internalReason = .busy
+                        case .hangUp:
                             internalReason = .hangUp(0)
                         case .disconnect:
                             internalReason = .disconnect
@@ -804,6 +807,9 @@ private final class CallSessionManagerContext {
                                     switch callProtocol {
                                         case let .phoneCallProtocol(_, _, maxLayer, versions):
                                             if !versions.isEmpty {
+                                                let isVideoPossible = self.videoVersions().contains(where: { versions.contains($0) })
+                                                context.isVideoPossible = isVideoPossible
+                                                
                                                 context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: calculatedKeyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connections.first!, alternative: Array(connections[1...])), maxLayer: maxLayer, version: versions[0], allowsP2P: allowsP2P)
                                                 self.contextUpdated(internalId: internalId)
                                             } else {
@@ -820,6 +826,9 @@ private final class CallSessionManagerContext {
                             switch callProtocol {
                                 case let .phoneCallProtocol(_, _, maxLayer, versions):
                                     if !versions.isEmpty {
+                                        let isVideoPossible = self.videoVersions().contains(where: { versions.contains($0) })
+                                        context.isVideoPossible = isVideoPossible
+                                        
                                         context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: keyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connections.first!, alternative: Array(connections[1...])), maxLayer: maxLayer, version: versions[0], allowsP2P: allowsP2P)
                                         self.contextUpdated(internalId: internalId)
                                     } else {
@@ -849,7 +858,7 @@ private final class CallSessionManagerContext {
                         }
                     }
                     if let context = self.contexts[internalId] {
-                        let callSession = CallSession(id: internalId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context))
+                        let callSession = CallSession(id: internalId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context), isVideoPossible: context.isVideoPossible)
                         if let resultRingingStateValue = resultRingingStateValue {
                             resultRingingState = (resultRingingStateValue, callSession)
                         }

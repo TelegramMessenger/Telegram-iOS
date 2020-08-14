@@ -207,7 +207,6 @@
     NSTimeInterval _callPacketTimeout;
     
     std::unique_ptr<tgcalls::Instance> _tgVoip;
-    OngoingCallThreadLocalContextWebrtcTerminationResult *_terminationResult;
     
     OngoingCallStateWebrtc _state;
     OngoingCallVideoStateWebrtc _videoState;
@@ -541,29 +540,19 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     return false;
 }
 
-- (void)stopInstanceIfNeeded {
-    if (!_tgVoip) {
-        return;
-    }
-    tgcalls::FinalState finalState = _tgVoip->stop();
-    _tgVoip.reset();
-    _terminationResult = [[OngoingCallThreadLocalContextWebrtcTerminationResult alloc] initWithFinalState:finalState];
-}
-
 - (void)beginTermination {
-    [self stopInstanceIfNeeded];
 }
 
-- (void)stop:(void (^)(NSString *, int64_t, int64_t, int64_t, int64_t))completion {
-    [self stopInstanceIfNeeded];
+- (void)stopWithTerminationResult:(OngoingCallThreadLocalContextWebrtcTerminationResult *)terminationResult completion:(void (^)(NSString *, int64_t, int64_t, int64_t, int64_t))completion {
+    _tgVoip.reset();
     
     if (completion) {
-        if (_terminationResult) {
-            NSString *debugLog = [NSString stringWithUTF8String:_terminationResult.finalState.debugLog.c_str()];
-            _lastDerivedState = [[NSData alloc] initWithBytes:_terminationResult.finalState.persistentState.value.data() length:_terminationResult.finalState.persistentState.value.size()];
+        if (terminationResult) {
+            NSString *debugLog = [NSString stringWithUTF8String:terminationResult.finalState.debugLog.c_str()];
+            _lastDerivedState = [[NSData alloc] initWithBytes:terminationResult.finalState.persistentState.value.data() length:terminationResult.finalState.persistentState.value.size()];
             
             if (completion) {
-                completion(debugLog, _terminationResult.finalState.trafficStats.bytesSentWifi, _terminationResult.finalState.trafficStats.bytesReceivedWifi, _terminationResult.finalState.trafficStats.bytesSentMobile, _terminationResult.finalState.trafficStats.bytesReceivedMobile);
+                completion(debugLog, terminationResult.finalState.trafficStats.bytesSentWifi, terminationResult.finalState.trafficStats.bytesReceivedWifi, terminationResult.finalState.trafficStats.bytesSentMobile, terminationResult.finalState.trafficStats.bytesReceivedMobile);
             }
         } else {
             if (completion) {
@@ -571,6 +560,33 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             }
         }
     }
+}
+
+- (void)stop:(void (^)(NSString *, int64_t, int64_t, int64_t, int64_t))completion {
+    if (!_tgVoip) {
+        return;
+    }
+    if (completion == nil) {
+        _tgVoip->stop([](tgcalls::FinalState finalState) {
+        });
+        _tgVoip.reset();
+        return;
+    }
+    
+    __weak OngoingCallThreadLocalContextWebrtc *weakSelf = self;
+    id<OngoingCallThreadLocalContextQueueWebrtc> queue = _queue;
+    _tgVoip->stop([weakSelf, queue, completion = [completion copy]](tgcalls::FinalState finalState) {
+        [queue dispatch:^{
+            __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
+            if (!strongSelf) {
+                return;
+            }
+            
+            OngoingCallThreadLocalContextWebrtcTerminationResult *terminationResult = [[OngoingCallThreadLocalContextWebrtcTerminationResult alloc] initWithFinalState:finalState];
+            
+            [strongSelf stopWithTerminationResult:terminationResult completion:completion];
+        }];
+    });
 }
 
 - (NSString *)debugInfo {

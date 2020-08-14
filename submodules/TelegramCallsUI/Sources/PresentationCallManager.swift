@@ -333,7 +333,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             } else {
                 for (account, _, state, _, _) in ringingStates {
                     if state.id != self.currentCall?.internalId {
-                        account.callSessionManager.drop(internalId: state.id, reason: .missed, debugLog: .single(nil))
+                        account.callSessionManager.drop(internalId: state.id, reason: .busy, debugLog: .single(nil))
                     }
                 }
             }
