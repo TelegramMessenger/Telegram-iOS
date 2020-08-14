@@ -1225,13 +1225,23 @@ final class SharedApplicationContext {
                     }
                     |> take(1)
                     |> timeout(4.0, queue: .mainQueue(), alternate: .complete())
-                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                        |> deliverOnMainQueue).start(next: { context in
+                            if let accountRecordId = authContextValue.account.continueFalseBottomFlowAccountRecordId, let context = context {
+                                let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> Bool in
+                                    return transaction.getAccessChallengeData() != .none
+                                } |> deliverOnMainQueue).start(next: { hasMasterPasscode in
+                                    let presentationData = authContextValue.sharedContext.currentPresentationData.with({ $0 })
+                                    authContextValue.rootController.setViewControllers([FalseBottomSplashScreen(presentationData: presentationData, mode: hasMasterPasscode ? .setSecretPasscode : .setMasterPasscode)], animated: true)
+                                    
+                                    context.context.sharedContext.switchToAccount(id: accountRecordId, fromSettingsController: nil, withChatListController: nil)
+                                    self.continueFalseBottomFlow(hideAccountWithId: accountRecordId, createdNewAccountWithId: authContextValue.account.id)
+                                })
+                            }
+                        }, completed: { [weak self] in
                         authContextValue.rootController.view.endEditing(true)
                         authContextValue.rootController.dismiss()
                         if let strongSelf = self {
-                            if let accountRecordId = authContextValue.account.continueFalseBottomFlowAccountRecordId {
-                                strongSelf.continueFalseBottomFlow(hideAccountWithId: accountRecordId)
-                            } else {
+                            if authContextValue.account.continueFalseBottomFlowAccountRecordId == nil {
                                 strongSelf.showFalseBottomAlert()
                             }
                         }
@@ -2094,13 +2104,22 @@ final class SharedApplicationContext {
         }))
     }
     
-    private func continueFalseBottomFlow(hideAccountWithId: AccountRecordId? = nil) {
+    private func continueFalseBottomFlow(hideAccountWithId: AccountRecordId? = nil, createdNewAccountWithId: AccountRecordId? = nil) {
         self.continueFalseBottomFlowDisposable.set((self.authorizedContext()
+        |> filter { context in
+            if let id = hideAccountWithId {
+                return id == context.context.account.id
+            } else {
+                return true
+            }
+        }
         |> take(1)
         |> deliverOnMainQueue).start(next: { context in
             let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
             
             var isFirstSplashScreen = true
+            
+            var didSetMasterPasswordDuringThisFlow = false
             
             let showSplashScreen: (FalseBottomSplashMode, Bool, @escaping () -> Void) -> Void = { mode, push, action in
                 let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
@@ -2109,31 +2128,97 @@ final class SharedApplicationContext {
                     action()
                 }
                 
-                let setViewControllersStack: () -> Void = {
-                    if let root = context.rootController.viewControllers.first {
-                        let baseController = FalseBottomSplashScreen(presentationData: presentationData, mode: .hideAccount)
-                        baseController.buttonPressed = { [weak self] in
-                            guard let strongSelf = self else { return }
-                            
-                            strongSelf.continueFalseBottomFlow()
-                            
-                        }
-                        let newViewControllers = [root, baseController, controller]
-                        context.rootController.setViewControllers(newViewControllers, animated: true)
-                    }
-                }
-                
                 if isFirstSplashScreen {
                     context.rootController.pushViewController(controller, animated: true)
                     (context.isReady.get()
                     |> filter { $0 }
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { _ in
-                        setViewControllersStack()
+                        if let root = context.rootController.viewControllers.first {
+                            let baseController = FalseBottomSplashScreen(presentationData: presentationData, mode: .hideAccount)
+                            baseController.buttonPressed = { [weak self] in
+                                guard let strongSelf = self else { return }
+                                
+                                if let createdNewAccountWithId = createdNewAccountWithId {
+                                    let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> Bool in
+                                        return transaction.getAllRecords().filter({
+                                            !$0.attributes.contains(where: { $0 is HiddenAccountAttribute }) && !$0.attributes.contains(where: { $0 is LoggedOutAccountAttribute })
+                                        }).count > 1
+                                    } |> deliverOnMainQueue).start(next: { [weak self] hasPublicAccounts in
+                                        guard let strongSelf = self else { return }
+                                        
+                                        if hasPublicAccounts {
+                                            strongSelf.continueFalseBottomFlow()
+                                        } else {
+                                            let accountController = FalseBottomSplashScreen(presentationData: presentationData, mode: .addOneMoreAccount)
+                                            accountController.buttonPressed = { [weak self] in
+                                                guard let strongSelf = self else { return }
+                                                
+                                                strongSelf.falseBottomAddAccountFlowInProgress = true
+                                                let isTestingEnvironment = context.context.account.testingEnvironment
+                                                context.sharedApplicationContext.sharedContext.beginNewAuthAndContinueFalseBottomFlow(testingEnvironment: isTestingEnvironment)
+                                            }
+                                            context.rootController.pushViewController(accountController, animated: true)
+                                        }
+                                    })
+                                } else {
+                                    strongSelf.continueFalseBottomFlow()
+                                }
+                            }
+                            var newViewControllers = [root, baseController]
+                            
+                            if let createdNewAccountWithId = createdNewAccountWithId {
+                                let accountController = FalseBottomSplashScreen(presentationData: presentationData, mode: .addOneMoreAccount)
+                                accountController.buttonPressed = { [weak self] in
+                                    guard let strongSelf = self else { return }
+                                    
+                                    strongSelf.falseBottomAddAccountFlowInProgress = true
+                                    let isTestingEnvironment = context.context.account.testingEnvironment
+                                    context.sharedApplicationContext.sharedContext.beginNewAuthAndContinueFalseBottomFlow(testingEnvironment: isTestingEnvironment)
+                                }
+                                newViewControllers.append(accountController)
+                                
+                                controller.backPressed = { [weak self] in
+                                    guard let strongSelf = self else { return }
+                                   
+                                    strongSelf.falseBottomAddAccountFlowInProgress = false
+                                    let _ = (logoutFromAccount(id: createdNewAccountWithId, accountManager: context.sharedApplicationContext.sharedContext.accountManager, alreadyLoggedOutRemotely: false) |> deliverOnMainQueue).start(completed: {
+                                        guard let root = context.rootController.viewControllers.first else { return }
+
+                                        context.rootController.setViewControllers([root, baseController, accountController], animated: true)
+                                    })
+                                }
+                                controller.poppedInteractively = controller.backPressed
+                            }
+                            
+                            newViewControllers.append(controller)
+                            context.rootController.setViewControllers(newViewControllers, animated: false)
+                        }
                     })
                 } else {
+                    if mode == .setSecretPasscode, didSetMasterPasswordDuringThisFlow {
+                        controller.backPressed = {
+                            didSetMasterPasswordDuringThisFlow = false
+                            let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { transaction in
+                                transaction.setAccessChallengeData(PostboxAccessChallengeData.none)
+                                updatePushNotificationsSettingsAfterOffMasterPasscode(transaction: transaction)
+                                } |> deliverOnMainQueue).start(completed: {
+                                    context.rootController.popViewController(animated: true)
+                                })
+                        }
+                        controller.poppedInteractively = {
+                            didSetMasterPasswordDuringThisFlow = false
+                            let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { transaction in
+                                transaction.setAccessChallengeData(PostboxAccessChallengeData.none)
+                                updatePushNotificationsSettingsAfterOffMasterPasscode(transaction: transaction)
+                                } |> deliverOnMainQueue).start()
+                        }
+                    }
                     context.rootController.pushViewController(controller, animated: true, completion: {
-                        setViewControllersStack()
+                        if let root = context.rootController.viewControllers.first {
+                            let splashScreens = context.rootController.viewControllers.dropFirst().filter { $0 is FalseBottomSplashScreen }
+                            context.rootController.setViewControllers([root] + splashScreens, animated: true)
+                        }
                     })
                 }
                 
@@ -2170,6 +2255,7 @@ final class SharedApplicationContext {
                         }) |> deliverOnMainQueue).start(next: { _ in
                         }, error: { _ in
                         }, completed: {
+                            didSetMasterPasswordDuringThisFlow = true
                             innerCompletion()
                         })
                     }

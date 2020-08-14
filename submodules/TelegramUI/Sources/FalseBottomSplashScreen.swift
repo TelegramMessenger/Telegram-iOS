@@ -25,6 +25,13 @@ public final class FalseBottomSplashScreen: ViewController {
     private let mode: FalseBottomSplashMode
     
     var buttonPressed: (() -> Void)?
+    var backPressed: (() -> Void)? {
+        didSet {
+            navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: presentationData.strings.Common_Back, target: self, action: #selector(self.didTapBack))
+        }
+    }
+    
+    var poppedInteractively: (() -> Void)?
     
     public init(presentationData: PresentationData, mode: FalseBottomSplashMode) {
         self.presentationData = presentationData
@@ -73,6 +80,14 @@ public final class FalseBottomSplashScreen: ViewController {
         (self.displayNode as! FalseBottomSplashScreenNode).containerLayoutUpdated(layout: layout, navigationHeight: self.navigationHeight, transition: transition)
     }
     
+    override public func viewDidPopFromNavigationInteractively() {
+        poppedInteractively?()
+    }
+    
+    override public func allowInteractivePopFromNavigation() -> Bool {
+        return mode != .hideAccount
+    }
+    
     @objc func didTapCancel() {
         self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.FalseBottom_CancelHide_Text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.FalseBottom_CancelHide_Continue, action: {
         }), TextAlertAction(type: .defaultAction, title: presentationData.strings.FalseBottom_CancelHide_Stop, action: { [weak self] in
@@ -80,6 +95,10 @@ public final class FalseBottomSplashScreen: ViewController {
             
             strongSelf.dismiss(animated: true)
         })]), in: .window(.root))
+    }
+    
+    @objc func didTapBack() {
+        backPressed?()
     }
 }
 
