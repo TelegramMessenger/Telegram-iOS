@@ -289,7 +289,7 @@ public final class LocationPickerController: ViewController {
             return
         }
         
-        self.displayNode = LocationPickerControllerNode(context: self.context, presentationData: self.presentationData, mode: self.mode, interaction: interaction)
+        self.displayNode = LocationPickerControllerNode(context: self.context, presentationData: self.presentationData, mode: self.mode, interaction: interaction, locationManager: self.locationManager)
         self.displayNodeDidLoad()
         
         self.permissionDisposable = (DeviceAccess.authorizationStatus(subject: .location(.send))

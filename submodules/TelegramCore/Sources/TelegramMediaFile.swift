@@ -129,13 +129,19 @@ func telegramMediaFileThumbnailRepresentationsFromApiSizes(datacenterId: Int32, 
                 switch location {
                     case let .fileLocationToBeDeprecated(volumeId, localId):
                         let resource = CloudDocumentSizeMediaResource(datacenterId: datacenterId, documentId: documentId, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference)
-                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource))
+                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: []))
                 }
             case let .photoSize(type, location, w, h, _):
                 switch location {
                     case let .fileLocationToBeDeprecated(volumeId, localId):
                         let resource = CloudDocumentSizeMediaResource(datacenterId: datacenterId, documentId: documentId, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference)
-                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource))
+                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: []))
+                }
+            case let .photoSizeProgressive(type, location, w, h, sizes):
+                switch location {
+                    case let .fileLocationToBeDeprecated(volumeId, localId):
+                        let resource = CloudDocumentSizeMediaResource(datacenterId: datacenterId, documentId: documentId, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference)
+                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: sizes))
                 }
             case let .photoStrippedSize(_, data):
                 immediateThumbnailData = data.makeData()

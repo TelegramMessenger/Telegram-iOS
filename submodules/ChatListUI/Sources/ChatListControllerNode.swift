@@ -195,7 +195,7 @@ private final class ChatListShimmerNode: ASDisplayNode {
             let timestamp1: Int32 = 100000
             let peers = SimpleDictionary<PeerId, Peer>()
             let interaction = ChatListNodeInteraction(activateSearch: {}, peerSelected: { _, _ in }, disabledPeerSelected: { _ in }, togglePeerSelected: { _ in }, additionalCategorySelected: { _ in
-            }, messageSelected: { _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, deletePeer: { _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, hidePsa: { _ in }, activateChatPreview: { _, _, gesture in
+            }, messageSelected: { _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, deletePeer: { _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, hidePsa: { _ in }, activateChatPreview: { _, _, gesture in
                 gesture?.cancel()
             }, present: { _ in })
             
@@ -478,8 +478,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         itemNode.listNode.hidePsa = { [weak self] peerId in
             self?.hidePsa?(peerId)
         }
-        itemNode.listNode.deletePeerChat = { [weak self] peerId in
-            self?.deletePeerChat?(peerId)
+        itemNode.listNode.deletePeerChat = { [weak self] peerId, joined in
+            self?.deletePeerChat?(peerId, joined)
         }
         itemNode.listNode.peerSelected = { [weak self] peerId, a, b in
             self?.peerSelected?(peerId, a, b)
@@ -527,7 +527,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var present: ((ViewController) -> Void)?
     var toggleArchivedFolderHiddenByDefault: (() -> Void)?
     var hidePsa: ((PeerId) -> Void)?
-    var deletePeerChat: ((PeerId) -> Void)?
+    var deletePeerChat: ((PeerId, Bool) -> Void)?
     var peerSelected: ((Peer, Bool, ChatListNodeEntryPromoInfo?) -> Void)?
     var groupSelected: ((PeerGroupId) -> Void)?
     var updatePeerGrouping: ((PeerId, Bool) -> Void)?

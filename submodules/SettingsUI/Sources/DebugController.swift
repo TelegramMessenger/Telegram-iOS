@@ -72,8 +72,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case alternativeFolderTabs(Bool)
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
-    case videoCalls(Bool)
-    case videoCallsInfo(PresentationTheme, String)
+    case preferredVideoCodec(Int, String, String?, Bool)
     case hostInfo(PresentationTheme, String)
     case versionInfo(PresentationTheme)
     
@@ -89,14 +88,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.experiments.rawValue
         case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .alternativeFolderTabs, .playerEmbedding, .playlistPlayback:
             return DebugControllerSection.experiments.rawValue
-        case .videoCalls, .videoCallsInfo:
+        case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
         case .hostInfo, .versionInfo:
             return DebugControllerSection.info.rawValue
         }
     }
     
-    var stableId: Int32 {
+    var stableId: Int {
         switch self {
         case .sendLogs:
             return 0
@@ -148,14 +147,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 24
         case .playlistPlayback:
             return 25
-        case .videoCalls:
-            return 26
-        case .videoCallsInfo:
-            return 27
+        case let .preferredVideoCodec(index, _, _, _):
+            return 26 + index
         case .hostInfo:
-            return 28
+            return 100
         case .versionInfo:
-            return 29
+            return 101
         }
     }
     
@@ -573,18 +570,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case let .videoCalls(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Experimental Feature", value: value, sectionId: self.section, style: .blocks, updated: { value in
+        case let .preferredVideoCodec(_, title, value, isSelected):
+            return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .right, checked: isSelected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
-                        settings.videoCalls = value
+                        settings.preferredVideoCodec = value
                         return settings
                     })
                 }).start()
             })
-        case let .videoCallsInfo(_, text):
-            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .hostInfo(theme, string):
             return ItemListTextItem(presentationData: presentationData, text: .plain(string), sectionId: self.section)
         case let .versionInfo(theme):
@@ -630,8 +625,18 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.alternativeFolderTabs(experimentalSettings.foldersTabAtBottom))
     entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
     entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
-    entries.append(.videoCalls(experimentalSettings.videoCalls))
-    entries.append(.videoCallsInfo(presentationData.theme, "Enables experimental transmission of electromagnetic radiation synchronized with pressure waves. Needs to be enabled on both sides."))
+    
+    let codecs: [(String, String?)] = [
+        ("No Preference", nil),
+        ("H265", "H265"),
+        ("H264", "H264"),
+        ("VP8", "VP8"),
+        ("VP9", "VP9")
+    ]
+    
+    for i in 0 ..< codecs.count {
+        entries.append(.preferredVideoCodec(i, codecs[i].0, codecs[i].1, experimentalSettings.preferredVideoCodec == codecs[i].1))
+    }
 
     if let backupHostOverride = networkSettings?.backupHostOverride {
         entries.append(.hostInfo(presentationData.theme, "Host: \(backupHostOverride)"))

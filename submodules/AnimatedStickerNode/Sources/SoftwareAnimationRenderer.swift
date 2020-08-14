@@ -8,8 +8,13 @@ import YuvConversion
 final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
     func render(queue: Queue, width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType, completion: @escaping () -> Void) {
         queue.async { [weak self] in
-            let calculatedBytesPerRow = (4 * Int(width) + 15) & (~15)
-            assert(bytesPerRow == calculatedBytesPerRow)
+            switch type {
+            case .argb:
+                let calculatedBytesPerRow = (4 * Int(width) + 15) & (~15)
+                assert(bytesPerRow == calculatedBytesPerRow)
+            case .yuva:
+                break
+            }
             
             let image = generateImagePixel(CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, pixelGenerator: { _, pixelData, bytesPerRow in
                 switch type {

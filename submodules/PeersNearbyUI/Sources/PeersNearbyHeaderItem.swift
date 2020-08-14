@@ -73,7 +73,7 @@ class PeersNearbyHeaderItemNode: ListViewItemNode {
         
         self.animationNode = AnimatedStickerNode()
         if let path = getAppBundle().path(forResource: "Compass", ofType: "tgs") {
-            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 192, height: 192, playbackMode: .once, mode: .direct)
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 192, height: 192, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
             self.animationNode.visibility = true
         }
         

@@ -228,7 +228,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         if let telegramDice = self.telegramDice {
-            let animationNode = ManagedDiceAnimationNode(context: item.context, emoji: telegramDice.emoji)
+            let animationNode = ManagedDiceAnimationNode(context: item.context, emoji: telegramDice.emoji.strippedEmoji)
             if !item.message.effectivelyIncoming(item.context.account.peerId) {
                 animationNode.success = { [weak self] in
                     if let strongSelf = self, let item = strongSelf.item {
@@ -377,12 +377,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     if let file = file {
                         let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
                         let fittedSize = isEmoji ? dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0)) : dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0))
-                        let mode: AnimatedStickerMode
-                        if file.resource is LocalFileReferenceMediaResource {
-                            mode = .direct
-                        } else {
-                            mode = .cached
-                        }
+                        
+                        let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
+                        let mode: AnimatedStickerMode = .direct(cachePathPrefix: pathPrefix)
+                        
                         animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, fitzModifier: fitzModifier), width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: mode)
                     }
                 }

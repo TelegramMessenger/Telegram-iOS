@@ -1,5 +1,6 @@
 import Foundation
 import TextFormat
+import Postbox
 import AccountContext
 
 func chatTextInputAddFormattingAttribute(_ state: ChatTextInputState, attribute: NSAttributedString.Key) -> ChatTextInputState {
@@ -71,6 +72,36 @@ func chatTextInputAddLinkAttribute(_ state: ChatTextInputState, url: String) -> 
         }
         result.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: nsRange)
         return ChatTextInputState(inputText: result, selectionRange: state.selectionRange)
+    } else {
+        return state
+    }
+}
+
+func chatTextInputAddMentionAttribute(_ state: ChatTextInputState, peer: Peer) -> ChatTextInputState {
+    let inputText = NSMutableAttributedString(attributedString: state.inputText)
+    
+    let range = NSMakeRange(state.selectionRange.startIndex, state.selectionRange.endIndex - state.selectionRange.startIndex)
+    
+    if let addressName = peer.addressName, !addressName.isEmpty {
+        let replacementText = "@\(addressName) "
+        
+        inputText.replaceCharacters(in: range, with: replacementText)
+        
+        let selectionPosition = range.lowerBound + (replacementText as NSString).length
+        
+        return ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition)
+    } else if !peer.compactDisplayTitle.isEmpty {
+        let replacementText = NSMutableAttributedString()
+        replacementText.append(NSAttributedString(string: peer.compactDisplayTitle, attributes: [ChatTextInputAttributes.textMention: ChatTextInputTextMentionAttribute(peerId: peer.id)]))
+        replacementText.append(NSAttributedString(string: " "))
+        
+        let updatedRange = NSRange(location: range.location , length: range.length)
+        
+        inputText.replaceCharacters(in: updatedRange, with: replacementText)
+        
+        let selectionPosition = updatedRange.lowerBound + replacementText.length
+        
+        return ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition)
     } else {
         return state
     }

@@ -260,10 +260,11 @@ public class ShareRootControllerImpl {
             
             let applicationInterface = account
             |> mapToSignal { sharedContext, account, otherAccounts -> Signal<(AccountContext, PostboxAccessChallengeData, [AccountWithInfo]), ShareAuthorizationError> in
-                let limitsConfigurationAndContentSettings = account.postbox.transaction { transaction -> (LimitsConfiguration, ContentSettings) in
+                let limitsConfigurationAndContentSettings = account.postbox.transaction { transaction -> (LimitsConfiguration, ContentSettings, AppConfiguration) in
                     return (
                         transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue,
-                        getContentSettings(transaction: transaction)
+                        getContentSettings(transaction: transaction),
+                        getAppConfiguration(transaction: transaction)
                     )
                 }
                 return combineLatest(sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), limitsConfigurationAndContentSettings, sharedContext.accountManager.accessChallengeData())
@@ -272,7 +273,7 @@ public class ShareRootControllerImpl {
                 |> castError(ShareAuthorizationError.self)
                 |> map { sharedData, limitsConfigurationAndContentSettings, data -> (AccountContext, PostboxAccessChallengeData, [AccountWithInfo]) in
                     updateLegacyLocalization(strings: sharedContext.currentPresentationData.with({ $0 }).strings)
-                    let context = AccountContextImpl(sharedContext: sharedContext, account: account/*, tonContext: nil*/, limitsConfiguration: limitsConfigurationAndContentSettings.0, contentSettings: limitsConfigurationAndContentSettings.1)
+                    let context = AccountContextImpl(sharedContext: sharedContext, account: account, limitsConfiguration: limitsConfigurationAndContentSettings.0, contentSettings: limitsConfigurationAndContentSettings.1, appConfiguration: limitsConfigurationAndContentSettings.2)
                     return (context, data.data, otherAccounts)
                 }
             }

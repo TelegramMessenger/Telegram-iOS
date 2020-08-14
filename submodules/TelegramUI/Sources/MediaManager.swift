@@ -149,7 +149,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                     switch value.status.status {
                     case .playing:
                         isPlaying = true
-                    case .buffering(_, true):
+                    case .buffering(_, true, _):
                         isPlaying = true
                     default:
                         break
@@ -229,7 +229,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                     updatedGlobalControlOptions.insert(.next)
                     updatedGlobalControlOptions.insert(.seek)
                     switch state.status.status {
-                        case .playing, .buffering(_, true):
+                        case .playing, .buffering(_, true, _):
                             updatedGlobalControlOptions.insert(.pause)
                         default:
                             updatedGlobalControlOptions.insert(.play)
@@ -383,7 +383,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                 switch state.status.status {
                     case .playing:
                         isPlaying = true
-                    case let .buffering(_, whilePlaying):
+                    case let .buffering(_, whilePlaying, _):
                         isPlaying = whilePlaying
                     default:
                         break

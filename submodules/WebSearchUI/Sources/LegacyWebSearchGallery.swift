@@ -261,9 +261,9 @@ func legacyWebSearchItem(account: Account, result: ChatContextResult) -> LegacyW
         
         var representations: [TelegramMediaImageRepresentation] = []
         if let thumbnailResource = thumbnailResource, let thumbnailDimensions = thumbnailDimensions {
-            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource))
+            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: []))
         }
-        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(imageDimensions), resource: imageResource))
+        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(imageDimensions), resource: imageResource, progressiveSizes: []))
         let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
         thumbnailSignal = chatMessagePhotoDatas(postbox: account.postbox, photoReference: .standalone(media: tmpImage), autoFetchFullSize: false)
         |> mapToSignal { value -> Signal<UIImage, NoError> in
@@ -459,7 +459,7 @@ public func legacyEnqueueWebSearchMessages(_ selectionState: TGMediaSelectionCon
                                         paintingImage = adjustments.paintingData?.image
                                     }
                                     
-                                    let thumbnailImage = TGPhotoEditorVideoExtCrop(image, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(image.size, CGSize(width: 512.0, height: 512.0)), adjustments.originalSize, true, true, true)
+                                    let thumbnailImage = TGPhotoEditorVideoExtCrop(image, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(image.size, CGSize(width: 512.0, height: 512.0)), adjustments.originalSize, true, true, true, false)
                                     if let thumbnailImage = thumbnailImage {
                                         dict["previewImage"] = thumbnailImage
                                     }

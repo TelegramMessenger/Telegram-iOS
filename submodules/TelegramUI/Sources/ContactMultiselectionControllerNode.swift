@@ -119,7 +119,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         
         switch self.contentNode {
         case let .contacts(contactsNode):
-            contactsNode.openPeer = { [weak self] peer in
+            contactsNode.openPeer = { [weak self] peer, _ in
                 self?.openPeer?(peer)
             }
         case let .chats(chatsNode):
@@ -186,7 +186,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                             globalSearch = false
                         }
                         let searchResultsNode = ContactListNode(context: context, presentation: .single(.search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false, searchGroups: searchGroups, searchChannels: searchChannels, globalSearch: globalSearch)), filters: filters, selectionState: selectionState, isSearch: true)
-                        searchResultsNode.openPeer = { peer in
+                        searchResultsNode.openPeer = { peer, _ in
                             self?.tokenListNode.setText("")
                             self?.openPeer?(peer)
                         }

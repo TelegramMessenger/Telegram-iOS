@@ -485,9 +485,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             updatedFetchControls = FetchControls(fetch: { manual in
                                 if let strongSelf = self {
                                     if !manual {
-                                        strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: context, photoReference: .message(message: MessageReference(message), media: image), storeToDownloadsPeerType: storeToDownloadsPeerType).start())
-                                    } else if let resource = largestRepresentationForPhoto(image)?.resource {
-                                        strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(context: context, message: message, image: image, resource: resource, storeToDownloadsPeerType: storeToDownloadsPeerType).start())
+                                        strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: context, photoReference: .message(message: MessageReference(message), media: image), displayAtSize: 600, storeToDownloadsPeerType: storeToDownloadsPeerType).start())
+                                    } else if let representation = largestRepresentationForPhoto(image) {
+                                        strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(context: context, message: message, image: image, resource: representation.resource, range: representationFetchRangeForDisplayAtSize(representation: representation, dimension: 600), storeToDownloadsPeerType: storeToDownloadsPeerType).start())
                                     }
                                 }
                             }, cancel: {
@@ -604,7 +604,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                         } else {
                                             var representations: [ImageRepresentationWithReference] = file.previewRepresentations.map({ ImageRepresentationWithReference(representation: $0, reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference($0.resource)) })
                                             if file.mimeType == "image/svg+xml" || file.mimeType == "application/x-tgwallpattern" {
-                                                representations.append(ImageRepresentationWithReference(representation: .init(dimensions: PixelDimensions(width: 1440, height: 2960), resource: file.resource), reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource)))
+                                                representations.append(ImageRepresentationWithReference(representation: .init(dimensions: PixelDimensions(width: 1440, height: 2960), resource: file.resource, progressiveSizes: []), reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource)))
                                             }
                                             if ["image/png", "image/svg+xml", "application/x-tgwallpattern"].contains(file.mimeType) {
                                                 return patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: representations, mode: .thumbnail)
@@ -649,7 +649,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     }
                                 }
                             } else {
-                                updatedStatusSignal = chatMessagePhotoStatus(context: context, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image))
+                                updatedStatusSignal = chatMessagePhotoStatus(context: context, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image), displayAtSize: 600)
                                 |> map { resourceStatus -> (MediaResourceStatus, MediaResourceStatus?) in
                                     return (resourceStatus, nil)
                                 }

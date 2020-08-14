@@ -82,6 +82,7 @@
     UIImage *_thumbnailImage;
     
     CMTime _chaseTime;
+    bool _chaseStart;
     bool _chasingTime;
     bool _isPlaying;
     AVPlayerItem *_playerItem;
@@ -297,8 +298,7 @@
                 break;
         }
     };
-    
-    
+     
     TGPhotoEditorBackButton backButton = TGPhotoEditorBackButtonCancel;
     TGPhotoEditorDoneButton doneButton = TGPhotoEditorDoneButtonCheck;
     _portraitToolbarView = [[TGPhotoToolbarView alloc] initWithBackButton:backButton doneButton:doneButton solidBackground:true];
@@ -368,6 +368,7 @@
     
     if ([self presentedForAvatarCreation] && _item.isVideo) {
         _scrubberView = [[TGMediaPickerGalleryVideoScrubber alloc] initWithFrame:CGRectMake(0.0f, 0.0, _portraitToolbarView.frame.size.width, 68.0f)];
+        _scrubberView.minimumLength = 3.0;
         _scrubberView.layer.allowsGroupOpacity = true;
         _scrubberView.hasDotPicker = true;
         _scrubberView.dataSource = self;
@@ -481,6 +482,8 @@
     if ([adjustments isKindOfClass:[TGMediaVideoEditAdjustments class]])
         position = adjustments.trimStartValue;
     
+    PGPhotoEditor *photoEditor = _photoEditor;
+    
     CGSize screenSize = TGNativeScreenSize();
     SSignal *signal = nil;
     if ([_photoEditor hasDefaultCropping] && (NSInteger)screenSize.width == 320)
@@ -504,20 +507,18 @@
                 if (avatar) {
                     return image;
                 } else {
-                    return TGPhotoEditorCrop(image, nil, _photoEditor.cropOrientation, _photoEditor.cropRotation, _photoEditor.cropRect, _photoEditor.cropMirrored, TGPhotoEditorScreenImageMaxSize(), _photoEditor.originalSize, true);
+                    return TGPhotoEditorCrop(image, nil, photoEditor.cropOrientation, photoEditor.cropRotation, photoEditor.cropRect, photoEditor.cropMirrored, TGPhotoEditorScreenImageMaxSize(), photoEditor.originalSize, true);
                 }
             }];
         }
     }
     
     __weak TGPhotoEditorController *weakSelf = self;
-    PGPhotoEditor *photoEditor = _photoEditor;
-    
     [signal startWithNext:^(id next)
     {
         __strong TGPhotoEditorController *strongSelf = weakSelf;
-         if (strongSelf == nil)
-             return;
+        if (strongSelf == nil)
+            return;
         
         if (strongSelf->_dismissed)
             return;
@@ -566,7 +567,6 @@
             
             if (strongSelf->_hadProgress && !progressVisible) {
                 [strongSelf->_progressView setPlay];
-                
                 [strongSelf->_scrubberView reloadThumbnails];
             }
         });
@@ -622,7 +622,10 @@
 
 - (NSTimeInterval)trimEndValue {
     if (_scrubberView != nil) {
-        return _scrubberView.trimEndValue;
+        if (_scrubberView.trimEndValue > 0.0)
+            return _scrubberView.trimEndValue;
+        else
+            return MIN(9.9, _scrubberView.duration);
     } else {
         return _photoEditor.trimEndValue;
     }
@@ -669,6 +672,9 @@
         if (strongSelf != nil && !strongSelf->_dismissed) {
             [strongSelf->_player seekToTime:startTime];
             [strongSelf->_scrubberView setValue:strongSelf.trimStartValue resetPosition:true];
+            
+            [strongSelf->_fullEntitiesView seekTo:0.0];
+            [strongSelf->_fullEntitiesView play];
         }
     }];
 }
@@ -698,6 +704,11 @@
             [_player addObserver:self forKeyPath:@"rate" options:NSKeyValueObservingOptionNew context:nil];
             _registeredKeypathObserver = true;
         }
+        
+        [_fullEntitiesView seekTo:0.0];
+        [_fullEntitiesView play];
+    } else {
+        [_fullEntitiesView play];
     }
     
     _isPlaying = true;
@@ -721,6 +732,8 @@
         }
         
         [_scrubberView setIsPlaying:false];
+    } else {
+        [_fullEntitiesView pause];
     }
     
     _isPlaying = false;
@@ -747,6 +760,14 @@
     }
 }
 
+- (NSTimeInterval)currentTime {
+    return CMTimeGetSeconds(_player.currentItem.currentTime) - [self trimStartValue];
+}
+
+- (void)setMinimalVideoDuration:(NSTimeInterval)duration {
+    _scrubberView.minimumLength = duration;
+}
+
 - (void)seekVideo:(NSTimeInterval)position {
     CMTime targetTime = CMTimeMakeWithSeconds(position, NSEC_PER_SEC);
     
@@ -765,6 +786,11 @@
     CMTime currentChasingTime = _chaseTime;
     
     [_player.currentItem seekToTime:currentChasingTime toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:^(BOOL finished) {
+        if (!_chaseStart) {
+            TGDispatchOnMainThread(^{
+               [_fullEntitiesView seekTo:CMTimeGetSeconds(currentChasingTime) - _scrubberView.trimStartValue];
+            });
+        }
         if (CMTIME_COMPARE_INLINE(currentChasingTime, ==, _chaseTime)) {
             _chasingTime = false;
             _chaseTime = kCMTimeInvalid;
@@ -965,6 +991,7 @@
         }];
     };
     
+    SQueue *queue = _queue;
     SSignal *(^imageRenderSignal)(UIImage *) = ^(UIImage *image)
     {
         return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
@@ -972,7 +999,7 @@
             [photoEditor setImage:image forCropRect:photoEditor.cropRect cropRotation:photoEditor.cropRotation cropOrientation:photoEditor.cropOrientation cropMirrored:photoEditor.cropMirrored fullSize:true];
             [photoEditor createResultImageWithCompletion:^(UIImage *result)
             {
-                [_queue dispatch:^{
+                [queue dispatch:^{
                     UIImage *final = result;
                     if (hasPainting)
                     {
@@ -995,7 +1022,7 @@
     }] mapToSignal:^SSignal *(UIImage *image)
     {
         if (hasImageAdjustments)
-            return [[[SSignal complete] delay:0.3 onQueue:_queue] then:imageRenderSignal(image)];
+            return [[[SSignal complete] delay:0.3 onQueue:queue] then:imageRenderSignal(image)];
         else
             return [SSignal single:image];
     }];
@@ -1171,6 +1198,7 @@
     UIView *snapshotView = nil;
     
     TGPhotoEditorTabController *currentController = _currentTabController;
+    TGPhotoEditorTab switchingFromTab = TGPhotoEditorNoneTab;
     if (currentController != nil)
     {
         if (![currentController isDismissAllowed])
@@ -1178,13 +1206,18 @@
         
         [self savePaintingData];
                 
+        bool resetTransform = false;
+        if ([self presentedForAvatarCreation] && tab == TGPhotoEditorCropTab && [currentController isKindOfClass:[TGPhotoPaintController class]]) {
+            resetTransform = true;
+        }
+        
         currentController.switchingToTab = tab;
         [currentController transitionOutSwitching:true completion:^
         {
             [currentController removeFromParentViewController];
             [currentController.view removeFromSuperview];
             
-            if ([self presentedForAvatarCreation] && tab == TGPhotoEditorCropTab) {
+            if (resetTransform) {
                 _previewView.transform = CGAffineTransformIdentity;
             }
         }];
@@ -1200,6 +1233,9 @@
             {
                 _backgroundView.alpha = 0.0f;
             } completion:nil];
+            switchingFromTab = TGPhotoEditorCropTab;
+        } else if ([currentController isKindOfClass:[TGPhotoToolsController class]]) {
+            switchingFromTab = TGPhotoEditorToolsTab;
         }
         
         isInitialAppearance = false;
@@ -1281,7 +1317,7 @@
                 cropController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
                 cropController.controlVideoPlayback = ^(bool play) {
                     __strong TGPhotoEditorController *strongSelf = weakSelf;
-                    if (strongSelf == nil)
+                    if (strongSelf == nil || strongSelf->_progressVisible)
                         return;
                     if (play) {
                         [strongSelf startVideoPlayback:false];
@@ -1297,7 +1333,7 @@
                 };
                 cropController.togglePlayback = ^{
                     __strong TGPhotoEditorController *strongSelf = weakSelf;
-                    if (strongSelf == nil || !strongSelf->_item.isVideo)
+                    if (strongSelf == nil || !strongSelf->_item.isVideo || strongSelf->_progressVisible)
                         return;
                     
                     if (strongSelf->_isPlaying) {
@@ -1613,6 +1649,7 @@
     _currentTabController = controller;
     _currentTabController.item = _item;
     _currentTabController.intent = _intent;
+    _currentTabController.switchingFromTab = switchingFromTab;
     _currentTabController.initialAppearance = isInitialAppearance;
     
     if (![_currentTabController isKindOfClass:[TGPhotoPaintController class]])
@@ -1915,7 +1952,7 @@
     {
         videoStartValue = _dotPosition;
         trimStartValue = self.trimStartValue;
-        trimEndValue = self.trimEndValue;
+        trimEndValue = MIN(self.trimStartValue + 9.9, self.trimEndValue);
     }
     
     [self stopVideoPlayback:true];
@@ -1945,7 +1982,7 @@
                 generator.requestedTimeToleranceAfter = kCMTimeZero;
                 generator.requestedTimeToleranceBefore = kCMTimeZero;
                 
-                CGImageRef imageRef = [generator copyCGImageAtTime:CMTimeMakeWithSeconds(videoStartValue, NSEC_PER_SEC) actualTime:nil error:NULL];
+                CGImageRef imageRef = [generator copyCGImageAtTime:CMTimeMakeWithSeconds(MIN(videoStartValue, CMTimeGetSeconds(asset.duration) - 0.05), NSEC_PER_SEC) actualTime:nil error:NULL];
                 UIImage *image = [UIImage imageWithCGImage:imageRef];
                 CGImageRelease(imageRef);
                 
@@ -1979,10 +2016,16 @@
                 
                 NSTimeInterval duration = trimEndValue - trimStartValue;
                 TGMediaVideoConversionPreset preset;
-                if (duration <= 2.5) {
-                    preset = TGMediaVideoConversionPresetProfileVeryHigh;
-                } else if (duration <= 5.0) {
-                    preset = TGMediaVideoConversionPresetProfileHigh;
+                if (duration > 0.0) {
+                    if (duration <= 2.0) {
+                        preset = TGMediaVideoConversionPresetProfileVeryHigh;
+                    } else if (duration <= 5.0) {
+                        preset = TGMediaVideoConversionPresetProfileHigh;
+                    } else if (duration <= 8.0) {
+                        preset = TGMediaVideoConversionPresetProfile;
+                    } else {
+                        preset = TGMediaVideoConversionPresetProfileLow;
+                    }
                 } else {
                     preset = TGMediaVideoConversionPresetProfile;
                 }
@@ -2725,7 +2768,7 @@
     });
 }
 
-- (void)videoScrubber:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber valueDidChange:(NSTimeInterval)position
+- (void)videoScrubber:(TGMediaPickerGalleryVideoScrubber *)videoScrubber valueDidChange:(NSTimeInterval)position
 {
     [self seekVideo:position];
 }
@@ -2762,6 +2805,8 @@
     [self startVideoPlayback:true];
     
     [self setPlayButtonHidden:true animated:false];
+    
+    _chaseStart = false;
 }
 
 - (void)videoScrubber:(TGMediaPickerGalleryVideoScrubber *)videoScrubber editingStartValueDidChange:(NSTimeInterval)startValue
@@ -2770,6 +2815,12 @@
         _resetDotPosition = true;
         [self resetDotImage];
     }
+    
+    if (!_chaseStart) {
+        _chaseStart = true;
+        [_fullEntitiesView resetToStart];
+    }
+    
     [self seekVideo:startValue];
 }
 

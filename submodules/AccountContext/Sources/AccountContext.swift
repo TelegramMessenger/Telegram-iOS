@@ -394,6 +394,12 @@ public enum ContactListPeerId: Hashable {
     case deviceContact(DeviceContactStableId)
 }
 
+public enum ContactListAction: Equatable {
+    case generic
+    case voiceCall
+    case videoCall
+}
+
 public enum ContactListPeer: Equatable {
     case peer(peer: Peer, isGlobal: Bool, participantCount: Int32?)
     case deviceContact(DeviceContactStableId, DeviceContactBasicData)
@@ -440,14 +446,16 @@ public final class ContactSelectionControllerParams {
     public let title: (PresentationStrings) -> String
     public let options: [ContactListAdditionalOption]
     public let displayDeviceContacts: Bool
+    public let displayCallIcons: Bool
     public let confirmation: (ContactListPeer) -> Signal<Bool, NoError>
     
-    public init(context: AccountContext, autoDismiss: Bool = true, title: @escaping (PresentationStrings) -> String, options: [ContactListAdditionalOption] = [], displayDeviceContacts: Bool = false, confirmation: @escaping (ContactListPeer) -> Signal<Bool, NoError> = { _ in .single(true) }) {
+    public init(context: AccountContext, autoDismiss: Bool = true, title: @escaping (PresentationStrings) -> String, options: [ContactListAdditionalOption] = [], displayDeviceContacts: Bool = false, displayCallIcons: Bool = false, confirmation: @escaping (ContactListPeer) -> Signal<Bool, NoError> = { _ in .single(true) }) {
         self.context = context
         self.autoDismiss = autoDismiss
         self.title = title
         self.options = options
         self.displayDeviceContacts = displayDeviceContacts
+        self.displayCallIcons = displayCallIcons
         self.confirmation = confirmation
     }
 }
@@ -647,6 +655,7 @@ public protocol AccountContext: class {
     
     var currentLimitsConfiguration: Atomic<LimitsConfiguration> { get }
     var currentContentSettings: Atomic<ContentSettings> { get }
+    var currentAppConfiguration: Atomic<AppConfiguration> { get }
     
     func storeSecureIdPassword(password: String)
     func getStoredSecureIdPassword() -> String?

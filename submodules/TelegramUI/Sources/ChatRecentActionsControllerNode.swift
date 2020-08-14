@@ -450,6 +450,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, animateDiceSuccess: {  
         }, greetingStickerNode: {
             return nil
+        }, openPeerContextMenu: { _, _, _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,

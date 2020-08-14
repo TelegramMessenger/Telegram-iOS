@@ -173,7 +173,7 @@ public class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
             let leftInset = 16.0 + params.leftInset
             let rightInset = 16.0 + params.rightInset
             var totalLeftInset = leftInset
-            let additionalRightInset: CGFloat = 93.0
+            let additionalRightInset: CGFloat = 128.0
         
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             
@@ -229,9 +229,9 @@ public class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
             
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: label, font: labelFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - totalLeftInset - rightInset - additionalRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (viewsLayout, viewsApply) = makeViewsLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_MessageViews(item.views), font: labelFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: CGFloat.greatestFiniteMagnitude), alignment: .right, cutout: nil, insets: UIEdgeInsets()))
+            let (viewsLayout, viewsApply) = makeViewsLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_MessageViews(item.views), font: labelFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 128.0, height: CGFloat.greatestFiniteMagnitude), alignment: .right, cutout: nil, insets: UIEdgeInsets()))
             
-            let (forwardsLayout, forwardsApply) = makeForwardsLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_MessageForwards(item.forwards), font: labelFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: CGFloat.greatestFiniteMagnitude), alignment: .right, cutout: nil, insets: UIEdgeInsets()))
+            let (forwardsLayout, forwardsApply) = makeForwardsLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_MessageForwards(item.forwards), font: labelFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 128.0, height: CGFloat.greatestFiniteMagnitude), alignment: .right, cutout: nil, insets: UIEdgeInsets()))
             
             let verticalInset: CGFloat = 11.0
             let titleSpacing: CGFloat = 3.0

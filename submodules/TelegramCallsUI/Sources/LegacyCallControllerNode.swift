@@ -14,75 +14,6 @@ import LocalizedPeerData
 import PhotoResources
 import CallsEmoji
 
-private final class IncomingVideoNode: ASDisplayNode {
-    private let videoView: UIView
-    private var effectView: UIVisualEffectView?
-    private var isBlurred: Bool = false
-    
-    init(videoView: UIView) {
-        self.videoView = videoView
-        
-        super.init()
-        
-        self.view.addSubview(self.videoView)
-    }
-    
-    func updateLayout(size: CGSize) {
-        self.videoView.frame = CGRect(origin: CGPoint(), size: size)
-    }
-    
-    func updateIsBlurred(isBlurred: Bool) {
-        if self.isBlurred == isBlurred {
-            return
-        }
-        self.isBlurred = isBlurred
-        
-        if isBlurred {
-            if self.effectView == nil {
-                let effectView = UIVisualEffectView()
-                self.effectView = effectView
-                effectView.frame = self.videoView.frame
-                self.view.addSubview(effectView)
-            }
-            UIView.animate(withDuration: 0.3, animations: {
-                self.effectView?.effect = UIBlurEffect(style: .dark)
-            })
-        } else if let effectView = self.effectView {
-            UIView.animate(withDuration: 0.3, animations: {
-                effectView.effect = nil
-            })
-        }
-    }
-}
-
-private final class OutgoingVideoNode: ASDisplayNode {
-    private let videoView: UIView
-    private let switchCameraButton: HighlightableButtonNode
-    private let switchCamera: () -> Void
-    
-    init(videoView: UIView, switchCamera: @escaping () -> Void) {
-        self.videoView = videoView
-        self.switchCameraButton = HighlightableButtonNode()
-        self.switchCamera = switchCamera
-        
-        super.init()
-        
-        self.view.addSubview(self.videoView)
-        self.addSubnode(self.switchCameraButton)
-        self.switchCameraButton.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
-    }
-    
-    @objc private func buttonPressed() {
-        self.switchCamera()
-    }
-    
-    func updateLayout(size: CGSize, isExpanded: Bool, transition: ContainedViewLayoutTransition) {
-        transition.updateFrame(view: self.videoView, frame: CGRect(origin: CGPoint(), size: size))
-        transition.updateCornerRadius(layer: self.videoView.layer, cornerRadius: isExpanded ? 0.0 : 16.0)
-        self.switchCameraButton.frame = CGRect(origin: CGPoint(), size: size)
-    }
-}
-
 final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol {
     private let sharedContext: SharedAccountContext
     private let account: Account
@@ -100,14 +31,9 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
     
     private let imageNode: TransformImageNode
     private let dimNode: ASDisplayNode
-    private var incomingVideoNode: IncomingVideoNode?
-    private var incomingVideoViewRequested: Bool = false
-    private var outgoingVideoNode: OutgoingVideoNode?
-    private var outgoingVideoViewRequested: Bool = false
     private let backButtonArrowNode: ASImageNode
     private let backButtonNode: HighlightableButtonNode
     private let statusNode: LegacyCallControllerStatusNode
-    private let videoPausedNode: ImmediateTextNode
     private let buttonsNode: LegacyCallControllerButtonsNode
     private var keyPreviewNode: CallControllerKeyPreviewNode?
     
@@ -131,15 +57,16 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
     
     var toggleMute: (() -> Void)?
     var setCurrentAudioOutput: ((AudioSessionOutput) -> Void)?
-    var beginAudioOuputSelection: (() -> Void)?
+    var beginAudioOuputSelection: ((Bool) -> Void)?
     var acceptCall: (() -> Void)?
     var endCall: (() -> Void)?
-    var toggleVideo: (() -> Void)?
+    var setIsVideoPaused: ((Bool) -> Void)?
     var back: (() -> Void)?
     var presentCallRating: ((CallId) -> Void)?
     var callEnded: ((Bool) -> Void)?
     var dismissedInteractively: (() -> Void)?
-    var setIsVideoPaused: ((Bool) -> Void)?
+    var present: ((ViewController) -> Void)?
+    var dismissAllTooltips: (() -> Void)?
     
     init(sharedContext: SharedAccountContext, account: Account, presentationData: PresentationData, statusBar: StatusBar, debugInfo: Signal<(String, String), NoError>, shouldStayHiddenUntilConnection: Bool = false, easyDebugAccess: Bool, call: PresentationCall) {
         self.sharedContext = sharedContext
@@ -169,9 +96,6 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
         self.backButtonNode = HighlightableButtonNode()
         
         self.statusNode = LegacyCallControllerStatusNode()
-        
-        self.videoPausedNode = ImmediateTextNode()
-        self.videoPausedNode.alpha = 0.0
         
         self.buttonsNode = LegacyCallControllerButtonsNode(strings: self.presentationData.strings)
         self.keyButtonNode = HighlightableButtonNode()
@@ -207,7 +131,6 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
         self.containerNode.addSubnode(self.imageNode)
         self.containerNode.addSubnode(self.dimNode)
         self.containerNode.addSubnode(self.statusNode)
-        self.containerNode.addSubnode(self.videoPausedNode)
         self.containerNode.addSubnode(self.buttonsNode)
         self.containerNode.addSubnode(self.keyButtonNode)
         self.containerNode.addSubnode(self.backButtonArrowNode)
@@ -218,7 +141,7 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
         }
         
         self.buttonsNode.speaker = { [weak self] in
-            self?.beginAudioOuputSelection?()
+            self?.beginAudioOuputSelection?(false)
         }
         
         self.buttonsNode.end = { [weak self] in
@@ -227,10 +150,6 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
         
         self.buttonsNode.accept = { [weak self] in
             self?.acceptCall?()
-        }
-        
-        self.buttonsNode.rotateCamera = { [weak self] in
-            self?.call.switchVideoCamera()
         }
         
         self.keyButtonNode.addTarget(self, action: #selector(self.keyPressed), forControlEvents: .touchUpInside)
@@ -269,8 +188,6 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
                 }
             }
             
-            self.videoPausedNode.attributedText = NSAttributedString(string: self.presentationData.strings.Call_RemoteVideoPaused(peer.compactDisplayTitle).0, font: Font.regular(17.0), textColor: .white)
-            
             if let (layout, navigationBarHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
             }
@@ -289,84 +206,6 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
         
         let statusValue: LegacyCallControllerStatusValue
         var statusReception: Int32?
-        
-        switch callState.videoState {
-        case .active:
-            if !self.incomingVideoViewRequested {
-                self.incomingVideoViewRequested = true
-                self.call.makeIncomingVideoView(completion: { [weak self] incomingVideoView in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    if let incomingVideoView = incomingVideoView {
-                        strongSelf.setCurrentAudioOutput?(.speaker)
-                        let incomingVideoNode = IncomingVideoNode(videoView: incomingVideoView.view)
-                        strongSelf.incomingVideoNode = incomingVideoNode
-                        strongSelf.containerNode.insertSubnode(incomingVideoNode, aboveSubnode: strongSelf.dimNode)
-                        strongSelf.statusNode.isHidden = true
-                        if let (layout, navigationBarHeight) = strongSelf.validLayout {
-                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-                        }
-                    }
-                })
-            }
-        default:
-            break
-        }
-        switch callState.videoState {
-        case .active, .outgoingRequested:
-            if !self.outgoingVideoViewRequested {
-                self.outgoingVideoViewRequested = true
-                self.call.makeOutgoingVideoView(completion: { [weak self] outgoingVideoView in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    if let outgoingVideoView = outgoingVideoView?.view {
-                        outgoingVideoView.backgroundColor = .black
-                        outgoingVideoView.clipsToBounds = true
-                        outgoingVideoView.layer.cornerRadius = 16.0
-                        strongSelf.setCurrentAudioOutput?(.speaker)
-                        let outgoingVideoNode = OutgoingVideoNode(videoView: outgoingVideoView, switchCamera: {
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            strongSelf.call.switchVideoCamera()
-                        })
-                        strongSelf.outgoingVideoNode = outgoingVideoNode
-                        if let incomingVideoNode = strongSelf.incomingVideoNode {
-                            strongSelf.containerNode.insertSubnode(outgoingVideoNode, aboveSubnode: incomingVideoNode)
-                        } else {
-                            strongSelf.containerNode.insertSubnode(outgoingVideoNode, aboveSubnode: strongSelf.dimNode)
-                        }
-                        if let (layout, navigationBarHeight) = strongSelf.validLayout {
-                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-                        }
-                    }
-                })
-            }
-        default:
-            break
-        }
-        
-        if let incomingVideoNode = self.incomingVideoNode {
-            let isActive: Bool
-            switch callState.remoteVideoState {
-            case .inactive:
-                isActive = false
-            case .active:
-                isActive = true
-            }
-            incomingVideoNode.updateIsBlurred(isBlurred: !isActive)
-            if isActive != self.videoPausedNode.alpha.isZero {
-                if isActive {
-                    self.videoPausedNode.alpha = 0.0
-                    self.videoPausedNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
-                } else {
-                    self.videoPausedNode.alpha = 1.0
-                    self.videoPausedNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                }
-            }
-        }
         
         switch callState.state {
             case .waiting, .connecting:
@@ -591,32 +430,9 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
         let statusHeight = self.statusNode.updateLayout(constrainedWidth: layout.size.width, transition: transition)
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: 0.0, y: statusOffset), size: CGSize(width: layout.size.width, height: statusHeight)))
         
-        let videoPausedSize = self.videoPausedNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: 100.0))
-        transition.updateFrame(node: self.videoPausedNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - videoPausedSize.width) / 2.0), y: floor((layout.size.height - videoPausedSize.height) / 2.0)), size: videoPausedSize))
-        
         self.buttonsNode.updateLayout(constrainedWidth: layout.size.width, transition: transition)
         let buttonsOriginY: CGFloat = layout.size.height - (buttonsOffset - 40.0) - buttonsHeight - layout.intrinsicInsets.bottom
         transition.updateFrame(node: self.buttonsNode, frame: CGRect(origin: CGPoint(x: 0.0, y: buttonsOriginY), size: CGSize(width: layout.size.width, height: buttonsHeight)))
-        
-        var outgoingVideoTransition = transition
-        if let incomingVideoNode = self.incomingVideoNode {
-            if incomingVideoNode.frame.width.isZero, let outgoingVideoNode = self.outgoingVideoNode, !outgoingVideoNode.frame.width.isZero, !transition.isAnimated {
-                outgoingVideoTransition = .animated(duration: 0.3, curve: .easeInOut)
-            }
-            incomingVideoNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-            incomingVideoNode.updateLayout(size: layout.size)
-        }
-        if let outgoingVideoNode = self.outgoingVideoNode {
-            if self.incomingVideoNode == nil {
-                outgoingVideoNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-                outgoingVideoNode.updateLayout(size: layout.size, isExpanded: true, transition: transition)
-            } else {
-                let outgoingSize = layout.size.aspectFitted(CGSize(width: 200.0, height: 200.0))
-                let outgoingFrame = CGRect(origin: CGPoint(x: layout.size.width - 16.0 - outgoingSize.width, y: buttonsOriginY - 32.0 - outgoingSize.height), size: outgoingSize)
-                outgoingVideoTransition.updateFrame(node: outgoingVideoNode, frame: outgoingFrame)
-                outgoingVideoNode.updateLayout(size: outgoingFrame.size, isExpanded: false, transition: outgoingVideoTransition)
-            }
-        }
         
         let keyTextSize = self.keyButtonNode.frame.size
         transition.updateFrame(node: self.keyButtonNode, frame: CGRect(origin: CGPoint(x: layout.size.width - keyTextSize.width - 8.0, y: navigationOffset + 8.0), size: keyTextSize))

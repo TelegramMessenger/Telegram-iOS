@@ -303,21 +303,25 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
 public final class TelegramMediaImageRepresentation: PostboxCoding, Equatable, CustomStringConvertible {
     public let dimensions: PixelDimensions
     public let resource: TelegramMediaResource
+    public let progressiveSizes: [Int32]
     
-    public init(dimensions: PixelDimensions, resource: TelegramMediaResource) {
+    public init(dimensions: PixelDimensions, resource: TelegramMediaResource, progressiveSizes: [Int32]) {
         self.dimensions = dimensions
         self.resource = resource
+        self.progressiveSizes = progressiveSizes
     }
     
     public init(decoder: PostboxDecoder) {
         self.dimensions = PixelDimensions(width: decoder.decodeInt32ForKey("dx", orElse: 0), height: decoder.decodeInt32ForKey("dy", orElse: 0))
         self.resource = decoder.decodeObjectForKey("r") as? TelegramMediaResource ?? EmptyMediaResource()
+        self.progressiveSizes = decoder.decodeInt32ArrayForKey("ps")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.dimensions.width, forKey: "dx")
         encoder.encodeInt32(self.dimensions.height, forKey: "dy")
         encoder.encodeObject(self.resource, forKey: "r")
+        encoder.encodeInt32Array(self.progressiveSizes, forKey: "ps")
     }
     
     public var description: String {
@@ -329,6 +333,9 @@ public final class TelegramMediaImageRepresentation: PostboxCoding, Equatable, C
             return false
         }
         if !self.resource.id.isEqual(to: other.resource.id) {
+            return false
+        }
+        if self.progressiveSizes != other.progressiveSizes {
             return false
         }
         return true

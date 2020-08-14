@@ -2719,7 +2719,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         }
         
         if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(point) {
-            return self.view
+            return avatarNode.containerNode.view
         }
         
         if !self.backgroundNode.frame.contains(point) {

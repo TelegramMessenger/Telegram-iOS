@@ -9,6 +9,8 @@
     bool _dismissing;
     UIView *_transitionView;
     bool _noTransitionToSnapshot;
+    
+    bool _animateScale;
 }
 
 @property (nonatomic, weak) id<TGMediaEditableItem> item;
@@ -36,6 +38,7 @@
 
 @property (nonatomic, assign) TGPhotoEditorTab availableTabs;
 
+@property (nonatomic, assign) TGPhotoEditorTab switchingFromTab;
 @property (nonatomic, assign) TGPhotoEditorTab switchingToTab;
 
 - (void)transitionOutSwitching:(bool)switching completion:(void (^)(void))completion;

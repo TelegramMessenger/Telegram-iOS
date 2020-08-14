@@ -21,7 +21,8 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         }
     }
     
-    let displayDeviceContacts: Bool
+    private let displayDeviceContacts: Bool
+    private let displayCallIcons: Bool
     
     let contactListNode: ContactListNode
     private let dimNode: ASDisplayNode
@@ -40,12 +41,13 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     var presentationData: PresentationData
     var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, options: [ContactListAdditionalOption], displayDeviceContacts: Bool) {
+    init(context: AccountContext, options: [ContactListAdditionalOption], displayDeviceContacts: Bool, displayCallIcons: Bool) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.displayDeviceContacts = displayDeviceContacts
+        self.displayCallIcons = displayCallIcons
         
-        self.contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: false)))
+        self.contactListNode = ContactListNode(context: context, presentation: .single(.natural(options: options, includeChatList: false)), displayCallIcons: displayCallIcons)
         
         self.dimNode = ASDisplayNode()
         

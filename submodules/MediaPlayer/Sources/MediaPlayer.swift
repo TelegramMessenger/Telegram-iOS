@@ -292,12 +292,12 @@ private final class MediaPlayerContext {
                 duration = max(duration, CMTimeGetSeconds(audioTrackFrameBuffer.duration))
             }
             loadedDuration = duration
-            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, dimensions: CGSize(), timestamp: min(max(timestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play), soundEnabled: self.enableSound)
+            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, dimensions: CGSize(), timestamp: min(max(timestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play, progress: 0.0), soundEnabled: self.enableSound)
             self.playerStatus.set(.single(status))
             let _ = self.playerStatusValue.swap(status)
         } else {
             let duration = seekState?.duration ?? 0.0
-            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, dimensions: CGSize(), timestamp: min(max(timestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play), soundEnabled: self.enableSound)
+            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, dimensions: CGSize(), timestamp: min(max(timestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play, progress: 0.0), soundEnabled: self.enableSound)
             self.playerStatus.set(.single(status))
             let _ = self.playerStatusValue.swap(status)
         }
@@ -778,7 +778,7 @@ private final class MediaPlayerContext {
         }
         
         var rate: Double
-        var buffering = false
+        var bufferingProgress: Float?
         
         if let worstStatus = worstStatus, case let .full(fullUntil) = worstStatus, fullUntil.isFinite {
             if case .playing = self.state {
@@ -811,8 +811,18 @@ private final class MediaPlayerContext {
                     rate = 0.0
                 }
             }
+        } else if case let .buffering(progress) = worstStatus {
+            bufferingProgress = Float(progress)
+            rate = 0.0
+            //print("bufferingProgress = \(progress)")
+            
+            let tickTimer = SwiftSignalKit.Timer(timeout: 0.3, repeat: false, completion: { [weak self] in
+                self?.tick()
+            }, queue: self.queue)
+            self.tickTimer = tickTimer
+            tickTimer.start()
         } else {
-            buffering = true
+            bufferingProgress = 0.0
             rate = 0.0
         }
         
@@ -854,12 +864,12 @@ private final class MediaPlayerContext {
         
         var statusTimestamp = CACurrentMediaTime()
         let playbackStatus: MediaPlayerPlaybackStatus
-        if buffering {
+        if let bufferingProgress = bufferingProgress {
             var whilePlaying = false
             if case .playing = self.state {
                 whilePlaying = true
             }
-            playbackStatus = .buffering(initial: false, whilePlaying: whilePlaying)
+            playbackStatus = .buffering(initial: false, whilePlaying: whilePlaying, progress: Float(bufferingProgress))
         } else if !rate.isZero {
             if reportRate.isZero {
                 //playbackStatus = .buffering(initial: false, whilePlaying: true)
@@ -910,7 +920,7 @@ private final class MediaPlayerContext {
 public enum MediaPlayerPlaybackStatus: Equatable {
     case playing
     case paused
-    case buffering(initial: Bool, whilePlaying: Bool)
+    case buffering(initial: Bool, whilePlaying: Bool, progress: Float)
     
     public static func ==(lhs: MediaPlayerPlaybackStatus, rhs: MediaPlayerPlaybackStatus) -> Bool {
         switch lhs {
@@ -926,8 +936,8 @@ public enum MediaPlayerPlaybackStatus: Equatable {
                 } else {
                     return false
                 }
-            case let .buffering(initial, whilePlaying):
-                if case .buffering(initial, whilePlaying) = rhs {
+            case let .buffering(initial, whilePlaying, progress):
+                if case .buffering(initial, whilePlaying, progress) = rhs {
                     return true
                 } else {
                     return false

@@ -15,6 +15,9 @@ public func rateCall(account: Account, callId: CallId, starsCount: Int32, commen
 }
 
 public func saveCallDebugLog(network: Network, callId: CallId, log: String) -> Signal<Void, NoError> {
+    if log.count > 1024 * 16 {
+        return .complete()
+    }
     return network.request(Api.functions.phone.saveCallDebug(peer: Api.InputPhoneCall.inputPhoneCall(id: callId.id, accessHash: callId.accessHash), debug: .dataJSON(data: log)))
     |> `catch` { _ -> Signal<Api.Bool, NoError> in
         return .single(.boolFalse)

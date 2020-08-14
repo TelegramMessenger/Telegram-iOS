@@ -55,7 +55,7 @@ final class StatsEmptyStateItemNode: ItemListControllerEmptyStateItemNode {
         
         self.animationNode = AnimatedStickerNode()
         if let path = getAppBundle().path(forResource: "Charts", ofType: "tgs") {
-            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 192, height: 192, playbackMode: .loop, mode: .direct)
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 192, height: 192, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
             self.animationNode.visibility = true
         }
         

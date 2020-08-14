@@ -29,7 +29,7 @@ public final class CallKitIntegration {
         return self.audioSessionActivePromise.get()
     }
     
-    init?(enableVideoCalls: Bool, startCall: @escaping (Account, UUID, String, Bool) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, setCallMuted: @escaping (UUID, Bool) -> Void, audioSessionActivationChanged: @escaping (Bool) -> Void) {
+    init?(startCall: @escaping (Account, UUID, String, Bool) -> Signal<Bool, NoError>, answerCall: @escaping (UUID) -> Void, endCall: @escaping (UUID) -> Signal<Bool, NoError>, setCallMuted: @escaping (UUID, Bool) -> Void, audioSessionActivationChanged: @escaping (Bool) -> Void) {
         if !CallKitIntegration.isAvailable {
             return nil
         }
@@ -40,7 +40,7 @@ public final class CallKitIntegration {
         
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             if sharedProviderDelegate == nil {
-                sharedProviderDelegate = CallKitProviderDelegate(enableVideoCalls: enableVideoCalls)
+                sharedProviderDelegate = CallKitProviderDelegate()
             }
             (sharedProviderDelegate as? CallKitProviderDelegate)?.setup(audioSessionActivePromise: self.audioSessionActivePromise, startCall: startCall, answerCall: answerCall, endCall: endCall, setCallMuted: setCallMuted, audioSessionActivationChanged: audioSessionActivationChanged)
         } else {
@@ -112,8 +112,8 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     
     fileprivate var audioSessionActivePromise: ValuePromise<Bool>?
     
-    init(enableVideoCalls: Bool) {
-        self.provider = CXProvider(configuration: CallKitProviderDelegate.providerConfiguration(enableVideoCalls: enableVideoCalls))
+    override init() {
+        self.provider = CXProvider(configuration: CallKitProviderDelegate.providerConfiguration())
         
         super.init()
         
@@ -129,10 +129,10 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         self.audioSessionActivationChanged = audioSessionActivationChanged
     }
     
-    private static func providerConfiguration(enableVideoCalls: Bool) -> CXProviderConfiguration {
+    private static func providerConfiguration() -> CXProviderConfiguration {
         let providerConfiguration = CXProviderConfiguration(localizedName: "Telegram")
         
-        providerConfiguration.supportsVideo = false
+        providerConfiguration.supportsVideo = true
         providerConfiguration.maximumCallsPerCallGroup = 1
         providerConfiguration.maximumCallGroups = 1
         providerConfiguration.supportedHandleTypes = [.phoneNumber, .generic]

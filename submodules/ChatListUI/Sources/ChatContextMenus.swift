@@ -46,7 +46,7 @@ enum ChatContextMenuSource {
     case search(ChatListSearchContextActionSource)
 }
 
-func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: ChatListNodeEntryPromoInfo?, source: ChatContextMenuSource, chatListController: ChatListControllerImpl?) -> Signal<[ContextMenuItem], NoError> {
+func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: ChatListNodeEntryPromoInfo?, source: ChatContextMenuSource, chatListController: ChatListControllerImpl?, joined: Bool) -> Signal<[ContextMenuItem], NoError> {
     let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
     let strings = presentationData.strings
     return context.account.postbox.transaction { [weak chatListController] transaction -> [ContextMenuItem] in
@@ -233,7 +233,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                             updatedItems.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Back, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
                             }, action: { c, _ in
-                                c.setItems(chatContextMenuItems(context: context, peerId: peerId, promoInfo: promoInfo, source: source, chatListController: chatListController))
+                                c.setItems(chatContextMenuItems(context: context, peerId: peerId, promoInfo: promoInfo, source: source, chatListController: chatListController, joined: joined))
                             })))
                             
                             return updatedItems
@@ -379,7 +379,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
         if case .chatList = source, groupAndIndex != nil {
             items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
                 if let chatListController = chatListController {
-                    chatListController.deletePeerChat(peerId: peerId)
+                    chatListController.deletePeerChat(peerId: peerId, joined: joined)
                 }
                 f(.default)
             })))

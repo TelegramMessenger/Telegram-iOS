@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 
-
 public class ViewCountMessageAttribute: MessageAttribute {
     public let count: Int
     

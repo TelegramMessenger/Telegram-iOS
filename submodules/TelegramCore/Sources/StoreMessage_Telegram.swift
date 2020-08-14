@@ -521,6 +521,10 @@ extension StoreMessage {
                     attributes.append(ViewCountMessageAttribute(count: Int(views)))
                 }
                 
+                /*if let forwards = forwards, namespace != Namespaces.Message.ScheduledCloud {
+                    attributes.append(ForwardCountMessageAttribute(count: Int(forwards)))
+                }*/
+                
                 if let editDate = editDate {
                     attributes.append(EditedMessageAttribute(date: editDate, isHidden: (flags & (1 << 21)) != 0))
                 }

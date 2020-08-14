@@ -1751,9 +1751,34 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         
         TGDispatchOnMainThread(^
         {
-            if (strongSelf.finishedWithPhoto != nil)
-                strongSelf.finishedWithPhoto(nil, resultImage, nil, nil, nil, nil);
-            
+            if (editorValues.paintingData.hasAnimation) {
+                TGVideoEditAdjustments *adjustments = [TGVideoEditAdjustments editAdjustmentsWithPhotoEditorValues:(PGPhotoEditorValues *)editorValues preset:TGMediaVideoConversionPresetProfileVeryHigh];
+
+                NSString *filePath = [NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"gifvideo_%x.jpg", (int)arc4random()]];
+                NSData *data = UIImageJPEGRepresentation(resultImage, 0.8);
+                [data writeToFile:filePath atomically:true];
+                
+                UIImage *previewImage = resultImage;
+                if ([adjustments cropAppliedForAvatar:false] || adjustments.hasPainting || adjustments.toolsApplied)
+                {
+                    UIImage *paintingImage = adjustments.paintingData.stillImage;
+                    if (paintingImage == nil) {
+                        paintingImage = adjustments.paintingData.image;
+                    }
+                    UIImage *croppedPaintingImage = TGPhotoEditorPaintingCrop(paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, resultImage.size, adjustments.originalSize, true, true, false);
+                    UIImage *thumbnailImage = TGPhotoEditorVideoExtCrop(resultImage, croppedPaintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(resultImage.size, CGSizeMake(800, 800)), adjustments.originalSize, true, true, true, true);
+                    if (thumbnailImage != nil) {
+                        previewImage = thumbnailImage;
+                    }
+                }
+                
+                if (strongSelf.finishedWithVideo != nil)
+                    strongSelf.finishedWithVideo(nil, [NSURL fileURLWithPath:filePath], previewImage, 0, CGSizeZero, adjustments, nil, nil, nil, nil);
+            } else {
+                if (strongSelf.finishedWithPhoto != nil)
+                    strongSelf.finishedWithPhoto(nil, resultImage, nil, nil, nil, nil);
+            }
+                        
             if (strongSelf.shouldStoreCapturedAssets && [input isKindOfClass:[UIImage class]])
             {
                 [strongSelf _savePhotoToCameraRollWithOriginalImage:image editedImage:[editorValues toolsApplied] ? resultImage : nil];
@@ -2608,7 +2633,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                         if (paintingImage == nil) {
                             paintingImage = adjustments.paintingData.image;
                         }
-                        UIImage *thumbnailImage = TGPhotoEditorVideoExtCrop(image, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(image.size, CGSizeMake(512, 512)), adjustments.originalSize, true, true, true);
+                        UIImage *thumbnailImage = TGPhotoEditorVideoExtCrop(image, paintingImage, adjustments.cropOrientation, adjustments.cropRotation, adjustments.cropRect, adjustments.cropMirrored, TGScaleToFill(image.size, CGSizeMake(512, 512)), adjustments.originalSize, true, true, true, false);
                         if (thumbnailImage != nil) {
                             dict[@"previewImage"] = thumbnailImage;
                         }

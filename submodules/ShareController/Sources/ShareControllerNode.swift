@@ -32,6 +32,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     private let externalShare: Bool
     private let immediateExternalShare: Bool
     private var immediatePeerId: PeerId?
+    private let shares: Int?
     
     private let defaultAction: ShareControllerAction?
     private let requestLayout: (ContainedViewLayoutTransition) -> Void
@@ -61,6 +62,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     var share: ((String, [PeerId]) -> Signal<ShareState, NoError>)?
     var shareExternal: (() -> Signal<ShareExternalState, NoError>)?
     var switchToAnotherAccount: (() -> Void)?
+    var openStats: (() -> Void)?
     
     let ready = Promise<Bool>()
     private var didSetReady = false
@@ -78,12 +80,13 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     private let presetText: String?
     
-    init(sharedContext: SharedAccountContext, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?) {
+    init(sharedContext: SharedAccountContext, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, shares: Int?) {
         self.sharedContext = sharedContext
         self.presentationData = sharedContext.currentPresentationData.with { $0 }
         self.externalShare = externalShare
         self.immediateExternalShare = immediateExternalShare
         self.immediatePeerId = immediatePeerId
+        self.shares = shares
         self.presentError = presentError
         
         self.presetText = presetText
@@ -670,7 +673,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         let animated = self.peersContentNode == nil
         let peersContentNode = SharePeersContainerNode(sharedContext: self.sharedContext, context: context, switchableAccounts: switchableAccounts, theme: self.presentationData.theme, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare, switchToAnotherAccount: { [weak self] in
             self?.switchToAnotherAccount?()
-        }, extendedInitialReveal: self.presetText != nil)
+        }, extendedInitialReveal: self.presetText != nil, statsCount: self.shares)
         self.peersContentNode = peersContentNode
         peersContentNode.openSearch = { [weak self] in
             let _ = (recentlySearchedPeers(postbox: context.account.postbox)
@@ -735,6 +738,14 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
         peersContentNode.openShare = {
             openShare(false)
+        }
+        if let openStats = self.openStats {
+            peersContentNode.openStats = { [weak self] in
+                openStats()
+                self?.animateOut(shared: true, completion: {
+                    self?.dismiss?(true)
+                })
+            }
         }
         if self.immediateExternalShare {
             openShare(true)

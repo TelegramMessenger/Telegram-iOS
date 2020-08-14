@@ -6,32 +6,39 @@ import SwiftSignalKit
 import MediaPlayer
 import TelegramPresentationData
 
-enum CallControllerButtonsSpeakerMode {
+enum CallControllerButtonsSpeakerMode: Equatable {
+    enum BluetoothType: Equatable {
+        case generic
+        case airpods
+        case airpodsPro
+    }
+    
     case none
     case builtin
     case speaker
     case headphones
-    case bluetooth
+    case bluetooth(BluetoothType)
 }
 
 enum CallControllerButtonsMode: Equatable {
-    enum VideoState: Equatable {
-        case notAvailable
-        case possible
-        case outgoingRequested
-        case incomingRequested
-        case active
+    struct VideoState: Equatable {
+        var isAvailable: Bool
+        var isCameraActive: Bool
+        var canChangeStatus: Bool
+        var hasVideo: Bool
+        var isInitializingCamera: Bool
     }
     
-    case active(speakerMode: CallControllerButtonsSpeakerMode, videoState: VideoState)
-    case incoming(speakerMode: CallControllerButtonsSpeakerMode, videoState: VideoState)
-    case outgoingRinging(speakerMode: CallControllerButtonsSpeakerMode, videoState: VideoState)
+    case active(speakerMode: CallControllerButtonsSpeakerMode, hasAudioRouteMenu: Bool, videoState: VideoState)
+    case incoming(speakerMode: CallControllerButtonsSpeakerMode, hasAudioRouteMenu: Bool, videoState: VideoState)
+    case outgoingRinging(speakerMode: CallControllerButtonsSpeakerMode, hasAudioRouteMenu: Bool, videoState: VideoState)
 }
 
 private enum ButtonDescription: Equatable {
     enum Key: Hashable {
         case accept
-        case end
+        case acceptOrEnd
+        case decline
         case enableCamera
         case switchCamera
         case soundOutput
@@ -42,6 +49,8 @@ private enum ButtonDescription: Equatable {
         case builtin
         case speaker
         case bluetooth
+        case airpods
+        case airpodsPro
     }
     
     enum EndType {
@@ -52,17 +61,21 @@ private enum ButtonDescription: Equatable {
     
     case accept
     case end(EndType)
-    case enableCamera(Bool)
-    case switchCamera
+    case enableCamera(Bool, Bool, Bool)
+    case switchCamera(Bool)
     case soundOutput(SoundOutput)
     case mute(Bool)
     
     var key: Key {
         switch self {
         case .accept:
-            return .accept
-        case .end:
-            return .end
+            return .acceptOrEnd
+        case let .end(type):
+            if type == .decline {
+                return .decline
+            } else {
+                return .acceptOrEnd
+            }
         case .enableCamera:
             return .enableCamera
         case .switchCamera:
@@ -83,11 +96,10 @@ final class CallControllerButtonsNode: ASDisplayNode {
     private var validLayout: (CGFloat, CGFloat)?
     
     var isMuted = false
-    var isCameraPaused = false
     
-    var accept: (() -> Void)?
+    var acceptOrEnd: (() -> Void)?
+    var decline: (() -> Void)?
     var mute: (() -> Void)?
-    var end: (() -> Void)?
     var speaker: (() -> Void)?
     var toggleVideo: (() -> Void)?
     var rotateCamera: (() -> Void)?
@@ -109,6 +121,10 @@ final class CallControllerButtonsNode: ASDisplayNode {
     }
     
     private var appliedMode: CallControllerButtonsMode?
+    
+    func videoButtonFrame() -> CGRect? {
+        return self.buttonNodes[.enableCamera]?.frame
+    }
     
     private func updateButtonsLayout(strings: PresentationStrings, mode: CallControllerButtonsMode, width: CGFloat, bottomInset: CGFloat, animated: Bool) -> CGFloat {
         let transition: ContainedViewLayoutTransition
@@ -133,7 +149,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
             }
         }
         
-        let minSmallButtonSideInset: CGFloat = 34.0
+        let minSmallButtonSideInset: CGFloat = width > 320.0 ? 34.0 : 16.0
         let maxSmallButtonSpacing: CGFloat = 34.0
         let smallButtonSize: CGFloat = 60.0
         let topBottomSpacing: CGFloat = 84.0
@@ -151,10 +167,12 @@ final class CallControllerButtonsNode: ASDisplayNode {
         
         let speakerMode: CallControllerButtonsSpeakerMode
         var videoState: CallControllerButtonsMode.VideoState
+        let hasAudioRouteMenu: Bool
         switch mode {
-        case .incoming(let speakerModeValue, let videoStateValue), .outgoingRinging(let speakerModeValue, let videoStateValue), .active(let speakerModeValue, let videoStateValue):
+        case .incoming(let speakerModeValue, let hasAudioRouteMenuValue, let videoStateValue), .outgoingRinging(let speakerModeValue, let hasAudioRouteMenuValue, let videoStateValue), .active(let speakerModeValue, let hasAudioRouteMenuValue, let videoStateValue):
             speakerMode = speakerModeValue
             videoState = videoStateValue
+            hasAudioRouteMenu = hasAudioRouteMenuValue
         }
         
         enum MappedState {
@@ -169,17 +187,9 @@ final class CallControllerButtonsNode: ASDisplayNode {
             mappedState = .incomingRinging
         case .outgoingRinging:
             mappedState = .outgoingRinging
-        case let .active(_, videoStateValue):
-            switch videoStateValue {
-            case .incomingRequested:
-                mappedState = .incomingRinging
-                videoState = .outgoingRequested
-            case .outgoingRequested:
-                mappedState = .outgoingRinging
-                videoState = .outgoingRequested
-            case .active, .possible, .notAvailable:
-                mappedState = .active
-            }
+        case let .active(_, _, videoStateValue):
+            mappedState = .active
+            videoState = videoStateValue
         }
         
         var buttons: [PlacedButton] = []
@@ -190,44 +200,61 @@ final class CallControllerButtonsNode: ASDisplayNode {
             
             let soundOutput: ButtonDescription.SoundOutput
             switch speakerMode {
-            case .none, .builtin:
-                soundOutput = .builtin
-            case .speaker:
-                soundOutput = .speaker
-            case .headphones:
-                soundOutput = .bluetooth
-            case .bluetooth:
-                soundOutput = .bluetooth
+                case .none, .builtin:
+                    soundOutput = .builtin
+                case .speaker:
+                    soundOutput = .speaker
+                case .headphones:
+                    soundOutput = .bluetooth
+                case let .bluetooth(type):
+                    switch type {
+                        case .generic:
+                            soundOutput = .bluetooth
+                        case .airpods:
+                            soundOutput = .airpods
+                        case .airpodsPro:
+                            soundOutput = .airpodsPro
+                }
             }
             
-            switch videoState {
-            case .active, .possible, .incomingRequested, .outgoingRequested:
+            if videoState.isAvailable {
                 let isCameraActive: Bool
-                if case .possible = videoState {
-                    isCameraActive = false
+                let isCameraEnabled: Bool
+                let isCameraInitializing: Bool
+                if videoState.hasVideo {
+                    isCameraActive = videoState.isCameraActive
+                    isCameraEnabled = videoState.canChangeStatus
+                    isCameraInitializing = videoState.isInitializingCamera
                 } else {
-                    isCameraActive = !self.isCameraPaused
+                    isCameraActive = false
+                    isCameraEnabled = videoState.canChangeStatus
+                    isCameraInitializing = videoState.isInitializingCamera
                 }
-                topButtons.append(.enableCamera(isCameraActive))
-                topButtons.append(.mute(self.isMuted))
-                if case .possible = videoState {
+                topButtons.append(.enableCamera(isCameraActive, false, isCameraInitializing))
+                if !videoState.hasVideo {
+                    topButtons.append(.mute(self.isMuted))
                     topButtons.append(.soundOutput(soundOutput))
                 } else {
-                    topButtons.append(.switchCamera)
+                    if hasAudioRouteMenu {
+                        topButtons.append(.soundOutput(soundOutput))
+                    } else {
+                        topButtons.append(.mute(self.isMuted))
+                    }
+                    topButtons.append(.switchCamera(isCameraActive && !isCameraInitializing))
                 }
-            case .notAvailable:
+            } else {
                 topButtons.append(.mute(self.isMuted))
                 topButtons.append(.soundOutput(soundOutput))
             }
             
-            let topButtonsContentWidth = CGFloat(topButtons.count) * smallButtonSize
+            let topButtonsContentWidth = CGFloat(topButtons.count) * largeButtonSize
             let topButtonsAvailableSpacingWidth = width - topButtonsContentWidth - minSmallButtonSideInset * 2.0
             let topButtonsSpacing = min(maxSmallButtonSpacing, topButtonsAvailableSpacingWidth / CGFloat(topButtons.count - 1))
-            let topButtonsWidth = CGFloat(topButtons.count) * smallButtonSize + CGFloat(topButtons.count - 1) * topButtonsSpacing
+            let topButtonsWidth = CGFloat(topButtons.count) * largeButtonSize + CGFloat(topButtons.count - 1) * topButtonsSpacing
             var topButtonsLeftOffset = floor((width - topButtonsWidth) / 2.0)
             for button in topButtons {
-                buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: topButtonsLeftOffset, y: 0.0), size: CGSize(width: smallButtonSize, height: smallButtonSize))))
-                topButtonsLeftOffset += smallButtonSize + topButtonsSpacing
+                buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: topButtonsLeftOffset, y: 0.0), size: CGSize(width: largeButtonSize, height: largeButtonSize))))
+                topButtonsLeftOffset += largeButtonSize + topButtonsSpacing
             }
             
             if case .incomingRinging = mappedState {
@@ -243,38 +270,54 @@ final class CallControllerButtonsNode: ASDisplayNode {
             let bottomButtonsWidth = CGFloat(bottomButtons.count) * largeButtonSize + CGFloat(bottomButtons.count - 1) * bottomButtonsSpacing
             var bottomButtonsLeftOffset = floor((width - bottomButtonsWidth) / 2.0)
             for button in bottomButtons {
-                buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: bottomButtonsLeftOffset, y: smallButtonSize + topBottomSpacing), size: CGSize(width: largeButtonSize, height: largeButtonSize))))
+                buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: bottomButtonsLeftOffset, y: largeButtonSize + topBottomSpacing), size: CGSize(width: largeButtonSize, height: largeButtonSize))))
                 bottomButtonsLeftOffset += largeButtonSize + bottomButtonsSpacing
             }
             
-            height = smallButtonSize + topBottomSpacing + largeButtonSize + max(bottomInset + 32.0, 46.0)
+            height = largeButtonSize + topBottomSpacing + largeButtonSize + max(bottomInset + 32.0, 46.0)
         case .active:
-            switch videoState {
-            case .active, .incomingRequested, .outgoingRequested:
+            if videoState.hasVideo {
                 let isCameraActive: Bool
-                if case .possible = videoState {
-                    isCameraActive = false
+                let isCameraEnabled: Bool
+                let isCameraInitializing: Bool
+                if videoState.hasVideo {
+                    isCameraActive = videoState.isCameraActive
+                    isCameraEnabled = videoState.canChangeStatus
+                    isCameraInitializing = videoState.isInitializingCamera
                 } else {
-                    isCameraActive = !self.isCameraPaused
+                    isCameraActive = false
+                    isCameraEnabled = videoState.canChangeStatus
+                    isCameraInitializing = videoState.isInitializingCamera
                 }
                 
                 var topButtons: [ButtonDescription] = []
                 
                 let soundOutput: ButtonDescription.SoundOutput
                 switch speakerMode {
-                case .none, .builtin:
-                    soundOutput = .builtin
-                case .speaker:
-                    soundOutput = .speaker
-                case .headphones:
-                    soundOutput = .builtin
-                case .bluetooth:
-                    soundOutput = .bluetooth
+                    case .none, .builtin:
+                        soundOutput = .builtin
+                    case .speaker:
+                        soundOutput = .speaker
+                    case .headphones:
+                        soundOutput = .builtin
+                    case let .bluetooth(type):
+                        switch type {
+                            case .generic:
+                                soundOutput = .bluetooth
+                            case .airpods:
+                                soundOutput = .airpods
+                            case .airpodsPro:
+                                soundOutput = .airpodsPro
+                    }
                 }
                 
-                topButtons.append(.enableCamera(isCameraActive))
-                topButtons.append(.mute(isMuted))
-                topButtons.append(.switchCamera)
+                topButtons.append(.enableCamera(isCameraActive, isCameraEnabled, isCameraInitializing))
+                if hasAudioRouteMenu {
+                    topButtons.append(.soundOutput(soundOutput))
+                } else {
+                    topButtons.append(.mute(isMuted))
+                }
+                topButtons.append(.switchCamera(isCameraActive && !isCameraInitializing))
                 topButtons.append(.end(.end))
                 
                 let topButtonsContentWidth = CGFloat(topButtons.count) * smallButtonSize
@@ -288,34 +331,54 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 }
                 
                 height = smallButtonSize + max(bottomInset + 19.0, 46.0)
-            case .notAvailable, .possible:
+            } else {
                 var topButtons: [ButtonDescription] = []
                 var bottomButtons: [ButtonDescription] = []
                 
-                let soundOutput: ButtonDescription.SoundOutput
-                switch speakerMode {
-                case .none, .builtin:
-                    soundOutput = .builtin
-                case .speaker:
-                    soundOutput = .speaker
-                case .headphones:
-                    soundOutput = .bluetooth
-                case .bluetooth:
-                    soundOutput = .bluetooth
+                let isCameraActive: Bool
+                let isCameraEnabled: Bool
+                let isCameraInitializing: Bool
+                if videoState.hasVideo {
+                    isCameraActive = videoState.isCameraActive
+                    isCameraEnabled = videoState.canChangeStatus
+                    isCameraInitializing = videoState.isInitializingCamera
+                } else {
+                    isCameraActive = false
+                    isCameraEnabled = videoState.canChangeStatus
+                    isCameraInitializing = videoState.isInitializingCamera
                 }
                 
-                topButtons.append(.enableCamera(false))
+                let soundOutput: ButtonDescription.SoundOutput
+                switch speakerMode {
+                    case .none, .builtin:
+                        soundOutput = .builtin
+                    case .speaker:
+                        soundOutput = .speaker
+                    case .headphones:
+                        soundOutput = .bluetooth
+                    case let .bluetooth(type):
+                        switch type {
+                            case .generic:
+                                soundOutput = .bluetooth
+                            case .airpods:
+                                soundOutput = .airpods
+                            case .airpodsPro:
+                                soundOutput = .airpodsPro
+                    }
+                }
+                
+                topButtons.append(.enableCamera(isCameraActive, isCameraEnabled, isCameraInitializing))
                 topButtons.append(.mute(self.isMuted))
                 topButtons.append(.soundOutput(soundOutput))
                 
-                let topButtonsContentWidth = CGFloat(topButtons.count) * smallButtonSize
+                let topButtonsContentWidth = CGFloat(topButtons.count) * largeButtonSize
                 let topButtonsAvailableSpacingWidth = width - topButtonsContentWidth - minSmallButtonSideInset * 2.0
                 let topButtonsSpacing = min(maxSmallButtonSpacing, topButtonsAvailableSpacingWidth / CGFloat(topButtons.count - 1))
-                let topButtonsWidth = CGFloat(topButtons.count) * smallButtonSize + CGFloat(topButtons.count - 1) * topButtonsSpacing
+                let topButtonsWidth = CGFloat(topButtons.count) * largeButtonSize + CGFloat(topButtons.count - 1) * topButtonsSpacing
                 var topButtonsLeftOffset = floor((width - topButtonsWidth) / 2.0)
                 for button in topButtons {
-                    buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: topButtonsLeftOffset, y: 0.0), size: CGSize(width: smallButtonSize, height: smallButtonSize))))
-                    topButtonsLeftOffset += smallButtonSize + topButtonsSpacing
+                    buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: topButtonsLeftOffset, y: 0.0), size: CGSize(width: largeButtonSize, height: largeButtonSize))))
+                    topButtonsLeftOffset += largeButtonSize + topButtonsSpacing
                 }
                 
                 bottomButtons.append(.end(.outgoing))
@@ -326,11 +389,11 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 let bottomButtonsWidth = CGFloat(bottomButtons.count) * largeButtonSize + CGFloat(bottomButtons.count - 1) * bottomButtonsSpacing
                 var bottomButtonsLeftOffset = floor((width - bottomButtonsWidth) / 2.0)
                 for button in bottomButtons {
-                    buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: bottomButtonsLeftOffset, y: smallButtonSize + topBottomSpacing), size: CGSize(width: largeButtonSize, height: largeButtonSize))))
+                    buttons.append(PlacedButton(button: button, frame: CGRect(origin: CGPoint(x: bottomButtonsLeftOffset, y: largeButtonSize + topBottomSpacing), size: CGSize(width: largeButtonSize, height: largeButtonSize))))
                     bottomButtonsLeftOffset += largeButtonSize + bottomButtonsSpacing
                 }
                 
-                height = smallButtonSize + topBottomSpacing + largeButtonSize + max(bottomInset + 32.0, 46.0)
+                height = largeButtonSize + topBottomSpacing + largeButtonSize + max(bottomInset + 32.0, 46.0)
             }
         }
         
@@ -373,21 +436,25 @@ final class CallControllerButtonsNode: ASDisplayNode {
                 case .end:
                     buttonText = strings.Call_End
                 }
-            case let .enableCamera(isEnabled):
+            case let .enableCamera(isActivated, isEnabled, isInitializing):
                 buttonContent = CallControllerButtonItemNode.Content(
-                    appearance: .blurred(isFilled: isEnabled),
-                    image: .camera
+                    appearance: .blurred(isFilled: isActivated),
+                    image: .camera,
+                    isEnabled: isEnabled,
+                    hasProgress: isInitializing
                 )
                 buttonText = strings.Call_Camera
-            case .switchCamera:
+            case let .switchCamera(isEnabled):
                 buttonContent = CallControllerButtonItemNode.Content(
                     appearance: .blurred(isFilled: false),
-                    image: .flipCamera
+                    image: .flipCamera,
+                    isEnabled: isEnabled
                 )
                 buttonText = strings.Call_Flip
             case let .soundOutput(value):
                 let image: CallControllerButtonItemNode.Content.Image
                 var isFilled = false
+                var title: String = strings.Call_Speaker
                 switch value {
                 case .builtin:
                     image = .speaker
@@ -396,12 +463,19 @@ final class CallControllerButtonsNode: ASDisplayNode {
                     isFilled = true
                 case .bluetooth:
                     image = .bluetooth
+                    title = strings.Call_Audio
+                case .airpods:
+                    image = .airpods
+                    title = strings.Call_Audio
+                case .airpodsPro:
+                    image = .airpodsPro
+                    title = strings.Call_Audio
                 }
                 buttonContent = CallControllerButtonItemNode.Content(
                     appearance: .blurred(isFilled: isFilled),
                     image: image
                 )
-                buttonText = strings.Call_Speaker
+                buttonText = title
             case let .mute(isMuted):
                 buttonContent = CallControllerButtonItemNode.Content(
                     appearance: .blurred(isFilled: isMuted),
@@ -418,7 +492,7 @@ final class CallControllerButtonsNode: ASDisplayNode {
                     buttonDelay = delayIncrement * 1.0
                 case .switchCamera:
                     buttonDelay = delayIncrement * 2.0
-                case .end:
+                case .acceptOrEnd:
                     buttonDelay = delayIncrement * 3.0
                 default:
                     break
@@ -436,17 +510,11 @@ final class CallControllerButtonsNode: ASDisplayNode {
             if !validKeys.contains(key) {
                 removedKeys.append(key)
                 if animated {
-                    if case .accept = key {
-                        if let endButton = self.buttonNodes[.end] {
-                            transition.updateFrame(node: button, frame: endButton.frame)
-                            if let content = button.currentContent {
-                                button.update(size: endButton.frame.size, content: content, text: button.currentText, transition: transition)
-                            }
-                            transition.updateTransformScale(node: button, scale: 0.1)
-                            transition.updateAlpha(node: button, alpha: 0.0, completion: { [weak button] _ in
-                                button?.removeFromSupernode()
-                            })
-                        }
+                    if case .decline = key {
+                        transition.updateTransformScale(node: button, scale: 0.1)
+                        transition.updateAlpha(node: button, alpha: 0.0, completion: { [weak button] _ in
+                            button?.removeFromSupernode()
+                        })
                     } else {
                         transition.updateAlpha(node: button, alpha: 0.0, completion: { [weak button] _ in
                             button?.removeFromSupernode()
@@ -469,9 +537,11 @@ final class CallControllerButtonsNode: ASDisplayNode {
             if button === listButton {
                 switch key {
                 case .accept:
-                    self.accept?()
-                case .end:
-                    self.end?()
+                    self.acceptOrEnd?()
+                case .acceptOrEnd:
+                    self.acceptOrEnd?()
+                case .decline:
+                    self.decline?()
                 case .enableCamera:
                     self.toggleVideo?()
                 case .switchCamera:

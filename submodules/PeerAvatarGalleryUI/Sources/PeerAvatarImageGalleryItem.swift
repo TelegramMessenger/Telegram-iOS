@@ -25,9 +25,9 @@ private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
         self.content = content
     }
     
-    var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
+    func image(synchronous: Bool) -> (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
         if let representation = largestImageRepresentation(self.content.map({ $0.representation })) {
-            return (avatarGalleryThumbnailPhoto(account: self.account, representations: self.content), representation.dimensions.cgSize)
+            return (avatarGalleryThumbnailPhoto(account: self.account, representations: self.content, synchronousLoad: synchronous), representation.dimensions.cgSize)
         } else {
             return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
         }
@@ -43,8 +43,6 @@ private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
 }
 
 class PeerAvatarImageGalleryItem: GalleryItem {
-
-    
     var id: AnyHashable {
         return self.entry.id
     }
@@ -268,7 +266,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     if video != previousVideoRepresentations?.last {
                         let mediaManager = self.context.sharedContext.mediaManager
                         let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: entry.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
-                        let videoContent = NativeVideoContent(id: .profileVideo(id, category), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
+                        let videoContent = NativeVideoContent(id: .profileVideo(id, category), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: true, useLargeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
                         let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .overlay)
                         videoNode.isUserInteractionEnabled = false
                         videoNode.isHidden = true

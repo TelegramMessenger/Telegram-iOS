@@ -206,7 +206,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.animationNode = nil
                 self.animatedStickerNode = AnimatedStickerNode()
                 self.animatedStickerNode?.visibility = true
-                self.animatedStickerNode?.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 100, height: 100, playbackMode: .once, mode: .direct)
+                self.animatedStickerNode?.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 100, height: 100, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -255,7 +255,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         thumbnailItem = .animated(item.file.resource)
                         resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: item.file.resource)
                     } else if let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
-                        thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource))
+                        thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: []))
                         resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: resource)
                     }
                 }
@@ -349,7 +349,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                             case let .result(_, items, _):
                                 let item = items[Int(value)]
                                 if let item = item as? StickerPackItem {
-                                    animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource), width: 120, height: 120, playbackMode: .once, mode: .direct)
+                                    animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource), width: 120, height: 120, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                                 }
                             default:
                                 break

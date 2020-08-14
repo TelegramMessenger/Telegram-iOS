@@ -1460,7 +1460,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                         if let data = image.jpegData(compressionQuality: 0.6) {
                             let resource = LocalFileMediaResource(fileId: arc4random64())
                             context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                            let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource)
+                            let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [])
                             updateState {
                                 $0.withUpdatedUpdatingAvatar(.image(representation, true))
                             }
@@ -1896,7 +1896,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 if let contactsController = contactsController as? ContactSelectionController {
                     selectAddMemberDisposable.set((contactsController.result
                     |> deliverOnMainQueue).start(next: { [weak contactsController] memberPeer in
-                        guard let memberPeer = memberPeer else {
+                        guard let (memberPeer, _) = memberPeer else {
                             return
                         }
                         
@@ -2439,7 +2439,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
         }
         for childController in tabController.controllers {
             if let chatListController = childController as? ChatListController {
-                chatListController.maybeAskForPeerChatRemoval(peer: RenderedPeer(peer: peer), deleteGloballyIfPossible: deleteGloballyIfPossible, completion: { [weak navigationController] removed in
+                chatListController.maybeAskForPeerChatRemoval(peer: RenderedPeer(peer: peer), joined: false, deleteGloballyIfPossible: deleteGloballyIfPossible, completion: { [weak navigationController] removed in
                     if removed {
                         navigationController?.popToRoot(animated: true)
                     }

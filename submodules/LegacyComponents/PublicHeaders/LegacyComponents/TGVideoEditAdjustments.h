@@ -13,6 +13,7 @@ typedef enum
     TGMediaVideoConversionPresetCompressedVeryHigh,
     TGMediaVideoConversionPresetAnimation,
     TGMediaVideoConversionPresetVideoMessage,
+    TGMediaVideoConversionPresetProfileLow,
     TGMediaVideoConversionPresetProfile,
     TGMediaVideoConversionPresetProfileHigh,
     TGMediaVideoConversionPresetProfileVeryHigh,

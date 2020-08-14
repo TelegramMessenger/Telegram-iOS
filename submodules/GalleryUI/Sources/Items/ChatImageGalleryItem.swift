@@ -60,7 +60,7 @@ final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
         }
     }
     
-    var image: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
+    func image(synchronous: Bool) -> (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize) {
         switch self.thumbnail {
             case let .image(imageReference):
                 if let representation = largestImageRepresentation(imageReference.media.representations) {
