@@ -15,6 +15,7 @@ objc_library(
     ]),
     includes = [
         "Public",
+        "Public/opus",
     ],
     deps = [
         ":opus_lib",
