@@ -358,6 +358,8 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     private var validLayout: (ContainerViewLayout, CGFloat)?
     private var disableActionsUntilTimestamp: Double = 0.0
     
+    private var displayedVersionOutdatedAlert: Bool = false
+    
     var isMuted: Bool = false {
         didSet {
             self.buttonsNode.isMuted = self.isMuted
@@ -417,9 +419,6 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         self.containerTransformationNode.clipsToBounds = true
         
         self.containerNode = ASDisplayNode()
-        if self.shouldStayHiddenUntilConnection {
-            self.containerNode.alpha = 0.0
-        }
         
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.subsequentUpdates]
@@ -564,7 +563,13 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         
         self.backButtonNode.addTarget(self, action: #selector(self.backPressed), forControlEvents: .touchUpInside)
         
-        if !shouldStayHiddenUntilConnection && call.isVideo && call.isOutgoing {
+        if shouldStayHiddenUntilConnection {
+            self.containerNode.alpha = 0.0
+            Queue.mainQueue().after(3.0, { [weak self] in
+                self?.containerNode.alpha = 1.0
+                self?.animateIn()
+            })
+        } else if call.isVideo && call.isOutgoing {
             self.containerNode.alpha = 0.0
             Queue.mainQueue().after(1.0, { [weak self] in
                 self?.containerNode.alpha = 1.0
@@ -881,8 +886,20 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                                 case .hungUp, .missed:
                                     statusValue = .text(string: self.presentationData.strings.Call_StatusEnded, displayLogo: false)
                             }
-                        case .error:
-                            statusValue = .text(string: self.presentationData.strings.Call_StatusFailed, displayLogo: false)
+                        case let .error(error):
+                            let text = self.presentationData.strings.Call_StatusFailed
+                            switch error {
+                            case .notSupportedByPeer:
+                                if !self.displayedVersionOutdatedAlert, let peer = self.peer {
+                                    self.displayedVersionOutdatedAlert = true
+                                    
+                                    self.present?(textAlertController(sharedContext: self.sharedContext, title: nil, text: self.presentationData.strings.Call_ParticipantVersionOutdatedError(peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)).0, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
+                                    })]))
+                                }
+                            default:
+                                break
+                            }
+                            statusValue = .text(string: text, displayLogo: false)
                     }
                 } else {
                     statusValue = .text(string: self.presentationData.strings.Call_StatusEnded, displayLogo: false)
@@ -1202,6 +1219,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         
         let previewVideoSide = interpolate(from: 350.0, to: 200.0, value: 1.0 - self.pictureInPictureTransitionFraction)
         var previewVideoSize = layout.size.aspectFitted(CGSize(width: previewVideoSide, height: previewVideoSide))
+        previewVideoSize = CGSize(width: 30.0, height: 45.0).aspectFitted(previewVideoSize)
         if let minimizedVideoNode = minimizedVideoNode {
             switch minimizedVideoNode.currentOrientation {
             case .rotation90, .rotation270:
@@ -1377,6 +1395,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         }
         
         if let expandedVideoNode = self.expandedVideoNode {
+            transition.updateAlpha(node: expandedVideoNode, alpha: 1.0)
             var expandedVideoTransition = transition
             if expandedVideoNode.frame.isEmpty || self.disableAnimationForExpandedVideoOnce {
                 expandedVideoTransition = .immediate
@@ -1424,6 +1443,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         
         
         if let minimizedVideoNode = self.minimizedVideoNode {
+            transition.updateAlpha(node: minimizedVideoNode, alpha: pipTransitionAlpha)
             var minimizedVideoTransition = transition
             var didAppear = false
             if minimizedVideoNode.frame.isEmpty {
