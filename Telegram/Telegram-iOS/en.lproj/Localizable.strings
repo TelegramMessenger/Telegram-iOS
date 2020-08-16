@@ -5735,3 +5735,5 @@ Any member of this group will be able to see messages in the channel.";
 "Call.AudioRouteMute" = "Mute Yourself";
 
 "AccessDenied.VideoCallCamera" = "Telegram needs access to your camera to make video calls.\n\nPlease go to Settings > Privacy > Camera and set Telegram to ON.";
+
+"Call.AccountIsLoggedOnCurrentDevice" = "Sorry, you can't call %@ because that account is logged in to Telegram on the device you're using for the call.";

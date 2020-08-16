@@ -228,15 +228,20 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         if let telegramDice = self.telegramDice {
-            let animationNode = ManagedDiceAnimationNode(context: item.context, emoji: telegramDice.emoji.strippedEmoji)
-            if !item.message.effectivelyIncoming(item.context.account.peerId) {
-                animationNode.success = { [weak self] in
-                    if let strongSelf = self, let item = strongSelf.item {
-                        item.controllerInteraction.animateDiceSuccess()
+            if telegramDice.emoji == "🎲" {
+                let animationNode = SlotMachineAnimationNode(context: item.context)
+                self.animationNode = animationNode
+            } else {
+                let animationNode = ManagedDiceAnimationNode(context: item.context, emoji: telegramDice.emoji.strippedEmoji)
+                if !item.message.effectivelyIncoming(item.context.account.peerId) {
+                    animationNode.success = { [weak self] in
+                        if let strongSelf = self, let item = strongSelf.item {
+                            item.controllerInteraction.animateDiceSuccess()
+                        }
                     }
                 }
+                self.animationNode = animationNode
             }
-            self.animationNode = animationNode
         } else {
             let animationNode: AnimatedStickerNode
             if let (node, parentNode, listNode, greetingCompletion)  = item.controllerInteraction.greetingStickerNode(), let greetingStickerNode = node as? AnimatedStickerNode {
@@ -290,7 +295,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         self.setupNode(item: item)
 
-        if let telegramDice = self.telegramDice, let diceNode = self.animationNode as? ManagedDiceAnimationNode {
+        if let telegramDice = self.telegramDice, let diceNode = self.animationNode as? SlotMachineAnimationNode {
+            if let value = telegramDice.value {
+                diceNode.setState(value == 0 ? .rolling : .value(value, true))
+            } else {
+                diceNode.setState(.rolling)
+            }
+        } else if let telegramDice = self.telegramDice, let diceNode = self.animationNode as? ManagedDiceAnimationNode {
             if let value = telegramDice.value {
                 diceNode.setState(value == 0 ? .rolling : .value(value, true))
             } else {

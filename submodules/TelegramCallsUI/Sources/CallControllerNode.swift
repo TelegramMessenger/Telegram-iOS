@@ -1523,9 +1523,9 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
             } else if let _ = self.keyPreviewNode {
                 self.backPressed()
             } else {
-                if let expandedVideoNode = self.expandedVideoNode, let minimizedVideoNode = self.minimizedVideoNode {
+                if self.hasVideoNodes {
                     let point = recognizer.location(in: recognizer.view)
-                    if minimizedVideoNode.frame.contains(point) {
+                    if let expandedVideoNode = self.expandedVideoNode, let minimizedVideoNode = self.minimizedVideoNode, minimizedVideoNode.frame.contains(point) {
                         if !self.areUserActionsDisabledNow() {
                             let copyView = minimizedVideoNode.view.snapshotView(afterScreenUpdates: false)
                             copyView?.frame = minimizedVideoNode.frame
