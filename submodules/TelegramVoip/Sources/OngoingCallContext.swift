@@ -8,19 +8,31 @@ import TelegramUIPreferences
 
 import TgVoip
 import TgVoipWebrtc
-//import TgVoipWebrtcCustom
 
-private func callConnectionDescription(_ connection: CallSessionConnection) -> OngoingCallConnectionDescription {
-    return OngoingCallConnectionDescription(connectionId: connection.id, ip: connection.ip, ipv6: connection.ipv6, port: connection.port, peerTag: connection.peerTag)
+private func callConnectionDescription(_ connection: CallSessionConnection) -> OngoingCallConnectionDescription? {
+    switch connection {
+    case let .reflector(reflector):
+        return OngoingCallConnectionDescription(connectionId: reflector.id, ip: reflector.ip, ipv6: reflector.ipv6, port: reflector.port, peerTag: reflector.peerTag)
+    case .webRtcReflector:
+        return nil
+    }
 }
 
-private func callConnectionDescriptionWebrtc(_ connection: CallSessionConnection) -> OngoingCallConnectionDescriptionWebrtc {
-    return OngoingCallConnectionDescriptionWebrtc(connectionId: connection.id, ip: connection.ip, ipv6: connection.ipv6, port: connection.port, peerTag: connection.peerTag)
+private func callConnectionDescriptionsWebrtc(_ connection: CallSessionConnection) -> [OngoingCallConnectionDescriptionWebrtc] {
+    switch connection {
+    case .reflector:
+        return []
+    case let .webRtcReflector(reflector):
+        var result: [OngoingCallConnectionDescriptionWebrtc] = []
+        if !reflector.ip.isEmpty {
+            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: reflector.hasStun, hasTurn: reflector.hasTurn, ip: reflector.ip, port: reflector.port, username: reflector.username, password: reflector.password))
+        }
+        if !reflector.ipv6.isEmpty {
+            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: reflector.hasStun, hasTurn: reflector.hasTurn, ip: reflector.ipv6, port: reflector.port, username: reflector.username, password: reflector.password))
+        }
+        return result
+    }
 }
-
-/*private func callConnectionDescriptionWebrtcCustom(_ connection: CallSessionConnection) -> OngoingCallConnectionDescriptionWebrtcCustom {
-    return OngoingCallConnectionDescriptionWebrtcCustom(connectionId: connection.id, ip: connection.ip, ipv6: connection.ipv6, port: connection.port, peerTag: connection.peerTag)
-}*/
 
 private let callLogsLimit = 20
 
@@ -103,20 +115,32 @@ public struct OngoingCallContextState: Equatable {
     
     public enum VideoState: Equatable {
         case notAvailable
-        case possible
-        case outgoingRequested
-        case incomingRequested
+        case inactive
         case active
+        case paused
     }
     
     public enum RemoteVideoState: Equatable {
         case inactive
         case active
+        case paused
+    }
+    
+    public enum RemoteAudioState: Equatable {
+        case active
+        case muted
+    }
+    
+    public enum RemoteBatteryLevel: Equatable {
+        case normal
+        case low
     }
     
     public let state: State
     public let videoState: VideoState
     public let remoteVideoState: RemoteVideoState
+    public let remoteAudioState: RemoteAudioState
+    public let remoteBatteryLevel: RemoteBatteryLevel
 }
 
 private final class OngoingCallThreadLocalContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueue, OngoingCallThreadLocalContextQueueWebrtc /*, OngoingCallThreadLocalContextQueueWebrtcCustom*/ {
@@ -245,9 +269,11 @@ private func ongoingDataSavingForTypeWebrtc(_ type: VoiceCallDataSaving) -> Ongo
 private protocol OngoingCallThreadLocalContextProtocol: class {
     func nativeSetNetworkType(_ type: NetworkType)
     func nativeSetIsMuted(_ value: Bool)
+    func nativeSetIsLowBatteryLevel(_ value: Bool)
     func nativeRequestVideo(_ capturer: OngoingCallVideoCapturer)
-    func nativeAcceptVideo(_ capturer: OngoingCallVideoCapturer)
+    func nativeDisableVideo()
     func nativeStop(_ completion: @escaping (String?, Int64, Int64, Int64, Int64) -> Void)
+    func nativeBeginTermination()
     func nativeDebugInfo() -> String
     func nativeVersion() -> String
     func nativeGetDerivedState() -> Data
@@ -270,14 +296,20 @@ extension OngoingCallThreadLocalContext: OngoingCallThreadLocalContextProtocol {
         self.stop(completion)
     }
     
+    func nativeBeginTermination() {
+    }
+    
     func nativeSetIsMuted(_ value: Bool) {
         self.setIsMuted(value)
+    }
+    
+    func nativeSetIsLowBatteryLevel(_ value: Bool) {
     }
     
     func nativeRequestVideo(_ capturer: OngoingCallVideoCapturer) {
     }
     
-    func nativeAcceptVideo(_ capturer: OngoingCallVideoCapturer) {
+    func nativeDisableVideo() {
     }
     
     func nativeSwitchVideoCamera() {
@@ -314,6 +346,14 @@ public final class OngoingCallVideoCapturer {
                     view: view,
                     setOnFirstFrameReceived: { [weak view] f in
                         view?.setOnFirstFrameReceived(f)
+                    },
+                    getOrientation: {
+                        return .rotation0
+                    },
+                    setOnOrientationUpdated: { _ in
+                    },
+                    setOnIsMirroredUpdated: { [weak view] f in
+                        view?.setOnIsMirroredUpdated(f)
                     }
                 ))
             } else {
@@ -336,16 +376,24 @@ extension OngoingCallThreadLocalContextWebrtc: OngoingCallThreadLocalContextProt
         self.stop(completion)
     }
     
+    func nativeBeginTermination() {
+        self.beginTermination()
+    }
+    
     func nativeSetIsMuted(_ value: Bool) {
         self.setIsMuted(value)
+    }
+    
+    func nativeSetIsLowBatteryLevel(_ value: Bool) {
+        self.setIsLowBatteryLevel(value)
     }
     
     func nativeRequestVideo(_ capturer: OngoingCallVideoCapturer) {
         self.requestVideo(capturer.impl)
     }
     
-    func nativeAcceptVideo(_ capturer: OngoingCallVideoCapturer) {
-        self.acceptVideo(capturer.impl)
+    func nativeDisableVideo() {
+        self.disableVideo()
     }
     
     func nativeDebugInfo() -> String {
@@ -395,16 +443,49 @@ private extension OngoingCallContextState.State {
     }
 }
 
+public enum OngoingCallVideoOrientation {
+    case rotation0
+    case rotation90
+    case rotation180
+    case rotation270
+}
+
+private extension OngoingCallVideoOrientation {
+    init(_ orientation: OngoingCallVideoOrientationWebrtc) {
+        switch orientation {
+        case .orientation0:
+            self = .rotation0
+        case .orientation90:
+            self = .rotation90
+        case .orientation180:
+            self = .rotation180
+        case .orientation270:
+            self = .rotation270
+        @unknown default:
+            self = .rotation0
+        }
+    }
+}
+
 public final class OngoingCallContextPresentationCallVideoView {
     public let view: UIView
-    public let setOnFirstFrameReceived: ((() -> Void)?) -> Void
+    public let setOnFirstFrameReceived: (((Float) -> Void)?) -> Void
+    public let getOrientation: () -> OngoingCallVideoOrientation
+    public let setOnOrientationUpdated: (((OngoingCallVideoOrientation) -> Void)?) -> Void
+    public let setOnIsMirroredUpdated: (((Bool) -> Void)?) -> Void
     
     public init(
         view: UIView,
-        setOnFirstFrameReceived: @escaping ((() -> Void)?) -> Void
+        setOnFirstFrameReceived: @escaping (((Float) -> Void)?) -> Void,
+        getOrientation: @escaping () -> OngoingCallVideoOrientation,
+        setOnOrientationUpdated: @escaping (((OngoingCallVideoOrientation) -> Void)?) -> Void,
+        setOnIsMirroredUpdated: @escaping (((Bool) -> Void)?) -> Void
     ) {
         self.view = view
         self.setOnFirstFrameReceived = setOnFirstFrameReceived
+        self.getOrientation = getOrientation
+        self.setOnOrientationUpdated = setOnOrientationUpdated
+        self.setOnIsMirroredUpdated = setOnIsMirroredUpdated
     }
 }
 
@@ -458,19 +539,19 @@ public final class OngoingCallContext {
     
     public static var maxLayer: Int32 {
         return OngoingCallThreadLocalContext.maxLayer()
-        //return max(OngoingCallThreadLocalContext.maxLayer(), OngoingCallThreadLocalContextWebrtc.maxLayer())
     }
     
-    public static func versions(includeExperimental: Bool) -> [String] {
-        var result: [String] = [OngoingCallThreadLocalContext.version()]
+    public static func versions(includeExperimental: Bool, includeReference: Bool) -> [(version: String, supportsVideo: Bool)] {
+        var result: [(version: String, supportsVideo: Bool)] = [(OngoingCallThreadLocalContext.version(), false)]
         if includeExperimental {
-            result.append(OngoingCallThreadLocalContextWebrtc.version())
-            //result.append(OngoingCallThreadLocalContextWebrtcCustom.version())
+            result.append(contentsOf: OngoingCallThreadLocalContextWebrtc.versions(withIncludeReference: includeReference).map { version -> (version: String, supportsVideo: Bool) in
+                return (version, true)
+            })
         }
         return result
     }
 
-    public init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, auxiliaryServers: [AuxiliaryServer], initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, key: Data, isOutgoing: Bool, video: OngoingCallVideoCapturer?, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, allowP2P: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String) {
+    public init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, key: Data, isOutgoing: Bool, video: OngoingCallVideoCapturer?, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, allowP2P: Bool, enableHighBitrateVideoCalls: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String) {
         let _ = setupLogs
         OngoingCallThreadLocalContext.applyServerConfig(serializedData)
         
@@ -489,7 +570,7 @@ public final class OngoingCallContext {
         |> take(1)
         |> deliverOn(queue)).start(next: { [weak self] _ in
             if let strongSelf = self {
-                if version == OngoingCallThreadLocalContextWebrtc.version() {
+                if OngoingCallThreadLocalContextWebrtc.versions(withIncludeReference: true).contains(version) {
                     var voipProxyServer: VoipProxyServerWebrtc?
                     if let proxyServer = proxyServer {
                         switch proxyServer.connection {
@@ -499,33 +580,29 @@ public final class OngoingCallContext {
                             break
                         }
                     }
-                    var rtcServers: [VoipRtcServerWebrtc] = []
-                    for server in auxiliaryServers {
-                        switch server.connection {
-                        case .stun:
-                            rtcServers.append(VoipRtcServerWebrtc(
-                                host: server.host,
-                                port: Int32(clamping: server.port),
-                                username: "",
-                                password: "",
-                                isTurn: false
-                            ))
-                        case let .turn(username, password):
-                            rtcServers.append(VoipRtcServerWebrtc(
-                                host: server.host,
-                                port: Int32(clamping: server.port),
-                                username: username,
-                                password: password,
-                                isTurn: true
-                            ))
+                    
+                    let screenSize = UIScreen.main.bounds.size
+                    let portraitSize = CGSize(width: min(screenSize.width, screenSize.height), height: max(screenSize.width, screenSize.height))
+                    let preferredAspectRatio = portraitSize.width / portraitSize.height
+                    
+                    
+                    let unfilteredConnections = [connections.primary] + connections.alternatives
+                    var processedConnections: [CallSessionConnection] = []
+                    var filteredConnections: [OngoingCallConnectionDescriptionWebrtc] = []
+                    for connection in unfilteredConnections {
+                        if processedConnections.contains(connection) {
+                            continue
                         }
+                        processedConnections.append(connection)
+                        filteredConnections.append(contentsOf: callConnectionDescriptionsWebrtc(connection))
                     }
-                    let context = OngoingCallThreadLocalContextWebrtc(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, rtcServers: rtcServers, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescriptionWebrtc(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescriptionWebrtc), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath, sendSignalingData: { [weak callSessionManager] data in
+                    
+                    let context = OngoingCallThreadLocalContextWebrtc(version: version, queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, connections: filteredConnections, maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath, sendSignalingData: { [weak callSessionManager] data in
                         callSessionManager?.sendSignalingData(internalId: internalId, data: data)
-                    }, videoCapturer: video?.impl)
+                    }, videoCapturer: video?.impl, preferredAspectRatio: Float(preferredAspectRatio), enableHighBitrateVideoCalls: enableHighBitrateVideoCalls)
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
-                    context.stateChanged = { [weak callSessionManager] state, videoState, remoteVideoState in
+                    context.stateChanged = { [weak callSessionManager] state, videoState, remoteVideoState, remoteAudioState, remoteBatteryLevel, _ in
                         queue.async {
                             guard let strongSelf = self else {
                                 return
@@ -533,14 +610,12 @@ public final class OngoingCallContext {
                             let mappedState = OngoingCallContextState.State(state)
                             let mappedVideoState: OngoingCallContextState.VideoState
                             switch videoState {
-                            case .possible:
-                                mappedVideoState = .possible
-                            case .incomingRequested:
-                                mappedVideoState = .incomingRequested
-                            case .outgoingRequested:
-                                mappedVideoState = .outgoingRequested
+                            case .inactive:
+                                mappedVideoState = .inactive
                             case .active:
                                 mappedVideoState = .active
+                            case .paused:
+                                mappedVideoState = .paused
                             @unknown default:
                                 mappedVideoState = .notAvailable
                             }
@@ -550,16 +625,37 @@ public final class OngoingCallContext {
                                 mappedRemoteVideoState = .inactive
                             case .active:
                                 mappedRemoteVideoState = .active
+                            case .paused:
+                                mappedRemoteVideoState = .paused
                             @unknown default:
                                 mappedRemoteVideoState = .inactive
+                            }
+                            let mappedRemoteAudioState: OngoingCallContextState.RemoteAudioState
+                            switch remoteAudioState {
+                            case .active:
+                                mappedRemoteAudioState = .active
+                            case .muted:
+                                mappedRemoteAudioState = .muted
+                            @unknown default:
+                                mappedRemoteAudioState = .active
+                            }
+                            let mappedRemoteBatteryLevel: OngoingCallContextState.RemoteBatteryLevel
+                            switch remoteBatteryLevel {
+                            case .normal:
+                                mappedRemoteBatteryLevel = .normal
+                            case .low:
+                                mappedRemoteBatteryLevel = .low
+                            @unknown default:
+                                mappedRemoteBatteryLevel = .normal
                             }
                             if case .active = mappedVideoState, !strongSelf.didReportCallAsVideo {
                                 strongSelf.didReportCallAsVideo = true
                                 callSessionManager?.updateCallType(internalId: internalId, type: .video)
                             }
-                            strongSelf.contextState.set(.single(OngoingCallContextState(state: mappedState, videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState)))
+                            strongSelf.contextState.set(.single(OngoingCallContextState(state: mappedState, videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState, remoteAudioState: mappedRemoteAudioState, remoteBatteryLevel: mappedRemoteBatteryLevel)))
                         }
                     }
+                    strongSelf.receptionPromise.set(.single(4))
                     context.signalBarsChanged = { signalBars in
                         self?.receptionPromise.set(.single(signalBars))
                     }
@@ -580,11 +676,11 @@ public final class OngoingCallContext {
                             break
                         }
                     }
-                    let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForType(initialNetworkType), dataSaving: ongoingDataSavingForType(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescription(connections.primary), alternativeConnections: connections.alternatives.map(callConnectionDescription), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath)
+                    let context = OngoingCallThreadLocalContext(queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForType(initialNetworkType), dataSaving: ongoingDataSavingForType(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, primaryConnection: callConnectionDescription(connections.primary)!, alternativeConnections: connections.alternatives.compactMap(callConnectionDescription), maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath)
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
                     context.stateChanged = { state in
-                        self?.contextState.set(.single(OngoingCallContextState(state: OngoingCallContextState.State(state), videoState: .notAvailable, remoteVideoState: .inactive)))
+                        self?.contextState.set(.single(OngoingCallContextState(state: OngoingCallContextState.State(state), videoState: .notAvailable, remoteVideoState: .inactive, remoteAudioState: .active, remoteBatteryLevel: .normal)))
                     }
                     context.signalBarsChanged = { signalBars in
                         self?.receptionPromise.set(.single(signalBars))
@@ -621,7 +717,7 @@ public final class OngoingCallContext {
         self.audioSessionDisposable.dispose()
         self.networkTypeDisposable?.dispose()
     }
-    
+        
     private func withContext(_ f: @escaping (OngoingCallThreadLocalContextProtocol) -> Void) {
         self.queue.async {
             if let contextRef = self.contextRef {
@@ -631,11 +727,29 @@ public final class OngoingCallContext {
         }
     }
     
+    private func withContextThenDeallocate(_ f: @escaping (OngoingCallThreadLocalContextProtocol) -> Void) {
+        self.queue.async {
+            if let contextRef = self.contextRef {
+                let context = contextRef.takeUnretainedValue()
+                f(context.context)
+                
+                self.contextRef?.release()
+                self.contextRef = nil
+            }
+        }
+    }
+    
+    public func beginTermination() {
+        self.withContext { context in
+            context.nativeBeginTermination()
+        }
+    }
+    
     public func stop(callId: CallId? = nil, sendDebugLogs: Bool = false, debugLogValue: Promise<String?>) {
         let account = self.account
         let logPath = self.logPath
         
-        self.withContext { context in
+        self.withContextThenDeallocate { context in
             context.nativeStop { debugLog, bytesSentWifi, bytesReceivedWifi, bytesSentMobile, bytesReceivedMobile in
                 debugLogValue.set(.single(debugLog))
                 let delta = NetworkUsageStatsConnectionsEntry(
@@ -674,15 +788,21 @@ public final class OngoingCallContext {
         }
     }
     
+    public func setIsLowBatteryLevel(_ value: Bool) {
+        self.withContext { context in
+            context.nativeSetIsLowBatteryLevel(value)
+        }
+    }
+    
     public func requestVideo(_ capturer: OngoingCallVideoCapturer) {
         self.withContext { context in
             context.nativeRequestVideo(capturer)
         }
     }
     
-    public func acceptVideo(_ capturer: OngoingCallVideoCapturer) {
+    public func disableVideo() {
         self.withContext { context in
-            context.nativeAcceptVideo(capturer)
+            context.nativeDisableVideo()
         }
     }
     
@@ -709,6 +829,23 @@ public final class OngoingCallContext {
                             view: view,
                             setOnFirstFrameReceived: { [weak view] f in
                                 view?.setOnFirstFrameReceived(f)
+                            },
+                            getOrientation: { [weak view] in
+                                if let view = view {
+                                    return OngoingCallVideoOrientation(view.orientation)
+                                } else {
+                                    return .rotation0
+                                }
+                            },
+                            setOnOrientationUpdated: { [weak view] f in
+                                view?.setOnOrientationUpdated { value in
+                                    f?(OngoingCallVideoOrientation(value))
+                                }
+                            },
+                            setOnIsMirroredUpdated: { [weak view] f in
+                                view?.setOnIsMirroredUpdated { value in
+                                    f?(value)
+                                }
                             }
                         ))
                     } else {

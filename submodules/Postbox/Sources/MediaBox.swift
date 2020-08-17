@@ -239,6 +239,11 @@ public final class MediaBox {
         return "\(self.basePath)/\(cacheString)/\(fileNameForId(id)):\(representation.uniqueId)"
     }
     
+    public func shortLivedResourceCachePathPrefix(_ id: MediaResourceId) -> String {
+        let cacheString = "short-cache"
+        return "\(self.basePath)/\(cacheString)/\(fileNameForId(id))"
+    }
+    
     public func storeResourceData(_ id: MediaResourceId, data: Data, synchronous: Bool = false) {
         let begin = {
             let paths = self.storePathsForId(id)
@@ -593,9 +598,39 @@ public final class MediaBox {
         }
     }
     
-    public func resourceData(_ resource: MediaResource, size: Int, in range: Range<Int>, mode: ResourceDataRangeMode = .complete) -> Signal<(Data, Bool), NoError> {
+    public func resourceData(_ resource: MediaResource, size: Int, in range: Range<Int>, mode: ResourceDataRangeMode = .complete, notifyAboutIncomplete: Bool = false, attemptSynchronously: Bool = false) -> Signal<(Data, Bool), NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
+            
+            if attemptSynchronously {
+                let paths = self.storePathsForId(resource.id)
+                
+                if let completeSize = fileSize(paths.complete) {
+                    self.timeBasedCleanup.touch(paths: [
+                        paths.complete
+                    ])
+                    
+                    if let file = ManagedFile(queue: nil, path: paths.complete, mode: .read) {
+                        let clippedLowerBound = min(completeSize, max(0, range.lowerBound))
+                        let clippedUpperBound = min(completeSize, max(0, range.upperBound))
+                        if clippedLowerBound < clippedUpperBound {
+                            file.seek(position: Int64(clippedLowerBound))
+                            let data = file.readData(count: clippedUpperBound)
+                            subscriber.putNext((data, true))
+                        } else {
+                            subscriber.putNext((Data(), isComplete: true))
+                        }
+                        subscriber.putCompletion()
+                        return EmptyDisposable
+                    } else {
+                        if let data = MediaBoxPartialFile.extractPartialData(path: paths.partial, metaPath: paths.partial + ".meta", range: Int32(range.lowerBound) ..< Int32(range.upperBound)) {
+                            subscriber.putNext((data, true))
+                            subscriber.putCompletion()
+                            return EmptyDisposable
+                        }
+                    }
+                }
+            }
             
             self.dataQueue.async {
                 guard let (fileContext, releaseContext) = self.fileContext(for: resource) else {
@@ -608,24 +643,25 @@ public final class MediaBox {
                 let dataDisposable = fileContext.data(range: range, waitUntilAfterInitialFetch: false, next: { result in
                     if let file = ManagedFile(queue: self.dataQueue, path: result.path, mode: .read), let fileSize = file.getSize() {
                         if result.complete {
-                            if result.offset + result.size <= fileSize {
-                                if fileSize >= result.offset + result.size {
-                                    file.seek(position: Int64(result.offset))
-                                    let resultData = file.readData(count: result.size)
-                                    subscriber.putNext((resultData, true))
-                                    subscriber.putCompletion()
-                                } else {
-                                    assertionFailure("data.count >= result.offset + result.size")
-                                }
+                            let clippedLowerBound = min(result.offset, fileSize)
+                            let clippedUpperBound = min(result.offset + result.size, fileSize)
+                            if clippedUpperBound == clippedLowerBound {
+                                subscriber.putNext((Data(), true))
+                                subscriber.putCompletion()
+                            } else if clippedUpperBound <= fileSize {
+                                file.seek(position: Int64(clippedLowerBound))
+                                let resultData = file.readData(count: clippedUpperBound - clippedLowerBound)
+                                subscriber.putNext((resultData, true))
+                                subscriber.putCompletion()
                             } else {
                                 assertionFailure()
                             }
                         } else {
                             switch mode {
-                                case .complete:
-                                    break
-                                case .incremental:
-                                    break
+                                case .complete, .incremental:
+                                    if notifyAboutIncomplete {
+                                        subscriber.putNext((Data(), false))
+                                    }
                                 case .partial:
                                     subscriber.putNext((Data(), false))
                             }
@@ -1105,4 +1141,22 @@ public final class MediaBox {
             return EmptyDisposable
         }
     }
+    
+
+    
+    public func allFileContexts() -> Signal<[(partial: String, complete: String)], NoError> {
+        return Signal { subscriber in
+            self.dataQueue.async {
+                var result: [(partial: String, complete: String)] = []
+                for (id, _) in self.fileContexts {
+                    let paths = self.storePathsForId(id.id)
+                    result.append((partial: paths.partial, complete: paths.complete))
+                }
+                subscriber.putNext(result)
+                subscriber.putCompletion()
+            }
+            return EmptyDisposable
+        }
+    }
+
 }

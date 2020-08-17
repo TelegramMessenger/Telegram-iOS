@@ -100,7 +100,8 @@ func paneGifSearchForQuery(account: Account, query: String, offset: String?, inc
                             } else {
                                 previews.append(TelegramMediaImageRepresentation(
                                     dimensions: dimensions,
-                                    resource: thumbnailResource
+                                    resource: thumbnailResource,
+                                    progressiveSizes: []
                                 ))
                             }
                         }

@@ -181,7 +181,11 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                 if withDirections {
                     return .openUrl(url: "comgooglemaps-x-callback://?daddr=\(coordinates)&directionsmode=driving&x-success=telegram://?resume=true&x-source=Telegram")
                 } else {
-                    return .openUrl(url: "comgooglemaps-x-callback://?center=\(coordinates)&q=\(coordinates)&x-success=telegram://?resume=true&x-source=Telegram")
+                    if let venue = location.venue, let venueId = venue.id, let provider = venue.provider, provider == "gplaces" {
+                        return .openUrl(url: "https://www.google.com/maps/search/?api=1&query=\(venue.address ?? "")&query_place_id=\(venueId)")
+                    } else {
+                        return .openUrl(url: "comgooglemaps-x-callback://?center=\(coordinates)&q=\(coordinates)&x-success=telegram://?resume=true&x-source=Telegram")
+                    }
                 }
             }))
         

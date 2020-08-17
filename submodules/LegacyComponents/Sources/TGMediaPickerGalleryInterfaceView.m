@@ -167,13 +167,14 @@
         if (recipientName.length > 0)
         {
             _arrowView = [[UIImageView alloc] initWithImage: TGComponentsImageNamed(@"PhotoPickerArrow")];
-            _arrowView.alpha = 0.45f;
+            _arrowView.alpha = 0.6f;
             [_wrapperView addSubview:_arrowView];
             
             _recipientLabel = [[UILabel alloc] init];
+            _recipientLabel.alpha = 0.6;
             _recipientLabel.backgroundColor = [UIColor clearColor];
             _recipientLabel.font = TGBoldSystemFontOfSize(13.0f);
-            _recipientLabel.textColor = UIColorRGBA(0xffffff, 0.45f);
+            _recipientLabel.textColor = UIColorRGB(0xffffff);
             _recipientLabel.text = recipientName;
             _recipientLabel.userInteractionEnabled = false;
             [_recipientLabel sizeToFit];
@@ -510,13 +511,7 @@
     UIEdgeInsets screenEdges = [self screenEdges];
   
     __weak TGMediaPickerGalleryInterfaceView *weakSelf = self;
-    
-    if ([itemView.headerView isKindOfClass:[TGMediaPickerScrubberHeaderView class]])
-    {
-        TGMediaPickerScrubberHeaderView *headerView = (TGMediaPickerScrubberHeaderView *)itemView.headerView;
-        [headerView.scrubberView setRecipientName:_recipientLabel.text];
-    }
-    
+        
     [self _layoutRecipientLabelForOrientation:[self interfaceOrientation] screenEdges:screenEdges hasHeaderView:(itemView.headerView != nil)];
     
     if (_selectionContext != nil)
@@ -1039,8 +1034,8 @@
         {
             _checkButton.alpha = alpha;
             _muteButton.alpha = alpha;
-            _arrowView.alpha = alpha * 0.45f;
-            _recipientLabel.alpha = alpha;
+            _arrowView.alpha = alpha * 0.6f;
+            _recipientLabel.alpha = alpha * 0.6;
         } completion:^(BOOL finished)
         {
             if (finished)
@@ -1070,8 +1065,8 @@
         _muteButton.alpha = alpha;
         _muteButton.userInteractionEnabled = !hidden;
         
-        _arrowView.alpha = alpha * 0.45f;
-        _recipientLabel.alpha = alpha;
+        _arrowView.alpha = alpha * 0.6f;
+        _recipientLabel.alpha = alpha * 0.6;
     }
     
     if (hidden)
@@ -1095,7 +1090,7 @@
         {
             _checkButton.alpha = alpha;
             _muteButton.alpha = alpha;
-            _arrowView.alpha = alpha * 0.45f;
+            _arrowView.alpha = alpha * 0.6;
             _recipientLabel.alpha = alpha;
             _portraitToolbarView.alpha = alpha;
             _landscapeToolbarView.alpha = alpha;
@@ -1132,7 +1127,7 @@
         _muteButton.alpha = alpha;
         _muteButton.userInteractionEnabled = !hidden;
         
-        _arrowView.alpha = alpha * 0.45f;
+        _arrowView.alpha = alpha * 0.6;
         _recipientLabel.alpha = alpha;
         
         _portraitToolbarView.alpha = alpha;
@@ -1391,6 +1386,8 @@
     screenEdges.left += _safeAreaInset.left;
     screenEdges.right -= _safeAreaInset.right;
     
+    CGFloat panelInset = 0.0f;
+    
     switch (orientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
@@ -1402,12 +1399,9 @@
             break;
             
         default:
-            frame = CGRectMake(screenEdges.left + 5, screenEdges.top + 6, _muteButton.frame.size.width, _muteButton.frame.size.height);
+            frame = CGRectMake(screenEdges.left + 5, screenEdges.bottom - TGPhotoEditorToolbarSize - [_captionMixin.inputPanel baseHeight] - 45 - _safeAreaInset.bottom - panelInset - (hasHeaderView ? 64.0 : 0.0), _muteButton.frame.size.width, _muteButton.frame.size.height);
             break;
     }
-    
-    if (hasHeaderView)
-        frame.origin.y += 64;
     
     return frame;
 }
@@ -1462,9 +1456,6 @@
             break;
     }
     
-    if (hasHeaderView)
-        frame.origin.y += 64;
-    
     return frame;
 }
 
@@ -1491,7 +1482,7 @@
             break;
     
         default:
-             frame = CGRectMake(screenEdges.right - 46 - _safeAreaInset.right - buttonInset, screenEdges.bottom - TGPhotoEditorToolbarSize - [_captionMixin.inputPanel baseHeight] - 45 - _safeAreaInset.bottom - panelInset, 44, 44);
+             frame = CGRectMake(screenEdges.right - 46 - _safeAreaInset.right - buttonInset, screenEdges.bottom - TGPhotoEditorToolbarSize - [_captionMixin.inputPanel baseHeight] - 45 - _safeAreaInset.bottom - panelInset - (hasHeaderView ? 64.0 : 0.0), 44, 44);
             break;
     }
     
@@ -1526,9 +1517,6 @@
     
     _arrowView.frame = frame;
     _recipientLabel.frame = CGRectMake(CGRectGetMaxX(_arrowView.frame) + 6.0f, _arrowView.frame.origin.y - 2.0f, recipientWidth, _recipientLabel.frame.size.height);
-    
-    _arrowView.hidden = hasHeaderView;
-    _recipientLabel.hidden = hasHeaderView;
 }
 
 - (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)__unused duration
@@ -1670,15 +1658,14 @@
         {
             [UIView performWithoutAnimation:^
             {
-                _photoCounterButton.frame = CGRectMake(screenEdges.right - 56 - _safeAreaInset.right, screenEdges.bottom - TGPhotoEditorToolbarSize - [_captionMixin.inputPanel baseHeight] - 40 - _safeAreaInset.bottom, 64, 38);
+                _photoCounterButton.frame = CGRectMake(screenEdges.right - 56 - _safeAreaInset.right, screenEdges.bottom - TGPhotoEditorToolbarSize - [_captionMixin.inputPanel baseHeight] - 40 - _safeAreaInset.bottom - (hasHeaderView ? 64.0 : 0.0), 64, 38);
                 
-                _selectedPhotosView.frame = CGRectMake(screenEdges.left + 4, screenEdges.bottom - TGPhotoEditorToolbarSize - [_captionMixin.inputPanel baseHeight] - photosViewSize - 54 - _safeAreaInset.bottom, self.frame.size.width - 4 * 2 - _safeAreaInset.right, photosViewSize);
+                _selectedPhotosView.frame = CGRectMake(screenEdges.left + 4, screenEdges.bottom - TGPhotoEditorToolbarSize - [_captionMixin.inputPanel baseHeight] - photosViewSize - 54 - _safeAreaInset.bottom - (hasHeaderView ? 64.0 : 0.0), self.frame.size.width - 4 * 2 - _safeAreaInset.right, photosViewSize);
             }];
             
             _landscapeToolbarView.frame = CGRectMake(_landscapeToolbarView.frame.origin.x, screenEdges.top, TGPhotoEditorToolbarSize, self.frame.size.height);
             
-            CGFloat topInset = _safeAreaInset.top > FLT_EPSILON ? _safeAreaInset.top - 14.0 : 0.0f;
-            _headerWrapperView.frame = CGRectMake(screenEdges.left, screenEdges.top + topInset, self.frame.size.width, 64);
+            _headerWrapperView.frame = CGRectMake(screenEdges.left, _portraitToolbarView.frame.origin.y - 64.0 - [_captionMixin.inputPanel baseHeight], self.frame.size.width, 64.0);
         }
             break;
     }

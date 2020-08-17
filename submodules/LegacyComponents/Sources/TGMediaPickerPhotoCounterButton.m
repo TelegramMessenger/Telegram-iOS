@@ -48,7 +48,7 @@ const CGFloat TGPhotoCounterButtonMaskFade = 18;
         {
             UIGraphicsBeginImageContextWithOptions(CGSizeMake(38.0f, 38.0f), false, 0.0f);
             CGContextRef context = UIGraphicsGetCurrentContext();
-            CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.7f).CGColor);
+            CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.3f).CGColor);
             
             CGContextFillEllipseInRect(context, CGRectMake(3.5f, 1.0f, 31.0f, 31.0f));
             

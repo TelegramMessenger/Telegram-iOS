@@ -1196,8 +1196,40 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     TGPhotoPaintStickerEntity *entity = [[TGPhotoPaintStickerEntity alloc] initWithDocument:document baseSize:[self _stickerBaseSizeForCurrentPainting] animated:animated];
     [self _setStickerEntityPosition:entity];
     
+    bool hasStickers = false;
+    for (TGPhotoPaintEntityView *view in _entitiesContainerView.subviews) {
+        if ([view isKindOfClass:[TGPhotoStickerEntityView class]]) {
+            hasStickers = true;
+            break;
+        }
+    }
+    
     TGPhotoStickerEntityView *stickerView = (TGPhotoStickerEntityView *)[_entitiesContainerView createEntityViewWithEntity:entity];
     [self _commonEntityViewSetup:stickerView];
+    
+    __weak TGPhotoPaintController *weakSelf = self;
+    __weak TGPhotoStickerEntityView *weakStickerView = stickerView;
+    stickerView.started = ^(double duration) {
+        __strong TGPhotoPaintController *strongSelf = weakSelf;
+        if (strongSelf != nil) {
+            TGPhotoEditorController *editorController = (TGPhotoEditorController *)self.parentViewController;
+            if (![editorController isKindOfClass:[TGPhotoEditorController class]])
+                return;
+            
+            if (!hasStickers) {
+                [editorController setMinimalVideoDuration:duration];
+            }
+            
+            NSTimeInterval currentTime = editorController.currentTime;
+            __strong TGPhotoStickerEntityView *strongStickerView = weakStickerView;
+            if (strongStickerView != nil) {
+                if (!isnan(currentTime)) {
+                    [strongStickerView seekTo:currentTime];
+                    [strongStickerView play];
+                }
+            }
+        }
+    };
     
     [self selectEntityView:stickerView];
     _entitySelectionView.alpha = 0.0f;

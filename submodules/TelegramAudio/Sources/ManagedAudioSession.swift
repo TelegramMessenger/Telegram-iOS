@@ -8,6 +8,7 @@ public enum ManagedAudioSessionType: Equatable {
     case playWithPossiblePortOverride
     case record(speaker: Bool)
     case voiceCall
+    case videoCall
     
     var isPlay: Bool {
         switch self {
@@ -23,7 +24,7 @@ private func nativeCategoryForType(_ type: ManagedAudioSessionType, headphones: 
     switch type {
     case .play:
         return .playback
-    case .record, .voiceCall:
+    case .record, .voiceCall, .videoCall:
         return .playAndRecord
     case .playWithPossiblePortOverride:
         if headphones {
@@ -244,6 +245,22 @@ public final class ManagedAudioSession {
         
         if let availableInputs = audioSession.availableInputs {
             var hasHeadphones = false
+            var hasBluetoothHeadphones = false
+            
+            var headphonesAreActive = false
+            loop: for currentOutput in audioSession.currentRoute.outputs {
+                switch currentOutput.portType {
+                case .headphones, .bluetoothA2DP, .bluetoothHFP:
+                    headphonesAreActive = true
+                    hasHeadphones = true
+                    hasBluetoothHeadphones = [.bluetoothA2DP, .bluetoothHFP].contains(currentOutput.portType)
+                    activeOutput = .headphones
+                    break loop
+                default:
+                    break
+                }
+            }
+            
             for input in availableInputs {
                 var isActive = false
                 for currentInput in audioSession.currentRoute.inputs {
@@ -253,7 +270,7 @@ public final class ManagedAudioSession {
                 }
                 
                 if input.portType == .builtInMic {
-                    if isActive {
+                    if isActive && !headphonesAreActive {
                         activeOutput = .builtin
                         inner: for currentOutput in audioSession.currentRoute.outputs {
                             if currentOutput.portType == .builtInSpeaker {
@@ -282,7 +299,7 @@ public final class ManagedAudioSession {
                 availableOutputs.insert(.speaker, at: 0)
             }
             
-            if hasHeadphones {
+            if hasHeadphones && !hasBluetoothHeadphones {
                 availableOutputs.insert(.headphones, at: 0)
             }
             availableOutputs.insert(.builtin, at: 0)
@@ -658,15 +675,24 @@ public final class ManagedAudioSession {
                                 options.insert(.allowBluetooth)
                             }
                         }
-                    case .record, .voiceCall:
+                    case .record, .voiceCall, .videoCall:
                         options.insert(.allowBluetooth)
                 }
                 print("ManagedAudioSession setting active true")
+                let mode: AVAudioSession.Mode
+                   switch type {
+                       case .voiceCall:
+                           mode = .voiceChat
+                       case .videoCall:
+                           mode = .videoChat
+                       default:
+                           mode = .default
+                   }
                 if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
-                    try AVAudioSession.sharedInstance().setCategory(nativeCategory, mode: type == .voiceCall ? .voiceChat : .default, policy: .default, options: options)
+                    try AVAudioSession.sharedInstance().setCategory(nativeCategory, mode: mode, policy: .default, options: options)
                 } else {
                     AVAudioSession.sharedInstance().perform(NSSelectorFromString("setCategory:error:"), with: nativeCategory)
-                    try AVAudioSession.sharedInstance().setMode(type == .voiceCall ? .voiceChat : .default)
+                    try AVAudioSession.sharedInstance().setMode(mode)
                 }
             } catch let error {
                 print("ManagedAudioSession setup error \(error)")
@@ -739,13 +765,28 @@ public final class ManagedAudioSession {
                 case .voiceCall, .playWithPossiblePortOverride, .record(true):
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
                     if let routes = AVAudioSession.sharedInstance().availableInputs {
-                        for route in routes {
-                            if route.portType == .builtInMic {
-                                if case .record = updatedType, self.isHeadsetPluggedInValue {
-                                } else {
+                        var alreadySet = false
+                        if self.isHeadsetPluggedInValue {
+                            loop: for route in routes {
+                                switch route.portType {
+                                case .headphones, .bluetoothA2DP, .bluetoothHFP:
                                     let _ = try? AVAudioSession.sharedInstance().setPreferredInput(route)
+                                    alreadySet = true
+                                    break loop
+                                default:
+                                    break
                                 }
-                                break
+                            }
+                        }
+                        if !alreadySet {
+                            for route in routes {
+                                if route.portType == .builtInMic {
+                                    if case .record = updatedType, self.isHeadsetPluggedInValue {
+                                    } else {
+                                        let _ = try? AVAudioSession.sharedInstance().setPreferredInput(route)
+                                    }
+                                    break
+                                }
                             }
                         }
                     }

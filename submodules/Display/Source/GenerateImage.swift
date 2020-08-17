@@ -383,6 +383,27 @@ public func generateGradientTintedImage(image: UIImage?, colors: [UIColor]) -> U
     return tintedImage
 }
 
+public func generateGradientImage(size: CGSize, colors: [UIColor], locations: [CGFloat]) -> UIImage? {
+    guard colors.count == locations.count else {
+        return nil
+    }
+    UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
+    if let context = UIGraphicsGetCurrentContext() {
+        let gradientColors = colors.map { $0.cgColor } as CFArray
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        
+        var locations = locations
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+        
+        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+    }
+    
+    let image = UIGraphicsGetImageFromCurrentImageContext()!
+    UIGraphicsEndImageContext()
+    
+    return image
+}
+
 public func generateScaledImage(image: UIImage?, size: CGSize, opaque: Bool = true, scale: CGFloat? = nil) -> UIImage? {
     guard let image = image else {
         return nil

@@ -201,9 +201,25 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                 if let discardReason = discardReason {
                                     switch discardReason {
                                         case .busy, .disconnect:
-                                            messageText = strings.Notification_CallCanceled
+                                            if isVideo {
+                                                messageText = strings.Notification_VideoCallCanceled
+                                            } else {
+                                                messageText = strings.Notification_CallCanceled
+                                            }
                                         case .missed:
-                                            messageText = incoming ? strings.Notification_CallMissed : strings.Notification_CallCanceled
+                                            if incoming {
+                                                if isVideo {
+                                                    messageText = strings.Notification_VideoCallMissed
+                                                } else {
+                                                    messageText = strings.Notification_CallMissed
+                                                }
+                                            } else {
+                                                if isVideo {
+                                                    messageText = strings.Notification_VideoCallCanceled
+                                                } else {
+                                                    messageText = strings.Notification_CallCanceled
+                                                }
+                                            }
                                         case .hangup:
                                             break
                                     }

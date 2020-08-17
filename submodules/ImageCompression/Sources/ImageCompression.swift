@@ -1,8 +1,19 @@
 import Foundation
 import AVFoundation
 import UIKit
+import MozjpegBinding
+
+public func extractImageExtraScans(_ data: Data) -> [Int] {
+    return extractJPEGDataScans(data).map { item in
+        return item.intValue
+    }
+}
 
 public func compressImageToJPEG(_ image: UIImage, quality: Float) -> Data? {
+    if let result = compressJPEGData(image) {
+        return result
+    }
+    
     let data = NSMutableData()
     guard let destination = CGImageDestinationCreateWithData(data as CFMutableData, "public.jpeg" as CFString, 1, nil) else {
         return nil
@@ -45,4 +56,8 @@ public func compressImage(_ image: UIImage, quality: Float) -> Data? {
     }
     
     return data as Data
+}
+
+public func compressImageMiniThumbnail(_ image: UIImage) -> Data? {
+    return compressMiniThumbnail(image)
 }

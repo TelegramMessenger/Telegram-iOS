@@ -215,7 +215,9 @@
 "PUSH_AUTH_REGION" = "New login|from unrecognized device %1$@, location: %2$@";
 
 "PUSH_PHONE_CALL_REQUEST" = "%1$@|is calling you!";
+"PUSH_VIDEO_CALL_REQUEST" = "%1$@|is calling you!";
 "PUSH_PHONE_CALL_MISSED" = "%1$@|You missed a call";
+"PUSH_VIDEO_CALL_MISSED" = "%1$@|You missed a video call";
 
 "PUSH_MESSAGE_GAME_SCORE" = "%1$@ scored %3$@ in game %2$@";
 "PUSH_MESSAGE_VIDEOS" = "%1$@ sent you %2$@ videos";
@@ -2293,7 +2295,9 @@ Unused sets are archived when you add more.";
 "Notification.CallIncoming" = "Incoming Call";
 "Notification.VideoCallIncoming" = "Incoming Video Call";
 "Notification.CallMissed" = "Missed Call";
+"Notification.VideoCallMissed" = "Missed Video Call";
 "Notification.CallCanceled" = "Cancelled Call";
+"Notification.VideoCallCanceled" = "Cancelled Video Call";
 "Notification.CallOutgoingShort" = "Outgoing";
 "Notification.CallIncomingShort" = "Incoming";
 "Notification.CallMissedShort" = "Missed";
@@ -2470,6 +2474,7 @@ Unused sets are archived when you add more.";
 
 "Call.CallInProgressTitle" = "Call in Progress";
 "Call.CallInProgressMessage" = "Finish call with %1$@ and start a new one with %2$@?";
+"Call.ExternalCallInProgressMessage" = "Please finish the current call first.";
 
 "Call.Message" = "Message";
 
@@ -3023,7 +3028,7 @@ Unused sets are archived when you add more.";
 
 "InfoPlist.NSContactsUsageDescription" = "Telegram will continuously upload your contacts to its heavily encrypted cloud servers to let you connect with your friends across all your devices.";
 "InfoPlist.NSLocationWhenInUseUsageDescription" = "When you send your location to your friends, Telegram needs access to show them a map.";
-"InfoPlist.NSCameraUsageDescription" = "We need this so that you can take and share photos and videos.";
+"InfoPlist.NSCameraUsageDescription" = "We need this so that you can take and share photos and videos, as well as make video calls.";
 "InfoPlist.NSPhotoLibraryUsageDescription" = "We need this so that you can share photos and videos from your photo library.";
 "InfoPlist.NSPhotoLibraryAddUsageDescription" = "We need this so that you can save photos and videos to your photo library.";
 "InfoPlist.NSMicrophoneUsageDescription" = "We need this so that you can record and share voice messages and videos with sound.";
@@ -4788,6 +4793,7 @@ Any member of this group will be able to see messages in the channel.";
 "ContactList.Context.SendMessage" = "Send Message";
 "ContactList.Context.StartSecretChat" = "Start Secret Chat";
 "ContactList.Context.Call" = "Call";
+"ContactList.Context.VideoCall" = "Video Call";
 
 "Theme.Context.Apply" = "Apply";
 
@@ -5332,7 +5338,7 @@ Any member of this group will be able to see messages in the channel.";
 "PeerInfo.ButtonMessage" = "Message";
 "PeerInfo.ButtonDiscuss" = "Discuss";
 "PeerInfo.ButtonCall" = "Call";
-"PeerInfo.ButtonVideoCall" = "Video Call";
+"PeerInfo.ButtonVideoCall" = "Video";
 "PeerInfo.ButtonMute" = "Mute";
 "PeerInfo.ButtonUnmute" = "Unmute";
 "PeerInfo.ButtonMore" = "More";
@@ -5633,7 +5639,7 @@ Any member of this group will be able to see messages in the channel.";
 "PrivacySettings.AutoArchive" = "Archive and Mute";
 "PrivacySettings.AutoArchiveInfo" = "Automatically archive and mute new chats, groups and channels from non-contacts.";
 
-"Call.RemoteVideoPaused" = "%@'s video paused";
+"Call.RemoteVideoPaused" = "%@'s video is paused";
 
 "Settings.SetProfilePhotoOrVideo" = "Set Photo or Video";
 "Settings.SetNewProfilePhotoOrVideo" = "Set New Photo or Video";
@@ -5710,3 +5716,22 @@ Any member of this group will be able to see messages in the channel.";
 "Cache.MaximumCacheSize" = "Maximum Cache Size";
 "Cache.NoLimit" = "No Limit";
 "Cache.MaximumCacheSizeHelp" = "If your cache size exceeds this limit, the oldest media will be deleted.\n\nAll media will stay in the Telegram cloud and can be re-downloaded if you need it again.";
+
+"Stats.MessageTitle" = "Message Statistics";
+"Stats.MessageOverview" = "Overview";
+"Stats.MessageInteractionsTitle" = "Interactions";
+"Stats.MessagePublicForwardsTitle" = "Public Shares";
+
+"Call.CameraTooltip" = "Tap here to turn on your camera";
+"Call.CameraConfirmationText" = "Switch to video call?";
+"Call.CameraConfirmationConfirm" = "Switch";
+
+"Call.YourMicrophoneOff" = "Your microphone is off";
+"Call.MicrophoneOff" = "%@'s microphone is off";
+"Call.CameraOff" = "%@'s camera is off";
+"Call.BatteryLow" = "%@'s battery level is low";
+
+"Call.Audio" = "audio";
+"Call.AudioRouteMute" = "Mute Yourself";
+
+"AccessDenied.VideoCallCamera" = "Telegram needs access to your camera to make video calls.\n\nPlease go to Settings > Privacy > Camera and set Telegram to ON.";

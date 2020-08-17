@@ -40,6 +40,55 @@
     }
 }
 
+- (void)seekTo:(double)timestamp {
+    for (TGPhotoPaintEntityView *view in self.subviews)
+    {
+        if (![view isKindOfClass:[TGPhotoPaintEntityView class]])
+            continue;
+           
+        if ([view isKindOfClass:[TGPhotoStickerEntityView class]]) {
+            [(TGPhotoStickerEntityView *)view seekTo:timestamp];
+        }
+    }
+}
+
+- (void)play {
+    for (TGPhotoPaintEntityView *view in self.subviews)
+    {
+        if (![view isKindOfClass:[TGPhotoPaintEntityView class]])
+            continue;
+        
+        if ([view isKindOfClass:[TGPhotoStickerEntityView class]]) {
+            [(TGPhotoStickerEntityView *)view play];
+        }
+    }
+}
+
+- (void)pause {
+    for (TGPhotoPaintEntityView *view in self.subviews)
+    {
+        if (![view isKindOfClass:[TGPhotoPaintEntityView class]])
+            continue;
+        
+        if ([view isKindOfClass:[TGPhotoStickerEntityView class]]) {
+            [(TGPhotoStickerEntityView *)view pause];
+        }
+    }
+}
+
+
+- (void)resetToStart {
+    for (TGPhotoPaintEntityView *view in self.subviews)
+    {
+        if (![view isKindOfClass:[TGPhotoPaintEntityView class]])
+            continue;
+        
+        if ([view isKindOfClass:[TGPhotoStickerEntityView class]]) {
+            [(TGPhotoStickerEntityView *)view resetToStart];
+        }
+    }
+}
+
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)__unused gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)__unused otherGestureRecognizer
 {
     return false;

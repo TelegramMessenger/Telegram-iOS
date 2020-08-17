@@ -4,8 +4,11 @@ swift_library(
     name = "ImageCompression",
     module_name = "ImageCompression",
     srcs = glob([
-		"Sources/**/*.swift",
+        "Sources/**/*.swift",
     ]),
+    deps = [
+        "//submodules/MozjpegBinding:MozjpegBinding",
+    ],
     visibility = [
         "//visibility:public",
     ],

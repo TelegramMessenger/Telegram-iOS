@@ -68,7 +68,7 @@ final class ChatListEmptyNode: ASDisplayNode {
             animationName = "ChatListEmpty"
         }
         if let path = getAppBundle().path(forResource: animationName, ofType: "tgs") {
-            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct)
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
             self.animationSize = CGSize(width: 124.0, height: 124.0)
             self.animationNode.visibility = true
         }

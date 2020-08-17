@@ -734,7 +734,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                     if let data = image.jpegData(compressionQuality: 0.6) {
                         let resource = LocalFileMediaResource(fileId: arc4random64())
                         context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource)
+                        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [])
                         updateState {
                             $0.withUpdatedUpdatingAvatar(.image(representation, true))
                         }
@@ -1076,8 +1076,8 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
         }
         for childController in tabController.controllers {
             if let chatListController = childController as? ChatListController {
-                chatListController.maybeAskForPeerChatRemoval(peer: RenderedPeer(peer: peer), deleteGloballyIfPossible: deleteGloballyIfPossible, completion: { [weak navigationController] deleted in
-                    if deleted {
+                chatListController.maybeAskForPeerChatRemoval(peer: RenderedPeer(peer: peer), joined: false, deleteGloballyIfPossible: deleteGloballyIfPossible, completion: { [weak navigationController] removed in
+                    if removed {
                         navigationController?.popToRoot(animated: true)
                     }
                 }, removed: {

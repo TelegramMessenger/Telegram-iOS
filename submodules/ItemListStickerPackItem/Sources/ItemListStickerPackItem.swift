@@ -375,7 +375,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     thumbnailItem = .animated(item.file.resource)
                     resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: item.file.resource)
                 } else if let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
-                    thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource))
+                    thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: []))
                     resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: resource)
                 }
             }

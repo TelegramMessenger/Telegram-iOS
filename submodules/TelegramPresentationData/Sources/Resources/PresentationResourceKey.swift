@@ -55,6 +55,9 @@ public enum PresentationResourceKey: Int32 {
     case itemListCornersBottom
     case itemListCornersBoth
     
+    case itemListVoiceCallIcon
+    case itemListVideoCallIcon
+    
     case chatListLockTopUnlockedImage
     case chatListLockBottomUnlockedImage
     case chatListPending
@@ -207,8 +210,12 @@ public enum PresentationResourceKey: Int32 {
     
     case chatBubbleIncomingCallButtonImage
     case chatBubbleOutgoingCallButtonImage
+    
+    case chatBubbleIncomingVideoCallButtonImage
+    case chatBubbleOutgoingVideoCallButtonImage
         
     case callListOutgoingIcon
+    case callListOutgoingVideoIcon
     case callListInfoButton
     
     case genericSearchBarLoupeImage

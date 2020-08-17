@@ -5,15 +5,21 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
-import ListSectionHeaderNode
 import ItemListUI
 import AppBundle
 
+enum LocationAttribution: Equatable {
+    case foursquare
+    case google
+}
+
 class LocationAttributionItem: ListViewItem {
     let presentationData: ItemListPresentationData
+    let attribution: LocationAttribution
     
-    public init(presentationData: ItemListPresentationData) {
+    public init(presentationData: ItemListPresentationData, attribution: LocationAttribution) {
         self.presentationData = presentationData
+        self.attribution = attribution
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -94,11 +100,20 @@ private class LocationAttributionItemNode: ListViewItemNode {
                         strongSelf.layoutParams = params
                         
                         if let _ = updatedTheme {
-                            strongSelf.imageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Location/FoursquareAttribution"), color: item.presentationData.theme.list.itemSecondaryTextColor)
+                            switch item.attribution {
+                                case .foursquare:
+                                    strongSelf.imageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Location/FoursquareAttribution"), color: item.presentationData.theme.list.itemSecondaryTextColor)
+                                case .google:
+                                    if item.presentationData.theme.overallDarkAppearance {
+                                        strongSelf.imageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Location/GoogleAttribution"), color: item.presentationData.theme.list.itemSecondaryTextColor)
+                                    } else {
+                                        strongSelf.imageNode.image = UIImage(bundleImageName: "Location/GoogleAttribution")
+                                    }
+                            }
                         }
                         
                         if let image = strongSelf.imageNode.image {
-                            strongSelf.imageNode.frame = CGRect(x: floor((params.width - image.size.width) / 2.0), y: 0.0, width: image.size.width, height: image.size.height)
+                            strongSelf.imageNode.frame = CGRect(x: floor((params.width - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0), width: image.size.width, height: image.size.height)
                         }
                     }
                 })

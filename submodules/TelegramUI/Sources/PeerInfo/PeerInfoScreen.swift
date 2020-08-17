@@ -647,7 +647,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             interaction.openSettings(.avatar)
         }))
     }
-    if let peer = data.peer, peer.addressName == nil {
+    if let peer = data.peer, (peer.addressName ?? "").isEmpty {
         items[.edit]!.append(PeerInfoScreenActionItem(id: 1, text: presentationData.strings.Settings_SetUsername, icon: UIImage(bundleImageName: "Settings/SetUsername"), action: {
             interaction.openSettings(.username)
         }))
@@ -1422,7 +1422,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.context = context
         self.peerId = peerId
         self.isOpenedFromChat = isOpenedFromChat
-        self.videoCallsEnabled = context.sharedContext.immediateExperimentalUISettings.videoCalls
+        self.videoCallsEnabled = VideoCallsConfiguration(appConfiguration: context.currentAppConfiguration.with { $0 }).areVideoCallsEnabled
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.nearbyPeerDistance = nearbyPeerDistance
         self.callMessages = callMessages
@@ -2118,7 +2118,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             let galleryController = AvatarGalleryController(context: strongSelf.context, peer: peer, sourceCorners: .round(!strongSelf.headerNode.isAvatarExpanded), remoteEntries: entriesPromise, skipInitial: true, centralEntryIndex: centralEntry.flatMap { entries.firstIndex(of: $0) }, replaceRootController: { controller, ready in
             })
             galleryController.openAvatarSetup = { [weak self] completion in
-                self?.openAvatarForEditing(hasRemove: false, completion: completion)
+                self?.openAvatarForEditing(fromGallery: true, completion: completion)
             }
             galleryController.avatarPhotoEditCompletion = { [weak self] image in
                 self?.updateProfilePhoto(image)
@@ -3153,12 +3153,30 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             return
         }
             
-        let callResult = self.context.sharedContext.callManager?.requestCall(account: self.context.account, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
+        let callResult = self.context.sharedContext.callManager?.requestCall(context: self.context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
         if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
             if currentPeerId == peer.id {
                 self.context.sharedContext.navigateToCurrentCall()
             } else {
+                let presentationData = self.presentationData
                 let _ = (self.context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
+                    return (transaction.getPeer(peer.id), currentPeerId.flatMap(transaction.getPeer))
+                } |> deliverOnMainQueue).start(next: { [weak self] peer, current in
+                    if let peer = peer {
+                        if let strongSelf = self, let current = current {
+                            strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                                if let strongSelf = self {
+                                    let _ = strongSelf.context.sharedContext.callManager?.requestCall(context: strongSelf.context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
+                                }
+                            })]), in: .window(.root))
+                        } else if let strongSelf = self {
+                            strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_ExternalCallInProgressMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                            })]), in: .window(.root))
+                        }
+                    }
+                })
+                
+                /*let _ = (self.context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
                     return (transaction.getPeer(peer.id), transaction.getPeer(currentPeerId))
                 }
                 |> deliverOnMainQueue).start(next: { [weak self] peer, current in
@@ -3170,10 +3188,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                             guard let strongSelf = self else {
                                 return
                             }
-                            let _ = strongSelf.context.sharedContext.callManager?.requestCall(account: strongSelf.context.account, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
+                            let _ = strongSelf.context.sharedContext.callManager?.requestCall(context: strongSelf.context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
                         })]), in: .window(.root))
                     }
-                })
+                })*/
             }
         }
     }
@@ -3837,7 +3855,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         for childController in tabController.controllers {
             if let chatListController = childController as? ChatListController {
-                chatListController.maybeAskForPeerChatRemoval(peer: RenderedPeer(peer: peer), deleteGloballyIfPossible: globally, completion: { [weak navigationController] deleted in
+                chatListController.maybeAskForPeerChatRemoval(peer: RenderedPeer(peer: peer), joined: false, deleteGloballyIfPossible: globally, completion: { [weak navigationController] deleted in
                     if deleted {
                         navigationController?.popToRoot(animated: true)
                     }
@@ -3885,7 +3903,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         let resource = LocalFileMediaResource(fileId: arc4random64())
         self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource)
+        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [])
         
         self.state = self.state.withUpdatingAvatar(.image(representation))
         if let (layout, navigationHeight) = self.validLayout {
@@ -3930,7 +3948,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         let photoResource = LocalFileMediaResource(fileId: arc4random64())
         self.context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
-        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource)
+        let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [])
         
         self.state = self.state.withUpdatingAvatar(.image(representation))
         if let (layout, navigationHeight) = self.validLayout {
@@ -4032,7 +4050,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                 })
             } else {
-                return updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: photoResource), video: uploadedPeerVideo(postbox: account.postbox, network: account.network, messageMediaPreuploadManager: account.messageMediaPreuploadManager, resource: videoResource) |> map(Optional.init), mapResourceToAvatarSizes: { resource, representations in
+                return updatePeerPhoto(postbox: account.postbox, network: account.network, stateManager: account.stateManager, accountPeerId: account.peerId, peerId: peerId, photo: uploadedPeerPhoto(postbox: account.postbox, network: account.network, resource: photoResource), video: uploadedPeerVideo(postbox: account.postbox, network: account.network, messageMediaPreuploadManager: account.messageMediaPreuploadManager, resource: videoResource) |> map(Optional.init), videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: { resource, representations in
                     return mapResourceToAvatarSizes(postbox: account.postbox, resource: resource, representations: representations)
                 })
             }
@@ -4053,7 +4071,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }))
     }
     
-    private func openAvatarForEditing(hasRemove: Bool = true, completion: @escaping () -> Void = {}) {
+    private func openAvatarForEditing(fromGallery: Bool = false, completion: @escaping () -> Void = {}) {
         guard let peer = self.data?.peer, canEditPeerInfo(context: self.context, peer: peer) else {
             return
         }
@@ -4105,7 +4123,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 return controller
             }
             
-            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos && hasRemove, hasViewButton: false, personalPhoto: strongSelf.isSettings, isVideo: currentIsVideo, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
+            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos && !fromGallery, hasViewButton: false, personalPhoto: strongSelf.isSettings, isVideo: currentIsVideo, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
             mixin.stickersContext = paintStickersContext
             let _ = strongSelf.currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { [weak self] assetsController in
@@ -4118,6 +4136,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 }))
                 controller.navigationPresentation = .modal
                 strongSelf.controller?.push(controller)
+                
+                if fromGallery {
+                    completion()
+                }
             }
             mixin.didFinishWithImage = { [weak self] image in
                 if let image = image {
@@ -4421,7 +4443,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             if let contactsController = contactsController as? ContactSelectionController {
                 selectAddMemberDisposable.set((contactsController.result
                 |> deliverOnMainQueue).start(next: { [weak contactsController] memberPeer in
-                    guard let memberPeer = memberPeer else {
+                    guard let (memberPeer, _) = memberPeer else {
                         return
                     }
                     
@@ -5136,6 +5158,9 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             })
         }
         
+        if self.isSettings {
+            contentHeight = max(contentHeight, layout.size.height + 140.0 + (self.headerNode.twoLineInfo ? 17.0 : 0.0) - layout.intrinsicInsets.bottom)
+        }
         self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: contentHeight)
         if self.isSettings {
             self.scrollNode.view.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0)
@@ -5389,12 +5414,14 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         guard let (_, navigationHeight) = self.validLayout else {
             return
         }
-        if self.state.isEditing && self.isSettings {
-            if targetContentOffset.pointee.y < navigationHeight {
-                if targetContentOffset.pointee.y < navigationHeight / 2.0 {
-                    targetContentOffset.pointee.y = 0.0
-                } else {
-                    targetContentOffset.pointee.y = navigationHeight
+        if self.state.isEditing {
+            if self.isSettings {
+                if targetContentOffset.pointee.y < navigationHeight {
+                    if targetContentOffset.pointee.y < navigationHeight / 2.0 {
+                        targetContentOffset.pointee.y = 0.0
+                    } else {
+                        targetContentOffset.pointee.y = navigationHeight
+                    }
                 }
             }
         } else {

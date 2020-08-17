@@ -25,6 +25,7 @@ public enum TooltipActiveTextAction {
 }
 
 private final class TooltipScreenNode: ViewControllerTracingNode {
+    private let tooltipStyle: TooltipScreen.Style
     private let icon: TooltipScreen.Icon?
     private let location: TooltipScreen.Location
     private let displayDuration: TooltipScreen.DisplayDuration
@@ -33,10 +34,12 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     
     private let scrollingContainer: ASDisplayNode
     private let containerNode: ASDisplayNode
+    private let backgroundContainerNode: ASDisplayNode
     private let backgroundNode: ASImageNode
     private var effectView: UIView?
     private let arrowNode: ASImageNode
     private let arrowContainer: ASDisplayNode
+    private var arrowEffectView: UIView?
     private let animatedStickerNode: AnimatedStickerNode
     private let textNode: ImmediateTextNode
     
@@ -44,7 +47,8 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     
     private var validLayout: ContainerViewLayout?
     
-    init(text: String, textEntities: [MessageTextEntity], icon: TooltipScreen.Icon?, location: TooltipScreen.Location, displayDuration: TooltipScreen.DisplayDuration, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void) {
+    init(text: String, textEntities: [MessageTextEntity], style: TooltipScreen.Style, icon: TooltipScreen.Icon?, location: TooltipScreen.Location, displayDuration: TooltipScreen.DisplayDuration, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void) {
+        self.tooltipStyle = style
         self.icon = icon
         self.location = location
         self.displayDuration = displayDuration
@@ -52,6 +56,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         self.requestDismiss = requestDismiss
         
         self.containerNode = ASDisplayNode()
+        self.backgroundContainerNode = ASDisplayNode()
         
         let fillColor = UIColor(white: 0.0, alpha: 0.8)
         
@@ -59,14 +64,43 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.image = generateAdjustedStretchableFilledCircleImage(diameter: 15.0, color: fillColor)
-        if case .top = location {
-            self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
-            self.containerNode.clipsToBounds = true
-            self.containerNode.cornerRadius = 9.0
+
+        func svgPath(_ path: StaticString, scale: CGPoint = CGPoint(x: 1.0, y: 1.0), offset: CGPoint = CGPoint()) throws -> UIBezierPath {
+            var index: UnsafePointer<UInt8> = path.utf8Start
+            let end = path.utf8Start.advanced(by: path.utf8CodeUnitCount)
+            let path = UIBezierPath()
+            while index < end {
+                let c = index.pointee
+                index = index.successor()
+                
+                if c == 77 { // M
+                    let x = try readCGFloat(&index, end: end, separator: 44) * scale.x + offset.x
+                    let y = try readCGFloat(&index, end: end, separator: 32) * scale.y + offset.y
+                    
+                    path.move(to: CGPoint(x: x, y: y))
+                } else if c == 76 { // L
+                    let x = try readCGFloat(&index, end: end, separator: 44) * scale.x + offset.x
+                    let y = try readCGFloat(&index, end: end, separator: 32) * scale.y + offset.y
+                    
+                    path.addLine(to: CGPoint(x: x, y: y))
+                } else if c == 67 { // C
+                    let x1 = try readCGFloat(&index, end: end, separator: 44) * scale.x + offset.x
+                    let y1 = try readCGFloat(&index, end: end, separator: 32) * scale.y + offset.y
+                    let x2 = try readCGFloat(&index, end: end, separator: 44) * scale.x + offset.x
+                    let y2 = try readCGFloat(&index, end: end, separator: 32) * scale.y + offset.y
+                    let x = try readCGFloat(&index, end: end, separator: 44) * scale.x + offset.x
+                    let y = try readCGFloat(&index, end: end, separator: 32) * scale.y + offset.y
+                    path.addCurve(to: CGPoint(x: x, y: y), controlPoint1: CGPoint(x: x1, y: y1), controlPoint2: CGPoint(x: x2, y: y2))
+                } else if c == 32 { // space
+                    continue
+                }
+            }
+            path.close()
+            return path
         }
         
-        self.arrowNode = ASImageNode()
         let arrowSize = CGSize(width: 29.0, height: 10.0)
+        self.arrowNode = ASImageNode()
         self.arrowNode.image = generateImage(arrowSize, rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setFillColor(fillColor.cgColor)
@@ -77,11 +111,42 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         self.arrowContainer = ASDisplayNode()
         
+        let fontSize: CGFloat
+        if style == .light {
+            self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
+            self.backgroundContainerNode.clipsToBounds = true
+            self.backgroundContainerNode.cornerRadius = 14.0
+            if #available(iOS 13.0, *) {
+                self.backgroundContainerNode.layer.cornerCurve = .continuous
+            }
+            fontSize = 17.0
+            
+            self.arrowEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
+            self.arrowContainer.view.addSubview(self.arrowEffectView!)
+            
+            let maskLayer = CAShapeLayer()
+            if let path = try? svgPath("M85.882251,0 C79.5170552,0 73.4125613,2.52817247 68.9116882,7.02834833 L51.4264069,24.5109211 C46.7401154,29.1964866 39.1421356,29.1964866 34.4558441,24.5109211 L16.9705627,7.02834833 C12.4696897,2.52817247 6.36519576,0 0,0 L85.882251,0 ", scale: CGPoint(x: 0.333333, y: 0.333333), offset: CGPoint()) {
+                maskLayer.path = path.cgPath
+            }
+            maskLayer.frame = CGRect(origin: CGPoint(), size: arrowSize)
+            self.arrowContainer.layer.mask = maskLayer
+        } else if case .top = location {
+            self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+            self.containerNode.clipsToBounds = true
+            self.containerNode.cornerRadius = 9.0
+            if #available(iOS 13.0, *) {
+                self.containerNode.layer.cornerCurve = .continuous
+            }
+            fontSize = 14.0
+        } else {
+            fontSize = 14.0
+        }
+        
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.maximumNumberOfLines = 0
         
-        self.textNode.attributedText = stringWithAppliedEntities(text, entities: textEntities, baseColor: .white, linkColor: .white, baseFont: Font.regular(14.0), linkFont: Font.regular(14.0), boldFont: Font.semibold(14.0), italicFont: Font.italic(14.0), boldItalicFont: Font.semiboldItalic(14.0), fixedFont: Font.monospace(14.0), blockQuoteFont: Font.regular(14.0), underlineLinks: true, external: false)
+        self.textNode.attributedText = stringWithAppliedEntities(text, entities: textEntities, baseColor: .white, linkColor: .white, baseFont: Font.regular(fontSize), linkFont: Font.regular(fontSize), boldFont: Font.semibold(14.0), italicFont: Font.italic(fontSize), boldItalicFont: Font.semiboldItalic(fontSize), fixedFont: Font.monospace(fontSize), blockQuoteFont: Font.regular(fontSize), underlineLinks: true, external: false)
         
         self.animatedStickerNode = AnimatedStickerNode()
         switch icon {
@@ -89,24 +154,29 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             break
         case .chatListPress:
             if let path = getAppBundle().path(forResource: "ChatListFoldersTooltip", ofType: "json") {
-                self.animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: Int(70 * UIScreenScale), height: Int(70 * UIScreenScale), playbackMode: .once, mode: .direct)
+                self.animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: Int(70 * UIScreenScale), height: Int(70 * UIScreenScale), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 self.animatedStickerNode.automaticallyLoadFirstFrame = true
             }
         case .info:
             if let path = getAppBundle().path(forResource: "anim_infotip", ofType: "json") {
-                self.animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: Int(70 * UIScreenScale), height: Int(70 * UIScreenScale), playbackMode: .once, mode: .direct)
+                self.animatedStickerNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: Int(70 * UIScreenScale), height: Int(70 * UIScreenScale), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 self.animatedStickerNode.automaticallyLoadFirstFrame = true
             }
         }
         
         super.init()
         
+        self.containerNode.addSubnode(self.backgroundContainerNode)
         self.arrowContainer.addSubnode(self.arrowNode)
         self.backgroundNode.addSubnode(self.arrowContainer)
         if let effectView = self.effectView {
-            self.containerNode.view.addSubview(effectView)
+            self.backgroundContainerNode.view.addSubview(effectView)
+            if let _ = self.arrowEffectView {
+                self.containerNode.addSubnode(self.arrowContainer)
+                self.arrowNode.removeFromSupernode()
+            }
         } else {
-            self.containerNode.addSubnode(self.backgroundNode)
+            self.backgroundContainerNode.addSubnode(self.backgroundNode)
         }
         self.containerNode.addSubnode(self.textNode)
         self.containerNode.addSubnode(self.animatedStickerNode)
@@ -207,8 +277,14 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         
         var backgroundFrame: CGRect
         
-        let backgroundHeight = max(animationSize.height, textSize.height) + contentVerticalInset * 2.0
-        
+        let backgroundHeight: CGFloat
+        switch self.tooltipStyle {
+            case .default:
+                backgroundHeight = max(animationSize.height, textSize.height) + contentVerticalInset * 2.0
+            case .light:
+                backgroundHeight = max(28.0, max(animationSize.height, textSize.height) + 4.0 * 2.0)
+        }
+                    
         var invertArrow = false
         switch self.location {
         case let .point(rect):
@@ -231,6 +307,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         }
         
         transition.updateFrame(node: self.containerNode, frame: backgroundFrame)
+        transition.updateFrame(node: self.backgroundContainerNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         if let effectView = self.effectView {
             transition.updateFrame(view: effectView, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
@@ -252,8 +329,10 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             ContainedViewLayoutTransition.immediate.updateTransformScale(node: self.arrowContainer, scale: CGPoint(x: 1.0, y: invertArrow ? -1.0 : 1.0))
             
             self.arrowNode.frame = CGRect(origin: CGPoint(), size: arrowFrame.size)
+            self.arrowEffectView?.frame = CGRect(origin: CGPoint(), size: arrowFrame.size)
         } else {
             self.arrowNode.isHidden = true
+            self.arrowEffectView?.isHidden = true
         }
         
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: contentInset + animationSize.width + animationSpacing, y: floor((backgroundHeight - textSize.height) / 2.0)), size: textSize))
@@ -373,8 +452,14 @@ public final class TooltipScreen: ViewController {
         case custom(Double)
     }
     
+    public enum Style {
+        case `default`
+        case light
+    }
+    
     public let text: String
     public let textEntities: [MessageTextEntity]
+    private let style: TooltipScreen.Style
     private let icon: TooltipScreen.Icon?
     private let location: TooltipScreen.Location
     private let displayDuration: DisplayDuration
@@ -393,9 +478,10 @@ public final class TooltipScreen: ViewController {
     
     private var dismissTimer: Foundation.Timer?
     
-    public init(text: String, textEntities: [MessageTextEntity] = [], icon: TooltipScreen.Icon?, location: TooltipScreen.Location, displayDuration: DisplayDuration = .default, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void = { _, _ in }) {
+    public init(text: String, textEntities: [MessageTextEntity] = [], style: TooltipScreen.Style = .default, icon: TooltipScreen.Icon?, location: TooltipScreen.Location, displayDuration: DisplayDuration = .default, shouldDismissOnTouch: @escaping (CGPoint) -> TooltipScreen.DismissOnTouch, openActiveTextItem: @escaping (TooltipActiveTextItem, TooltipActiveTextAction) -> Void = { _, _ in }) {
         self.text = text
         self.textEntities = textEntities
+        self.style = style
         self.icon = icon
         self.location = location
         self.displayDuration = displayDuration
@@ -455,7 +541,7 @@ public final class TooltipScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = TooltipScreenNode(text: self.text, textEntities: self.textEntities, icon: self.icon, location: self.location, displayDuration: self.displayDuration, shouldDismissOnTouch: self.shouldDismissOnTouch, requestDismiss: { [weak self] in
+        self.displayNode = TooltipScreenNode(text: self.text, textEntities: self.textEntities, style: self.style, icon: self.icon, location: self.location, displayDuration: self.displayDuration, shouldDismissOnTouch: self.shouldDismissOnTouch, requestDismiss: { [weak self] in
             guard let strongSelf = self else {
                 return
             }

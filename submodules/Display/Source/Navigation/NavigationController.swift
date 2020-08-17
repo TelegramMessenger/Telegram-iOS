@@ -579,6 +579,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         var previousModalContainer: NavigationModalContainer?
         var visibleModalCount = 0
         var topModalIsFlat = false
+        var isLandscape = layout.orientation == .landscape
         var hasVisibleStandaloneModal = false
         var topModalDismissProgress: CGFloat = 0.0
         
@@ -784,7 +785,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                 let visibleRootModalDismissProgress: CGFloat
                 var additionalModalFrameProgress: CGFloat
                 if visibleModalCount == 1 {
-                    effectiveRootModalDismissProgress = topModalIsFlat ? 1.0 : topModalDismissProgress
+                    effectiveRootModalDismissProgress = (topModalIsFlat || isLandscape) ? 1.0 : topModalDismissProgress
                     visibleRootModalDismissProgress = effectiveRootModalDismissProgress
                     additionalModalFrameProgress = 0.0
                 } else if visibleModalCount >= 2 {
@@ -851,7 +852,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     }
                     let maxScale: CGFloat
                     let maxOffset: CGFloat
-                    if topModalIsFlat {
+                    if topModalIsFlat || isLandscape {
                         maxScale = 1.0
                         maxOffset = 0.0
                     } else if visibleModalCount <= 1 {

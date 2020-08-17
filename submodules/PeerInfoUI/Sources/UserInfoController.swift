@@ -597,7 +597,7 @@ private func userInfoEntries(account: Account, presentationData: PresentationDat
     
     var callsAvailable = true
     if let cachedUserData = cachedPeerData as? CachedUserData {
-        callsAvailable = cachedUserData.callsAvailable
+        callsAvailable = cachedUserData.voiceCallsAvailable
     }
     
     entries.append(UserInfoEntry.info(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: user, presence: view.peerPresences[user.id], cachedData: cachedPeerData, state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), displayCall: user.botInfo == nil && callsAvailable))
@@ -873,18 +873,18 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                 return
             }
             
-            let callResult = context.sharedContext.callManager?.requestCall(account: context.account, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
+            let callResult = context.sharedContext.callManager?.requestCall(context: context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
             if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
                 if currentPeerId == peer.id {
                     context.sharedContext.navigateToCurrentCall()
                 } else {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     let _ = (context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                        return (transaction.getPeer(peer.id), transaction.getPeer(currentPeerId))
+                        return (transaction.getPeer(peer.id), currentPeerId.flatMap(transaction.getPeer))
                         } |> deliverOnMainQueue).start(next: { peer, current in
                             if let peer = peer, let current = current {
                                 presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                    let _ = context.sharedContext.callManager?.requestCall(account: context.account, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
+                                    let _ = context.sharedContext.callManager?.requestCall(context: context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
                                 })]), nil)
                             }
                         })

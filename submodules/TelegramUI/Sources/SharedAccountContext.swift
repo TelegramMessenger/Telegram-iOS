@@ -574,7 +574,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
         
         if let mainWindow = mainWindow, applicationBindings.isMainApp {
-            let callManager = PresentationCallManagerImpl(accountManager: self.accountManager, enableVideoCalls: self.immediateExperimentalUISettings.videoCalls, getDeviceAccessData: {
+            let callManager = PresentationCallManagerImpl(accountManager: self.accountManager, getDeviceAccessData: {
                 return (self.currentPresentationData.with { $0 }, { [weak self] c, a in
                     self?.presentGlobalController(c, a)
                 }, {
@@ -634,14 +634,18 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 if let strongSelf = self {
                     let resolvedText: CallStatusText
                     if let state = state {
-                        switch state.state {
-                            case .connecting, .requesting, .terminating, .ringing, .waiting:
-                                resolvedText = .inProgress(nil)
-                            case .terminated:
-                                resolvedText = .none
-                            case .active(let timestamp, _, _), .reconnecting(let timestamp, _, _):
-                                resolvedText = .inProgress(timestamp)
-                        }
+//                        if [.active, .paused].contains(state.videoState) || [.active, .paused].contains(state.remoteVideoState) {
+//                            resolvedText = .none
+//                        } else {
+                            switch state.state {
+                                case .connecting, .requesting, .terminating, .ringing, .waiting:
+                                    resolvedText = .inProgress(nil)
+                                case .terminated:
+                                    resolvedText = .none
+                                case .active(let timestamp, _, _), .reconnecting(let timestamp, _, _):
+                                    resolvedText = .inProgress(timestamp)
+                            }
+//                        }
                     } else {
                         resolvedText = .none
                     }
@@ -937,7 +941,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeTempAccountContext(account: Account) -> AccountContext {
-        return AccountContextImpl(sharedContext: self, account: account/*, tonContext: nil*/, limitsConfiguration: .defaultValue, contentSettings: .default, temp: true)
+        return AccountContextImpl(sharedContext: self, account: account, limitsConfiguration: .defaultValue, contentSettings: .default, appConfiguration: .defaultValue, temp: true)
     }
     
     public func openChatMessage(_ params: OpenChatMessageParams) -> Bool {

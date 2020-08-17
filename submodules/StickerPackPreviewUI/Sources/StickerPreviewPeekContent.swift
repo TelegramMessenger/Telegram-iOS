@@ -93,7 +93,7 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
             let dimensions = item.file.dimensions ?? PixelDimensions(width: 512, height: 512)
             let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 400.0, height: 400.0))
             
-            self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct)
+            self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
             self.animationNode?.visibility = true
             self.animationNode?.addSubnode(self.textNode)
         } else {

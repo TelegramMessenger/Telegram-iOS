@@ -13,7 +13,13 @@
 
 @protocol TGPhotoPaintStickerRenderView <NSObject>
 
+@property (nonatomic, copy) void(^started)(double);
+
 - (void)setIsVisible:(bool)isVisible;
+- (void)seekTo:(double)timestamp;
+- (void)play;
+- (void)pause;
+- (void)resetToStart;
 - (int64_t)documentId;
 - (UIImage *)image;
 

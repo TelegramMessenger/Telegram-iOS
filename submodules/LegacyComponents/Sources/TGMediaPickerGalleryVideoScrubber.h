@@ -19,6 +19,7 @@
 - (void)setDotVideoView:(UIView *)dotVideoView;
 - (void)setDotImage:(UIImage *)dotImage;
 
+@property (nonatomic, assign) NSTimeInterval minimumLength;
 @property (nonatomic, assign) NSTimeInterval maximumLength;
 
 @property (nonatomic, assign) bool disableZoom;
@@ -43,8 +44,6 @@
 - (void)updateThumbnails;
 
 - (void)setThumbnailImage:(UIImage *)image forTimestamp:(NSTimeInterval)timestamp index:(NSInteger)index isSummaryThubmnail:(bool)isSummaryThumbnail;
-
-- (void)setRecipientName:(NSString *)recipientName;
 
 - (CGPoint)scrubberPositionForPosition:(NSTimeInterval)position;
 

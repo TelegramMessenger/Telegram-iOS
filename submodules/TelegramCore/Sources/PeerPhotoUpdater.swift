@@ -161,7 +161,12 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                                                             case let .photoSize(_, location, w, h, _):
                                                                 switch location {
                                                                     case let .fileLocationToBeDeprecated(volumeId, localId):
-                                                                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: CloudPeerPhotoSizeMediaResource(datacenterId: dcId, sizeSpec: w <= 200 ? .small : .fullSize, volumeId: volumeId, localId: localId)))
+                                                                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: CloudPeerPhotoSizeMediaResource(datacenterId: dcId, sizeSpec: w <= 200 ? .small : .fullSize, volumeId: volumeId, localId: localId), progressiveSizes: []))
+                                                                }
+                                                            case let .photoSizeProgressive(_, location, w, h, sizes):
+                                                                switch location {
+                                                                    case let .fileLocationToBeDeprecated(volumeId, localId):
+                                                                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: CloudPeerPhotoSizeMediaResource(datacenterId: dcId, sizeSpec: w <= 200 ? .small : .fullSize, volumeId: volumeId, localId: localId), progressiveSizes: sizes))
                                                                 }
                                                             default:
                                                                 break
