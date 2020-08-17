@@ -983,15 +983,17 @@ public class Account {
         
         let networkStateQueue = Queue()
         
-        let _ = accountManager.transaction({ [weak self] transaction -> Void in
-            guard let self = self else { return }
+        let _ = (accountManager.transaction{ [weak self] transaction -> Bool in
+            guard let self = self else { return false }
             let records = transaction.getAllRecords()
             
-            guard let record = records.first(where: { $0.id == id }) else { return }
+            guard let record = records.first(where: { $0.id == id }) else { return false }
             
-            self.isHidden = record.attributes.contains { $0 is HiddenAccountAttribute } ?? false
+            return record.attributes.contains { $0 is HiddenAccountAttribute }
             
-        }).start()
+            } |> deliverOnMainQueue).start(next: { isHidden in
+                self.isHidden = isHidden
+            })
         
         let networkStateSignal = combineLatest(queue: networkStateQueue, self.stateManager.isUpdating, network.connectionStatus/*, delayNetworkStatus*/)
         |> map { isUpdating, connectionStatus/*, delayNetworkStatus*/ -> AccountNetworkState in
