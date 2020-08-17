@@ -10,6 +10,7 @@ public enum SearchMessagesLocation: Equatable {
     case general
     case group(PeerGroupId)
     case peer(peerId: PeerId, fromId: PeerId?, tags: MessageTags?)
+    case publicForwards(messageId: MessageId, datacenterId: Int?)
 }
 
 private struct SearchMessagesPeerState: Equatable {
@@ -282,7 +283,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 } 
             }
             |> mapToSignal { (nextRate, lowerBound, inputPeer) in
-                account.network.request(Api.functions.messages.searchGlobal(flags: 0, folderId: nil, q: query, offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit), automaticFloodWait: false)
+                return account.network.request(Api.functions.messages.searchGlobal(flags: 0, folderId: nil, q: query, offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit), automaticFloodWait: false)
                 |> map { result -> (Api.messages.Messages?, Api.messages.Messages?) in
                     return (result, nil)
                 }
@@ -290,6 +291,46 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                     return .single((nil, nil))
                 }
             }
+        case let .publicForwards(messageId, datacenterId):
+            remoteSearchResult = .single((nil, nil))
+            /*remoteSearchResult = account.postbox.transaction { transaction -> (Api.InputChannel?, Int32, MessageIndex?, Api.InputPeer) in
+                let sourcePeer = transaction.getPeer(messageId.peerId)
+                let inputChannel = sourcePeer.flatMap { apiInputChannel($0) }
+                
+                var lowerBound: MessageIndex?
+                if let state = state, let message = state.main.messages.last {
+                    lowerBound = message.index
+                }
+                if let lowerBound = lowerBound, let peer = transaction.getPeer(lowerBound.id.peerId), let inputPeer = apiInputPeer(peer) {
+                    return (inputChannel, state?.main.nextRate ?? 0, lowerBound, inputPeer)
+                } else {
+                    return (inputChannel, 0, lowerBound, .inputPeerEmpty)
+                }
+            }
+            |> mapToSignal { (inputChannel, nextRate, lowerBound, inputPeer) in
+                guard let inputChannel = inputChannel else {
+                    return .complete()
+                }
+                
+                let request = Api.functions.stats.getMessagePublicForwards(channel: inputChannel, msgId: messageId.id, offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit)
+                let signal: Signal<Api.messages.Messages, MTRpcError>
+                if let datacenterId = datacenterId, account.network.datacenterId != datacenterId {
+                    signal = account.network.download(datacenterId: datacenterId, isMedia: false, tag: nil)
+                    |> castError(MTRpcError.self)
+                    |> mapToSignal { worker in
+                        return worker.request(request)
+                    }
+                } else {
+                    signal = account.network.request(request, automaticFloodWait: false)
+                }
+                return signal
+                |> map { result -> (Api.messages.Messages?, Api.messages.Messages?) in
+                    return (result, nil)
+                }
+                |> `catch` { _ -> Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError> in
+                    return .single((nil, nil))
+                }
+        }*/
     }
     
     return remoteSearchResult
@@ -572,11 +613,11 @@ public func searchMessageIdByTimestamp(account: Account, peerId: PeerId, timesta
     } |> switchToLatest
 }
 
-enum UpdatedRemotePeerError {
+public enum UpdatedRemotePeerError {
     case generic
 }
 
-func updatedRemotePeer(postbox: Postbox, network: Network, peer: PeerReference) -> Signal<Peer, UpdatedRemotePeerError> {
+public func updatedRemotePeer(postbox: Postbox, network: Network, peer: PeerReference) -> Signal<Peer, UpdatedRemotePeerError> {
     if let inputUser = peer.inputUser {
         return network.request(Api.functions.users.getUsers(id: [inputUser]))
         |> mapError { _ -> UpdatedRemotePeerError in

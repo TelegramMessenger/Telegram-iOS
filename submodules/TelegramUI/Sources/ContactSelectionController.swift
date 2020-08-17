@@ -34,14 +34,15 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     private let titleProducer: (PresentationStrings) -> String
     private let options: [ContactListAdditionalOption]
     private let displayDeviceContacts: Bool
+    private let displayCallIcons: Bool
     
     private var _ready = Promise<Bool>()
     override var ready: Promise<Bool> {
         return self._ready
     }
     
-    private let _result = Promise<ContactListPeer?>()
-    var result: Signal<ContactListPeer?, NoError> {
+    private let _result = Promise<(ContactListPeer, ContactListAction)?>()
+    var result: Signal<(ContactListPeer, ContactListAction)?, NoError> {
         return self._result.get()
     }
     
@@ -74,6 +75,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         self.titleProducer = params.title
         self.options = params.options
         self.displayDeviceContacts = params.displayDeviceContacts
+        self.displayCallIcons = params.displayCallIcons
         self.confirmation = params.confirmation
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -143,7 +145,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ContactSelectionControllerNode(context: self.context, options: self.options, displayDeviceContacts: self.displayDeviceContacts)
+        self.displayNode = ContactSelectionControllerNode(context: self.context, options: self.options, displayDeviceContacts: self.displayDeviceContacts, displayCallIcons: self.displayCallIcons)
         self._ready.set(self.contactsNode.contactListNode.ready)
         
         self.contactsNode.navigationBar = self.navigationBar
@@ -153,15 +155,15 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         }
         
         self.contactsNode.requestOpenPeerFromSearch = { [weak self] peer in
-            self?.openPeer(peer: peer)
+            self?.openPeer(peer: peer, action: .generic)
         }
         
         self.contactsNode.contactListNode.activateSearch = { [weak self] in
             self?.activateSearch()
         }
         
-        self.contactsNode.contactListNode.openPeer = { [weak self] peer in
-            self?.openPeer(peer: peer)
+        self.contactsNode.contactListNode.openPeer = { [weak self] peer, action in
+            self?.openPeer(peer: peer, action: action)
         }
         
         self.contactsNode.contactListNode.suppressPermissionWarning = { [weak self] in
@@ -256,12 +258,12 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         }
     }
     
-    private func openPeer(peer: ContactListPeer) {
+    private func openPeer(peer: ContactListPeer, action: ContactListAction) {
         self.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
         self.confirmationDisposable.set((self.confirmation(peer) |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
                 if value {
-                    strongSelf._result.set(.single(peer))
+                    strongSelf._result.set(.single((peer, action)))
                     if strongSelf.autoDismiss {
                         strongSelf.dismiss()
                     }

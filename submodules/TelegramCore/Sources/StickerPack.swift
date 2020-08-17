@@ -11,13 +11,19 @@ func telegramStickerPachThumbnailRepresentationFromApiSize(datacenterId: Int32, 
             switch location {
                 case let .fileLocationToBeDeprecated(volumeId, localId):
                     let resource = CloudStickerPackThumbnailMediaResource(datacenterId: datacenterId, volumeId: volumeId, localId: localId)
-                    return TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource)
+                    return TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: [])
             }
         case let .photoSize(_, location, w, h, _):
             switch location {
                 case let .fileLocationToBeDeprecated(volumeId, localId):
                     let resource = CloudStickerPackThumbnailMediaResource(datacenterId: datacenterId, volumeId: volumeId, localId: localId)
-                    return TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource)
+                    return TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: [])
+            }
+        case let .photoSizeProgressive(_, location, w, h, sizes):
+            switch location {
+                case let .fileLocationToBeDeprecated(volumeId, localId):
+                    let resource = CloudStickerPackThumbnailMediaResource(datacenterId: datacenterId, volumeId: volumeId, localId: localId)
+                    return TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: sizes)
             }
         case .photoStrippedSize:
             return nil

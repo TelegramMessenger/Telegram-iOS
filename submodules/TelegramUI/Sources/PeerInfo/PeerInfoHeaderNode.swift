@@ -2565,7 +2565,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.isAvatarExpanded = avatarInitiallyExpanded
         self.isOpenedFromChat = isOpenedFromChat
         self.isSettings = isSettings
-        self.videoCallsEnabled = context.sharedContext.immediateExperimentalUISettings.videoCalls
+        self.videoCallsEnabled = VideoCallsConfiguration(appConfiguration: context.currentAppConfiguration.with { $0 }).areVideoCallsEnabled
         
         self.avatarListNode = PeerInfoAvatarListNode(context: context, readyWhenGalleryLoads: avatarInitiallyExpanded)
         

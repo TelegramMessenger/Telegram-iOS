@@ -86,7 +86,7 @@ static void setViewFrame(UIView *view, CGRect frame)
         {
             localizationPlaceholderText = TGLocalized(@"MediaPicker.AddCaption");
             NSString *placeholderText = TGLocalized(@"MediaPicker.AddCaption");
-            UIFont *placeholderFont = TGSystemFontOfSize(16);
+            UIFont *placeholderFont = TGSystemFontOfSize(17);
             CGSize placeholderSize = [placeholderText sizeWithFont:placeholderFont];
             placeholderSize.width += 2.0f;
             placeholderSize.height += 2.0f;
@@ -121,7 +121,7 @@ static void setViewFrame(UIView *view, CGRect frame)
         _placeholderLabel = [[UILabel alloc] init];
         _placeholderLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
         _placeholderLabel.backgroundColor = [UIColor clearColor];
-        _placeholderLabel.font = TGSystemFontOfSize(16);
+        _placeholderLabel.font = TGSystemFontOfSize(17);
         _placeholderLabel.textColor = UIColorRGB(0x7f7f7f);
         _placeholderLabel.text = TGLocalized(@"MediaPicker.AddCaption");
         _placeholderLabel.userInteractionEnabled = true;
@@ -130,7 +130,7 @@ static void setViewFrame(UIView *view, CGRect frame)
         
         _inputFieldOnelineLabel = [[UILabel alloc] init];
         _inputFieldOnelineLabel.backgroundColor = [UIColor clearColor];
-        _inputFieldOnelineLabel.font = TGSystemFontOfSize(16);
+        _inputFieldOnelineLabel.font = TGSystemFontOfSize(17);
         _inputFieldOnelineLabel.hidden = true;
         _inputFieldOnelineLabel.numberOfLines = 1;
         _inputFieldOnelineLabel.textColor = [UIColor whiteColor];
@@ -169,7 +169,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     _inputField.textColor = [UIColor whiteColor];
     _inputField.disableFormatting = !_allowEntities;
     _inputField.placeholderView = _placeholderLabel;
-    _inputField.font = TGSystemFontOfSize(16);
+    _inputField.font = TGSystemFontOfSize(17);
     _inputField.accentColor = UIColorRGB(0x78b1f9);
     _inputField.clipsToBounds = true;
     _inputField.backgroundColor = nil;
@@ -188,7 +188,7 @@ static void setViewFrame(UIView *view, CGRect frame)
     
     _inputField.internalTextView.scrollIndicatorInsets = UIEdgeInsetsMake(-inputFieldInternalEdgeInsets.top, 0, 5 - TGRetinaPixel, 0);
     
-    [_inputField setAttributedText:[TGMediaPickerCaptionInputPanel attributedStringForText:_caption entities:_entities fontSize:16.0f] keepFormatting:true animated:false];
+    [_inputField setAttributedText:[TGMediaPickerCaptionInputPanel attributedStringForText:_caption entities:_entities fontSize:17.0f] keepFormatting:true animated:false];
     
     [_inputFieldClippingContainer addSubview:_inputField];
 }
@@ -439,7 +439,7 @@ static void setViewFrame(UIView *view, CGRect frame)
         _fieldBackground.alpha = _placeholderLabel.hidden ? 1.0f : 0.0f;
     }
     
-    [self.inputField setAttributedText:[TGMediaPickerCaptionInputPanel attributedStringForText:_caption entities:_entities fontSize:16.0f] keepFormatting:true animated:false];
+    [self.inputField setAttributedText:[TGMediaPickerCaptionInputPanel attributedStringForText:_caption entities:_entities fontSize:17.0f] keepFormatting:true animated:false];
 }
 
 + (NSAttributedString *)attributedStringForText:(NSString *)text entities:(NSArray *)entities fontSize:(CGFloat)fontSize {
@@ -777,14 +777,14 @@ static void setViewFrame(UIView *view, CGRect frame)
     if (text == nil)
         return nil;
     
-    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithAttributedString:[TGMediaPickerCaptionInputPanel attributedStringForText:text entities:entities fontSize:16.0f]];
+    NSMutableAttributedString *string = [[NSMutableAttributedString alloc] initWithAttributedString:[TGMediaPickerCaptionInputPanel attributedStringForText:text entities:entities fontSize:17.0f]];
     
     for (NSUInteger i = 0; i < string.length; i++)
     {
         unichar c = [text characterAtIndex:i];
         if (c == '\t' || c == '\n')
         {
-            [string insertAttributedString:[[NSAttributedString alloc] initWithString:tokenString attributes:@{NSFontAttributeName:TGSystemFontOfSize(16.0f)}] atIndex:i];
+            [string insertAttributedString:[[NSAttributedString alloc] initWithString:tokenString attributes:@{NSFontAttributeName:TGSystemFontOfSize(17.0f)}] atIndex:i];
             break;
         }
     }

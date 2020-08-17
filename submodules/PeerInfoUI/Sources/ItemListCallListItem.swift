@@ -68,14 +68,30 @@ private func stringForCallType(message: Message, strings: PresentationStrings) -
         switch media {
             case let action as TelegramMediaAction:
                 switch action.action {
-                    case let .phoneCall(_, discardReason, _, _):
+                    case let .phoneCall(_, discardReason, _, isVideo):
                         let incoming = message.flags.contains(.Incoming)
                         if let discardReason = discardReason {
                             switch discardReason {
                             case .busy, .disconnect:
-                                string = strings.Notification_CallCanceled
+                                if isVideo {
+                                    string = strings.Notification_VideoCallCanceled
+                                } else {
+                                    string = strings.Notification_CallCanceled
+                                }
                             case .missed:
-                                string = incoming ? strings.Notification_CallMissed : strings.Notification_CallCanceled
+                                if incoming {
+                                    if isVideo {
+                                        string = strings.Notification_VideoCallMissed
+                                    } else {
+                                        string = strings.Notification_CallMissed
+                                    }
+                                } else {
+                                    if isVideo {
+                                        string = strings.Notification_VideoCallCanceled
+                                    } else {
+                                        string = strings.Notification_CallCanceled
+                                    }
+                                }
                             case .hangup:
                                 break
                             }
@@ -83,9 +99,17 @@ private func stringForCallType(message: Message, strings: PresentationStrings) -
                         
                         if string.isEmpty {
                             if incoming {
-                                string = strings.Notification_CallIncoming
+                                if isVideo {
+                                    string = strings.Notification_VideoCallIncoming
+                                } else {
+                                    string = strings.Notification_CallIncoming
+                                }
                             } else {
-                                string = strings.Notification_CallOutgoing
+                                if isVideo {
+                                    string = strings.Notification_VideoCallOutgoing
+                                } else {
+                                    string = strings.Notification_CallOutgoing
+                                }
                             }
                         }
                     default:

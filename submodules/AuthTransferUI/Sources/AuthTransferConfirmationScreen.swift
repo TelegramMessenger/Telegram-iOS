@@ -112,7 +112,7 @@ public final class AuthDataTransferSplashScreen: ViewController {
                 return
             }
             
-            DeviceAccess.authorizeAccess(to: .camera, presentationData: strongSelf.presentationData, present: { c, a in
+            DeviceAccess.authorizeAccess(to: .camera(.video), presentationData: strongSelf.presentationData, present: { c, a in
                 guard let strongSelf = self else {
                     return
                 }

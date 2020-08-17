@@ -72,8 +72,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case alternativeFolderTabs(Bool)
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
-    case videoCalls(Bool)
-    case videoCallsInfo(PresentationTheme, String)
+    case enableHighBitrateVideoCalls(Bool)
     case hostInfo(PresentationTheme, String)
     case versionInfo(PresentationTheme)
     
@@ -89,7 +88,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.experiments.rawValue
         case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .alternativeFolderTabs, .playerEmbedding, .playlistPlayback:
             return DebugControllerSection.experiments.rawValue
-        case .videoCalls, .videoCallsInfo:
+        case .enableHighBitrateVideoCalls:
             return DebugControllerSection.videoExperiments.rawValue
         case .hostInfo, .versionInfo:
             return DebugControllerSection.info.rawValue
@@ -148,14 +147,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 24
         case .playlistPlayback:
             return 25
-        case .videoCalls:
+        case .enableHighBitrateVideoCalls:
             return 26
-        case .videoCallsInfo:
-            return 27
         case .hostInfo:
-            return 28
-        case .versionInfo:
             return 29
+        case .versionInfo:
+            return 30
         }
     }
     
@@ -573,18 +570,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case let .videoCalls(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Experimental Feature", value: value, sectionId: self.section, style: .blocks, updated: { value in
+        case let .enableHighBitrateVideoCalls(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "HD Video Calls", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
-                        settings.videoCalls = value
+                        settings.enableHighBitrateVideoCalls = value
                         return settings
                     })
                 }).start()
             })
-        case let .videoCallsInfo(_, text):
-            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .hostInfo(theme, string):
             return ItemListTextItem(presentationData: presentationData, text: .plain(string), sectionId: self.section)
         case let .versionInfo(theme):
@@ -630,8 +625,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.alternativeFolderTabs(experimentalSettings.foldersTabAtBottom))
     entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
     entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
-    entries.append(.videoCalls(experimentalSettings.videoCalls))
-    entries.append(.videoCallsInfo(presentationData.theme, "Enables experimental transmission of electromagnetic radiation synchronized with pressure waves. Needs to be enabled on both sides."))
+    entries.append(.enableHighBitrateVideoCalls(experimentalSettings.enableHighBitrateVideoCalls))
 
     if let backupHostOverride = networkSettings?.backupHostOverride {
         entries.append(.hostInfo(presentationData.theme, "Host: \(backupHostOverride)"))

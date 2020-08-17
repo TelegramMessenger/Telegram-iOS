@@ -911,15 +911,17 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             result.append(.message)
         }
         var callsAvailable = false
+        var videoCallsAvailable = false
         if !user.isDeleted, user.botInfo == nil, !user.flags.contains(.isSupport) {
             if let cachedUserData = cachedData as? CachedUserData {
-                callsAvailable = cachedUserData.callsAvailable
+                callsAvailable = cachedUserData.voiceCallsAvailable
+                videoCallsAvailable = cachedUserData.videoCallsAvailable
             }
             callsAvailable = true
         }
         if callsAvailable {
             result.append(.call)
-            if videoCallsEnabled {
+            if videoCallsEnabled && videoCallsAvailable {
                 result.append(.videoCall)
             }
         }

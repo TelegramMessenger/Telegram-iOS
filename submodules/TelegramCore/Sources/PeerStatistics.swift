@@ -30,8 +30,8 @@ public enum StatsGraph: Equatable {
         switch self {
             case .Empty:
                 return true
-            case let .Failed(error):
-                return error.lowercased().contains("not enough data")
+            case .Failed:
+                return true
             default:
                 return false
         }
@@ -193,15 +193,16 @@ private func requestChannelStats(postbox: Postbox, network: Network, datacenterI
             flags |= (1 << 1)
         }
         
+        let request = Api.functions.stats.getBroadcastStats(flags: flags, channel: inputChannel)
         let signal: Signal<Api.stats.BroadcastStats, MTRpcError>
         if network.datacenterId != datacenterId {
             signal = network.download(datacenterId: Int(datacenterId), isMedia: false, tag: nil)
             |> castError(MTRpcError.self)
             |> mapToSignal { worker in
-                return worker.request(Api.functions.stats.getBroadcastStats(flags: flags, channel: inputChannel))
+                return worker.request(request)
             }
         } else {
-            signal = network.request(Api.functions.stats.getBroadcastStats(flags: flags, channel: inputChannel))
+            signal = network.request(request)
         }
         
         return signal
@@ -212,7 +213,7 @@ private func requestChannelStats(postbox: Postbox, network: Network, datacenterI
     }
 }
 
-private func requestGraph(network: Network, datacenterId: Int32, token: String, x: Int64? = nil) -> Signal<StatsGraph?, NoError> {
+func requestGraph(network: Network, datacenterId: Int32, token: String, x: Int64? = nil) -> Signal<StatsGraph?, NoError> {
     var flags: Int32 = 0
     if let _ = x {
         flags |= (1 << 0)

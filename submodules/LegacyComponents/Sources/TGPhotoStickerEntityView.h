@@ -9,6 +9,8 @@
 
 @interface TGPhotoStickerEntityView : TGPhotoPaintEntityView
 
+@property (nonatomic, copy) void(^started)(double);
+
 @property (nonatomic, readonly) TGPhotoPaintStickerEntity *entity;
 @property (nonatomic, readonly) bool isMirrored;
 
@@ -17,6 +19,10 @@
 - (UIImage *)image;
 
 - (void)updateVisibility:(bool)visible;
+- (void)seekTo:(double)timestamp;
+- (void)play;
+- (void)pause;
+- (void)resetToStart;
 
 - (CGRect)realBounds;
 

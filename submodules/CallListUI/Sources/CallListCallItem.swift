@@ -368,6 +368,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             var hasMissed = false
             var hasIncoming = false
             var hasOutgoing = false
+            var isVideo = false
             
             var hadDuration = false
             var callDuration: Int32?
@@ -375,7 +376,8 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             for message in item.messages {
                 inner: for media in message.media {
                     if let action = media as? TelegramMediaAction {
-                        if case let .phoneCall(_, discardReason, duration, _) = action.action {
+                        if case let .phoneCall(_, discardReason, duration, video) = action.action {
+                            isVideo = video
                             if message.flags.contains(.Incoming) {
                                 hasIncoming = true
                                 
@@ -459,8 +461,11 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: titleLayout.size.height + titleSpacing + statusLayout.size.height + verticalInset * 2.0), insets: UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0))
             
-            let outgoingIcon = PresentationResourcesCallList.outgoingIcon(item.presentationData.theme)
+            let outgoingVoiceIcon = PresentationResourcesCallList.outgoingIcon(item.presentationData.theme)
+            let outgoingVideoIcon = PresentationResourcesCallList.outgoingVideoIcon(item.presentationData.theme)
             let infoIcon = PresentationResourcesCallList.infoButton(item.presentationData.theme)
+            
+            let outgoingIcon = isVideo ? outgoingVideoIcon : outgoingVoiceIcon
             
             let contentSize = nodeLayout.contentSize
             
@@ -582,7 +587,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                                 if strongSelf.typeIconNode.image !== outgoingIcon {
                                     strongSelf.typeIconNode.image = outgoingIcon
                                 }
-                                transition.updateFrameAdditive(node: strongSelf.typeIconNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 81.0, y: floor((nodeLayout.contentSize.height - outgoingIcon.size.height) / 2.0)), size: outgoingIcon.size))
+                                transition.updateFrameAdditive(node: strongSelf.typeIconNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 79.0, y: floor((nodeLayout.contentSize.height - outgoingIcon.size.height) / 2.0)), size: outgoingIcon.size))
                             }
                             strongSelf.typeIconNode.isHidden = !hasOutgoing
                             

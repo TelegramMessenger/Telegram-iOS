@@ -405,7 +405,7 @@ private func loadLegacyMessages(account: TemporaryAccount, basePath: String, acc
                                 if let resourcePath = resourcePath, let image = UIImage(contentsOfFile: resourcePath) {
                                     dimensions = image.size
                                 }
-                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(dimensions), resource: resource))
+                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(dimensions), resource: resource, progressiveSizes: []))
                             }
                         }
                         
@@ -414,7 +414,7 @@ private func loadLegacyMessages(account: TemporaryAccount, basePath: String, acc
                             if let image = UIImage(contentsOfFile: fullSizePath) {
                                 let resource: TelegramMediaResource = LocalFileMediaResource(fileId: arc4random64())
                                 copyLocalFiles.append((resource, fullSizePath))
-                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(image.size), resource: resource))
+                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(image.size), resource: resource, progressiveSizes: []))
                             }
                         }
                         
@@ -431,7 +431,7 @@ private func loadLegacyMessages(account: TemporaryAccount, basePath: String, acc
                                 } else if imageUrl.hasPrefix("file://"), let path = URL(string: imageUrl)?.path {
                                     copyLocalFiles.append((resource, path))
                                 }
-                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(sizeValue.cgSizeValue), resource: resource))
+                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(sizeValue.cgSizeValue), resource: resource, progressiveSizes: []))
                             }
                         }
                         
@@ -488,7 +488,7 @@ private func loadLegacyMessages(account: TemporaryAccount, basePath: String, acc
                                     resource = updatedResource
                                     copyLocalFiles.append((resource, pathFromLegacyImageUrl(basePath: basePath, url: imageUrl)))
                                 }
-                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(sizeValue.cgSizeValue), resource: resource))
+                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(sizeValue.cgSizeValue), resource: resource, progressiveSizes: []))
                             }
                         }
                         

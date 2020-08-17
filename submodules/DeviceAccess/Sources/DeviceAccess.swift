@@ -15,6 +15,12 @@ import TelegramPresentationData
 import LegacyComponents
 import AccountContext
 
+public enum DeviceAccessCameraSubject {
+    case video
+    case videoCall
+}
+
+
 public enum DeviceAccessMicrophoneSubject {
     case audio
     case video
@@ -34,7 +40,7 @@ public enum DeviceAccessLocationSubject {
 }
 
 public enum DeviceAccessSubject {
-    case camera
+    case camera(DeviceAccessCameraSubject)
     case microphone(DeviceAccessMicrophoneSubject)
     case mediaLibrary(DeviceAccessMediaLibrarySubject)
     case location(DeviceAccessLocationSubject)
@@ -246,14 +252,20 @@ public final class DeviceAccess {
     
     public static func authorizeAccess(to subject: DeviceAccessSubject, registerForNotifications: ((@escaping (Bool) -> Void) -> Void)? = nil, requestSiriAuthorization: ((@escaping (Bool) -> Void) -> Void)? = nil, locationManager: LocationManager? = nil, presentationData: PresentationData? = nil, present: @escaping (ViewController, Any?) -> Void = { _, _ in }, openSettings: @escaping () -> Void = { }, displayNotificationFromBackground: @escaping (String) -> Void = { _ in }, _ completion: @escaping (Bool) -> Void = { _ in }) {
             switch subject {
-                case .camera:
+                case let .camera(cameraSubject):
                     let status = PGCamera.cameraAuthorizationStatus()
                     if status == PGCameraAuthorizationStatusNotDetermined {
                         AVCaptureDevice.requestAccess(for: AVMediaType.video) { response in
                             Queue.mainQueue().async {
                                 completion(response)
                                 if !response, let presentationData = presentationData {
-                                    let text = presentationData.strings.AccessDenied_Camera
+                                    let text: String
+                                    switch cameraSubject {
+                                        case .video:
+                                            text = presentationData.strings.AccessDenied_Camera
+                                        case .videoCall:
+                                            text = presentationData.strings.AccessDenied_VideoCallCamera
+                                    }
                                     present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
                                         openSettings()
                                     })]), nil)

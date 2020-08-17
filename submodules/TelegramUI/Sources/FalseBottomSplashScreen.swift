@@ -141,7 +141,7 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             buttonText = presentationData.strings.FalseBottom_HideAccount_Button
             
             if let source = source {
-                self.animationNode.setup(source: source, width: 528, height: 348, playbackMode: .loop, mode: .direct)
+                self.animationNode.setup(source: source, width: 528, height: 348, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                 self.animationSize = CGSize(width: 264.0, height: 174.0)
                 self.animationNode.visibility = true
             }
@@ -152,7 +152,7 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             buttonText = presentationData.strings.FalseBottom_AddOneMoreAccount_Button
             
             if let source = source {
-                self.animationNode.setup(source: source, width: 174, height: 348, playbackMode: .loop, mode: .direct)
+                self.animationNode.setup(source: source, width: 174, height: 348, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                 self.animationSize = CGSize(width: 87.0, height: 174.0)
                 self.animationNode.visibility = true
         }
@@ -163,7 +163,7 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             buttonText = presentationData.strings.FalseBottom_SetMasterPasscode_Button
             
             if let source = source {
-                self.animationNode.setup(source: source, width: 528, height: 348, playbackMode: .loop, mode: .direct)
+                self.animationNode.setup(source: source, width: 528, height: 348, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                 self.animationSize = CGSize(width: 264.0, height: 174.0)
                 self.animationNode.visibility = true
             }
@@ -174,7 +174,7 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             buttonText = presentationData.strings.FalseBottom_SetSecretPasscode_Button
             
             if let source = source {
-                self.animationNode.setup(source: source, width: 248, height: 248, playbackMode: .loop, mode: .direct)
+                self.animationNode.setup(source: source, width: 248, height: 248, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                 self.animationSize = CGSize(width: 124.0, height: 124.0)
                 self.animationNode.visibility = true
             }
@@ -185,7 +185,7 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             buttonText = presentationData.strings.FalseBottom_AccountWasHidden_Button
             
             if let source = source {
-                self.animationNode.setup(source: source, width: 248, height: 248, playbackMode: .loop, mode: .direct)
+                self.animationNode.setup(source: source, width: 248, height: 248, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                 self.animationSize = CGSize(width: 124.0, height: 124.0)
                 self.animationNode.visibility = true
             }

@@ -296,20 +296,6 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
     }
     
-    func animateIn() {
-        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-    }
-    
-    func animateOut(completion: (() -> Void)? = nil) {
-        self.clipsToBounds = true
-        self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
-            if let strongSelf = self {
-                strongSelf.dismiss()
-            }
-            completion?()
-        })
-    }
-    
     private func indexChanged(_ index: Int) {
         guard let (layout, navigationHeight, actualNavigationHeight) = self.containerLayout else {
             return
@@ -331,7 +317,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     contactListNode.activateSearch = { [weak self] in
                         self?.requestActivateSearch?()
                     }
-                    contactListNode.openPeer = { [weak self] peer in
+                    contactListNode.openPeer = { [weak self] peer, _ in
                         if case let .peer(peer, _, _) = peer {
                             self?.requestOpenPeer?(peer.id)
                         }

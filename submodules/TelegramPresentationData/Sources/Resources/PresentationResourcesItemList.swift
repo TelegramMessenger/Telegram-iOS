@@ -108,6 +108,18 @@ public struct PresentationResourcesItemList {
         })
     }
     
+    public static func voiceCallIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListVoiceCallIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Info/CallButton"), color: theme.list.itemAccentColor)
+        })
+    }
+    
+    public static func videoCallIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListVideoCallIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Info/VideoCallButton"), color: theme.list.itemAccentColor)
+        })
+    }
+    
     public static func addPhoneIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListAddPhoneIcon.rawValue, { theme in
             guard let image = generateTintedImage(image: UIImage(bundleImageName: "Item List/AddItemIcon"), color: theme.list.itemAccentColor) else {

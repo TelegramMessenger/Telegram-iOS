@@ -10,6 +10,8 @@ import StickerResources
 import LegacyComponents
 
 class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
+    var started: ((Double) -> Void)?
+    
     private let context: AccountContext
     private let file: TelegramMediaFile
     private var currentSize: CGSize?
@@ -63,8 +65,16 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
                 if self.animationNode == nil {
                     let animationNode = AnimatedStickerNode()
                     self.animationNode = animationNode
-                    animationNode.started = { [weak self] in
+                    animationNode.started = { [weak self, weak animationNode] in
                         self?.imageNode.isHidden = true
+                        
+                        if let animationNode = animationNode {
+                            let _ = (animationNode.status
+                            |> take(1)
+                            |> deliverOnMainQueue).start(next: { [weak self] status in
+                                self?.started?(status.duration)
+                            })
+                        }
                     }
                     self.addSubnode(animationNode)
                 }
@@ -107,12 +117,36 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
                 let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                 let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0))
                 let source = AnimatedStickerResourceSource(account: self.context.account, resource: self.file.resource)
-                self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct)
+                self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
             
                 self.cachedDisposable.set((source.cachedDataPath(width: 384, height: 384)
                 |> deliverOn(Queue.concurrentDefaultQueue())).start())
             }
         }
+    }
+    
+    func seek(to timestamp: Double) {
+        self.isVisible = false
+        self.isPlaying = false
+        self.animationNode?.seekTo(.timestamp(timestamp))
+    }
+    
+    func play() {
+        self.isVisible = true
+        self.isPlaying = true
+        self.animationNode?.play()
+    }
+    
+    func pause() {
+        self.isVisible = false
+        self.isPlaying = false
+        self.animationNode?.pause()
+    }
+    
+    func resetToStart() {
+        self.isVisible = false
+        self.isPlaying = false
+        self.animationNode?.seekTo(.timestamp(0.0))
     }
     
     override func layoutSubviews() {

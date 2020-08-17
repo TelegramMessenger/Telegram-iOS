@@ -400,7 +400,7 @@ private enum FetchResourceReference {
 
 private final class MultipartFetchManager {
     let parallelParts: Int
-    let defaultPartSize = 128 * 1024
+    let defaultPartSize: Int
     var partAlignment = 4 * 1024
     
     var resource: TelegramMediaResource
@@ -448,10 +448,17 @@ private final class MultipartFetchManager {
         self.consumerId = arc4random64()
         
         self.completeSize = size
-        if let _ = size {
-            self.parallelParts = 4
+        if let size = size {
+            if size <= 512 * 1024 {
+                self.defaultPartSize = 16 * 1024
+                self.parallelParts = 4 * 4
+            } else {
+                self.defaultPartSize = 128 * 1024
+                self.parallelParts = 4
+            }
         } else {
             self.parallelParts = 1
+            self.defaultPartSize = 128 * 1024
         }
         
         if let info = parameters?.info as? TelegramCloudMediaResourceFetchInfo {

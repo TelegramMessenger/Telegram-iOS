@@ -190,20 +190,6 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         self._ready.set(self.peerSelectionNode.ready)
     }
     
-    override public func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-    }
-    
-    override public func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        
-        //self.peerSelectionNode.animateIn()
-    }
-    
-    override public func viewDidDisappear(_ animated: Bool) {
-        super.viewDidDisappear(animated)
-    }
-    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         

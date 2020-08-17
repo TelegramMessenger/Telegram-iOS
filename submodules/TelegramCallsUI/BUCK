@@ -7,7 +7,7 @@ static_library(
     ]),
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
-	    "//submodules/Display:Display#shared",
+        "//submodules/Display:Display#shared",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
     	"//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/PhotoResources:PhotoResources",
@@ -21,6 +21,8 @@ static_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/TelegramCallsUI/CallsEmoji:CallsEmoji",
+        "//submodules/SemanticStatusNode:SemanticStatusNode",
+        "//submodules/TooltipUI:TooltipUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

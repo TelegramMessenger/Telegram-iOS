@@ -85,4 +85,7 @@ typedef enum {
 
 + (TGPhotoEditorTab)defaultTabsForAvatarIntent;
 
+- (NSTimeInterval)currentTime;
+- (void)setMinimalVideoDuration:(NSTimeInterval)duration;
+
 @end
