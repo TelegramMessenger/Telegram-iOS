@@ -2548,7 +2548,8 @@ final class SharedApplicationContext {
             if let context = self.contextValue, let accountId = accountId, context.context.account.id != accountId {
                 let _ = context.context.sharedContext.accountManager.transaction { transaction in
                     if let record = transaction.getAllRecords().first(where: { $0.id == accountId }),
-                        !record.attributes.contains(where: { $0 is HiddenAccountAttribute }) {
+                        !record.attributes.contains(where: { $0 is HiddenAccountAttribute }),
+                        context.context.sharedContext.accountManager.displayedAccountsFilter.unlockedHiddenAccountRecordId == nil {
                         completionHandler([.alert])
                     }
                 }.start()

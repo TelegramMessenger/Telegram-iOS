@@ -231,15 +231,15 @@ public func updateHiddenAccountsAccessChallengeData(manager: AccountManager) {
 }
 
 public final class DisplayedAccountsFilterImpl: DisplayedAccountsFilter {
-    public let unlockedHiddenAccountRecordIdPromise = Promise<AccountRecordId?>()
+    public let unlockedHiddenAccountRecordIdPromise = Promise<AccountRecordId?>(nil)
     public var unlockedHiddenAccountRecordId: AccountRecordId?
     private var unlockedHiddenAccountRecordIdDisposable: Disposable?
     
-    public let accountManagerRecordIdPromise = ValuePromise<AccountRecordId?>()
+    public let accountManagerRecordIdPromise = ValuePromise<AccountRecordId?>(nil)
     public let getHiddenAccountsAccessChallengeDataPromise = Promise<[AccountRecordId:PostboxAccessChallengeData]>()
     public let didFinishChangingAccountPromise = Promise<Void>()
     
-    public var currentAccountRecordIdPromise = Promise<AccountRecordId?>()
+    public var currentAccountRecordIdPromise = Promise<AccountRecordId?>(nil)
     
     public init() {
         unlockedHiddenAccountRecordIdDisposable = (unlockedHiddenAccountRecordIdPromise.get()

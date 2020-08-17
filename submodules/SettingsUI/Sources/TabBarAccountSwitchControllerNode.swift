@@ -269,12 +269,14 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
         contentNodes.append(SwitchAccountItemNode(context: sharedContext.makeTempAccountContext(account: accounts.primary.0), peer: accounts.primary.1, isCurrent: true, unreadCount: 0, displaySeparator: !accounts.other.isEmpty, presentationData: presentationData, action: {
             cancel()
         }))
-        for i in 0 ..< accounts.other.count {
-            let (account, peer, count) = accounts.other[i]
-            let id = account.id
-            contentNodes.append(SwitchAccountItemNode(context: sharedContext.makeTempAccountContext(account: account), peer: peer, isCurrent: false, unreadCount: count, displaySeparator: i != accounts.other.count - 1, presentationData: presentationData, action: {
-                switchToAccount(id)
-            }))
+        if !accounts.primary.0.isHidden {
+            for i in 0 ..< accounts.other.count {
+                let (account, peer, count) = accounts.other[i]
+                let id = account.id
+                contentNodes.append(SwitchAccountItemNode(context: sharedContext.makeTempAccountContext(account: account), peer: peer, isCurrent: false, unreadCount: count, displaySeparator: i != accounts.other.count - 1, presentationData: presentationData, action: {
+                    switchToAccount(id)
+                }))
+            }
         }
         self.contentNodes = contentNodes
         

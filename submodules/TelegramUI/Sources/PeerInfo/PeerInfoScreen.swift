@@ -623,7 +623,7 @@ private enum SettingsSection: Int, CaseIterable {
     case support
 }
 
-private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, isExpanded: Bool) -> [(AnyHashable, [PeerInfoScreenItem])] {
+private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, isExpanded: Bool, currentHiddenId: AccountRecordId?) -> [(AnyHashable, [PeerInfoScreenItem])] {
     guard let data = data else {
         return []
     }
@@ -668,7 +668,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             }))
         }
         
-        if !settings.accountsAndPeers.isEmpty {
+        if !settings.accountsAndPeers.isEmpty, currentHiddenId == nil {
             for (peerAccount, peer, badgeCount) in settings.accountsAndPeers {
                 let member: PeerInfoMember = .account(peer: RenderedPeer(peer: peer))
                 items[.accounts]!.append(PeerInfoScreenMemberItem(id: member.id, context: context.sharedContext.makeTempAccountContext(account: peerAccount), enclosingPeer: nil, member: member, badge: badgeCount > 0 ? "\(compactNumericCountString(Int(badgeCount), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))" : nil, action: { action in
@@ -1416,6 +1416,15 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         return self._ready
     }
     private var didSetReady = false
+    
+    var currentHiddenId: AccountRecordId?
+    {
+        didSet {
+            if let (layout, navigationHeight) = self.validLayout {
+                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+            }
+        }
+    }
     
     init(controller: PeerInfoScreen, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool, ignoreGroupInCommon: PeerId?) {
         self.controller = controller
@@ -4955,7 +4964,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         var validRegularSections: [AnyHashable] = []
         if !self.isMediaOnly {
-            let items = self.isSettings ? settingsItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, isExpanded: self.headerNode.isAvatarExpanded) : infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, nearbyPeerDistance: self.nearbyPeerDistance, callMessages: self.callMessages)
+            let items = self.isSettings ? settingsItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, isExpanded: self.headerNode.isAvatarExpanded, currentHiddenId: self.currentHiddenId) : infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, nearbyPeerDistance: self.nearbyPeerDistance, callMessages: self.callMessages)
             
             contentHeight += headerHeight
             if !self.isSettings {
@@ -5487,6 +5496,9 @@ public final class PeerInfoScreen: ViewController {
     
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
+    private var currentHiddenId: AccountRecordId?
+    private var currentHiddenIdDisposable: Disposable?
+    
     public init(context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool = false, ignoreGroupInCommon: PeerId? = nil) {
         self.context = context
         self.peerId = peerId
@@ -5545,7 +5557,8 @@ public final class PeerInfoScreen: ViewController {
             
             let accountTabBarAvatarBadge: Signal<Int32, NoError> = combineLatest(notificationsFromAllAccounts, self.accountsAndPeers.get())
             |> map { notificationsFromAllAccounts, primaryAndOther -> Int32 in
-                if !notificationsFromAllAccounts {
+                let currentHiddenId = context.sharedContext.accountManager.displayedAccountsFilter.unlockedHiddenAccountRecordId
+                if !notificationsFromAllAccounts || currentHiddenId != nil {
                     return 0
                 }
                 let (primary, other) = primaryAndOther
@@ -5561,7 +5574,8 @@ public final class PeerInfoScreen: ViewController {
             
             let accountTabBarAvatar: Signal<(UIImage, UIImage)?, NoError> = combineLatest(self.accountsAndPeers.get(), context.sharedContext.presentationData)
             |> map { primaryAndOther, presentationData -> (Account, Peer, PresentationTheme)? in
-                if let primary = primaryAndOther.0, !primaryAndOther.1.isEmpty {
+                let currentHiddenId = context.sharedContext.accountManager.displayedAccountsFilter.unlockedHiddenAccountRecordId
+                if let primary = primaryAndOther.0, !primaryAndOther.1.isEmpty, currentHiddenId == nil {
                     return (primary.0, primary.1, presentationData.theme)
                 } else {
                     return nil
@@ -5738,6 +5752,13 @@ public final class PeerInfoScreen: ViewController {
                 }
             }
         })
+        
+        self.currentHiddenIdDisposable = (context.sharedContext.accountManager.displayedAccountsFilter.unlockedHiddenAccountRecordIdPromise.get() |> deliverOnMainQueue).start(next: { [weak self] currentHiddenId -> Void in
+            guard let strongSelf = self else { return }
+            
+            strongSelf.currentHiddenId = currentHiddenId
+            strongSelf.controllerNode.currentHiddenId = currentHiddenId
+        })
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -5748,6 +5769,7 @@ public final class PeerInfoScreen: ViewController {
         self.presentationDataDisposable?.dispose()
         self.accountsAndPeersDisposable?.dispose()
         self.tabBarItemDisposable?.dispose()
+        self.currentHiddenIdDisposable?.dispose()
     }
     
     override public func loadDisplayNode() {
@@ -5837,6 +5859,8 @@ public final class PeerInfoScreen: ViewController {
         
         for account in other {
             let id = account.0.id
+            guard self.currentHiddenId == nil || self.currentHiddenId == id else { continue }
+            
             items.append(.action(ContextMenuActionItem(text: account.1.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), badge: account.2 != 0 ? ContextMenuActionBadge(value: "\(account.2)", color: .accent) : nil, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: accountIconSignal(account: account.0, peer: account.1, size: avatarSize)), action: { [weak self] _, f in
                 guard let strongSelf = self else {
                     return

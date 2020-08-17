@@ -88,13 +88,15 @@ private enum DebugAccountsControllerEntry: ItemListNodeEntry {
     }
 }
 
-private func debugAccountsControllerEntries(view: AccountRecordsView, presentationData: PresentationData) -> [DebugAccountsControllerEntry] {
+private func debugAccountsControllerEntries(view: AccountRecordsView, presentationData: PresentationData, currentHiddenId: AccountRecordId?) -> [DebugAccountsControllerEntry] {
     var entries: [DebugAccountsControllerEntry] = []
     
     for entry in view.records.sorted(by: {
         $0.id < $1.id
     }) {
-        entries.append(.record(presentationData.theme, entry, entry.id == view.currentRecord?.id))
+        if currentHiddenId == nil || currentHiddenId == entry.id {
+            entries.append(.record(presentationData.theme, entry, entry.id == view.currentRecord?.id))
+        }
     }
     
     entries.append(.loginNewAccount(presentationData.theme))
@@ -133,10 +135,10 @@ public func debugAccountsController(context: AccountContext, accountManager: Acc
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, accountManager.accountRecords())
-        |> map { presentationData, view -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(context.sharedContext.presentationData, accountManager.accountRecords(), accountManager.displayedAccountsFilter.unlockedHiddenAccountRecordIdPromise.get())
+        |> map { presentationData, view, currentHiddenId -> (ItemListControllerState, (ItemListNodeState, Any)) in
             let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Accounts"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: debugAccountsControllerEntries(view: view, presentationData: presentationData), style: .blocks)
+            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: debugAccountsControllerEntries(view: view, presentationData: presentationData, currentHiddenId: currentHiddenId), style: .blocks)
             
             return (controllerState, (listState, arguments))
     }
