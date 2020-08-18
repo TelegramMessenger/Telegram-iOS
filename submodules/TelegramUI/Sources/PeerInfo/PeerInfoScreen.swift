@@ -5880,7 +5880,7 @@ public final class PeerInfoScreen: ViewController {
             f(.default)
         })))
         
-        if !other.isEmpty {
+        if !other.isEmpty, self.currentHiddenId == nil {
             items.append(.separator)
         }
         
