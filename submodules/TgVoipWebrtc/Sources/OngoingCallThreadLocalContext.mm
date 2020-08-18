@@ -387,7 +387,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .enableNS = true,
             .enableAGC = true,
             .enableCallUpgrade = false,
-            .logPath = "", //logPath.length == 0 ? "" : std::string(logPath.UTF8String),
+            .logPath = logPath.length == 0 ? "" : std::string(logPath.UTF8String),
             .maxApiLayer = [OngoingCallThreadLocalContextWebrtc maxLayer],
             .preferredAspectRatio = preferredAspectRatio,
             .enableHighBitrateVideo = enableHighBitrateVideoCalls
