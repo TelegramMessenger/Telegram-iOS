@@ -26,12 +26,14 @@ public struct LockState: Codable, Equatable {
     public var autolockTimeout: Int32?
     public var unlockAttemts: UnlockAttempts?
     public var applicationActivityTimestamp: MonotonicTimestamp?
+    public var forceLockOnLaunch: Bool
 
-    public init(isManuallyLocked: Bool = false, autolockTimeout: Int32? = nil, unlockAttemts: UnlockAttempts? = nil, applicationActivityTimestamp: MonotonicTimestamp? = nil) {
+    public init(isManuallyLocked: Bool = false, autolockTimeout: Int32? = nil, unlockAttemts: UnlockAttempts? = nil, applicationActivityTimestamp: MonotonicTimestamp? = nil, forceLockOnLaunch: Bool = false) {
         self.isManuallyLocked = isManuallyLocked
         self.autolockTimeout = autolockTimeout
         self.unlockAttemts = unlockAttemts
         self.applicationActivityTimestamp = applicationActivityTimestamp
+        self.forceLockOnLaunch = forceLockOnLaunch
     }
 }
 
