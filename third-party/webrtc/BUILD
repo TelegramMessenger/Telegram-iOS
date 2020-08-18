@@ -1526,6 +1526,8 @@ webrtc_sources = [
     "stats/rtc_stats_report.cc",
     "stats/rtc_stats.cc",
     "stats/rtcstats_objects.cc",
+    "rtc_base/system/cocoa_threading.mm",
+    "rtc_base/mac_ifaddrs_converter.cc",
 ]
 
 ios_objc_sources = [
@@ -1549,6 +1551,10 @@ ios_objc_sources = [
     "objc/helpers/RTCDispatcher.m",
     "objc/components/renderer/opengl/RTCDisplayLinkTimer.h",
     "objc/components/renderer/opengl/RTCDisplayLinkTimer.m",
+    "objc/components/video_codec/RTCVideoEncoderFactoryH264.h",
+    "objc/components/video_codec/RTCVideoEncoderFactoryH264.m",
+    "objc/components/video_codec/RTCVideoDecoderFactoryH264.h",
+    "objc/components/video_codec/RTCVideoDecoderFactoryH264.m",
 ]
 
 ios_sources = [
@@ -1645,7 +1651,6 @@ ios_sources = [
     "objc/helpers/AVCaptureSession+DevicePosition.h",
     "objc/helpers/AVCaptureSession+DevicePosition.mm",
     "objc/helpers/NSString+StdString.h",
-    "objc/helpers/NSString+StdString.mm",
     "objc/helpers/scoped_cftyperef.h",
     "objc/api/peerconnection/RTCMediaSource+Private.h",
     "objc/api/peerconnection/RTCMediaSource.h",
@@ -1677,10 +1682,118 @@ ios_sources = [
     "objc/components/renderer/metal/RTCMTLRenderer+Private.h",
     "objc/components/renderer/metal/RTCMTLRenderer.h",
     "objc/components/renderer/metal/RTCMTLRenderer.mm",
+    "objc/components/video_codec/UIDevice+H264Profile.mm",
+    "objc/helpers/UIDevice+RTCDevice.mm",
+    "objc/api/peerconnection/RTCEncodedImage+Private.mm",
+    "objc/api/peerconnection/RTCPeerConnection+DataChannel.mm",
+    "objc/api/peerconnection/RTCPeerConnection+Stats.mm",
+    "objc/api/peerconnection/RTCPeerConnectionFactoryBuilder+DefaultComponents.mm",
+    "objc/api/peerconnection/RTCRtpFragmentationHeader+Private.mm",
+    "objc/api/peerconnection/RTCVideoCodecInfo+Private.mm",
+    "objc/api/peerconnection/RTCVideoEncoderSettings+Private.mm",
+    "objc/helpers/NSString+StdString.mm",
+    "objc/api/peerconnection/RTCPeerConnectionFactoryBuilder.mm",
+    "objc/api/peerconnection/RTCLegacyStatsReport.mm",
+    "objc/api/peerconnection/RTCPeerConnection.mm",
+    "objc/api/peerconnection/RTCStatisticsReport.mm",
+    "objc/api/peerconnection/RTCDataChannel.mm",
+    "objc/api/peerconnection/RTCSessionDescription.mm",
+    "objc/api/peerconnection/RTCRtpSender.mm",
+    "objc/api/peerconnection/RTCIceCandidate.mm",
+    "objc/api/peerconnection/RTCConfiguration.mm",
+    "objc/api/peerconnection/RTCRtpReceiver.mm",
+    "objc/api/peerconnection/RTCMediaStream.mm",
+    "objc/api/peerconnection/RTCRtpTransceiver.mm",
+    "objc/api/peerconnection/RTCPeerConnectionFactory.mm",
+    "objc/api/peerconnection/RTCCertificate.mm",
+    "objc/api/peerconnection/RTCDtmfSender.mm",
+    "objc/api/peerconnection/RTCMediaStreamTrack.mm",
+    "objc/api/peerconnection/RTCVideoTrack.mm",
+    "objc/api/peerconnection/RTCRtpParameters.mm",
+    "objc/api/peerconnection/RTCAudioSource.mm",
+    "objc/api/peerconnection/RTCIceServer.mm",
+    "objc/api/peerconnection/RTCCryptoOptions.mm",
+    "objc/api/peerconnection/RTCAudioTrack.mm",
+    "objc/api/peerconnection/RTCRtpEncodingParameters.mm",
+    "objc/api/peerconnection/RTCRtpCodecParameters.mm",
+    "objc/api/RTCVideoRendererAdapter.mm",
+    "objc/api/peerconnection/RTCRtpHeaderExtension.mm",
+    "objc/api/peerconnection/RTCRtcpParameters.mm",
+    "media_constraints.cc",
+    "objc/native/api/audio_device_module.mm",
 ]
 
+common_arm_specific_sources = ["webrtc-ios/src/" + path for path in [
+    "modules/audio_coding/codecs/isac/fix/source/entropy_coding_neon.c",
+    "modules/audio_coding/codecs/isac/fix/source/filterbanks_neon.c",
+    "modules/audio_coding/codecs/isac/fix/source/filters_neon.c",
+    "modules/audio_coding/codecs/isac/fix/source/lattice_neon.c",
+    "modules/audio_coding/codecs/isac/fix/source/transform_neon.c",
+    "modules/audio_processing/aecm/aecm_core_neon.cc",
+    "modules/audio_processing/utility/ooura_fft_neon.cc",
+    "modules/video_processing/util/denoiser_filter_neon.cc",
+    "common_audio/fir_filter_neon.cc",
+    "common_audio/signal_processing/cross_correlation_neon.c",
+    "common_audio/signal_processing/downsample_fast_neon.c",
+    "common_audio/signal_processing/min_max_operations_neon.c",
+    "common_audio/resampler/sinc_resampler_neon.cc",
+]]
+
+armv7_specific_sources = ["webrtc-ios/src/" + path for path in [
+
+]]
+
+arm64_specific_sources = ["webrtc-ios/src/" + path for path in [
+    "common_audio/signal_processing/complex_bit_reverse.c",
+    "common_audio/signal_processing/filter_ar_fast_q12.c",
+]]
+
+x86_specific_sources = ["webrtc-ios/src/" + path for path in [
+    "modules/audio_processing/utility/ooura_fft_sse2.cc",
+    "modules/video_processing/util/denoiser_filter_sse2.cc",
+    "common_audio/fir_filter_sse.cc",
+    "common_audio/resampler/sinc_resampler_sse.cc",
+    "common_audio/signal_processing/complex_bit_reverse.c",
+    "common_audio/signal_processing/filter_ar_fast_q12.c",
+]]
+
+arch_specific_sources = select({
+    "@build_bazel_rules_apple//apple:ios_armv7": common_arm_specific_sources + armv7_specific_sources,
+    "@build_bazel_rules_apple//apple:ios_arm64": common_arm_specific_sources + arm64_specific_sources,
+    "@build_bazel_rules_apple//apple:ios_x86_64": x86_specific_sources,
+})
+
+common_flags = [
+    "-DWEBRTC_IOS",
+    "-DWEBRTC_MAC",
+    "-DWEBRTC_POSIX",
+    "-DHAVE_WEBRTC_VIDEO",
+    "-DRTC_ENABLE_VP9",
+]
+
+arm_specific_flags = [
+    "-DWEBRTC_ARCH_ARM",
+    "-DWEBRTC_ARCH_ARM_V7",
+    "-DWEBRTC_HAS_NEON",
+]
+
+arm64_specific_flags = [
+    "-DWEBRTC_ARCH_ARM64",
+    "-DWEBRTC_HAS_NEON",
+]
+
+x86_64_specific_flags = [
+    "-DHAVE_SSE2",
+]
+
+arch_specific_cflags = select({
+    "@build_bazel_rules_apple//apple:ios_armv7": common_flags + arm_specific_flags,
+    "@build_bazel_rules_apple//apple:ios_arm64": common_flags + arm64_specific_flags,
+    "@build_bazel_rules_apple//apple:ios_x86_64": common_flags + x86_64_specific_flags,
+})
+
 raw_combined_sources = webrtc_sources + rnnoice_sources + pffft_sources + absl_sources
-combined_sources = ["webrtc-ios/src/" + path for path in raw_combined_sources]
+combined_sources = ["webrtc-ios/src/" + path for path in raw_combined_sources] + arch_specific_sources
 
 cc_library(
     name = "usrsctp",
@@ -1773,7 +1886,7 @@ cc_library(
         "-D__Userspace__",
         "-D__Userspace_os_Darwin",
         "-DPACKAGE_VERSION=''",
-    ],
+    ] + arch_specific_cflags,
     visibility = ["//visibility:public"],
 )
 
@@ -1850,7 +1963,7 @@ cc_library(
         "-DHAVE_SYS_TYPES_H",
         "-DHAVE_UNISTD_H",
         "-DPACKAGE_STRING='\"\"'",
-    ],
+    ] + arch_specific_cflags,
     deps = [
         "//submodules/openssl:openssl",
     ],
@@ -1895,7 +2008,83 @@ cc_library(
         "-Ithird-party/webrtc/webrtc-ios/src/base/third_party/libevent/mac",
         "-Ithird-party/webrtc/webrtc-ios/src/base/third_party/libevent",
         "-Ithird-party/webrtc/webrtc-ios/src",
-    ],
+    ] + arch_specific_cflags,
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "libyuv",
+    srcs = ["webrtc-ios/src/third_party/libyuv/" + path for path in [
+        # Headers
+        "include/libyuv.h",
+        "include/libyuv/basic_types.h",
+        "include/libyuv/compare.h",
+        "include/libyuv/convert.h",
+        "include/libyuv/convert_argb.h",
+        "include/libyuv/convert_from.h",
+        "include/libyuv/convert_from_argb.h",
+        "include/libyuv/cpu_id.h",
+        "include/libyuv/mjpeg_decoder.h",
+        "include/libyuv/planar_functions.h",
+        "include/libyuv/rotate.h",
+        "include/libyuv/rotate_argb.h",
+        "include/libyuv/rotate_row.h",
+        "include/libyuv/row.h",
+        "include/libyuv/scale.h",
+        "include/libyuv/scale_argb.h",
+        "include/libyuv/scale_row.h",
+        "include/libyuv/version.h",
+        "include/libyuv/video_common.h",
+        "include/libyuv/compare_row.h",
+
+        # Source Files
+        "source/compare.cc",
+        "source/compare_common.cc",
+        "source/compare_gcc.cc",
+        "source/compare_win.cc",
+        "source/convert.cc",
+        "source/convert_argb.cc",
+        "source/convert_from.cc",
+        "source/convert_from_argb.cc",
+        "source/convert_jpeg.cc",
+        "source/convert_to_argb.cc",
+        "source/convert_to_i420.cc",
+        "source/cpu_id.cc",
+        "source/mjpeg_decoder.cc",
+        "source/mjpeg_validate.cc",
+        "source/planar_functions.cc",
+        "source/rotate.cc",
+        "source/rotate_any.cc",
+        "source/rotate_argb.cc",
+        "source/rotate_common.cc",
+        "source/rotate_gcc.cc",
+        "source/rotate_win.cc",
+        "source/row_any.cc",
+        "source/row_common.cc",
+        "source/row_gcc.cc",
+        "source/row_win.cc",
+        "source/scale.cc",
+        "source/scale_any.cc",
+        "source/scale_argb.cc",
+        "source/scale_common.cc",
+        "source/scale_gcc.cc",
+        "source/scale_win.cc",
+        "source/video_common.cc",
+
+        # ARM Source Files
+        "source/compare_neon.cc",
+        "source/compare_neon64.cc",
+        "source/rotate_neon.cc",
+        "source/rotate_neon64.cc",
+        "source/row_neon.cc",
+        "source/row_neon64.cc",
+        "source/scale_neon.cc",
+        "source/scale_neon64.cc",
+    ]],
+    copts = [
+        "-ffp-contract=fast",
+        "-Ithird-party/webrtc/webrtc-ios/src/third_party/libyuv/include",
+    ] + arch_specific_cflags,
     visibility = ["//visibility:public"],
 )
 
@@ -1934,7 +2123,7 @@ objc_library(
         "-D__Userspace__",
         "-D__Userspace_os_Darwin",
         "-DPACKAGE_VERSION='\"\"'",
-    ],
+    ] + arch_specific_cflags,
     deps = [
         "//submodules/openssl:openssl",
         "//submodules/Opus:opus",
@@ -1981,7 +2170,7 @@ objc_library(
         "-D__Userspace_os_Darwin",
         "-DPACKAGE_VERSION='\"\"'",
         "-std=c++14",
-    ],
+    ] + arch_specific_cflags,
     deps = [
         "//submodules/openssl:openssl",
         "//submodules/Opus:opus",
@@ -2009,10 +2198,6 @@ objc_library(
         "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc",
         "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc/base",
         "-Ithird-party/webrtc/additional-files",
-        "-DWEBRTC_IOS",
-        "-DWEBRTC_MAC",
-        "-DWEBRTC_POSIX",
-        "-DRTC_ENABLE_VP9",
         "-DBSD=1",
         "-DUSE_KISS_FFT",
         "-DHAVE_PTHREAD",
@@ -2026,13 +2211,14 @@ objc_library(
         "-D__Userspace__",
         "-D__Userspace_os_Darwin",
         "-DPACKAGE_VERSION='\"\"'",
-    ],
+    ] + arch_specific_cflags,
     deps = [
         "//submodules/openssl:openssl",
         "//submodules/Opus:opus",
         ":usrsctp",
         ":libsrtp",
         ":libevent",
+        ":libyuv",
         ":webrtc_objc_sdk",
         ":webrtc_objcpp_sdk",
         "//third-party/libvpx:vpx",

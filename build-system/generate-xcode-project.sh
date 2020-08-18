@@ -71,7 +71,7 @@ for NAME in $PATCH_OPTIONS; do
 	sed -i "" -e '1h;2,$H;$!d;g' -e 's/\("'"$NAME"'" : {\n[ ]*"p" : "$(inherited)\)/\1'" ${BAZEL_OPTIONS[*]}"'/' "$GEN_DIRECTORY/${APP_TARGET}.tulsiproj/Configs/${APP_TARGET}.tulsigen"
 done
 
-sed -i "" -e '1h;2,$H;$!d;g' -e 's/\("sourceFilters" : \[\n[ ]*\)"\.\/\.\.\."/\1"'"${APP_TARGET}"'\/...", "submodules\/..."/' "$GEN_DIRECTORY/${APP_TARGET}.tulsiproj/Configs/${APP_TARGET}.tulsigen"
+sed -i "" -e '1h;2,$H;$!d;g' -e 's/\("sourceFilters" : \[\n[ ]*\)"\.\/\.\.\."/\1"'"${APP_TARGET}"'\/...", "submodules\/...", "third-party\/..."/' "$GEN_DIRECTORY/${APP_TARGET}.tulsiproj/Configs/${APP_TARGET}.tulsigen"
 
 "$TULSI" -- \
 	--verbose \
