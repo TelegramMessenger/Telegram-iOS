@@ -212,7 +212,10 @@ public final class AppLockContextImpl: AppLockContext {
                             }
                         }), hasPublicAccountsSignal: displayedAccountsFilter.hasPublicAccounts(accountManager: accountManager))
                         if becameActiveRecently, appInForeground {
-                            passcodeController.presentationCompleted = { [weak passcodeController] in
+                            passcodeController.presentationCompleted = { [weak passcodeController, weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.unlockedHiddenAccountRecordId.set(nil)
+                                }
                                 if case .enabled = biometrics {
                                     passcodeController?.requestBiometrics()
                                 }
@@ -266,7 +269,7 @@ public final class AppLockContextImpl: AppLockContext {
             
             if strongSelf.displayedAccountsFilter.unlockedHiddenAccountRecordId == nil {
                 if strongSelf.currentStateValue.autolockTimeout == 1 {
-                    strongSelf.lock()
+                    strongSelf.lockAndHideHiddenAccount()
                 } else if let coveringView = strongSelf.coveringView, let window = strongSelf.window {
                     coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
                     window.coveringView = coveringView
@@ -281,7 +284,7 @@ public final class AppLockContextImpl: AppLockContext {
             guard let strongSelf = self, let coveringView = strongSelf.coveringView, let window = strongSelf.window else { return }
             
             if strongSelf.currentStateValue.autolockTimeout == 1 {
-                strongSelf.lock()
+                strongSelf.lockAndHideHiddenAccount()
             } else {
                 Queue.mainQueue().after(0.01, {
                     coveringView.updateSnapshot(nil)
@@ -369,6 +372,12 @@ public final class AppLockContextImpl: AppLockContext {
                 return nil
             }
         }
+    }
+    
+    private func lockAndHideHiddenAccount() {
+        self.unlockedHiddenAccountRecordId.set(nil)
+        
+        self.lock()
     }
     
     public func lock() {
