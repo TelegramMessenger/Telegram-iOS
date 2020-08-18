@@ -185,8 +185,8 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             buttonText = presentationData.strings.FalseBottom_AccountWasHidden_Button
             
             if let source = source {
-                self.animationNode.setup(source: source, width: 248, height: 248, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
-                self.animationSize = CGSize(width: 124.0, height: 124.0)
+                self.animationNode.setup(source: source, width: 528, height: 348, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+                self.animationSize = CGSize(width: 264.0, height: 174.0)
                 self.animationNode.visibility = true
             }
         }
@@ -387,8 +387,11 @@ private final class FalseBottomAnimationSource: AnimatedStickerNodeSource {
             replacements = [:]
             
         case .accountWasHidden:
-            fileName = "TwoFactorSetupDone"
-            replacements = [:]
+            fileName = "FalseBottomAccountIsHidden"
+            replacements = [
+                "0.121568627451,0.121568627451,0.121568627451,1": elementBackgroundColor,
+                "0.552941203117,0.556862771511,0.57647061348,1": outlineColor
+            ]
         }
         guard let path = getAppBundle().path(forResource: fileName, ofType: "tgs"),
             let rawData = try? Data(contentsOf: URL(fileURLWithPath: path)) else { return nil }
