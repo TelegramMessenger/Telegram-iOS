@@ -17,6 +17,7 @@ static_library(
         "tgcalls/tgcalls/platform/android/**",
         "tgcalls/tgcalls/platform/darwin/VideoCameraCapturerMac.*",
         "tgcalls/tgcalls/platform/darwin/VideoMetalViewMac.*",
+        "tgcalls/tgcalls/platform/darwin/GLVideoViewMac.*",
     ]),
     has_cpp = True,
     headers = merge_maps([
