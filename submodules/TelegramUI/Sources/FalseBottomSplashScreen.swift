@@ -179,8 +179,8 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             buttonText = presentationData.strings.FalseBottom_SetSecretPasscode_Button
             
             if let source = source {
-                self.animationNode.setup(source: source, width: 248, height: 248, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
-                self.animationSize = CGSize(width: 124.0, height: 124.0)
+                self.animationNode.setup(source: source, width: 528, height: 348, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+                self.animationSize = CGSize(width: 264.0, height: 174.0)
                 self.animationNode.visibility = true
             }
 
@@ -388,8 +388,15 @@ private final class FalseBottomAnimationSource: AnimatedStickerNodeSource {
             ]
             
         case .setSecretPasscode:
-            fileName = "TwoFactorSetupIntro"
-            replacements = [:]
+            fileName = "FalseBottomHiddenPassword"
+            replacements = [
+                "0.219607843137,0.223529411765,0.23137254902,1": elementBackgroundColor,
+                "0.122,0.122,0.122,1": elementBackgroundColor,
+                "0.122000002394,0.122000002394,0.122000002394,1": elementBackgroundColor,
+                "0.125,0.125,0.125,1": elementBackgroundColor,
+                "0.1254902035,0.1254902035,0.1254902035,1": elementBackgroundColor,
+                "0.552999997606,0.556999954523,0.57599995931,1": outlineColor
+            ]
             
         case .accountWasHidden:
             fileName = "FalseBottomAccountIsHidden"
