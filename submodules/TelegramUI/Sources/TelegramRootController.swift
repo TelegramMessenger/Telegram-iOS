@@ -32,7 +32,7 @@ public final class TelegramRootController: NavigationController {
         didSet {
             self.falseBottomAuthViewControllersDisposable?.dispose()
             self.falseBottomAuthViewControllersDisposable = falseBottomAuthViewControllersSignal?.start(next: { [weak self] viewControllers in
-                guard let strongSelf = self else { return }
+                guard let strongSelf = self, !viewControllers.isEmpty else { return }
                 
                 let setViewControllers: ([UIViewController]) -> Void = { [weak self] controllers in
                     guard let strongSelf = self else { return }

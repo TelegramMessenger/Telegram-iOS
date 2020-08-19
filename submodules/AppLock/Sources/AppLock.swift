@@ -12,7 +12,7 @@ import ImageBlur
 import FastBlur
 import AppLockState
 
-private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: LockState, isApplicationActive: Bool) -> Bool {
+private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: LockState) -> Bool {
     if state.isManuallyLocked {
         return true
     } else if let autolockTimeout = passcodeSettings.autolockTimeout {
@@ -26,7 +26,7 @@ private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: Loc
             if timestamp.bootTimestamp != applicationActivityTimestamp.bootTimestamp {
                 return true
             }
-            if timestamp.uptime > applicationActivityTimestamp.uptime + autolockTimeout {
+            if autolockTimeout != 1, timestamp.uptime > applicationActivityTimestamp.uptime + autolockTimeout {
                 return true
             }
         } else {
@@ -98,8 +98,12 @@ public final class AppLockContextImpl: AppLockContext {
     public var unlockedHiddenAccountRecordId = ValuePromise<AccountRecordId?>()
     
     private var applicationIsActiveDisposable: Disposable?
+    private var applicationInForegroundDisposable: Disposable?
     private var didFinishChangingAccountDisposable: Disposable?
+    private var unlockedHiddenAccountRecordIdDisposable: Disposable?
     private let displayedAccountsFilter: DisplayedAccountsFilter
+    
+    private var applicationJustLaunched: Bool = true
     
     public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, displayedAccountsFilter: DisplayedAccountsFilter, applicationIsActive: Signal<Bool, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
         assert(Queue.mainQueue().isCurrent())
@@ -170,12 +174,12 @@ public final class AppLockContextImpl: AppLockContext {
                 strongSelf.autolockTimeout.set(nil)
                 strongSelf.autolockReportTimeout.set(nil)
             } else {
-                if let autolockTimeout = passcodeSettings.autolockTimeout, !appInForeground {
+                if let autolockTimeout = passcodeSettings.autolockTimeout, autolockTimeout != 1, !appInForeground {
                     shouldDisplayCoveringView = true
                 }
                 
                 if !appInForeground {
-                    if let autolockTimeout = passcodeSettings.autolockTimeout {
+                    if let autolockTimeout = passcodeSettings.autolockTimeout, autolockTimeout != 1 {
                         strongSelf.autolockReportTimeout.set(autolockTimeout)
                     } else if state.isManuallyLocked {
                         strongSelf.autolockReportTimeout.set(1)
@@ -188,7 +192,7 @@ public final class AppLockContextImpl: AppLockContext {
                 
                 strongSelf.autolockTimeout.set(passcodeSettings.autolockTimeout)
                 
-                if isLocked(passcodeSettings: passcodeSettings, state: state, isApplicationActive: appInForeground) {
+                if isLocked(passcodeSettings: passcodeSettings, state: state) {
                     isCurrentlyLocked = true
                     
                     let biometrics: PasscodeEntryControllerBiometricsMode
@@ -212,11 +216,20 @@ public final class AppLockContextImpl: AppLockContext {
                             }
                         }), hasPublicAccountsSignal: displayedAccountsFilter.hasPublicAccounts(accountManager: accountManager))
                         if becameActiveRecently, appInForeground {
-                            passcodeController.presentationCompleted = { [weak passcodeController] in
+                            passcodeController.presentationCompleted = { [weak passcodeController, weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.unlockedHiddenAccountRecordId.set(nil)
+                                }
                                 if case .enabled = biometrics {
                                     passcodeController?.requestBiometrics()
                                 }
                                 passcodeController?.ensureInputFocused()
+                            }
+                        } else {
+                            passcodeController.presentationCompleted = { [weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.unlockedHiddenAccountRecordId.set(nil)
+                                }
                             }
                         }
                         passcodeController.presentedOverCoveringView = true
@@ -261,18 +274,26 @@ public final class AppLockContextImpl: AppLockContext {
         
         self.currentState.set(.single(self.currentStateValue))
         
-        self.applicationIsActiveDisposable = applicationIsActive.start(next: { [weak self] value in
-            guard let strongSelf = self, !value else { return }
+        self.applicationIsActiveDisposable = applicationBindings.applicationIsActive.start(next: { [weak self] applicationIsActive in
+            guard let strongSelf = self else { return }
             
-            if strongSelf.displayedAccountsFilter.unlockedHiddenAccountRecordId == nil {
-                if strongSelf.currentStateValue.autolockTimeout == 1 {
-                    strongSelf.lock()
-                } else if let coveringView = strongSelf.coveringView, let window = strongSelf.window {
-                    coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
-                    window.coveringView = coveringView
+            if applicationIsActive {
+                if strongSelf.applicationJustLaunched {
+                    strongSelf.applicationJustLaunched = false
+                    if strongSelf.currentStateValue.forceLockOnLaunch {
+                        strongSelf.lock()
+                    }
                 }
             } else {
-                strongSelf.unlockedHiddenAccountRecordId.set(nil)
+                if strongSelf.displayedAccountsFilter.unlockedHiddenAccountRecordId == nil {
+                    if strongSelf.currentStateValue.autolockTimeout == 1 {
+                    } else if let coveringView = strongSelf.coveringView, let window = strongSelf.window {
+                        coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
+                        window.coveringView = coveringView
+                    }
+                } else if strongSelf.currentStateValue.autolockTimeout != 1  {
+                    strongSelf.unlockedHiddenAccountRecordId.set(nil)
+                }
             }
         })
         
@@ -280,9 +301,7 @@ public final class AppLockContextImpl: AppLockContext {
 
             guard let strongSelf = self, let coveringView = strongSelf.coveringView, let window = strongSelf.window else { return }
             
-            if strongSelf.currentStateValue.autolockTimeout == 1 {
-                strongSelf.lock()
-            } else {
+            if strongSelf.currentStateValue.autolockTimeout != 1 {
                 Queue.mainQueue().after(0.01, {
                     coveringView.updateSnapshot(nil)
                     coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
@@ -290,6 +309,21 @@ public final class AppLockContextImpl: AppLockContext {
                 })
             }
         })
+        
+        self.applicationInForegroundDisposable = (applicationBindings.applicationInForeground
+            |> distinctUntilChanged(isEqual: { $0 == $1 })
+            |> filter { !$0 }
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                guard let strongSelf = self, strongSelf.currentStateValue.autolockTimeout == 1 else { return }
+                
+                strongSelf.lock()
+        })
+        
+        self.unlockedHiddenAccountRecordIdDisposable = combineLatest(self.unlockedHiddenAccountRecordId.get(), applicationBindings.applicationIsActive).start(next: { [weak self] hiddenAccountRecordId, applicationIsActive in
+                guard let strongSelf = self, applicationIsActive else { return }
+                
+                strongSelf.setForceLockOnLaunch(hiddenAccountRecordId != nil)
+            })
         
         let _ = (self.autolockTimeout.get()
         |> deliverOnMainQueue).start(next: { [weak self] autolockTimeout in
@@ -371,9 +405,13 @@ public final class AppLockContextImpl: AppLockContext {
         }
     }
     
-    public func lock() {
+    private func lockAndHideHiddenAccount() {
         self.unlockedHiddenAccountRecordId.set(nil)
         
+        self.lock()
+    }
+    
+    public func lock() {
         self.updateLockState { state in
             var state = state
             state.isManuallyLocked = true
@@ -415,9 +453,19 @@ public final class AppLockContextImpl: AppLockContext {
         }
     }
     
+    private func setForceLockOnLaunch(_ value: Bool) {
+        self.updateLockState { state in
+            var state = state
+            state.forceLockOnLaunch = value
+            return state
+        }
+    }
+    
     deinit {
         self.hiddenAccountsAccessChallengeDataDisposable?.dispose()
         self.applicationIsActiveDisposable?.dispose()
         self.didFinishChangingAccountDisposable?.dispose()
+        self.applicationInForegroundDisposable?.dispose()
+        self.unlockedHiddenAccountRecordIdDisposable?.dispose()
     }
 }

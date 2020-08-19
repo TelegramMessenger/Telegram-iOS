@@ -246,6 +246,8 @@ final class SharedApplicationContext {
     
     private var falseBottomAddAccountFlowInProgress = false
     
+    private var continueFalseBottomFlowAccountRecordId: AccountRecordId?
+    
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         precondition(!testIsLaunched)
         testIsLaunched = true
@@ -1152,12 +1154,26 @@ final class SharedApplicationContext {
                         oldRootController.viewControllers.contains(where: { $0 is FalseBottomSplashScreen }),
                         let newTopController = context.rootController.viewControllers.last as? ViewController,
                         let newRootViewController = context.rootController.viewControllers.first {
-                        let oldFalseBottomStack = oldRootController.viewControllers.dropFirst()
+                        let oldFalseBottomStack = oldRootController.viewControllers
                             context.rootController.setViewControllers([newRootViewController] + oldFalseBottomStack, animated: false)
                         self.mainWindow.viewController = context.rootController
-                        context.rootController.pushViewController(newTopController, animated: true, completion: {
-                            context.rootController.setViewControllers([newRootViewController, newTopController], animated: false)
-                        })
+                        if let accountRecordId = self.continueFalseBottomFlowAccountRecordId {
+                            self.continueFalseBottomFlowAccountRecordId = nil
+                            let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> Bool in
+                                return transaction.getAccessChallengeData() != .none
+                            } |> deliverOnMainQueue).start(next: { hasMasterPasscode in
+                                let presentationData =  context.sharedApplicationContext.sharedContext.currentPresentationData.with({ $0 })
+                                let viewController = FalseBottomSplashScreen(presentationData: presentationData, mode: hasMasterPasscode ? .setSecretPasscode : .setMasterPasscode)
+                                viewController.navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: presentationData.strings.Common_Back, target: nil, action: nil)
+                                let createdNewAccountWithId = context.context.account.id
+                                context.rootController.pushViewController(viewController, animated: true, completion: {
+                                    Queue.mainQueue().after(0.2) {
+                                        context.context.sharedContext.switchToAccount(id: accountRecordId, fromSettingsController: nil, withChatListController: nil)
+                                        self.continueFalseBottomFlow(hideAccountWithId: accountRecordId, createdNewAccountWithId: createdNewAccountWithId, topController: viewController)
+                                    }
+                                })
+                            })
+                        }
                     } else {
                         self.mainWindow.viewController = context.rootController
                     }
@@ -1225,23 +1241,13 @@ final class SharedApplicationContext {
                     }
                     |> take(1)
                     |> timeout(4.0, queue: .mainQueue(), alternate: .complete())
-                        |> deliverOnMainQueue).start(next: { context in
-                            if let accountRecordId = authContextValue.account.continueFalseBottomFlowAccountRecordId, let context = context {
-                                let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> Bool in
-                                    return transaction.getAccessChallengeData() != .none
-                                } |> deliverOnMainQueue).start(next: { hasMasterPasscode in
-                                    let presentationData = authContextValue.sharedContext.currentPresentationData.with({ $0 })
-                                    authContextValue.rootController.setViewControllers([FalseBottomSplashScreen(presentationData: presentationData, mode: hasMasterPasscode ? .setSecretPasscode : .setMasterPasscode)], animated: true)
-                                    
-                                    context.context.sharedContext.switchToAccount(id: accountRecordId, fromSettingsController: nil, withChatListController: nil)
-                                    self.continueFalseBottomFlow(hideAccountWithId: accountRecordId, createdNewAccountWithId: authContextValue.account.id)
-                                })
-                            }
-                        }, completed: { [weak self] in
+                        |> deliverOnMainQueue).start(completed: { [weak self] in
                         authContextValue.rootController.view.endEditing(true)
                         authContextValue.rootController.dismiss()
                         if let strongSelf = self {
-                            if authContextValue.account.continueFalseBottomFlowAccountRecordId == nil {
+                            if let accountRecordId = authContextValue.account.continueFalseBottomFlowAccountRecordId {
+                                strongSelf.continueFalseBottomFlowAccountRecordId = accountRecordId
+                            } else {
                                 strongSelf.showFalseBottomAlert()
                             }
                         }
@@ -2104,7 +2110,7 @@ final class SharedApplicationContext {
         }))
     }
     
-    private func continueFalseBottomFlow(hideAccountWithId: AccountRecordId? = nil, createdNewAccountWithId: AccountRecordId? = nil) {
+    private func continueFalseBottomFlow(hideAccountWithId: AccountRecordId? = nil, createdNewAccountWithId: AccountRecordId? = nil, topController: FalseBottomSplashScreen? = nil) {
         self.continueFalseBottomFlowDisposable.set((self.authorizedContext()
         |> filter { context in
             if let id = hideAccountWithId {
@@ -2123,13 +2129,21 @@ final class SharedApplicationContext {
             
             let showSplashScreen: (FalseBottomSplashMode, Bool, @escaping () -> Void) -> Void = { mode, push, action in
                 let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
-                let controller = FalseBottomSplashScreen(presentationData: presentationData, mode: mode)
+                let controller: FalseBottomSplashScreen
+                if isFirstSplashScreen, let topController = topController {
+                    controller = topController
+                    controller.navigationItem.leftBarButtonItem = nil
+                } else {
+                    controller = FalseBottomSplashScreen(presentationData: presentationData, mode: mode)
+                }
                 controller.buttonPressed = {
                     action()
                 }
                 
                 if isFirstSplashScreen {
-                    context.rootController.pushViewController(controller, animated: true)
+                    if createdNewAccountWithId == nil {
+                        context.rootController.pushViewController(controller, animated: true)
+                    }
                     (context.isReady.get()
                     |> filter { $0 }
                     |> take(1)

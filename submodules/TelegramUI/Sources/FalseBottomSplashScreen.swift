@@ -85,7 +85,12 @@ public final class FalseBottomSplashScreen: ViewController {
     }
     
     override public func allowInteractivePopFromNavigation() -> Bool {
-        return mode != .hideAccount
+        switch mode {
+        case .hideAccount, .accountWasHidden:
+            return false
+        default:
+            return true
+        }
     }
     
     @objc func didTapCancel() {
