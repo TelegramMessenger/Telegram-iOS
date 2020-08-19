@@ -346,13 +346,13 @@ private final class FalseBottomAnimationSource: AnimatedStickerNodeSource {
             replacements = [
                 "0.125,0.125,0.125,1": elementBackgroundColor,
                 "0.1254902035,0.1254902035,0.1254902035,1": elementBackgroundColor,
-                "0.152941182256,0.32549020648,0.509803950787,1": brightElementColor1,
-                "0.164705887437,0.32549020648,0.509803950787,1": brightElementColor1,
+//                "0.152941182256,0.32549020648,0.509803950787,1": brightElementColor1,
+//                "0.164705887437,0.32549020648,0.509803950787,1": brightElementColor1,
                 "0.1882353127,0.1882353127,0.196078449488,1": middleColor1,
                 "0.219999994016,0.224000010771,0.231000010173,1": middleColor2,
                 "0.352999997606,0.352999997606,0.352999997606,1": middleColor3,
-                "0.364705890417,0.443137288094,0.298039227724,1": brightElementColor2,
-                "0.372549027205,0.462745130062,0.301960796118,1": brightElementColor2,
+//                "0.364705890417,0.443137288094,0.298039227724,1": brightElementColor2,
+//                "0.372549027205,0.462745130062,0.301960796118,1": brightElementColor2,
                 "0.552941203117,0.556862771511,0.57647061348,1": outlineColor,
                 "0.552999997606,0.556999954523,0.57599995931,1": outlineColor
             ]
@@ -370,14 +370,14 @@ private final class FalseBottomAnimationSource: AnimatedStickerNodeSource {
                 "0,0,0,1": theme.list.plainBackgroundColor,
                 "0.125,0.125,0.125,1": elementBackgroundColor,
                 "0.1254902035,0.1254902035,0.1254902035,1": elementBackgroundColor,
-                "0.164705882353,0.325490196078,0.509803921569,1": brightElementColor1,
-                "0.164705887437,0.32549020648,0.509803950787,1": brightElementColor1,
+//                "0.164705882353,0.325490196078,0.509803921569,1": brightElementColor1,
+//                "0.164705887437,0.32549020648,0.509803950787,1": brightElementColor1,
                 "0.165000002992,0.325,0.510000011968,1": brightElementColor1,
                 "0.1882353127,0.1882353127,0.196078449488,1": middleColor1,
                 "0.219999994016,0.224000010771,0.231000010173,1": middleColor2,
                 "0.352999997606,0.352999997606,0.352999997606,1": middleColor3,
-                "0.372549027205,0.46274510026,0.301960796118,1": brightElementColor2,
-                "0.372549027205,0.462745130062,0.301960796118,1": brightElementColor2,
+//                "0.372549027205,0.46274510026,0.301960796118,1": brightElementColor2,
+//                "0.372549027205,0.462745130062,0.301960796118,1": brightElementColor2,
                 "0.552941203117,0.556862771511,0.57647061348,1": outlineColor,
                 "0.552999997606,0.556999954523,0.57599995931,1": outlineColor
             ]
