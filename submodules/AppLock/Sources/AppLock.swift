@@ -225,6 +225,12 @@ public final class AppLockContextImpl: AppLockContext {
                                 }
                                 passcodeController?.ensureInputFocused()
                             }
+                        } else {
+                            passcodeController.presentationCompleted = { [weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.unlockedHiddenAccountRecordId.set(nil)
+                                }
+                            }
                         }
                         passcodeController.presentedOverCoveringView = true
                         passcodeController.isOpaqueWhenInOverlay = true
