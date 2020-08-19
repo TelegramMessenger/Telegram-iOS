@@ -9236,6 +9236,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     public override var keyShortcuts: [KeyShortcut] {
+        if !self.traceVisibility() || !isTopmostChatController(self) {
+            return []
+        }
+        
         let strings = self.presentationData.strings
         
         var inputShortcuts: [KeyShortcut]
@@ -9346,16 +9350,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         let otherShortcuts: [KeyShortcut] = [
-            KeyShortcut(title: strings.KeyCommand_ScrollUp, input: UIKeyCommand.inputUpArrow, modifiers: [.shift], action: { [weak self] in
-                if let strongSelf = self {
-                    _ = strongSelf.chatDisplayNode.historyNode.scrollWithDirection(.down, distance: 75.0)
-                }
-            }),
-            KeyShortcut(title: strings.KeyCommand_ScrollDown, input: UIKeyCommand.inputDownArrow, modifiers: [.shift], action: { [weak self] in
-                if let strongSelf = self {
-                    _ = strongSelf.chatDisplayNode.historyNode.scrollWithDirection(.up, distance: 75.0)
-                }
-            }),
+//            KeyShortcut(title: strings.KeyCommand_ScrollUp, input: UIKeyCommand.inputUpArrow, modifiers: [.shift], action: { [weak self] in
+//                if let strongSelf = self {
+//                    _ = strongSelf.chatDisplayNode.historyNode.scrollWithDirection(.down, distance: 75.0)
+//                }
+//            }),
+//            KeyShortcut(title: strings.KeyCommand_ScrollDown, input: UIKeyCommand.inputDownArrow, modifiers: [.shift], action: { [weak self] in
+//                if let strongSelf = self {
+//                    _ = strongSelf.chatDisplayNode.historyNode.scrollWithDirection(.up, distance: 75.0)
+//                }
+//            }),
             KeyShortcut(title: strings.KeyCommand_ChatInfo, input: "I", modifiers: [.command, .control], action: { [weak self] in
                 if let strongSelf = self {
                     strongSelf.interfaceInteraction?.openPeerInfo()
