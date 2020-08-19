@@ -60,7 +60,11 @@ final class InstantVideoController: LegacyController, StandalonePresentableContr
                 self?.durationValue.set(duration)
             }
             captureController.onDismiss = { [weak self] _, isCancelled in
-                self?.onDismiss?(isCancelled)
+                guard let strongSelf = self else { return }
+                if !strongSelf.dismissedVideo {
+                    self?.dismissedVideo = true
+                    self?.onDismiss?(isCancelled)
+                }
             }
             captureController.onStop = { [weak self] in
                 self?.onStop?()

@@ -61,9 +61,11 @@ private final class CallVideoNode: ASDisplayNode {
         
         super.init()
         
+        self.backgroundColor = .black
+        self.clipsToBounds = true
+        
         if #available(iOS 13.0, *) {
             self.layer.cornerCurve = .continuous
-            self.videoTransformContainer.layer.cornerCurve = .continuous
         }
         
         self.videoTransformContainer.view.addSubview(self.videoView.view)
@@ -162,25 +164,41 @@ private final class CallVideoNode: ASDisplayNode {
         })
     }
     
-    func updateLayout(size: CGSize, cornerRadius: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, cornerRadius: CGFloat, deviceOrientation: UIDeviceOrientation, transition: ContainedViewLayoutTransition) {
         self.currentCornerRadius = cornerRadius
         
         var rotationAngle: CGFloat
-        var rotateFrame: Bool
         switch self.currentOrientation {
         case .rotation0:
             rotationAngle = 0.0
-            rotateFrame = false
         case .rotation90:
             rotationAngle = -CGFloat.pi / 2.0
-            rotateFrame = true
         case .rotation180:
             rotationAngle = -CGFloat.pi
-            rotateFrame = false
         case .rotation270:
-            rotationAngle = -CGFloat.pi * 3.0 / 2.0
-            rotateFrame = true
+            rotationAngle = CGFloat.pi / 2.0
         }
+        
+        var additionalAngle: CGFloat = 0.0
+        switch deviceOrientation {
+        case .portrait:
+            additionalAngle = 0.0
+        case .landscapeLeft:
+            additionalAngle = CGFloat.pi / 2.0
+        case .landscapeRight:
+            additionalAngle = -CGFloat.pi / 2.0
+        case .portraitUpsideDown:
+            rotationAngle = -CGFloat.pi
+        default:
+            additionalAngle = 0.0
+        }
+        rotationAngle += additionalAngle
+        if abs(rotationAngle - (-CGFloat.pi)) < 1.0 {
+            rotationAngle = -CGFloat.pi + 0.001
+        }
+        
+        var rotateFrame = abs(rotationAngle.remainder(dividingBy: CGFloat.pi)) > 1.0
+        
         var originalRotateFrame = rotateFrame
         if size.width > size.height {
             rotateFrame = !rotateFrame
@@ -233,11 +251,6 @@ private final class CallVideoNode: ASDisplayNode {
             transition.updateFrame(view: effectView, frame: videoFrame)
         }
         
-        transition.updateCornerRadius(layer: self.videoTransformContainer.layer, cornerRadius: self.currentCornerRadius)
-        if let effectView = self.effectView {
-            transition.updateCornerRadius(layer: effectView.layer, cornerRadius: self.currentCornerRadius)
-        }
-        
         transition.updateCornerRadius(layer: self.layer, cornerRadius: self.currentCornerRadius)
     }
     
@@ -250,8 +263,6 @@ private final class CallVideoNode: ASDisplayNode {
         if isBlurred {
             if self.effectView == nil {
                 let effectView = UIVisualEffectView()
-                effectView.clipsToBounds = true
-                effectView.layer.cornerRadius = self.currentCornerRadius
                 self.effectView = effectView
                 effectView.frame = self.videoTransformContainer.bounds
                 self.videoTransformContainer.view.addSubview(effectView)
@@ -404,6 +415,9 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     private var pictureInPictureGestureState: PictureInPictureGestureState = .none
     private var pictureInPictureCorner: VideoNodeCorner = .topRight
     private var pictureInPictureTransitionFraction: CGFloat = 0.0
+    
+    private var deviceOrientation: UIDeviceOrientation = .portrait
+    private var orientationDidChangeObserver: NSObjectProtocol?
     
     init(sharedContext: SharedAccountContext, account: Account, presentationData: PresentationData, statusBar: StatusBar, debugInfo: Signal<(String, String), NoError>, shouldStayHiddenUntilConnection: Bool = false, easyDebugAccess: Bool, call: PresentationCall) {
         self.sharedContext = sharedContext
@@ -575,6 +589,25 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 self?.containerNode.alpha = 1.0
                 self?.animateIn()
             })
+        }
+        
+        self.orientationDidChangeObserver = NotificationCenter.default.addObserver(forName: UIDevice.orientationDidChangeNotification, object: nil, queue: nil, using: { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+            let deviceOrientation = UIDevice.current.orientation
+            if strongSelf.deviceOrientation != deviceOrientation {
+                strongSelf.deviceOrientation = deviceOrientation
+                if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                }
+            }
+        })
+    }
+    
+    deinit {
+        if let orientationDidChangeObserver = self.orientationDidChangeObserver {
+            NotificationCenter.default.removeObserver(orientationDidChangeObserver)
         }
     }
     
@@ -1416,7 +1449,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 expandedVideoTransition.updateFrame(node: expandedVideoNode, frame: fullscreenVideoFrame)
             }
             
-            expandedVideoNode.updateLayout(size: expandedVideoNode.frame.size, cornerRadius: 0.0, transition: expandedVideoTransition)
+            expandedVideoNode.updateLayout(size: expandedVideoNode.frame.size, cornerRadius: 0.0, deviceOrientation: self.deviceOrientation, transition: expandedVideoTransition)
             
             if self.animateRequestedVideoOnce {
                 self.animateRequestedVideoOnce = false
@@ -1466,7 +1499,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                     self.animationForExpandedVideoSnapshotView = nil
                 }
                 minimizedVideoTransition.updateFrame(node: minimizedVideoNode, frame: previewVideoFrame)
-                minimizedVideoNode.updateLayout(size: previewVideoFrame.size, cornerRadius: interpolate(from: 14.0, to: 24.0, value: self.pictureInPictureTransitionFraction), transition: minimizedVideoTransition)
+                minimizedVideoNode.updateLayout(size: previewVideoFrame.size, cornerRadius: interpolate(from: 14.0, to: 24.0, value: self.pictureInPictureTransitionFraction), deviceOrientation: .portrait, transition: minimizedVideoTransition)
                 if transition.isAnimated && didAppear {
                     minimizedVideoNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
                 }

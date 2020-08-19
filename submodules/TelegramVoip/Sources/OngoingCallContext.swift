@@ -456,11 +456,11 @@ private extension OngoingCallVideoOrientation {
         case .orientation0:
             self = .rotation0
         case .orientation90:
-            self = .rotation90
+            self = .rotation270
         case .orientation180:
             self = .rotation180
         case .orientation270:
-            self = .rotation270
+            self = .rotation90
         @unknown default:
             self = .rotation0
         }
