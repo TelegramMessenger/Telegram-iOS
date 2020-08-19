@@ -1825,7 +1825,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             return false
         }, sendBotContextResultAsGif: { _, _, _, _ in
             return false
-        }, requestMessageActionCallback: { _, _, _ in
+        }, requestMessageActionCallback: { _, _, _, _ in
         }, requestMessageActionUrlAuth: { _, _, _ in
         }, activateSwitchInline: { _, _ in
         }, openUrl: { [weak self] url, concealed, external, _ in

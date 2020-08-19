@@ -907,6 +907,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             }
         }
         
+        if item.presentationData.isPreview {
+            needShareButton = false
+        }
+        
         var tmpWidth: CGFloat
         if allowFullWidth {
             tmpWidth = baseWidth
@@ -1843,6 +1847,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 strongSelf.contextSourceNode.contentNode.addSubnode(nameNode)
             }
             nameNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + nameNodeOriginY), size: nameNodeSizeApply.0)
+            nameNode.displaysAsynchronously = !item.presentationData.isPreview
             
             if let credibilityIconImage = currentCredibilityIconImage {
                 let credibilityIconNode: ASImageNode

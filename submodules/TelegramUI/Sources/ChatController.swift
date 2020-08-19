@@ -793,7 +793,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.enqueueChatContextResult(collection, result, hideVia: true, closeMediaInput: true)
             
             return true
-        }, requestMessageActionCallback: { [weak self] messageId, data, isGame in
+        }, requestMessageActionCallback: { [weak self] messageId, data, isGame, requiresPassword in
             if let strongSelf = self {
                 guard !strongSelf.presentationInterfaceState.isScheduledMessages else {
                     strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.ScheduledMessages_BotActionUnavailable, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
@@ -819,52 +819,73 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     })
                     
-                    strongSelf.messageActionCallbackDisposable.set(((requestMessageActionCallback(account: strongSelf.context.account, messageId: messageId, isGame: isGame, data: data)
-                    |> afterDisposed {
-                        Queue.mainQueue().async {
-                            if let strongSelf = self {
-                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                    return $0.updatedTitlePanelContext {
-                                        if let index = $0.firstIndex(where: {
-                                            switch $0 {
-                                                case .requestInProgress:
-                                                    return true
-                                                default:
-                                                    return false
-                                            }
-                                        }) {
-                                            var updatedContexts = $0
-                                            updatedContexts.remove(at: index)
-                                            return updatedContexts
-                                        }
-                                        return $0
-                                    }
+                    let proceedWithResult: (MessageActionCallbackResult) -> Void = { [weak self] result in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        switch result {
+                            case .none:
+                                break
+                            case let .alert(text):
+                                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                            case let .toast(text):
+                                let message: Signal<String?, NoError> = .single(text)
+                                let noMessage: Signal<String?, NoError> = .single(nil)
+                                let delayedNoMessage: Signal<String?, NoError> = noMessage |> delay(1.0, queue: Queue.mainQueue())
+                                strongSelf.botCallbackAlertMessage.set(message |> then(delayedNoMessage))
+                            case let .url(url):
+                                if isGame {
+                                    strongSelf.chatDisplayNode.dismissInput()
+                                    strongSelf.effectiveNavigationController?.pushViewController(GameController(context: strongSelf.context, url: url, message: message))
+                                } else {
+                                    strongSelf.openUrl(url, concealed: false)
+                            }
+                        }
+                    }
+                    
+                    let account = strongSelf.context.account
+                    if requiresPassword {
+                        strongSelf.messageActionCallbackDisposable.set((requestMessageActionCallbackPasswordCheck(account: account, messageId: messageId, isGame: isGame, data: data)
+                            |> deliverOnMainQueue).start(error: { error in
+                                let controller = ownershipTransferController(context: context, initialError: error, present: { c, a in
+                                    strongSelf.present(c, in: .window(.root), with: a)
+                                }, commit: { password in
+                                   return requestMessageActionCallback(account: account, messageId: messageId, isGame: isGame, password: password, data: data)
+                                }, completion: { result in
+                                    proceedWithResult(result)
                                 })
+                                strongSelf.present(controller, in: .window(.root))
+                            }))
+                    } else {
+                        strongSelf.messageActionCallbackDisposable.set(((requestMessageActionCallback(account: account, messageId: messageId, isGame: isGame, password: nil, data: data)
+                        |> afterDisposed {
+                            Queue.mainQueue().async {
+                                if let strongSelf = self {
+                                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                        return $0.updatedTitlePanelContext {
+                                            if let index = $0.firstIndex(where: {
+                                                switch $0 {
+                                                    case .requestInProgress:
+                                                        return true
+                                                    default:
+                                                        return false
+                                                }
+                                            }) {
+                                                var updatedContexts = $0
+                                                updatedContexts.remove(at: index)
+                                                return updatedContexts
+                                            }
+                                            return $0
+                                        }
+                                    })
+                                }
                             }
-                        }
-                    })
-                    |> deliverOnMainQueue).start(next: { result in
-                        if let strongSelf = self {
-                            switch result {
-                                case .none:
-                                    break
-                                case let .alert(text):
-                                    strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                                case let .toast(text):
-                                    let message: Signal<String?, NoError> = .single(text)
-                                    let noMessage: Signal<String?, NoError> = .single(nil)
-                                    let delayedNoMessage: Signal<String?, NoError> = noMessage |> delay(1.0, queue: Queue.mainQueue())
-                                    strongSelf.botCallbackAlertMessage.set(message |> then(delayedNoMessage))
-                                case let .url(url):
-                                    if isGame {
-                                        strongSelf.chatDisplayNode.dismissInput()
-                                        strongSelf.effectiveNavigationController?.pushViewController(GameController(context: strongSelf.context, url: url, message: message))
-                                    } else {
-                                        strongSelf.openUrl(url, concealed: false)
-                                    }
-                            }
-                        }
-                    }))
+                        })
+                        |> deliverOnMainQueue).start(next: { result in
+                            proceedWithResult(result)
+                        }))
+                    }
                 }
             }
         }, requestMessageActionUrlAuth: { [weak self] defaultUrl, messageId, buttonId in

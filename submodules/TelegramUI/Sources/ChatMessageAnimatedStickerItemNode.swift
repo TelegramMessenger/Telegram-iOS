@@ -68,7 +68,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     private var highlightedState: Bool = false
     
-    private var heartbeatHaptic: HeartbeatHaptic?
+    private var haptic: EmojiHaptic?
     
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
@@ -217,7 +217,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         didSet {
             if self.visibilityStatus != oldValue {
                 self.updateVisibility()
-                self.heartbeatHaptic?.enabled = self.visibilityStatus
+                self.haptic?.enabled = self.visibilityStatus
             }
         }
     }
@@ -228,10 +228,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         if let telegramDice = self.telegramDice {
-            if telegramDice.emoji == "🎲" {
-                let animationNode = SlotMachineAnimationNode(context: item.context)
-                self.animationNode = animationNode
-            } else {
+//            if telegramDice.emoji == "🎲" {
+//                let animationNode = SlotMachineAnimationNode(context: item.context)
+//                self.animationNode = animationNode
+//            } else {
                 let animationNode = ManagedDiceAnimationNode(context: item.context, emoji: telegramDice.emoji.strippedEmoji)
                 if !item.message.effectivelyIncoming(item.context.account.peerId) {
                     animationNode.success = { [weak self] in
@@ -241,7 +241,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
                 self.animationNode = animationNode
-            }
+//            }
         } else {
             let animationNode: AnimatedStickerNode
             if let (node, parentNode, listNode, greetingCompletion)  = item.controllerInteraction.greetingStickerNode(), let greetingStickerNode = node as? AnimatedStickerNode {
@@ -1110,24 +1110,29 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         }
                         
                         let beatingHearts: [UInt32] = [0x2764, 0x1F90E, 0x1F9E1, 0x1F49A, 0x1F49C, 0x1F49B, 0x1F5A4, 0x1F90D]
-
-                        if let text = self.item?.message.text, let firstScalar = text.unicodeScalars.first, beatingHearts.contains(firstScalar.value) {
+                        let peach = 0x1F351
+                        
+                        if let text = self.item?.message.text, let firstScalar = text.unicodeScalars.first, beatingHearts.contains(firstScalar.value) || firstScalar.value == peach {
                             return .optionalAction({
                                 let _ = startTime.start(next: { [weak self] time in
                                     guard let strongSelf = self else {
                                         return
                                     }
                                     
-                                    let heartbeatHaptic: HeartbeatHaptic
-                                    if let current = strongSelf.heartbeatHaptic {
-                                        heartbeatHaptic = current
+                                    var haptic: EmojiHaptic
+                                    if let current = strongSelf.haptic {
+                                        haptic = current
                                     } else {
-                                        heartbeatHaptic = HeartbeatHaptic()
-                                        heartbeatHaptic.enabled = true
-                                        strongSelf.heartbeatHaptic = heartbeatHaptic
+                                        if beatingHearts.contains(firstScalar.value) {
+                                            haptic = HeartbeatHaptic()
+                                        } else {
+                                            haptic = PeachHaptic()
+                                        }
+                                        haptic.enabled = true
+                                        strongSelf.haptic = haptic
                                     }
-                                    if !heartbeatHaptic.active {
-                                        heartbeatHaptic.start(time: time)
+                                    if !haptic.active {
+                                        haptic.start(time: time)
                                     }
                                 })
                             })

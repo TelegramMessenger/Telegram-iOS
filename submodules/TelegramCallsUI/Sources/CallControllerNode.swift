@@ -1272,6 +1272,10 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationBarHeight)
         
+        if !self.hasVideoNodes {
+            self.isUIHidden = false
+        }
+        
         var isUIHidden = self.isUIHidden
         switch self.callState?.state {
         case .terminated, .terminating:

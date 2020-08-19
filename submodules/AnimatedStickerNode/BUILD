@@ -13,6 +13,7 @@ swift_library(
         "//submodules/YuvConversion:YuvConversion",
         "//submodules/GZip:GZip",
         "//submodules/rlottie:RLottieBinding",
+        "//submodules/MediaResources:MediaResources",
     ],
     visibility = [
         "//visibility:public",

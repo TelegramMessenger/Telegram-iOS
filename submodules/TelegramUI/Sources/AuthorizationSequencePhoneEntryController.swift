@@ -58,6 +58,8 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         self.openUrl = openUrl
         self.back = back
         
+        loadServerCountryCodes(network: account.network)
+        
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(presentationData.theme), strings: NavigationBarStrings(presentationStrings: presentationData.strings)))
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)

@@ -67,7 +67,7 @@ public func checkOwnershipTranfserAvailability(postbox: Postbox, network: Networ
         }
         |> mapToSignal { updates -> Signal<Never, ChannelOwnershipTransferError> in
             accountStateManager.addUpdates(updates)
-            return.complete()
+            return .complete()
         }
     }
 }
