@@ -49,10 +49,6 @@ public final class FalseBottomSplashScreen: ViewController {
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.navigationPresentation = .modalInLargeLayout
-        
-        if mode == .hideAccount {
-            navigationItem.leftBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.didTapCancel))
-        }
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -85,21 +81,7 @@ public final class FalseBottomSplashScreen: ViewController {
     }
     
     override public func allowInteractivePopFromNavigation() -> Bool {
-        switch mode {
-        case .hideAccount, .accountWasHidden:
-            return false
-        default:
-            return true
-        }
-    }
-    
-    @objc func didTapCancel() {
-        self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.FalseBottom_CancelHide_Text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.FalseBottom_CancelHide_Continue, action: {
-        }), TextAlertAction(type: .defaultAction, title: presentationData.strings.FalseBottom_CancelHide_Stop, action: { [weak self] in
-            guard let strongSelf = self else { return }
-            
-            strongSelf.dismiss(animated: true)
-        })]), in: .window(.root))
+        return mode != .accountWasHidden
     }
     
     @objc func didTapBack() {
@@ -239,12 +221,6 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
         
         let iconSize: CGSize = self.animationSize
         var iconOffset = CGPoint()
-        switch self.mode {
-        case .accountWasHidden:
-            iconOffset.x = 10.0
-        default:
-            break
-        }
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
         let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))

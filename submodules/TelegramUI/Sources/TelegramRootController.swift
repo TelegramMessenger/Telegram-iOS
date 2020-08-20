@@ -31,6 +31,7 @@ public final class TelegramRootController: NavigationController {
     public var falseBottomAuthViewControllersSignal: Signal<[ViewController], NoError>? {
         didSet {
             self.falseBottomAuthViewControllersDisposable?.dispose()
+            self.falseBottomAuthViewControllers = []
             self.falseBottomAuthViewControllersDisposable = falseBottomAuthViewControllersSignal?.start(next: { [weak self] viewControllers in
                 guard let strongSelf = self, !viewControllers.isEmpty else { return }
                 
@@ -71,6 +72,24 @@ public final class TelegramRootController: NavigationController {
     
     private var falseBottomAuthViewControllers = [ViewController]()
     private var falseBottomAuthViewControllersDisposable: Disposable?
+    
+    public func createPrivacySettingsStack() -> Signal<[ViewController], NoError> {
+        var result = [ViewController]()
+        guard let rootTabController = self.viewControllers.first as? ViewController else { return .single(result) }
+        
+        result.append(rootTabController)
+        
+        guard let accountSettingsController = self.accountSettingsController else { return .single(result) }
+        
+        return accountSettingsController.privacyAndSecurityViewController()
+        |> map { viewController in
+            if let viewController = viewController {
+                return result + [viewController]
+            } else {
+                return result
+            }
+        }
+    }
         
     public init(context: AccountContext) {
         self.context = context

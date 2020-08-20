@@ -822,6 +822,8 @@ final class SharedApplicationContext {
                         self.mainWindow.coveringView = nil
                     }
                 }
+            }, openFalseBottomFlow: { [weak self] in
+                self?.openFalseBottomFlow()
             })
             
             presentationDataPromise.set(sharedContext.presentationData)
@@ -1150,68 +1152,83 @@ final class SharedApplicationContext {
                     }
                     print("Launch to ready took \((CFAbsoluteTimeGetCurrent() - launchStartTime) * 1000.0) ms")
                     
-                    if let oldRootController = self.mainWindow.viewController as? TelegramRootController,
-                        oldRootController.viewControllers.contains(where: { $0 is FalseBottomSplashScreen }),
-                        let newTopController = context.rootController.viewControllers.last as? ViewController,
-                        let newRootViewController = context.rootController.viewControllers.first {
-                        let oldFalseBottomStack = oldRootController.viewControllers
-                            context.rootController.setViewControllers([newRootViewController] + oldFalseBottomStack, animated: false)
-                        self.mainWindow.viewController = context.rootController
-                        if let accountRecordId = self.continueFalseBottomFlowAccountRecordId {
-                            self.continueFalseBottomFlowAccountRecordId = nil
-                            let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> Bool in
-                                return transaction.getAccessChallengeData() != .none
-                            } |> deliverOnMainQueue).start(next: { hasMasterPasscode in
-                                let presentationData =  context.sharedApplicationContext.sharedContext.currentPresentationData.with({ $0 })
-                                let viewController = FalseBottomSplashScreen(presentationData: presentationData, mode: hasMasterPasscode ? .setSecretPasscode : .setMasterPasscode)
-                                viewController.navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: presentationData.strings.Common_Back, target: nil, action: nil)
-                                let createdNewAccountWithId = context.context.account.id
-                                context.rootController.pushViewController(viewController, animated: true, completion: {
-                                    Queue.mainQueue().after(0.2) {
-                                        context.context.sharedContext.switchToAccount(id: accountRecordId, fromSettingsController: nil, withChatListController: nil)
-                                        self.continueFalseBottomFlow(hideAccountWithId: accountRecordId, createdNewAccountWithId: createdNewAccountWithId, topController: viewController)
-                                    }
-                                })
+                    let completion: () -> Void = {
+                        if firstTime {
+                            let layer = context.rootController.view.layer
+                            layer.allowsGroupOpacity = true
+                            layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak layer] _ in
+                                if let layer = layer {
+                                    layer.allowsGroupOpacity = false
+                                }
                             })
                         }
-                    } else {
-                        self.mainWindow.viewController = context.rootController
-                    }
-                    if firstTime {
-                        let layer = context.rootController.view.layer
-                        layer.allowsGroupOpacity = true
-                        layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak layer] _ in
-                            if let layer = layer {
-                                layer.allowsGroupOpacity = false
-                            }
-                        })
-                    }
-                    self.mainWindow.forEachViewController({ controller in
-                        if let controller = controller as? TabBarAccountSwitchController {
-                            if let rootController = self.mainWindow.viewController as? TelegramRootController {
-                                if let tabsController = rootController.viewControllers.first as? TabBarController {
-                                    for i in 0 ..< tabsController.controllers.count {
-                                        if let _ = tabsController.controllers[i] as? (SettingsController & ViewController) {
-                                            let sourceNodes = tabsController.sourceNodesForController(at: i)
-                                            if let sourceNodes = sourceNodes {
-                                                controller.dismiss(sourceNodes: sourceNodes)
+                        self.mainWindow.forEachViewController({ controller in
+                            if let controller = controller as? TabBarAccountSwitchController {
+                                if let rootController = self.mainWindow.viewController as? TelegramRootController {
+                                    if let tabsController = rootController.viewControllers.first as? TabBarController {
+                                        for i in 0 ..< tabsController.controllers.count {
+                                            if let _ = tabsController.controllers[i] as? (SettingsController & ViewController) {
+                                                let sourceNodes = tabsController.sourceNodesForController(at: i)
+                                                if let sourceNodes = sourceNodes {
+                                                    controller.dismiss(sourceNodes: sourceNodes)
+                                                }
+                                                return false
                                             }
-                                            return false
                                         }
                                     }
                                 }
                             }
+                            return true
+                        })
+                        self.mainWindow.topLevelOverlayControllers = [context.sharedApplicationContext.overlayMediaController, context.notificationController]
+                        var authorizeNotifications = true
+                        if #available(iOS 10.0, *) {
+                            authorizeNotifications = false
                         }
-                        return true
-                    })
-                    self.mainWindow.topLevelOverlayControllers = [context.sharedApplicationContext.overlayMediaController, context.notificationController]
-                    var authorizeNotifications = true
-                    if #available(iOS 10.0, *) {
-                        authorizeNotifications = false
+                        self.registerForNotifications(context: context.context, authorize: authorizeNotifications)
+                        
+                        self.resetIntentsIfNeeded(context: context.context)
                     }
-                    self.registerForNotifications(context: context.context, authorize: authorizeNotifications)
                     
-                    self.resetIntentsIfNeeded(context: context.context)
+                    if let oldRootController = self.mainWindow.viewController as? TelegramRootController,
+                        oldRootController.viewControllers.contains(where: { $0 is FalseBottomSplashScreen }) {
+                        (context.rootController.createPrivacySettingsStack() |> deliverOnMainQueue).start(next: { viewControllers in
+                            let oldFalseBottomStack = oldRootController.viewControllers.dropFirst(2)
+                            context.rootController.setViewControllers(viewControllers + oldFalseBottomStack, animated: false)
+                            context.rootController.rootTabController?.selectedIndex = .max
+                            self.mainWindow.viewController = context.rootController
+                            if let accountRecordId = self.continueFalseBottomFlowAccountRecordId {
+                                self.continueFalseBottomFlowAccountRecordId = nil
+                                let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> Bool in
+                                    return transaction.getAccessChallengeData() != .none
+                                } |> deliverOnMainQueue).start(next: { [weak context] hasMasterPasscode in
+                                    guard let context = context else { return }
+                                    
+                                    let presentationData =  context.sharedApplicationContext.sharedContext.currentPresentationData.with({ $0 })
+                                    let viewController = FalseBottomSplashScreen(presentationData: presentationData, mode: hasMasterPasscode ? .setSecretPasscode : .setMasterPasscode)
+                                    viewController.navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: presentationData.strings.Common_Back, target: nil, action: nil)
+                                    let createdNewAccountWithId = context.context.account.id
+                                    context.rootController.pushViewController(viewController, animated: true, completion: { [weak context] in
+                                        guard let context = context else { return }
+                                        
+                                        Queue.mainQueue().after(0.2) { [weak context] in
+                                            guard let context = context else { return }
+                                            
+                                            context.rootController.setViewControllers(context.rootController.viewControllers.prefix(2) + context.rootController.viewControllers.dropFirst(2).filter { $0 is FalseBottomSplashScreen }, animated: false)
+                                            context.rootController.falseBottomAuthViewControllersSignal = nil
+                                            context.context.sharedContext.switchToAccount(id: accountRecordId, fromSettingsController: nil, withChatListController: nil)
+                                            self.continueFalseBottomFlow(hideAccountWithId: accountRecordId, createdNewAccountWithId: createdNewAccountWithId, topController: viewController)
+                                        }
+                                        
+                                    })
+                                })
+                            }
+                            completion()
+                        })
+                    } else {
+                        self.mainWindow.viewController = context.rootController
+                        completion()
+                    }
                 }))
             } else {
                 self.mainWindow.viewController = nil
@@ -1247,8 +1264,6 @@ final class SharedApplicationContext {
                         if let strongSelf = self {
                             if let accountRecordId = authContextValue.account.continueFalseBottomFlowAccountRecordId {
                                 strongSelf.continueFalseBottomFlowAccountRecordId = accountRecordId
-                            } else {
-                                strongSelf.showFalseBottomAlert()
                             }
                         }
                     })
@@ -1456,12 +1471,7 @@ final class SharedApplicationContext {
                     for subController in controller.controllers {
                         subController.forEachController { controller in
                             if let controller = controller as? UndoOverlayController {
-                                switch controller.content {
-                                case .falseBottom:
-                                    break
-                                default:
-                                    controller.dismissWithCommitAction()
-                                }
+                                controller.dismissWithCommitAction()
                             }
                             return true
                         }
@@ -2053,61 +2063,61 @@ final class SharedApplicationContext {
         }))
     }
     
-    private func showFalseBottomAlert() {
-        self.showFalseBottomAlertDisposable.set((self.authorizedContext()
-        |> take(1)
-        |> delay(1.0, queue: .mainQueue())).start(next: { context in
+    private func openFalseBottomFlow() {
+        guard let context = self.contextValue else { return }
+        
+        let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
+        
+        let showSplashScreen: (FalseBottomSplashMode, Bool, @escaping () -> Void) -> Void = { mode, push, action in
             let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
+            let controller = FalseBottomSplashScreen(presentationData: presentationData, mode: mode)
+            controller.buttonPressed = action
+            context.rootController.pushViewController(controller, animated: true)
+            context.rootController.allowInteractiveDismissal = false
+        }
+        
+        let showOtherAccountScreenIfNeeded: (@escaping () -> Void) -> Void = { [weak context] completion in
+            guard let context = context else { return }
             
-            let showSplashScreen: (FalseBottomSplashMode, Bool, @escaping () -> Void) -> Void = { mode, push, action in
-                let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
-                let controller = FalseBottomSplashScreen(presentationData: presentationData, mode: mode)
-                controller.buttonPressed = action
-                context.rootController.pushViewController(controller, animated: true)
-                context.rootController.allowInteractiveDismissal = false
-            }
-            
-            let showOtherAccountScreenIfNeeded: (@escaping () -> Void) -> Void = { completion in
-                let checkOtherAccounts: (@escaping (Bool) -> Void) -> Void = { completion in
-                    let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> Bool in
-                        return transaction.getAllRecords().filter({
-                            !$0.attributes.contains(where: { $0 is HiddenAccountAttribute }) && !$0.attributes.contains(where: { $0 is LoggedOutAccountAttribute })
-                        }).count > 1
-                    } |> deliverOnMainQueue).start(next: { result in
-                        completion(result)
-                    })
-                }
+            let checkOtherAccounts: (@escaping (Bool) -> Void) -> Void = { [weak context] completion in
+                guard let context = context else { return }
                 
-                checkOtherAccounts({ hasOtherAccounts in
-                    if hasOtherAccounts {
-                        completion()
-                    } else {
-                        showSplashScreen(.addOneMoreAccount, true, { [weak self] in
-                            guard let strongSelf = self else { return }
-                            
-                            strongSelf.falseBottomAddAccountFlowInProgress = true
-                            let isTestingEnvironment = context.context.account.testingEnvironment
-                            context.sharedApplicationContext.sharedContext.beginNewAuthAndContinueFalseBottomFlow(testingEnvironment: isTestingEnvironment)
-                        })
-                    }
+                let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> Bool in
+                    return transaction.getAllRecords().filter({
+                        !$0.attributes.contains(where: { $0 is HiddenAccountAttribute }) && !$0.attributes.contains(where: { $0 is LoggedOutAccountAttribute })
+                    }).count > 1
+                } |> deliverOnMainQueue).start(next: { result in
+                    completion(result)
                 })
             }
-                                                         
-            context.rootController.chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .falseBottom(title: presentationData.strings.FalseBottom_Toast_HideAccount), elevatedLayout: false, animateInAsReplacement: false, action: { value in
-                    guard value == .info else { return false }
+            
+            checkOtherAccounts({ [weak context] hasOtherAccounts in
+                guard let context = context else { return }
                 
-                    context.rootController.allowInteractiveDismissal = false
-                    showSplashScreen(.hideAccount, true, {
-                        showOtherAccountScreenIfNeeded { [weak self] in
-                            guard let strongSelf = self else { return }
-                            
-                            strongSelf.continueFalseBottomFlow()
-                        }
+                if hasOtherAccounts {
+                    completion()
+                } else {
+                    showSplashScreen(.addOneMoreAccount, true, { [weak self, weak context] in
+                        guard let strongSelf = self, let context = context else { return }
+                        
+                        strongSelf.falseBottomAddAccountFlowInProgress = true
+                        let isTestingEnvironment = context.context.account.testingEnvironment
+                        context.sharedApplicationContext.sharedContext.beginNewAuthAndContinueFalseBottomFlow(testingEnvironment: isTestingEnvironment)
                     })
-                    return true
                 }
-            ), in: .current)
-        }))
+            })
+        }
+
+        context.rootController.allowInteractiveDismissal = false
+        showSplashScreen(.hideAccount, true, { [weak context] in
+            guard let context = context else { return }
+            
+            showOtherAccountScreenIfNeeded { [weak self, weak context] in
+                guard let strongSelf = self, let context = context else { return }
+                
+                strongSelf.continueFalseBottomFlow()
+            }
+        })
     }
     
     private func continueFalseBottomFlow(hideAccountWithId: AccountRecordId? = nil, createdNewAccountWithId: AccountRecordId? = nil, topController: FalseBottomSplashScreen? = nil) {
@@ -2120,14 +2130,18 @@ final class SharedApplicationContext {
             }
         }
         |> take(1)
-        |> deliverOnMainQueue).start(next: { context in
+        |> deliverOnMainQueue).start(next: { [weak topController] context in
             let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
             
             var isFirstSplashScreen = true
             
             var didSetMasterPasswordDuringThisFlow = false
-            
-            let showSplashScreen: (FalseBottomSplashMode, Bool, @escaping () -> Void) -> Void = { mode, push, action in
+
+            var rootStack = [ViewController]()
+
+            let showSplashScreen: (FalseBottomSplashMode, Bool, @escaping () -> Void) -> Void = { [weak topController, weak context] mode, push, action in
+                guard let context = context else { return }
+                
                 let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
                 let controller: FalseBottomSplashScreen
                 if isFirstSplashScreen, let topController = topController {
@@ -2139,7 +2153,7 @@ final class SharedApplicationContext {
                 controller.buttonPressed = {
                     action()
                 }
-                
+                                
                 if isFirstSplashScreen {
                     if createdNewAccountWithId == nil {
                         context.rootController.pushViewController(controller, animated: true)
@@ -2147,26 +2161,35 @@ final class SharedApplicationContext {
                     (context.isReady.get()
                     |> filter { $0 }
                     |> take(1)
-                    |> deliverOnMainQueue).start(next: { _ in
+                    |> deliverOnMainQueue
+                    |> mapToSignal { [weak context] _ -> Signal<[ViewController], NoError> in
+                        guard let context = context else { return .single([]) }
+                        
+                        return context.rootController.createPrivacySettingsStack()
+                    }).start(next: { [weak context] viewControllerStack in
+                        guard let context = context else { return }
+                        
+                        rootStack = viewControllerStack
+                        
                         if let root = context.rootController.viewControllers.first {
                             let baseController = FalseBottomSplashScreen(presentationData: presentationData, mode: .hideAccount)
-                            baseController.buttonPressed = { [weak self] in
-                                guard let strongSelf = self else { return }
+                            baseController.buttonPressed = { [weak self, weak context] in
+                                guard let strongSelf = self, let context = context else { return }
                                 
                                 if let createdNewAccountWithId = createdNewAccountWithId {
                                     let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> Bool in
                                         return transaction.getAllRecords().filter({
                                             !$0.attributes.contains(where: { $0 is HiddenAccountAttribute }) && !$0.attributes.contains(where: { $0 is LoggedOutAccountAttribute })
                                         }).count > 1
-                                    } |> deliverOnMainQueue).start(next: { [weak self] hasPublicAccounts in
-                                        guard let strongSelf = self else { return }
+                                    } |> deliverOnMainQueue).start(next: { [weak self, weak context] hasPublicAccounts in
+                                        guard let strongSelf = self, let context = context else { return }
                                         
                                         if hasPublicAccounts {
                                             strongSelf.continueFalseBottomFlow()
                                         } else {
                                             let accountController = FalseBottomSplashScreen(presentationData: presentationData, mode: .addOneMoreAccount)
-                                            accountController.buttonPressed = { [weak self] in
-                                                guard let strongSelf = self else { return }
+                                            accountController.buttonPressed = { [weak self, weak context] in
+                                                guard let strongSelf = self, let context = context else { return }
                                                 
                                                 strongSelf.falseBottomAddAccountFlowInProgress = true
                                                 let isTestingEnvironment = context.context.account.testingEnvironment
@@ -2179,12 +2202,13 @@ final class SharedApplicationContext {
                                     strongSelf.continueFalseBottomFlow()
                                 }
                             }
-                            var newViewControllers = [root, baseController]
+                            
+                            var newViewControllers = rootStack + [baseController]
                             
                             if let createdNewAccountWithId = createdNewAccountWithId {
                                 let accountController = FalseBottomSplashScreen(presentationData: presentationData, mode: .addOneMoreAccount)
-                                accountController.buttonPressed = { [weak self] in
-                                    guard let strongSelf = self else { return }
+                                accountController.buttonPressed = { [weak self, weak context] in
+                                    guard let strongSelf = self, let context = context else { return }
                                     
                                     strongSelf.falseBottomAddAccountFlowInProgress = true
                                     let isTestingEnvironment = context.context.account.testingEnvironment
@@ -2192,14 +2216,15 @@ final class SharedApplicationContext {
                                 }
                                 newViewControllers.append(accountController)
                                 
-                                controller.backPressed = { [weak self] in
-                                    guard let strongSelf = self else { return }
+                                controller.backPressed = { [weak self, weak context] in
+                                    guard let strongSelf = self, let context = context else { return }
                                    
                                     strongSelf.falseBottomAddAccountFlowInProgress = false
                                     let _ = (logoutFromAccount(id: createdNewAccountWithId, accountManager: context.sharedApplicationContext.sharedContext.accountManager, alreadyLoggedOutRemotely: false) |> deliverOnMainQueue).start(completed: {
                                         guard let root = context.rootController.viewControllers.first else { return }
 
-                                        context.rootController.setViewControllers([root, baseController, accountController], animated: true)
+                                        context.rootController.setViewControllers(rootStack + [baseController, accountController], animated: true)
+                                        context.rootController.rootTabController?.selectedIndex = .max
                                     })
                                 }
                                 controller.poppedInteractively = controller.backPressed
@@ -2231,7 +2256,8 @@ final class SharedApplicationContext {
                     context.rootController.pushViewController(controller, animated: true, completion: {
                         if let root = context.rootController.viewControllers.first {
                             let splashScreens = context.rootController.viewControllers.dropFirst().filter { $0 is FalseBottomSplashScreen }
-                            context.rootController.setViewControllers([root] + splashScreens, animated: true)
+                            context.rootController.setViewControllers(rootStack + splashScreens, animated: false)
+                            context.rootController.rootTabController?.selectedIndex = .max
                         }
                     })
                 }
@@ -2240,8 +2266,10 @@ final class SharedApplicationContext {
                 isFirstSplashScreen = false
             }
                 
-            let showMasterPasscodeScreenIfNeeded: (@escaping () -> Void) -> Void = { completion in
-                let checkMasterPassode: (@escaping (Bool) -> Void) -> Void = { completion in
+            let showMasterPasscodeScreenIfNeeded: (@escaping () -> Void) -> Void = { [weak context] completion in
+                let checkMasterPassode: (@escaping (Bool) -> Void) -> Void = {  [weak context] completion in
+                    guard let context = context else { return }
+                    
                     let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> Bool in
                         return transaction.getAccessChallengeData() != .none
                     } |> deliverOnMainQueue).start(next: { result in
@@ -2249,10 +2277,14 @@ final class SharedApplicationContext {
                     })
                 }
                 
-                let setupMasterPasscode: (@escaping () -> Void) -> Void = { innerCompletion in
+                let setupMasterPasscode: (@escaping () -> Void) -> Void = { [weak context] innerCompletion in
+                    guard let context = context else { return }
+                    
                     let accountContext = context.sharedApplicationContext.sharedContext
                     let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits6), isOpaqueNavigationBar: true)
-                    setupController.complete = { passcode, numerical in
+                    setupController.complete = { [weak accountContext] passcode, numerical in
+                        guard let accountContext = accountContext else { return }
+                        
                         let _ = (accountContext.accountManager.transaction({ transaction -> Void in
                             var data = transaction.getAccessChallengeData()
                             if numerical {
@@ -2288,8 +2320,12 @@ final class SharedApplicationContext {
                 })
             }
             
-            let showSecretPasscodeScreen: () -> Void = {
-                let addFalseBottomToCurrentAccount: () -> Void = {
+            let showSecretPasscodeScreen: () -> Void = { [weak context] in
+                guard let context = context else { return }
+                
+                let addFalseBottomToCurrentAccount: () -> Void = { [weak context] in
+                    guard let context = context else { return }
+                    
                     let accountContext = context.sharedApplicationContext.sharedContext
                     
                     let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits4), isChangeModeAllowed: false, isOpaqueNavigationBar: true)
@@ -2316,21 +2352,25 @@ final class SharedApplicationContext {
                             }
                         }) |> deliverOnMainQueue).start(next: { _ in
                         }, error: { _ in
-                        }, completed: {
+                        }, completed: { [weak context, weak accountContext] in
+                            guard let context = context, let accountContext = accountContext else { return }
+                            
                             updateHiddenAccountsAccessChallengeData(manager: accountContext.accountManager)
                             
                             let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
                             let controller = FalseBottomSplashScreen(presentationData: presentationData, mode: .accountWasHidden)
-                            controller.buttonPressed = { [weak controller] in
+                            controller.buttonPressed = { [weak accountContext, weak context] in
+                                guard let accountContext = accountContext, let context = context else { return }
+                                
                                 accountContext.appLockContext.lock()
                                 context.rootController.popToRoot(animated: true)
                                 context.rootController.allowInteractiveDismissal = true
                             }
                             controller.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
-                            context.rootController.pushViewController(controller, animated: true, completion: {
-                                guard let root = context.rootController.viewControllers.first, let top = context.rootController.viewControllers.last else { return }
+                            context.rootController.pushViewController(controller, animated: true, completion: { [weak context] in
+                                guard let context = context, let root = context.rootController.viewControllers.first, let top = context.rootController.viewControllers.last else { return }
                                 
-                                context.rootController.setViewControllers([root, top], animated: false)
+                                context.rootController.setViewControllers(rootStack + [top], animated: false)
                                 context.rootController.allowInteractiveDismissal = false
                             })
                         })

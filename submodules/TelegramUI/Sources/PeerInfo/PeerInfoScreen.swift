@@ -1426,6 +1426,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
     }
     
+    private let hasData = ValuePromise<Bool>(false)
+    
     init(controller: PeerInfoScreen, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool, ignoreGroupInCommon: PeerId?) {
         self.controller = controller
         self.context = context
@@ -2665,6 +2667,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             
             self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: self.didSetReady && membersUpdated ? .animated(duration: 0.3, curve: .spring) : .immediate)
         }
+        
+        self.hasData.set(true)
     }
     
     func scrollToTop() {
@@ -4507,6 +4511,27 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         })
     }
     
+    public func privacyAndSecurityViewController() -> Signal<ViewController?, NoError> {
+        let hasData = self.hasData.get()
+        |> distinctUntilChanged(isEqual: ==)
+        |> filter { $0 }
+        
+        return combineLatest(queue: .mainQueue(), self.blockedPeers.get(), self.hasTwoStepAuth.get(), hasData)
+        |> take(1)
+        |> deliverOnMainQueue
+        |> map { [weak self] blockedPeersContext, hasTwoStepAuth, _ -> ViewController? in
+            guard let strongSelf = self, let settings = strongSelf.data?.globalSettings else { return nil }
+            
+            return privacyAndSecurityController(context: strongSelf.context, initialSettings: settings.privacySettings, updatedSettings: { [weak self] settings in
+                    self?.privacySettings.set(.single(settings))
+                }, updatedBlockedPeers: { [weak self] blockedPeersContext in
+                    self?.blockedPeers.set(.single(blockedPeersContext))
+                }, updatedHasTwoStepAuth: { [weak self] hasTwoStepAuthValue in
+                    self?.hasTwoStepAuth.set(.single(hasTwoStepAuthValue))
+                }, focusOnItemTag: nil, activeSessionsContext: settings.activeSessionsContext, webSessionsContext: settings.webSessionsContext, blockedPeersContext: blockedPeersContext, hasTwoStepAuth: hasTwoStepAuth)
+        }
+    }
+    
     fileprivate func openSettings(section: PeerInfoSettingsSection) {
         switch section {
             case .avatar:
@@ -5899,6 +5924,10 @@ public final class PeerInfoScreen: ViewController {
         
         let controller = ContextController(account: primary.0, presentationData: self.presentationData, source: .extracted(SettingsTabBarContextExtractedContentSource(controller: self, sourceNode: sourceNode)), items: .single(items), reactionItems: [], recognizer: nil, gesture: gesture)
         self.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
+    }
+    
+    public func privacyAndSecurityViewController() -> Signal<ViewController?, NoError> {
+        return controllerNode.privacyAndSecurityViewController()
     }
 }
 

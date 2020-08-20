@@ -193,7 +193,6 @@ public extension PeerSummaryCounterTags {
 
 private enum PreferencesKeyValues: Int32 {
     case globalNotifications = 0
-    case tempGlobalNotifications = 44
     case suggestedLocalization = 3
     case limitsConfiguration = 4
     case coreSettings = 7
@@ -212,6 +211,7 @@ private enum PreferencesKeyValues: Int32 {
     case chatListFilters = 20
     case peersNearby = 21
     case chatListFiltersFeaturedState = 22
+    case falseBottomHideTimestamp = 44
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -338,6 +338,12 @@ public struct PreferencesKeys {
     public static let chatListFiltersFeaturedState: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.chatListFiltersFeaturedState.rawValue)
+        return key
+    }()
+    
+    public static let falseBottomHideTimestamp: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.falseBottomHideTimestamp.rawValue)
         return key
     }()
 }

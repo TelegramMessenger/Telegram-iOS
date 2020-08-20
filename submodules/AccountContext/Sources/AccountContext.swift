@@ -517,6 +517,8 @@ public protocol SharedAccountContext: class {
     
     var presentGlobalController: (ViewController, Any?) -> Void { get }
     
+    var openFalseBottomFlow: () -> Void { get }
+    
     func makeTempAccountContext(account: Account) -> AccountContext
     
     func updateNotificationTokensRegistration()
