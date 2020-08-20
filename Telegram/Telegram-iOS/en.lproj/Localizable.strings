@@ -5737,6 +5737,7 @@ Any member of this group will be able to see messages in the channel.";
 
 "AccessDenied.VideoCallCamera" = "Telegram needs access to your camera to make video calls.\n\nPlease go to Settings > Privacy > Camera and set Telegram to ON.";
 
+"FalseBottom.Settings.Text" = "False Bottom";
 "FalseBottom.Toast.HideAccount" = "Hide account";
 "FalseBottom.HideAccount.Title" = "Hide account";
 "FalseBottom.HideAccount.Text" = "Access different accounts depending on the passcode you enter.";

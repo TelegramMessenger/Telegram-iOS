@@ -443,7 +443,7 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
     entries.append(.twoStepVerification(presentationData.theme, presentationData.strings.PrivacySettings_TwoStepAuth, twoStepAuthString, twoStepAuthData))
     
     if let falseBottomDisplayTime = falseBottomDisplayTime {
-        entries.append(.falseBottom(presentationData.theme, "False Bottom", "\(falseBottomDisplayTime)"))
+        entries.append(.falseBottom(presentationData.theme, presentationData.strings.FalseBottom_Settings_Text, "\(falseBottomDisplayTime)"))
     }
     
     entries.append(.privacyHeader(presentationData.theme, presentationData.strings.PrivacySettings_PrivacyTitle))
