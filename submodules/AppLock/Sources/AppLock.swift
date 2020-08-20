@@ -280,20 +280,14 @@ public final class AppLockContextImpl: AppLockContext {
             if applicationIsActive {
                 if strongSelf.applicationJustLaunched {
                     strongSelf.applicationJustLaunched = false
-                    if strongSelf.currentStateValue.forceLockOnLaunch {
+                    if strongSelf.currentStateValue.forceLockOnLaunch || strongSelf.currentStateValue.autolockTimeout == 1 {
                         strongSelf.lock()
                     }
                 }
-            } else {
-                if strongSelf.displayedAccountsFilter.unlockedHiddenAccountRecordId == nil {
-                    if strongSelf.currentStateValue.autolockTimeout == 1 {
-                    } else if let coveringView = strongSelf.coveringView, let window = strongSelf.window {
-                        coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
-                        window.coveringView = coveringView
-                    }
-                } else if strongSelf.currentStateValue.autolockTimeout != 1  {
-                    strongSelf.unlockedHiddenAccountRecordId.set(nil)
-                }
+            }
+            else if let coveringView = strongSelf.coveringView, let window = strongSelf.window {
+                coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
+                window.coveringView = coveringView
             }
         })
         
@@ -314,9 +308,13 @@ public final class AppLockContextImpl: AppLockContext {
             |> distinctUntilChanged(isEqual: { $0 == $1 })
             |> filter { !$0 }
             |> deliverOnMainQueue).start(next: { [weak self] _ in
-                guard let strongSelf = self, strongSelf.currentStateValue.autolockTimeout == 1 else { return }
+                guard let strongSelf = self else { return }
                 
-                strongSelf.lock()
+                if strongSelf.currentStateValue.autolockTimeout == 1 {
+                    strongSelf.lock()
+                } else {
+                    strongSelf.unlockedHiddenAccountRecordId.set(nil)
+                }
         })
         
         self.unlockedHiddenAccountRecordIdDisposable = combineLatest(self.unlockedHiddenAccountRecordId.get(), applicationBindings.applicationIsActive).start(next: { [weak self] hiddenAccountRecordId, applicationIsActive in
