@@ -1189,6 +1189,14 @@ final class SharedApplicationContext {
                     
                     self.resetIntentsIfNeeded(context: context.context)
                 }))
+                
+                context.context.account.postbox.transaction({ transaction -> Void in
+                    var value = transaction.getPreferencesEntry(key: PreferencesKeys.falseBottomHideTimestamp) as? FalseBottomHideTimestamp ?? FalseBottomHideTimestamp.defaultValue
+                    if value.timestamp == 0 {
+                        value.timestamp = Int64(Date().timeIntervalSince1970) + 60
+                        transaction.setPreferencesEntry(key: PreferencesKeys.falseBottomHideTimestamp, value: value)
+                    }
+                    }).start()
             } else {
                 self.mainWindow.viewController = nil
                 self.mainWindow.topLevelOverlayControllers = []
