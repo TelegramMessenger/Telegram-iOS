@@ -310,6 +310,7 @@ private final class FalseBottomAnimationSource: AnimatedStickerNodeSource {
         let middleColor1 = elementBackgroundColor.interpolated(to: outlineColor, percentage: 0.15).grayscale
         let middleColor2 = elementBackgroundColor.interpolated(to: outlineColor, percentage: 0.23).grayscale
         let middleColor3 = elementBackgroundColor.interpolated(to: outlineColor, percentage: 0.56).grayscale
+        let middleColor4 = elementBackgroundColor.interpolated(to: outlineColor, percentage: 0.56).grayscale
         let brightElementColor1: UIColor
         let brightElementColor2: UIColor
         let buttonColor = theme.list.itemCheckColors.fillColor
@@ -377,8 +378,22 @@ private final class FalseBottomAnimationSource: AnimatedStickerNodeSource {
         case .accountWasHidden:
             fileName = "FalseBottomAccountIsHidden"
             replacements = [
-                "0.121568627451,0.121568627451,0.121568627451,1": elementBackgroundColor,
-                "0.552941203117,0.556862771511,0.57647061348,1": outlineColor
+//                "0.086000001197,0.165000002992,0.250999989229,1"
+                "0.122000002394,0.122000002394,0.122000002394,1": elementBackgroundColor,
+                "0.125,0.125,0.125,1": elementBackgroundColor,
+                "0.1254902035,0.1254902035,0.1254902035,1": elementBackgroundColor,
+                "0.184000007779,0.184000007779,0.187999994615,1": middleColor1,
+//                "0.184000007779,0.226999993418,0.149000010771,1"
+                "0.196078431373,0.196078431373,0.196078431373,1": middleColor1,
+                "0.219607843137,0.223529411765,0.23137254902,1": middleColor2,
+                "0.219999994016,0.224000010771,0.231000010173,1": middleColor2,
+                "0.352999997606,0.352999997606,0.352999997606,1": middleColor3,
+//                "0.462745127958,0.258823529412,0,1"
+                "0.47080338422,0.448363120883,0.441716063256,1": middleColor4,
+                "0.552941203117,0.556862771511,0.57647061348,1": outlineColor,
+                "0.552999997606,0.556999954523,0.57599995931,1": outlineColor,
+                "0.556862745098,0.552941176471,0.560784313725,1": outlineColor
+//                "0.905999995213,0.246999987434,0.250999989229,1"
             ]
         }
         guard let path = getAppBundle().path(forResource: fileName, ofType: "tgs"),
