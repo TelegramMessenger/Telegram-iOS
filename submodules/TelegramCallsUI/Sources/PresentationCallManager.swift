@@ -284,6 +284,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         startWithVideo: firstState.2.isVideo,
                         isVideoPossible: firstState.2.isVideoPossible,
                         enableStunMarking: shouldEnableStunMarking(appConfiguration: appConfiguration),
+                        enableTCP: experimentalSettings.enableVoipTcp,
                         preferredVideoCodec: experimentalSettings.preferredVideoCodec
                     )
                     strongSelf.updateCurrentCall(call)
@@ -527,6 +528,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         startWithVideo: isVideo,
                         isVideoPossible: isVideoPossible,
                         enableStunMarking: shouldEnableStunMarking(appConfiguration: appConfiguration),
+                        enableTCP: experimentalSettings.enableVoipTcp,
                         preferredVideoCodec: experimentalSettings.preferredVideoCodec
                     )
                     strongSelf.updateCurrentCall(call)

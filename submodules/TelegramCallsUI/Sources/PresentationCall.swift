@@ -170,6 +170,7 @@ public final class PresentationCallImpl: PresentationCall {
     public var isVideo: Bool
     public var isVideoPossible: Bool
     private let enableStunMarking: Bool
+    private let enableTCP: Bool
     public let preferredVideoCodec: String?
     public let peer: Peer?
     
@@ -268,6 +269,7 @@ public final class PresentationCallImpl: PresentationCall {
         startWithVideo: Bool,
         isVideoPossible: Bool,
         enableStunMarking: Bool,
+        enableTCP: Bool,
         preferredVideoCodec: String?
     ) {
         self.account = account
@@ -296,6 +298,7 @@ public final class PresentationCallImpl: PresentationCall {
         self.isVideo = initialState?.type == .video
         self.isVideoPossible = isVideoPossible
         self.enableStunMarking = enableStunMarking
+        self.enableTCP = enableTCP
         self.preferredVideoCodec = preferredVideoCodec
         self.peer = peer
         self.isVideo = startWithVideo
@@ -610,7 +613,7 @@ public final class PresentationCallImpl: PresentationCall {
                 if let _ = audioSessionControl, !wasActive || previousControl == nil {
                     let logName = "\(id.id)_\(id.accessHash)"
                     
-                    let ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, derivedState: self.derivedState, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: connections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, enableStunMarking: self.enableStunMarking, audioSessionActive: self.audioSessionActive.get(), logName: logName, preferredVideoCodec: self.preferredVideoCodec)
+                    let ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, derivedState: self.derivedState, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: connections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, enableTCP: self.enableTCP, enableStunMarking: self.enableStunMarking, audioSessionActive: self.audioSessionActive.get(), logName: logName, preferredVideoCodec: self.preferredVideoCodec)
                     self.ongoingContext = ongoingContext
                     ongoingContext.setIsMuted(self.isMutedValue)
                     if let requestedVideoAspect = self.requestedVideoAspect {
