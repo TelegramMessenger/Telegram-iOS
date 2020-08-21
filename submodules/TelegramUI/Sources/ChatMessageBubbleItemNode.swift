@@ -759,6 +759,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         currentForwardInfo: (Peer?, String?)?,
         isSelected: Bool?
     ) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
+        let isPreview = item.presentationData.isPreview
         let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: isSelected)
         
         let fontSize = floor(item.presentationData.fontSize.baseDisplaySize * 14.0 / 17.0)
@@ -848,11 +849,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             }
         }
         
-        if hasAvatar {
-            avatarInset = layoutConstants.avatarDiameter
-        } else {
-            avatarInset = 0.0
-        }
+        avatarInset = hasAvatar ? layoutConstants.avatarDiameter : 0.0
         
         let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
         
@@ -907,7 +904,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             }
         }
         
-        if item.presentationData.isPreview {
+        if isPreview {
             needShareButton = false
         }
         
@@ -992,7 +989,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 }
             } else if let attribute = attribute as? ReplyMessageAttribute {
                 replyMessage = firstMessage.associatedMessages[attribute.messageId]
-            } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
+            } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty && !isPreview {
                 replyMarkup = attribute
             }
         }

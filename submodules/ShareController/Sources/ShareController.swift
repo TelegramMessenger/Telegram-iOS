@@ -888,7 +888,7 @@ public final class ShareController: ViewController {
 }
 
 
-class MessageStoryRenderer {
+final class MessageStoryRenderer {
     private let context: AccountContext
     private let presentationData: PresentationData
     private let messages: [Message]
@@ -909,7 +909,7 @@ class MessageStoryRenderer {
         
         self.instantChatBackgroundNode = WallpaperBackgroundNode()
         self.instantChatBackgroundNode.displaysAsynchronously = false
-        self.instantChatBackgroundNode.image = chatControllerBackgroundImage(theme: presentationData.theme, wallpaper: .builtin(WallpaperSettings()), mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
+        self.instantChatBackgroundNode.image = chatControllerBackgroundImage(theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
         
         self.messagesContainerNode = ASDisplayNode()
         self.messagesContainerNode.clipsToBounds = true
@@ -920,8 +920,8 @@ class MessageStoryRenderer {
 
         self.addressNode = ImmediateTextNode()
         self.addressNode.displaysAsynchronously = false
-        self.addressNode.attributedText = NSAttributedString(string: "t.me/\(addressName)/\(message.id.id)", font: Font.medium(14.0), textColor: UIColor(rgb: 0xa8b7c4))
-//        self.addressNode.textShadowColor = .black
+        self.addressNode.attributedText = NSAttributedString(string: "t.me/\(addressName)/\(message.id.id)", font: Font.medium(14.0), textColor: UIColor(rgb: 0xffffff))
+        self.addressNode.textShadowColor = UIColor(rgb: 0x929292, alpha: 0.8)
         
         self.containerNode.addSubnode(self.instantChatBackgroundNode)
         self.containerNode.addSubnode(self.messagesContainerNode)
@@ -952,12 +952,7 @@ class MessageStoryRenderer {
         let theme = self.presentationData.theme.withUpdated(preview: true)
         let headerItem = self.context.sharedContext.makeChatMessageDateHeaderItem(context: self.context, timestamp: self.messages.first?.timestamp ?? 0, theme: theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder)
     
-        var items: [ListViewItem] = []
-        let sampleMessages: [Message] = self.messages
-    
-        items = sampleMessages.reversed().map { message in
-            self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message, theme: theme, strings: self.presentationData.strings, wallpaper: self.presentationData.theme.chat.defaultWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil)
-        }
+        let items: [ListViewItem] = [self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: self.messages, theme: theme, strings: self.presentationData.strings, wallpaper: self.presentationData.theme.chat.defaultWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil)]
     
         let inset: CGFloat = 16.0
         let width = layout.size.width - inset * 2.0
