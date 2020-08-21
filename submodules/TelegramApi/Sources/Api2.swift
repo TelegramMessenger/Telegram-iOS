@@ -2003,17 +2003,18 @@ public struct help {
     
     }
     public enum Country: TypeConstructorDescription {
-        case country(iso2: String, defaultName: String, name: String, countryCodes: [Api.help.CountryCode])
+        case country(flags: Int32, iso2: String, defaultName: String, name: String?, countryCodes: [Api.help.CountryCode])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .country(let iso2, let defaultName, let name, let countryCodes):
+                case .country(let flags, let iso2, let defaultName, let name, let countryCodes):
                     if boxed {
-                        buffer.appendInt32(-77073091)
+                        buffer.appendInt32(-1014526429)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(iso2, buffer: buffer, boxed: false)
                     serializeString(defaultName, buffer: buffer, boxed: false)
-                    serializeString(name, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(name!, buffer: buffer, boxed: false)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(countryCodes.count))
                     for item in countryCodes {
@@ -2025,28 +2026,31 @@ public struct help {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .country(let iso2, let defaultName, let name, let countryCodes):
-                return ("country", [("iso2", iso2), ("defaultName", defaultName), ("name", name), ("countryCodes", countryCodes)])
+                case .country(let flags, let iso2, let defaultName, let name, let countryCodes):
+                return ("country", [("flags", flags), ("iso2", iso2), ("defaultName", defaultName), ("name", name), ("countryCodes", countryCodes)])
     }
     }
     
         public static func parse_country(_ reader: BufferReader) -> Country? {
-            var _1: String?
-            _1 = parseString(reader)
+            var _1: Int32?
+            _1 = reader.readInt32()
             var _2: String?
             _2 = parseString(reader)
             var _3: String?
             _3 = parseString(reader)
-            var _4: [Api.help.CountryCode]?
+            var _4: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_4 = parseString(reader) }
+            var _5: [Api.help.CountryCode]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.help.CountryCode.self)
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.help.CountryCode.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.help.Country.country(iso2: _1!, defaultName: _2!, name: _3!, countryCodes: _4!)
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.help.Country.country(flags: _1!, iso2: _2!, defaultName: _3!, name: _4, countryCodes: _5!)
             }
             else {
                 return nil

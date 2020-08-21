@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
+import Postbox
 import TelegramPresentationData
 import TelegramStringFormatting
 import SearchBarNode
@@ -46,7 +47,7 @@ private func loadCountryCodes() -> [Country] {
         
         let countryName = locale.localizedString(forIdentifier: countryId) ?? ""
         if let countryCodeInt = Int(countryCode) {
-            result.append(Country(code: countryId, defaultName: countryName, name: countryName, countryCodes: [Country.CountryCode(code: countryCode, prefixes: [], patterns: [])]))
+            result.append(Country(code: countryId, name: countryName, localizedName: nil, countryCodes: [Country.CountryCode(code: countryCode, prefixes: [], patterns: [])], hidden: false))
         }
         
         if let maybeNameRange = maybeNameRange {
@@ -61,8 +62,8 @@ private func loadCountryCodes() -> [Country] {
 
 private var countryCodes: [Country] = loadCountryCodes()
 
-public func loadServerCountryCodes(network: Network) {
-    let _ = (getCountriesList(network: network, langCode: "")
+public func loadServerCountryCodes(accountManager: AccountManager, network: Network) {
+    let _ = (getCountriesList(accountManager: accountManager, network: network, langCode: nil)
     |> deliverOnMainQueue).start(next: { countries in
         countryCodes = countries
     })

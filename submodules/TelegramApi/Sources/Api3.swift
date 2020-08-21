@@ -3348,26 +3348,6 @@ public extension Api {
                     })
                 }
             
-                public static func searchGlobal(flags: Int32, folderId: Int32?, q: String, offsetRate: Int32, offsetPeer: Api.InputPeer, offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1083038300)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(folderId!, buffer: buffer, boxed: false)}
-                    serializeString(q, buffer: buffer, boxed: false)
-                    serializeInt32(offsetRate, buffer: buffer, boxed: false)
-                    offsetPeer.serialize(buffer, true)
-                    serializeInt32(offsetId, buffer: buffer, boxed: false)
-                    serializeInt32(limit, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.searchGlobal", parameters: [("flags", flags), ("folderId", folderId), ("q", q), ("offsetRate", offsetRate), ("offsetPeer", offsetPeer), ("offsetId", offsetId), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Messages? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.Messages?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.Messages
-                        }
-                        return result
-                    })
-                }
-            
                 public static func sendMessage(flags: Int32, peer: Api.InputPeer, replyToMsgId: Int32?, message: String, randomId: Int64, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, scheduleDate: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1376532592)
@@ -3715,6 +3695,27 @@ public extension Api {
                         var result: [Api.MessageViews]?
                         if let _ = reader.readInt32() {
                             result = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageViews.self)
+                        }
+                        return result
+                    })
+                }
+            
+                public static func searchGlobal(flags: Int32, folderId: Int32?, q: String, filter: Api.MessagesFilter, offsetRate: Int32, offsetPeer: Api.InputPeer, offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1934479725)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(folderId!, buffer: buffer, boxed: false)}
+                    serializeString(q, buffer: buffer, boxed: false)
+                    filter.serialize(buffer, true)
+                    serializeInt32(offsetRate, buffer: buffer, boxed: false)
+                    offsetPeer.serialize(buffer, true)
+                    serializeInt32(offsetId, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.searchGlobal", parameters: [("flags", flags), ("folderId", folderId), ("q", q), ("filter", filter), ("offsetRate", offsetRate), ("offsetPeer", offsetPeer), ("offsetId", offsetId), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Messages? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Messages?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Messages
                         }
                         return result
                     })
