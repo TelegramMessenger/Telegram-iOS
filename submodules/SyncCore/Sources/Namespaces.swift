@@ -96,8 +96,10 @@ public extension MessageTags {
     static let unseenPersonalMessage = MessageTags(rawValue: 1 << 5)
     static let liveLocation = MessageTags(rawValue: 1 << 6)
     static let gif = MessageTags(rawValue: 1 << 7)
+    static let photo = MessageTags(rawValue: 1 << 8)
+    static let video = MessageTags(rawValue: 1 << 9)
     
-    static let all: MessageTags = [.photoOrVideo, .file, .music, .webPage, .voiceOrInstantVideo, .unseenPersonalMessage, .liveLocation, .gif]
+    static let all: MessageTags = [.photoOrVideo, .file, .music, .webPage, .voiceOrInstantVideo, .unseenPersonalMessage, .liveLocation, .gif, .photo, .video]
 }
 
 public extension GlobalMessageTags {
