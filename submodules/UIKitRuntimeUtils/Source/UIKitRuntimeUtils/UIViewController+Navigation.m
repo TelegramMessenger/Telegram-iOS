@@ -106,7 +106,7 @@ static bool notyfyingShiftState = false;
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIViewController class] currentSelector:@selector(presentViewController:animated:completion:) newSelector:@selector(_65087dc8_presentViewController:animated:completion:)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIViewController class] currentSelector:@selector(setNeedsStatusBarAppearanceUpdate) newSelector:@selector(_65087dc8_setNeedsStatusBarAppearanceUpdate)];
         
-        #pragma clang diagnostic push
+        /*#pragma clang diagnostic push
         #pragma clang diagnostic ignored "-Wundeclared-selector"
         if (@available(iOS 13, *)) {
             Class UIUndoGestureInteractionClass = NSClassFromString(@"UIUndoGestureInteraction");
@@ -117,7 +117,7 @@ static bool notyfyingShiftState = false;
             
             method_setImplementation(class_getInstanceMethod(UIUndoGestureInteractionClass, addGestureRecognizersSelector), doNothing);
         }
-        #pragma clang diagnostic pop
+        #pragma clang diagnostic pop*/
         
         //[RuntimeUtils swizzleInstanceMethodOfClass:NSClassFromString(@"UIKeyboardImpl") currentSelector:@selector(notifyShiftState) withAnotherClass:[UIKeyboardImpl_65087dc8 class] newSelector:@selector(notifyShiftState)];
         //[RuntimeUtils swizzleInstanceMethodOfClass:NSClassFromString(@"UIInputWindowController") currentSelector:@selector(updateViewConstraints) withAnotherClass:[UIInputWindowController_65087dc8 class] newSelector:@selector(updateViewConstraints)];

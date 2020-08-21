@@ -6,6 +6,7 @@ import AsyncDisplayKit
 import RLottieBinding
 import GZip
 import YuvConversion
+import MediaResources
 
 private let sharedQueue = Queue()
 private let sharedStoreQueue = Queue.concurrentDefaultQueue()
@@ -438,7 +439,7 @@ private final class AnimatedStickerDirectFrameSourceCache {
     private var scratchBuffer: Data
     private var decodeBuffer: Data
     
-    init?(queue: Queue, pathPrefix: String, width: Int, height: Int, frameCount: Int) {
+    init?(queue: Queue, pathPrefix: String, width: Int, height: Int, frameCount: Int, fitzModifier: EmojiFitzModifier?) {
         self.queue = queue
         self.storeQueue = sharedStoreQueue
         
@@ -446,7 +447,13 @@ private final class AnimatedStickerDirectFrameSourceCache {
         self.width = width
         self.height = height
         
-        let path = "\(pathPrefix)_\(width):\(height).stickerframecache"
+        let suffix : String
+        if let fitzModifier = fitzModifier {
+            suffix = "_fitz\(fitzModifier.rawValue)"
+        } else {
+            suffix = ""
+        }
+        let path = "\(pathPrefix)_\(width):\(height)\(suffix).stickerframecache"
         var file = ManagedFileImpl(queue: queue, path: path, mode: .readwrite)
         if let file = file {
             self.file = file
@@ -594,7 +601,7 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
         return self.currentFrame % self.frameCount
     }
     
-    init?(queue: Queue, data: Data, width: Int, height: Int, cachePathPrefix: String?) {
+    init?(queue: Queue, data: Data, width: Int, height: Int, cachePathPrefix: String?, fitzModifier: EmojiFitzModifier?) {
         self.queue = queue
         self.data = data
         self.width = width
@@ -602,7 +609,9 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
         self.bytesPerRow = (4 * Int(width) + 15) & (~15)
         self.currentFrame = 0
         let rawData = TGGUnzipData(data, 8 * 1024 * 1024) ?? data
-        guard let animation = LottieInstance(data: rawData, cacheKey: "") else {
+        let decompressedData = transformedWithFitzModifier(data: rawData, fitzModifier: fitzModifier)
+        
+        guard let animation = LottieInstance(data: decompressedData, cacheKey: "") else {
             return nil
         }
         self.animation = animation
@@ -611,7 +620,7 @@ private final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource
         self.frameRate = Int(animation.frameRate)
         
         self.cache = cachePathPrefix.flatMap { cachePathPrefix in
-            AnimatedStickerDirectFrameSourceCache(queue: queue, pathPrefix: cachePathPrefix, width: width, height: height, frameCount: frameCount)
+            AnimatedStickerDirectFrameSourceCache(queue: queue, pathPrefix: cachePathPrefix, width: width, height: height, frameCount: frameCount, fitzModifier: fitzModifier)
         }
     }
     
@@ -698,11 +707,15 @@ public struct AnimatedStickerStatus: Equatable {
 }
 
 public protocol AnimatedStickerNodeSource {
+    var fitzModifier: EmojiFitzModifier? { get }
+    
     func cachedDataPath(width: Int, height: Int) -> Signal<(String, Bool), NoError>
     func directDataPath() -> Signal<String, NoError>
 }
 
 public final class AnimatedStickerNodeLocalFileSource: AnimatedStickerNodeSource {
+    public var fitzModifier: EmojiFitzModifier? = nil
+    
     public let path: String
     
     public init(path: String) {
@@ -733,8 +746,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
     private let timer = Atomic<SwiftSignalKit.Timer?>(value: nil)
     private let frameSource = Atomic<QueueLocalObject<AnimatedStickerFrameSourceWrapper>?>(value: nil)
     
-    private var directData: (Data, String, Int, Int, String?)?
-    private var cachedData: (Data, Bool)?
+    private var directData: (Data, String, Int, Int, String?, EmojiFitzModifier?)?
+    private var cachedData: (Data, Bool, EmojiFitzModifier?)?
     
     private var renderer: (AnimationRenderer & ASDisplayNode)?
     
@@ -809,7 +822,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                     return
                 }
                 if let directData = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
-                    strongSelf.directData = (directData, path, width, height, cachePathPrefix)
+                    strongSelf.directData = (directData, path, width, height, cachePathPrefix, source.fitzModifier)
                 }
                 if case let .still(position) = playbackMode {
                     strongSelf.seekTo(position)
@@ -830,9 +843,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
                     return
                 }
                 if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
-                    if let (_, currentComplete) = strongSelf.cachedData {
+                    if let (_, currentComplete, _) = strongSelf.cachedData {
                         if !currentComplete {
-                            strongSelf.cachedData = (data, complete)
+                            strongSelf.cachedData = (data, complete, source.fitzModifier)
                             strongSelf.frameSource.with { frameSource in
                                 frameSource?.with { frameSource in
                                     if let frameSource = frameSource.value as? AnimatedStickerCachedFrameSource {
@@ -842,7 +855,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                             }
                         }
                     } else {
-                        strongSelf.cachedData = (data, complete)
+                        strongSelf.cachedData = (data, complete, source.fitzModifier)
                         if strongSelf.isPlaying {
                             strongSelf.play()
                         } else if strongSelf.canDisplayFirstFrame {
@@ -892,8 +905,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
                 if maybeFrameSource == nil {
                     let notifyUpdated: (() -> Void)? = nil
                     if let directData = directData {
-                        maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4)
-                    } else if let (cachedData, cachedDataComplete) = cachedData {
+                        maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, fitzModifier: directData.5)
+                    } else if let (cachedData, cachedDataComplete, _) = cachedData {
                         if #available(iOS 9.0, *) {
                             maybeFrameSource = AnimatedStickerCachedFrameSource(queue: queue, data: cachedData, complete: cachedDataComplete, notifyUpdated: {
                                 notifyUpdated?()
@@ -964,8 +977,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
                 var maybeFrameSource: AnimatedStickerFrameSource?
                 let notifyUpdated: (() -> Void)? = nil
                 if let directData = directData {
-                    maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4)
-                } else if let (cachedData, cachedDataComplete) = cachedData {
+                    maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, fitzModifier: directData.5)
+                } else if let (cachedData, cachedDataComplete, _) = cachedData {
                     if #available(iOS 9.0, *) {
                         maybeFrameSource = AnimatedStickerCachedFrameSource(queue: queue, data: cachedData, complete: cachedDataComplete, notifyUpdated: {
                             notifyUpdated?()
@@ -1054,11 +1067,11 @@ public final class AnimatedStickerNode: ASDisplayNode {
             } else {
                 var maybeFrameSource: AnimatedStickerFrameSource?
                 if let directData = directData {
-                    maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4)
+                    maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, fitzModifier: directData.5)
                     if case .end = position {
                         maybeFrameSource?.skipToEnd()
                     }
-                } else if let (cachedData, cachedDataComplete) = cachedData {
+                } else if let (cachedData, cachedDataComplete, _) = cachedData {
                     if #available(iOS 9.0, *) {
                         maybeFrameSource = AnimatedStickerCachedFrameSource(queue: queue, data: cachedData, complete: cachedDataComplete, notifyUpdated: {})
                     }

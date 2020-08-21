@@ -762,7 +762,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 )
             )
             let location: SearchMessagesLocation
-            location = .general
+            location = .general(tags: nil)
             
             updateSearchContext { _ in
                 return (nil, true)

@@ -121,26 +121,32 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         self.phoneInputNode.countryCodeField.textField.disableAutomaticKeyboardHandling = [.forward]
         self.phoneInputNode.numberField.textField.disableAutomaticKeyboardHandling = [.forward]
         
-        
         self.countryButton.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 15.0, bottom: 10.0, right: 0.0)
         self.countryButton.contentHorizontalAlignment = .left
         
-        self.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: theme.list.itemPlaceholderTextColor)
+//        self.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: theme.list.itemPlaceholderTextColor)
         
         self.countryButton.addTarget(self, action: #selector(self.countryPressed), forControlEvents: .touchUpInside)
         
         self.phoneInputNode.countryCodeUpdated = { [weak self] code, name in
+            let font = Font.with(size: 20.0, design: .monospace, traits: [])
             if let strongSelf = self {
                 if let code = Int(code), let name = name, let countryName = countryCodeAndIdToName[CountryCodeAndId(code: code, id: name)] {
                     let flagString = emojiFlagForISOCountryCode(name as NSString)
                     let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(name, strings: strongSelf.strings) ?? countryName
                     strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.list.itemPrimaryTextColor, for: [])
+                    
+                    strongSelf.phoneInputNode.mask = AuthorizationSequenceCountrySelectionController.lookupPatternByCode(code).flatMap { NSAttributedString(string: $0, font: font, textColor: theme.list.itemPlaceholderTextColor) }
                 } else if let code = Int(code), let (countryId, countryName) = countryCodeToIdAndName[code] {
                     let flagString = emojiFlagForISOCountryCode(countryId as NSString)
                     let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(countryId, strings: strongSelf.strings) ?? countryName
                     strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.list.itemPrimaryTextColor, for: [])
+                    
+                    strongSelf.phoneInputNode.mask = AuthorizationSequenceCountrySelectionController.lookupPatternByCode(code).flatMap { NSAttributedString(string: $0, font: font, textColor: theme.list.itemPlaceholderTextColor) }
                 } else {
                     strongSelf.countryButton.setTitle(strings.Login_SelectCountry_Title, with: Font.regular(20.0), with: theme.list.itemPlaceholderTextColor, for: [])
+                    
+                    strongSelf.phoneInputNode.mask = nil
                 }
             }
         }
@@ -165,12 +171,14 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         
         let countryCodeFrame = CGRect(origin: CGPoint(x: 18.0, y: size.height - 57.0), size: CGSize(width: 60.0, height: 57.0))
         let numberFrame = CGRect(origin: CGPoint(x: 96.0, y: size.height - 57.0), size: CGSize(width: size.width - 96.0 - 8.0, height: 57.0))
+        let placeholderFrame = numberFrame.offsetBy(dx: -1.0, dy: 16.0)
         
         let phoneInputFrame = countryCodeFrame.union(numberFrame)
         
         self.phoneInputNode.frame = phoneInputFrame
         self.phoneInputNode.countryCodeField.frame = countryCodeFrame.offsetBy(dx: -phoneInputFrame.minX, dy: -phoneInputFrame.minY)
         self.phoneInputNode.numberField.frame = numberFrame.offsetBy(dx: -phoneInputFrame.minX, dy: -phoneInputFrame.minY)
+        self.phoneInputNode.placeholderNode.frame = placeholderFrame.offsetBy(dx: -phoneInputFrame.minX, dy: -phoneInputFrame.minY)
     }
 }
 
@@ -203,6 +211,8 @@ private final class ContactSyncNode: ASDisplayNode {
         return CGSize(width: width, height: height)
     }
 }
+
+
 
 final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     private let sharedContext: SharedAccountContext

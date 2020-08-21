@@ -12,6 +12,7 @@ static_library(
         "//submodules/YuvConversion:YuvConversion",
         "//submodules/GZip:GZip",
         "//submodules/rlottie:RLottieBinding",
+        "//submodules/MediaResources:MediaResources",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

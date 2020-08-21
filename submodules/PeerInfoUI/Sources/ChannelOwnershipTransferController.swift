@@ -173,12 +173,12 @@ private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UI
     }
 }
 
-private final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
+public final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
     
     private let titleNode: ASTextNode
     private let textNode: ASTextNode
-    let inputFieldNode: ChannelOwnershipTransferPasswordFieldNode
+    fileprivate let inputFieldNode: ChannelOwnershipTransferPasswordFieldNode
     
     private let actionNodesSeparator: ASDisplayNode
     private let actionNodes: [TextAlertContentActionNode]
@@ -190,18 +190,25 @@ private final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
     
     private let hapticFeedback = HapticFeedback()
     
-    var complete: (() -> Void)? {
+    public var complete: (() -> Void)? {
         didSet {
             self.inputFieldNode.complete = self.complete
         }
     }
     
-    override var dismissOnOutsideTap: Bool {
+    public var theme: PresentationTheme {
+        didSet {
+            self.inputFieldNode.updateTheme(self.theme)
+        }
+    }
+    
+    public override var dismissOnOutsideTap: Bool {
         return self.isUserInteractionEnabled
     }
     
-    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction]) {
+    public init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction]) {
         self.strings = strings
+        self.theme = ptheme
         
         self.titleNode = ASTextNode()
         self.titleNode.maximumNumberOfLines = 2
@@ -258,19 +265,19 @@ private final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
         self.disposable.dispose()
     }
     
-    func dismissInput() {
+    public func dismissInput() {
         self.inputFieldNode.deactivateInput()
     }
     
-    var password: String {
+    public var password: String {
         return self.inputFieldNode.password
     }
     
-    func updateIsChecking(_ checking: Bool) {
+    public func updateIsChecking(_ checking: Bool) {
         self.inputFieldNode.updateIsChecking(checking)
     }
     
-    override func updateTheme(_ theme: AlertControllerTheme) {
+    public override func updateTheme(_ theme: AlertControllerTheme) {
         self.titleNode.attributedText = NSAttributedString(string: self.strings.Channel_OwnershipTransfer_EnterPassword, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
         self.textNode.attributedText = NSAttributedString(string: self.strings.Channel_OwnershipTransfer_EnterPasswordText, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
         
@@ -281,13 +288,13 @@ private final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
         for separatorNode in self.actionVerticalSeparators {
             separatorNode.backgroundColor = theme.separatorColor
         }
-        
+                
         if let size = self.validLayout {
             _ = self.updateLayout(size: size, transition: .immediate)
         }
     }
     
-    override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+    public override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         var size = size
         size.width = min(size.width, 270.0)
         let measureSize = CGSize(width: size.width - 16.0 * 2.0, height: CGFloat.greatestFiniteMagnitude)
@@ -400,7 +407,7 @@ private final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
         return resultSize
     }
     
-    func animateError() {
+    public func animateError() {
         self.inputFieldNode.updateIsInvalid()
         self.inputFieldNode.layer.addShakeAnimation()
         self.hapticFeedback.error()

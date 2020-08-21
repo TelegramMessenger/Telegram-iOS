@@ -45,7 +45,7 @@ private func generateEmptyButtonImage(icon: UIImage?, strokeColor: UIColor?, fil
                 context.fill(imageRect)
             } else {
                 context.setBlendMode(.normal)
-                context.draw(icon.cgImage!, in: imageRect)
+                context.draw(generateTintedImage(image: icon, color: .white)!.cgImage!, in: imageRect)
             }
         }
     })

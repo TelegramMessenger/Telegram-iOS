@@ -2,12 +2,15 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
+import SwiftSignalKit
+import Postbox
 import TelegramPresentationData
 import TelegramStringFormatting
 import SearchBarNode
 import AppBundle
+import TelegramCore
 
-private func loadCountryCodes() -> [(String, Int)] {
+private func loadCountryCodes() -> [Country] {
     guard let filePath = getAppBundle().path(forResource: "PhoneCountries", ofType: "txt") else {
         return []
     }
@@ -21,9 +24,11 @@ private func loadCountryCodes() -> [(String, Int)] {
     let delimiter = ";"
     let endOfLine = "\n"
     
-    var result: [(String, Int)] = []
+    var result: [Country] = []
     
     var currentLocation = data.startIndex
+    
+    let locale = Locale(identifier: "en-US")
     
     while true {
         guard let codeRange = data.range(of: delimiter, options: [], range: currentLocation ..< data.endIndex) else {
@@ -40,8 +45,9 @@ private func loadCountryCodes() -> [(String, Int)] {
         
         let maybeNameRange = data.range(of: endOfLine, options: [], range: idRange.upperBound ..< data.endIndex)
         
+        let countryName = locale.localizedString(forIdentifier: countryId) ?? ""
         if let countryCodeInt = Int(countryCode) {
-            result.append((countryId, countryCodeInt))
+            result.append(Country(code: countryId, name: countryName, localizedName: nil, countryCodes: [Country.CountryCode(code: countryCode, prefixes: [], patterns: [])], hidden: false))
         }
         
         if let maybeNameRange = maybeNameRange {
@@ -54,7 +60,14 @@ private func loadCountryCodes() -> [(String, Int)] {
     return result
 }
 
-private let countryCodes: [(String, Int)] = loadCountryCodes()
+private var countryCodes: [Country] = loadCountryCodes()
+
+public func loadServerCountryCodes(accountManager: AccountManager, network: Network) {
+    let _ = (getCountriesList(accountManager: accountManager, network: network, langCode: nil)
+    |> deliverOnMainQueue).start(next: { countries in
+        countryCodes = countries
+    })
+}
 
 private final class AuthorizationSequenceCountrySelectionNavigationContentNode: NavigationBarContentNode {
     private let theme: PresentationTheme
@@ -117,8 +130,8 @@ private final class AuthorizationSequenceCountrySelectionNavigationContentNode: 
 
 public final class AuthorizationSequenceCountrySelectionController: ViewController {
     public static func lookupCountryNameById(_ id: String, strings: PresentationStrings) -> String? {
-        for (itemId, _) in countryCodes {
-            if id == itemId {
+        for country in countryCodes {
+            if id == country.code {
                 let locale = localeWithStrings(strings)
                 if let countryName = locale.localizedString(forRegionCode: id) {
                     return countryName
@@ -131,9 +144,22 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
     }
     
     public static func lookupCountryIdByCode(_ code: Int) -> String? {
-        for (itemId, itemCode) in countryCodes {
-            if itemCode == code {
-                return itemId
+        for country in countryCodes {
+            for countryCode in country.countryCodes {
+                if countryCode.code == "\(code)" {
+                    return country.code
+                }
+            }
+        }
+        return nil
+    }
+    
+    public static func lookupPatternByCode(_ code: Int) -> String? {
+        for country in countryCodes {
+            for countryCode in country.countryCodes {
+                if countryCode.code == "\(code)" {
+                    return countryCode.patterns.first
+                }
             }
         }
         return nil
