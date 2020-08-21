@@ -927,60 +927,63 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     globalExpandType = .none
                 }
                 
-                let lowercasedQuery = finalQuery.lowercased()
-                if presentationData.strings.DialogList_SavedMessages.lowercased().hasPrefix(lowercasedQuery) || "saved messages".hasPrefix(lowercasedQuery) {
-                    if !existingPeerIds.contains(accountPeer.id), filteredPeer(accountPeer, accountPeer) {
-                        existingPeerIds.insert(accountPeer.id)
-                        entries.append(.localPeer(accountPeer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType))
-                        index += 1
-                    }
-                }
-                
-                var numberOfLocalPeers = 0
-                for renderedPeer in foundLocalPeers.peers {
-                    if case .expand = localExpandType, numberOfLocalPeers >= 5 {
-                        break
+                if let _ = messageTags {
+                } else {
+                    let lowercasedQuery = finalQuery.lowercased()
+                    if presentationData.strings.DialogList_SavedMessages.lowercased().hasPrefix(lowercasedQuery) || "saved messages".hasPrefix(lowercasedQuery) {
+                        if !existingPeerIds.contains(accountPeer.id), filteredPeer(accountPeer, accountPeer) {
+                            existingPeerIds.insert(accountPeer.id)
+                            entries.append(.localPeer(accountPeer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType))
+                            index += 1
+                        }
                     }
                     
-                    if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != context.account.peerId, filteredPeer(peer, accountPeer) {
-                        if !existingPeerIds.contains(peer.id) {
-                            existingPeerIds.insert(peer.id)
-                            var associatedPeer: Peer?
-                            if let associatedPeerId = peer.associatedPeerId {
-                                associatedPeer = renderedPeer.peers[associatedPeerId]
+                    var numberOfLocalPeers = 0
+                    for renderedPeer in foundLocalPeers.peers {
+                        if case .expand = localExpandType, numberOfLocalPeers >= 5 {
+                            break
+                        }
+                        
+                        if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != context.account.peerId, filteredPeer(peer, accountPeer) {
+                            if !existingPeerIds.contains(peer.id) {
+                                existingPeerIds.insert(peer.id)
+                                var associatedPeer: Peer?
+                                if let associatedPeerId = peer.associatedPeerId {
+                                    associatedPeer = renderedPeer.peers[associatedPeerId]
+                                }
+                                entries.append(.localPeer(peer, associatedPeer, foundLocalPeers.unread[peer.id], index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType))
+                                index += 1
+                                numberOfLocalPeers += 1
                             }
-                            entries.append(.localPeer(peer, associatedPeer, foundLocalPeers.unread[peer.id], index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType))
+                        }
+                    }
+                    
+                    for peer in foundRemotePeers.0 {
+                        if case .expand = localExpandType, numberOfLocalPeers >= 5 {
+                            break
+                        }
+                        
+                        if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer, accountPeer) {
+                            existingPeerIds.insert(peer.peer.id)
+                            entries.append(.localPeer(peer.peer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType))
                             index += 1
                             numberOfLocalPeers += 1
                         }
                     }
-                }
-                
-                for peer in foundRemotePeers.0 {
-                    if case .expand = localExpandType, numberOfLocalPeers >= 5 {
-                        break
-                    }
-                    
-                    if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer, accountPeer) {
-                        existingPeerIds.insert(peer.peer.id)
-                        entries.append(.localPeer(peer.peer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType))
-                        index += 1
-                        numberOfLocalPeers += 1
-                    }
-                }
 
-                var numberOfGlobalPeers = 0
-                index = 0
-                for peer in foundRemotePeers.1 {
-                    if case .expand = globalExpandType, numberOfGlobalPeers >= 3 {
-                        break
-                    }
-                    
-                    if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer, accountPeer) {
-                        existingPeerIds.insert(peer.peer.id)
-                        entries.append(.globalPeer(peer, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, globalExpandType))
-                        index += 1
-                        numberOfGlobalPeers += 1
+                    var numberOfGlobalPeers = 0
+                    index = 0
+                    for peer in foundRemotePeers.1 {
+                        if case .expand = globalExpandType, numberOfGlobalPeers >= 3 {
+                            break
+                        }
+                        
+                        if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer, accountPeer) {
+                            existingPeerIds.insert(peer.peer.id)
+                            entries.append(.globalPeer(peer, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, globalExpandType))
+                            index += 1
+                            numberOfGlobalPeers += 1
+                        }
                     }
                 }
                 

@@ -1109,7 +1109,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             |> deliverOnMainQueue
                         }
                         
-                        let beatingHearts: [UInt32] = [0x2764, 0x1F90E, 0x1F9E1, 0x1F49A, 0x1F49C, 0x1F49B, 0x1F5A4, 0x1F90D]
+                        let beatingHearts: [UInt32] = [0x2764, 0x1F90E, 0x1F9E1, 0x1F499, 0x1F49A, 0x1F49C, 0x1F49B, 0x1F5A4, 0x1F90D]
                         let peach = 0x1F351
                         
                         if let text = self.item?.message.text, let firstScalar = text.unicodeScalars.first, beatingHearts.contains(firstScalar.value) || firstScalar.value == peach {

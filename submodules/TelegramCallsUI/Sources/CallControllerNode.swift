@@ -1005,8 +1005,10 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         self.updateButtonsMode()
         self.updateDimVisibility()
         
-        if self.incomingVideoViewRequested && self.outgoingVideoViewRequested {
-            self.displayedCameraTooltip = true
+        if self.incomingVideoViewRequested || self.outgoingVideoViewRequested {
+            if self.incomingVideoViewRequested && self.outgoingVideoViewRequested {
+                self.displayedCameraTooltip = true
+            }
             self.displayedCameraConfirmation = true
         }
         if self.incomingVideoViewRequested && !self.outgoingVideoViewRequested && !self.displayedCameraTooltip && (self.toastContent?.isEmpty ?? true) {
