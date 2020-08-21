@@ -110,7 +110,8 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 
 - (void)switchVideoCamera;
 - (void)setIsVideoEnabled:(bool)isVideoEnabled;
-
+- (void)enableScreenCast;
+- (void)disableScreenCast;
 - (void)makeOutgoingVideoView:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion;
 
 @end

@@ -145,6 +145,13 @@
     _interface->switchCamera();
 }
 
+-(void)enableScreenCast {
+    _interface->enableScreenCast();
+}
+- (void)disableScreenCast {
+    _interface->disableScreenCast();
+}
+
 - (void)setIsVideoEnabled:(bool)isVideoEnabled {
     _interface->setState(isVideoEnabled ? tgcalls::VideoState::Active : tgcalls::VideoState::Paused);
 }
@@ -387,7 +394,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .enableNS = true,
             .enableAGC = true,
             .enableCallUpgrade = false,
-            .logPath = logPath.length == 0 ? "" : std::string(logPath.UTF8String),
+            .logPath = "",//logPath.length == 0 ? "" : std::string(logPath.UTF8String),
             .maxApiLayer = [OngoingCallThreadLocalContextWebrtc maxLayer],
             .preferredAspectRatio = preferredAspectRatio,
             .enableHighBitrateVideo = enableHighBitrateVideoCalls
