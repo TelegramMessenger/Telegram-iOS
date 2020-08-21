@@ -1171,7 +1171,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }, navigateToFirstDateMessage: { _ in
             }, requestRedeliveryOfFailedMessages: { _ in
             }, addContact: { _ in
-            }, rateCall: { _, _ in
+            }, rateCall: { _, _, _ in
             }, requestSelectMessagePollOptions: { _, _ in
             }, requestOpenMessagePollResults: { _, _ in
             }, openAppStorePage: {

@@ -2878,10 +2878,10 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     }
     
     // could be the reason for unbounded slowdown, needs investigation
-    /*for (peerIdAndNamespace, pts) in clearHolesFromPreviousStateForChannelMessagesWithPts {
+    for (peerIdAndNamespace, pts) in clearHolesFromPreviousStateForChannelMessagesWithPts {
         var upperMessageId: Int32?
         var lowerMessageId: Int32?
-        transaction.scanMessageAttributes(peerId: peerIdAndNamespace.peerId, namespace: peerIdAndNamespace.namespace, { id, attributes in
+        transaction.scanMessageAttributes(peerId: peerIdAndNamespace.peerId, namespace: peerIdAndNamespace.namespace, limit: 200, { id, attributes in
             for attribute in attributes {
                 if let attribute = attribute as? ChannelMessageStateVersionAttribute {
                     if attribute.pts >= pts {
@@ -2906,7 +2906,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 transaction.removeHole(peerId: peerIdAndNamespace.peerId, namespace: peerIdAndNamespace.namespace, space: .everywhere, range: lowerMessageId ... upperMessageId)
             }
         }
-    }*/
+    }
     
     if !peerActivityTimestamps.isEmpty {
         updatePeerPresenceLastActivities(transaction: transaction, accountPeerId: accountPeerId, activities: peerActivityTimestamps)

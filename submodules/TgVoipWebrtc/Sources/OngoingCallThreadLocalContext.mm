@@ -49,12 +49,14 @@
 @protocol OngoingCallThreadLocalContextWebrtcVideoViewImpl <NSObject>
 
 @property (nonatomic, readwrite) OngoingCallVideoOrientationWebrtc orientation;
+@property (nonatomic, readonly) CGFloat aspect;
 
 @end
 
 @interface VideoMetalView (VideoViewImpl) <OngoingCallThreadLocalContextWebrtcVideoView, OngoingCallThreadLocalContextWebrtcVideoViewImpl>
 
 @property (nonatomic, readwrite) OngoingCallVideoOrientationWebrtc orientation;
+@property (nonatomic, readonly) CGFloat aspect;
 
 @end
 
@@ -64,14 +66,18 @@
     return (OngoingCallVideoOrientationWebrtc)self.internalOrientation;
 }
 
+- (CGFloat)aspect {
+    return self.internalAspect;
+}
+
 - (void)setOrientation:(OngoingCallVideoOrientationWebrtc)orientation {
     [self setInternalOrientation:(int)orientation];
 }
 
-- (void)setOnOrientationUpdated:(void (^ _Nullable)(OngoingCallVideoOrientationWebrtc))onOrientationUpdated {
+- (void)setOnOrientationUpdated:(void (^ _Nullable)(OngoingCallVideoOrientationWebrtc, CGFloat))onOrientationUpdated {
     if (onOrientationUpdated) {
-        [self internalSetOnOrientationUpdated:^(int value) {
-            onOrientationUpdated((OngoingCallVideoOrientationWebrtc)value);
+        [self internalSetOnOrientationUpdated:^(int value, CGFloat aspect) {
+            onOrientationUpdated((OngoingCallVideoOrientationWebrtc)value, aspect);
         }];
     } else {
         [self internalSetOnOrientationUpdated:nil];
@@ -93,6 +99,7 @@
 @interface GLVideoView (VideoViewImpl) <OngoingCallThreadLocalContextWebrtcVideoView, OngoingCallThreadLocalContextWebrtcVideoViewImpl>
 
 @property (nonatomic, readwrite) OngoingCallVideoOrientationWebrtc orientation;
+@property (nonatomic, readonly) CGFloat aspect;
 
 @end
 
@@ -102,14 +109,18 @@
     return (OngoingCallVideoOrientationWebrtc)self.internalOrientation;
 }
 
+- (CGFloat)aspect {
+    return self.internalAspect;
+}
+
 - (void)setOrientation:(OngoingCallVideoOrientationWebrtc)orientation {
     [self setInternalOrientation:(int)orientation];
 }
 
-- (void)setOnOrientationUpdated:(void (^ _Nullable)(OngoingCallVideoOrientationWebrtc))onOrientationUpdated {
+- (void)setOnOrientationUpdated:(void (^ _Nullable)(OngoingCallVideoOrientationWebrtc, CGFloat))onOrientationUpdated {
     if (onOrientationUpdated) {
-        [self internalSetOnOrientationUpdated:^(int value) {
-            onOrientationUpdated((OngoingCallVideoOrientationWebrtc)value);
+        [self internalSetOnOrientationUpdated:^(int value, CGFloat aspect) {
+            onOrientationUpdated((OngoingCallVideoOrientationWebrtc)value, aspect);
         }];
     } else {
         [self internalSetOnOrientationUpdated:nil];
@@ -207,6 +218,7 @@
     NSTimeInterval _callPacketTimeout;
     
     std::unique_ptr<tgcalls::Instance> _tgVoip;
+    bool _didStop;
     
     OngoingCallStateWebrtc _state;
     OngoingCallVideoStateWebrtc _videoState;
@@ -224,7 +236,6 @@
     void (^_sendSignalingData)(NSData *);
     
     float _remotePreferredAspectRatio;
-
 }
 
 - (void)controllerStateChanged:(tgcalls::State)state;
@@ -312,7 +323,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
-- (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing connections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)connections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath sendSignalingData:(void (^)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer preferredAspectRatio:(float)preferredAspectRatio preferredVideoCodec:(NSString * _Nullable)preferredVideoCodec {
+- (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing connections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)connections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P enableStunMarking:(BOOL)enableStunMarking logPath:(NSString * _Nonnull)logPath statsLogPath:(NSString * _Nonnull)statsLogPath sendSignalingData:(void (^)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer preferredVideoCodec:(NSString * _Nullable)preferredVideoCodec {
     self = [super init];
     if (self != nil) {
         _version = version;
@@ -387,13 +398,14 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .receiveTimeout = _callPacketTimeout,
             .dataSaving = callControllerDataSavingForType(dataSaving),
             .enableP2P = (bool)allowP2P,
+            .enableStunMarking = (bool)enableStunMarking,
             .enableAEC = false,
             .enableNS = true,
             .enableAGC = true,
             .enableCallUpgrade = false,
-            .logPath = "", //logPath.length == 0 ? "" : std::string(logPath.UTF8String),
+            .logPath = logPath.length == 0 ? "" : std::string(logPath.UTF8String),
+            .statsLogPath = statsLogPath.length == 0 ? "" : std::string(statsLogPath.UTF8String),
             .maxApiLayer = [OngoingCallThreadLocalContextWebrtc maxLayer],
-            .preferredAspectRatio = preferredAspectRatio,
             .enableHighBitrateVideo = true,
             .preferredVideoCodecs = preferredVideoCodecs,
             .protocolVersion = [OngoingCallThreadLocalContextWebrtc protocolVersionFromLibraryVersion:version]
@@ -543,13 +555,10 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 - (void)beginTermination {
 }
 
-- (void)stopWithTerminationResult:(OngoingCallThreadLocalContextWebrtcTerminationResult *)terminationResult completion:(void (^)(NSString *, int64_t, int64_t, int64_t, int64_t))completion {
-    _tgVoip.reset();
-    
++ (void)stopWithTerminationResult:(OngoingCallThreadLocalContextWebrtcTerminationResult *)terminationResult completion:(void (^)(NSString *, int64_t, int64_t, int64_t, int64_t))completion {
     if (completion) {
         if (terminationResult) {
             NSString *debugLog = [NSString stringWithUTF8String:terminationResult.finalState.debugLog.c_str()];
-            _lastDerivedState = [[NSData alloc] initWithBytes:terminationResult.finalState.persistentState.value.data() length:terminationResult.finalState.persistentState.value.size()];
             
             if (completion) {
                 completion(debugLog, terminationResult.finalState.trafficStats.bytesSentWifi, terminationResult.finalState.trafficStats.bytesReceivedWifi, terminationResult.finalState.trafficStats.bytesSentMobile, terminationResult.finalState.trafficStats.bytesReceivedMobile);
@@ -567,24 +576,28 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         return;
     }
     if (completion == nil) {
-        _tgVoip->stop([](tgcalls::FinalState finalState) {
-        });
+        if (!_didStop) {
+            _tgVoip->stop([](tgcalls::FinalState finalState) {
+            });
+        }
         _tgVoip.reset();
         return;
     }
     
     __weak OngoingCallThreadLocalContextWebrtc *weakSelf = self;
     id<OngoingCallThreadLocalContextQueueWebrtc> queue = _queue;
+    _didStop = true;
     _tgVoip->stop([weakSelf, queue, completion = [completion copy]](tgcalls::FinalState finalState) {
         [queue dispatch:^{
             __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
-            if (!strongSelf) {
+            if (strongSelf) {
+                strongSelf->_tgVoip.reset();
                 return;
             }
             
             OngoingCallThreadLocalContextWebrtcTerminationResult *terminationResult = [[OngoingCallThreadLocalContextWebrtcTerminationResult alloc] initWithFinalState:finalState];
             
-            [strongSelf stopWithTerminationResult:terminationResult completion:completion];
+            [OngoingCallThreadLocalContextWebrtc stopWithTerminationResult:terminationResult completion:completion];
         }];
     });
 }
@@ -694,7 +707,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             if ([VideoMetalView isSupported]) {
                 VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
                 #if TARGET_OS_IPHONE
-                remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
+                remoteRenderer.videoContentMode = UIViewContentModeScaleToFill;
                 #else
                 remoteRenderer.videoContentMode = UIViewContentModeScaleAspect;
                 #endif
@@ -734,6 +747,12 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         if (_stateChanged) {
             _stateChanged(_state, _videoState, _remoteVideoState, _remoteAudioState, _remoteBatteryLevel, _remotePreferredAspectRatio);
         }
+    }
+}
+
+- (void)setRequestedVideoAspect:(float)aspect {
+    if (_tgVoip) {
+        _tgVoip->setRequestedVideoAspect(aspect);
     }
 }
 

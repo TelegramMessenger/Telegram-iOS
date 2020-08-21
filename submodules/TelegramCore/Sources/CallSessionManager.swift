@@ -11,44 +11,9 @@ private let minLayer: Int32 = 65
 public enum CallSessionError: Equatable {
     case generic
     case privacyRestricted
-    case notSupportedByPeer
-    case serverProvided(String)
+    case notSupportedByPeer(isVideo: Bool)
+    case serverProvided(text: String)
     case disconnected
-    
-    public static func ==(lhs: CallSessionError, rhs: CallSessionError) -> Bool {
-        switch lhs {
-        case .generic:
-            if case .generic = rhs {
-                return true
-            } else {
-                return false
-            }
-        case .privacyRestricted:
-            if case .privacyRestricted = rhs {
-                return true
-            } else {
-                return false
-            }
-        case .notSupportedByPeer:
-            if case .notSupportedByPeer = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .serverProvided(text):
-            if case .serverProvided(text) = rhs {
-                return true
-            } else {
-                return false
-            }
-        case .disconnected:
-            if case .disconnected = rhs {
-                return true
-            } else {
-                return false
-            }
-        }
-    }
 }
 
 public enum CallSessionEndedType {
@@ -1204,12 +1169,12 @@ private func requestCallSession(postbox: Postbox, network: Network, peerId: Peer
                 |> `catch` { error -> Signal<RequestCallSessionResult, NoError> in
                     switch error.errorDescription {
                         case "PARTICIPANT_VERSION_OUTDATED":
-                            return .single(.failed(.notSupportedByPeer))
+                            return .single(.failed(.notSupportedByPeer(isVideo: isVideo)))
                         case "USER_PRIVACY_RESTRICTED":
                             return .single(.failed(.privacyRestricted))
                         default:
                             if error.errorCode == 406 {
-                                return .single(.failed(.serverProvided(error.errorDescription)))
+                                return .single(.failed(.serverProvided(text: error.errorDescription)))
                             } else {
                                 return .single(.failed(.generic))
                             }

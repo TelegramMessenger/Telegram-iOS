@@ -1710,9 +1710,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }, completed: {})
             }
-        }, rateCall: { [weak self] message, callId in
+        }, rateCall: { [weak self] message, callId, isVideo in
             if let strongSelf = self {
-                let controller = callRatingController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, callId: callId, userInitiated: true, present: { [weak self] c, a in
+                let controller = callRatingController(sharedContext: strongSelf.context.sharedContext, account: strongSelf.context.account, callId: callId, userInitiated: true, isVideo: isVideo, present: { [weak self] c, a in
                     if let strongSelf = self {
                         strongSelf.present(c, in: .window(.root), with: a)
                     }
