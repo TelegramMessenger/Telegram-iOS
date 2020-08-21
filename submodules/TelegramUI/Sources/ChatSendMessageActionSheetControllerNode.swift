@@ -241,9 +241,11 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
                 sendSilently?()
             }))
         }
-        contentNodes.append(ActionSheetItemNode(theme: self.presentationData.theme, title: reminders ? self.presentationData.strings.Conversation_SendMessage_SetReminder: self.presentationData.strings.Conversation_SendMessage_ScheduleMessage, icon: .schedule, hasSeparator: false, action: {
-            schedule?()
-        }))
+        if let _ = schedule {
+            contentNodes.append(ActionSheetItemNode(theme: self.presentationData.theme, title: reminders ? self.presentationData.strings.Conversation_SendMessage_SetReminder: self.presentationData.strings.Conversation_SendMessage_ScheduleMessage, icon: .schedule, hasSeparator: false, action: {
+                schedule?()
+            }))
+        }
         self.contentNodes = contentNodes
         
         super.init()
