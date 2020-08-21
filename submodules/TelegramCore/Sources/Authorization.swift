@@ -25,10 +25,12 @@ func switchToAuthorizedAccount(transaction: AccountManagerModifier, account: Una
         return 0
     }).max() ?? 0) + 1
     var attributes: [AccountRecordAttribute] = [AccountEnvironmentAttribute(environment: account.testingEnvironment ? .test : .production), AccountSortOrderAttribute(order: nextSortOrder)]
+    var shouldSwitchToAccount = true
     if let currentAuthAttribues = transaction.getCurrentAuth()?.attributes {
         for attribute in currentAuthAttribues {
             if let attribute = attribute as? ContinueFalseBottomFlowAttribute {
                 account.continueFalseBottomFlowAccountRecordId = attribute.accountRecordId
+                shouldSwitchToAccount = false
             } else if attribute is HiddenAccountAttribute {
                 attributes.append(attribute)
             }
@@ -37,7 +39,9 @@ func switchToAuthorizedAccount(transaction: AccountManagerModifier, account: Una
     transaction.updateRecord(account.id, { _ in
         return AccountRecord(id: account.id, attributes: attributes, temporarySessionId: nil)
     })
-    transaction.setCurrentId(account.id)
+    if shouldSwitchToAccount {
+        transaction.setCurrentId(account.id)
+    }
     transaction.removeAuth()
 }
 
