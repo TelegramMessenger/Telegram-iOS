@@ -592,7 +592,6 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
             if (strongSelf) {
                 strongSelf->_tgVoip.reset();
-                return;
             }
             
             OngoingCallThreadLocalContextWebrtcTerminationResult *terminationResult = [[OngoingCallThreadLocalContextWebrtcTerminationResult alloc] initWithFinalState:finalState];
