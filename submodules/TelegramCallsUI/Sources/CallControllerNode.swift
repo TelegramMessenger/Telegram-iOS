@@ -1024,8 +1024,10 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         self.updateButtonsMode()
         self.updateDimVisibility()
         
-        if self.incomingVideoViewRequested && self.outgoingVideoViewRequested {
-            self.displayedCameraTooltip = true
+        if self.incomingVideoViewRequested || self.outgoingVideoViewRequested {
+            if self.incomingVideoViewRequested && self.outgoingVideoViewRequested {
+                self.displayedCameraTooltip = true
+            }
             self.displayedCameraConfirmation = true
         }
         if self.incomingVideoViewRequested && !self.outgoingVideoViewRequested && !self.displayedCameraTooltip && (self.toastContent?.isEmpty ?? true) {
@@ -1329,6 +1331,10 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         if case .regular = layout.metrics.widthClass, case .regular = layout.metrics.heightClass {
             mappedDeviceOrientation = .portrait
             isCompactLayout = false
+        }
+        
+        if !self.hasVideoNodes {
+            self.isUIHidden = false
         }
         
         var isUIHidden = self.isUIHidden
@@ -1639,9 +1645,9 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
             } else if let _ = self.keyPreviewNode {
                 self.backPressed()
             } else {
-                if let expandedVideoNode = self.expandedVideoNode, let minimizedVideoNode = self.minimizedVideoNode {
+                if self.hasVideoNodes {
                     let point = recognizer.location(in: recognizer.view)
-                    if minimizedVideoNode.frame.contains(point) {
+                    if let expandedVideoNode = self.expandedVideoNode, let minimizedVideoNode = self.minimizedVideoNode, minimizedVideoNode.frame.contains(point) {
                         if !self.areUserActionsDisabledNow() {
                             let copyView = minimizedVideoNode.view.snapshotView(afterScreenUpdates: false)
                             copyView?.frame = minimizedVideoNode.frame

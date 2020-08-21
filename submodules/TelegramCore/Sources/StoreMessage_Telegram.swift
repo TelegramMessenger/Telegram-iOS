@@ -30,6 +30,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
         if let _ = attachment as? TelegramMediaImage {
             if !isSecret {
                 tags.insert(.photoOrVideo)
+                tags.insert(.photo)
             }
         } else if let file = attachment as? TelegramMediaFile {
             var refinedTag: MessageTags? = .file
@@ -41,7 +42,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
                             refinedTag = .voiceOrInstantVideo
                         } else {
                             if !isSecret {
-                                refinedTag = .photoOrVideo
+                                refinedTag = [.photoOrVideo, .video]
                             } else {
                                 refinedTag = nil
                             }
@@ -136,7 +137,7 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
 
 func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
     switch message {
-        case let .message(flags, _, fromId, toId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _):
+        case let .message(flags, _, fromId, toId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _, _):
             let peerId: PeerId
             switch toId {
                 case let .peerUser(userId):
@@ -240,7 +241,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
 
 func apiMessageAssociatedMessageIds(_ message: Api.Message) -> [MessageId]? {
     switch message {
-        case let .message(flags, _, fromId, toId, _, _, replyToMsgId, _, _, _, _, _, _, _, _, _, _):
+        case let .message(flags, _, fromId, toId, _, _, replyToMsgId, _, _, _, _, _, _, _, _, _, _, _):
             if let replyToMsgId = replyToMsgId {
                 let peerId: PeerId
                     switch toId {
@@ -398,7 +399,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 extension StoreMessage {
     convenience init?(apiMessage: Api.Message, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
-            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, replyMarkup, entities, views, editDate, postAuthor, groupingId, restrictionReason):
+            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, replyMarkup, entities, views, forwards, editDate, postAuthor, groupingId, restrictionReason):
                 let peerId: PeerId
                 var authorId: PeerId?
                 switch toId {
@@ -517,13 +518,15 @@ extension StoreMessage {
                     attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)))
                 }
                 
-                if let views = views, namespace != Namespaces.Message.ScheduledCloud {
-                    attributes.append(ViewCountMessageAttribute(count: Int(views)))
+                if namespace != Namespaces.Message.ScheduledCloud {
+                    if let views = views {
+                        attributes.append(ViewCountMessageAttribute(count: Int(views)))
+                    }
+                    
+                    if let forwards = forwards {
+                        attributes.append(ForwardCountMessageAttribute(count: Int(forwards)))
+                    }
                 }
-                
-                /*if let forwards = forwards, namespace != Namespaces.Message.ScheduledCloud {
-                    attributes.append(ForwardCountMessageAttribute(count: Int(forwards)))
-                }*/
                 
                 if let editDate = editDate {
                     attributes.append(EditedMessageAttribute(date: editDate, isHidden: (flags & (1 << 21)) != 0))
