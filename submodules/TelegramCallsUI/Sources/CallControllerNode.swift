@@ -251,14 +251,17 @@ private final class CallVideoNode: ASDisplayNode {
         }
         self.previousVideoHeight = rotatedVideoHeight
         transition.updatePosition(node: self.videoTransformContainer, position: CGPoint(x: size.width / 2.0, y: size.height / 2.0))
+        transition.updateTransformRotation(view: self.videoTransformContainer.view, angle: rotationAngle)
         
         let localVideoFrame = CGRect(origin: CGPoint(), size: videoFrame.size)
         self.videoView.view.bounds = localVideoFrame
         self.videoView.view.center = localVideoFrame.center
-        transition.updateTransformRotation(view: self.videoView.view, angle: rotationAngle)
+        // TODO: properly fix the issue
+        // On iOS 13 and later metal layer transformation is broken if the layer does not require compositing
+        self.videoView.view.alpha = 0.995
         
         if let effectView = self.effectView {
-            transition.updateFrame(view: effectView, frame: videoFrame)
+            transition.updateFrame(view: effectView, frame: localVideoFrame)
         }
         
         transition.updateCornerRadius(layer: self.layer, cornerRadius: self.currentCornerRadius)
