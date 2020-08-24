@@ -253,51 +253,6 @@ public final class DisplayedAccountsFilterImpl: DisplayedAccountsFilter {
             })
     }
     
-    public func filterDisplayed(_ records: [AccountRecord]) -> [AccountRecord] {
-        let recordsWithOrder: [(AccountRecord, Int32)] = records.map { record in
-            var order: Int32 = 0
-            for attribute in record.attributes {
-                if let attribute = attribute as? AccountSortOrderAttribute {
-                    order = attribute.order
-                    break
-                }
-            }
-            return (record, order)
-        }
-        let sortedRecords = recordsWithOrder.sorted(by: { $0.1 > $1.1 })
-            .map { $0.0 }
-        
-        var result = [AccountRecord]()
-        var containHidden = false
-        
-        for record in records {
-            var isVisible = true
-            for attribute in record.attributes {
-                if let attribute = attribute as? HiddenAccountAttribute {
-                    if record.id == unlockedHiddenAccountRecordId, !containHidden {
-                        containHidden = true
-                    } else {
-                        isVisible = false
-                    }
-                    break
-                }
-            }
-            if isVisible {
-                result.append(record)
-            }
-        }
-        return result
-    }
-    
-    public func filterHidden(_ records: [AccountRecord]) -> [AccountRecord] {
-        var result = records
-        let displayed = filterDisplayed(records)
-        for record in displayed {
-            result.removeAll { $0.id == record.id }
-        }
-        return result
-    }
-    
     public func hasPublicAccounts(accountManager: AccountManager) -> Signal<Bool, NoError> {
         return accountManager.transaction { transaction in
             return transaction.getRecords().first(where: {

@@ -31,8 +31,6 @@ public protocol DisplayedAccountsFilter {
     var didFinishChangingAccountPromise: Promise<Void> { get }
     var currentAccountRecordIdPromise: Promise<AccountRecordId?> { get }
     
-    func filterDisplayed(_ records: [AccountRecord]) -> [AccountRecord]
-    func filterHidden(_ records: [AccountRecord]) -> [AccountRecord]
     func hasPublicAccounts(accountManager: AccountManager) -> Signal<Bool, NoError>
 }
 
@@ -113,28 +111,16 @@ final class AccountManagerImpl {
         self.unlockedHiddenAccountRecordIdDisposable = displayedAccountsFilter.accountManagerRecordIdPromise.get().start(next: { [weak self] id in
             guard let strongSelf = self else { return }
             
-            var operations = [AccountManagerRecordOperation]()
             var metadataOperations = [AccountManagerMetadataOperation]()
             
             if let id = id {
-                var hidden = displayedAccountsFilter.filterHidden(strongSelf.currentAtomicState.records.map { $0.value })
-                hidden.removeAll { $0.id == id }
-                for record in hidden {
-                    operations.append(.set(id: record.id, record: nil))
-                }
-                operations.append(.set(id: id, record: strongSelf.currentAtomicState.records[id]))
                 metadataOperations.append(.updateCurrentAccountId(id))
-            } else {
-                for record in displayedAccountsFilter.filterHidden(strongSelf.currentAtomicState.records.map { $0.value }) {
-                    operations.append(.set(id: record.id, record: nil))
-                }
-                if let id = strongSelf.currentAtomicState.currentRecordId {
-                    metadataOperations.append(.updateCurrentAccountId(id))
-                }
+            } else if let id = strongSelf.currentAtomicState.currentRecordId {
+                metadataOperations.append(.updateCurrentAccountId(id))
             }
             
             for (view, pipe) in strongSelf.recordsViews.copyItems() {
-                if view.replay(operations: operations, metadataOperations: metadataOperations) {
+                if view.replay(operations: [], metadataOperations: metadataOperations) {
                     pipe.putNext(AccountRecordsView(view))
                 }
             }
@@ -167,7 +153,7 @@ final class AccountManagerImpl {
                 self.valueBox.begin()
                 
                 let transaction = AccountManagerModifier(getRecords: {
-                    return self.displayedAccountsFilter.filterDisplayed(self.currentAtomicState.records.map { $0.1 })
+                    return self.currentAtomicState.records.map { $0.1 }
                 }, getAllRecords: {
                     return self.currentAtomicState.records.map { $0.1 }
                 }, updateRecord: { id, update in
@@ -386,7 +372,7 @@ final class AccountManagerImpl {
     private func accountRecordsInternal(transaction: AccountManagerModifier) -> Signal<AccountRecordsView, NoError> {
         assert(self.queue.isCurrent())
         let mutableView = MutableAccountRecordsView(getRecords: {
-            return displayedAccountsFilter.filterDisplayed(self.currentAtomicState.records.map { $0.1 })
+            return self.currentAtomicState.records.map { $0.1 }
         }, currentId: self.currentAtomicState.currentRecordId, currentAuth: self.currentAtomicState.currentAuthRecord)
         let pipe = ValuePipe<AccountRecordsView>()
         let index = self.recordsViews.add((mutableView, pipe))
