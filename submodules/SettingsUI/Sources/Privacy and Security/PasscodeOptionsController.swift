@@ -166,8 +166,6 @@ private func autolockStringForTimeout(strings: PresentationStrings, timeout: Int
     if let timeout = timeout {
         if timeout == 10 {
             return "If away for 10 seconds"
-        } else if timeout == 1 {
-            return strings.PasscodeSettings_AutoLock_Immediately
         } else if timeout == 1 * 60 {
             return strings.PasscodeSettings_AutoLock_IfAwayFor_1minute
         } else if timeout == 5 * 60 {
@@ -331,7 +329,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                 }).start()
             })
         }
-        var values: [Int32] = [0, 1, 1 * 60, 5 * 60, 1 * 60 * 60, 5 * 60 * 60]
+        var values: [Int32] = [0, 1 * 60, 5 * 60, 1 * 60 * 60, 5 * 60 * 60]
         
         #if DEBUG
             values.append(10)

@@ -26,7 +26,7 @@ private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: Loc
             if timestamp.bootTimestamp != applicationActivityTimestamp.bootTimestamp {
                 return true
             }
-            if autolockTimeout != 1, timestamp.uptime > applicationActivityTimestamp.uptime + autolockTimeout {
+            if timestamp.uptime > applicationActivityTimestamp.uptime + autolockTimeout {
                 return true
             }
         } else {
@@ -174,12 +174,12 @@ public final class AppLockContextImpl: AppLockContext {
                 strongSelf.autolockTimeout.set(nil)
                 strongSelf.autolockReportTimeout.set(nil)
             } else {
-                if let autolockTimeout = passcodeSettings.autolockTimeout, autolockTimeout != 1, !appInForeground {
+                if let autolockTimeout = passcodeSettings.autolockTimeout, !appInForeground {
                     shouldDisplayCoveringView = true
                 }
                 
                 if !appInForeground {
-                    if let autolockTimeout = passcodeSettings.autolockTimeout, autolockTimeout != 1 {
+                    if let autolockTimeout = passcodeSettings.autolockTimeout {
                         strongSelf.autolockReportTimeout.set(autolockTimeout)
                     } else if state.isManuallyLocked {
                         strongSelf.autolockReportTimeout.set(1)
@@ -280,7 +280,7 @@ public final class AppLockContextImpl: AppLockContext {
             if applicationIsActive {
                 if strongSelf.applicationJustLaunched {
                     strongSelf.applicationJustLaunched = false
-                    if strongSelf.currentStateValue.forceLockOnLaunch || strongSelf.currentStateValue.autolockTimeout == 1 {
+                    if strongSelf.currentStateValue.forceLockOnLaunch {
                         strongSelf.lock()
                     }
                 }
@@ -295,13 +295,11 @@ public final class AppLockContextImpl: AppLockContext {
 
             guard let strongSelf = self, let coveringView = strongSelf.coveringView, let window = strongSelf.window else { return }
             
-            if strongSelf.currentStateValue.autolockTimeout != 1 {
-                Queue.mainQueue().after(0.01, {
-                    coveringView.updateSnapshot(nil)
-                    coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
-                    window.coveringView = coveringView
-                })
-            }
+            Queue.mainQueue().after(0.01, {
+                coveringView.updateSnapshot(nil)
+                coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
+                window.coveringView = coveringView
+            })
         })
         
         self.applicationInForegroundDisposable = (applicationBindings.applicationInForeground
@@ -310,11 +308,7 @@ public final class AppLockContextImpl: AppLockContext {
             |> deliverOnMainQueue).start(next: { [weak self] _ in
                 guard let strongSelf = self else { return }
                 
-                if strongSelf.currentStateValue.autolockTimeout == 1 {
-                    strongSelf.lock()
-                } else {
-                    strongSelf.unlockedHiddenAccountRecordId.set(nil)
-                }
+                strongSelf.unlockedHiddenAccountRecordId.set(nil)
         })
         
         self.unlockedHiddenAccountRecordIdDisposable = combineLatest(self.unlockedHiddenAccountRecordId.get(), applicationBindings.applicationIsActive).start(next: { [weak self] hiddenAccountRecordId, applicationIsActive in

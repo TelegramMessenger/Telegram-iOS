@@ -777,41 +777,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
     }
     
-    public func initializeAccount(id: AccountRecordId) -> Signal<Account, NoError> {
-        accountManager.transaction { transaction -> (backupData: AccountBackupData?, isTestingEnvironment: Bool) in
-            var backupData: AccountBackupData?
-            var isTestingEnvironment = false
-            transaction.updateRecord(id) { record in
-                guard let record = record else { return nil }
-                
-                for attribute in record.attributes {
-                    if let attribute = attribute as? AccountEnvironmentAttribute, case .test = attribute.environment {
-                        isTestingEnvironment = true
-                    } else if let attribute = attribute as? AccountBackupDataAttribute {
-                        backupData = attribute.data
-                    }
-                }
-                return record
-            }
-            return (backupData, isTestingEnvironment)
-        } |> mapToSignal { [weak self] backupData, isTestingEnvironment -> Signal<AccountResult, NoError> in
-            guard let strongSelf = self else { return .never() }
-            
-            return accountWithId(accountManager: strongSelf.accountManager, networkArguments: strongSelf.networkArguments, id: id, encryptionParameters: strongSelf.encryptionParameters, supplementary: !strongSelf.applicationBindings.isMainApp, rootPath: strongSelf.rootPath, beginWithTestingEnvironment: isTestingEnvironment, backupData: backupData, auxiliaryMethods: telegramAccountAuxiliaryMethods)
-        } |> mapToSignal { result -> Signal<Account, NoError> in
-            switch result {
-                case let .authorized(account):
-                    setupAccount(account, fetchCachedResourceRepresentation: fetchCachedResourceRepresentation, transformOutgoingMessageMedia: transformOutgoingMessageMedia, preFetchedResourcePath: { resource in
-                        return nil
-                    })
-                    account.shouldBeServiceTaskMaster.set(.single(.always))
-                    return .single(account)
-                default:
-                    return .never()
-            }
-        }
-    }
-    
     public func updateNotificationTokensRegistration() {
         let sandbox: Bool
         #if DEBUG
@@ -821,15 +786,18 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         #endif
         
         let settings = self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
-        |> map { sharedData -> (allAccounts: Bool, includeMuted: Bool) in
+        |> map { sharedData -> (allAccounts: Bool, includeMuted: Bool, disabledNotificationsAccountRecords: [AccountRecordId]) in
             let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings] as? InAppNotificationSettings ?? InAppNotificationSettings.defaultSettings
-            return (settings.displayNotificationsFromAllAccounts, false)
+            return (settings.displayNotificationsFromAllAccounts, false, settings.disabledNotificationsAccountRecords)
         }
         |> distinctUntilChanged(isEqual: { lhs, rhs in
             if lhs.allAccounts != rhs.allAccounts {
                 return false
             }
             if lhs.includeMuted != rhs.includeMuted {
+                return false
+            }
+            if lhs.disabledNotificationsAccountRecords.map({ $0.int64 }).sorted() != rhs.disabledNotificationsAccountRecords.map({ $0.int64 }).sorted() {
                 return false
             }
             return true
@@ -839,14 +807,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         |> mapToSignal { settings, activeAccountsAndInfo -> Signal<Never, NoError> in
             let (primary, activeAccounts, _) = activeAccountsAndInfo
             var applied: [Signal<Never, NoError>] = []
-            var activeProductionUserIds = activeAccounts.map({ $0.1 }).filter({ !$0.testingEnvironment }).map({ $0.peerId.id })
-            var activeTestingUserIds = activeAccounts.map({ $0.1 }).filter({ $0.testingEnvironment }).map({ $0.peerId.id })
+            var activeProductionUserIds = activeAccounts.map({ $0.1 }).filter({ !$0.testingEnvironment && !settings.disabledNotificationsAccountRecords.contains($0.id) }).map({ $0.peerId.id })
+            var activeTestingUserIds = activeAccounts.map({ $0.1 }).filter({ $0.testingEnvironment && !settings.disabledNotificationsAccountRecords.contains($0.id) }).map({ $0.peerId.id })
             
             let allProductionUserIds = activeProductionUserIds
             let allTestingUserIds = activeTestingUserIds
             
             if !settings.allAccounts {
-                if let primary = primary {
+                if let primary = primary, !settings.disabledNotificationsAccountRecords.contains(primary.id) {
                     if !primary.testingEnvironment {
                         activeProductionUserIds = [primary.peerId.id]
                         activeTestingUserIds = []
