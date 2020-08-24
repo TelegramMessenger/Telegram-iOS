@@ -1148,7 +1148,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return PeerSelectionControllerImpl(params)
     }
     
-    public func makeChatMessagePreviewItem(context: AccountContext, message: Message, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((Message) -> Void)? = nil, clickThroughMessage: (() -> Void)? = nil) -> ListViewItem {
+    public func makeChatMessagePreviewItem(context: AccountContext, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((Message) -> Void)? = nil, clickThroughMessage: (() -> Void)? = nil) -> ListViewItem {
         let controllerInteraction: ChatControllerInteraction
         if tapMessage != nil || clickThroughMessage != nil {
             controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
@@ -1171,7 +1171,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }, navigateToFirstDateMessage: { _ in
             }, requestRedeliveryOfFailedMessages: { _ in
             }, addContact: { _ in
-            }, rateCall: { _, _ in
+            }, rateCall: { _, _, _ in
             }, requestSelectMessagePollOptions: { _, _ in
             }, requestOpenMessagePollResults: { _, _ in
             }, openAppStorePage: {
@@ -1202,7 +1202,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             controllerInteraction = defaultChatControllerInteraction
         }
         
-        return ChatMessageItem(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), context: context, chatLocation: .peer(message.id.peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false, isScheduledMessages: false, contactsPeerIds: Set(), animatedEmojiStickers: [:], forcedResourceStatus: forcedResourceStatus), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes()), disableDate: true, additionalContent: nil)
+        let content: ChatMessageItemContent
+        let chatLocation: ChatLocation
+        if messages.count > 1 {
+            content = .group(messages: messages.map { ($0, true, .none, ChatMessageEntryAttributes()) })
+            chatLocation = .peer(messages.first!.id.peerId)
+        } else {
+            content = .message(message: messages.first!, read: true, selection: .none, attributes: ChatMessageEntryAttributes())
+            chatLocation = .peer(messages.first!.id.peerId)
+        }
+        
+        return ChatMessageItem(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), context: context, chatLocation: chatLocation, associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false, isScheduledMessages: false, contactsPeerIds: Set(), animatedEmojiStickers: [:], forcedResourceStatus: forcedResourceStatus), controllerInteraction: controllerInteraction, content: content, disableDate: true, additionalContent: nil)
     }
     
     public func makeChatMessageDateHeaderItem(context: AccountContext, timestamp: Int32, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder) -> ListViewItemHeader {

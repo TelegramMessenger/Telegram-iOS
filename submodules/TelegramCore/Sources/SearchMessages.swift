@@ -192,20 +192,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 }
             }
             
-            let filter: Api.MessagesFilter
-            if let tags = tags {
-                if tags.contains(.file) {
-                    filter = .inputMessagesFilterDocument
-                } else if tags.contains(.music) {
-                    filter = .inputMessagesFilterMusic
-                } else if tags.contains(.webPage) {
-                    filter = .inputMessagesFilterUrl
-                } else {
-                    filter = .inputMessagesFilterEmpty
-                }
-            } else {
-                filter = .inputMessagesFilterEmpty
-            }
+            let filter: Api.MessagesFilter = tags.flatMap { messageFilterForTagMask($0) } ?? .inputMessagesFilterEmpty
             remoteSearchResult = account.postbox.transaction { transaction -> (peer: Peer, additionalPeer: Peer?, from: Peer?)? in
                 guard let peer = transaction.getPeer(peerId) else {
                     return nil

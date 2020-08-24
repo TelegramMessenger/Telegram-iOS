@@ -42,18 +42,21 @@ private final class CallVideoNode: ASDisplayNode {
     private let isFlippedUpdated: (CallVideoNode) -> Void
     
     private(set) var currentOrientation: PresentationCallVideoView.Orientation
+    private(set) var currentAspect: CGFloat = 0.0
+    
+    private var previousVideoHeight: CGFloat?
     
     init(videoView: PresentationCallVideoView, disabledText: String?, assumeReadyAfterTimeout: Bool, isReadyUpdated: @escaping () -> Void, orientationUpdated: @escaping () -> Void, isFlippedUpdated: @escaping (CallVideoNode) -> Void) {
         self.isReadyUpdated = isReadyUpdated
         self.isFlippedUpdated = isFlippedUpdated
         
         self.videoTransformContainer = ASDisplayNode()
-        self.videoTransformContainer.clipsToBounds = true
         self.videoView = videoView
         videoView.view.clipsToBounds = true
         videoView.view.backgroundColor = .black
         
         self.currentOrientation = videoView.getOrientation()
+        self.currentAspect = videoView.getAspect()
         
         self.videoPausedNode = ImmediateTextNode()
         self.videoPausedNode.alpha = 0.0
@@ -89,13 +92,14 @@ private final class CallVideoNode: ASDisplayNode {
             }
         }
         
-        self.videoView.setOnOrientationUpdated { [weak self] orientation in
+        self.videoView.setOnOrientationUpdated { [weak self] orientation, aspect in
             Queue.mainQueue().async {
                 guard let strongSelf = self else {
                     return
                 }
-                if strongSelf.currentOrientation != orientation {
+                if strongSelf.currentOrientation != orientation || strongSelf.currentAspect != aspect {
                     strongSelf.currentOrientation = orientation
+                    strongSelf.currentAspect = aspect
                     orientationUpdated()
                 }
             }
@@ -164,91 +168,100 @@ private final class CallVideoNode: ASDisplayNode {
         })
     }
     
-    func updateLayout(size: CGSize, cornerRadius: CGFloat, deviceOrientation: UIDeviceOrientation, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, cornerRadius: CGFloat, isOutgoing: Bool, deviceOrientation: UIDeviceOrientation, isCompactLayout: Bool, transition: ContainedViewLayoutTransition) {
         self.currentCornerRadius = cornerRadius
         
         var rotationAngle: CGFloat
-        switch self.currentOrientation {
-        case .rotation0:
-            rotationAngle = 0.0
-        case .rotation90:
-            rotationAngle = -CGFloat.pi / 2.0
-        case .rotation180:
-            rotationAngle = -CGFloat.pi
-        case .rotation270:
+        if isOutgoing {
             rotationAngle = CGFloat.pi / 2.0
-        }
-        
-        var additionalAngle: CGFloat = 0.0
-        switch deviceOrientation {
-        case .portrait:
-            additionalAngle = 0.0
-        case .landscapeLeft:
-            additionalAngle = CGFloat.pi / 2.0
-        case .landscapeRight:
-            additionalAngle = -CGFloat.pi / 2.0
-        case .portraitUpsideDown:
-            rotationAngle = -CGFloat.pi
-        default:
-            additionalAngle = 0.0
-        }
-        rotationAngle += additionalAngle
-        if abs(rotationAngle - (-CGFloat.pi)) < 1.0 {
-            rotationAngle = -CGFloat.pi + 0.001
-        }
-        
-        var rotateFrame = abs(rotationAngle.remainder(dividingBy: CGFloat.pi)) > 1.0
-        
-        var originalRotateFrame = rotateFrame
-        if size.width > size.height {
-            rotateFrame = !rotateFrame
-            if rotateFrame {
-                originalRotateFrame = true
-            }
         } else {
-            if rotateFrame {
-                originalRotateFrame = false
+            switch self.currentOrientation {
+            case .rotation0:
+                rotationAngle = 0.0
+            case .rotation90:
+                rotationAngle = CGFloat.pi / 2.0
+            case .rotation180:
+                rotationAngle = CGFloat.pi
+            case .rotation270:
+                rotationAngle = -CGFloat.pi / 2.0
+            }
+            
+            var additionalAngle: CGFloat = 0.0
+            switch deviceOrientation {
+            case .portrait:
+                additionalAngle = 0.0
+            case .landscapeLeft:
+                additionalAngle = CGFloat.pi / 2.0
+            case .landscapeRight:
+                additionalAngle = -CGFloat.pi / 2.0
+            case .portraitUpsideDown:
+                rotationAngle = CGFloat.pi
+            default:
+                additionalAngle = 0.0
+            }
+            rotationAngle += additionalAngle
+            if abs(rotationAngle - (-CGFloat.pi)) < 1.0 {
+                rotationAngle = -CGFloat.pi + 0.001
             }
         }
-        let videoFrame: CGRect
-        let scale: CGFloat
+        
+        let rotateFrame = abs(rotationAngle.remainder(dividingBy: CGFloat.pi)) > 1.0
+        let fittingSize: CGSize
         if rotateFrame {
-            let frameSize = CGSize(width: size.height, height: size.width).aspectFitted(size)
-            videoFrame = CGRect(origin: CGPoint(x: floor((size.width - frameSize.width) / 2.0), y: floor((size.height - frameSize.height) / 2.0)), size: frameSize)
-            if size.width > size.height {
-                scale = frameSize.height / size.width
-            } else {
-                scale = frameSize.width / size.height
-            }
+            fittingSize = CGSize(width: size.height, height: size.width)
         } else {
-            videoFrame = CGRect(origin: CGPoint(), size: size)
-            if size.width > size.height {
-                scale = 1.0
+            fittingSize = size
+        }
+        
+        let unboundVideoSize = CGSize(width: self.currentAspect * 10000.0, height: 10000.0)
+        
+        var fittedVideoSize = unboundVideoSize.fitted(fittingSize)
+        if fittedVideoSize.width < fittingSize.width || fittedVideoSize.height < fittingSize.height {
+            let isVideoPortrait = unboundVideoSize.width < unboundVideoSize.height
+            let isFittingSizePortrait = fittingSize.width < fittingSize.height
+            
+            if isCompactLayout && isVideoPortrait == isFittingSizePortrait {
+                fittedVideoSize = unboundVideoSize.aspectFilled(fittingSize)
             } else {
-                scale = 1.0
+                let maxFittingEdgeDistance: CGFloat
+                if isCompactLayout {
+                    maxFittingEdgeDistance = 200.0
+                } else {
+                    maxFittingEdgeDistance = 400.0
+                }
+                if fittedVideoSize.width > fittingSize.width - maxFittingEdgeDistance && fittedVideoSize.height > fittingSize.height - maxFittingEdgeDistance {
+                    fittedVideoSize = unboundVideoSize.aspectFilled(fittingSize)
+                }
             }
         }
+        
+        let rotatedVideoHeight: CGFloat = max(fittedVideoSize.height, fittedVideoSize.width)
+        
+        let videoFrame: CGRect = CGRect(origin: CGPoint(), size: fittedVideoSize)
         
         let videoPausedSize = self.videoPausedNode.updateLayout(CGSize(width: size.width - 16.0, height: 100.0))
         transition.updateFrame(node: self.videoPausedNode, frame: CGRect(origin: CGPoint(x: floor((size.width - videoPausedSize.width) / 2.0), y: floor((size.height - videoPausedSize.height) / 2.0)), size: videoPausedSize))
         
-        let previousVideoFrame = self.videoTransformContainer.frame
-        self.videoTransformContainer.bounds = CGRect(origin: CGPoint(), size: size)
-        if transition.isAnimated && !videoFrame.height.isZero && !previousVideoFrame.height.isZero {
-            transition.animateTransformScale(node: self.videoTransformContainer, from: previousVideoFrame.height / size.height, additive: true)
+        self.videoTransformContainer.bounds = CGRect(origin: CGPoint(), size: videoFrame.size)
+        if transition.isAnimated && !videoFrame.height.isZero, let previousVideoHeight = self.previousVideoHeight, !previousVideoHeight.isZero {
+            let scaleDifference = previousVideoHeight / rotatedVideoHeight
+            if abs(scaleDifference - 1.0) > 0.001 {
+                transition.animateTransformScale(node: self.videoTransformContainer, from: scaleDifference, additive: true)
+            }
         }
-        transition.updatePosition(node: self.videoTransformContainer, position: videoFrame.center)
-        transition.updateSublayerTransformScale(node: self.videoTransformContainer, scale: scale)
+        self.previousVideoHeight = rotatedVideoHeight
+        transition.updatePosition(node: self.videoTransformContainer, position: CGPoint(x: size.width / 2.0, y: size.height / 2.0))
+        transition.updateTransformRotation(view: self.videoTransformContainer.view, angle: rotationAngle)
         
-        let localVideoSize = originalRotateFrame ? CGSize(width: size.height, height: size.width) : size
-        let localVideoFrame = CGRect(origin: CGPoint(x: floor((size.width - localVideoSize.width) / 2.0), y: floor((size.height - localVideoSize.height) / 2.0)), size: localVideoSize)
-        
+        let localVideoFrame = CGRect(origin: CGPoint(), size: videoFrame.size)
         self.videoView.view.bounds = localVideoFrame
         self.videoView.view.center = localVideoFrame.center
-        transition.updateTransformRotation(view: self.videoView.view, angle: rotationAngle)
+        // TODO: properly fix the issue
+        // On iOS 13 and later metal layer transformation is broken if the layer does not require compositing
+        self.videoView.view.alpha = 0.995
         
         if let effectView = self.effectView {
-            transition.updateFrame(view: effectView, frame: videoFrame)
+            transition.updateFrame(view: effectView, frame: localVideoFrame)
         }
         
         transition.updateCornerRadius(layer: self.layer, cornerRadius: self.currentCornerRadius)
@@ -392,7 +405,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     var acceptCall: (() -> Void)?
     var endCall: (() -> Void)?
     var back: (() -> Void)?
-    var presentCallRating: ((CallId) -> Void)?
+    var presentCallRating: ((CallId, Bool) -> Void)?
     var callEnded: ((Bool) -> Void)?
     var dismissedInteractively: (() -> Void)?
     var present: ((ViewController) -> Void)?
@@ -418,6 +431,8 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     
     private var deviceOrientation: UIDeviceOrientation = .portrait
     private var orientationDidChangeObserver: NSObjectProtocol?
+    
+    private var currentRequestedAspect: CGFloat?
     
     init(sharedContext: SharedAccountContext, account: Account, presentationData: PresentationData, statusBar: StatusBar, debugInfo: Signal<(String, String), NoError>, shouldStayHiddenUntilConnection: Bool = false, easyDebugAccess: Bool, call: PresentationCall) {
         self.sharedContext = sharedContext
@@ -922,11 +937,18 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                         case let .error(error):
                             let text = self.presentationData.strings.Call_StatusFailed
                             switch error {
-                            case .notSupportedByPeer:
+                            case let .notSupportedByPeer(isVideo):
                                 if !self.displayedVersionOutdatedAlert, let peer = self.peer {
                                     self.displayedVersionOutdatedAlert = true
                                     
-                                    self.present?(textAlertController(sharedContext: self.sharedContext, title: nil, text: self.presentationData.strings.Call_ParticipantVersionOutdatedError(peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)).0, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
+                                    let text: String
+                                    if isVideo {
+                                        text = self.presentationData.strings.Call_ParticipantVideoVersionOutdatedError(peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)).0
+                                    } else {
+                                        text = self.presentationData.strings.Call_ParticipantVersionOutdatedError(peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)).0
+                                    }
+                                    
+                                    self.present?(textAlertController(sharedContext: self.sharedContext, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
                                     })]))
                                 }
                             default:
@@ -1005,8 +1027,10 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         self.updateButtonsMode()
         self.updateDimVisibility()
         
-        if self.incomingVideoViewRequested && self.outgoingVideoViewRequested {
-            self.displayedCameraTooltip = true
+        if self.incomingVideoViewRequested || self.outgoingVideoViewRequested {
+            if self.incomingVideoViewRequested && self.outgoingVideoViewRequested {
+                self.displayedCameraTooltip = true
+            }
             self.displayedCameraConfirmation = true
         }
         if self.incomingVideoViewRequested && !self.outgoingVideoViewRequested && !self.displayedCameraTooltip && (self.toastContent?.isEmpty ?? true) {
@@ -1019,7 +1043,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         if case let .terminated(id, _, reportRating) = callState.state, let callId = id {
             let presentRating = reportRating || self.forceReportRating
             if presentRating {
-                self.presentCallRating?(callId)
+                self.presentCallRating?(callId, self.call.isVideo)
             }
             self.callEnded?(presentRating)
         }
@@ -1253,12 +1277,12 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         let previewVideoSide = interpolate(from: 350.0, to: 200.0, value: 1.0 - self.pictureInPictureTransitionFraction)
         var previewVideoSize = layout.size.aspectFitted(CGSize(width: previewVideoSide, height: previewVideoSide))
         previewVideoSize = CGSize(width: 30.0, height: 45.0).aspectFitted(previewVideoSize)
-        if let minimizedVideoNode = minimizedVideoNode {
+        if let minimizedVideoNode = self.minimizedVideoNode {
             switch minimizedVideoNode.currentOrientation {
             case .rotation90, .rotation270:
-                previewVideoSize = CGSize(width: previewVideoSize.height, height: previewVideoSize.width)
-            default:
                 break
+            default:
+                previewVideoSize = CGSize(width: previewVideoSize.height, height: previewVideoSize.width)
             }
         }
         let previewVideoY: CGFloat
@@ -1304,6 +1328,13 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationBarHeight)
+        
+        var mappedDeviceOrientation = self.deviceOrientation
+        var isCompactLayout = true
+        if case .regular = layout.metrics.widthClass, case .regular = layout.metrics.heightClass {
+            mappedDeviceOrientation = .portrait
+            isCompactLayout = false
+        }
         
         if !self.hasVideoNodes {
             self.isUIHidden = false
@@ -1449,7 +1480,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                 expandedVideoTransition.updateFrame(node: expandedVideoNode, frame: fullscreenVideoFrame)
             }
             
-            expandedVideoNode.updateLayout(size: expandedVideoNode.frame.size, cornerRadius: 0.0, deviceOrientation: self.deviceOrientation, transition: expandedVideoTransition)
+            expandedVideoNode.updateLayout(size: expandedVideoNode.frame.size, cornerRadius: 0.0, isOutgoing: expandedVideoNode === self.outgoingVideoNodeValue, deviceOrientation: mappedDeviceOrientation, isCompactLayout: isCompactLayout, transition: expandedVideoTransition)
             
             if self.animateRequestedVideoOnce {
                 self.animateRequestedVideoOnce = false
@@ -1499,7 +1530,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                     self.animationForExpandedVideoSnapshotView = nil
                 }
                 minimizedVideoTransition.updateFrame(node: minimizedVideoNode, frame: previewVideoFrame)
-                minimizedVideoNode.updateLayout(size: previewVideoFrame.size, cornerRadius: interpolate(from: 14.0, to: 24.0, value: self.pictureInPictureTransitionFraction), deviceOrientation: .portrait, transition: minimizedVideoTransition)
+                minimizedVideoNode.updateLayout(size: previewVideoFrame.size, cornerRadius: interpolate(from: 14.0, to: 24.0, value: self.pictureInPictureTransitionFraction), isOutgoing: minimizedVideoNode === self.outgoingVideoNodeValue, deviceOrientation: .portrait, isCompactLayout: false, transition: minimizedVideoTransition)
                 if transition.isAnimated && didAppear {
                     minimizedVideoNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
                 }
@@ -1514,6 +1545,43 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         
         if let debugNode = self.debugNode {
             transition.updateFrame(node: debugNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        }
+        
+        let requestedAspect: CGFloat
+        if case .compact = layout.metrics.widthClass, case .compact = layout.metrics.heightClass {
+            var isIncomingVideoRotated = false
+            var rotationCount = 0
+            
+            switch mappedDeviceOrientation {
+            case .portrait:
+                break
+            case .landscapeLeft:
+                rotationCount += 1
+            case .landscapeRight:
+                rotationCount += 1
+            case .portraitUpsideDown:
+                 break
+            default:
+                break
+            }
+            
+            if rotationCount % 2 != 0 {
+                isIncomingVideoRotated = true
+            }
+            
+            if !isIncomingVideoRotated {
+                requestedAspect = layout.size.width / layout.size.height
+            } else {
+                requestedAspect = 0.0
+            }
+        } else {
+            requestedAspect = 0.0
+        }
+        if self.currentRequestedAspect != requestedAspect {
+            self.currentRequestedAspect = requestedAspect
+            if !self.sharedContext.immediateExperimentalUISettings.disableVideoAspectScaling {
+                self.call.setRequestedVideoAspect(Float(requestedAspect))
+            }
         }
     }
     

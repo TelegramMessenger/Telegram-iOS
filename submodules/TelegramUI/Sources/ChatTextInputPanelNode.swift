@@ -809,7 +809,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     self.textPlaceholderNode.frame = CGRect(origin: self.textPlaceholderNode.frame.origin, size: placeholderSize)
                 }
                 
-                self.actionButtons.sendButtonLongPressEnabled = peer.id.namespace != Namespaces.Peer.SecretChat && !interfaceState.isScheduledMessages
+                self.actionButtons.sendButtonLongPressEnabled = !interfaceState.isScheduledMessages
             }
             
             let sendButtonHasApplyIcon = interfaceState.interfaceState.editMessage != nil

@@ -496,6 +496,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     let _ = dateApply()
                     
                     if let currentImpressionIcon = currentImpressionIcon {
+                        currentImpressionIcon.displaysAsynchronously = !presentationData.isPreview
                         if currentImpressionIcon.image !== impressionImage {
                             currentImpressionIcon.image = impressionImage
                         }
@@ -508,7 +509,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         impressionIcon.removeFromSupernode()
                         strongSelf.impressionIcon = nil
                     }
-                    strongSelf.impressionIcon?.displaysAsynchronously = !presentationData.isPreview
+                    
                     
                     strongSelf.dateNode.frame = CGRect(origin: CGPoint(x: leftInset + backgroundInsets.left + impressionWidth, y: backgroundInsets.top + 1.0 + offset), size: date.size)
                     

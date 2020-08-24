@@ -30,6 +30,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
         if let _ = attachment as? TelegramMediaImage {
             if !isSecret {
                 tags.insert(.photoOrVideo)
+                tags.insert(.photo)
             }
         } else if let file = attachment as? TelegramMediaFile {
             var refinedTag: MessageTags? = .file
@@ -41,7 +42,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
                             refinedTag = .voiceOrInstantVideo
                         } else {
                             if !isSecret {
-                                refinedTag = .photoOrVideo
+                                refinedTag = [.photoOrVideo, .video]
                             } else {
                                 refinedTag = nil
                             }

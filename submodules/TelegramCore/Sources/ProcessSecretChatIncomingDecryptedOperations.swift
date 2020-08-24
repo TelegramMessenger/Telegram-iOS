@@ -686,7 +686,7 @@ private func maximumMediaAutoremoveTimeout(_ media: [Media]) -> Int32 {
 
 private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32, timestamp: Int32, apiMessage: SecretApi46.DecryptedMessage, file: SecretChatFileReference?, messageIdForGloballyUniqueMessageId: (Int64) -> MessageId?) -> (StoreMessage, [(MediaResource, Data)])? {
     switch apiMessage {
-        case let .decryptedMessage(_, randomId, ttl, message, media, entities, viaBotName, replyToRandomId):
+        case let .decryptedMessage(flags, randomId, ttl, message, media, entities, viaBotName, replyToRandomId):
             var text = message
             var parsedMedia: [Media] = []
             var attributes: [MessageAttribute] = []
@@ -696,6 +696,10 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
             
             if let viaBotName = viaBotName, !viaBotName.isEmpty {
                 attributes.append(InlineBotMessageAttribute(peerId: nil, title: viaBotName))
+            }
+            
+            if (flags & 1 << 5) != 0 {
+                attributes.append(NotificationInfoMessageAttribute(flags: .muted))
             }
             
             if let media = media {
@@ -882,7 +886,7 @@ private func parseEntities(_ entities: [SecretApi73.MessageEntity]) -> TextEntit
 
 private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32, timestamp: Int32, apiMessage: SecretApi73.DecryptedMessage, file: SecretChatFileReference?, messageIdForGloballyUniqueMessageId: (Int64) -> MessageId?) -> (StoreMessage, [(MediaResource, Data)])? {
     switch apiMessage {
-        case let .decryptedMessage(_, randomId, ttl, message, media, entities, viaBotName, replyToRandomId, groupedId):
+        case let .decryptedMessage(flags, randomId, ttl, message, media, entities, viaBotName, replyToRandomId, groupedId):
             var text = message
             var parsedMedia: [Media] = []
             var attributes: [MessageAttribute] = []
@@ -894,6 +898,10 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
             
             if let viaBotName = viaBotName, !viaBotName.isEmpty {
                 attributes.append(InlineBotMessageAttribute(peerId: nil, title: viaBotName))
+            }
+            
+            if (flags & 1 << 5) != 0 {
+                attributes.append(NotificationInfoMessageAttribute(flags: .muted))
             }
             
             if let media = media {
@@ -1116,7 +1124,7 @@ private func parseEntities(_ entities: [SecretApi101.MessageEntity]) -> TextEnti
 
 private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32, timestamp: Int32, apiMessage: SecretApi101.DecryptedMessage, file: SecretChatFileReference?, messageIdForGloballyUniqueMessageId: (Int64) -> MessageId?) -> (StoreMessage, [(MediaResource, Data)])? {
     switch apiMessage {
-        case let .decryptedMessage(_, randomId, ttl, message, media, entities, viaBotName, replyToRandomId, groupedId):
+        case let .decryptedMessage(flags, randomId, ttl, message, media, entities, viaBotName, replyToRandomId, groupedId):
             var text = message
             var parsedMedia: [Media] = []
             var attributes: [MessageAttribute] = []
@@ -1128,6 +1136,10 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
             
             if let viaBotName = viaBotName, !viaBotName.isEmpty {
                 attributes.append(InlineBotMessageAttribute(peerId: nil, title: viaBotName))
+            }
+            
+            if (flags & 1 << 5) != 0 {
+                attributes.append(NotificationInfoMessageAttribute(flags: .muted))
             }
             
             if let media = media {
