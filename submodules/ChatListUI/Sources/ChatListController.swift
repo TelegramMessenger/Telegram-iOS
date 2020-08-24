@@ -137,6 +137,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     private let presentationDataValue = Promise<PresentationData>()
     private var presentationDataDisposable: Disposable?
     
+    private var unlockedHiddenAccountRecordIdDisposable: Disposable?
+    
     private let stateDisposable = MetaDisposable()
     private let filterDisposable = MetaDisposable()
     private let featuredFiltersDisposable = MetaDisposable()
@@ -469,6 +471,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             }
             self.reloadFilters()
         }
+        
+        self.unlockedHiddenAccountRecordIdDisposable = (context.sharedContext.accountManager.displayedAccountsFilter.unlockedHiddenAccountRecordIdPromise.get() |> deliverOnMainQueue).start(next: { [weak self] accountId in
+            guard let strongSelf = self else { return }
+            
+            if let navigationController = strongSelf.navigationController as? NavigationController, accountId != nil {
+                navigationController.popToRoot(animated: true)
+            }
+        })
     }
 
     required public init(coder aDecoder: NSCoder) {
@@ -488,6 +498,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         self.stateDisposable.dispose()
         self.filterDisposable.dispose()
         self.featuredFiltersDisposable.dispose()
+        self.unlockedHiddenAccountRecordIdDisposable?.dispose()
     }
     
     private func updateThemeAndStrings() {
