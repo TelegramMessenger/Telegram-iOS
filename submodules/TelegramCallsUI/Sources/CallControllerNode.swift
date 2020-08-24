@@ -172,7 +172,7 @@ private final class CallVideoNode: ASDisplayNode {
         self.currentCornerRadius = cornerRadius
         
         var rotationAngle: CGFloat
-        if isOutgoing {
+        if isOutgoing && isCompactLayout {
             rotationAngle = CGFloat.pi / 2.0
         } else {
             switch self.currentOrientation {
@@ -181,9 +181,17 @@ private final class CallVideoNode: ASDisplayNode {
             case .rotation90:
                 rotationAngle = CGFloat.pi / 2.0
             case .rotation180:
-                rotationAngle = CGFloat.pi
+                if isCompactLayout {
+                    rotationAngle = CGFloat.pi
+                } else {
+                    rotationAngle = 0.0
+                }
             case .rotation270:
-                rotationAngle = -CGFloat.pi / 2.0
+                if isCompactLayout {
+                    rotationAngle = -CGFloat.pi / 2.0
+                } else {
+                    rotationAngle = CGFloat.pi / 2.0
+                }
             }
             
             var additionalAngle: CGFloat = 0.0
