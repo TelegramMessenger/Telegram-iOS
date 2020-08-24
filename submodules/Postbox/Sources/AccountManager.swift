@@ -138,6 +138,12 @@ final class AccountManagerImpl {
                     pipe.putNext(AccountRecordsView(view))
                 }
             }
+            
+            for (view, pipe) in strongSelf.allRecordsViews.copyItems() {
+                if view.replay(operations: [], metadataOperations: metadataOperations) {
+                    pipe.putNext(AccountRecordsView(view))
+                }
+            }
         })
         
         postboxLog("AccountManager: currentAccountId = \(String(describing: currentAtomicState.currentRecordId))")

@@ -1336,7 +1336,7 @@ final class SharedApplicationContext {
                 if let context = context {
                     let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
                     
-                    return activeAccountsAndPeers(context: context.context)
+                    return visibleAccountsAndPeers(context: context.context)
                     |> take(1)
                     |> map { primaryAndAccounts -> (Account, Peer, Int32)? in
                         let accounts = primaryAndAccounts.1
@@ -2302,6 +2302,11 @@ final class SharedApplicationContext {
                             accountContext.appLockContext.lock()
                             context.rootController.popToRoot(animated: true)
                             context.rootController.allowInteractiveDismissal = true
+                            let _ = (accountContext.accountManager.transaction({ transaction -> Void in
+                                if let publicId = transaction.getAllRecords().first(where: { !$0.attributes.contains(where: { $0 is HiddenAccountAttribute }) && !$0.attributes.contains(where: { $0 is LoggedOutAccountAttribute }) })?.id {
+                                    transaction.setCurrentId(publicId)
+                                }
+                            })).start()
                         }
                         controller.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
                         context.rootController.pushViewController(controller, animated: true, completion: { [weak context] in

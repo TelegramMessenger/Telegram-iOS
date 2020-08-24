@@ -931,7 +931,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     
     let contextValue = Promise<AccountContext>()
     let accountsAndPeers = Promise<((Account, Peer)?, [(Account, Peer, Int32)])>()
-    accountsAndPeers.set(activeAccountsAndPeers(context: context))
+    accountsAndPeers.set(visibleAccountsAndPeers(context: context))
     
     let privacySettings = Promise<AccountPrivacySettings?>(nil)
     

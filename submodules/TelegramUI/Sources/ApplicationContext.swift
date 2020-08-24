@@ -806,7 +806,7 @@ final class AuthorizedApplicationContext {
     }
     
     func switchAccount() {
-        let _ = (activeAccountsAndPeers(context: self.context)
+        let _ = (visibleAccountsAndPeers(context: self.context)
         |> take(1)
         |> map { primaryAndAccounts -> (Account, Peer, Int32)? in
             return primaryAndAccounts.1.first

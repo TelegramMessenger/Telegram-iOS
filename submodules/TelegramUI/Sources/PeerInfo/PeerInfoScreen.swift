@@ -5567,7 +5567,7 @@ public final class PeerInfoScreen: ViewController {
             }
             self.activeSessionsContextAndCount.set(activeSessionsContextAndCountSignal)
             
-            self.accountsAndPeers.set(activeAccountsAndPeers(context: context))
+            self.accountsAndPeers.set(visibleAccountsAndPeers(context: context))
             self.accountsAndPeersDisposable = (self.accountsAndPeers.get()
             |> deliverOnMainQueue).start(next: { [weak self] value in
                 self?.accountsAndPeersValue = value

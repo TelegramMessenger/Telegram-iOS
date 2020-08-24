@@ -291,6 +291,13 @@ public class ShareRootControllerImpl {
                 let displayShare: () -> Void = {
                     var cancelImpl: (() -> Void)?
                     
+                    let filteredAccounts: [AccountWithInfo]
+                    if let unlockedHiddenAccountRecordId = context.sharedContext.accountManager.displayedAccountsFilter.unlockedHiddenAccountRecordId {
+                        filteredAccounts = otherAccounts.filter { $0.account.id == unlockedHiddenAccountRecordId }
+                    } else {
+                        filteredAccounts = otherAccounts.filter { !$0.account.isHidden }
+                    }
+                    
                     let requestUserInteraction: ([UnpreparedShareItemContent]) -> Signal<[PreparedShareItemContent], NoError> = { content in
                         return Signal { [weak self] subscriber in
                             switch content[0] {
@@ -357,7 +364,7 @@ public class ShareRootControllerImpl {
                         } else {
                             return .single(.done)
                         }
-                    }), externalShare: false, switchableAccounts: otherAccounts, immediatePeerId: immediatePeerId)
+                    }), externalShare: false, switchableAccounts: filteredAccounts, immediatePeerId: immediatePeerId)
                     shareController.presentationArguments = ViewControllerPresentationArguments(presentationAnimation: .modalSheet)
                     shareController.dismissed = { _ in
                         self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)

@@ -924,6 +924,7 @@ public class Account {
     }
     
     public var isHidden: Bool = false
+    private var isHiddenDisposable: Disposable?
     
     fileprivate let masterNotificationKey = Atomic<MasterNotificationKey?>(value: nil)
     
@@ -983,17 +984,16 @@ public class Account {
         
         let networkStateQueue = Queue()
         
-        let _ = (accountManager.transaction{ [weak self] transaction -> Bool in
-            guard let self = self else { return false }
-            let records = transaction.getAllRecords()
+        self.isHiddenDisposable = (accountManager.allAccountRecords()
+        |> map { view -> Bool in
+            return view.records.first(where: { $0.id == id })?.attributes.contains(where: { $0 is HiddenAccountAttribute }) ?? false
+        }
+        |> distinctUntilChanged(isEqual: ==)
+        |> deliverOnMainQueue).start(next: { [weak self] isHidden in
+            guard let strongSelf = self else { return }
             
-            guard let record = records.first(where: { $0.id == id }) else { return false }
-            
-            return record.attributes.contains { $0 is HiddenAccountAttribute }
-            
-            } |> deliverOnMainQueue).start(next: { isHidden in
-                self.isHidden = isHidden
-            })
+            strongSelf.isHidden = isHidden
+        })
         
         let networkStateSignal = combineLatest(queue: networkStateQueue, self.stateManager.isUpdating, network.connectionStatus/*, delayNetworkStatus*/)
         |> map { isUpdating, connectionStatus/*, delayNetworkStatus*/ -> AccountNetworkState in
@@ -1196,6 +1196,7 @@ public class Account {
         self.storageSettingsDisposable?.dispose()
         self.smallLogPostDisposable.dispose()
         self.networkTypeDisposable?.dispose()
+        self.isHiddenDisposable?.dispose()
     }
     
     private func postSmallLogIfNeeded() {
