@@ -2265,59 +2265,74 @@ final class SharedApplicationContext {
                 
                 let accountContext = context.sharedApplicationContext.sharedContext
                 
-                let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, .digits4), isChangeModeAllowed: false, isOpaqueNavigationBar: true)
-                setupController.complete = { passcode, numerical in
-                    let _ = (accountContext.accountManager.transaction({ transaction -> Void in
-                        var data = transaction.getAccessChallengeData()
-                        if numerical {
-                            data = PostboxAccessChallengeData.numericalPassword(value: passcode)
-                        } else {
-                            data = PostboxAccessChallengeData.plaintextPassword(value: passcode)
-                        }
-                        
-                        var id = hideAccountWithId
-                        if id == nil, let (currentId, _) = transaction.getCurrent() {
-                            id = currentId
-                        }
-                        
-                        if let id = id {
-                            setAccountPushNotificationsEnabledOnThisDevice(accountIds: [id: false], transaction: transaction)
+                
+                let _ = (accountContext.accountManager.transaction({ transaction -> PasscodeEntryFieldType in
+                    var data = transaction.getAccessChallengeData()
+                    switch data {
+                    case .none:
+                        return .digits4
+                    case let .numericalPassword(value):
+                        return value.count == 4 ? .digits4 : .digits6
+                    case let .plaintextPassword(value):
+                        return .alphanumeric
+                    }
+                }) |> deliverOnMainQueue).start(next: { [weak context, weak accountContext] passcodeType -> Void in
+                    guard let context = context, let accountContext = accountContext else { return }
+                    
+                    let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, passcodeType), isChangeModeAllowed: false, isOpaqueNavigationBar: true)
+                    setupController.complete = { passcode, numerical in
+                        let _ = (accountContext.accountManager.transaction({ transaction -> Void in
+                            var data = transaction.getAccessChallengeData()
+                            if numerical {
+                                data = PostboxAccessChallengeData.numericalPassword(value: passcode)
+                            } else {
+                                data = PostboxAccessChallengeData.plaintextPassword(value: passcode)
+                            }
                             
-                            setAccountRecordAccessChallengeData(transaction: transaction, id: id, accessChallengeData: data)
+                            var id = hideAccountWithId
+                            if id == nil, let (currentId, _) = transaction.getCurrent() {
+                                id = currentId
+                            }
                             
-                            updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(60).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
-                        }
-                    }) |> deliverOnMainQueue).start(next: { _ in
-                    }, error: { _ in
-                    }, completed: { [weak context, weak accountContext] in
-                        guard let context = context, let accountContext = accountContext else { return }
-                        
-                        updateHiddenAccountsAccessChallengeData(manager: accountContext.accountManager)
-                        
-                        let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
-                        let controller = FalseBottomSplashScreen(presentationData: presentationData, mode: .accountWasHidden)
-                        controller.buttonPressed = { [weak accountContext, weak context] in
-                            guard let accountContext = accountContext, let context = context else { return }
+                            if let id = id {
+                                setAccountPushNotificationsEnabledOnThisDevice(accountIds: [id: false], transaction: transaction)
+                                
+                                setAccountRecordAccessChallengeData(transaction: transaction, id: id, accessChallengeData: data)
+                                
+                                updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(60).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
+                            }
+                        }) |> deliverOnMainQueue).start(next: { _ in
+                        }, error: { _ in
+                        }, completed: { [weak context, weak accountContext] in
+                            guard let context = context, let accountContext = accountContext else { return }
                             
-                            accountContext.appLockContext.lock()
-                            context.rootController.popToRoot(animated: true)
-                            context.rootController.allowInteractiveDismissal = true
-                            let _ = (accountContext.accountManager.transaction({ transaction -> Void in
-                                if let publicId = transaction.getAllRecords().first(where: { !$0.attributes.contains(where: { $0 is HiddenAccountAttribute }) && !$0.attributes.contains(where: { $0 is LoggedOutAccountAttribute }) })?.id {
-                                    transaction.setCurrentId(publicId)
-                                }
-                            })).start()
-                        }
-                        controller.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
-                        context.rootController.pushViewController(controller, animated: true, completion: { [weak context] in
-                            guard let context = context, let root = context.rootController.viewControllers.first, let top = context.rootController.viewControllers.last else { return }
+                            updateHiddenAccountsAccessChallengeData(manager: accountContext.accountManager)
                             
-                            context.rootController.setViewControllers(Array(context.rootController.viewControllers.prefix(2)) + [top], animated: false)
-                            context.rootController.allowInteractiveDismissal = false
+                            let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
+                            let controller = FalseBottomSplashScreen(presentationData: presentationData, mode: .accountWasHidden)
+                            controller.buttonPressed = { [weak accountContext, weak context] in
+                                guard let accountContext = accountContext, let context = context else { return }
+                                
+                                accountContext.appLockContext.lock()
+                                context.rootController.popToRoot(animated: true)
+                                context.rootController.allowInteractiveDismissal = true
+                                let _ = (accountContext.accountManager.transaction({ transaction -> Void in
+                                    if let publicId = transaction.getAllRecords().first(where: { !$0.attributes.contains(where: { $0 is HiddenAccountAttribute }) && !$0.attributes.contains(where: { $0 is LoggedOutAccountAttribute }) })?.id {
+                                        transaction.setCurrentId(publicId)
+                                    }
+                                })).start()
+                            }
+                            controller.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
+                            context.rootController.pushViewController(controller, animated: true, completion: { [weak context] in
+                                guard let context = context, let root = context.rootController.viewControllers.first, let top = context.rootController.viewControllers.last else { return }
+                                
+                                context.rootController.setViewControllers(Array(context.rootController.viewControllers.prefix(2)) + [top], animated: false)
+                                context.rootController.allowInteractiveDismissal = false
+                            })
                         })
-                    })
-                }
-                context.rootController.pushViewController(setupController, animated: true)
+                    }
+                    context.rootController.pushViewController(setupController, animated: true)
+                })
             }
             
             showSplashScreen(.setSecretPasscode, true, addFalseBottomToCurrentAccount)
