@@ -43,16 +43,4 @@
     _animation->renderSync(index, surface);
 }
 
-- (void)setFillColorWithKeyPath:(NSString * _Nonnull)keyPath color:(UIColor * _Nonnull)color {
-    CGFloat red = 0.0, green = 0.0, blue = 0.0, alpha = 0.0;
-    [color getRed:&red green:&green blue:&blue alpha:&alpha];
-    _animation->setValue<rlottie::Property::FillColor>(std::string([keyPath UTF8String]), rlottie::Color(float(red), float(green), float(blue)));
-}
-
-- (void)setStrokeColorWithKeyPath:(NSString * _Nonnull)keyPath color:(UIColor * _Nonnull)color {
-    CGFloat red = 0.0, green = 0.0, blue = 0.0, alpha = 0.0;
-    [color getRed:&red green:&green blue:&blue alpha:&alpha];
-    _animation->setValue<rlottie::Property::StrokeColor>(std::string([keyPath UTF8String]), rlottie::Color(float(red), float(green), float(blue)));
-}
-
 @end

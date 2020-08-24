@@ -193,7 +193,7 @@ public class ShareRootControllerImpl {
                 
                 let presentationDataPromise = Promise<PresentationData>()
                 
-                let appLockContext = AppLockContextImpl(rootPath: rootPath, window: nil, rootController: nil, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), displayedAccountsFilter: displayedAccountsFilter, applicationIsActive: inForeground.get(), lockIconInitialFrame: {
+                let appLockContext = AppLockContextImpl(rootPath: rootPath, window: nil, rootController: nil, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), displayedAccountsFilter: displayedAccountsFilter, lockIconInitialFrame: {
                     return nil
                 })
                 

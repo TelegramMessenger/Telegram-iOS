@@ -764,7 +764,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         }
         if intro {
             var nextImpl: (() -> Void)?
-            let introController = PrivacyIntroController(context: context.sharedContext, mode: .twoStepVerification, proceedAction: {
+            let introController = PrivacyIntroController(context: context, mode: .twoStepVerification, proceedAction: {
                 nextImpl?()
             })
             nextImpl = { [weak introController] in

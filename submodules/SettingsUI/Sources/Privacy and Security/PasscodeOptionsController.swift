@@ -250,7 +250,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                 })
                 
                 var innerReplaceTopControllerImpl: ((ViewController, Bool) -> Void)?
-                let controller = PrivacyIntroController(context: context.sharedContext, mode: .passcode, proceedAction: {
+                let controller = PrivacyIntroController(context: context, mode: .passcode, proceedAction: {
                     let setupController = PasscodeSetupController(context: context.sharedContext, mode: .setup(change: false, .digits6))
                     setupController.complete = { passcode, numerical in
                         let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
@@ -402,7 +402,7 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
     |> deliverOnMainQueue
     |> map { challenge -> ViewController? in
         if case .none = challenge {
-            let controller = PrivacyIntroController(context: context.sharedContext, mode: .passcode, proceedAction: {
+            let controller = PrivacyIntroController(context: context, mode: .passcode, proceedAction: {
                 let setupController = PasscodeSetupController(context: context.sharedContext, mode: .setup(change: false, .digits6))
                 setupController.complete = { passcode, numerical in
                     let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in

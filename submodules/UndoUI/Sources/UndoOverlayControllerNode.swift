@@ -27,7 +27,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private var stillStickerNode: TransformImageNode?
     private var stickerImageSize: CGSize?
     private var stickerOffset: CGPoint?
-    private var timerTextNodeFont = Font.regular(16.0)
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     private let buttonNode: HighlightTrackingButtonNode
@@ -357,19 +356,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         }
                     }
                 })
-            case let .falseBottom(title):
-                self.iconNode = nil
-                self.iconCheckNode = nil
-                self.animationNode = nil
-                self.animatedStickerNode = nil
-                
-                self.textNode.attributedText = NSAttributedString(string: title, font: Font.regular(15.0), textColor: .white)
-                
-                self.timerTextNodeFont = Font.regular(14.0)
-                displayUndo = false
-
-                self.originalRemainingSeconds = 60
-                self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
         }
         
         self.remainingSeconds = self.originalRemainingSeconds
@@ -396,7 +382,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         super.init()
         
         switch content {
-        case .removedChat, .falseBottom:
+        case .removedChat:
             self.panelWrapperNode.addSubnode(self.timerTextNode)
         case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder:
             break
@@ -480,7 +466,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     snapshot?.removeFromSuperview()
                 })
             }
-            self.timerTextNode.attributedText = NSAttributedString(string: "\(self.remainingSeconds)", font: timerTextNodeFont, textColor: .white)
+            self.timerTextNode.attributedText = NSAttributedString(string: "\(self.remainingSeconds)", font: Font.regular(16.0), textColor: .white)
             if let validLayout = self.validLayout {
                 self.containerLayoutUpdated(layout: validLayout, transition: .immediate)
             }

@@ -899,7 +899,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: ViewController? = nil, withChatListController chatListController: ViewController? = nil) {
-        
         if let unlockedHiddenAccountRecordId = accountManager.displayedAccountsFilter.unlockedHiddenAccountRecordId, unlockedHiddenAccountRecordId != id {
             appLockContext.unlockedHiddenAccountRecordId.set(nil)
         }
