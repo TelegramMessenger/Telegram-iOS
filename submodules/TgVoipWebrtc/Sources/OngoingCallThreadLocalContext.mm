@@ -152,8 +152,8 @@
 - (void)dealloc {
 }
 
-- (void)switchVideoCamera {
-    _interface->switchCamera();
+- (void)switchVideoInput:(bool)isFront {
+    _interface->switchToDevice(isFront ? "" : "back");
 }
 
 - (void)setIsVideoEnabled:(bool)isVideoEnabled {

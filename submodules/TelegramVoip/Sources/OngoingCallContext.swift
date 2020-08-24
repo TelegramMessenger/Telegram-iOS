@@ -336,8 +336,8 @@ public final class OngoingCallVideoCapturer {
         self.impl = OngoingCallThreadLocalContextVideoCapturer()
     }
     
-    public func switchCamera() {
-        self.impl.switchVideoCamera()
+    public func switchVideoInput(isFront: Bool) {
+        self.impl.switchVideoInput(isFront)
     }
     
     public func makeOutgoingVideoView(completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
