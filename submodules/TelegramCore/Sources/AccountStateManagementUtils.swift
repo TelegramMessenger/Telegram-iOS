@@ -2274,9 +2274,34 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     
     var topUpperHistoryBlockMessages: [PeerIdAndMessageNamespace: MessageId.Id] = [:]
     
+    var messageThreadStatsDifferences: [MessageId: Int] = [:]
+    func addMessageThreadStatsDifference(threadMessageId: MessageId, add: Int, remove: Int) {
+        if let value = messageThreadStatsDifferences[threadMessageId] {
+            messageThreadStatsDifferences[threadMessageId] = value + add - remove
+        } else {
+            messageThreadStatsDifferences[threadMessageId] = add - remove
+        }
+    }
+    
     for operation in optimizedOperations(finalState.state.operations) {
         switch operation {
             case let .AddMessages(messages, location):
+                if case .UpperHistoryBlock = location {
+                    for message in messages {
+                        if case let .Id(id) = message.id {
+                            findAttribute: for attribute in message.attributes {
+                                if let attribute = attribute as? ReplyMessageAttribute {
+                                    if id.peerId.namespace == Namespaces.Peer.CloudChannel {
+                                        if !transaction.messageExists(id: id) {
+                                            addMessageThreadStatsDifference(threadMessageId: attribute.effectiveReplyThreadMessageId, add: 1, remove: 0)
+                                        }
+                                    }
+                                    break findAttribute
+                                }
+                            }
+                        }
+                    }
+                }
                 let _ = transaction.addMessages(messages, location: location)
                 if case .UpperHistoryBlock = location {
                     for message in messages {
@@ -2384,7 +2409,9 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                     let _ = mediaBox.removeCachedResources(Set(resourceIds)).start()
                 }
             case let .DeleteMessages(ids):
-                deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids)
+                deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids, manualAddMessageThreadStatsDifference: { id, add, remove in
+                    addMessageThreadStatsDifference(threadMessageId: id, add: add, remove: remove)
+                })
             case let .UpdateMinAvailableMessage(id):
                 if let message = transaction.getMessage(id) {
                     updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: id.peerId, minTimestamp: message.timestamp, forceRootGroupIfNotExists: false)
@@ -2906,6 +2933,10 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 transaction.removeHole(peerId: peerIdAndNamespace.peerId, namespace: peerIdAndNamespace.namespace, space: .everywhere, range: lowerMessageId ... upperMessageId)
             }
         }
+    }
+    
+    for (threadMessageId, difference) in messageThreadStatsDifferences {
+        updateMessageThreadStats(transaction: transaction, threadMessageId: threadMessageId, difference: difference) 
     }
     
     if !peerActivityTimestamps.isEmpty {

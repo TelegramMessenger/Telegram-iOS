@@ -28,3 +28,23 @@ func updateMessageMedia(transaction: Transaction, id: MediaId, media: Media?) {
         })
     }
 }
+
+func updateMessageThreadStats(transaction: Transaction, threadMessageId: MessageId, difference: Int) {
+    transaction.updateMessage(threadMessageId, update: { currentMessage in
+        let countDifference = Int32(difference)
+        
+        var attributes = currentMessage.attributes
+        var updated = false
+        loop: for j in 0 ..< attributes.count {
+            if let attribute = attributes[j] as? ReplyThreadMessageAttribute {
+                attributes[j] = ReplyThreadMessageAttribute(count: max(0, attribute.count + countDifference))
+                updated = true
+                break loop
+            }
+        }
+        if !updated {
+            attributes.append(ReplyThreadMessageAttribute(count: max(0, countDifference)))
+        }
+        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+    })
+}

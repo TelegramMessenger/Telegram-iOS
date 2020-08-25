@@ -809,7 +809,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
             }
             
             if let replyToRandomId = replyToRandomId, let replyMessageId = messageIdForGloballyUniqueMessageId(replyToRandomId) {
-                attributes.append(ReplyMessageAttribute(messageId: replyMessageId))
+                attributes.append(ReplyMessageAttribute(messageId: replyMessageId, threadMessageId: nil))
             }
 
             var entitiesAttribute: TextEntitiesMessageAttribute?
@@ -1041,7 +1041,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
             }
             
             if let replyToRandomId = replyToRandomId, let replyMessageId = messageIdForGloballyUniqueMessageId(replyToRandomId) {
-                attributes.append(ReplyMessageAttribute(messageId: replyMessageId))
+                attributes.append(ReplyMessageAttribute(messageId: replyMessageId, threadMessageId: nil))
             }
             
             var entitiesAttribute: TextEntitiesMessageAttribute?
@@ -1279,7 +1279,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
             }
             
             if let replyToRandomId = replyToRandomId, let replyMessageId = messageIdForGloballyUniqueMessageId(replyToRandomId) {
-                attributes.append(ReplyMessageAttribute(messageId: replyMessageId))
+                attributes.append(ReplyMessageAttribute(messageId: replyMessageId, threadMessageId: nil))
             }
             
             var entitiesAttribute: TextEntitiesMessageAttribute?

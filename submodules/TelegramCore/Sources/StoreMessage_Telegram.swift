@@ -137,7 +137,7 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
 
 func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
     switch message {
-        case let .message(flags, _, fromId, toId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _, _):
+        case let .message(flags, _, fromId, toId, fwdHeader, viaBotId, _, _, _, _, media, _, entities, _, _, _, _, _, _, _, _):
             let peerId: PeerId
             switch toId {
                 case let .peerUser(userId):
@@ -241,7 +241,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
 
 func apiMessageAssociatedMessageIds(_ message: Api.Message) -> [MessageId]? {
     switch message {
-        case let .message(flags, _, fromId, toId, _, _, replyToMsgId, _, _, _, _, _, _, _, _, _, _, _):
+        case let .message(flags, _, fromId, toId, _, _, replyToMsgId, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
             if let replyToMsgId = replyToMsgId {
                 let peerId: PeerId
                     switch toId {
@@ -399,7 +399,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 extension StoreMessage {
     convenience init?(apiMessage: Api.Message, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
-            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, replyMarkup, entities, views, forwards, editDate, postAuthor, groupingId, restrictionReason):
+            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, replyToTopId, date, message, media, replyMarkup, entities, views, forwards, replies, _, editDate, postAuthor, groupingId, restrictionReason):
                 let peerId: PeerId
                 var authorId: PeerId?
                 switch toId {
@@ -515,7 +515,11 @@ extension StoreMessage {
                 }
                 
                 if let replyToMsgId = replyToMsgId {
-                    attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)))
+                    var threadMessageId: MessageId?
+                    if let replyToTopId = replyToTopId {
+                        threadMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
+                    }
+                    attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
                 }
                 
                 if namespace != Namespaces.Message.ScheduledCloud {
@@ -563,6 +567,10 @@ extension StoreMessage {
                 /*if let reactions = reactions {
                     attributes.append(ReactionsMessageAttribute(apiReactions: reactions))
                 }*/
+                
+                if let replies = replies {
+                    attributes.append(ReplyThreadMessageAttribute(count: replies))
+                }
                 
                 if let restrictionReason = restrictionReason {
                     attributes.append(RestrictedContentMessageAttribute(rules: restrictionReason.map(RestrictionRule.init(apiReason:))))
@@ -636,7 +644,7 @@ extension StoreMessage {
                 
                 var attributes: [MessageAttribute] = []
                 if let replyToMsgId = replyToMsgId {
-                    attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)))
+                    attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: nil))
                 }
                 
                 if (flags & (1 << 17)) != 0 {

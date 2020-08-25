@@ -53,6 +53,7 @@ class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 var viewCount: Int?
                 var rawText = ""
+                var dateReplies = 0
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
                         edited = !attribute.isHidden
@@ -60,6 +61,8 @@ class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNode {
                         viewCount = attribute.count
                     } else if let attribute = attribute as? RestrictedContentMessageAttribute {
                         rawText = attribute.platformText(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) ?? ""
+                    } else if let attribute = attribute as? ReplyThreadMessageAttribute {
+                        dateReplies = Int(attribute.count)
                     }
                 }
                 
@@ -100,7 +103,7 @@ class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNode {
                 var statusApply: ((Bool) -> Void)?
                 
                 if let statusType = statusType {
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions)
+                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions, dateReplies)
                     statusSize = size
                     statusApply = apply
                 }

@@ -38,6 +38,14 @@ public final class Transaction {
         }
     }
     
+    public func messageExists(id: MessageId) -> Bool {
+        if let postbox = self.postbox {
+            return postbox.messageHistoryIndexTable.exists(id)
+        } else {
+            return false
+        }
+    }
+    
     public func countIncomingMessage(id: MessageId) {
         assert(!self.disposed)
         if let postbox = self.postbox {
@@ -2333,8 +2341,8 @@ public final class Postbox {
         }
     }
     
-    func peerIdsForLocation(_ chatLocation: ChatLocation, tagMask: MessageTags?) -> MessageHistoryViewPeerIds {
-        var peerIds: MessageHistoryViewPeerIds
+    func peerIdsForLocation(_ chatLocation: ChatLocation, tagMask: MessageTags?) -> MessageHistoryViewInput {
+        var peerIds: MessageHistoryViewInput
         switch chatLocation {
             case let .peer(peerId):
                 peerIds = .single(peerId)
@@ -2410,7 +2418,7 @@ public final class Postbox {
         }
     }
     
-    private func syncAroundMessageHistoryViewForPeerId(subscriber: Subscriber<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>, peerIds: MessageHistoryViewPeerIds, count: Int, clipHoles: Bool, anchor: HistoryViewInputAnchor, fixedCombinedReadStates: MessageHistoryViewReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData]) -> Disposable {
+    private func syncAroundMessageHistoryViewForPeerId(subscriber: Subscriber<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>, peerIds: MessageHistoryViewInput, count: Int, clipHoles: Bool, anchor: HistoryViewInputAnchor, fixedCombinedReadStates: MessageHistoryViewReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData]) -> Disposable {
         var topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?] = [:]
         var mainPeerId: PeerId?
         switch peerIds {
