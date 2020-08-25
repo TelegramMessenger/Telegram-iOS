@@ -102,14 +102,16 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)setOnIsMirroredUpdated:(void (^ _Nullable)(bool))onIsMirroredUpdated;
 #if defined(WEBRTC_MAC) && !defined(WEBRTC_IOS)
 - (void)setVideoContentMode:(CALayerContentsGravity _Nonnull )mode;
+- (void)setForceMirrored:(bool)forceMirrored;
 #endif
 @end
 
 @interface OngoingCallThreadLocalContextVideoCapturer : NSObject
 
 - (instancetype _Nonnull)init;
+- (instancetype _Nonnull)initWithDeviceId:(NSString * _Nonnull)deviceId;
 
-- (void)switchVideoInput:(bool)isFront;
+- (void)switchVideoInput:(NSString * _Nonnull)deviceId;
 - (void)setIsVideoEnabled:(bool)isVideoEnabled;
 
 - (void)makeOutgoingVideoView:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion;
@@ -132,7 +134,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)stop:(void (^_Nullable)(NSString * _Nullable debugLog, int64_t bytesSentWifi, int64_t bytesReceivedWifi, int64_t bytesSentMobile, int64_t bytesReceivedMobile))completion;
 
 - (bool)needRate;
-    
+
 - (NSString * _Nullable)debugInfo;
 - (NSString * _Nullable)version;
 - (NSData * _Nonnull)getDerivedState;
