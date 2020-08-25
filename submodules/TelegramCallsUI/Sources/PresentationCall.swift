@@ -169,6 +169,8 @@ public final class PresentationCallImpl: PresentationCall {
     public let isOutgoing: Bool
     public var isVideo: Bool
     public var isVideoPossible: Bool
+    private let enableStunMarking: Bool
+    private let enableTCP: Bool
     public let preferredVideoCodec: String?
     public let peer: Peer?
     
@@ -184,6 +186,7 @@ public final class PresentationCallImpl: PresentationCall {
     private var callContextState: OngoingCallContextState?
     private var ongoingContext: OngoingCallContext?
     private var ongoingContextStateDisposable: Disposable?
+    private var requestedVideoAspect: Float?
     private var reception: Int32?
     private var receptionDisposable: Disposable?
     private var reportedIncomingCall = false
@@ -243,6 +246,7 @@ public final class PresentationCallImpl: PresentationCall {
     private var droppedCall = false
     private var dropCallKitCallTimer: SwiftSignalKit.Timer?
     
+    private var useFrontCamera: Bool = true
     private var videoCapturer: OngoingCallVideoCapturer?
     
     init(
@@ -265,6 +269,8 @@ public final class PresentationCallImpl: PresentationCall {
         updatedNetworkType: Signal<NetworkType, NoError>,
         startWithVideo: Bool,
         isVideoPossible: Bool,
+        enableStunMarking: Bool,
+        enableTCP: Bool,
         preferredVideoCodec: String?
     ) {
         self.account = account
@@ -292,6 +298,8 @@ public final class PresentationCallImpl: PresentationCall {
         self.isOutgoing = isOutgoing
         self.isVideo = initialState?.type == .video
         self.isVideoPossible = isVideoPossible
+        self.enableStunMarking = enableStunMarking
+        self.enableTCP = enableTCP
         self.preferredVideoCodec = preferredVideoCodec
         self.peer = peer
         self.isVideo = startWithVideo
@@ -606,9 +614,12 @@ public final class PresentationCallImpl: PresentationCall {
                 if let _ = audioSessionControl, !wasActive || previousControl == nil {
                     let logName = "\(id.id)_\(id.accessHash)"
                     
-                    let ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, derivedState: self.derivedState, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: connections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, audioSessionActive: self.audioSessionActive.get(), logName: logName, preferredVideoCodec: self.preferredVideoCodec)
+                    let ongoingContext = OngoingCallContext(account: account, callSessionManager: self.callSessionManager, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, derivedState: self.derivedState, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: connections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, enableTCP: self.enableTCP, enableStunMarking: self.enableStunMarking, audioSessionActive: self.audioSessionActive.get(), logName: logName, preferredVideoCodec: self.preferredVideoCodec)
                     self.ongoingContext = ongoingContext
                     ongoingContext.setIsMuted(self.isMutedValue)
+                    if let requestedVideoAspect = self.requestedVideoAspect {
+                        ongoingContext.setRequestedVideoAspect(requestedVideoAspect)
+                    }
                     
                     self.debugInfoValue.set(ongoingContext.debugInfo())
                     
@@ -848,6 +859,11 @@ public final class PresentationCallImpl: PresentationCall {
         }
     }
     
+    public func setRequestedVideoAspect(_ aspect: Float) {
+        self.requestedVideoAspect = aspect
+        self.ongoingContext?.setRequestedVideoAspect(aspect)
+    }
+    
     public func disableVideo() {
         if let _ = self.videoCapturer {
             self.videoCapturer = nil
@@ -909,8 +925,15 @@ public final class PresentationCallImpl: PresentationCall {
                             return .rotation0
                         }
                     },
+                    getAspect: { [weak view] in
+                        if let view = view {
+                            return view.getAspect()
+                        } else {
+                            return 0.0
+                        }
+                    },
                     setOnOrientationUpdated: { f in
-                        setOnOrientationUpdated { value in
+                        setOnOrientationUpdated { value, aspect in
                             let mappedValue: PresentationCallVideoView.Orientation
                             switch value {
                             case .rotation0:
@@ -922,7 +945,7 @@ public final class PresentationCallImpl: PresentationCall {
                             case .rotation270:
                                 mappedValue = .rotation270
                             }
-                            f?(mappedValue)
+                            f?(mappedValue, aspect)
                         }
                     },
                     setOnIsMirroredUpdated: { f in
@@ -971,8 +994,15 @@ public final class PresentationCallImpl: PresentationCall {
                             return .rotation0
                         }
                     },
+                    getAspect: { [weak view] in
+                        if let view = view {
+                            return view.getAspect()
+                        } else {
+                            return 0.0
+                        }
+                    },
                     setOnOrientationUpdated: { f in
-                        setOnOrientationUpdated { value in
+                        setOnOrientationUpdated { value, aspect in
                             let mappedValue: PresentationCallVideoView.Orientation
                             switch value {
                             case .rotation0:
@@ -984,7 +1014,7 @@ public final class PresentationCallImpl: PresentationCall {
                             case .rotation270:
                                 mappedValue = .rotation270
                             }
-                            f?(mappedValue)
+                            f?(mappedValue, aspect)
                         }
                     },
                     setOnIsMirroredUpdated: { f in
@@ -1000,6 +1030,7 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     public func switchVideoCamera() {
-        self.videoCapturer?.switchCamera()
+        self.useFrontCamera = !self.useFrontCamera
+        self.videoCapturer?.switchVideoInput(isFront: self.useFrontCamera)
     }
 }

@@ -95,11 +95,12 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 @protocol OngoingCallThreadLocalContextWebrtcVideoView <NSObject>
 
 @property (nonatomic, readonly) OngoingCallVideoOrientationWebrtc orientation;
+@property (nonatomic, readonly) CGFloat aspect;
 
 - (void)setOnFirstFrameReceived:(void (^ _Nullable)(float))onFirstFrameReceived;
-- (void)setOnOrientationUpdated:(void (^ _Nullable)(OngoingCallVideoOrientationWebrtc))onOrientationUpdated;
+- (void)setOnOrientationUpdated:(void (^ _Nullable)(OngoingCallVideoOrientationWebrtc, CGFloat))onOrientationUpdated;
 - (void)setOnIsMirroredUpdated:(void (^ _Nullable)(bool))onIsMirroredUpdated;
-#ifdef WEBRTC_MAC
+#if defined(WEBRTC_MAC) && !defined(WEBRTC_IOS)
 - (void)setVideoContentMode:(CALayerContentsGravity _Nonnull )mode;
 #endif
 @end
@@ -108,7 +109,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 
 - (instancetype _Nonnull)init;
 
-- (void)switchVideoCamera;
+- (void)switchVideoInput:(bool)isFront;
 - (void)setIsVideoEnabled:(bool)isVideoEnabled;
 
 - (void)makeOutgoingVideoView:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion;
@@ -125,7 +126,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 @property (nonatomic, copy) void (^ _Nullable stateChanged)(OngoingCallStateWebrtc, OngoingCallVideoStateWebrtc, OngoingCallRemoteVideoStateWebrtc, OngoingCallRemoteAudioStateWebrtc, OngoingCallRemoteBatteryLevelWebrtc, float);
 @property (nonatomic, copy) void (^ _Nullable signalBarsChanged)(int32_t);
 
-- (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing connections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)connections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P logPath:(NSString * _Nonnull)logPath sendSignalingData:(void (^ _Nonnull)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer preferredAspectRatio:(float)preferredAspectRatio preferredVideoCodec:(NSString * _Nullable)preferredVideoCodec;
+- (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing connections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)connections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P allowTCP:(BOOL)allowTCP enableStunMarking:(BOOL)enableStunMarking logPath:(NSString * _Nonnull)logPath statsLogPath:(NSString * _Nonnull)statsLogPath sendSignalingData:(void (^ _Nonnull)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer preferredVideoCodec:(NSString * _Nullable)preferredVideoCodec;
 
 - (void)beginTermination;
 - (void)stop:(void (^_Nullable)(NSString * _Nullable debugLog, int64_t bytesSentWifi, int64_t bytesReceivedWifi, int64_t bytesSentMobile, int64_t bytesReceivedMobile))completion;
@@ -141,6 +142,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)setNetworkType:(OngoingCallNetworkTypeWebrtc)networkType;
 - (void)makeIncomingVideoView:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion;
 - (void)requestVideo:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer;
+- (void)setRequestedVideoAspect:(float)aspect;
 - (void)disableVideo;
 - (void)addSignalingData:(NSData * _Nonnull)data;
 

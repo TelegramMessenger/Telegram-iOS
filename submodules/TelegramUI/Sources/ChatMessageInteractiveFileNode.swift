@@ -868,7 +868,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             statusNode.backgroundNodeColor = backgroundNodeColor
         }
         
-        if state != .none && isVoice && self.playbackAudioLevelView == nil {
+        if state != .none && isVoice && self.playbackAudioLevelView == nil && false {
             let blobFrame = progressFrame.insetBy(dx: -12.0, dy: -12.0)
             let playbackAudioLevelView = VoiceBlobView(
                 frame: blobFrame,

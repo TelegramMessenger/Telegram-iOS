@@ -99,15 +99,15 @@ public func childWindowHostView(parent: UIView) -> WindowHostView {
     }
     
     view.invalidateDeferScreenEdgeGestureImpl = { [weak hostView] in
-        return hostView?.invalidateDeferScreenEdgeGesture?()
+        hostView?.invalidateDeferScreenEdgeGesture?()
     }
     
     view.invalidatePrefersOnScreenNavigationHiddenImpl = { [weak hostView] in
-        return hostView?.invalidatePrefersOnScreenNavigationHidden?()
+        hostView?.invalidatePrefersOnScreenNavigationHidden?()
     }
     
     view.invalidateSupportedOrientationsImpl = { [weak hostView] in
-        return hostView?.invalidateSupportedOrientations?()
+        hostView?.invalidateSupportedOrientations?()
     }
     
     view.cancelInteractiveKeyboardGesturesImpl = { [weak hostView] in

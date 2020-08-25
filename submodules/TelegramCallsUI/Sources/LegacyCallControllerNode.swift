@@ -62,7 +62,7 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
     var endCall: (() -> Void)?
     var setIsVideoPaused: ((Bool) -> Void)?
     var back: (() -> Void)?
-    var presentCallRating: ((CallId) -> Void)?
+    var presentCallRating: ((CallId, Bool) -> Void)?
     var callEnded: ((Bool) -> Void)?
     var dismissedInteractively: (() -> Void)?
     var present: ((ViewController) -> Void)?
@@ -307,7 +307,7 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
         if case let .terminated(id, _, reportRating) = callState.state, let callId = id {
             let presentRating = reportRating || self.forceReportRating
             if presentRating {
-                self.presentCallRating?(callId)
+                self.presentCallRating?(callId, false)
             }
             self.callEnded?(presentRating)
         }
