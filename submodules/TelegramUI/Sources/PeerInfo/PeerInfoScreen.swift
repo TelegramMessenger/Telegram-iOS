@@ -623,7 +623,7 @@ private enum SettingsSection: Int, CaseIterable {
     case support
 }
 
-private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, isExpanded: Bool, currentHiddenId: AccountRecordId?) -> [(AnyHashable, [PeerInfoScreenItem])] {
+private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, isExpanded: Bool) -> [(AnyHashable, [PeerInfoScreenItem])] {
     guard let data = data else {
         return []
     }
@@ -668,7 +668,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             }))
         }
         
-        if !settings.accountsAndPeers.isEmpty, currentHiddenId == nil {
+        if !settings.accountsAndPeers.isEmpty, data.currentHiddenId == nil {
             for (peerAccount, peer, badgeCount) in settings.accountsAndPeers {
                 let member: PeerInfoMember = .account(peer: RenderedPeer(peer: peer))
                 items[.accounts]!.append(PeerInfoScreenMemberItem(id: member.id, context: context.sharedContext.makeTempAccountContext(account: peerAccount), enclosingPeer: nil, member: member, badge: badgeCount > 0 ? "\(compactNumericCountString(Int(badgeCount), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))" : nil, action: { action in
@@ -4986,7 +4986,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         var validRegularSections: [AnyHashable] = []
         if !self.isMediaOnly {
-            let items = self.isSettings ? settingsItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, isExpanded: self.headerNode.isAvatarExpanded, currentHiddenId: self.currentHiddenId) : infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, nearbyPeerDistance: self.nearbyPeerDistance, callMessages: self.callMessages)
+            let items = self.isSettings ? settingsItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, isExpanded: self.headerNode.isAvatarExpanded) : infoItems(data: self.data, context: self.context, presentationData: self.presentationData, interaction: self.interaction, nearbyPeerDistance: self.nearbyPeerDistance, callMessages: self.callMessages)
             
             contentHeight += headerHeight
             if !self.isSettings {
@@ -5582,9 +5582,8 @@ public final class PeerInfoScreen: ViewController {
             }
             |> distinctUntilChanged
             
-            let accountTabBarAvatarBadge: Signal<Int32, NoError> = combineLatest(notificationsFromAllAccounts, self.accountsAndPeers.get())
-            |> map { notificationsFromAllAccounts, primaryAndOther -> Int32 in
-                let currentHiddenId = context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId
+            let accountTabBarAvatarBadge: Signal<Int32, NoError> = combineLatest(notificationsFromAllAccounts, self.accountsAndPeers.get(), context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.get())
+                |> map { notificationsFromAllAccounts, primaryAndOther, currentHiddenId -> Int32 in
                 if !notificationsFromAllAccounts || currentHiddenId != nil {
                     return 0
                 }
@@ -5599,9 +5598,8 @@ public final class PeerInfoScreen: ViewController {
             }
             |> distinctUntilChanged
             
-            let accountTabBarAvatar: Signal<(UIImage, UIImage)?, NoError> = combineLatest(self.accountsAndPeers.get(), context.sharedContext.presentationData)
-            |> map { primaryAndOther, presentationData -> (Account, Peer, PresentationTheme)? in
-                let currentHiddenId = context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId
+            let accountTabBarAvatar: Signal<(UIImage, UIImage)?, NoError> = combineLatest(self.accountsAndPeers.get(), context.sharedContext.presentationData, context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.get())
+            |> map { primaryAndOther, presentationData, currentHiddenId -> (Account, Peer, PresentationTheme)? in
                 if let primary = primaryAndOther.0, !primaryAndOther.1.isEmpty, currentHiddenId == nil {
                     return (primary.0, primary.1, presentationData.theme)
                 } else {

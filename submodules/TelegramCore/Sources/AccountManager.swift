@@ -234,7 +234,7 @@ public func updateHiddenAccountsAccessChallengeData(manager: AccountManager) {
 }
 
 public final class HiddenAccountManagerImpl: HiddenAccountManager {
-    public let unlockedHiddenAccountRecordIdPromise = Promise<AccountRecordId?>(nil)
+    public let unlockedHiddenAccountRecordIdPromise = ValuePromise<AccountRecordId?>(nil)
     public var unlockedHiddenAccountRecordId: AccountRecordId?
     private var unlockedHiddenAccountRecordIdDisposable: Disposable?
     
@@ -366,6 +366,9 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
 
 public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManager, alreadyLoggedOutRemotely: Bool) -> Signal<Void, NoError> {
     Logger.shared.log("AccountManager", "logoutFromAccount \(id)")
+    if accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId == id {
+        accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
+    }
     return accountManager.transaction { transaction -> Void in
         transaction.updateRecord(id, { current in
             if alreadyLoggedOutRemotely {
