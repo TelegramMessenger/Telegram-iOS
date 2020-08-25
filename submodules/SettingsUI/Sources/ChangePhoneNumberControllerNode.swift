@@ -263,12 +263,14 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
         
         let countryCodeFrame = CGRect(origin: CGPoint(x: 9.0, y: navigationHeight + 44.0 + 1.0), size: CGSize(width: 45.0, height: 44.0))
         let numberFrame = CGRect(origin: CGPoint(x: 70.0, y: navigationHeight + 44.0 + 1.0), size: CGSize(width: layout.size.width - 70.0 - 8.0, height: 44.0))
+        let placeholderFrame = numberFrame.offsetBy(dx: -1.0, dy: 16.0)
         
         let phoneInputFrame = countryCodeFrame.union(numberFrame)
         
         transition.updateFrame(node: self.phoneInputNode, frame: phoneInputFrame)
         transition.updateFrame(node: self.phoneInputNode.countryCodeField, frame: countryCodeFrame.offsetBy(dx: -phoneInputFrame.minX, dy: -phoneInputFrame.minY))
         transition.updateFrame(node: self.phoneInputNode.numberField, frame: numberFrame.offsetBy(dx: -phoneInputFrame.minX, dy: -phoneInputFrame.minY))
+        transition.updateFrame(node: self.phoneInputNode.placeholderNode, frame: placeholderFrame.offsetBy(dx: -phoneInputFrame.minX, dy: -phoneInputFrame.minY))
         
         transition.updateFrame(node: self.noticeNode, frame: CGRect(origin: CGPoint(x: 15.0 + insets.left, y: navigationHeight + inputHeight + 8.0), size: noticeSize))
     }
