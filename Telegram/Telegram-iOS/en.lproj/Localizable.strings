@@ -4300,6 +4300,7 @@ Sorry for the inconvenience.";
 
 "PasscodeSettings.PasscodeOptions" = "Passcode Options";
 "PasscodeSettings.DoNotMatch" = "Passcodes don't match. Please try again.";
+"PasscodeSettings.MatchMaster" = "Matches master password. Please enter another one.";
 
 "Conversation.PrivateChannelTooltip" = "This channel is private";
 

@@ -24,6 +24,7 @@ public final class PasscodeSetupController: ViewController {
     
     public var complete: ((String, Bool) -> Void)?
     public var check: ((String) -> Bool)?
+    public var checkSetupPasscode: ((String) -> Bool)?
     
     private let hapticFeedback = HapticFeedback()
     
@@ -127,6 +128,9 @@ public final class PasscodeSetupController: ViewController {
         }
         self.controllerNode.checkPasscode = { [weak self] passcode in
             return self?.check?(passcode) ?? false
+        }
+        self.controllerNode.checkSetupPasscode = { [weak self] passcode in
+            return self?.checkSetupPasscode?(passcode) ?? true
         }
     }
     

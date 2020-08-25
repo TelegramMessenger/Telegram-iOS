@@ -49,6 +49,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
     
     var selectPasscodeMode: (() -> Void)?
     var checkPasscode: ((String) -> Bool)?
+    var checkSetupPasscode: ((String) -> Bool)?
     var complete: ((String, Bool) -> Void)?
     var updateNextAction: ((Bool) -> Void)?
     
@@ -240,6 +241,21 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                         }
                     }
                 } else {
+                    guard (self.checkSetupPasscode?(self.currentPasscode) ?? true) else {
+                        self.animateError()
+                        
+                        self.subtitleNode.isHidden = false
+                        self.subtitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.PasscodeSettings_MatchMaster, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+                        
+                        UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: self.presentationData.strings.PasscodeSettings_MatchMaster)
+                        
+                        if let validLayout = self.validLayout {
+                            self.containerLayoutUpdated(validLayout.0, navigationBarHeight: validLayout.1, transition: .immediate)
+                        }
+                        
+                        return
+                    }
+                    
                     self.previousPasscode = self.currentPasscode
                     
                     if let snapshotView = self.wrapperNode.view.snapshotContentTree() {

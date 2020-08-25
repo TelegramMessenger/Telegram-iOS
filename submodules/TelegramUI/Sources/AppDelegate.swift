@@ -42,6 +42,7 @@ import CoreSpotlight
 import PasscodeUI
 import LocalAuth
 import TelegramUIPreferences
+import TelegramStringFormatting
 
 #if canImport(BackgroundTasks)
 import BackgroundTasks
@@ -2265,21 +2266,23 @@ final class SharedApplicationContext {
                 
                 let accountContext = context.sharedApplicationContext.sharedContext
                 
-                
-                let _ = (accountContext.accountManager.transaction({ transaction -> PasscodeEntryFieldType in
+                let _ = (accountContext.accountManager.transaction({ transaction -> (PasscodeEntryFieldType, PostboxAccessChallengeData) in
                     var data = transaction.getAccessChallengeData()
                     switch data {
                     case .none:
-                        return .digits4
+                        return (.digits4, data)
                     case let .numericalPassword(value):
-                        return value.count == 4 ? .digits4 : .digits6
+                        return (value.count == 4 ? .digits4 : .digits6, data)
                     case let .plaintextPassword(value):
-                        return .alphanumeric
+                        return (.alphanumeric, data)
                     }
-                }) |> deliverOnMainQueue).start(next: { [weak context, weak accountContext] passcodeType -> Void in
+                }) |> deliverOnMainQueue).start(next: { [weak context, weak accountContext] passcodeType, accessChallengeData -> Void in
                     guard let context = context, let accountContext = accountContext else { return }
                     
                     let setupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, passcodeType), isChangeModeAllowed: false, isOpaqueNavigationBar: true)
+                    setupController.checkSetupPasscode = { passcode in
+                        return !accessChallengeData.isEqual(to: passcode)
+                    }
                     setupController.complete = { passcode, numerical in
                         let _ = (accountContext.accountManager.transaction({ transaction -> Void in
                             var data = transaction.getAccessChallengeData()
@@ -2795,6 +2798,19 @@ private func downloadHTTPData(url: URL) -> Signal<Data, DownloadFileError> {
             if !completed.with({ $0 }) {
                 downloadTask.cancel()
             }
+        }
+    }
+}
+
+fileprivate extension PostboxAccessChallengeData {
+    public func isEqual(to passcode: String) -> Bool {
+        switch self {
+        case .none:
+            return true
+        case let .numericalPassword(code):
+            return passcode == normalizeArabicNumeralString(code, type: .western)
+        case let .plaintextPassword(code):
+            return passcode == code
         }
     }
 }
