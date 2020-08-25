@@ -152,6 +152,18 @@ private final class AuthorizationSequenceCountrySelectionNavigationContentNode: 
     }
 }
 
+private func removePlus(_ text: String?) -> String {
+    var result = ""
+    if let text = text {
+        for c in text {
+            if c != "+" {
+                result += String(c)
+            }
+        }
+    }
+    return result
+}
+
 public final class AuthorizationSequenceCountrySelectionController: ViewController {
     static func countries() -> [Country] {
         return countryCodes
@@ -176,6 +188,7 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
     }
     
     public static func lookupCountryIdByNumber(_ number: String, preferredCountries: [String: String]) -> (Country, Country.CountryCode)? {
+        let number = removePlus(number)
         var results: [(Country, Country.CountryCode)]? = nil
         if number.count == 1, let preferredCountryId = preferredCountries[number], let country = lookupCountryById(preferredCountryId), let code = country.countryCodes.first {
             return (country, code)

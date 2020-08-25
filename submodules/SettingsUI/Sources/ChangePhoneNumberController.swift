@@ -87,6 +87,12 @@ final class ChangePhoneNumberController: ViewController {
                 strongSelf.push(controller)
             }
         }
+        
+        loadServerCountryCodes(accountManager: self.context.sharedContext.accountManager, network: self.context.account.network, completion: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.controllerNode.updateCountryCode()
+            }
+        })
     }
     
     override func viewWillAppear(_ animated: Bool) {

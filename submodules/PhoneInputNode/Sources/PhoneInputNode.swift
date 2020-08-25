@@ -166,6 +166,7 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     public var returnAction: (() -> Void)?
     
     private let phoneFormatter = InteractivePhoneFormatter()
+    public var customFormatter: ((String) -> String?)?
     
     public var mask: NSAttributedString? {
         didSet {
@@ -180,7 +181,7 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
             if let text = self.numberField.textField.text {
                 mutableMask.replaceCharacters(in: NSRange(location: 0, length: min(text.count, mask.string.count)), with: text)
             }
-            mutableMask.addAttribute(.foregroundColor, value: UIColor.clear, range: NSRange(location: 0, length: min(self.numberField.textField.text?.count ?? 0, mask.string.count)))
+            mutableMask.addAttribute(.foregroundColor, value: UIColor.clear, range: NSRange(location: 0, length: min(self.numberField.textField.text?.count ?? 0, mutableMask.string.count)))
             mutableMask.addAttribute(.kern, value: 1.6, range: NSRange(location: 0, length: mask.string.count))
             self.placeholderNode.attributedText = mutableMask
         } else {
@@ -265,7 +266,12 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     private func updateNumber(_ inputText: String, tryRestoringInputPosition: Bool = true, forceNotifyCountryCodeUpdated: Bool = false) {
-        let (regionPrefix, text) = self.phoneFormatter.updateText(inputText)
+        var (regionPrefix, text) = self.phoneFormatter.updateText(inputText)
+        
+        if let customFormatter = self.customFormatter, let customRegionPrefix = customFormatter(inputText) {
+            regionPrefix = "+\(customRegionPrefix)"
+            text = inputText
+        }
                 
         var realRegionPrefix: String
         var numberText: String

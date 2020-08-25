@@ -13,24 +13,6 @@ import SwiftSignalKit
 import Postbox
 import AccountContext
 
-private func emojiFlagForISOCountryCode(_ countryCode: NSString) -> String {
-    if countryCode.length != 2 {
-        return ""
-    }
-    
-    let base: UInt32 = 127462 - 65
-    let first: UInt32 = base + UInt32(countryCode.character(at: 0))
-    let second: UInt32 = base + UInt32(countryCode.character(at: 1))
-    
-    var data = Data()
-    data.count = 8
-    data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt32>) -> Void in
-        bytes[0] = first
-        bytes[1] = second
-    }
-    return String(data: data, encoding: String.Encoding.utf32LittleEndian) ?? ""
-}
-
 private final class PhoneAndCountryNode: ASDisplayNode {
     let strings: PresentationStrings
     let countryButton: ASButtonNode
@@ -128,25 +110,12 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         
         self.countryButton.addTarget(self, action: #selector(self.countryPressed), forControlEvents: .touchUpInside)
         
-        func removePlus(_ text: String?) -> String {
-            var result = ""
-            if let text = text {
-                for c in text {
-                    if c != "+" {
-                        result += String(c)
-                    }
-                }
-            }
-            return result
-        }
-        
         let processNumberChange: (String) -> Bool = { [weak self] number in
             guard let strongSelf = self else {
                 return false
             }
-            let number = removePlus(number)
             if let (country, _) = AuthorizationSequenceCountrySelectionController.lookupCountryIdByNumber(number, preferredCountries: strongSelf.preferredCountryIdForCode) {
-                let flagString = emojiFlagForISOCountryCode(country.id as NSString)
+                let flagString = emojiFlagForISOCountryCode(country.id)
                 let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(country.id, strings: strongSelf.strings) ?? country.name
                 strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.list.itemPrimaryTextColor, for: [])
                 
@@ -178,12 +147,12 @@ private final class PhoneAndCountryNode: ASDisplayNode {
                 
                 if processNumberChange(strongSelf.phoneInputNode.number) {
                 } else if let code = Int(code), let name = name, let countryName = countryCodeAndIdToName[CountryCodeAndId(code: code, id: name)] {
-                    let flagString = emojiFlagForISOCountryCode(name as NSString)
+                    let flagString = emojiFlagForISOCountryCode(name)
                     let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(name, strings: strongSelf.strings) ?? countryName
                     strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.list.itemPrimaryTextColor, for: [])
                     strongSelf.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: theme.list.itemPlaceholderTextColor)
                 } else if let code = Int(code), let (countryId, countryName) = countryCodeToIdAndName[code] {
-                    let flagString = emojiFlagForISOCountryCode(countryId as NSString)
+                    let flagString = emojiFlagForISOCountryCode(countryId)
                     let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(countryId, strings: strongSelf.strings) ?? countryName
                     strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.list.itemPrimaryTextColor, for: [])
                     strongSelf.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: theme.list.itemPlaceholderTextColor)
@@ -192,6 +161,14 @@ private final class PhoneAndCountryNode: ASDisplayNode {
                     strongSelf.phoneInputNode.mask = nil
                     strongSelf.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: theme.list.itemPlaceholderTextColor)
                 }
+            }
+        }
+        
+        self.phoneInputNode.customFormatter = { number in
+            if let (_, code) = AuthorizationSequenceCountrySelectionController.lookupCountryIdByNumber(number, preferredCountries: [:]) {
+                return code.code
+            } else {
+                return nil
             }
         }
         
@@ -366,10 +343,6 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.tokenEventsDisposable.dispose()
     }
     
-    func updateCountryCode() {
-        self.phoneAndCountryNode.phoneInputNode.codeAndNumber = self.codeAndNumber
-    }
-    
     override func didLoad() {
         super.didLoad()
         
@@ -377,6 +350,10 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         #if DEBUG
         self.noticeNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.debugQrTap(_:))))
         #endif
+    }
+    
+    func updateCountryCode() {
+        self.phoneAndCountryNode.phoneInputNode.codeAndNumber = self.codeAndNumber
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
