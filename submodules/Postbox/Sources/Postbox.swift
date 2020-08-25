@@ -38,6 +38,14 @@ public final class Transaction {
         }
     }
     
+    public func messageExists(id: MessageId) -> Bool {
+        if let postbox = self.postbox {
+            return postbox.messageHistoryIndexTable.exists(id)
+        } else {
+            return false
+        }
+    }
+    
     public func countIncomingMessage(id: MessageId) {
         assert(!self.disposed)
         if let postbox = self.postbox {
@@ -945,8 +953,8 @@ public final class Transaction {
         self.postbox?.scanMessages(peerId: peerId, namespace: namespace, tag: tag, f)
     }
     
-    public func scanMessageAttributes(peerId: PeerId, namespace: MessageId.Namespace, _ f: (MessageId, [MessageAttribute]) -> Bool) {
-        self.postbox?.scanMessageAttributes(peerId: peerId, namespace: namespace, f)
+    public func scanMessageAttributes(peerId: PeerId, namespace: MessageId.Namespace, limit: Int, _ f: (MessageId, [MessageAttribute]) -> Bool) {
+        self.postbox?.scanMessageAttributes(peerId: peerId, namespace: namespace, limit: limit, f)
     }
     
     public func invalidateMessageHistoryTagsSummary(peerId: PeerId, namespace: MessageId.Namespace, tagMask: MessageTags) {
@@ -2333,8 +2341,8 @@ public final class Postbox {
         }
     }
     
-    func peerIdsForLocation(_ chatLocation: ChatLocation, tagMask: MessageTags?) -> MessageHistoryViewPeerIds {
-        var peerIds: MessageHistoryViewPeerIds
+    func peerIdsForLocation(_ chatLocation: ChatLocation, tagMask: MessageTags?) -> MessageHistoryViewInput {
+        var peerIds: MessageHistoryViewInput
         switch chatLocation {
             case let .peer(peerId):
                 peerIds = .single(peerId)
@@ -2410,7 +2418,7 @@ public final class Postbox {
         }
     }
     
-    private func syncAroundMessageHistoryViewForPeerId(subscriber: Subscriber<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>, peerIds: MessageHistoryViewPeerIds, count: Int, clipHoles: Bool, anchor: HistoryViewInputAnchor, fixedCombinedReadStates: MessageHistoryViewReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData]) -> Disposable {
+    private func syncAroundMessageHistoryViewForPeerId(subscriber: Subscriber<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>, peerIds: MessageHistoryViewInput, count: Int, clipHoles: Bool, anchor: HistoryViewInputAnchor, fixedCombinedReadStates: MessageHistoryViewReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData]) -> Disposable {
         var topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?] = [:]
         var mainPeerId: PeerId?
         switch peerIds {
@@ -3174,9 +3182,10 @@ public final class Postbox {
         }
     }
     
-    fileprivate func scanMessageAttributes(peerId: PeerId, namespace: MessageId.Namespace, _ f: (MessageId, [MessageAttribute]) -> Bool) {
+    fileprivate func scanMessageAttributes(peerId: PeerId, namespace: MessageId.Namespace, limit: Int, _ f: (MessageId, [MessageAttribute]) -> Bool) {
+        var remainingLimit = limit
         var index = MessageIndex.upperBound(peerId: peerId, namespace: namespace)
-        while true {
+        while remainingLimit > 0 {
             let messages = self.messageHistoryTable.fetch(peerId: peerId, namespace: namespace, tag: nil, from: index, includeFrom: false, to: MessageIndex.lowerBound(peerId: peerId, namespace: namespace), limit: 32)
             for message in messages {
                 let attributes = MessageHistoryTable.renderMessageAttributes(message)
@@ -3184,6 +3193,7 @@ public final class Postbox {
                     break
                 }
             }
+            remainingLimit -= messages.count
             if let last = messages.last {
                 index = last.index
             } else {

@@ -109,11 +109,14 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     edited = true
                 }
                 var viewCount: Int?
+                var dateReplies = 0
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
                         edited = !attribute.isHidden
                     } else if let attribute = attribute as? ViewCountMessageAttribute {
                         viewCount = attribute.count
+                    } else if let attribute = attribute as? ReplyThreadMessageAttribute {
+                        dateReplies = Int(attribute.count)
                     }
                 }
                 
@@ -154,7 +157,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 var statusApply: ((Bool) -> Void)?
                 
                 if let statusType = statusType {
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions)
+                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions, dateReplies)
                     statusSize = size
                     statusApply = apply
                 }

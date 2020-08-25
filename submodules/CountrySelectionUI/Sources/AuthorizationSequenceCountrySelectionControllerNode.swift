@@ -57,12 +57,15 @@ private func loadCountryCodes() -> [(String, Int)] {
 
 private let countryCodes: [(String, Int)] = loadCountryCodes()
 
-func localizedContryNamesAndCodes(strings: PresentationStrings) -> [((String, String), String, Int)] {
+func localizedCountryNamesAndCodes(strings: PresentationStrings) -> [((String, String), String, Int)] {
     let locale = localeWithStrings(strings)
     var result: [((String, String), String, Int)] = []
-    for (id, code) in countryCodes {
-        if let englishCountryName = usEnglishLocale.localizedString(forRegionCode: id), let countryName = locale.localizedString(forRegionCode: id) {
-            result.append(((englishCountryName, countryName), id, code))
+    for country in AuthorizationSequenceCountrySelectionController.countries() {
+        if country.hidden {
+            continue
+        }
+        if let englishCountryName = usEnglishLocale.localizedString(forRegionCode: country.id), let countryName = locale.localizedString(forRegionCode: country.id), let codeValue = country.countryCodes.first?.code, let code = Int(codeValue) {
+            result.append(((englishCountryName, countryName), country.id, code))
         } else {
             assertionFailure()
         }
@@ -103,7 +106,7 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
             self.searchTableView.contentInsetAdjustmentBehavior = .never
         }
         
-        let countryNamesAndCodes = localizedContryNamesAndCodes(strings: strings)
+        let countryNamesAndCodes = localizedCountryNamesAndCodes(strings: strings)
         
         var sections: [(String, [((String, String), String, Int)])] = []
         for (names, id, code) in countryNamesAndCodes.sorted(by: { lhs, rhs in
@@ -116,8 +119,7 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
             sections[sections.count - 1].1.append((names, id, code))
         }
         self.sections = sections
-        var sectionTitles = sections.map { $0.0 }
-        self.sectionTitles = sectionTitles
+        self.sectionTitles = sections.map { $0.0 }
         
         super.init()
         

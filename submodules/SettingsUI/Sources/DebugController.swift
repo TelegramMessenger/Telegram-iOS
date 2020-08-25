@@ -43,6 +43,7 @@ private enum DebugControllerSection: Int32 {
     case logging
     case experiments
     case videoExperiments
+    case videoExperiments2
     case info
 }
 
@@ -73,6 +74,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
     case preferredVideoCodec(Int, String, String?, Bool)
+    case disableVideoAspectScaling(Bool)
+    case enableVoipTcp(Bool)
     case hostInfo(PresentationTheme, String)
     case versionInfo(PresentationTheme)
     
@@ -90,6 +93,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
+        case .disableVideoAspectScaling, .enableVoipTcp:
+            return DebugControllerSection.videoExperiments2.rawValue
         case .hostInfo, .versionInfo:
             return DebugControllerSection.info.rawValue
         }
@@ -149,10 +154,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 25
         case let .preferredVideoCodec(index, _, _, _):
             return 26 + index
-        case .hostInfo:
+        case .disableVideoAspectScaling:
             return 100
-        case .versionInfo:
+        case .enableVoipTcp:
             return 101
+        case .hostInfo:
+            return 102
+        case .versionInfo:
+            return 103
         }
     }
     
@@ -459,6 +468,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         actionSheet?.dismissAnimated()
                         let databasePath = context.account.basePath + "/postbox/db"
                         let _ = try? FileManager.default.removeItem(atPath: databasePath)
+                        exit(0)
                         preconditionFailure()
                     }),
                     ]), ActionSheetItemGroup(items: [
@@ -580,6 +590,26 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .disableVideoAspectScaling(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Video Cropping Optimization", value: !value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        settings.disableVideoAspectScaling = !value
+                        return settings
+                    })
+                }).start()
+            })
+        case let .enableVoipTcp(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Enable VoIP TCP", value: !value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        settings.enableVoipTcp = value
+                        return settings
+                    })
+                }).start()
+            })
         case let .hostInfo(theme, string):
             return ItemListTextItem(presentationData: presentationData, text: .plain(string), sectionId: self.section)
         case let .versionInfo(theme):
@@ -637,6 +667,9 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     for i in 0 ..< codecs.count {
         entries.append(.preferredVideoCodec(i, codecs[i].0, codecs[i].1, experimentalSettings.preferredVideoCodec == codecs[i].1))
     }
+    
+    entries.append(.disableVideoAspectScaling(experimentalSettings.disableVideoAspectScaling))
+    entries.append(.enableVoipTcp(experimentalSettings.enableVoipTcp))
 
     if let backupHostOverride = networkSettings?.backupHostOverride {
         entries.append(.hostInfo(presentationData.theme, "Host: \(backupHostOverride)"))

@@ -84,12 +84,6 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         self.micButtonPointerInteraction = PointerInteraction(view: self.micButton, style: .circle)
     }
     
-    @objc func handleLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
-        if !self.sendButtonHasApplyIcon && gestureRecognizer.state == .began {
-            //self.sendButtonLongPressed?()
-        }
-    }
-    
     func updateTheme(theme: PresentationTheme) {
         self.micButton.updateTheme(theme: theme)
         self.expandMediaInputButton.setImage(PresentationResourcesChat.chatInputPanelExpandButtonImage(theme), for: [])

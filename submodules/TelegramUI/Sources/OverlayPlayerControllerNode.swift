@@ -76,7 +76,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
             return false
         }, sendBotContextResultAsGif: { _, _, _, _ in
             return false
-        }, requestMessageActionCallback: { _, _, _ in
+        }, requestMessageActionCallback: { _, _, _, _ in
         }, requestMessageActionUrlAuth: { _, _, _ in
         }, activateSwitchInline: { _, _ in
         }, openUrl: { _, _, _, _ in
@@ -108,7 +108,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, navigateToFirstDateMessage: { _ in
         }, requestRedeliveryOfFailedMessages: { _ in
         }, addContact: { _ in   
-        }, rateCall: { _, _ in
+        }, rateCall: { _, _, _ in
         }, requestSelectMessagePollOptions: { _, _ in
         }, requestOpenMessagePollResults: { _, _ in
         }, openAppStorePage: {

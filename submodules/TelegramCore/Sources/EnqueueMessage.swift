@@ -316,7 +316,11 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     attributes.append(contentsOf: filterMessageAttributesForOutgoingMessage(requestedAttributes))
                         
                     if let replyToMessageId = replyToMessageId, replyToMessageId.peerId == peerId {
-                        attributes.append(ReplyMessageAttribute(messageId: replyToMessageId))
+                        var threadMessageId: MessageId?
+                        if let replyMessage = transaction.getMessage(replyToMessageId) {
+                            threadMessageId = replyMessage.effectiveReplyThreadMessageId
+                        }
+                        attributes.append(ReplyMessageAttribute(messageId: replyToMessageId, threadMessageId: threadMessageId))
                     }
                     var mediaList: [Media] = []
                     if let mediaReference = mediaReference {

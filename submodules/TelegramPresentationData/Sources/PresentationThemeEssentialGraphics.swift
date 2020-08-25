@@ -162,6 +162,10 @@ public final class PrincipalThemeEssentialGraphics {
     public let outgoingDateAndStatusImpressionIcon: UIImage
     public let mediaImpressionIcon: UIImage
     public let freeImpressionIcon: UIImage
+    public let incomingDateAndStatusRepliesIcon: UIImage
+    public let outgoingDateAndStatusRepliesIcon: UIImage
+    public let mediaRepliesIcon: UIImage
+    public let freeRepliesIcon: UIImage
     
     public let dateStaticBackground: UIImage
     public let dateFloatingBackground: UIImage
@@ -308,10 +312,19 @@ public final class PrincipalThemeEssentialGraphics {
             self.clockFreeMinImage = emptyImage
             self.dateAndStatusMediaBackground = emptyImage
             self.dateAndStatusFreeBackground = emptyImage
-            self.incomingDateAndStatusImpressionIcon = emptyImage
-            self.outgoingDateAndStatusImpressionIcon = emptyImage
-            self.mediaImpressionIcon = emptyImage
-            self.freeImpressionIcon = emptyImage
+                
+            let impressionCountImage = UIImage(bundleImageName: "Chat/Message/ImpressionCount")!
+            self.incomingDateAndStatusImpressionIcon = generateTintedImage(image: impressionCountImage, color: theme.message.incoming.secondaryTextColor)!
+            self.outgoingDateAndStatusImpressionIcon = generateTintedImage(image: impressionCountImage, color: theme.message.outgoing.secondaryTextColor)!
+            self.mediaImpressionIcon = generateTintedImage(image: impressionCountImage, color: .white)!
+            self.freeImpressionIcon = generateTintedImage(image: impressionCountImage, color: serviceColor.primaryText)!
+            
+            let repliesImage = UIImage(bundleImageName: "Chat/Message/ReplyCount")!
+            self.incomingDateAndStatusRepliesIcon = generateTintedImage(image: repliesImage, color: theme.message.incoming.secondaryTextColor)!
+            self.outgoingDateAndStatusRepliesIcon = generateTintedImage(image: repliesImage, color: theme.message.outgoing.secondaryTextColor)!
+            self.mediaRepliesIcon = generateTintedImage(image: repliesImage, color: .white)!
+            self.freeRepliesIcon = generateTintedImage(image: repliesImage, color: serviceColor.primaryText)!
+            
             self.radialIndicatorFileIconIncoming = emptyImage
             self.radialIndicatorFileIconOutgoing = emptyImage
         } else {
@@ -406,6 +419,12 @@ public final class PrincipalThemeEssentialGraphics {
             self.outgoingDateAndStatusImpressionIcon = generateTintedImage(image: impressionCountImage, color: theme.message.outgoing.secondaryTextColor)!
             self.mediaImpressionIcon = generateTintedImage(image: impressionCountImage, color: .white)!
             self.freeImpressionIcon = generateTintedImage(image: impressionCountImage, color: serviceColor.primaryText)!
+            
+            let repliesImage = UIImage(bundleImageName: "Chat/Message/ReplyCount")!
+            self.incomingDateAndStatusRepliesIcon = generateTintedImage(image: repliesImage, color: theme.message.incoming.secondaryTextColor)!
+            self.outgoingDateAndStatusRepliesIcon = generateTintedImage(image: repliesImage, color: theme.message.outgoing.secondaryTextColor)!
+            self.mediaRepliesIcon = generateTintedImage(image: repliesImage, color: .white)!
+            self.freeRepliesIcon = generateTintedImage(image: repliesImage, color: serviceColor.primaryText)!
             
             self.radialIndicatorFileIconIncoming = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: .black)!
             self.radialIndicatorFileIconOutgoing = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: .black)!

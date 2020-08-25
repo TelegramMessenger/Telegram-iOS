@@ -33,7 +33,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
     private let count: Int
     private var anchor: HistoryViewInputAnchor
     private var wrappedView: MutableMessageHistoryView
-    private var peerIds: MessageHistoryViewPeerIds
+    private var peerIds: MessageHistoryViewInput
     
     fileprivate var closestHole: MessageOfInterestHole?
     fileprivate var closestLaterMedia: [HolesViewMedia] = []
@@ -43,7 +43,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
         self.count = count
         
         let mainPeerId: PeerId
-        let peerIds: MessageHistoryViewPeerIds
+        let peerIds: MessageHistoryViewInput
         switch self.location {
         case let .peer(id):
             mainPeerId = id
@@ -127,7 +127,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
         
         if self.anchor != anchor {
             self.anchor = anchor
-            let peerIds: MessageHistoryViewPeerIds
+            let peerIds: MessageHistoryViewInput
             switch self.location {
             case let .peer(id):
                 peerIds = postbox.peerIdsForLocation(.peer(id), tagMask: nil)
@@ -155,7 +155,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
                 }
             }
             if reloadView {
-                let peerIds: MessageHistoryViewPeerIds
+                let peerIds: MessageHistoryViewInput
                 switch self.location {
                 case let .peer(id):
                     peerIds = postbox.peerIdsForLocation(.peer(id), tagMask: nil)

@@ -9,11 +9,11 @@ extension ReplyMarkupButton {
         switch apiButton {
             case let .keyboardButton(text):
                 self.init(title: text, titleWhenForwarded: nil, action: .text)
-            case let .keyboardButtonCallback(text, data):
+            case let .keyboardButtonCallback(flags, text, data):
                 let memory = malloc(data.size)!
                 memcpy(memory, data.data, data.size)
                 let dataBuffer = MemoryBuffer(memory: memory, capacity: data.size, length: data.size, freeWhenDone: true)
-                self.init(title: text, titleWhenForwarded: nil, action: .callback(dataBuffer))
+                self.init(title: text, titleWhenForwarded: nil, action: .callback(requiresPassword: (flags & (1 << 0)) != 0, data: dataBuffer))
             case let .keyboardButtonRequestGeoLocation(text):
                 self.init(title: text, titleWhenForwarded: nil, action: .requestMap)
             case let .keyboardButtonRequestPhone(text):

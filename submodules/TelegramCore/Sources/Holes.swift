@@ -9,6 +9,10 @@ import SyncCore
 func messageFilterForTagMask(_ tagMask: MessageTags) -> Api.MessagesFilter? {
     if tagMask == .photoOrVideo {
         return Api.MessagesFilter.inputMessagesFilterPhotoVideo
+    } else if tagMask == .photo {
+        return Api.MessagesFilter.inputMessagesFilterPhotos
+    } else if tagMask == .video {
+        return Api.MessagesFilter.inputMessagesFilterVideo
     } else if tagMask == .file {
         return Api.MessagesFilter.inputMessagesFilterDocument
     } else if tagMask == .music {

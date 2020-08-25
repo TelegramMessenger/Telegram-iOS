@@ -236,7 +236,13 @@ public struct MessageHistoryViewOrderStatistics: OptionSet {
     public static let locationWithinMonth = MessageHistoryViewOrderStatistics(rawValue: 1 << 1)
 }
 
-public enum MessageHistoryViewPeerIds: Equatable {
+public protocol MessageHistoryViewExternalInput: class {
+    func getNamespaces() -> [MessageId.Namespace]
+    func getMessageIds(namespace: MessageId.Namespace) -> [MessageId]
+    func getHoleIndices(namespace: MessageId.Namespace) -> IndexSet
+}
+
+public enum MessageHistoryViewInput: Equatable {
     case single(PeerId)
     case associated(PeerId, MessageId?)
 }
@@ -254,7 +260,7 @@ public enum HistoryViewInputAnchor: Equatable {
 }
 
 final class MutableMessageHistoryView {
-    private(set) var peerIds: MessageHistoryViewPeerIds
+    private(set) var peerIds: MessageHistoryViewInput
     let tag: MessageTags?
     let namespaces: MessageIdNamespaces
     private let orderStatistics: MessageHistoryViewOrderStatistics
@@ -274,7 +280,7 @@ final class MutableMessageHistoryView {
     
     fileprivate var isAddedToChatList: Bool
     
-    init(postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, clipHoles: Bool, peerIds: MessageHistoryViewPeerIds, anchor inputAnchor: HistoryViewInputAnchor, combinedReadStates: MessageHistoryViewReadState?, transientReadStates: MessageHistoryViewReadState?, tag: MessageTags?, namespaces: MessageIdNamespaces, count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
+    init(postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, clipHoles: Bool, peerIds: MessageHistoryViewInput, anchor inputAnchor: HistoryViewInputAnchor, combinedReadStates: MessageHistoryViewReadState?, transientReadStates: MessageHistoryViewReadState?, tag: MessageTags?, namespaces: MessageIdNamespaces, count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
         self.anchor = inputAnchor
         
         self.orderStatistics = orderStatistics

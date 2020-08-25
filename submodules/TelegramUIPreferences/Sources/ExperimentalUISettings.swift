@@ -12,6 +12,8 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
     public var playerEmbedding: Bool
     public var playlistPlayback: Bool
     public var preferredVideoCodec: String?
+    public var disableVideoAspectScaling: Bool
+    public var enableVoipTcp: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -23,7 +25,9 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
             foldersTabAtBottom: false,
             playerEmbedding: false,
             playlistPlayback: false,
-            preferredVideoCodec: nil
+            preferredVideoCodec: nil,
+            disableVideoAspectScaling: false,
+            enableVoipTcp: false
         )
     }
     
@@ -36,7 +40,9 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         foldersTabAtBottom: Bool,
         playerEmbedding: Bool,
         playlistPlayback: Bool,
-        preferredVideoCodec: String?
+        preferredVideoCodec: String?,
+        disableVideoAspectScaling: Bool,
+        enableVoipTcp: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -47,6 +53,8 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         self.playerEmbedding = playerEmbedding
         self.playlistPlayback = playlistPlayback
         self.preferredVideoCodec = preferredVideoCodec
+        self.disableVideoAspectScaling = disableVideoAspectScaling
+        self.enableVoipTcp = enableVoipTcp
     }
     
     public init(decoder: PostboxDecoder) {
@@ -59,6 +67,8 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         self.playerEmbedding = decoder.decodeInt32ForKey("playerEmbedding", orElse: 0) != 0
         self.playlistPlayback = decoder.decodeInt32ForKey("playlistPlayback", orElse: 0) != 0
         self.preferredVideoCodec = decoder.decodeOptionalStringForKey("preferredVideoCodec")
+        self.disableVideoAspectScaling = decoder.decodeInt32ForKey("disableVideoAspectScaling", orElse: 0) != 0
+        self.enableVoipTcp = decoder.decodeInt32ForKey("enableVoipTcp", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -73,6 +83,8 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         if let preferredVideoCodec = self.preferredVideoCodec {
             encoder.encodeString(preferredVideoCodec, forKey: "preferredVideoCodec")
         }
+        encoder.encodeInt32(self.disableVideoAspectScaling ? 1 : 0, forKey: "disableVideoAspectScaling")
+        encoder.encodeInt32(self.enableVoipTcp ? 1 : 0, forKey: "enableVoipTcp")
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {

@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
+import SyncCore
 import TelegramPresentationData
 import AccountContext
 import ContextUI
@@ -67,8 +68,10 @@ final class ChatSendMessageActionSheetController: ViewController {
         }
         
         var reminders = false
-        if case let .peer(peerId) = self.interfaceState.chatLocation, peerId == context.account.peerId {
-            reminders = true
+        var isSecret = false
+        if case let .peer(peerId) = self.interfaceState.chatLocation {
+            reminders = peerId == context.account.peerId
+            isSecret = peerId.namespace == Namespaces.Peer.SecretChat
         }
         
         self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, reminders: reminders, gesture: gesture, sendButtonFrame: self.sendButtonFrame, textInputNode: self.textInputNode, forwardedCount: forwardedCount, send: { [weak self] in
@@ -77,7 +80,7 @@ final class ChatSendMessageActionSheetController: ViewController {
         }, sendSilently: { [weak self] in
             self?.controllerInteraction?.sendCurrentMessage(true)
             self?.dismiss(cancel: false)
-        }, schedule: { [weak self] in
+        }, schedule: isSecret ? nil : { [weak self] in
             self?.controllerInteraction?.scheduleCurrentMessage()
             self?.dismiss(cancel: false)
         }, cancel: { [weak self] in

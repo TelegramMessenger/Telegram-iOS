@@ -752,13 +752,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         forwardInfoLayout: (ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, String?, CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode),
         replyInfoLayout: (ChatPresentationData, PresentationStrings, AccountContext, ChatMessageReplyInfoType, Message, CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode),
         actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (Bool) -> ChatMessageActionButtonsNode)),
-        mosaicStatusLayout: (AccountContext, ChatPresentationData, Bool, Int?, String, ChatMessageDateAndStatusType, CGSize, [MessageReaction]) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode),
+        mosaicStatusLayout: (AccountContext, ChatPresentationData, Bool, Int?, String, ChatMessageDateAndStatusType, CGSize, [MessageReaction], Int) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode),
         currentShareButtonNode: HighlightableButtonNode?,
         layoutConstants: ChatMessageItemLayoutConstants,
         currentItem: ChatMessageItem?,
         currentForwardInfo: (Peer?, String?)?,
         isSelected: Bool?
     ) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
+        let isPreview = item.presentationData.isPreview
         let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: isSelected)
         
         let fontSize = floor(item.presentationData.fontSize.baseDisplaySize * 14.0 / 17.0)
@@ -848,11 +849,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             }
         }
         
-        if hasAvatar {
-            avatarInset = layoutConstants.avatarDiameter
-        } else {
-            avatarInset = 0.0
-        }
+        avatarInset = hasAvatar ? layoutConstants.avatarDiameter : 0.0
         
         let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
         
@@ -905,6 +902,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     }
                 }
             }
+        }
+        
+        if isPreview {
+            needShareButton = false
         }
         
         var tmpWidth: CGFloat
@@ -988,7 +989,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 }
             } else if let attribute = attribute as? ReplyMessageAttribute {
                 replyMessage = firstMessage.associatedMessages[attribute.messageId]
-            } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
+            } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty && !isPreview {
                 replyMarkup = attribute
             }
         }
@@ -1205,11 +1206,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     edited = true
                 }
                 var viewCount: Int?
+                var dateReplies = 0
                 for attribute in message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
                         edited = !attribute.isHidden
                     } else if let attribute = attribute as? ViewCountMessageAttribute {
                         viewCount = attribute.count
+                    } else if let attribute = attribute as? ReplyThreadMessageAttribute {
+                        dateReplies = Int(attribute.count)
                     }
                 }
                 
@@ -1241,7 +1245,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     }
                 }
                 
-                mosaicStatusSizeAndApply = mosaicStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude), dateReactions)
+                mosaicStatusSizeAndApply = mosaicStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies)
             }
         }
         
@@ -1843,6 +1847,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 strongSelf.contextSourceNode.contentNode.addSubnode(nameNode)
             }
             nameNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + nameNodeOriginY), size: nameNodeSizeApply.0)
+            nameNode.displaysAsynchronously = !item.presentationData.isPreview
             
             if let credibilityIconImage = currentCredibilityIconImage {
                 let credibilityIconNode: ASImageNode

@@ -174,6 +174,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                         edited = true
                     }
                     var viewCount: Int?
+                    var dateReplies = 0
                     for attribute in item.message.attributes {
                         if let attribute = attribute as? EditedMessageAttribute {
                             if case .mosaic = preparePosition {
@@ -182,6 +183,8 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                         } else if let attribute = attribute as? ViewCountMessageAttribute {
                             viewCount = attribute.count
+                        } else if let attribute = attribute as? ReplyThreadMessageAttribute {
+                            dateReplies = Int(attribute.count)
                         }
                     }
                     
@@ -226,7 +229,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     var statusApply: ((Bool) -> Void)?
                     
                     if let statusType = statusType {
-                        let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: imageSize.width - 30.0, height: CGFloat.greatestFiniteMagnitude), dateReactions)
+                        let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: imageSize.width - 30.0, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies)
                         statusSize = size
                         statusApply = apply
                     }

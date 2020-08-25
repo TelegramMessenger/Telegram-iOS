@@ -293,11 +293,14 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         edited = true
                     }
                     var viewCount: Int?
+                    var dateReplies = 0
                     for attribute in message.attributes {
                         if let attribute = attribute as? EditedMessageAttribute {
                             edited = !attribute.isHidden
                         } else if let attribute = attribute as? ViewCountMessageAttribute {
                             viewCount = attribute.count
+                        } else if let attribute = attribute as? ReplyThreadMessageAttribute {
+                            dateReplies = Int(attribute.count)
                         }
                     }
                     
@@ -316,7 +319,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     
                     let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings, reactionCount: dateReactionCount)
                     
-                    let (size, apply) = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, constrainedSize, dateReactions)
+                    let (size, apply) = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, constrainedSize, dateReactions, dateReplies)
                     statusSize = size
                     statusApply = apply
                 }
@@ -868,7 +871,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             statusNode.backgroundNodeColor = backgroundNodeColor
         }
         
-        if state != .none && isVoice && self.playbackAudioLevelView == nil {
+        if state != .none && isVoice && self.playbackAudioLevelView == nil && false {
             let blobFrame = progressFrame.insetBy(dx: -12.0, dy: -12.0)
             let playbackAudioLevelView = VoiceBlobView(
                 frame: blobFrame,

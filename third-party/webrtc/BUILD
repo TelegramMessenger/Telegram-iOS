@@ -1,3 +1,5 @@
+use_gn_build = True
+
 webrtc_libs = [
     "libwebrtc.a",
 ]
@@ -70,7 +72,7 @@ genrule(
 )
 
 cc_library(
-    name = "webrtc_lib_gn",
+    name = "webrtc_lib_gn" if not use_gn_build else "webrtc_lib",
     srcs = [":" + x for x in webrtc_libs],
     visibility = ["//visibility:public"],
 )
@@ -2182,7 +2184,7 @@ objc_library(
 )
 
 objc_library(
-    name = "webrtc_lib",
+    name = "webrtc_lib_custom" if use_gn_build else "webrtc_lib",
     enable_modules = True,
     module_name = "webrtc",
     srcs = combined_sources,

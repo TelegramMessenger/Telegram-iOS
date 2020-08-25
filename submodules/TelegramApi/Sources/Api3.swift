@@ -2046,39 +2046,6 @@ public extension Api {
                     })
                 }
             
-                public static func sendEncrypted(peer: Api.InputEncryptedChat, randomId: Int64, data: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SentEncryptedMessage>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1451792525)
-                    peer.serialize(buffer, true)
-                    serializeInt64(randomId, buffer: buffer, boxed: false)
-                    serializeBytes(data, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.sendEncrypted", parameters: [("peer", peer), ("randomId", randomId), ("data", data)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.SentEncryptedMessage? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.SentEncryptedMessage?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.SentEncryptedMessage
-                        }
-                        return result
-                    })
-                }
-            
-                public static func sendEncryptedFile(peer: Api.InputEncryptedChat, randomId: Int64, data: Buffer, file: Api.InputEncryptedFile) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SentEncryptedMessage>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1701831834)
-                    peer.serialize(buffer, true)
-                    serializeInt64(randomId, buffer: buffer, boxed: false)
-                    serializeBytes(data, buffer: buffer, boxed: false)
-                    file.serialize(buffer, true)
-                    return (FunctionDescription(name: "messages.sendEncryptedFile", parameters: [("peer", peer), ("randomId", randomId), ("data", data), ("file", file)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.SentEncryptedMessage? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.SentEncryptedMessage?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.SentEncryptedMessage
-                        }
-                        return result
-                    })
-                }
-            
                 public static func sendEncryptedService(peer: Api.InputEncryptedChat, randomId: Int64, data: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SentEncryptedMessage>) {
                     let buffer = Buffer()
                     buffer.appendInt32(852769188)
@@ -2238,26 +2205,6 @@ public extension Api {
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-            
-                public static func getMessagesViews(peer: Api.InputPeer, id: [Int32], increment: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Int32]>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-993483427)
-                    peer.serialize(buffer, true)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(id.count))
-                    for item in id {
-                        serializeInt32(item, buffer: buffer, boxed: false)
-                    }
-                    increment.serialize(buffer, true)
-                    return (FunctionDescription(name: "messages.getMessagesViews", parameters: [("peer", peer), ("id", id), ("increment", increment)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Int32]? in
-                        let reader = BufferReader(buffer)
-                        var result: [Int32]?
-                        if let _ = reader.readInt32() {
-                            result = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
                         }
                         return result
                     })
@@ -2424,23 +2371,6 @@ public extension Api {
                         var result: Api.messages.MessageEditData?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.messages.MessageEditData
-                        }
-                        return result
-                    })
-                }
-            
-                public static func getBotCallbackAnswer(flags: Int32, peer: Api.InputPeer, msgId: Int32, data: Buffer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.BotCallbackAnswer>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-2130010132)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    serializeInt32(msgId, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeBytes(data!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "messages.getBotCallbackAnswer", parameters: [("flags", flags), ("peer", peer), ("msgId", msgId), ("data", data)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.BotCallbackAnswer? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.BotCallbackAnswer?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.BotCallbackAnswer
                         }
                         return result
                     })
@@ -3385,26 +3315,6 @@ public extension Api {
                     })
                 }
             
-                public static func searchGlobal(flags: Int32, folderId: Int32?, q: String, offsetRate: Int32, offsetPeer: Api.InputPeer, offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1083038300)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(folderId!, buffer: buffer, boxed: false)}
-                    serializeString(q, buffer: buffer, boxed: false)
-                    serializeInt32(offsetRate, buffer: buffer, boxed: false)
-                    offsetPeer.serialize(buffer, true)
-                    serializeInt32(offsetId, buffer: buffer, boxed: false)
-                    serializeInt32(limit, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.searchGlobal", parameters: [("flags", flags), ("folderId", folderId), ("q", q), ("offsetRate", offsetRate), ("offsetPeer", offsetPeer), ("offsetId", offsetId), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Messages? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.messages.Messages?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.messages.Messages
-                        }
-                        return result
-                    })
-                }
-            
                 public static func sendMessage(flags: Int32, peer: Api.InputPeer, replyToMsgId: Int32?, message: String, randomId: Int64, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, scheduleDate: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1376532592)
@@ -3714,6 +3624,121 @@ public extension Api {
                         var result: Api.messages.FeaturedStickers?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.messages.FeaturedStickers
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getMessagesViews(peer: Api.InputPeer, id: [Int32], increment: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.MessageViews]>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-39035462)
+                    peer.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(id.count))
+                    for item in id {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    increment.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.getMessagesViews", parameters: [("peer", peer), ("id", id), ("increment", increment)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.MessageViews]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Api.MessageViews]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageViews.self)
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getBotCallbackAnswer(flags: Int32, peer: Api.InputPeer, msgId: Int32, data: Buffer?, password: Api.InputCheckPasswordSRP?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.BotCallbackAnswer>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1824339449)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeBytes(data!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {password!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "messages.getBotCallbackAnswer", parameters: [("flags", flags), ("peer", peer), ("msgId", msgId), ("data", data), ("password", password)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.BotCallbackAnswer? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.BotCallbackAnswer?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.BotCallbackAnswer
+                        }
+                        return result
+                    })
+                }
+            
+                public static func sendEncrypted(flags: Int32, peer: Api.InputEncryptedChat, randomId: Int64, data: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SentEncryptedMessage>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1157265941)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt64(randomId, buffer: buffer, boxed: false)
+                    serializeBytes(data, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.sendEncrypted", parameters: [("flags", flags), ("peer", peer), ("randomId", randomId), ("data", data)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.SentEncryptedMessage? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.SentEncryptedMessage?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.SentEncryptedMessage
+                        }
+                        return result
+                    })
+                }
+            
+                public static func sendEncryptedFile(flags: Int32, peer: Api.InputEncryptedChat, randomId: Int64, data: Buffer, file: Api.InputEncryptedFile) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.SentEncryptedMessage>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1431914525)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt64(randomId, buffer: buffer, boxed: false)
+                    serializeBytes(data, buffer: buffer, boxed: false)
+                    file.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.sendEncryptedFile", parameters: [("flags", flags), ("peer", peer), ("randomId", randomId), ("data", data), ("file", file)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.SentEncryptedMessage? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.SentEncryptedMessage?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.SentEncryptedMessage
+                        }
+                        return result
+                    })
+                }
+            
+                public static func searchGlobal(flags: Int32, folderId: Int32?, q: String, filter: Api.MessagesFilter, offsetRate: Int32, offsetPeer: Api.InputPeer, offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1934479725)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(folderId!, buffer: buffer, boxed: false)}
+                    serializeString(q, buffer: buffer, boxed: false)
+                    filter.serialize(buffer, true)
+                    serializeInt32(offsetRate, buffer: buffer, boxed: false)
+                    offsetPeer.serialize(buffer, true)
+                    serializeInt32(offsetId, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.searchGlobal", parameters: [("flags", flags), ("folderId", folderId), ("q", q), ("filter", filter), ("offsetRate", offsetRate), ("offsetPeer", offsetPeer), ("offsetId", offsetId), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Messages? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Messages?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Messages
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getReplies(peer: Api.InputPeer, msgId: Int32, offsetId: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32, hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-39505956)
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    serializeInt32(offsetId, buffer: buffer, boxed: false)
+                    serializeInt32(addOffset, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    serializeInt32(maxId, buffer: buffer, boxed: false)
+                    serializeInt32(minId, buffer: buffer, boxed: false)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getReplies", parameters: [("peer", peer), ("msgId", msgId), ("offsetId", offsetId), ("addOffset", addOffset), ("limit", limit), ("maxId", maxId), ("minId", minId), ("hash", hash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Messages? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Messages?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Messages
                         }
                         return result
                     })
@@ -4446,6 +4471,41 @@ public extension Api {
                         var result: Api.stats.MegagroupStats?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.stats.MegagroupStats
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getMessagePublicForwards(channel: Api.InputChannel, msgId: Int32, offsetRate: Int32, offsetPeer: Api.InputPeer, offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1445996571)
+                    channel.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    serializeInt32(offsetRate, buffer: buffer, boxed: false)
+                    offsetPeer.serialize(buffer, true)
+                    serializeInt32(offsetId, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "stats.getMessagePublicForwards", parameters: [("channel", channel), ("msgId", msgId), ("offsetRate", offsetRate), ("offsetPeer", offsetPeer), ("offsetId", offsetId), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Messages? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Messages?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Messages
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getMessageStats(flags: Int32, channel: Api.InputChannel, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.MessageStats>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1226791947)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    channel.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "stats.getMessageStats", parameters: [("flags", flags), ("channel", channel), ("msgId", msgId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stats.MessageStats? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.stats.MessageStats?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.stats.MessageStats
                         }
                         return result
                     })
@@ -5440,6 +5500,21 @@ public extension Api {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getCountriesList(langCode: String, hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.CountriesList>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1935116200)
+                    serializeString(langCode, buffer: buffer, boxed: false)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "help.getCountriesList", parameters: [("langCode", langCode), ("hash", hash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.help.CountriesList? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.help.CountriesList?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.help.CountriesList
                         }
                         return result
                     })

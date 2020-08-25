@@ -90,6 +90,8 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             transaction.offsetPendingMessagesTimestamps(lowerBound: message.id, excludeIds: Set([message.id]), timestamp: updatedTimestamp)
         }
         
+        var updatedMessage: StoreMessage?
+        
         transaction.updateMessage(message.id, update: { currentMessage in
             let updatedId: MessageId
             if let messageId = messageId {
@@ -222,8 +224,21 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 }
             }
             
-            return .update(StoreMessage(id: updatedId, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: forwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media))
+            let updatedMessageValue = StoreMessage(id: updatedId, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: forwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media)
+            updatedMessage = updatedMessageValue
+            
+            return .update(updatedMessageValue)
         })
+        if let updatedMessage = updatedMessage, case let .Id(updatedId) = updatedMessage.id {
+            if message.id.namespace == Namespaces.Message.Local && updatedId.namespace == Namespaces.Message.Cloud && updatedId.peerId.namespace == Namespaces.Peer.CloudChannel {
+                for attribute in updatedMessage.attributes {
+                    if let attribute = attribute as? ReplyMessageAttribute {
+                        updateMessageThreadStats(transaction: transaction, threadMessageId: attribute.effectiveReplyThreadMessageId, difference: 1)
+                        break
+                    }
+                }
+            }
+        }
         for file in sentStickers {
             transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
         }
