@@ -157,8 +157,8 @@
 - (void)dealloc {
 }
 
-- (void)switchVideoInput:(NSString * _Nonnull)deviceeId {
-    _interface->switchToDevice(deviceeId.UTF8String);
+- (void)switchVideoInput:(NSString * _Nonnull)deviceId {
+    _interface->switchToDevice(deviceId.UTF8String);
 }
 
 - (void)setIsVideoEnabled:(bool)isVideoEnabled {

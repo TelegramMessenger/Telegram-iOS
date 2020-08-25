@@ -337,7 +337,7 @@ public final class OngoingCallVideoCapturer {
     }
     
     public func switchVideoInput(isFront: Bool) {
-        self.impl.switchVideoInput(isFront)
+        self.impl.switchVideoInput(isFront ? "" : "back")
     }
     
     public func makeOutgoingVideoView(completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
