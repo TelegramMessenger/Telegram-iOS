@@ -13,7 +13,7 @@
 
 #ifndef WEBRTC_IOS
 #import "platform/darwin/VideoMetalViewMac.h"
-#define GLVideoView VideoMetalView
+#import "platform/darwin/GLVideoViewMac.h"
 #define UIViewContentModeScaleAspectFill kCAGravityResizeAspectFill
 #define UIViewContentModeScaleAspect kCAGravityResizeAspect
 
@@ -142,18 +142,23 @@
 @implementation OngoingCallThreadLocalContextVideoCapturer
 
 - (instancetype _Nonnull)init {
+    return [self initWithDeviceId:@""];
+}
+
+- (instancetype _Nonnull)initWithDeviceId:(NSString * _Nonnull)deviceId {
     self = [super init];
     if (self != nil) {
-        _interface = tgcalls::VideoCaptureInterface::Create();
+        _interface = tgcalls::VideoCaptureInterface::Create(deviceId.UTF8String);
     }
     return self;
 }
 
+
 - (void)dealloc {
 }
 
-- (void)switchVideoInput:(bool)isFront {
-    _interface->switchToDevice(isFront ? "" : "back");
+- (void)switchVideoInput:(NSString * _Nonnull)deviceId {
+    _interface->switchToDevice(deviceId.UTF8String);
 }
 
 - (void)setIsVideoEnabled:(bool)isVideoEnabled {
@@ -210,7 +215,7 @@
     NSString *_version;
     id<OngoingCallThreadLocalContextQueueWebrtc> _queue;
     int32_t _contextId;
-
+    
     OngoingCallNetworkTypeWebrtc _networkType;
     NSTimeInterval _callReceiveTimeout;
     NSTimeInterval _callRingTimeout;
@@ -260,29 +265,29 @@
 
 static tgcalls::NetworkType callControllerNetworkTypeForType(OngoingCallNetworkTypeWebrtc type) {
     switch (type) {
-    case OngoingCallNetworkTypeWifi:
-        return tgcalls::NetworkType::WiFi;
-    case OngoingCallNetworkTypeCellularGprs:
-        return tgcalls::NetworkType::Gprs;
-    case OngoingCallNetworkTypeCellular3g:
-        return tgcalls::NetworkType::ThirdGeneration;
-    case OngoingCallNetworkTypeCellularLte:
-        return tgcalls::NetworkType::Lte;
-    default:
-        return tgcalls::NetworkType::ThirdGeneration;
+        case OngoingCallNetworkTypeWifi:
+            return tgcalls::NetworkType::WiFi;
+        case OngoingCallNetworkTypeCellularGprs:
+            return tgcalls::NetworkType::Gprs;
+        case OngoingCallNetworkTypeCellular3g:
+            return tgcalls::NetworkType::ThirdGeneration;
+        case OngoingCallNetworkTypeCellularLte:
+            return tgcalls::NetworkType::Lte;
+        default:
+            return tgcalls::NetworkType::ThirdGeneration;
     }
 }
 
 static tgcalls::DataSaving callControllerDataSavingForType(OngoingCallDataSavingWebrtc type) {
     switch (type) {
-    case OngoingCallDataSavingNever:
-        return tgcalls::DataSaving::Never;
-    case OngoingCallDataSavingCellular:
-        return tgcalls::DataSaving::Mobile;
-    case OngoingCallDataSavingAlways:
-        return tgcalls::DataSaving::Always;
-    default:
-        return tgcalls::DataSaving::Never;
+        case OngoingCallDataSavingNever:
+            return tgcalls::DataSaving::Never;
+        case OngoingCallDataSavingCellular:
+            return tgcalls::DataSaving::Mobile;
+        case OngoingCallDataSavingAlways:
+            return tgcalls::DataSaving::Always;
+        default:
+            return tgcalls::DataSaving::Never;
     }
 }
 
@@ -706,11 +711,11 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         dispatch_async(dispatch_get_main_queue(), ^{
             if ([VideoMetalView isSupported]) {
                 VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
-                #if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE
                 remoteRenderer.videoContentMode = UIViewContentModeScaleToFill;
-                #else
+#else
                 remoteRenderer.videoContentMode = UIViewContentModeScaleAspect;
-                #endif
+#endif
                 
                 std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
                 __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;

@@ -91,6 +91,8 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
         }
     }
     
+    var preferredCountryIdForCode: [String: String] = [:]
+    
     var selectCountryCode: (() -> Void)?
     
     var inProgress: Bool = false {
@@ -155,9 +157,43 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
         
         self.countryButton.addTarget(self, action: #selector(self.countryPressed), forControlEvents: .touchUpInside)
         
+        let processNumberChange: (String) -> Bool = { [weak self] number in
+            guard let strongSelf = self else {
+                return false
+            }
+            if let (country, _) = AuthorizationSequenceCountrySelectionController.lookupCountryIdByNumber(number, preferredCountries: strongSelf.preferredCountryIdForCode) {
+                let flagString = emojiFlagForISOCountryCode(country.id)
+                let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(country.id, strings: strongSelf.presentationData.strings) ?? country.name
+                strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(17.0), with: strongSelf.presentationData.theme.list.itemPrimaryTextColor, for: [])
+                
+                let maskFont = Font.with(size: 20.0, design: .regular, traits: [.monospacedNumbers])
+                if let mask = AuthorizationSequenceCountrySelectionController.lookupPatternByNumber(number, preferredCountries: strongSelf.preferredCountryIdForCode).flatMap({ NSAttributedString(string: $0, font: maskFont, textColor: strongSelf.presentationData.theme.list.itemPlaceholderTextColor) }) {
+                    strongSelf.phoneInputNode.numberField.textField.attributedPlaceholder = nil
+                    strongSelf.phoneInputNode.mask = mask
+                } else {
+                    strongSelf.phoneInputNode.mask = nil
+                    strongSelf.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strongSelf.presentationData.strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: strongSelf.presentationData.theme.list.itemPlaceholderTextColor)
+                }
+                return true
+            } else {
+                return false
+            }
+        }
+        
+        self.phoneInputNode.numberTextUpdated = { [weak self] number in
+            if let strongSelf = self {
+                let _ = processNumberChange(strongSelf.phoneInputNode.number)
+            }
+        }
+        
         self.phoneInputNode.countryCodeUpdated = { [weak self] code, name in
             if let strongSelf = self {
-                if let code = Int(code), let name = name, let countryName = countryCodeAndIdToName[CountryCodeAndId(code: code, id: name)] {
+                if let name = name {
+                    strongSelf.preferredCountryIdForCode[code] = name
+                }
+                
+                if processNumberChange(strongSelf.phoneInputNode.number) {
+                } else if let code = Int(code), let name = name, let countryName = countryCodeAndIdToName[CountryCodeAndId(code: code, id: name)] {
                     let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(name, strings: strongSelf.presentationData.strings) ?? countryName
                     strongSelf.countryButton.setTitle(localizedName, with: Font.regular(17.0), with: strongSelf.presentationData.theme.list.itemPrimaryTextColor, for: [])
                 } else if let code = Int(code), let (_, countryName) = countryCodeToIdAndName[code] {
@@ -165,6 +201,14 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
                 } else {
                     strongSelf.countryButton.setTitle(strongSelf.presentationData.strings.Login_CountryCode, with: Font.regular(17.0), with: strongSelf.presentationData.theme.list.itemPrimaryTextColor, for: [])
                 }
+            }
+        }
+        
+        self.phoneInputNode.customFormatter = { number in
+            if let (_, code) = AuthorizationSequenceCountrySelectionController.lookupCountryIdByNumber(number, preferredCountries: [:]) {
+                return code.code
+            } else {
+                return nil
             }
         }
         
@@ -193,6 +237,10 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
         self.phoneInputNode.number = "+\(countryCodeAndId.0)"
     }
     
+    func updateCountryCode() {
+        self.phoneInputNode.codeAndNumber = self.codeAndNumber
+    }
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         var insets = layout.insets(options: [.statusBar, .input])
         insets.left = layout.safeInsets.left
@@ -215,12 +263,14 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
         
         let countryCodeFrame = CGRect(origin: CGPoint(x: 9.0, y: navigationHeight + 44.0 + 1.0), size: CGSize(width: 45.0, height: 44.0))
         let numberFrame = CGRect(origin: CGPoint(x: 70.0, y: navigationHeight + 44.0 + 1.0), size: CGSize(width: layout.size.width - 70.0 - 8.0, height: 44.0))
+        let placeholderFrame = numberFrame.offsetBy(dx: -1.0, dy: 16.0)
         
         let phoneInputFrame = countryCodeFrame.union(numberFrame)
         
         transition.updateFrame(node: self.phoneInputNode, frame: phoneInputFrame)
         transition.updateFrame(node: self.phoneInputNode.countryCodeField, frame: countryCodeFrame.offsetBy(dx: -phoneInputFrame.minX, dy: -phoneInputFrame.minY))
         transition.updateFrame(node: self.phoneInputNode.numberField, frame: numberFrame.offsetBy(dx: -phoneInputFrame.minX, dy: -phoneInputFrame.minY))
+        transition.updateFrame(node: self.phoneInputNode.placeholderNode, frame: placeholderFrame.offsetBy(dx: -phoneInputFrame.minX, dy: -phoneInputFrame.minY))
         
         transition.updateFrame(node: self.noticeNode, frame: CGRect(origin: CGPoint(x: 15.0 + insets.left, y: navigationHeight + inputHeight + 8.0), size: noticeSize))
     }

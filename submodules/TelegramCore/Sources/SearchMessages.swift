@@ -323,8 +323,8 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
     |> mapToSignal { result, additionalResult -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> in
         return account.postbox.transaction { transaction -> (SearchMessagesResult, SearchMessagesState) in
             var additional: SearchMessagesPeerState? = mergedState(transaction: transaction, state: state?.additional, result: additionalResult)
-            if state?.additional == nil, case .general = location {
-                let secretMessages = transaction.searchMessages(peerId: nil, query: query, tags: nil)
+            if state?.additional == nil, case let .general(tags) = location {
+                let secretMessages = transaction.searchMessages(peerId: nil, query: query, tags: tags)
                 var readStates: [PeerId: CombinedPeerReadState] = [:]
                 for message in secretMessages {
                     if let readState = transaction.getCombinedPeerReadState(message.id.peerId) {

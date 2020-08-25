@@ -769,7 +769,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 messageTags = .photo
             } else if query.hasPrefix("%video ") {
                 messageTags = .video
-            }  else if query.hasPrefix("%file ") {
+            } else if query.hasPrefix("%file ") {
                 messageTags = .file
             } else if query.hasPrefix("%music ") {
                 messageTags = .music

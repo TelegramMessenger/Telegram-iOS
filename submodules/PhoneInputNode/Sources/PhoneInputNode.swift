@@ -78,6 +78,7 @@ private func cleanSuffix(_ text: String) -> String {
 
 extension String {
     func applyPatternOnNumbers(pattern: String, replacementCharacter: Character) -> String {
+        let pattern = pattern.replacingOccurrences( of: "[0-9]", with: "X", options: .regularExpression)
         var pureNumber = self.replacingOccurrences( of: "[^0-9]", with: "", options: .regularExpression)
         for index in 0 ..< pattern.count {
             guard index < pureNumber.count else { return pureNumber }
@@ -165,6 +166,7 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     public var returnAction: (() -> Void)?
     
     private let phoneFormatter = InteractivePhoneFormatter()
+    public var customFormatter: ((String) -> String?)?
     
     public var mask: NSAttributedString? {
         didSet {
@@ -175,8 +177,12 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     private func updatePlaceholder() {
         if let mask = self.mask {
             let mutableMask = NSMutableAttributedString(attributedString: mask)
-            mutableMask.replaceCharacters(in: NSRange(location: 0, length: mask.string.count), with: mask.string.replacingOccurrences(of: "X", with: "-"))
-            mutableMask.addAttribute(.foregroundColor, value: UIColor.clear, range: NSRange(location: 0, length: min(self.numberField.textField.text?.count ?? 0, mask.string.count)))
+            mutableMask.replaceCharacters(in: NSRange(location: 0, length: mask.string.count), with: mask.string.replacingOccurrences(of: "X", with: "–"))
+            if let text = self.numberField.textField.text {
+                mutableMask.replaceCharacters(in: NSRange(location: 0, length: min(text.count, mask.string.count)), with: text)
+            }
+            mutableMask.addAttribute(.foregroundColor, value: UIColor.clear, range: NSRange(location: 0, length: min(self.numberField.textField.text?.count ?? 0, mutableMask.string.count)))
+            mutableMask.addAttribute(.kern, value: 1.6, range: NSRange(location: 0, length: mask.string.count))
             self.placeholderNode.attributedText = mutableMask
         } else {
             self.placeholderNode.attributedText = NSAttributedString(string: "")
@@ -212,7 +218,7 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         } else {
             self.numberField.textField.keyboardType = .numberPad
         }
-        self.numberField.textField.defaultTextAttributes = [NSAttributedString.Key.font: font, NSAttributedString.Key.kern: 2.0]
+        self.numberField.textField.defaultTextAttributes = [NSAttributedString.Key.font: font, NSAttributedString.Key.kern: 1.6]
         super.init()
         
         self.addSubnode(self.countryCodeField)
@@ -260,7 +266,12 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     private func updateNumber(_ inputText: String, tryRestoringInputPosition: Bool = true, forceNotifyCountryCodeUpdated: Bool = false) {
-        let (regionPrefix, text) = self.phoneFormatter.updateText(inputText)
+        var (regionPrefix, text) = self.phoneFormatter.updateText(inputText)
+        
+        if let customFormatter = self.customFormatter, let customRegionPrefix = customFormatter(inputText) {
+            regionPrefix = "+\(customRegionPrefix)"
+            text = inputText
+        }
                 
         var realRegionPrefix: String
         var numberText: String
