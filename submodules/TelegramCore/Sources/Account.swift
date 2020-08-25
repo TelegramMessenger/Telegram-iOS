@@ -235,11 +235,11 @@ public func accountWithId(accountManager: AccountManager, networkArguments: Netw
             case let .upgrading(progress):
                 return .single(.upgrading(progress))
             case let .postbox(postbox):
-                return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?) in
-                    return (transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings, transaction.getSharedData(SharedDataKeys.proxySettings) as? ProxySettings)
+                return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?, Bool) in
+                    return (transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings, transaction.getSharedData(SharedDataKeys.proxySettings) as? ProxySettings, transaction.getRecords().first(where: { $0.id == id })?.attributes.contains(where: { $0 is HiddenAccountAttribute }) ?? false)
                 }
-                |> mapToSignal { localizationSettings, proxySettings -> Signal<AccountResult, NoError> in
-                    return postbox.transaction { transaction -> (PostboxCoding?, LocalizationSettings?, ProxySettings?, NetworkSettings?) in
+                |> mapToSignal { localizationSettings, proxySettings, isHidden -> Signal<AccountResult, NoError> in
+                    return postbox.transaction { transaction -> (PostboxCoding?, LocalizationSettings?, ProxySettings?, NetworkSettings?, Bool) in
                         var state = transaction.getState()
                         if state == nil, let backupData = backupData {
                             let backupState = AuthorizedAccountState(isTestingEnvironment: beginWithTestingEnvironment, masterDatacenterId: backupData.masterDatacenterId, peerId: PeerId(backupData.peerId), state: nil)
@@ -251,9 +251,9 @@ public func accountWithId(accountManager: AccountManager, networkArguments: Netw
                             transaction.setKeychainEntry(data, forKey: "persistent:datacenterAuthInfoById")
                         }
                         
-                        return (state, localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings)
+                        return (state, localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings) as? NetworkSettings, isHidden)
                     }
-                    |> mapToSignal { (accountState, localizationSettings, proxySettings, networkSettings) -> Signal<AccountResult, NoError> in
+                    |> mapToSignal { (accountState, localizationSettings, proxySettings, networkSettings, isHidden) -> Signal<AccountResult, NoError> in
                         let keychain = makeExclusiveKeychain(id: id, postbox: postbox)
                         
                         if let accountState = accountState {
@@ -270,7 +270,7 @@ public func accountWithId(accountManager: AccountManager, networkArguments: Netw
                                     |> mapToSignal { phoneNumber in
                                         return initializedNetwork(arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: phoneNumber)
                                         |> map { network -> AccountResult in
-                                            return .authorized(Account(accountManager: accountManager, id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, networkArguments: networkArguments, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods, supplementary: supplementary))
+                                            return .authorized(Account(accountManager: accountManager, id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, networkArguments: networkArguments, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods, supplementary: supplementary, isHidden: isHidden))
                                         }
                                     }
                                 case _:
@@ -923,7 +923,7 @@ public class Account {
         return self._importantTasksRunning.get()
     }
     
-    public var isHidden: Bool = false
+    public var isHidden: Bool
     private var isHiddenDisposable: Disposable?
     
     fileprivate let masterNotificationKey = Atomic<MasterNotificationKey?>(value: nil)
@@ -933,7 +933,7 @@ public class Account {
     private var lastSmallLogPostTimestamp: Double?
     private let smallLogPostDisposable = MetaDisposable()
     
-    public init(accountManager: AccountManager, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, supplementary: Bool) {
+    public init(accountManager: AccountManager, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, supplementary: Bool, isHidden: Bool) {
         self.id = id
         self.basePath = basePath
         self.testingEnvironment = testingEnvironment
@@ -941,6 +941,7 @@ public class Account {
         self.network = network
         self.networkArguments = networkArguments
         self.peerId = peerId
+        self.isHidden = isHidden
         
         self.auxiliaryMethods = auxiliaryMethods
         self.supplementary = supplementary
@@ -984,7 +985,7 @@ public class Account {
         
         let networkStateQueue = Queue()
         
-        self.isHiddenDisposable = (accountManager.allAccountRecords()
+        self.isHiddenDisposable = (accountManager.accountRecords()
         |> map { view -> Bool in
             return view.records.first(where: { $0.id == id })?.attributes.contains(where: { $0 is HiddenAccountAttribute }) ?? false
         }

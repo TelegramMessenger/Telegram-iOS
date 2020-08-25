@@ -168,7 +168,7 @@ public func setAccountPushNotificationsEnabledOnThisDevice(accountIds: [AccountR
 }
 
 public func updatePushNotificationsSettingsAfterOffMasterPasscode(transaction: AccountManagerModifier) {
-    let accountIds = transaction.getAllRecords()
+    let accountIds = transaction.getRecords()
         .filter { $0.attributes.contains { $0 is HiddenAccountAttribute } }
         .map { $0.id }
 
@@ -201,7 +201,7 @@ public func updatePushNotificationsSettingsAfterOnMasterPasscode(transaction: Ac
 
 public func updatePushNotificationsSettingsAfterAllPublicLogout(accountManager: AccountManager) {
     let _ = (accountManager.transaction { transaction in
-        let accountIds = transaction.getAllRecords()
+        let accountIds = transaction.getRecords()
             .filter { $0.attributes.contains { $0 is HiddenAccountAttribute } }
             .map { $0.id }
         

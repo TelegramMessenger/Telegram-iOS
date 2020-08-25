@@ -46,7 +46,7 @@ public func activeAccountsAndPeers(context: AccountContext, includePrimary: Bool
 }
 
 public func visibleAccountsAndPeers(context: AccountContext, includePrimary: Bool = false) -> Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError> {
-    let hiddenIds = context.sharedContext.accountManager.allAccountRecords()
+    let hiddenIds = context.sharedContext.accountManager.accountRecords()
     |> map { view -> [AccountRecordId] in
         return view.records.filter({ $0.attributes.contains(where: { $0 is HiddenAccountAttribute }) }).map { $0.id }
     }

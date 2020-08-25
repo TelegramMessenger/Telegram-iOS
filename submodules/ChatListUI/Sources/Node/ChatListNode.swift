@@ -1481,7 +1481,7 @@ public final class ChatListNode: ListView {
                     
                     completion()
                     
-                    strongSelf.context.sharedContext.accountManager.displayedAccountsFilter.didFinishChangingAccountPromise.set(.single(()))
+                    strongSelf.context.sharedContext.accountManager.hiddenAccountManager.didFinishChangingAccountPromise.set(.single(()))
                 }
             }
             

@@ -113,8 +113,8 @@ public final class NotificationViewControllerImpl {
         
         if sharedAccountContext == nil {
             initializeAccountManagement()
-            let displayedAccountsFilter = DisplayedAccountsFilterImpl()
-            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", displayedAccountsFilter: displayedAccountsFilter)
+            let hiddenAccountManager = HiddenAccountManagerImpl()
+            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", hiddenAccountManager: hiddenAccountManager)
             updateHiddenAccountsAccessChallengeData(manager: accountManager)
             
             var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
@@ -152,7 +152,7 @@ public final class NotificationViewControllerImpl {
             
             let presentationDataPromise = Promise<PresentationData>()
             
-            let appLockContext = AppLockContextImpl(rootPath: rootPath, window: nil, rootController: nil, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), displayedAccountsFilter: displayedAccountsFilter, lockIconInitialFrame: {
+            let appLockContext = AppLockContextImpl(rootPath: rootPath, window: nil, rootController: nil, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), hiddenAccountManager: hiddenAccountManager, lockIconInitialFrame: {
                 return nil
             })
             

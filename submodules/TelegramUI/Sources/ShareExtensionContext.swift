@@ -169,8 +169,8 @@ public class ShareRootControllerImpl {
             
             initializeAccountManagement()
             
-            let displayedAccountsFilter = DisplayedAccountsFilterImpl()
-            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", displayedAccountsFilter: displayedAccountsFilter)
+            let hiddenAccountManager = HiddenAccountManagerImpl()
+            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", hiddenAccountManager: hiddenAccountManager)
             
             updateHiddenAccountsAccessChallengeData(manager: accountManager)
             
@@ -193,11 +193,11 @@ public class ShareRootControllerImpl {
                 
                 let presentationDataPromise = Promise<PresentationData>()
                 
-                let appLockContext = AppLockContextImpl(rootPath: rootPath, window: nil, rootController: nil, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), displayedAccountsFilter: displayedAccountsFilter, lockIconInitialFrame: {
+                let appLockContext = AppLockContextImpl(rootPath: rootPath, window: nil, rootController: nil, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), hiddenAccountManager: hiddenAccountManager, lockIconInitialFrame: {
                     return nil
                 })
                 
-                displayedAccountsFilter.unlockedHiddenAccountRecordIdPromise.set(appLockContext.unlockedHiddenAccountRecordId.get())
+                hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(appLockContext.unlockedHiddenAccountRecordId.get())
                 
                 let sharedContext = SharedAccountContextImpl(mainWindow: nil, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider()), rootPath: rootPath, legacyBasePath: nil, legacyCache: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in }, openFalseBottomFlow: {})
                 presentationDataPromise.set(sharedContext.presentationData)
@@ -226,7 +226,7 @@ public class ShareRootControllerImpl {
                 Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
                 
                 return combineLatest(sharedContext.activeAccountsWithInfo, accountManager.transaction { transaction -> (Set<AccountRecordId>, PeerId?) in
-                    let accountRecords = Set(transaction.getAllRecords().map { record in
+                    let accountRecords = Set(transaction.getRecords().map { record in
                         return record.id
                     })
                     let intentsSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings) as? IntentsSettings ?? IntentsSettings.defaultSettings
@@ -292,7 +292,7 @@ public class ShareRootControllerImpl {
                     var cancelImpl: (() -> Void)?
                     
                     let filteredAccounts: [AccountWithInfo]
-                    if let unlockedHiddenAccountRecordId = context.sharedContext.accountManager.displayedAccountsFilter.unlockedHiddenAccountRecordId {
+                    if let unlockedHiddenAccountRecordId = context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId {
                         filteredAccounts = otherAccounts.filter { $0.account.id == unlockedHiddenAccountRecordId }
                     } else {
                         filteredAccounts = otherAccounts.filter { !$0.account.isHidden }

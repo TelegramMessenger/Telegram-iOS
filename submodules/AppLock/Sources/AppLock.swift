@@ -100,9 +100,9 @@ public final class AppLockContextImpl: AppLockContext {
     private var applicationIsActiveDisposable: Disposable?
     private var applicationInForegroundDisposable: Disposable?
     private var didFinishChangingAccountDisposable: Disposable?
-    private let displayedAccountsFilter: DisplayedAccountsFilter
+    private let hiddenAccountManager: HiddenAccountManager
     
-    public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, displayedAccountsFilter: DisplayedAccountsFilter, lockIconInitialFrame: @escaping () -> CGRect?) {
+    public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, hiddenAccountManager: HiddenAccountManager, lockIconInitialFrame: @escaping () -> CGRect?) {
         assert(Queue.mainQueue().isCurrent())
         
         self.applicationBindings = applicationBindings
@@ -111,7 +111,7 @@ public final class AppLockContextImpl: AppLockContext {
         self.rootPath = rootPath
         self.window = window
         self.rootController = rootController
-        self.displayedAccountsFilter = displayedAccountsFilter
+        self.hiddenAccountManager = hiddenAccountManager
         
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: self.rootPath))), let current = try? JSONDecoder().decode(LockState.self, from: data) {
             self.currentStateValue = current
@@ -120,7 +120,7 @@ public final class AppLockContextImpl: AppLockContext {
         }
         self.autolockTimeout.set(self.currentStateValue.autolockTimeout)
         
-        let _ = (displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise.get() |> deliverOnMainQueue).start(next: { [weak self] value in
+        let _ = (hiddenAccountManager.getHiddenAccountsAccessChallengeDataPromise.get() |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {
                 return
             }
@@ -211,7 +211,7 @@ public final class AppLockContextImpl: AppLockContext {
                             } else {
                                 return CGRect()
                             }
-                        }), hasPublicAccountsSignal: displayedAccountsFilter.hasPublicAccounts(accountManager: accountManager))
+                        }), hasPublicAccountsSignal: hiddenAccountManager.hasPublicAccounts(accountManager: accountManager))
                         if becameActiveRecently, appInForeground {
                             passcodeController.presentationCompleted = { [weak passcodeController, weak self] in
                                 if let strongSelf = self {
@@ -280,7 +280,7 @@ public final class AppLockContextImpl: AppLockContext {
             }
         })
         
-        self.didFinishChangingAccountDisposable = (displayedAccountsFilter.didFinishChangingAccountPromise.get() |> deliverOnMainQueue).start(next: { [weak self] in
+        self.didFinishChangingAccountDisposable = (hiddenAccountManager.didFinishChangingAccountPromise.get() |> deliverOnMainQueue).start(next: { [weak self] in
 
             guard let strongSelf = self, let coveringView = strongSelf.coveringView, let window = strongSelf.window else { return }
             

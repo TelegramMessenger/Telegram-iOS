@@ -1623,7 +1623,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     }
     enableFilters.set(enableFiltersSignal)
     
-    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), privacySettings.get(), displayPhoneNumberConfirmation.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasWallet, hasPassport.get(), hasWatchApp, enableQRLogin.get(), enableFilters.get()), accountsAndPeers.get(), activeSessionsContextAndCount.get(), accountManager.displayedAccountsFilter.unlockedHiddenAccountRecordIdPromise.get())
+    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), privacySettings.get(), displayPhoneNumberConfirmation.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasWallet, hasPassport.get(), hasWatchApp, enableQRLogin.get(), enableFilters.get()), accountsAndPeers.get(), activeSessionsContextAndCount.get(), accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.get())
     |> map { context, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasWalletPassportAndWatch, accountsAndPeers, activeSessionsContextAndCount, currentHiddenId -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let otherSessionCount = activeSessionsContextAndCount.1
 

@@ -101,7 +101,7 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
             account = .single(accountCache)
         } else {
             initializeAccountManagement()
-            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", displayedAccountsFilter: DisplayedAccountsFilterImpl())
+            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", hiddenAccountManager: HiddenAccountManagerImpl())
             
             let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
             let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)

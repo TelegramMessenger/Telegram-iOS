@@ -193,7 +193,7 @@ public func performAppGroupUpgrades(appGroupPath: String, rootPath: String) {
 
 public func getHiddenAccountsAccessChallengeData(transaction: AccountManagerModifier) -> [AccountRecordId:PostboxAccessChallengeData] {
     var result = [AccountRecordId:PostboxAccessChallengeData]()
-    let recordsWithOrder: [(AccountRecord, Int32)] = transaction.getAllRecords().map { record in
+    let recordsWithOrder: [(AccountRecord, Int32)] = transaction.getRecords().map { record in
         var order: Int32 = 0
         for attribute in record.attributes {
             if let attribute = attribute as? AccountSortOrderAttribute {
@@ -229,10 +229,10 @@ public func getHiddenAccountsAccessChallengeData(manager: AccountManager) -> Sig
 }
 
 public func updateHiddenAccountsAccessChallengeData(manager: AccountManager) {
-    manager.displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise.set(getHiddenAccountsAccessChallengeData(manager: manager))
+    manager.hiddenAccountManager.getHiddenAccountsAccessChallengeDataPromise.set(getHiddenAccountsAccessChallengeData(manager: manager))
 }
 
-public final class DisplayedAccountsFilterImpl: DisplayedAccountsFilter {
+public final class HiddenAccountManagerImpl: HiddenAccountManager {
     public let unlockedHiddenAccountRecordIdPromise = Promise<AccountRecordId?>(nil)
     public var unlockedHiddenAccountRecordId: AccountRecordId?
     private var unlockedHiddenAccountRecordIdDisposable: Disposable?
@@ -387,7 +387,7 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
             }
         })
         let hiddenAccountsAccessChallengeData = getHiddenAccountsAccessChallengeData(transaction: transaction)
-        accountManager.displayedAccountsFilter.getHiddenAccountsAccessChallengeDataPromise.set(.single(hiddenAccountsAccessChallengeData))
+        accountManager.hiddenAccountManager.getHiddenAccountsAccessChallengeDataPromise.set(.single(hiddenAccountsAccessChallengeData))
     }
 }
 
@@ -404,7 +404,7 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
                 }
             }
         }).start()
-        let disposable = accountManager.allAccountRecords().start(next: { view in
+        let disposable = accountManager.accountRecords().start(next: { view in
             var disposeList: [(AccountRecordId, MetaDisposable)] = []
             var beginList: [(AccountRecordId, [AccountRecordAttribute], MetaDisposable)] = []
             let _ = loggedOutAccounts.modify { disposables in

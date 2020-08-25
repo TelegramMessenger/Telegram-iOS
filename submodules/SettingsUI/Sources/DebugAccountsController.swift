@@ -135,7 +135,7 @@ public func debugAccountsController(context: AccountContext, accountManager: Acc
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData, accountManager.accountRecords(), accountManager.displayedAccountsFilter.unlockedHiddenAccountRecordIdPromise.get())
+    let signal = combineLatest(context.sharedContext.presentationData, accountManager.accountRecords(), accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.get())
         |> map { presentationData, view, currentHiddenId -> (ItemListControllerState, (ItemListNodeState, Any)) in
             let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Accounts"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
             let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: debugAccountsControllerEntries(view: view, presentationData: presentationData, currentHiddenId: currentHiddenId), style: .blocks)

@@ -5584,7 +5584,7 @@ public final class PeerInfoScreen: ViewController {
             
             let accountTabBarAvatarBadge: Signal<Int32, NoError> = combineLatest(notificationsFromAllAccounts, self.accountsAndPeers.get())
             |> map { notificationsFromAllAccounts, primaryAndOther -> Int32 in
-                let currentHiddenId = context.sharedContext.accountManager.displayedAccountsFilter.unlockedHiddenAccountRecordId
+                let currentHiddenId = context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId
                 if !notificationsFromAllAccounts || currentHiddenId != nil {
                     return 0
                 }
@@ -5601,7 +5601,7 @@ public final class PeerInfoScreen: ViewController {
             
             let accountTabBarAvatar: Signal<(UIImage, UIImage)?, NoError> = combineLatest(self.accountsAndPeers.get(), context.sharedContext.presentationData)
             |> map { primaryAndOther, presentationData -> (Account, Peer, PresentationTheme)? in
-                let currentHiddenId = context.sharedContext.accountManager.displayedAccountsFilter.unlockedHiddenAccountRecordId
+                let currentHiddenId = context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId
                 if let primary = primaryAndOther.0, !primaryAndOther.1.isEmpty, currentHiddenId == nil {
                     return (primary.0, primary.1, presentationData.theme)
                 } else {
@@ -5780,7 +5780,7 @@ public final class PeerInfoScreen: ViewController {
             }
         })
         
-        self.currentHiddenIdDisposable = (context.sharedContext.accountManager.displayedAccountsFilter.unlockedHiddenAccountRecordIdPromise.get() |> deliverOnMainQueue).start(next: { [weak self] currentHiddenId -> Void in
+        self.currentHiddenIdDisposable = (context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.get() |> deliverOnMainQueue).start(next: { [weak self] currentHiddenId -> Void in
             guard let strongSelf = self else { return }
             
             strongSelf.currentHiddenId = currentHiddenId

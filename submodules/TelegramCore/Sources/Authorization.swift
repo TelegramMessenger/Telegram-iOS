@@ -16,7 +16,7 @@ public enum AuthorizationCodeRequestError {
 }
 
 func switchToAuthorizedAccount(transaction: AccountManagerModifier, account: UnauthorizedAccount) {
-    let nextSortOrder = (transaction.getAllRecords().map({ record -> Int32 in
+    let nextSortOrder = (transaction.getRecords().map({ record -> Int32 in
         for attribute in record.attributes {
             if let attribute = attribute as? AccountSortOrderAttribute {
                 return attribute.order

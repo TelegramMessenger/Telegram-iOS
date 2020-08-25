@@ -240,7 +240,7 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String, e
             
             let upgradeSortOrder = accountManager.transaction { transaction -> Void in
                 var index: Int32 = 0
-                for record in transaction.getAllRecords() {
+                for record in transaction.getRecords() {
                     transaction.updateRecord(record.id, { _ in
                         return AccountRecord(id: record.id, attributes: record.attributes + [AccountSortOrderAttribute(order: index)], temporarySessionId: record.temporarySessionId)
                     })
@@ -285,7 +285,7 @@ public func upgradedAccounts(accountManager: AccountManager, rootPath: String, e
         }
         if version < 4 {
             let updatedContactSynchronizationSettings = accountManager.transaction { transaction -> (ContactSynchronizationSettings, [AccountRecordId]) in
-                return (transaction.getSharedData(ApplicationSpecificSharedDataKeys.contactSynchronizationSettings) as? ContactSynchronizationSettings ?? ContactSynchronizationSettings.defaultSettings, transaction.getAllRecords().map({ $0.id }))
+                return (transaction.getSharedData(ApplicationSpecificSharedDataKeys.contactSynchronizationSettings) as? ContactSynchronizationSettings ?? ContactSynchronizationSettings.defaultSettings, transaction.getRecords().map({ $0.id }))
             }
             |> mapToSignal { globalSettings, ids -> Signal<Never, NoError> in
                 var importSignal: Signal<Never, NoError> = .complete()

@@ -74,7 +74,7 @@ func sharedAccountInfos(accountManager: AccountManager, accounts: Signal<[Accoun
         }
         
         let hiddenNotificationKeys = accountManager.transaction({ transaction -> [AccountRecordId] in
-            return transaction.getAllRecords()
+            return transaction.getRecords()
                 .filter { $0.attributes.contains(where: { $0 is HiddenAccountAttribute }) }
                 .map { $0.id }
         }) |> mapToSignal { hiddenAccountIds in
@@ -111,7 +111,7 @@ func storeAccountsData(rootPath: String, accounts: StoredAccountInfos) {
 private func filterPublicAccounts(_ signal: Signal<[Account], NoError>, accountManager: AccountManager) -> Signal<[Account], NoError> {
     signal |> mapToSignal { accounts in
         accountManager.transaction { transaction in
-            let hiddenIds = Set(transaction.getAllRecords().filter { $0.attributes.contains(where: { $0 is HiddenAccountAttribute }) }.map { $0.id })
+            let hiddenIds = Set(transaction.getRecords().filter { $0.attributes.contains(where: { $0 is HiddenAccountAttribute }) }.map { $0.id })
             return accounts.filter { !hiddenIds.contains($0.id) }
         }
     }

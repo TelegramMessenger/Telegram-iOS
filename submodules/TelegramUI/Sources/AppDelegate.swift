@@ -681,9 +681,9 @@ final class SharedApplicationContext {
             }
         })
         
-        let displayedAccountsFilter = DisplayedAccountsFilterImpl()
+        let hiddenAccountManager = HiddenAccountManagerImpl()
         let accountManagerSignal = Signal<AccountManager, NoError> { subscriber in
-            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", displayedAccountsFilter: displayedAccountsFilter)
+            let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", hiddenAccountManager: hiddenAccountManager)
             return (upgradedAccounts(accountManager: accountManager, rootPath: rootPath, encryptionParameters: encryptionParameters)
             |> deliverOnMainQueue).start(next: { progress in
                 if self.dataImportSplash == nil {
@@ -796,11 +796,11 @@ final class SharedApplicationContext {
             let legacyCache = LegacyCache(path: legacyBasePath + "/Caches")
             
             let presentationDataPromise = Promise<PresentationData>()
-            let appLockContext = AppLockContextImpl(rootPath: rootPath, window: self.mainWindow!, rootController: self.window?.rootViewController, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), displayedAccountsFilter: displayedAccountsFilter, lockIconInitialFrame: {
+            let appLockContext = AppLockContextImpl(rootPath: rootPath, window: self.mainWindow!, rootController: self.window?.rootViewController, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), hiddenAccountManager: hiddenAccountManager, lockIconInitialFrame: {
                 return (self.mainWindow?.viewController as? TelegramRootController)?.chatListController?.lockViewFrame
             })
             
-            displayedAccountsFilter.unlockedHiddenAccountRecordIdPromise.set(appLockContext.unlockedHiddenAccountRecordId.get())
+            hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(appLockContext.unlockedHiddenAccountRecordId.get())
             
             var setPresentationCall: ((PresentationCall?) -> Void)?
             let sharedContext = SharedAccountContextImpl(mainWindow: self.mainWindow, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, rootPath: rootPath, legacyBasePath: legacyBasePath, legacyCache: legacyCache, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
@@ -1057,7 +1057,7 @@ final class SharedApplicationContext {
             return sharedApplicationContext.sharedContext.activeAccounts
             |> map { primary, accounts, auth -> (Account?, UnauthorizedAccount, [Account])? in
                 if let auth = auth {
-                    return (primary, auth, Array(accounts.map({ $0.1 })))
+                    return (primary, auth, Array(accounts.filter { !$0.1.isHidden }.map({ $0.1 })))
                 } else {
                     return nil
                 }
@@ -2050,7 +2050,7 @@ final class SharedApplicationContext {
                 guard let context = context else { return }
                 
                 let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> Bool in
-                    return transaction.getAllRecords().filter({
+                    return transaction.getRecords().filter({
                         !$0.attributes.contains(where: { $0 is HiddenAccountAttribute }) && !$0.attributes.contains(where: { $0 is LoggedOutAccountAttribute })
                     }).count > 1
                 } |> deliverOnMainQueue).start(next: { result in
@@ -2114,7 +2114,7 @@ final class SharedApplicationContext {
                     
                     if let createdNewAccountWithId = createdNewAccountWithId {
                         let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> Bool in
-                            return transaction.getAllRecords().filter({
+                            return transaction.getRecords().filter({
                                 !$0.attributes.contains(where: { $0 is HiddenAccountAttribute }) && !$0.attributes.contains(where: { $0 is LoggedOutAccountAttribute })
                             }).count > 1
                             } |> deliverOnMainQueue).start(next: { [weak self, weak context] hasPublicAccounts in
@@ -2320,7 +2320,7 @@ final class SharedApplicationContext {
                                 context.rootController.popToRoot(animated: true)
                                 context.rootController.allowInteractiveDismissal = true
                                 let _ = (accountContext.accountManager.transaction({ transaction -> Void in
-                                    if let publicId = transaction.getAllRecords().first(where: { !$0.attributes.contains(where: { $0 is HiddenAccountAttribute }) && !$0.attributes.contains(where: { $0 is LoggedOutAccountAttribute }) })?.id {
+                                    if let publicId = transaction.getRecords().first(where: { !$0.attributes.contains(where: { $0 is HiddenAccountAttribute }) && !$0.attributes.contains(where: { $0 is LoggedOutAccountAttribute }) })?.id {
                                         transaction.setCurrentId(publicId)
                                     }
                                 })).start()
@@ -2560,9 +2560,9 @@ final class SharedApplicationContext {
         |> deliverOnMainQueue).start(next: { accountId in
             if let context = self.contextValue, let accountId = accountId, context.context.account.id != accountId {
                 let _ = context.context.sharedContext.accountManager.transaction { transaction in
-                    if let record = transaction.getAllRecords().first(where: { $0.id == accountId }),
+                    if let record = transaction.getRecords().first(where: { $0.id == accountId }),
                         !record.attributes.contains(where: { $0 is HiddenAccountAttribute }),
-                        context.context.sharedContext.accountManager.displayedAccountsFilter.unlockedHiddenAccountRecordId == nil {
+                        context.context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId == nil {
                         completionHandler([.alert])
                     }
                 }.start()

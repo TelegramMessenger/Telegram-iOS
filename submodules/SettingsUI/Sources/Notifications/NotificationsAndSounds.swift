@@ -1121,7 +1121,7 @@ public func notificationsAndSoundsController(context: AccountContext, exceptions
     }
     |> distinctUntilChanged
     
-    let currentAccountId = context.sharedContext.accountManager.displayedAccountsFilter.currentAccountRecordIdPromise.get()
+    let currentAccountId = context.sharedContext.accountManager.hiddenAccountManager.currentAccountRecordIdPromise.get()
     
     let signal = combineLatest(context.sharedContext.presentationData, sharedData, preferences, notificationExceptions.get(), DeviceAccess.authorizationStatus(applicationInForeground: context.sharedContext.applicationBindings.applicationInForeground, subject: .notifications), notificationsWarningSuppressed.get(), hasMoreThanOneAccount, currentAccountId)
         |> map { presentationData, sharedData, view, exceptions, authorizationStatus, warningSuppressed, hasMoreThanOneAccount, currentAccountId -> (ItemListControllerState, (ItemListNodeState, Any)) in

@@ -345,7 +345,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let startTime = CFAbsoluteTimeGetCurrent()
         
         let differenceDisposable = MetaDisposable()
-        let _ = (accountManager.allAccountRecords()
+        let _ = (accountManager.accountRecords()
         |> map { view -> (AccountRecordId?, [AccountRecordId: AccountAttributes], (AccountRecordId, Bool)?) in
             print("SharedAccountContextImpl: records appeared in \(CFAbsoluteTimeGetCurrent() - startTime)")
             
@@ -534,7 +534,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     }
                 }
                 if primary == nil && !self.activeAccountsValue!.accounts.isEmpty {
-                    primary = self.activeAccountsValue!.accounts.first?.1
+                    primary = self.activeAccountsValue!.accounts.filter { !$0.1.isHidden }.first?.1
                 }
                 if primary !== self.activeAccountsValue!.primary {
                     hadUpdates = true
@@ -899,7 +899,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: ViewController? = nil, withChatListController chatListController: ViewController? = nil) {
-        if let unlockedHiddenAccountRecordId = accountManager.displayedAccountsFilter.unlockedHiddenAccountRecordId, unlockedHiddenAccountRecordId != id {
+        if let unlockedHiddenAccountRecordId = accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId, unlockedHiddenAccountRecordId != id {
             appLockContext.unlockedHiddenAccountRecordId.set(nil)
         }
         
