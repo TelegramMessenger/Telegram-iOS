@@ -293,7 +293,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
         
         self.addSubnode(self.listNode)
         
-        self.unlockedHiddenAccountRecordIdDisposable = (context.sharedContext.accountManager.displayedAccountsFilter.unlockedHiddenAccountRecordIdPromise.get() |> deliverOnMainQueue).start(next: { [weak self] accountId in
+        self.unlockedHiddenAccountRecordIdDisposable = (context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.get() |> deliverOnMainQueue).start(next: { [weak self] accountId in
             guard let strongSelf = self else { return }
             
             if accountId != nil && strongSelf.emptyShimmerEffectNode == nil {

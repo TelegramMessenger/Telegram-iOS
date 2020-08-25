@@ -17,6 +17,7 @@ public enum FalseBottomSplashMode {
     case addOneMoreAccount
     case setMasterPasscode
     case setSecretPasscode
+    case disableNotifications
     case accountWasHidden
 }
 
@@ -164,6 +165,11 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
                 self.animationSize = CGSize(width: 264.0, height: 174.0)
                 self.animationNode.visibility = true
             }
+            
+        case .disableNotifications:
+            title = presentationData.strings.FalseBottom_DisableNotifications_Title
+            text = NSAttributedString(string: presentationData.strings.FalseBottom_DisableNotifications_Text, font: textFont, textColor: textColor)
+            buttonText = presentationData.strings.FalseBottom_DisableNotifications_Button
 
         case .accountWasHidden:
             title = presentationData.strings.FalseBottom_AccountWasHidden_Title
@@ -366,6 +372,18 @@ private final class FalseBottomAnimationSource: AnimatedStickerNodeSource {
             ]
             
         case .setSecretPasscode:
+            fileName = "FalseBottomHiddenPassword"
+            replacements = [
+                "0.219607843137,0.223529411765,0.23137254902,1": elementBackgroundColor,
+                "0.122,0.122,0.122,1": elementBackgroundColor,
+                "0.122000002394,0.122000002394,0.122000002394,1": elementBackgroundColor,
+                "0.125,0.125,0.125,1": elementBackgroundColor,
+                "0.1254902035,0.1254902035,0.1254902035,1": elementBackgroundColor,
+                "0.552999997606,0.556999954523,0.57599995931,1": outlineColor
+            ]
+            
+        case .disableNotifications:
+            // TODO: - change with actual animation
             fileName = "FalseBottomHiddenPassword"
             replacements = [
                 "0.219607843137,0.223529411765,0.23137254902,1": elementBackgroundColor,
