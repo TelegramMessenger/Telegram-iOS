@@ -192,7 +192,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         
         let countryCodeFrame = CGRect(origin: CGPoint(x: 18.0, y: size.height - 57.0), size: CGSize(width: 71.0, height: 57.0))
         let numberFrame = CGRect(origin: CGPoint(x: 107.0, y: size.height - 57.0), size: CGSize(width: size.width - 96.0 - 8.0, height: 57.0))
-        let placeholderFrame = numberFrame.offsetBy(dx: -1.0, dy: 16.0)
+        let placeholderFrame = numberFrame.offsetBy(dx: 0.0, dy: 16.0)
         
         let phoneInputFrame = countryCodeFrame.union(numberFrame)
         
