@@ -165,6 +165,7 @@ private var declaredEncodables: Void = {
     declareEncodable(TelegramMediaImage.VideoRepresentation.self, f: { TelegramMediaImage.VideoRepresentation(decoder: $0) })
     declareEncodable(Country.self, f: { Country(decoder: $0) })
     declareEncodable(Country.CountryCode.self, f: { Country.CountryCode(decoder: $0) })
+    declareEncodable(CountriesList.self, f: { CountriesList(decoder: $0) })
     
     return
 }()

@@ -7,7 +7,7 @@ import SyncCore
 
 public struct Country: PostboxCoding, Equatable {
     public static func == (lhs: Country, rhs: Country) -> Bool {
-        return lhs.code == rhs.code && lhs.name == rhs.name && lhs.localizedName == rhs.localizedName && lhs.countryCodes == rhs.countryCodes && lhs.hidden == rhs.hidden
+        return lhs.id == rhs.id && lhs.name == rhs.name && lhs.localizedName == rhs.localizedName && lhs.countryCodes == rhs.countryCodes && lhs.hidden == rhs.hidden
     }
     
     public struct CountryCode: PostboxCoding, Equatable {
@@ -34,14 +34,14 @@ public struct Country: PostboxCoding, Equatable {
         }
     }
     
-    public let code: String
+    public let id: String
     public let name: String
     public let localizedName: String?
     public let countryCodes: [CountryCode]
     public let hidden: Bool
     
-    public init(code: String, name: String, localizedName: String?, countryCodes: [CountryCode], hidden: Bool) {
-        self.code = code
+    public init(id: String, name: String, localizedName: String?, countryCodes: [CountryCode], hidden: Bool) {
+        self.id = id
         self.name = name
         self.localizedName = localizedName
         self.countryCodes = countryCodes
@@ -49,7 +49,7 @@ public struct Country: PostboxCoding, Equatable {
     }
     
     public init(decoder: PostboxDecoder) {
-        self.code = decoder.decodeStringForKey("c", orElse: "")
+        self.id = decoder.decodeStringForKey("c", orElse: "")
         self.name = decoder.decodeStringForKey("n", orElse: "")
         self.localizedName = decoder.decodeOptionalStringForKey("ln")
         self.countryCodes = decoder.decodeObjectArrayForKey("cc").map { $0 as! CountryCode }
@@ -57,7 +57,7 @@ public struct Country: PostboxCoding, Equatable {
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeString(self.code, forKey: "c")
+        encoder.encodeString(self.id, forKey: "c")
         encoder.encodeString(self.name, forKey: "n")
         if let localizedName = self.localizedName {
             encoder.encodeString(localizedName, forKey: "ln")
@@ -130,6 +130,7 @@ public func getCountriesList(accountManager: AccountManager, network: Network, l
         return fetch(nil, nil)
     } else {
         return accountManager.sharedData(keys: [SharedDataKeys.countriesList])
+        |> take(1)
         |> map { sharedData -> ([Country], Int32) in
             if let countriesList = sharedData.entries[SharedDataKeys.countriesList] as? CountriesList {
                 return (countriesList.countries, countriesList.hash)
@@ -158,7 +159,7 @@ extension Country {
     init(apiCountry: Api.help.Country) {
         switch apiCountry {
             case let .country(flags, iso2, defaultName, name, countryCodes):
-                self.init(code: iso2, name: defaultName, localizedName: name, countryCodes: countryCodes.map { Country.CountryCode(apiCountryCode: $0) }, hidden: (flags & 1 << 0) != 0)
+                self.init(id: iso2, name: defaultName, localizedName: name, countryCodes: countryCodes.map { Country.CountryCode(apiCountryCode: $0) }, hidden: (flags & 1 << 0) != 0)
         }
     }
 }
