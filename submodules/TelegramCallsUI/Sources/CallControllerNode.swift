@@ -172,7 +172,7 @@ private final class CallVideoNode: ASDisplayNode {
         self.currentCornerRadius = cornerRadius
         
         var rotationAngle: CGFloat
-        if isOutgoing {
+        if isOutgoing && isCompactLayout {
             rotationAngle = CGFloat.pi / 2.0
         } else {
             switch self.currentOrientation {
@@ -181,9 +181,17 @@ private final class CallVideoNode: ASDisplayNode {
             case .rotation90:
                 rotationAngle = CGFloat.pi / 2.0
             case .rotation180:
-                rotationAngle = CGFloat.pi
+                if isCompactLayout {
+                    rotationAngle = CGFloat.pi
+                } else {
+                    rotationAngle = 0.0
+                }
             case .rotation270:
-                rotationAngle = -CGFloat.pi / 2.0
+                if isCompactLayout {
+                    rotationAngle = -CGFloat.pi / 2.0
+                } else {
+                    rotationAngle = CGFloat.pi / 2.0
+                }
             }
             
             var additionalAngle: CGFloat = 0.0
@@ -1274,16 +1282,48 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
         insets.left = interpolate(from: expandedInset, to: insets.left, value: 1.0 - self.pictureInPictureTransitionFraction)
         insets.right = interpolate(from: expandedInset, to: insets.right, value: 1.0 - self.pictureInPictureTransitionFraction)
         
-        let previewVideoSide = interpolate(from: 350.0, to: 200.0, value: 1.0 - self.pictureInPictureTransitionFraction)
+        let previewVideoSide = interpolate(from: 300.0, to: 150.0, value: 1.0 - self.pictureInPictureTransitionFraction)
         var previewVideoSize = layout.size.aspectFitted(CGSize(width: previewVideoSide, height: previewVideoSide))
         previewVideoSize = CGSize(width: 30.0, height: 45.0).aspectFitted(previewVideoSize)
         if let minimizedVideoNode = self.minimizedVideoNode {
-            switch minimizedVideoNode.currentOrientation {
-            case .rotation90, .rotation270:
-                break
-            default:
-                previewVideoSize = CGSize(width: previewVideoSize.height, height: previewVideoSize.width)
+            var aspect = minimizedVideoNode.currentAspect
+            var rotationCount = 0
+            if minimizedVideoNode === self.outgoingVideoNodeValue {
+                aspect = 3.0 / 4.0
+            } else {
+                if aspect < 1.0 {
+                    aspect = 3.0 / 4.0
+                } else {
+                    aspect = 4.0 / 3.0
+                }
+                
+                switch minimizedVideoNode.currentOrientation {
+                case .rotation90, .rotation270:
+                    rotationCount += 1
+                default:
+                    break
+                }
+                
+                var mappedDeviceOrientation = self.deviceOrientation
+                if case .regular = layout.metrics.widthClass, case .regular = layout.metrics.heightClass {
+                    mappedDeviceOrientation = .portrait
+                }
+                
+                switch mappedDeviceOrientation {
+                case .landscapeLeft, .landscapeRight:
+                    rotationCount += 1
+                default:
+                    break
+                }
+                
+                if rotationCount % 2 != 0 {
+                    aspect = 1.0 / aspect
+                }
             }
+            
+            let unboundVideoSize = CGSize(width: aspect * 10000.0, height: 10000.0)
+            
+            previewVideoSize = unboundVideoSize.aspectFitted(CGSize(width: previewVideoSide, height: previewVideoSide))
         }
         let previewVideoY: CGFloat
         let previewVideoX: CGFloat
@@ -1530,7 +1570,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                     self.animationForExpandedVideoSnapshotView = nil
                 }
                 minimizedVideoTransition.updateFrame(node: minimizedVideoNode, frame: previewVideoFrame)
-                minimizedVideoNode.updateLayout(size: previewVideoFrame.size, cornerRadius: interpolate(from: 14.0, to: 24.0, value: self.pictureInPictureTransitionFraction), isOutgoing: minimizedVideoNode === self.outgoingVideoNodeValue, deviceOrientation: .portrait, isCompactLayout: false, transition: minimizedVideoTransition)
+                minimizedVideoNode.updateLayout(size: previewVideoFrame.size, cornerRadius: interpolate(from: 14.0, to: 24.0, value: self.pictureInPictureTransitionFraction), isOutgoing: minimizedVideoNode === self.outgoingVideoNodeValue, deviceOrientation: mappedDeviceOrientation, isCompactLayout: false, transition: minimizedVideoTransition)
                 if transition.isAnimated && didAppear {
                     minimizedVideoNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
                 }

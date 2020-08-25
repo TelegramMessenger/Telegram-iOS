@@ -246,6 +246,7 @@ public final class PresentationCallImpl: PresentationCall {
     private var droppedCall = false
     private var dropCallKitCallTimer: SwiftSignalKit.Timer?
     
+    private var useFrontCamera: Bool = true
     private var videoCapturer: OngoingCallVideoCapturer?
     
     init(
@@ -1029,6 +1030,7 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     public func switchVideoCamera() {
-        self.videoCapturer?.switchCamera()
+        self.useFrontCamera = !self.useFrontCamera
+        self.videoCapturer?.switchVideoInput(isFront: self.useFrontCamera)
     }
 }
