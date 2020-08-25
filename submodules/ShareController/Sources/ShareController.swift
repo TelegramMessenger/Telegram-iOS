@@ -593,25 +593,25 @@ public final class ShareController: ViewController {
         }
         self.controllerNode.shareExternal = { [weak self] in
             if let strongSelf = self {
-                if case let .messages(messages) = strongSelf.subject, let message = messages.first, let peer = message.peers[message.id.peerId] {
-                    let renderer = MessageStoryRenderer(context: strongSelf.currentContext, messages: messages)
-                    
-                    let layout = ContainerViewLayout(size: CGSize(width: 414.0, height: 896.0), metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: .iPhoneX, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: 0.0, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)
-                    renderer.update(layout: layout) { image in
-                        if let data = image?.pngData() {
-                            let pasteboardItems: [[String: Any]] = [["com.instagram.sharedSticker.backgroundImage": data,
-                                                    "com.instagram.sharedSticker.contentURL": "https://t.me/\(peer.addressName ?? "")/\(message.id.id)"]]
-                            if #available(iOS 10.0, *) {
-                                UIPasteboard.general.setItems(pasteboardItems, options: [.expirationDate: Date().addingTimeInterval(5 * 60)])
-                            } else {
-//                                UIPasteboard.general.setItems(pasteboardItems)
-                            }
-                            strongSelf.sharedContext.applicationBindings.openUrl("instagram-stories://share")
-                        }
-                    }
-                    
-                    return .complete()
-                }
+//                if case let .messages(messages) = strongSelf.subject, let message = messages.first, let peer = message.peers[message.id.peerId] {
+//                    let renderer = MessageStoryRenderer(context: strongSelf.currentContext, messages: messages)
+//                    
+//                    let layout = ContainerViewLayout(size: CGSize(width: 414.0, height: 896.0), metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: .iPhoneX, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: 0.0, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)
+//                    renderer.update(layout: layout) { image in
+//                        if let data = image?.pngData() {
+//                            let pasteboardItems: [[String: Any]] = [["com.instagram.sharedSticker.backgroundImage": data,
+//                                                    "com.instagram.sharedSticker.contentURL": "https://t.me/\(peer.addressName ?? "")/\(message.id.id)"]]
+//                            if #available(iOS 10.0, *) {
+//                                UIPasteboard.general.setItems(pasteboardItems, options: [.expirationDate: Date().addingTimeInterval(5 * 60)])
+//                            } else {
+////                                UIPasteboard.general.setItems(pasteboardItems)
+//                            }
+//                            strongSelf.sharedContext.applicationBindings.openUrl("instagram-stories://share")
+//                        }
+//                    }
+//                    
+//                    return .complete()
+//                }
                 
                 
                 var collectableItems: [CollectableExternalShareItem] = []
