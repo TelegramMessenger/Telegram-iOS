@@ -24,7 +24,7 @@ public struct AccountManagerModifier {
 }
 
 public protocol HiddenAccountManager {
-    var unlockedHiddenAccountRecordIdPromise: Promise<AccountRecordId?> { get }
+    var unlockedHiddenAccountRecordIdPromise: ValuePromise<AccountRecordId?> { get }
     var unlockedHiddenAccountRecordId: AccountRecordId? { get }
     var getHiddenAccountsAccessChallengeDataPromise: Promise<[AccountRecordId:PostboxAccessChallengeData]> { get }
     var accountManagerRecordIdPromise: ValuePromise<AccountRecordId?> { get }

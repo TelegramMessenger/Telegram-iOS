@@ -95,7 +95,7 @@ public final class AppLockContextImpl: AppLockContext {
     private var hiddenAccountsAccessChallengeDataDisposable: Disposable?
     public private(set) var hiddenAccountsAccessChallengeData = [AccountRecordId:PostboxAccessChallengeData]()
     
-    public var unlockedHiddenAccountRecordId = ValuePromise<AccountRecordId?>()
+    public var unlockedHiddenAccountRecordId: ValuePromise<AccountRecordId?>
     
     private var applicationIsActiveDisposable: Disposable?
     private var applicationInForegroundDisposable: Disposable?
@@ -112,6 +112,7 @@ public final class AppLockContextImpl: AppLockContext {
         self.window = window
         self.rootController = rootController
         self.hiddenAccountManager = hiddenAccountManager
+        self.unlockedHiddenAccountRecordId = hiddenAccountManager.unlockedHiddenAccountRecordIdPromise
         
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: self.rootPath))), let current = try? JSONDecoder().decode(LockState.self, from: data) {
             self.currentStateValue = current

@@ -159,6 +159,7 @@ final class PeerInfoScreenData {
     let members: PeerInfoMembersData?
     let encryptionKeyFingerprint: SecretChatKeyFingerprint?
     let globalSettings: TelegramGlobalSettings?
+    let currentHiddenId: AccountRecordId?
     
     init(
         peer: Peer?,
@@ -172,7 +173,8 @@ final class PeerInfoScreenData {
         linkedDiscussionPeer: Peer?,
         members: PeerInfoMembersData?,
         encryptionKeyFingerprint: SecretChatKeyFingerprint?,
-        globalSettings: TelegramGlobalSettings?
+        globalSettings: TelegramGlobalSettings?,
+        currentHiddenId: AccountRecordId?
     ) {
         self.peer = peer
         self.cachedData = cachedData
@@ -186,6 +188,7 @@ final class PeerInfoScreenData {
         self.members = members
         self.encryptionKeyFingerprint = encryptionKeyFingerprint
         self.globalSettings = globalSettings
+        self.currentHiddenId = currentHiddenId
     }
 }
 
@@ -409,9 +412,10 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: PeerId, account
         combineLatest(context.account.viewTracker.featuredStickerPacks(), archivedStickerPacks),
         hasPassport,
         (context.watchManager?.watchAppInstalled ?? .single(false)),
-        context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+        context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration]),
+        context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.get()
         )
-        |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences -> PeerInfoScreenData in
+        |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, currentHiddenId -> PeerInfoScreenData in
             let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
             let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
             
@@ -442,7 +446,8 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: PeerId, account
                 linkedDiscussionPeer: nil,
                 members: nil,
                 encryptionKeyFingerprint: nil,
-                globalSettings: globalSettings
+                globalSettings: globalSettings,
+                currentHiddenId: currentHiddenId
             )
     }
 }
@@ -464,7 +469,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 linkedDiscussionPeer: nil,
                 members: nil,
                 encryptionKeyFingerprint: nil,
-                globalSettings: nil
+                globalSettings: nil,
+                currentHiddenId: nil
             ))
         case let .user(userPeerId, secretChatId, kind):
             let groupsInCommon: GroupsInCommonContext?
@@ -603,7 +609,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     linkedDiscussionPeer: nil,
                     members: nil,
                     encryptionKeyFingerprint: encryptionKeyFingerprint,
-                    globalSettings: nil
+                    globalSettings: nil,
+                    currentHiddenId: nil
                 )
             }
         case .channel:
@@ -654,7 +661,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     linkedDiscussionPeer: discussionPeer,
                     members: nil,
                     encryptionKeyFingerprint: nil,
-                    globalSettings: nil
+                    globalSettings: nil,
+                    currentHiddenId: nil
                 )
             }
         case let .group(groupId):
@@ -792,7 +800,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     linkedDiscussionPeer: discussionPeer,
                     members: membersData,
                     encryptionKeyFingerprint: nil,
-                    globalSettings: nil
+                    globalSettings: nil,
+                    currentHiddenId: nil
                 )
             }
         }
