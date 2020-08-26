@@ -91,3 +91,31 @@ open class SwitchNode: ASDisplayNode {
         self.valueUpdated?(view.isOn)
     }
 }
+
+open class BorderSwitchNode: SwitchNode {
+    public override var contentColor: UIColor {
+        didSet {
+            if self.isNodeLoaded {
+                (self.view as! UISwitch).onTintColor = self.contentColor
+                (self.view as! UISwitch).layer.borderColor = self.contentColor.cgColor
+            }
+        }
+    }
+    
+    open override func didLoad() {
+        super.didLoad()
+        
+        (self.view as! UISwitch).layer.cornerRadius = ceil(frame.size.height * 0.5)
+        (self.view as! UISwitch).layer.masksToBounds = true
+        (self.view as! UISwitch).layer.borderWidth = 1.0
+        
+        (self.view as! UISwitch).onTintColor = self.contentColor
+        (self.view as! UISwitch).layer.borderColor = self.contentColor.cgColor
+        
+        if #available(iOS 13.0, *) {
+            (self.view as! UISwitch).subviews[0].subviews[0].backgroundColor = .clear
+        } else if #available(iOS 12.0, *) {
+            (self.view as! UISwitch).subviews[0].subviews[0].subviews[0].backgroundColor = .clear
+        }
+    }
+}
