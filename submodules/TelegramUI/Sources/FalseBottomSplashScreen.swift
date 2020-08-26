@@ -25,6 +25,7 @@ public final class FalseBottomSplashScreen: ViewController {
     private let presentationData: PresentationData
     private let mode: FalseBottomSplashMode
     
+    var buttonPressedWithEnabledSwitch: ((Bool) -> Void)?
     var buttonPressed: (() -> Void)?
     var backPressed: (() -> Void)? {
         didSet {
@@ -66,6 +67,7 @@ public final class FalseBottomSplashScreen: ViewController {
                     return
                 }
                 
+                strongSelf.buttonPressedWithEnabledSwitch?(enabled)
                 strongSelf.buttonPressed?()
             })
         } else {

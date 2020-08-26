@@ -2309,8 +2309,17 @@ final class SharedApplicationContext {
                             
                             let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
                             let controller = FalseBottomSplashScreen(presentationData: presentationData, mode: .disableNotifications)
-                            controller.buttonPressed = { [weak accountContext, weak context] in
+                            controller.buttonPressedWithEnabledSwitch = { [weak accountContext, weak context] enabled in
                                 guard let accountContext = accountContext, let context = context else { return }
+                                
+                                // Turn of notifications and calls
+                                let _ = updateGlobalNotificationSettingsInteractively(postbox: context.context.account.postbox, { settings in
+                                    var settings = settings
+                                    settings.channels.enabled = enabled
+                                    settings.groupChats.enabled = enabled
+                                    settings.privateChats.enabled = enabled
+                                    return settings
+                                }).start()
                                 
                                 updateHiddenAccountsAccessChallengeData(manager: accountContext.accountManager)
                                 
