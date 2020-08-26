@@ -2313,16 +2313,17 @@ final class SharedApplicationContext {
                                 guard let accountContext = accountContext, let context = context else { return }
                                 
                                 // Turn off notifications and calls
-                                
-                                if !enabled {
                                     let _ = updateGlobalNotificationSettingsInteractively(postbox: context.context.account.postbox, { settings in
                                         var settings = settings
-                                        settings.channels.enabled = false
-                                        settings.groupChats.enabled = false
-                                        settings.privateChats.enabled = false
+                                        settings.channels.enabled = enabled
+                                        settings.groupChats.enabled = enabled
+                                        settings.privateChats.enabled = enabled
                                         return settings
                                     }).start()
                                     
+                                if enabled {
+                                    let _ = updateSelectiveAccountPrivacySettings(account: context.context.account, type: .voiceCalls, settings: .enableEveryone(disableFor: [:])).start()
+                                } else {
                                     let _ = updateSelectiveAccountPrivacySettings(account: context.context.account, type: .voiceCalls, settings: .disableEveryone(enableFor: [:])).start()
                                 }
                                 
