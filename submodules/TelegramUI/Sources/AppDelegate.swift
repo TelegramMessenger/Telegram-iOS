@@ -1319,7 +1319,7 @@ final class SharedApplicationContext {
         
         self.badgeDisposable.set((self.context.get()
         |> mapToSignal { context -> Signal<Int32, NoError> in
-            if let context = context {
+            if let context = context, !context.context.account.isHidden {
                 return context.applicationBadge
             } else {
                 return .single(0)
