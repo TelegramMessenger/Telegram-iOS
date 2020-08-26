@@ -1319,7 +1319,7 @@ final class SharedApplicationContext {
         
         self.badgeDisposable.set((self.context.get()
         |> mapToSignal { context -> Signal<Int32, NoError> in
-            if let context = context {
+            if let context = context, !context.context.account.isHidden {
                 return context.applicationBadge
             } else {
                 return .single(0)
@@ -1954,8 +1954,7 @@ final class SharedApplicationContext {
                 })
             }
             if let appLockContext = sharedContext.sharedContext.appLockContext as? AppLockContextImpl, !immediately {
-                let _ = (appLockContext.isCurrentlyLocked
-                |> filter { !$0 }
+                let _ = (appLockContext.isUnlockedAndReady
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { _ in
                     proceed()
@@ -2296,8 +2295,6 @@ final class SharedApplicationContext {
                             }
                             
                             if let id = id {
-                                setAccountPushNotificationsEnabledOnThisDevice(accountIds: [id: false], transaction: transaction)
-                                
                                 setAccountRecordAccessChallengeData(transaction: transaction, id: id, accessChallengeData: data)
                                 
                                 updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(60).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })

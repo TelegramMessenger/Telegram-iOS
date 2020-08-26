@@ -141,32 +141,6 @@ public func updateInAppNotificationSettingsInteractively(transaction: AccountMan
     })
 }
 
-public func setAccountPushNotificationsEnabledOnThisDevice(accountIds: [AccountRecordId: Bool], accountManager: AccountManager) {
-    let _ = (accountManager.transaction { transaction -> Void in
-        setAccountPushNotificationsEnabledOnThisDevice(accountIds: accountIds,transaction: transaction)
-    } |> deliverOnMainQueue).start()
-}
-
-public func setAccountPushNotificationsEnabledOnThisDevice(accountIds: [AccountRecordId: Bool], transaction: AccountManagerModifier) {
-    updateInAppNotificationSettingsInteractively(transaction: transaction, { settings in
-        var settings = settings
-        for (accountId, enabled) in accountIds {
-            if !enabled {
-                if !settings.disabledNotificationsAccountRecords.contains(accountId) {
-                    settings.disabledNotificationsAccountRecords.append(accountId)
-                }
-                if !settings.disabledNotificationsAccountRecordsMasterPasscodeSnapshot.contains(accountId) {
-                    settings.disabledNotificationsAccountRecordsMasterPasscodeSnapshot.append(accountId)
-                }
-            } else {
-                settings.disabledNotificationsAccountRecords.removeAll(where: { $0 == accountId })
-                settings.disabledNotificationsAccountRecordsMasterPasscodeSnapshot.removeAll(where: { $0 == accountId })
-            }
-        }
-        return settings
-    })
-}
-
 public func updatePushNotificationsSettingsAfterOffMasterPasscode(transaction: AccountManagerModifier) {
     let accountIds = transaction.getRecords()
         .filter { $0.attributes.contains { $0 is HiddenAccountAttribute } }
@@ -174,13 +148,7 @@ public func updatePushNotificationsSettingsAfterOffMasterPasscode(transaction: A
 
     updateInAppNotificationSettingsInteractively(transaction: transaction, { settings in
         var settings = settings
-
-        if !settings.hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot {
-            settings.disabledNotificationsAccountRecordsMasterPasscodeSnapshot = settings.disabledNotificationsAccountRecords
-            settings.disabledNotificationsAccountRecords = accountIds
-            settings.hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot = true
-        }
-
+        settings.disabledNotificationsAccountRecords = accountIds
         return settings
     })
 }
@@ -188,13 +156,7 @@ public func updatePushNotificationsSettingsAfterOffMasterPasscode(transaction: A
 public func updatePushNotificationsSettingsAfterOnMasterPasscode(transaction: AccountManagerModifier) {
     updateInAppNotificationSettingsInteractively(transaction: transaction, { settings in
         var settings = settings
-
-        if settings.hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot {
-            settings.disabledNotificationsAccountRecords = settings.disabledNotificationsAccountRecordsMasterPasscodeSnapshot
-            settings.disabledNotificationsAccountRecordsMasterPasscodeSnapshot = []
-            settings.hasDisabledNotificationsAccountRecordsMasterPasscodeSnapshot = false
-        }
-
+        settings.disabledNotificationsAccountRecords = []
         return settings
     })
 }
@@ -207,13 +169,7 @@ public func updatePushNotificationsSettingsAfterAllPublicLogout(accountManager: 
         
         updateInAppNotificationSettingsInteractively(transaction: transaction, { settings in
             var settings = settings
-            
-            if !settings.hasDisabledNotificationsAccountRecordsLogoutSnapshot {
-                settings.disabledNotificationsAccountRecordsLogoutSnapshot = settings.disabledNotificationsAccountRecords
-                settings.disabledNotificationsAccountRecords = accountIds
-                settings.hasDisabledNotificationsAccountRecordsLogoutSnapshot = true
-            }
-            
+            settings.disabledNotificationsAccountRecords = accountIds
             return settings
         })
     } |> deliverOnMainQueue).start()
@@ -223,13 +179,7 @@ public func updatePushNotificationsSettingsAfterLogin(accountManager: AccountMan
     let _ = (accountManager.transaction { transaction -> Void in
         updateInAppNotificationSettingsInteractively(transaction: transaction, { settings in
             var settings = settings
-            
-            if settings.hasDisabledNotificationsAccountRecordsLogoutSnapshot {
-                settings.disabledNotificationsAccountRecords = settings.disabledNotificationsAccountRecordsLogoutSnapshot
-                settings.disabledNotificationsAccountRecordsLogoutSnapshot = []
-                settings.hasDisabledNotificationsAccountRecordsLogoutSnapshot = false
-            }
-            
+            settings.disabledNotificationsAccountRecords = []
             return settings
         })
     } |> deliverOnMainQueue).start()

@@ -997,6 +997,9 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
                 guard let errorContext = errorContext else {
                     return true
                 }
+                if errorContext.floodWaitSeconds > 0 {
+                    print(Date(), "!@# flood wait:", errorContext.floodWaitSeconds)
+                }
                 if errorContext.floodWaitSeconds > 0 && !automaticFloodWait {
                     return false
                 }
@@ -1008,6 +1011,9 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
                     subscriber.putError(error)
                 } else {
                     if let result = (boxedResponse as! BoxedMessage).body as? T {
+                        if data.0.name == "account.registerDevice" || data.0.name == "account.unregisterDevice" {
+                            print(Date(), "!@# success:", data.0.name, data.0.parameters.first(where: { $0.0 == "otherUids" }))
+                        }
                         subscriber.putNext(result)
                         subscriber.putCompletion()
                     }

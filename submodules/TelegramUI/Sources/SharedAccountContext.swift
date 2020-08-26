@@ -803,15 +803,27 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             return true
         })
         
-        self.registeredNotificationTokensDisposable.set((combineLatest(queue: .mainQueue(), settings, self.activeAccounts)
+        let activeAccounts = self.activeAccounts |> map { [weak self] accounts -> (primary: Account?, accounts: [(AccountRecordId, Account, Int32)], currentAuth: UnauthorizedAccount?) in
+            if let strongSelf = self {
+                if accounts.accounts.contains(where: { !$0.1.isHidden }) {
+                    updatePushNotificationsSettingsAfterLogin(accountManager: strongSelf.accountManager)
+                } else {
+                    updatePushNotificationsSettingsAfterAllPublicLogout(accountManager: strongSelf.accountManager)
+                }
+            }
+            
+            return accounts
+        }
+        
+        self.registeredNotificationTokensDisposable.set((combineLatest(queue: .mainQueue(), settings, activeAccounts)
         |> mapToSignal { settings, activeAccountsAndInfo -> Signal<Never, NoError> in
             let (primary, activeAccounts, _) = activeAccountsAndInfo
             var applied: [Signal<Never, NoError>] = []
             var activeProductionUserIds = activeAccounts.map({ $0.1 }).filter({ !$0.testingEnvironment && !settings.disabledNotificationsAccountRecords.contains($0.id) }).map({ $0.peerId.id })
             var activeTestingUserIds = activeAccounts.map({ $0.1 }).filter({ $0.testingEnvironment && !settings.disabledNotificationsAccountRecords.contains($0.id) }).map({ $0.peerId.id })
             
-            let allProductionUserIds = activeProductionUserIds
-            let allTestingUserIds = activeTestingUserIds
+            let allProductionUserIds = activeAccounts.map({ $0.1 }).filter({ !$0.testingEnvironment }).map({ $0.peerId.id })
+            let allTestingUserIds = activeAccounts.map({ $0.1 }).filter({ $0.testingEnvironment }).map({ $0.peerId.id })
             
             if !settings.allAccounts {
                 if let primary = primary, !settings.disabledNotificationsAccountRecords.contains(primary.id) {
@@ -829,6 +841,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
             
             for (_, account, _) in activeAccounts {
+                if account.isHidden {
+                    account.shouldBeServiceTaskMaster.set(.single(.always))
+                }
+                
                 let appliedAps: Signal<Never, NoError>
                 let appliedVoip: Signal<Never, NoError>
                 
