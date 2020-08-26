@@ -2312,14 +2312,19 @@ final class SharedApplicationContext {
                             controller.buttonPressedWithEnabledSwitch = { [weak accountContext, weak context] enabled in
                                 guard let accountContext = accountContext, let context = context else { return }
                                 
-                                // Turn of notifications and calls
-                                let _ = updateGlobalNotificationSettingsInteractively(postbox: context.context.account.postbox, { settings in
-                                    var settings = settings
-                                    settings.channels.enabled = enabled
-                                    settings.groupChats.enabled = enabled
-                                    settings.privateChats.enabled = enabled
-                                    return settings
-                                }).start()
+                                // Turn off notifications and calls
+                                
+                                if !enabled {
+                                    let _ = updateGlobalNotificationSettingsInteractively(postbox: context.context.account.postbox, { settings in
+                                        var settings = settings
+                                        settings.channels.enabled = false
+                                        settings.groupChats.enabled = false
+                                        settings.privateChats.enabled = false
+                                        return settings
+                                    }).start()
+                                    
+                                    let _ = updateSelectiveAccountPrivacySettings(account: context.context.account, type: .voiceCalls, settings: .disableEveryone(enableFor: [:])).start()
+                                }
                                 
                                 updateHiddenAccountsAccessChallengeData(manager: accountContext.accountManager)
                                 
