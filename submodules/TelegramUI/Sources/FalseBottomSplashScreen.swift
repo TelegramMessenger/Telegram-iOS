@@ -129,7 +129,7 @@ private final class FalseBottomSwitchScreenNode: ViewControllerTracingNode {
         let text = NSAttributedString(string: presentationData.strings.FalseBottom_DisableNotifications_Text, font: textFont, textColor: textColor)
         let subtitle = NSAttributedString(string: presentationData.strings.FalseBottom_DisableNotifications_Subtitle, font: subtitleFont, textColor: subtitleColor)
         let buttonText = presentationData.strings.Common_Next
-        let source = FalseBottomAnimationSource(mode: .disableNotifications, theme: presentationData.theme)
+        let source = FalseBottomAnimationSource(mode: .disableNotifications)
         
         self.animationNode = AnimatedStickerNode()
         if let source = source {
@@ -245,7 +245,7 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
         
         let textFont = Font.regular(16.0)
         let textColor = self.presentationData.theme.list.itemPrimaryTextColor
-        let source = FalseBottomAnimationSource(mode: mode, theme: presentationData.theme)
+        let source = FalseBottomAnimationSource(mode: mode)
 
         switch mode {
         case .hideAccount:
@@ -446,124 +446,32 @@ private extension CGFloat {
 private final class FalseBottomAnimationSource: AnimatedStickerNodeSource {
     public let path: String
     
-    public init?(mode: FalseBottomSplashMode, theme: PresentationTheme) {
+    public init?(mode: FalseBottomSplashMode) {
         let fileName: String
-        let replacements: [String:UIColor]
-        
-        let outlineColor = theme.list.itemPrimaryTextColor.interpolated(to: theme.list.plainBackgroundColor, percentage: 0.45).grayscale
-        let elementBackgroundColor = theme.list.plainBackgroundColor.interpolated(to: theme.list.itemPrimaryTextColor, percentage: 0.125).grayscale
-        let middleColor1 = elementBackgroundColor.interpolated(to: outlineColor, percentage: 0.15).grayscale
-        let middleColor2 = elementBackgroundColor.interpolated(to: outlineColor, percentage: 0.23).grayscale
-        let middleColor3 = elementBackgroundColor.interpolated(to: outlineColor, percentage: 0.56).grayscale
-        let middleColor4 = elementBackgroundColor.interpolated(to: outlineColor, percentage: 0.56).grayscale
-        let brightElementColor1: UIColor
-        let brightElementColor2: UIColor
-        let buttonColor = theme.list.itemCheckColors.fillColor
-        if buttonColor.hsba.s > 0.5 {
-            brightElementColor1 = buttonColor
-            brightElementColor2 = buttonColor.complement
-        } else {
-            brightElementColor1 = UIColor(red: 0.165, green: 0.325, blue: 0.51, alpha: 1.0)
-            brightElementColor2 = UIColor(red: 0.373, green: 0.463, blue: 0.302, alpha: 1.0)
-        }
         
         switch mode {
         case .hideAccount:
             fileName = "FalseBottomHideAccount"
-            replacements = [
-                "0.125,0.125,0.125,1": elementBackgroundColor,
-                "0.1254902035,0.1254902035,0.1254902035,1": elementBackgroundColor,
-//                "0.152941182256,0.32549020648,0.509803950787,1": brightElementColor1,
-//                "0.164705887437,0.32549020648,0.509803950787,1": brightElementColor1,
-                "0.1882353127,0.1882353127,0.196078449488,1": middleColor1,
-                "0.219999994016,0.224000010771,0.231000010173,1": middleColor2,
-                "0.352999997606,0.352999997606,0.352999997606,1": middleColor3,
-//                "0.364705890417,0.443137288094,0.298039227724,1": brightElementColor2,
-//                "0.372549027205,0.462745130062,0.301960796118,1": brightElementColor2,
-                "0.552941203117,0.556862771511,0.57647061348,1": outlineColor,
-                "0.552999997606,0.556999954523,0.57599995931,1": outlineColor
-            ]
             
         case .addOneMoreAccount:
             fileName = "FalseBottomAddOneMoreAccount"
-            replacements = [
-                "0.125,0.125,0.125,1": elementBackgroundColor,
-                "0.552999997606,0.556999954523,0.57599995931,1": outlineColor
-            ]
             
         case .setMasterPasscode:
             fileName = "FalseBottomSetMasterPasscode"
-            replacements = [
-                "0,0,0,1": theme.list.plainBackgroundColor,
-                "0.125,0.125,0.125,1": elementBackgroundColor,
-                "0.1254902035,0.1254902035,0.1254902035,1": elementBackgroundColor,
-//                "0.164705882353,0.325490196078,0.509803921569,1": brightElementColor1,
-//                "0.164705887437,0.32549020648,0.509803950787,1": brightElementColor1,
-                "0.165000002992,0.325,0.510000011968,1": brightElementColor1,
-                "0.1882353127,0.1882353127,0.196078449488,1": middleColor1,
-                "0.219999994016,0.224000010771,0.231000010173,1": middleColor2,
-                "0.352999997606,0.352999997606,0.352999997606,1": middleColor3,
-//                "0.372549027205,0.46274510026,0.301960796118,1": brightElementColor2,
-//                "0.372549027205,0.462745130062,0.301960796118,1": brightElementColor2,
-                "0.552941203117,0.556862771511,0.57647061348,1": outlineColor,
-                "0.552999997606,0.556999954523,0.57599995931,1": outlineColor
-            ]
             
         case .setSecretPasscode:
             fileName = "FalseBottomHiddenPassword"
-            replacements = [
-                "0.219607843137,0.223529411765,0.23137254902,1": elementBackgroundColor,
-                "0.122,0.122,0.122,1": elementBackgroundColor,
-                "0.122000002394,0.122000002394,0.122000002394,1": elementBackgroundColor,
-                "0.125,0.125,0.125,1": elementBackgroundColor,
-                "0.1254902035,0.1254902035,0.1254902035,1": elementBackgroundColor,
-                "0.552999997606,0.556999954523,0.57599995931,1": outlineColor
-            ]
             
         case .disableNotifications:
             fileName = "FalseBottomNotifications_part_1"
-            replacements = [:]
             
         case .accountWasHidden:
             fileName = "FalseBottomAccountIsHidden"
-            replacements = [
-//                "0.086000001197,0.165000002992,0.250999989229,1"
-                "0.122000002394,0.122000002394,0.122000002394,1": elementBackgroundColor,
-                "0.125,0.125,0.125,1": elementBackgroundColor,
-                "0.1254902035,0.1254902035,0.1254902035,1": elementBackgroundColor,
-                "0.184000007779,0.184000007779,0.187999994615,1": middleColor1,
-//                "0.184000007779,0.226999993418,0.149000010771,1"
-                "0.196078431373,0.196078431373,0.196078431373,1": middleColor1,
-                "0.219607843137,0.223529411765,0.23137254902,1": middleColor2,
-                "0.219999994016,0.224000010771,0.231000010173,1": middleColor2,
-                "0.352999997606,0.352999997606,0.352999997606,1": middleColor3,
-//                "0.462745127958,0.258823529412,0,1"
-                "0.47080338422,0.448363120883,0.441716063256,1": middleColor4,
-                "0.552941203117,0.556862771511,0.57647061348,1": outlineColor,
-                "0.552999997606,0.556999954523,0.57599995931,1": outlineColor,
-                "0.556862745098,0.552941176471,0.560784313725,1": outlineColor
-//                "0.905999995213,0.246999987434,0.250999989229,1"
-            ]
-        }
-        guard let path = getAppBundle().path(forResource: fileName, ofType: "tgs"),
-            let rawData = try? Data(contentsOf: URL(fileURLWithPath: path)) else { return nil }
-        
-        let data = TGGUnzipData(rawData, 8 * 1024 * 1024) ?? rawData
-        
-        guard var string = String(data: data, encoding: .utf8) else { return nil }
-        
-        for (key, value) in replacements {
-            string = string.replacingOccurrences(of: key, with: value.lottieColor)
         }
         
-        let newPath = NSTemporaryDirectory() + "/" + fileName + "_colored.tgs"
-        do {
-            try string.write(to: URL(fileURLWithPath: newPath), atomically: true, encoding: .utf8)
-        } catch {
-            return nil
-        }
+        guard let path = getAppBundle().path(forResource: fileName, ofType: "tgs") else { return nil }
         
-        self.path = newPath
+        self.path = path
     }
     
     public func directDataPath() -> Signal<String, NoError> {
