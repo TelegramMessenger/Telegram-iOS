@@ -102,6 +102,24 @@ public final class AppLockContextImpl: AppLockContext {
     private var didFinishChangingAccountDisposable: Disposable?
     private let hiddenAccountManager: HiddenAccountManager
     
+    public var isUnlockedAndReady: Signal<Void, NoError> {
+        return self.isCurrentlyLockedPromise.get()
+            |> filter { !$0 }
+            |> distinctUntilChanged(isEqual: ==)
+            |> mapToSignal { [weak self] _ in
+                guard let strongSelf = self else { return .never() }
+                
+                return strongSelf.unlockedHiddenAccountRecordId.get()
+                |> mapToSignal { unlockedHiddenAccountRecordId in
+                    if unlockedHiddenAccountRecordId == nil {
+                        return .single(())
+                    } else {
+                        return strongSelf.hiddenAccountManager.didFinishChangingAccountPromise.get() |> delay(0.1, queue: .mainQueue())
+                    }
+                }
+        }
+    }
+    
     public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, hiddenAccountManager: HiddenAccountManager, lockIconInitialFrame: @escaping () -> CGRect?) {
         assert(Queue.mainQueue().isCurrent())
         

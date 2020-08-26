@@ -1954,8 +1954,7 @@ final class SharedApplicationContext {
                 })
             }
             if let appLockContext = sharedContext.sharedContext.appLockContext as? AppLockContextImpl, !immediately {
-                let _ = (appLockContext.isCurrentlyLocked
-                |> filter { !$0 }
+                let _ = (appLockContext.isUnlockedAndReady
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { _ in
                     proceed()
