@@ -5752,6 +5752,8 @@ Any member of this group will be able to see messages in the channel.";
 "FalseBottom.SetSecretPasscode.Title" = "Hidden passcode";
 "FalseBottom.SetSecretPasscode.Text" = "Set up a passcode for the account you want to hide.";
 "FalseBottom.SetSecretPasscode.Button" = "Set up passcode";
+"FalseBottom.DisableNotifications.Text" = "You can disable push notifications and calls for hidden account";
+"FalseBottom.DisableNotifications.Subtitle" = "It will take effect for every device this account is logged in";
 "FalseBottom.AccountWasHidden.Title" = "Account is hidden";
 "FalseBottom.AccountWasHidden.Text" = "Now you can open the account you need by entering the first or the second passcode.";
 "FalseBottom.AccountWasHidden.Button" = "Enter passcode";
