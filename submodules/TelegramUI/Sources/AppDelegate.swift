@@ -1543,14 +1543,18 @@ final class SharedApplicationContext {
             return
         }
         
-        let _ = (self.sharedContextPromise.get()
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
-            
-            sharedApplicationContext.wakeupManager.replaceCurrentExtensionWithExternalTime(completion: {
-                completionHandler(.newData)
-            }, timeout: 29.0)
-            sharedApplicationContext.notificationManager.addNotification(userInfo)
+        let _ = (combineLatest(queue: .mainQueue(), self.sharedContextPromise.get(), accountIdFromNotification(userInfo, sharedContext: self.sharedContextPromise.get()))
+            |> take(1)).start(next: { sharedApplicationContext, accountId in
+                
+            let _ = (sharedApplicationContext.sharedContext.accountManager.transaction({ [weak sharedApplicationContext] transaction in
+                if let sharedApplicationContext = sharedApplicationContext, let record = transaction.getRecords().first(where: { $0.id == accountId }),
+                    !record.attributes.contains(where: { $0 is HiddenAccountAttribute }) {
+                    sharedApplicationContext.wakeupManager.replaceCurrentExtensionWithExternalTime(completion: {
+                        completionHandler(.newData)
+                    }, timeout: 29.0)
+                    sharedApplicationContext.notificationManager.addNotification(userInfo)
+                }
+            }) |> deliverOnMainQueue).start()
         })
     }
     
@@ -2000,7 +2004,17 @@ final class SharedApplicationContext {
         |> take(1)
         |> mapToSignal { sharedApplicationContext -> Signal<AuthorizedApplicationContext, NoError> in
             if let accountId = accountId {
-                sharedApplicationContext.sharedContext.switchToAccount(id: accountId)
+                let _ = (sharedApplicationContext.sharedContext.accountManager.transaction({ transaction -> Bool in
+                    if let record = transaction.getRecords().first(where: { $0.id == accountId }) {
+                        return !record.attributes.contains(where: { $0 is HiddenAccountAttribute })
+                    } else {
+                        return false
+                    }
+                }) |> deliverOnMainQueue).start(next: { [weak sharedApplicationContext] canSwitch in
+                    if canSwitch {
+                        sharedApplicationContext?.sharedContext.switchToAccount(id: accountId)
+                    }
+                })
                 return self.authorizedContext()
                 |> filter { context in
                     context.context.account.id == accountId
@@ -2341,15 +2355,30 @@ final class SharedApplicationContext {
     
     @available(iOS 10.0, *)
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
-        let _ = (accountIdFromNotification(response.notification, sharedContext: self.sharedContextPromise.get())
-        |> deliverOnMainQueue).start(next: { accountId in
+        
+        let hiddenIdsAndPasscodeSettings = self.sharedContextPromise.get() |> mapToSignal { context in
+            return context.sharedContext.accountManager.transaction({ transaction -> (hiddenIds: [AccountRecordId], hasMasterPasscode: Bool) in
+                let hiddenIds = transaction.getRecords().filter { $0.attributes.contains(where: { $0 is HiddenAccountAttribute }) }.map { $0.id }
+                let hasMasterPasscode = transaction.getAccessChallengeData() != .none
+                return (hiddenIds, hasMasterPasscode)
+            })
+        }
+        
+        let _ = combineLatest(queue: .mainQueue(), accountIdFromNotification(response.notification, sharedContext: self.sharedContextPromise.get()), hiddenIdsAndPasscodeSettings, self.sharedContextPromise.get()).start(next: { accountId, hiddenIdsAndPasscodeSettings, context in
             if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
                 if let peerId = peerIdFromNotification(response.notification) {
                     var messageId: MessageId? = nil
                     if response.notification.request.content.categoryIdentifier == "watch" {
                         messageId = messageIdFromNotification(peerId: peerId, notification: response.notification)
                     }
-                    self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
+                    if let accountId = accountId, hiddenIdsAndPasscodeSettings.hiddenIds.contains(accountId) {
+                        if hiddenIdsAndPasscodeSettings.hasMasterPasscode {
+                            context.sharedContext.appLockContext.lock()
+                            self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
+                        }
+                    } else {
+                        self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
+                    }
                 }
                 completionHandler()
             } else if response.actionIdentifier == "reply", let peerId = peerIdFromNotification(response.notification), let accountId = accountId {
@@ -2713,6 +2742,64 @@ private func accountIdFromNotification(_ notification: UNNotification, sharedCon
                 }
             }
         } else if let userId = notification.request.content.userInfo["userId"] as? Int {
+            return sharedContext
+            |> take(1)
+            |> mapToSignal { sharedContext -> Signal<AccountRecordId?, NoError> in
+                return sharedContext.sharedContext.activeAccounts
+                |> take(1)
+                |> map { _, accounts, _ -> AccountRecordId? in
+                    for (_, account, _) in accounts {
+                        if Int(account.peerId.id) == userId {
+                            return account.id
+                        }
+                    }
+                    return nil
+                }
+            }
+        } else {
+            return .single(nil)
+        }
+    }
+}
+
+private func accountIdFromNotification(_ notification: [AnyHashable : Any], sharedContext: Signal<SharedApplicationContext, NoError>) -> Signal<AccountRecordId?, NoError> {
+    if let id = notification["accountId"] as? Int64 {
+        return .single(AccountRecordId(rawValue: id))
+    } else {
+        var encryptedData: Data?
+        if var encryptedPayload = notification["p"] as? String {
+            encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
+            encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
+            while encryptedPayload.count % 4 != 0 {
+                encryptedPayload.append("=")
+            }
+            encryptedData = Data(base64Encoded: encryptedPayload)
+        }
+        if let encryptedData = encryptedData, let notificationKeyId = notificationPayloadKey(data: encryptedData) {
+            return sharedContext
+            |> take(1)
+            |> mapToSignal { sharedContext -> Signal<AccountRecordId?, NoError> in
+                return sharedContext.sharedContext.activeAccounts
+                |> take(1)
+                |> mapToSignal { _, accounts, _ -> Signal<AccountRecordId?, NoError> in
+                    let keys = accounts.map { _, account, _ -> Signal<(AccountRecordId, MasterNotificationKey)?, NoError> in
+                        return masterNotificationsKey(account: account, ignoreDisabled: true)
+                        |> map { key in
+                            return (account.id, key)
+                        }
+                    }
+                    return combineLatest(keys)
+                    |> map { keys -> AccountRecordId? in
+                        for idAndKey in keys {
+                            if let (id, key) = idAndKey, key.id == notificationKeyId {
+                                return id
+                            }
+                        }
+                        return nil
+                    }
+                }
+            }
+        } else if let userId = notification["userId"] as? Int {
             return sharedContext
             |> take(1)
             |> mapToSignal { sharedContext -> Signal<AccountRecordId?, NoError> in
