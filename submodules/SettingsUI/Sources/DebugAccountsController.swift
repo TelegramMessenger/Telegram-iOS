@@ -94,8 +94,14 @@ private func debugAccountsControllerEntries(view: AccountRecordsView, presentati
     for entry in view.records.sorted(by: {
         $0.id < $1.id
     }) {
-        if currentHiddenId == nil || currentHiddenId == entry.id {
-            entries.append(.record(presentationData.theme, entry, entry.id == view.currentRecord?.id))
+        if let currentHiddenId = currentHiddenId {
+            if entry.id == currentHiddenId {
+                entries.append(.record(presentationData.theme, entry, true))
+            }
+        } else {
+            if !entry.attributes.contains(where: { $0 is HiddenAccountAttribute }) {
+                entries.append(.record(presentationData.theme, entry, entry.id == view.currentRecord?.id))
+            }
         }
     }
     
