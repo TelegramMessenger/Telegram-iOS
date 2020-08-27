@@ -162,6 +162,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private let rootPath: String
     
     public let openFalseBottomFlow: () -> Void
+    private var activeAccountsSettingsDisposable: Disposable?
     
     public init(mainWindow: Window1?, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, legacyCache: LegacyCache?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }, openFalseBottomFlow: @escaping () -> Void) {
         assert(Queue.mainQueue().isCurrent())
@@ -742,6 +743,20 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             })
         }
+        
+        self.activeAccountsSettingsDisposable = (self.activeAccounts |> delay(1.0, queue: .mainQueue())).start(next:{ [weak self] accounts -> Void in
+            if let strongSelf = self {
+                if accounts.accounts.contains(where: { !$0.1.isHidden }) {
+                    updatePushNotificationsSettingsAfterLogin(accountManager: strongSelf.accountManager)
+                } else {
+                    Queue.mainQueue().after(1.0) { [weak self] in
+                        guard let strongSelf = self else { return }
+                        
+                        updatePushNotificationsSettingsAfterAllPublicLogout(accountManager: strongSelf.accountManager)
+                    }
+                }
+            }
+        })
     }
     
     deinit {
@@ -755,6 +770,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.callDisposable?.dispose()
         self.callStateDisposable?.dispose()
         self.currentCallStatusTextTimer?.invalidate()
+        self.activeAccountsSettingsDisposable?.dispose()
     }
     
     private func updateAccountBackupData(account: Account) -> Signal<Never, NoError> {
@@ -803,19 +819,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             return true
         })
         
-        let activeAccounts = self.activeAccounts |> map { [weak self] accounts -> (primary: Account?, accounts: [(AccountRecordId, Account, Int32)], currentAuth: UnauthorizedAccount?) in
-            if let strongSelf = self {
-                if accounts.accounts.contains(where: { !$0.1.isHidden }) {
-                    updatePushNotificationsSettingsAfterLogin(accountManager: strongSelf.accountManager)
-                } else {
-                    updatePushNotificationsSettingsAfterAllPublicLogout(accountManager: strongSelf.accountManager)
-                }
+        let accounts = self.activeAccounts |> distinctUntilChanged(isEqual: { lhs, rhs in
+            if lhs.primary?.id != rhs.primary?.id {
+                return false
             }
-            
-            return accounts
-        }
+            if lhs.accounts.map({ $0.1.id.int64 }).sorted() != rhs.accounts.map({ $0.1.id.int64 }).sorted() {
+                return false
+            }
+            return true
+        })
         
-        self.registeredNotificationTokensDisposable.set((combineLatest(queue: .mainQueue(), settings, activeAccounts)
+        self.registeredNotificationTokensDisposable.set((combineLatest(queue: .mainQueue(), settings, accounts)
         |> mapToSignal { settings, activeAccountsAndInfo -> Signal<Never, NoError> in
             let (primary, activeAccounts, _) = activeAccountsAndInfo
             var applied: [Signal<Never, NoError>] = []
@@ -840,9 +854,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             }
             
+            let hasPublicAccounts = activeAccounts.contains(where: { !$0.1.isHidden })
+            
             for (_, account, _) in activeAccounts {
-                if account.isHidden {
+                if account.isHidden || !hasPublicAccounts {
                     account.shouldBeServiceTaskMaster.set(.single(.always))
+                    account.postbox.becomeMasterClient()
+                    account.resetStateManagement()
                 }
                 
                 let appliedAps: Signal<Never, NoError>

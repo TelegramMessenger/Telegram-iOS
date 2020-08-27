@@ -298,9 +298,9 @@ final class AccountManagerImpl {
         }
     }
     
-    fileprivate func accountRecords() -> Signal<AccountRecordsView, NoError> {
+    fileprivate func accountRecords(currentRecordId: AccountRecordId?) -> Signal<AccountRecordsView, NoError> {
         return self.transaction(ignoreDisabled: false, { transaction -> Signal<AccountRecordsView, NoError> in
-            return self.accountRecordsInternal(transaction: transaction)
+            return self.accountRecordsInternal(transaction: transaction, currentRecordId: currentRecordId)
         })
         |> switchToLatest
     }
@@ -326,11 +326,11 @@ final class AccountManagerImpl {
         |> switchToLatest
     }
     
-    private func accountRecordsInternal(transaction: AccountManagerModifier) -> Signal<AccountRecordsView, NoError> {
+    private func accountRecordsInternal(transaction: AccountManagerModifier, currentRecordId: AccountRecordId?) -> Signal<AccountRecordsView, NoError> {
         assert(self.queue.isCurrent())
         let mutableView = MutableAccountRecordsView(getRecords: {
             return self.currentAtomicState.records.map { $0.1 }
-        }, currentId: self.currentAtomicState.currentRecordId, currentAuth: self.currentAtomicState.currentAuthRecord)
+        }, currentId: currentRecordId ?? self.currentAtomicState.currentRecordId, currentAuth: self.currentAtomicState.currentAuthRecord)
         let pipe = ValuePipe<AccountRecordsView>()
         let index = self.recordsViews.add((mutableView, pipe))
         
@@ -423,7 +423,7 @@ final class AccountManagerImpl {
                 return .single(nil)
             }
             
-            let signal = self.accountRecordsInternal(transaction: transaction)
+            let signal = self.accountRecordsInternal(transaction: transaction, currentRecordId: nil)
             |> map { view -> (AccountRecordId, [AccountRecordAttribute])? in
                 if let currentRecord = view.currentRecord {
                     return (currentRecord.id, currentRecord.attributes)
@@ -516,16 +516,19 @@ public final class AccountManager {
     }
     
     public func accountRecords() -> Signal<AccountRecordsView, NoError> {
-        return Signal { subscriber in
-            let disposable = MetaDisposable()
-            self.impl.with { impl in
-                disposable.set(impl.accountRecords().start(next: { next in
-                    subscriber.putNext(next)
-                }, completed: {
-                    subscriber.putCompletion()
-                }))
+        return hiddenAccountManager.accountManagerRecordIdPromise.get() |> mapToSignal { currentHiddenRecordId in
+            return Signal { subscriber in
+                let disposable = MetaDisposable()
+                self.impl.with { impl in
+                    disposable.set(impl.accountRecords(currentRecordId: currentHiddenRecordId)
+                        .start(next: { next in
+                        subscriber.putNext(next)
+                    }, completed: {
+                        subscriber.putCompletion()
+                    }))
+                }
+                return disposable
             }
-            return disposable
         }
     }
     

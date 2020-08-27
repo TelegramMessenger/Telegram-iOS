@@ -19,6 +19,7 @@ public func unregisterNotificationToken(account: Account, token: Data, type: Not
             mappedType = 9
     }
     print(Date(), "!@# unrequest register:", account.peerId.toInt64(), "other:", otherAccountUserIds)
+//    account.shouldBeServiceTaskMaster.set(.single(.always))
     return account.network.request(Api.functions.account.unregisterDevice(tokenType: mappedType, token: hexString(token), otherUids: otherAccountUserIds))
     |> retryRequest
     |> ignoreValues
@@ -44,6 +45,7 @@ public func registerNotificationToken(account: Account, token: Data, type: Notif
             flags |= 1 << 0
         }
         print(Date(), "!@# request register:", account.peerId.toInt64(), "other:", otherAccountUserIds)
+//        account.shouldBeServiceTaskMaster.set(.single(.always))
         return account.network.request(Api.functions.account.registerDevice(flags: flags, tokenType: mappedType, token: hexString(token), appSandbox: sandbox ? .boolTrue : .boolFalse, secret: Buffer(data: keyData), otherUids: otherAccountUserIds))
         |> retryRequest
         |> ignoreValues
