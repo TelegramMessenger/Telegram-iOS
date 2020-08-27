@@ -1187,7 +1187,6 @@ public class Account {
                 let _ = try? data.write(to: URL(fileURLWithPath: "\(basePath)/notificationsKey"))
             }
         })
-        print("!@# init:", id, Unmanaged.passUnretained(self).toOpaque())
     }
     
     deinit {
@@ -1199,7 +1198,6 @@ public class Account {
         self.smallLogPostDisposable.dispose()
         self.networkTypeDisposable?.dispose()
         self.isHiddenDisposable?.dispose()
-        print("!@# deinit:", id, Unmanaged.passUnretained(self).toOpaque())
     }
     
     private func postSmallLogIfNeeded() {
