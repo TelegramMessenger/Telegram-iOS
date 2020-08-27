@@ -409,7 +409,7 @@ final class AccountManagerImpl {
         }
     }
     
-    fileprivate func currentAccountRecord(allocateIfNotExists: Bool) -> Signal<(AccountRecordId, [AccountRecordAttribute])?, NoError> {
+    fileprivate func currentAccountRecord(allocateIfNotExists: Bool, currentRecordId: AccountRecordId?) -> Signal<(AccountRecordId, [AccountRecordAttribute])?, NoError> {
         return self.transaction(ignoreDisabled: false, { transaction -> Signal<(AccountRecordId, [AccountRecordAttribute])?, NoError> in
             let current = transaction.getCurrent()
             if let _ = current {
@@ -423,7 +423,7 @@ final class AccountManagerImpl {
                 return .single(nil)
             }
             
-            let signal = self.accountRecordsInternal(transaction: transaction, currentRecordId: nil)
+            let signal = self.accountRecordsInternal(transaction: transaction, currentRecordId: currentRecordId)
             |> map { view -> (AccountRecordId, [AccountRecordAttribute])? in
                 if let currentRecord = view.currentRecord {
                     return (currentRecord.id, currentRecord.attributes)
@@ -575,16 +575,18 @@ public final class AccountManager {
     }
     
     public func currentAccountRecord(allocateIfNotExists: Bool) -> Signal<(AccountRecordId, [AccountRecordAttribute])?, NoError> {
-        return Signal { subscriber in
-            let disposable = MetaDisposable()
-            self.impl.with { impl in
-                disposable.set(impl.currentAccountRecord(allocateIfNotExists: allocateIfNotExists).start(next: { next in
-                    subscriber.putNext(next)
-                }, completed: {
-                    subscriber.putCompletion()
-                }))
+        return hiddenAccountManager.accountManagerRecordIdPromise.get() |> mapToSignal { currentHiddenRecordId in
+            return Signal { subscriber in
+                let disposable = MetaDisposable()
+                self.impl.with { impl in
+                    disposable.set(impl.currentAccountRecord(allocateIfNotExists: allocateIfNotExists, currentRecordId: currentHiddenRecordId).start(next: { next in
+                        subscriber.putNext(next)
+                    }, completed: {
+                        subscriber.putCompletion()
+                    }))
+                }
+                return disposable
             }
-            return disposable
         }
     }
     
