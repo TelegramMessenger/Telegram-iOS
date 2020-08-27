@@ -177,24 +177,21 @@ private final class FalseBottomSwitchScreenNode: ViewControllerTracingNode {
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let isIphone4s = layout.size.height <= 480
         
-        let sideInset: CGFloat = 30.0
-        let buttonSideInset: CGFloat = 30.0
-        let upperSpacing: CGFloat = isIphone4s ? 69 : 87
-        let iconSpacing: CGFloat = 21.0
+        let textWidth: CGFloat = UIDevice.current.userInterfaceIdiom == .pad ? 426.0 : 270.0
+        let buttonSideInset: CGFloat = 48.0
+        let iconSpacing: CGFloat = 19.0
         let switchSpacing: CGFloat = 32.0
         let textSpacing: CGFloat = 10.0
-        let subtitleSpacing: CGFloat = 16.0
         let buttonHeight: CGFloat = 50.0
-        
-        let isIphone4sAnimationHeight: CGFloat = 147.0
-        let iconSize: CGSize = isIphone4s ? CGSize(width: floor(self.animationSize.width * isIphone4sAnimationHeight / self.animationSize.height), height: isIphone4sAnimationHeight) : self.animationSize
+        let titleCenterOffset: CGFloat = UIScreen.main.isNarrowDevice ? -9.0 : -38.0
+        let iconSize: CGSize = self.animationSize
         
         let switchSize = self.switchNode.frame.size
-        let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
-        let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
+        let textSize = self.textNode.updateLayout(CGSize(width: textWidth, height: layout.size.height))
+        let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: textWidth, height: layout.size.height))
         
-        let minimalBottomInset: CGFloat = 57.0
-        let bottomInset = layout.intrinsicInsets.bottom + (isIphone4s ? 23 : minimalBottomInset)
+        let minimalBottomInset: CGFloat = 60.0
+        let bottomInset = layout.intrinsicInsets.bottom + (isIphone4s ? 23.0 : minimalBottomInset)
         
         let buttonWidth = layout.size.width - buttonSideInset * 2.0
         
@@ -202,7 +199,7 @@ private final class FalseBottomSwitchScreenNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
         self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
         
-        let switchFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - switchSize.width) / 2.0), y: floor(layout.size.height / 2.0)), size: switchSize)
+        let switchFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - switchSize.width) / 2.0), y: floor(layout.size.height / 2.0) + titleCenterOffset), size: switchSize)
         transition.updateFrameAdditive(node: self.switchNode, frame: switchFrame)
         
         let iconFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: switchFrame.origin.y - (iconSize.height + iconSpacing)), size: iconSize)
@@ -247,6 +244,8 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
         let textFont = Font.regular(16.0)
         let textColor = self.presentationData.theme.list.itemPrimaryTextColor
         let source = FalseBottomAnimationSource(mode: mode)
+        
+        self.animationSize = UIScreen.main.isIphone4 ? CGSize(width: 211.0, height: 139.0) : CGSize(width: 264.0, height: 174.0)
 
         switch mode {
         case .hideAccount:
@@ -254,21 +253,13 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             text = NSAttributedString(string: presentationData.strings.FalseBottom_HideAccount_Text, font: textFont, textColor: textColor)
             buttonText = presentationData.strings.FalseBottom_HideAccount_Button
             
-            if let source = source {
-                self.animationNode.setup(source: source, width: 528, height: 348, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
-                self.animationSize = CGSize(width: 264.0, height: 174.0)
-                self.animationNode.visibility = true
-            }
-            
         case .addOneMoreAccount:
             title = presentationData.strings.FalseBottom_AddOneMoreAccount_Title
             text = NSAttributedString(string: presentationData.strings.FalseBottom_AddOneMoreAccount_Text, font: textFont, textColor: textColor)
             buttonText = presentationData.strings.FalseBottom_AddOneMoreAccount_Button
             
             if let source = source {
-                self.animationNode.setup(source: source, width: 174, height: 348, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
-                self.animationSize = CGSize(width: 87.0, height: 174.0)
-                self.animationNode.visibility = true
+                self.animationSize = UIScreen.main.isIphone4 ? CGSize(width: 70.0, height: 139.0) : CGSize(width: 87.0, height: 174.0)
         }
             
         case .setMasterPasscode:
@@ -276,22 +267,10 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             text = NSAttributedString(string: presentationData.strings.FalseBottom_SetMasterPasscode_Text, font: textFont, textColor: textColor)
             buttonText = presentationData.strings.FalseBottom_SetMasterPasscode_Button
             
-            if let source = source {
-                self.animationNode.setup(source: source, width: 528, height: 348, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
-                self.animationSize = CGSize(width: 264.0, height: 174.0)
-                self.animationNode.visibility = true
-            }
-            
         case .setSecretPasscode:
             title = presentationData.strings.FalseBottom_SetSecretPasscode_Title
             text = NSAttributedString(string: presentationData.strings.FalseBottom_SetSecretPasscode_Text, font: textFont, textColor: textColor)
             buttonText = presentationData.strings.FalseBottom_SetSecretPasscode_Button
-            
-            if let source = source {
-                self.animationNode.setup(source: source, width: 528, height: 348, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
-                self.animationSize = CGSize(width: 264.0, height: 174.0)
-                self.animationNode.visibility = true
-            }
             
         case .disableNotifications:
             title = ""
@@ -302,26 +281,19 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             title = presentationData.strings.FalseBottom_LockExplanation_Title
             text = NSAttributedString(string: presentationData.strings.FalseBottom_LockExplanation_Text, font: textFont, textColor: textColor)
             buttonText = presentationData.strings.FalseBottom_LockExplanation_Button
-            
-            if let source = source {
-                self.animationNode.setup(source: source, width: 528, height: 348, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
-                self.animationSize = CGSize(width: 264.0, height: 174.0)
-                self.animationNode.visibility = true
-            }
 
         case .accountWasHidden:
             title = presentationData.strings.FalseBottom_AccountWasHidden_Title
             text = NSAttributedString(string: presentationData.strings.FalseBottom_AccountWasHidden_Text, font: textFont, textColor: textColor)
             buttonText = presentationData.strings.FalseBottom_AccountWasHidden_Button
-            
-            if let source = source {
-                self.animationNode.setup(source: source, width: 528, height: 348, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
-                self.animationSize = CGSize(width: 264.0, height: 174.0)
-                self.animationNode.visibility = true
-            }
         }
         
-        let titleSize: CGFloat = UIDevice.current.userInterfaceIdiom == .pad ? 32.0 : 28.0
+        if let source = source {
+            self.animationNode.visibility = true
+            self.animationNode.setup(source: source, width: Int(self.animationSize.width * 2.0), height: Int(self.animationSize.height * 2.0), playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+        }
+        
+        let titleSize: CGFloat = UIScreen.main.isNarrowDevice ? 28.0 : 32.0
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
@@ -360,23 +332,19 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let isIphone4s = layout.size.height <= 480
         
-        let sideInset: CGFloat = 16.0
+        let textWidth: CGFloat = UIDevice.current.userInterfaceIdiom == .pad ? 426.0 : 270.0
         let buttonSideInset: CGFloat = 48.0
-        let iconSpacing: CGFloat = isIphone4s ? 23.0 : 35.0
-        let titleSpacing: CGFloat = 27.0
+        let iconSpacing: CGFloat = 27.0
+        let titleSpacing: CGFloat = 20.0
         let buttonHeight: CGFloat = 50.0
+        let titleCenterOffset: CGFloat = UIScreen.main.isNarrowDevice ? 0.0 : -32.0
+        let iconSize: CGSize = self.animationSize
         
-        let isIphone4sAnimationHeight: CGFloat = 148.0
-        let iconSize: CGSize = isIphone4s ? CGSize(width: floor(self.animationSize.width * isIphone4sAnimationHeight / self.animationSize.height), height: isIphone4sAnimationHeight) : self.animationSize
+        let titleSize = self.titleNode.updateLayout(CGSize(width: textWidth, height: layout.size.height))
+        let textSize = self.textNode.updateLayout(CGSize(width: textWidth, height: layout.size.height))
         
-        let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
-        let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
-        
-        let contentHeight = iconSize.height + iconSpacing + titleSize.height + titleSpacing + textSize.height
-        var contentVerticalOrigin = floor((layout.size.height - contentHeight - iconSize.height / 2.0) / 2.0)
-        
-        let minimalBottomInset: CGFloat = 57.0
-        let bottomInset = layout.intrinsicInsets.bottom + (isIphone4s ? 23 : minimalBottomInset)
+        let minimalBottomInset: CGFloat = isIphone4s ? 23.0 : 60.0
+        let bottomInset = layout.intrinsicInsets.bottom + minimalBottomInset
         
         let buttonWidth = layout.size.width - buttonSideInset * 2.0
         
@@ -384,7 +352,7 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
         self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
         
-        let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: floor((layout.size.height - titleSize.height) / 2.0)), size: titleSize)
+        let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: floor((layout.size.height) / 2.0 + titleCenterOffset)), size: titleSize)
         transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
         
         let iconFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: titleFrame.origin.y - iconSpacing - iconSize.height), size: iconSize)
@@ -495,5 +463,15 @@ private final class FalseBottomAnimationSource: AnimatedStickerNodeSource {
     
     public func cachedDataPath(width: Int, height: Int) -> Signal<(String, Bool), NoError> {
         return .never()
+    }
+}
+
+fileprivate extension UIScreen {
+    var isNarrowDevice: Bool {
+        bounds.width <= 320
+    }
+    
+    var isIphone4: Bool {
+        isNarrowDevice && bounds.height <= 480
     }
 }
