@@ -18,6 +18,7 @@ public enum FalseBottomSplashMode {
     case setMasterPasscode
     case setSecretPasscode
     case disableNotifications
+    case lockExplanation
     case accountWasHidden
 }
 
@@ -296,6 +297,17 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             title = ""
             text = NSAttributedString()
             buttonText = ""
+            
+        case .lockExplanation:
+            title = presentationData.strings.FalseBottom_LockExplanation_Title
+            text = NSAttributedString(string: presentationData.strings.FalseBottom_LockExplanation_Text, font: textFont, textColor: textColor)
+            buttonText = presentationData.strings.FalseBottom_LockExplanation_Button
+            
+            if let source = source {
+                self.animationNode.setup(source: source, width: 528, height: 348, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+                self.animationSize = CGSize(width: 264.0, height: 174.0)
+                self.animationNode.visibility = true
+            }
 
         case .accountWasHidden:
             title = presentationData.strings.FalseBottom_AccountWasHidden_Title
@@ -464,6 +476,9 @@ private final class FalseBottomAnimationSource: AnimatedStickerNodeSource {
             
         case .disableNotifications:
             fileName = "FalseBottomNotifications_part_1"
+            
+        case .lockExplanation:
+            fileName = "FalseBottomLocking"
             
         case .accountWasHidden:
             fileName = "FalseBottomAccountIsHidden"

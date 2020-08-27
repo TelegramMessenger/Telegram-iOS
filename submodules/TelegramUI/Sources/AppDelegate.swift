@@ -2309,7 +2309,15 @@ final class SharedApplicationContext {
                             controller.buttonPressedWithEnabledSwitch = { [weak accountContext, weak context] enabled in
                                 guard let accountContext = accountContext, let context = context else { return }
                                 
-                                // Turn off notifications and calls
+                                let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
+                                let controller = FalseBottomSplashScreen(presentationData: presentationData, mode: .lockExplanation)
+                                controller.backPressed = { [weak context] in
+                                    context?.rootController.popViewController(animated: true)
+                                }
+                                controller.buttonPressed = { [weak accountContext, weak context] in
+                                    guard let accountContext = accountContext, let context = context else { return }
+                                    
+                                    // Turn off notifications and calls depending on switch position from disableNotifications screen
                                     let _ = updateGlobalNotificationSettingsInteractively(postbox: context.context.account.postbox, { settings in
                                         var settings = settings
                                         settings.channels.enabled = enabled
@@ -2317,36 +2325,38 @@ final class SharedApplicationContext {
                                         settings.privateChats.enabled = enabled
                                         return settings
                                     }).start()
+                                        
+                                    if enabled {
+                                        let _ = updateSelectiveAccountPrivacySettings(account: context.context.account, type: .voiceCalls, settings: .enableEveryone(disableFor: [:])).start()
+                                    } else {
+                                        let _ = updateSelectiveAccountPrivacySettings(account: context.context.account, type: .voiceCalls, settings: .disableEveryone(enableFor: [:])).start()
+                                    }
                                     
-                                if enabled {
-                                    let _ = updateSelectiveAccountPrivacySettings(account: context.context.account, type: .voiceCalls, settings: .enableEveryone(disableFor: [:])).start()
-                                } else {
-                                    let _ = updateSelectiveAccountPrivacySettings(account: context.context.account, type: .voiceCalls, settings: .disableEveryone(enableFor: [:])).start()
+                                    updateHiddenAccountsAccessChallengeData(manager: accountContext.accountManager)
+                                    
+                                    let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
+                                    let controller = FalseBottomSplashScreen(presentationData: presentationData, mode: .accountWasHidden)
+                                    controller.buttonPressed = { [weak accountContext, weak context] in
+                                        guard let accountContext = accountContext, let context = context else { return }
+                                        
+                                        accountContext.appLockContext.lock()
+                                        context.rootController.popToRoot(animated: true)
+                                        context.rootController.allowInteractiveDismissal = true
+                                        let _ = (accountContext.accountManager.transaction({ transaction -> Void in
+                                            if let publicId = transaction.getRecords().first(where: { !$0.attributes.contains(where: { $0 is HiddenAccountAttribute }) && !$0.attributes.contains(where: { $0 is LoggedOutAccountAttribute }) })?.id {
+                                                transaction.setCurrentId(publicId)
+                                            }
+                                        })).start()
+                                    }
+                                    controller.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
+                                    context.rootController.pushViewController(controller, animated: true, completion: { [weak context] in
+                                        guard let context = context, let root = context.rootController.viewControllers.first, let top = context.rootController.viewControllers.last else { return }
+                                        
+                                        context.rootController.setViewControllers(Array(context.rootController.viewControllers.prefix(2)) + [top], animated: false)
+                                        context.rootController.allowInteractiveDismissal = false
+                                    })
                                 }
-                                
-                                updateHiddenAccountsAccessChallengeData(manager: accountContext.accountManager)
-                                
-                                let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
-                                let controller = FalseBottomSplashScreen(presentationData: presentationData, mode: .accountWasHidden)
-                                controller.buttonPressed = { [weak accountContext, weak context] in
-                                    guard let accountContext = accountContext, let context = context else { return }
-                                    
-                                    accountContext.appLockContext.lock()
-                                    context.rootController.popToRoot(animated: true)
-                                    context.rootController.allowInteractiveDismissal = true
-                                    let _ = (accountContext.accountManager.transaction({ transaction -> Void in
-                                        if let publicId = transaction.getRecords().first(where: { !$0.attributes.contains(where: { $0 is HiddenAccountAttribute }) && !$0.attributes.contains(where: { $0 is LoggedOutAccountAttribute }) })?.id {
-                                            transaction.setCurrentId(publicId)
-                                        }
-                                    })).start()
-                                }
-                                controller.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
-                                context.rootController.pushViewController(controller, animated: true, completion: { [weak context] in
-                                    guard let context = context, let root = context.rootController.viewControllers.first, let top = context.rootController.viewControllers.last else { return }
-                                    
-                                    context.rootController.setViewControllers(Array(context.rootController.viewControllers.prefix(2)) + [top], animated: false)
-                                    context.rootController.allowInteractiveDismissal = false
-                                })
+                                context.rootController.pushViewController(controller, animated: true)
                             }
                             context.rootController.pushViewController(controller, animated: true, completion: { [weak context] in
                                 guard let context = context, let root = context.rootController.viewControllers.first, let top = context.rootController.viewControllers.last else { return }
