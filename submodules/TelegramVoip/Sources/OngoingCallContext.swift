@@ -42,6 +42,9 @@ public func callLogNameForId(id: Int64, account: Account) -> String? {
         for url in enumerator {
             if let url = url as? URL {
                 if url.lastPathComponent.hasPrefix(namePrefix) {
+                    if url.lastPathComponent.hasSuffix(".log.json") {
+                        continue
+                    }
                     return url.lastPathComponent
                 }
             }
