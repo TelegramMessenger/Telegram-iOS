@@ -340,7 +340,7 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
         let titleCenterOffset: CGFloat = UIScreen.main.isNarrowDevice ? 0.0 : -32.0
         let iconSize: CGSize = self.animationSize
         
-        let titleSize = self.titleNode.updateLayout(CGSize(width: textWidth, height: layout.size.height))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - 16, height: layout.size.height))
         let textSize = self.textNode.updateLayout(CGSize(width: textWidth, height: layout.size.height))
         
         let minimalBottomInset: CGFloat = isIphone4s ? 23.0 : 60.0
