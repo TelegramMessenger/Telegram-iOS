@@ -2354,13 +2354,20 @@ final class SharedApplicationContext {
                                         guard let accountContext = accountContext, let context = context else { return }
                                         
                                         accountContext.appLockContext.lock()
-                                        context.rootController.popToRoot(animated: true)
                                         context.rootController.allowInteractiveDismissal = true
-                                        let _ = (accountContext.accountManager.transaction({ transaction -> Void in
-                                            if let publicId = transaction.getRecords().first(where: { !$0.attributes.contains(where: { $0 is HiddenAccountAttribute }) && !$0.attributes.contains(where: { $0 is LoggedOutAccountAttribute }) })?.id {
-                                                transaction.setCurrentId(publicId)
+                                        (accountContext.appLockContext.lockingIsCompletePromise
+                                            .get()
+                                            |> distinctUntilChanged
+                                            |> mapToSignal { [weak accountContext] complete -> Signal<Void, NoError> in
+                                                guard complete, let accountContext = accountContext else { return .single(()) }
+                                                
+                                                return accountContext.accountManager.transaction({ transaction -> Void in
+                                                    if let publicId = transaction.getRecords().first(where: { !$0.attributes.contains(where: { $0 is HiddenAccountAttribute }) && !$0.attributes.contains(where: { $0 is LoggedOutAccountAttribute }) })?.id {
+                                                        transaction.setCurrentId(publicId)
+                                                    }
+                                                })
                                             }
-                                        })).start()
+                                            |> deliverOnMainQueue).start()
                                     }
                                     controller.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
                                     context.rootController.pushViewController(controller, animated: true, completion: { [weak context] in

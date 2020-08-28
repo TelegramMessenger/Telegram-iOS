@@ -100,6 +100,8 @@ public final class AppLockContextImpl: AppLockContext {
     private var applicationInForegroundDisposable: Disposable?
     private let hiddenAccountManager: HiddenAccountManager
     
+    public var lockingIsCompletePromise = Promise<Bool>()
+    
     public var isUnlockedAndReady: Signal<Void, NoError> {
         return self.isCurrentlyLockedPromise.get()
             |> filter { !$0 }
@@ -222,6 +224,8 @@ public final class AppLockContextImpl: AppLockContext {
                         }
                         passcodeController.ensureInputFocused()
                     } else {
+                        strongSelf.lockingIsCompletePromise.set(.single(false))
+                        
                         let passcodeController = PasscodeEntryController(applicationBindings: strongSelf.applicationBindings, accountManager: strongSelf.accountManager, appLockContext: strongSelf, presentationData: presentationData, presentationDataSignal: strongSelf.presentationDataSignal, challengeData: accessChallengeData.data, hiddenAccountsAccessChallengeData: strongSelf.hiddenAccountsAccessChallengeData, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: !becameActiveRecently, lockIconInitialFrame: { [weak self] in
                             if let lockViewFrame = lockIconInitialFrame() {
                                 return lockViewFrame
@@ -233,6 +237,7 @@ public final class AppLockContextImpl: AppLockContext {
                             passcodeController.presentationCompleted = { [weak passcodeController, weak self] in
                                 if let strongSelf = self {
                                     strongSelf.unlockedHiddenAccountRecordId.set(nil)
+                                    strongSelf.lockingIsCompletePromise.set(.single(true))
                                 }
                                 if case .enabled = biometrics {
                                     passcodeController?.requestBiometrics()
@@ -243,6 +248,7 @@ public final class AppLockContextImpl: AppLockContext {
                             passcodeController.presentationCompleted = { [weak self] in
                                 if let strongSelf = self {
                                     strongSelf.unlockedHiddenAccountRecordId.set(nil)
+                                    strongSelf.lockingIsCompletePromise.set(.single(true))
                                 }
                             }
                         }
