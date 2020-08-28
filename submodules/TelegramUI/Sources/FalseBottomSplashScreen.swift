@@ -144,7 +144,7 @@ private final class FalseBottomSwitchScreenNode: ViewControllerTracingNode {
         self.animationNode2 = AnimatedStickerNode()
         if let otherSource = FalseBottomAnimationSource(mode: .disableNotifications2) {
             self.animationNode2.setup(source: otherSource, width: 528, height: 348, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
-            self.animationNode2.visibility = true
+            self.animationNode2.visibility = false
             self.animationNode2.alpha = 0.0
         }
         
@@ -167,14 +167,7 @@ private final class FalseBottomSwitchScreenNode: ViewControllerTracingNode {
         self.subtitleNode.textAlignment = .center
         
         super.init()
-        
-        Queue.mainQueue().after(1.0) { [weak self] in
-            guard let strongSelf = self else { return }
-            
-            strongSelf.animationNode2.playToCompletionOnStop = true
-            strongSelf.animationNode2.stop()
-        }
-        
+
         self.switchNode.valueUpdated = { [weak self] isOn in
             guard let strongSelf = self else { return }
             
@@ -202,13 +195,19 @@ private final class FalseBottomSwitchScreenNode: ViewControllerTracingNode {
                     guard let strongSelf = self else { return }
                     
                     strongSelf.animationNode.stop()
+                    strongSelf.animationNode2.visibility = true
                     strongSelf.animationNode2.alpha = 1.0
-                    strongSelf.animationNode.alpha = 0.0
-                    strongSelf.animationNode2.playTo(frame: 69, fromFrame: 0) { [weak self] in
+                    Queue.mainQueue().after(0.1) { [weak self] in
                         guard let strongSelf = self else { return }
                         
-                        strongSelf.switchNode.isUserInteractionEnabled = true
+                        strongSelf.animationNode.alpha = 0.0
+                        strongSelf.animationNode2.playTo(frame: 69, fromFrame: 0) { [weak self] in
+                            guard let strongSelf = self else { return }
+                            
+                            strongSelf.switchNode.isUserInteractionEnabled = true
+                        }
                     }
+                    
                 }
             }
         }
