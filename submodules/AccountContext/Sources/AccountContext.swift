@@ -484,7 +484,6 @@ public protocol AppLockContext: class {
     func lock()
     func unlock()
     func failedUnlockAttempt()
-    func updateSnapshot()
 }
 
 public protocol RecentSessionsController: class {

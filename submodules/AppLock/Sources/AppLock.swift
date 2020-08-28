@@ -44,28 +44,21 @@ private func getCoveringViewSnaphot(window: Window1) -> UIImage? {
     return generateImage(CGSize(width: floor(unscaledSize.width * scale), height: floor(unscaledSize.height * scale)), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.scaleBy(x: scale, y: scale)
-        let snapshot = window.hostView.containerView.snapshotView(afterScreenUpdates: false)
-        if let snapshot = snapshot {
-            window.hostView.containerView.superview?.addSubview(snapshot)
-        }
         UIGraphicsPushContext(context)
-        
         window.forEachViewController({ controller in
             if let controller = controller as? PasscodeEntryController {
                 controller.displayNode.alpha = 0.0
             }
             return true
         })
-        window.hostView.containerView.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: true)
+        window.hostView.containerView.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: false)
         window.forEachViewController({ controller in
             if let controller = controller as? PasscodeEntryController {
                 controller.displayNode.alpha = 1.0
             }
             return true
         })
-        
         UIGraphicsPopContext()
-        snapshot?.removeFromSuperview()
     }).flatMap(applyScreenshotEffectToImage)
 }
 
@@ -103,8 +96,6 @@ public final class AppLockContextImpl: AppLockContext {
     public private(set) var hiddenAccountsAccessChallengeData = [AccountRecordId:PostboxAccessChallengeData]()
     
     public var unlockedHiddenAccountRecordId: ValuePromise<AccountRecordId?>
-    private var unlockedHiddenAccountRecordIdValue: AccountRecordId?
-    private var unlockedHiddenAccountRecordIdDisposable: Disposable?
     
     private var applicationInForegroundDisposable: Disposable?
     private let hiddenAccountManager: HiddenAccountManager
@@ -126,8 +117,6 @@ public final class AppLockContextImpl: AppLockContext {
                 }
         }
     }
-    
-    private var snapshot: UIImage?
     
     public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, hiddenAccountManager: HiddenAccountManager, lockIconInitialFrame: @escaping () -> CGRect?) {
         assert(Queue.mainQueue().isCurrent())
@@ -154,14 +143,6 @@ public final class AppLockContextImpl: AppLockContext {
             }
             
             strongSelf.hiddenAccountsAccessChallengeData = value
-        })
-        
-        self.unlockedHiddenAccountRecordIdDisposable = (self.unlockedHiddenAccountRecordId.get() |> deliverOnMainQueue).start(next: { [weak self] value in
-            guard let strongSelf = self else {
-                return
-            }
-            
-            strongSelf.unlockedHiddenAccountRecordIdValue = value
         })
         
         let _ = (combineLatest(queue: .mainQueue(),
@@ -288,7 +269,7 @@ public final class AppLockContextImpl: AppLockContext {
             if shouldDisplayCoveringView {
                 if strongSelf.coveringView == nil, let window = strongSelf.window {
                     let coveringView = LockedWindowCoveringView(theme: presentationData.theme)
-                    coveringView.updateSnapshot(strongSelf.snapshot)
+                    coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
                     strongSelf.coveringView = coveringView
                     window.coveringView = coveringView
                     
@@ -326,13 +307,6 @@ public final class AppLockContextImpl: AppLockContext {
                 return state
             }
         })
-    }
-    
-    public func updateSnapshot() {
-        guard let window = self.window, window.coveringView == nil, self.unlockedHiddenAccountRecordIdValue == nil else { return }
-        
-        let snapshot = getCoveringViewSnaphot(window: window)
-        self.snapshot = snapshot
     }
     
     private func updateTimestampRenewTimer(shouldRun: Bool) {
@@ -450,6 +424,5 @@ public final class AppLockContextImpl: AppLockContext {
     deinit {
         self.hiddenAccountsAccessChallengeDataDisposable?.dispose()
         self.applicationInForegroundDisposable?.dispose()
-        self.unlockedHiddenAccountRecordIdDisposable?.dispose()
     }
 }
