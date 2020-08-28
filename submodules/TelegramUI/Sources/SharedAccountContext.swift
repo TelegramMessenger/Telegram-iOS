@@ -486,27 +486,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     let isTestingEnvironment: Bool
                 }
                 
-                var existingAccountPeerKeys = Set<AccountPeerKey>()
                 for accountRecord in addedAccounts {
                     if let account = accountRecord.1 {
-                        if existingAccountPeerKeys.contains(AccountPeerKey(peerId: account.peerId, isTestingEnvironment: account.testingEnvironment)) {
-                            let _ = accountManager.transaction({ transaction in
-                                transaction.updateRecord(accountRecord.0, { _ in
-                                    return nil
-                                })
-                            }).start()
-                        } else {
-                            existingAccountPeerKeys.insert(AccountPeerKey(peerId: account.peerId, isTestingEnvironment: account.testingEnvironment))
-                            if let index = self.activeAccountsValue?.accounts.firstIndex(where: { $0.0 == account.id }) {
-                                self.activeAccountsValue?.accounts.remove(at: index)
-                                self.managedAccountDisposables.set(nil, forKey: account.id)
-                                assertionFailure()
-                            }
-                            self.activeAccountsValue!.accounts.append((account.id, account, accountRecord.2))
-                            self.managedAccountDisposables.set(self.updateAccountBackupData(account: account).start(), forKey: account.id)
-                            account.resetStateManagement()
-                            hadUpdates = true
+                        if let index = self.activeAccountsValue?.accounts.firstIndex(where: { $0.0 == account.id }) {
+                            self.activeAccountsValue?.accounts.remove(at: index)
+                            self.managedAccountDisposables.set(nil, forKey: account.id)
+                            assertionFailure()
                         }
+                        self.activeAccountsValue!.accounts.append((account.id, account, accountRecord.2))
+                        self.managedAccountDisposables.set(self.updateAccountBackupData(account: account).start(), forKey: account.id)
+                        account.resetStateManagement()
+                        hadUpdates = true
                     } else {
                         let _ = accountManager.transaction({ transaction in
                             transaction.updateRecord(accountRecord.0, { _ in
