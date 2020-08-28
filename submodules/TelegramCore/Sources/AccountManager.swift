@@ -215,7 +215,7 @@ public func getHiddenAccountsAccessChallengeData(transaction: AccountManagerModi
                 break
             }
         }
-        if accessChallengeData != .none {
+        if accessChallengeData != .none, result[record.id] == nil {
             result[record.id] = accessChallengeData
         }
     }
