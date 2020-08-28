@@ -10,7 +10,7 @@ import PhoneInputNode
 import CountrySelectionUI
 
 private func generateCountryButtonBackground(color: UIColor, strokeColor: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 45.0, height: 44.0 + 6.0), rotatedContext: { size, context in
+    return generateImage(CGSize(width: 56, height: 44.0 + 6.0), rotatedContext: { size, context in
         let arrowSize: CGFloat = 6.0
         let lineWidth = UIScreenPixel
         
@@ -37,11 +37,11 @@ private func generateCountryButtonBackground(color: UIColor, strokeColor: UIColo
         context.move(to: CGPoint(x: 0.0, y: lineWidth / 2.0))
         context.addLine(to: CGPoint(x: size.width, y: lineWidth / 2.0))
         context.strokePath()
-    })?.stretchableImage(withLeftCapWidth: 46, topCapHeight: 1)
+    })?.stretchableImage(withLeftCapWidth: 55, topCapHeight: 1)
 }
 
 private func generateCountryButtonHighlightedBackground(color: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 45.0, height: 44.0 + 6.0), rotatedContext: { size, context in
+    return generateImage(CGSize(width: 56.0, height: 44.0 + 6.0), rotatedContext: { size, context in
         let arrowSize: CGFloat = 6.0
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(color.cgColor)
@@ -52,11 +52,11 @@ private func generateCountryButtonHighlightedBackground(color: UIColor) -> UIIma
         context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize - arrowSize, y: size.height - arrowSize))
         context.closePath()
         context.fillPath()
-    })?.stretchableImage(withLeftCapWidth: 46, topCapHeight: 2)
+    })?.stretchableImage(withLeftCapWidth: 55, topCapHeight: 2)
 }
 
 private func generatePhoneInputBackground(color: UIColor, strokeColor: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 60.0, height: 44.0), rotatedContext: { size, context in
+    return generateImage(CGSize(width: 82.0, height: 44.0), rotatedContext: { size, context in
         let lineWidth = UIScreenPixel
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(color.cgColor)
@@ -69,7 +69,7 @@ private func generatePhoneInputBackground(color: UIColor, strokeColor: UIColor) 
         context.move(to: CGPoint(x: size.width - 2.0 + lineWidth / 2.0, y: size.height - lineWidth / 2.0))
         context.addLine(to: CGPoint(x: size.width - 2.0 + lineWidth / 2.0, y: 0.0))
         context.strokePath()
-    })?.stretchableImage(withLeftCapWidth: 61, topCapHeight: 2)
+    })?.stretchableImage(withLeftCapWidth: 81, topCapHeight: 2)
 }
 
 final class ChangePhoneNumberControllerNode: ASDisplayNode {
@@ -261,9 +261,9 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.countryButton, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationHeight), size: CGSize(width: layout.size.width, height: 44.0 + 6.0)))
         transition.updateFrame(node: self.phoneBackground, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationHeight + 44.0), size: CGSize(width: layout.size.width, height: 44.0)))
         
-        let countryCodeFrame = CGRect(origin: CGPoint(x: 9.0, y: navigationHeight + 44.0 + 1.0), size: CGSize(width: 45.0, height: 44.0))
-        let numberFrame = CGRect(origin: CGPoint(x: 70.0, y: navigationHeight + 44.0 + 1.0), size: CGSize(width: layout.size.width - 70.0 - 8.0, height: 44.0))
-        let placeholderFrame = numberFrame.offsetBy(dx: -1.0, dy: 8.0)
+        let countryCodeFrame = CGRect(origin: CGPoint(x: 11.0, y: navigationHeight + 44.0 + 1.0), size: CGSize(width: 67.0, height: 44.0))
+        let numberFrame = CGRect(origin: CGPoint(x: 92.0, y: navigationHeight + 44.0 + 1.0), size: CGSize(width: layout.size.width - 70.0 - 8.0, height: 44.0))
+        let placeholderFrame = numberFrame.offsetBy(dx: 0.0, dy: 8.0)
         
         let phoneInputFrame = countryCodeFrame.union(numberFrame)
         

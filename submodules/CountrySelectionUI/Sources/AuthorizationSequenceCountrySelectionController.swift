@@ -236,6 +236,7 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
     }
     
     public static func lookupPatternByNumber(_ number: String, preferredCountries: [String: String]) -> String? {
+        let number = removePlus(number)
         if let (_, code) = lookupCountryIdByNumber(number, preferredCountries: preferredCountries), !code.patterns.isEmpty {
             var prefixes: [String: String] = [:]
             for pattern in code.patterns {

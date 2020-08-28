@@ -593,27 +593,6 @@ public final class ShareController: ViewController {
         }
         self.controllerNode.shareExternal = { [weak self] in
             if let strongSelf = self {
-//                if case let .messages(messages) = strongSelf.subject, let message = messages.first, let peer = message.peers[message.id.peerId] {
-//                    let renderer = MessageStoryRenderer(context: strongSelf.currentContext, messages: messages)
-//                    
-//                    let layout = ContainerViewLayout(size: CGSize(width: 414.0, height: 896.0), metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: .iPhoneX, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: 0.0, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)
-//                    renderer.update(layout: layout) { image in
-//                        if let data = image?.pngData() {
-//                            let pasteboardItems: [[String: Any]] = [["com.instagram.sharedSticker.backgroundImage": data,
-//                                                    "com.instagram.sharedSticker.contentURL": "https://t.me/\(peer.addressName ?? "")/\(message.id.id)"]]
-//                            if #available(iOS 10.0, *) {
-//                                UIPasteboard.general.setItems(pasteboardItems, options: [.expirationDate: Date().addingTimeInterval(5 * 60)])
-//                            } else {
-////                                UIPasteboard.general.setItems(pasteboardItems)
-//                            }
-//                            strongSelf.sharedContext.applicationBindings.openUrl("instagram-stories://share")
-//                        }
-//                    }
-//                    
-//                    return .complete()
-//                }
-                
-                
                 var collectableItems: [CollectableExternalShareItem] = []
                 switch strongSelf.subject {
                     case let .url(text):
@@ -695,7 +674,25 @@ public final class ShareController: ViewController {
                                             activityItems.append(url)
                                     }
                                 }
-                                let activityController = UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+                                
+                                var activities: [UIActivity]?
+                                if false, #available(iOS 10.0, *), strongSelf.sharedContext.applicationBindings.canOpenUrl("instagram-stories://"), case let .messages(messages) = strongSelf.subject, let message = messages.first, let peer = message.peers[message.id.peerId] {
+                                    let shareToInstagram = ShareToInstagramActivity(action: { sharedItems in
+                                        let renderer = MessageStoryRenderer(context: strongSelf.currentContext, messages: messages)
+                                        
+                                        let layout = ContainerViewLayout(size: CGSize(width: 414.0, height: 896.0), metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: .iPhoneX, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: 0.0, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)
+                                        renderer.update(layout: layout) { image in
+                                            if let data = image?.pngData() {
+                                                let pasteboardItems: [[String: Any]] = [["com.instagram.sharedSticker.backgroundImage": data,
+                                                                                         "com.instagram.sharedSticker.contentURL": "https://t.me/\(peer.addressName ?? "")/\(message.id.id)"]]
+                                                UIPasteboard.general.setItems(pasteboardItems, options: [.expirationDate: Date().addingTimeInterval(5 * 60)])
+                                                strongSelf.sharedContext.applicationBindings.openUrl("instagram-stories://share")
+                                            }
+                                        }
+                                    })
+                                    activities = [shareToInstagram]
+                                }
+                                let activityController = UIActivityViewController(activityItems: activityItems, applicationActivities: activities)
                                 
                                 if let window = strongSelf.view.window, let rootViewController = window.rootViewController {
                                     activityController.popoverPresentationController?.sourceView = window
@@ -1013,5 +1010,44 @@ final class MessageStoryRenderer {
         
         dateHeaderNode.frame = CGRect(origin: CGPoint(x: 0.0, y: bottomOffset), size: CGSize(width: layout.size.width, height: headerItem.height))
         dateHeaderNode.updateLayout(size: self.containerNode.frame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
+    }
+}
+
+private class ShareToInstagramActivity: UIActivity {
+    private var activityItems = [Any]()
+    private var action: ([Any]) -> Void
+    
+    init(action: @escaping ([Any]) -> Void) {
+        self.action = action
+        super.init()
+    }
+    
+    override var activityTitle: String? {
+        return "Share to Instagram Stories"
+    }
+
+    override var activityImage: UIImage? {
+        return nil
+    }
+    
+    override var activityType: UIActivity.ActivityType? {
+        return UIActivity.ActivityType(rawValue: "org.telegram.Telegram.ShareToInstagram")
+    }
+
+    override class var activityCategory: UIActivity.Category {
+        return .action
+    }
+    
+    override func canPerform(withActivityItems activityItems: [Any]) -> Bool {
+        return true
+    }
+    
+    override func prepare(withActivityItems activityItems: [Any]) {
+        self.activityItems = activityItems
+    }
+    
+    override func perform() {
+        self.action(self.activityItems)
+        activityDidFinish(true)
     }
 }

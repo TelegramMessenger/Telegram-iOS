@@ -855,14 +855,44 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     
+                    let updateProgress = { [weak self] in
+                        Queue.mainQueue().async {
+                            if let strongSelf = self {
+                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                    return $0.updatedTitlePanelContext {
+                                        if let index = $0.firstIndex(where: {
+                                            switch $0 {
+                                                case .requestInProgress:
+                                                    return true
+                                                default:
+                                                    return false
+                                            }
+                                        }) {
+                                            var updatedContexts = $0
+                                            updatedContexts.remove(at: index)
+                                            return updatedContexts
+                                        }
+                                        return $0
+                                    }
+                                })
+                            }
+                        }
+                    }
+                    
                     let account = strongSelf.context.account
                     if requiresPassword {
-                        strongSelf.messageActionCallbackDisposable.set((requestMessageActionCallbackPasswordCheck(account: account, messageId: messageId, isGame: isGame, data: data)
-                            |> deliverOnMainQueue).start(error: { error in
+                        strongSelf.messageActionCallbackDisposable.set(((requestMessageActionCallbackPasswordCheck(account: account, messageId: messageId, isGame: isGame, data: data)
+                        |> afterDisposed {
+                            updateProgress()
+                        })
+                        |> deliverOnMainQueue).start(error: { error in
                                 let controller = ownershipTransferController(context: context, initialError: error, present: { c, a in
                                     strongSelf.present(c, in: .window(.root), with: a)
                                 }, commit: { password in
-                                   return requestMessageActionCallback(account: account, messageId: messageId, isGame: isGame, password: password, data: data)
+                                    return requestMessageActionCallback(account: account, messageId: messageId, isGame: isGame, password: password, data: data)
+                                    |> afterDisposed {
+                                        updateProgress()
+                                    }
                                 }, completion: { result in
                                     proceedWithResult(result)
                                 })
@@ -871,27 +901,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         strongSelf.messageActionCallbackDisposable.set(((requestMessageActionCallback(account: account, messageId: messageId, isGame: isGame, password: nil, data: data)
                         |> afterDisposed {
-                            Queue.mainQueue().async {
-                                if let strongSelf = self {
-                                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                        return $0.updatedTitlePanelContext {
-                                            if let index = $0.firstIndex(where: {
-                                                switch $0 {
-                                                    case .requestInProgress:
-                                                        return true
-                                                    default:
-                                                        return false
-                                                }
-                                            }) {
-                                                var updatedContexts = $0
-                                                updatedContexts.remove(at: index)
-                                                return updatedContexts
-                                            }
-                                            return $0
-                                        }
-                                    })
-                                }
-                            }
+                            updateProgress()
                         })
                         |> deliverOnMainQueue).start(next: { result in
                             proceedWithResult(result)

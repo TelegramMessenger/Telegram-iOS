@@ -27,7 +27,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
     init(strings: PresentationStrings, theme: PresentationTheme) {
         self.strings = strings
         
-        let countryButtonBackground = generateImage(CGSize(width: 61.0, height: 67.0), rotatedContext: { size, context in
+        let countryButtonBackground = generateImage(CGSize(width: 68.0, height: 67.0), rotatedContext: { size, context in
             let arrowSize: CGFloat = 10.0
             let lineWidth = UIScreenPixel
             context.clear(CGRect(origin: CGPoint(), size: size))
@@ -43,9 +43,9 @@ private final class PhoneAndCountryNode: ASDisplayNode {
             context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize - arrowSize, y: size.height - arrowSize - lineWidth / 2.0))
             context.addLine(to: CGPoint(x: 15.0, y: size.height - arrowSize - lineWidth / 2.0))
             context.strokePath()
-        })?.stretchableImage(withLeftCapWidth: 61, topCapHeight: 1)
+        })?.stretchableImage(withLeftCapWidth: 67, topCapHeight: 1)
         
-        let countryButtonHighlightedBackground = generateImage(CGSize(width: 60.0, height: 67.0), rotatedContext: { size, context in
+        let countryButtonHighlightedBackground = generateImage(CGSize(width: 68.0, height: 67.0), rotatedContext: { size, context in
             let arrowSize: CGFloat = 10.0
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setFillColor(theme.list.itemHighlightedBackgroundColor.cgColor)
@@ -56,9 +56,9 @@ private final class PhoneAndCountryNode: ASDisplayNode {
             context.addLine(to: CGPoint(x: size.width - 1.0 - arrowSize - arrowSize, y: size.height - arrowSize))
             context.closePath()
             context.fillPath()
-        })?.stretchableImage(withLeftCapWidth: 61, topCapHeight: 2)
+        })?.stretchableImage(withLeftCapWidth: 67, topCapHeight: 2)
         
-        let phoneInputBackground = generateImage(CGSize(width: 85.0, height: 57.0), rotatedContext: { size, context in
+        let phoneInputBackground = generateImage(CGSize(width: 96.0, height: 57.0), rotatedContext: { size, context in
             let lineWidth = UIScreenPixel
             context.clear(CGRect(origin: CGPoint(), size: size))
             context.setStrokeColor(theme.list.itemPlainSeparatorColor.cgColor)
@@ -69,7 +69,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
             context.move(to: CGPoint(x: size.width - 2.0 + lineWidth / 2.0, y: size.height - lineWidth / 2.0))
             context.addLine(to: CGPoint(x: size.width - 2.0 + lineWidth / 2.0, y: 0.0))
             context.strokePath()
-        })?.stretchableImage(withLeftCapWidth: 84, topCapHeight: 2)
+        })?.stretchableImage(withLeftCapWidth: 95, topCapHeight: 2)
         
         self.countryButton = ASButtonNode()
         self.countryButton.displaysAsynchronously = false
@@ -190,9 +190,9 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         self.countryButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 67.0))
         self.phoneBackground.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height - 57.0), size: CGSize(width: size.width, height: 57.0))
         
-        let countryCodeFrame = CGRect(origin: CGPoint(x: 18.0, y: size.height - 57.0), size: CGSize(width: 60.0, height: 57.0))
-        let numberFrame = CGRect(origin: CGPoint(x: 96.0, y: size.height - 57.0), size: CGSize(width: size.width - 96.0 - 8.0, height: 57.0))
-        let placeholderFrame = numberFrame.offsetBy(dx: -1.0, dy: 16.0)
+        let countryCodeFrame = CGRect(origin: CGPoint(x: 18.0, y: size.height - 57.0), size: CGSize(width: 71.0, height: 57.0))
+        let numberFrame = CGRect(origin: CGPoint(x: 107.0, y: size.height - 57.0), size: CGSize(width: size.width - 96.0 - 8.0, height: 57.0))
+        let placeholderFrame = numberFrame.offsetBy(dx: 0.0, dy: 16.0)
         
         let phoneInputFrame = countryCodeFrame.union(numberFrame)
         
