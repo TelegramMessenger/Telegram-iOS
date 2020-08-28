@@ -23,10 +23,15 @@ private final class ManagedMessageHistoryHolesState {
         }
         
         for entry in entries {
-            if self.holeDisposables[entry] == nil {
-                let disposable = MetaDisposable()
-                self.holeDisposables[entry] = disposable
-                added[entry] = disposable
+            switch entry.hole {
+            case let .peer(hole):
+                if hole.threadId == nil {
+                    if self.holeDisposables[entry] == nil {
+                        let disposable = MetaDisposable()
+                        self.holeDisposables[entry] = disposable
+                        added[entry] = disposable
+                    }
+                }
             }
         }
         

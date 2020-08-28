@@ -579,13 +579,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         if !scheduled {
             additionalData.append(.totalUnreadState)
         }
+        if case let .replyThread(messageId) = chatLocation {
+            additionalData.append(.message(messageId))
+        }
 
         let currentViewVersion = Atomic<Int?>(value: nil)
         
         let historyViewUpdate = self.chatHistoryLocationPromise.get()
         |> distinctUntilChanged
         |> mapToSignal { location in
-            return chatHistoryViewForLocation(location, account: context.account, chatLocation: chatLocation, scheduled: scheduled, fixedCombinedReadStates: fixedCombinedReadStates.with { $0 }, tagMask: tagMask, additionalData: additionalData)
+            return chatHistoryViewForLocation(location, context: context, chatLocation: chatLocation, scheduled: scheduled, fixedCombinedReadStates: fixedCombinedReadStates.with { $0 }, tagMask: tagMask, additionalData: additionalData)
             |> beforeNext { viewUpdate in
                 switch viewUpdate {
                     case let .HistoryView(view, _, _, _, _, _, _):
@@ -824,7 +827,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
                 if apply {
                     switch chatLocation {
-                        case .peer:
+                        case .peer, .replyThread:
                             if !context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
                                 let _ = applyMaxReadIndexInteractively(postbox: context.account.postbox, stateManager: context.account.stateManager, index: messageIndex).start()
                         }

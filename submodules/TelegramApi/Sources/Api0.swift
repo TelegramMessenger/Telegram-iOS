@@ -388,7 +388,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1694474197] = { return Api.messages.Chats.parse_chats($0) }
     dict[-1663561404] = { return Api.messages.Chats.parse_chatsSlice($0) }
     dict[482797855] = { return Api.InputSingleMedia.parse_inputSingleMedia($0) }
-    dict[23453020] = { return Api.MessageViews.parse_messageViews($0) }
+    dict[-119526594] = { return Api.MessageViews.parse_messageViews($0) }
     dict[218751099] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowContacts($0) }
     dict[407582158] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowAll($0) }
     dict[320652927] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowUsers($0) }
@@ -541,6 +541,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[480546647] = { return Api.InputChatPhoto.parse_inputChatPhotoEmpty($0) }
     dict[-1991004873] = { return Api.InputChatPhoto.parse_inputChatPhoto($0) }
     dict[-968723890] = { return Api.InputChatPhoto.parse_inputChatUploadedPhoto($0) }
+    dict[742337250] = { return Api.messages.MessageViews.parse_messageViews($0) }
     dict[-368917890] = { return Api.PaymentCharge.parse_paymentCharge($0) }
     dict[-1387279939] = { return Api.MessageInteractionCounters.parse_messageInteractionCounters($0) }
     dict[-1107852396] = { return Api.stats.BroadcastStats.parse_broadcastStats($0) }
@@ -602,7 +603,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1820043071] = { return Api.User.parse_user($0) }
     dict[-2082087340] = { return Api.Message.parse_messageEmpty($0) }
     dict[-1642487306] = { return Api.Message.parse_messageService($0) }
-    dict[2119777911] = { return Api.Message.parse_message($0) }
+    dict[-739735064] = { return Api.Message.parse_message($0) }
     dict[831924812] = { return Api.StatsGroupTopInviter.parse_statsGroupTopInviter($0) }
     dict[186120336] = { return Api.messages.RecentStickers.parse_recentStickersNotModified($0) }
     dict[586395571] = { return Api.messages.RecentStickers.parse_recentStickers($0) }
@@ -1258,6 +1259,8 @@ public struct Api {
             case let _1 as Api.auth.SentCode:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputChatPhoto:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.MessageViews:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PaymentCharge:
                 _1.serialize(buffer, boxed)

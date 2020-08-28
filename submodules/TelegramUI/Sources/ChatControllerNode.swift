@@ -2137,10 +2137,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func loadInputPanels(theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
         if self.inputMediaNode == nil {
-            var peerId: PeerId?
-            if case let .peer(id) = self.chatPresentationInterfaceState.chatLocation {
-                peerId = id
-            }
+            let peerId: PeerId? = self.chatPresentationInterfaceState.chatLocation.peerId
             let inputNode = ChatMediaInputNode(context: self.context, peerId: peerId, controllerInteraction: self.controllerInteraction, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper, theme: theme, strings: strings, fontSize: fontSize, gifPaneIsActiveUpdated: { [weak self] value in
                 if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                     interfaceInteraction.updateInputModeAndDismissedButtonKeyboardMessageId { state in
@@ -2694,7 +2691,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 let effectiveInputText = effectivePresentationInterfaceState.interfaceState.composeInputState.inputText
                 let trimmedInputText = effectiveInputText.string.trimmingCharacters(in: .whitespacesAndNewlines)
-                if case let .peer(peerId) = effectivePresentationInterfaceState.chatLocation, peerId.namespace != Namespaces.Peer.SecretChat, let interactiveEmojis = self.interactiveEmojis, interactiveEmojis.emojis.contains(trimmedInputText) {
+                let peerId = effectivePresentationInterfaceState.chatLocation.peerId
+                if peerId.namespace != Namespaces.Peer.SecretChat, let interactiveEmojis = self.interactiveEmojis, interactiveEmojis.emojis.contains(trimmedInputText) {
                     messages.append(.message(text: "", attributes: [], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: trimmedInputText)), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil))
                 } else {
                     let inputText = convertMarkdownToAttributes(effectiveInputText)
@@ -2746,9 +2744,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                     }
                     
-                    if case .peer = self.chatLocation {
-                        self.sendMessages(messages, silentPosting, scheduleTime, messages.count > 1)
-                    }
+                    self.sendMessages(messages, silentPosting, scheduleTime, messages.count > 1)
                 }
             }
         }

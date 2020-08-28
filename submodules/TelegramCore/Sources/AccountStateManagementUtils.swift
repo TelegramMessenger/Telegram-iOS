@@ -975,7 +975,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                             updatedState.authorizationListUpdated = true
                         }
                         
-                        let message = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, groupingKey: nil, timestamp: date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: messageText, attributes: attributes, media: medias)
+                        let message = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, groupingKey: nil, threadId: nil, timestamp: date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: messageText, attributes: attributes, media: medias)
                         updatedState.addMessages([message], location: .UpperHistoryBlock)
                     }
                 }
@@ -2274,12 +2274,24 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     
     var topUpperHistoryBlockMessages: [PeerIdAndMessageNamespace: MessageId.Id] = [:]
     
-    var messageThreadStatsDifferences: [MessageId: Int] = [:]
-    func addMessageThreadStatsDifference(threadMessageId: MessageId, add: Int, remove: Int) {
+    final class MessageThreadStatsRecord {
+        var count: Int = 0
+        var peers: [PeerId] = []
+    }
+    var messageThreadStatsDifferences: [MessageId: MessageThreadStatsRecord] = [:]
+    func addMessageThreadStatsDifference(threadMessageId: MessageId, add: Int, remove: Int, addedMessagePeer: PeerId?) {
         if let value = messageThreadStatsDifferences[threadMessageId] {
-            messageThreadStatsDifferences[threadMessageId] = value + add - remove
+            value.count += add - remove
+            if let addedMessagePeer = addedMessagePeer {
+                value.peers.append(addedMessagePeer)
+            }
         } else {
-            messageThreadStatsDifferences[threadMessageId] = add - remove
+            let value = MessageThreadStatsRecord()
+            messageThreadStatsDifferences[threadMessageId] = value
+            value.count = add - remove
+            if let addedMessagePeer = addedMessagePeer {
+                value.peers.append(addedMessagePeer)
+            }
         }
     }
     
@@ -2289,14 +2301,12 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 if case .UpperHistoryBlock = location {
                     for message in messages {
                         if case let .Id(id) = message.id {
-                            findAttribute: for attribute in message.attributes {
-                                if let attribute = attribute as? ReplyMessageAttribute {
-                                    if id.peerId.namespace == Namespaces.Peer.CloudChannel {
-                                        if !transaction.messageExists(id: id) {
-                                            addMessageThreadStatsDifference(threadMessageId: attribute.effectiveReplyThreadMessageId, add: 1, remove: 0)
-                                        }
+                            if let threadId = message.threadId {
+                                let messageThreadId = makeThreadIdMessageId(peerId: message.id.peerId, threadId: threadId)
+                                if id.peerId.namespace == Namespaces.Peer.CloudChannel {
+                                    if !transaction.messageExists(id: id) {
+                                        addMessageThreadStatsDifference(threadMessageId: messageThreadId, add: 1, remove: 0, addedMessagePeer: message.authorId)
                                     }
-                                    break findAttribute
                                 }
                             }
                         }
@@ -2410,7 +2420,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 }
             case let .DeleteMessages(ids):
                 deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids, manualAddMessageThreadStatsDifference: { id, add, remove in
-                    addMessageThreadStatsDifference(threadMessageId: id, add: add, remove: remove)
+                    addMessageThreadStatsDifference(threadMessageId: id, add: add, remove: remove, addedMessagePeer: nil)
                 })
             case let .UpdateMinAvailableMessage(id):
                 if let message = transaction.getMessage(id) {
@@ -2802,7 +2812,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                             break loop
                         }
                     }
-                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                 })
             case let .UpdateMessageForwardsCount(id, count):
                 transaction.updateMessage(id, update: { currentMessage in
@@ -2817,7 +2827,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                             break loop
                         }
                     }
-                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                 })
             case let .UpdateInstalledStickerPacks(operation):
                 stickerPackOperations.append(operation)
@@ -2936,7 +2946,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     }
     
     for (threadMessageId, difference) in messageThreadStatsDifferences {
-        updateMessageThreadStats(transaction: transaction, threadMessageId: threadMessageId, difference: difference) 
+        updateMessageThreadStats(transaction: transaction, threadMessageId: threadMessageId, difference: difference.count, addedMessagePeers: difference.peers)
     }
     
     if !peerActivityTimestamps.isEmpty {

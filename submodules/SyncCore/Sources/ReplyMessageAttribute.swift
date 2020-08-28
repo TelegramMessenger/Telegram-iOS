@@ -37,18 +37,10 @@ public class ReplyMessageAttribute: MessageAttribute {
     }
 }
 
-public extension ReplyMessageAttribute {
-    var effectiveReplyThreadMessageId: MessageId {
-        return self.threadMessageId ?? self.messageId
-    }
-}
-
 public extension Message {
     var effectiveReplyThreadMessageId: MessageId? {
-        for attribute in self.attributes {
-            if let attribute = attribute as? ReplyMessageAttribute {
-                return attribute.effectiveReplyThreadMessageId
-            }
+        if let threadId = self.threadId {
+            return makeThreadIdMessageId(peerId: self.id.peerId, threadId: threadId)
         }
         return nil
     }

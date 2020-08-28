@@ -143,7 +143,7 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
     
     var canReply = false
     switch chatPresentationInterfaceState.chatLocation {
-        case .peer:
+        case .peer, .replyThread:
             if let channel = peer as? TelegramChannel {
                 if case .member = channel.participationStatus {
                     canReply = channel.hasPermission(.sendMessages)
@@ -155,8 +155,6 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
             } else {
                 canReply = true
             }
-        /*case .group:
-            break*/
     }
     return canReply
 }
@@ -302,7 +300,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         canPin = false
     } else if messages[0].flags.intersection([.Failed, .Unsent]).isEmpty {
         switch chatPresentationInterfaceState.chatLocation {
-            case .peer:
+            case .peer, .replyThread:
                 if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
                     if !isAction {
                         canPin = channel.hasPermission(.pinMessages)
@@ -569,6 +567,60 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             }
         }
         
+        var threadId: Int64?
+        if case .peer = chatPresentationInterfaceState.chatLocation {
+            if let value = messages[0].threadId {
+                threadId = value
+            } else {
+                for attribute in messages[0].attributes {
+                    if let attribute = attribute as? ReplyThreadMessageAttribute, attribute.count > 0 {
+                        threadId = makeMessageThreadId(messages[0].id)
+                    }
+                }
+            }
+        }
+        
+        if let threadId = threadId {
+            let replyThreadId = makeThreadIdMessageId(peerId: messages[0].id.peerId, threadId: threadId)
+            //TODO:localize
+            actions.append(.action(ContextMenuActionItem(text: "View Replies", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replies"), color: theme.actionSheet.primaryTextColor)
+            }, action: { c, _ in
+                let foundIndex = Promise<MessageIndex?>()
+                if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+                    foundIndex.set(fetchChannelReplyThreadMessage(account: context.account, messageId: messages[0].id))
+                }
+                c.dismiss(completion: {
+                    if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
+                        if case .group = channel.info {
+                            interfaceInteraction.viewReplies(replyThreadId)
+                        } else {
+                            var cancelImpl: (() -> Void)?
+                            let statusController = OverlayStatusController(theme: chatPresentationInterfaceState.theme, type: .loading(cancelled: {
+                                cancelImpl?()
+                            }))
+                            controllerInteraction.presentController(statusController, nil)
+                            
+                            let disposable = (foundIndex.get()
+                            |> take(1)
+                            |> deliverOnMainQueue).start(next: { [weak statusController] resultIndex in
+                                statusController?.dismiss()
+                                
+                                if let resultIndex = resultIndex {
+                                    interfaceInteraction.viewReplies(resultIndex.id)
+                                }
+                            })
+                            
+                            cancelImpl = { [weak statusController] in
+                                disposable.dispose()
+                                statusController?.dismiss()
+                            }
+                        }
+                    }
+                })
+            })))
+        }
+        
         if data.canEdit {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
@@ -605,7 +657,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             }
         }
         
-        if data.canPin {
+        if data.canPin, case .peer = chatPresentationInterfaceState.chatLocation {
             if chatPresentationInterfaceState.pinnedMessage?.id != messages[0].id {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_Pin, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Pin"), color: theme.actionSheet.primaryTextColor)
@@ -744,94 +796,6 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             })))
         }
         
-        if canDiscuss {
-            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuDiscuss, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.actionSheet.primaryTextColor)
-            }, action: { c, _ in
-                let timestamp = messages[0].timestamp
-                let channelMessageId = messages[0].id
-                
-                enum DiscussMessageResult {
-                    case message(MessageId)
-                    case peer(PeerId)
-                }
-                
-                let signal = context.account.postbox.transaction { transaction -> PeerId? in
-                    if let cachedData = transaction.getPeerCachedData(peerId: messages[0].id.peerId) as? CachedChannelData {
-                        return cachedData.linkedDiscussionPeerId
-                    } else {
-                        return nil
-                    }
-                }
-                |> mapToSignal { peerId -> Signal<DiscussMessageResult?, NoError> in
-                    guard let peerId = peerId else {
-                        return .single(nil)
-                    }
-                    let historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(location: .index(MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: timestamp)), count: 30), id: 0), account: context.account, chatLocation: .peer(peerId), fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
-                    return historyView
-                    |> mapToSignal { historyView -> Signal<(MessageIndex?, Bool), NoError> in
-                        switch historyView {
-                        case .Loading:
-                            return .single((nil, true))
-                        case let .HistoryView(view, _, _, _, _, _, _):
-                            for entry in view.entries {
-                                for attribute in entry.message.attributes {
-                                    if let attribute = attribute as? SourceReferenceMessageAttribute {
-                                        if attribute.messageId == channelMessageId {
-                                            return .single((entry.message.index, false))
-                                        }
-                                    }
-                                }
-                            }
-                            return .single((nil, false))
-                        }
-                    }
-                    |> take(until: { index in
-                        return SignalTakeAction(passthrough: true, complete: !index.1)
-                    })
-                    |> last
-                    |> map { result -> DiscussMessageResult? in
-                        if let index = result?.0 {
-                            return .message(index.id)
-                        } else {
-                            return .peer(peerId)
-                        }
-                    }
-                }
-                
-                let foundIndex = Promise<DiscussMessageResult?>()
-                foundIndex.set(signal)
-                
-                c.dismiss(completion: { [weak interfaceInteraction] in
-                    var cancelImpl: (() -> Void)?
-                    let statusController = OverlayStatusController(theme: chatPresentationInterfaceState.theme, type: .loading(cancelled: {
-                        cancelImpl?()
-                    }))
-                    controllerInteraction.presentController(statusController, nil)
-                    
-                    let disposable = (foundIndex.get()
-                    |> take(1)
-                    |> deliverOnMainQueue).start(next: { [weak statusController] result in
-                        statusController?.dismiss()
-                        
-                        if let result = result {
-                            switch result {
-                            case let .message(id):
-                                interfaceInteraction?.navigateToMessage(id)
-                            case let .peer(peerId):
-                                interfaceInteraction?.navigateToChat(peerId)
-                            }
-                        }
-                    })
-                    
-                    cancelImpl = { [weak statusController] in
-                        disposable.dispose()
-                        statusController?.dismiss()
-                    }
-                })
-            })))
-        }
-        
         if data.messageActions.options.contains(.report) {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuReport, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.actionSheet.primaryTextColor)
@@ -841,7 +805,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         var clearCacheAsDelete = false
-        if let peer = message.peers[message.id.peerId] as? TelegramChannel {
+        if let _ = message.peers[message.id.peerId] as? TelegramChannel {
             clearCacheAsDelete = true
         }
         if (!data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty || clearCacheAsDelete) && !isAction {

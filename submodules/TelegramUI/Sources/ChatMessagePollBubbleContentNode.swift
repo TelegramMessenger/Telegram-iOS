@@ -1031,7 +1031,9 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     } else if let attribute = attribute as? ViewCountMessageAttribute {
                         viewCount = attribute.count
                     } else if let attribute = attribute as? ReplyThreadMessageAttribute {
-                        dateReplies = Int(attribute.count)
+                        if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
+                            dateReplies = Int(attribute.count)
+                        }
                     }
                 }
                 
@@ -1512,10 +1514,10 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                 timerTransition.updateAlpha(node: strongSelf.solutionButtonNode, alpha: 0.0)
                             }
                             
-                            let avatarsFrame = CGRect(origin: CGPoint(x: typeFrame.maxX + 6.0, y: typeFrame.minY + floor((typeFrame.height - mergedImageSize) / 2.0)), size: CGSize(width: mergedImageSize + mergedImageSpacing * 2.0, height: mergedImageSize))
+                            let avatarsFrame = CGRect(origin: CGPoint(x: typeFrame.maxX + 6.0, y: typeFrame.minY + floor((typeFrame.height - defaultMergedImageSize) / 2.0)), size: CGSize(width: defaultMergedImageSize + defaultMergedImageSpacing * 2.0, height: defaultMergedImageSize))
                             strongSelf.avatarsNode.frame = avatarsFrame
                             strongSelf.avatarsNode.updateLayout(size: avatarsFrame.size)
-                            strongSelf.avatarsNode.update(context: item.context, peers: avatarPeers, synchronousLoad: synchronousLoad)
+                            strongSelf.avatarsNode.update(context: item.context, peers: avatarPeers, synchronousLoad: synchronousLoad, imageSize: defaultMergedImageSize, imageSpacing: defaultMergedImageSpacing)
                             strongSelf.avatarsNode.isHidden = isBotChat
                             let alphaTransition: ContainedViewLayoutTransition
                             if animation.isAnimated {
@@ -1790,23 +1792,29 @@ private extension PeerAvatarReference {
 private final class MergedAvatarsNodeArguments: NSObject {
     let peers: [PeerAvatarReference]
     let images: [PeerId: UIImage]
+    let imageSize: CGFloat
+    let imageSpacing: CGFloat
     
-    init(peers: [PeerAvatarReference], images: [PeerId: UIImage]) {
+    init(peers: [PeerAvatarReference], images: [PeerId: UIImage], imageSize: CGFloat, imageSpacing: CGFloat) {
         self.peers = peers
         self.images = images
+        self.imageSize = imageSize
+        self.imageSpacing = imageSpacing
     }
 }
 
-private let mergedImageSize: CGFloat = 16.0
-private let mergedImageSpacing: CGFloat = 15.0
+private let defaultMergedImageSize: CGFloat = 16.0
+private let defaultMergedImageSpacing: CGFloat = 15.0
 
 private let avatarFont = avatarPlaceholderFont(size: 8.0)
 
-private final class MergedAvatarsNode: ASDisplayNode {
+final class MergedAvatarsNode: ASDisplayNode {
     private var peers: [PeerAvatarReference] = []
     private var images: [PeerId: UIImage] = [:]
     private var disposables: [PeerId: Disposable] = [:]
     private let buttonNode: HighlightTrackingButtonNode
+    private var imageSize: CGFloat = defaultMergedImageSize
+    private var imageSpacing: CGFloat = defaultMergedImageSpacing
     
     var pressed: (() -> Void)?
     
@@ -1835,10 +1843,12 @@ private final class MergedAvatarsNode: ASDisplayNode {
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
     }
     
-    func update(context: AccountContext, peers: [Peer], synchronousLoad: Bool) {
+    func update(context: AccountContext, peers: [Peer], synchronousLoad: Bool, imageSize: CGFloat, imageSpacing: CGFloat) {
+        self.imageSize = imageSize
+        self.imageSpacing = imageSpacing
         var filteredPeers = peers.map(PeerAvatarReference.init)
         if filteredPeers.count > 3 {
-            let _ = filteredPeers.dropLast(filteredPeers.count - 3)
+            filteredPeers = filteredPeers.dropLast(filteredPeers.count - 3)
         }
         if filteredPeers != self.peers {
             self.peers = filteredPeers
@@ -1873,7 +1883,7 @@ private final class MergedAvatarsNode: ASDisplayNode {
                 switch peer {
                 case let .image(peerReference, representation):
                     if self.disposables[peer.peerId] == nil {
-                        if let signal = peerAvatarImage(account: context.account, peerReference: peerReference, authorOfMessage: nil, representation: representation, displayDimensions: CGSize(width: mergedImageSize, height: mergedImageSize), synchronousLoad: synchronousLoad) {
+                        if let signal = peerAvatarImage(account: context.account, peerReference: peerReference, authorOfMessage: nil, representation: representation, displayDimensions: CGSize(width: imageSize, height: imageSize), synchronousLoad: synchronousLoad) {
                             let disposable = (signal
                             |> deliverOnMainQueue).start(next: { [weak self] imageVersions in
                                 guard let strongSelf = self else {
@@ -1897,7 +1907,7 @@ private final class MergedAvatarsNode: ASDisplayNode {
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol {
-        return MergedAvatarsNodeArguments(peers: self.peers, images: self.images)
+        return MergedAvatarsNodeArguments(peers: self.peers, images: self.images, imageSize: self.imageSize, imageSpacing: self.imageSpacing)
     }
     
     @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -1916,6 +1926,9 @@ private final class MergedAvatarsNode: ASDisplayNode {
         }
         
         context.setBlendMode(.copy)
+        
+        let mergedImageSize = parameters.imageSize
+        let mergedImageSpacing = parameters.imageSpacing
         
         var currentX = mergedImageSize + mergedImageSpacing * CGFloat(parameters.peers.count - 1) - mergedImageSize
         for i in (0 ..< parameters.peers.count).reversed() {

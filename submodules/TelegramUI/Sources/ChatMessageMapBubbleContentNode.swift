@@ -157,7 +157,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                 if activeLiveBroadcastingTimeout != nil || selectedMedia?.venue != nil {
                     var relativePosition = position
                     if case let .linear(top, _) = position {
-                        relativePosition = .linear(top: top, bottom: ChatMessageBubbleRelativePosition.Neighbour)
+                        relativePosition = .linear(top: top, bottom: .Neighbour(false))
                     }
                     imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: relativePosition, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius, layoutConstants: layoutConstants, chatPresentationData: item.presentationData)
                     
@@ -183,7 +183,9 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                     } else if let attribute = attribute as? ViewCountMessageAttribute {
                         viewCount = attribute.count
                     } else if let attribute = attribute as? ReplyThreadMessageAttribute {
-                        dateReplies = Int(attribute.count)
+                        if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
+                            dateReplies = Int(attribute.count)
+                        }
                     }
                 }
                 

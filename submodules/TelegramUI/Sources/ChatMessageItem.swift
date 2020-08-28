@@ -313,29 +313,34 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         var effectiveAuthor: Peer?
         let displayAuthorInfo: Bool
         
+        let messagePeerId: PeerId
         switch chatLocation {
-            case let .peer(peerId):
-                if peerId == context.account.peerId {
-                    if let forwardInfo = content.firstMessage.forwardInfo {
-                        effectiveAuthor = forwardInfo.author
-                        if effectiveAuthor == nil, let authorSignature = forwardInfo.authorSignature  {
-                            effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: Int32(clamping: authorSignature.persistentHashValue)), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: UserInfoFlags())
-                        }
+        case let .peer(peerId):
+            messagePeerId = peerId
+        case let .replyThread(messageId):
+            messagePeerId = messageId.peerId
+        }
+        
+        do {
+            let peerId = messagePeerId
+            if peerId == context.account.peerId {
+                if let forwardInfo = content.firstMessage.forwardInfo {
+                    effectiveAuthor = forwardInfo.author
+                    if effectiveAuthor == nil, let authorSignature = forwardInfo.authorSignature  {
+                        effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: Int32(clamping: authorSignature.persistentHashValue)), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: UserInfoFlags())
                     }
-                    displayAuthorInfo = incoming && effectiveAuthor != nil
-                } else {
-                    effectiveAuthor = content.firstMessage.author
-                    for attribute in content.firstMessage.attributes {
-                        if let attribute = attribute as? SourceReferenceMessageAttribute {
-                            effectiveAuthor = content.firstMessage.peers[attribute.messageId.peerId]
-                            break
-                        }
-                    }
-                    displayAuthorInfo = incoming && peerId.isGroupOrChannel && effectiveAuthor != nil
                 }
-            /*case .group:
+                displayAuthorInfo = incoming && effectiveAuthor != nil
+            } else {
                 effectiveAuthor = content.firstMessage.author
-                displayAuthorInfo = incoming && effectiveAuthor != nil*/
+                for attribute in content.firstMessage.attributes {
+                    if let attribute = attribute as? SourceReferenceMessageAttribute {
+                        effectiveAuthor = content.firstMessage.peers[attribute.messageId.peerId]
+                        break
+                    }
+                }
+                displayAuthorInfo = incoming && peerId.isGroupOrChannel && effectiveAuthor != nil
+            }
         }
         
         self.effectiveAuthorId = effectiveAuthor?.id

@@ -1210,6 +1210,56 @@ public struct messages {
         }
     
     }
+    public enum MessageViews: TypeConstructorDescription {
+        case messageViews(views: [Api.MessageViews], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .messageViews(let views, let users):
+                    if boxed {
+                        buffer.appendInt32(742337250)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(views.count))
+                    for item in views {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageViews(let views, let users):
+                return ("messageViews", [("views", views), ("users", users)])
+    }
+    }
+    
+        public static func parse_messageViews(_ reader: BufferReader) -> MessageViews? {
+            var _1: [Api.MessageViews]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageViews.self)
+            }
+            var _2: [Api.User]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.MessageViews.messageViews(views: _1!, users: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum PeerDialogs: TypeConstructorDescription {
         case peerDialogs(dialogs: [Api.Dialog], messages: [Api.Message], chats: [Api.Chat], users: [Api.User], state: Api.updates.State)
     
@@ -11752,26 +11802,32 @@ public extension Api {
     
     }
     public enum MessageViews: TypeConstructorDescription {
-        case messageViews(views: Int32, forwards: Int32, replies: Int32, repliesPts: Int32)
+        case messageViews(flags: Int32, views: Int32?, forwards: Int32?, replies: Int32?, repliesPts: Int32?, recentRepliers: [Int32]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .messageViews(let views, let forwards, let replies, let repliesPts):
+                case .messageViews(let flags, let views, let forwards, let replies, let repliesPts, let recentRepliers):
                     if boxed {
-                        buffer.appendInt32(23453020)
+                        buffer.appendInt32(-119526594)
                     }
-                    serializeInt32(views, buffer: buffer, boxed: false)
-                    serializeInt32(forwards, buffer: buffer, boxed: false)
-                    serializeInt32(replies, buffer: buffer, boxed: false)
-                    serializeInt32(repliesPts, buffer: buffer, boxed: false)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(views!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(forwards!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(replies!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(repliesPts!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(recentRepliers!.count))
+                    for item in recentRepliers! {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .messageViews(let views, let forwards, let replies, let repliesPts):
-                return ("messageViews", [("views", views), ("forwards", forwards), ("replies", replies), ("repliesPts", repliesPts)])
+                case .messageViews(let flags, let views, let forwards, let replies, let repliesPts, let recentRepliers):
+                return ("messageViews", [("flags", flags), ("views", views), ("forwards", forwards), ("replies", replies), ("repliesPts", repliesPts), ("recentRepliers", recentRepliers)])
     }
     }
     
@@ -11779,17 +11835,25 @@ public extension Api {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
-            _2 = reader.readInt32()
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
             var _3: Int32?
-            _3 = reader.readInt32()
+            if Int(_1!) & Int(1 << 1) != 0 {_3 = reader.readInt32() }
             var _4: Int32?
-            _4 = reader.readInt32()
+            if Int(_1!) & Int(1 << 2) != 0 {_4 = reader.readInt32() }
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_5 = reader.readInt32() }
+            var _6: [Int32]?
+            if Int(_1!) & Int(1 << 3) != 0 {if let _ = reader.readInt32() {
+                _6 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            } }
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.MessageViews.messageViews(views: _1!, forwards: _2!, replies: _3!, repliesPts: _4!)
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.MessageViews.messageViews(flags: _1!, views: _2, forwards: _3, replies: _4, repliesPts: _5, recentRepliers: _6)
             }
             else {
                 return nil
@@ -17170,7 +17234,7 @@ public extension Api {
     public enum Message: TypeConstructorDescription {
         case messageEmpty(id: Int32)
         case messageService(flags: Int32, id: Int32, fromId: Int32?, toId: Api.Peer, replyToMsgId: Int32?, date: Int32, action: Api.MessageAction)
-        case message(flags: Int32, id: Int32, fromId: Int32?, toId: Api.Peer, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyToMsgId: Int32?, replyToTopId: Int32?, date: Int32, message: String, media: Api.MessageMedia?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, views: Int32?, forwards: Int32?, replies: Int32?, repliesPts: Int32?, editDate: Int32?, postAuthor: String?, groupedId: Int64?, restrictionReason: [Api.RestrictionReason]?)
+        case message(flags: Int32, id: Int32, fromId: Int32?, toId: Api.Peer, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyToMsgId: Int32?, replyToTopId: Int32?, date: Int32, message: String, media: Api.MessageMedia?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, views: Int32?, forwards: Int32?, replies: Int32?, recentRepliers: [Int32]?, editDate: Int32?, postAuthor: String?, groupedId: Int64?, restrictionReason: [Api.RestrictionReason]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -17192,9 +17256,9 @@ public extension Api {
                     serializeInt32(date, buffer: buffer, boxed: false)
                     action.serialize(buffer, true)
                     break
-                case .message(let flags, let id, let fromId, let toId, let fwdFrom, let viaBotId, let replyToMsgId, let replyToTopId, let date, let message, let media, let replyMarkup, let entities, let views, let forwards, let replies, let repliesPts, let editDate, let postAuthor, let groupedId, let restrictionReason):
+                case .message(let flags, let id, let fromId, let toId, let fwdFrom, let viaBotId, let replyToMsgId, let replyToTopId, let date, let message, let media, let replyMarkup, let entities, let views, let forwards, let replies, let recentRepliers, let editDate, let postAuthor, let groupedId, let restrictionReason):
                     if boxed {
-                        buffer.appendInt32(2119777911)
+                        buffer.appendInt32(-739735064)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -17216,7 +17280,11 @@ public extension Api {
                     if Int(flags) & Int(1 << 10) != 0 {serializeInt32(views!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 10) != 0 {serializeInt32(forwards!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 23) != 0 {serializeInt32(replies!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 23) != 0 {serializeInt32(repliesPts!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 25) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(recentRepliers!.count))
+                    for item in recentRepliers! {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }}
                     if Int(flags) & Int(1 << 15) != 0 {serializeInt32(editDate!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 16) != 0 {serializeString(postAuthor!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 17) != 0 {serializeInt64(groupedId!, buffer: buffer, boxed: false)}
@@ -17235,8 +17303,8 @@ public extension Api {
                 return ("messageEmpty", [("id", id)])
                 case .messageService(let flags, let id, let fromId, let toId, let replyToMsgId, let date, let action):
                 return ("messageService", [("flags", flags), ("id", id), ("fromId", fromId), ("toId", toId), ("replyToMsgId", replyToMsgId), ("date", date), ("action", action)])
-                case .message(let flags, let id, let fromId, let toId, let fwdFrom, let viaBotId, let replyToMsgId, let replyToTopId, let date, let message, let media, let replyMarkup, let entities, let views, let forwards, let replies, let repliesPts, let editDate, let postAuthor, let groupedId, let restrictionReason):
-                return ("message", [("flags", flags), ("id", id), ("fromId", fromId), ("toId", toId), ("fwdFrom", fwdFrom), ("viaBotId", viaBotId), ("replyToMsgId", replyToMsgId), ("replyToTopId", replyToTopId), ("date", date), ("message", message), ("media", media), ("replyMarkup", replyMarkup), ("entities", entities), ("views", views), ("forwards", forwards), ("replies", replies), ("repliesPts", repliesPts), ("editDate", editDate), ("postAuthor", postAuthor), ("groupedId", groupedId), ("restrictionReason", restrictionReason)])
+                case .message(let flags, let id, let fromId, let toId, let fwdFrom, let viaBotId, let replyToMsgId, let replyToTopId, let date, let message, let media, let replyMarkup, let entities, let views, let forwards, let replies, let recentRepliers, let editDate, let postAuthor, let groupedId, let restrictionReason):
+                return ("message", [("flags", flags), ("id", id), ("fromId", fromId), ("toId", toId), ("fwdFrom", fwdFrom), ("viaBotId", viaBotId), ("replyToMsgId", replyToMsgId), ("replyToTopId", replyToTopId), ("date", date), ("message", message), ("media", media), ("replyMarkup", replyMarkup), ("entities", entities), ("views", views), ("forwards", forwards), ("replies", replies), ("recentRepliers", recentRepliers), ("editDate", editDate), ("postAuthor", postAuthor), ("groupedId", groupedId), ("restrictionReason", restrictionReason)])
     }
     }
     
@@ -17327,8 +17395,10 @@ public extension Api {
             if Int(_1!) & Int(1 << 10) != 0 {_15 = reader.readInt32() }
             var _16: Int32?
             if Int(_1!) & Int(1 << 23) != 0 {_16 = reader.readInt32() }
-            var _17: Int32?
-            if Int(_1!) & Int(1 << 23) != 0 {_17 = reader.readInt32() }
+            var _17: [Int32]?
+            if Int(_1!) & Int(1 << 25) != 0 {if let _ = reader.readInt32() {
+                _17 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            } }
             var _18: Int32?
             if Int(_1!) & Int(1 << 15) != 0 {_18 = reader.readInt32() }
             var _19: String?
@@ -17355,13 +17425,13 @@ public extension Api {
             let _c14 = (Int(_1!) & Int(1 << 10) == 0) || _14 != nil
             let _c15 = (Int(_1!) & Int(1 << 10) == 0) || _15 != nil
             let _c16 = (Int(_1!) & Int(1 << 23) == 0) || _16 != nil
-            let _c17 = (Int(_1!) & Int(1 << 23) == 0) || _17 != nil
+            let _c17 = (Int(_1!) & Int(1 << 25) == 0) || _17 != nil
             let _c18 = (Int(_1!) & Int(1 << 15) == 0) || _18 != nil
             let _c19 = (Int(_1!) & Int(1 << 16) == 0) || _19 != nil
             let _c20 = (Int(_1!) & Int(1 << 17) == 0) || _20 != nil
             let _c21 = (Int(_1!) & Int(1 << 22) == 0) || _21 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 {
-                return Api.Message.message(flags: _1!, id: _2!, fromId: _3, toId: _4!, fwdFrom: _5, viaBotId: _6, replyToMsgId: _7, replyToTopId: _8, date: _9!, message: _10!, media: _11, replyMarkup: _12, entities: _13, views: _14, forwards: _15, replies: _16, repliesPts: _17, editDate: _18, postAuthor: _19, groupedId: _20, restrictionReason: _21)
+                return Api.Message.message(flags: _1!, id: _2!, fromId: _3, toId: _4!, fwdFrom: _5, viaBotId: _6, replyToMsgId: _7, replyToTopId: _8, date: _9!, message: _10!, media: _11, replyMarkup: _12, entities: _13, views: _14, forwards: _15, replies: _16, recentRepliers: _17, editDate: _18, postAuthor: _19, groupedId: _20, restrictionReason: _21)
             }
             else {
                 return nil

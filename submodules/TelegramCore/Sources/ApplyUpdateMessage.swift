@@ -42,7 +42,7 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: 
     }
 }
 
-func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, result: Api.Updates) -> Signal<Void, NoError> {
+func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, result: Api.Updates, accountPeerId: PeerId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         let messageId: Int32?
         var apiMessage: Api.Message?
@@ -224,18 +224,16 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 }
             }
             
-            let updatedMessageValue = StoreMessage(id: updatedId, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: forwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media)
+            let updatedMessageValue = StoreMessage(id: updatedId, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: forwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media)
             updatedMessage = updatedMessageValue
             
             return .update(updatedMessageValue)
         })
         if let updatedMessage = updatedMessage, case let .Id(updatedId) = updatedMessage.id {
             if message.id.namespace == Namespaces.Message.Local && updatedId.namespace == Namespaces.Message.Cloud && updatedId.peerId.namespace == Namespaces.Peer.CloudChannel {
-                for attribute in updatedMessage.attributes {
-                    if let attribute = attribute as? ReplyMessageAttribute {
-                        updateMessageThreadStats(transaction: transaction, threadMessageId: attribute.effectiveReplyThreadMessageId, difference: 1)
-                        break
-                    }
+                if let threadId = updatedMessage.threadId {
+                    let messageThreadId = makeThreadIdMessageId(peerId: updatedMessage.id.peerId, threadId: threadId)
+                    updateMessageThreadStats(transaction: transaction, threadMessageId: messageThreadId, difference: 1, addedMessagePeers: [accountPeerId])
                 }
             }
         }
@@ -375,7 +373,7 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                 
                 let (tags, globalTags) = tagsForStoreMessage(incoming: currentMessage.flags.contains(.Incoming), attributes: attributes, media: media, textEntities: entitiesAttribute?.entities)
                 
-                return .update(StoreMessage(id: updatedId, globallyUniqueId: nil, groupingKey: currentMessage.groupingKey, timestamp: updatedMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media))
+                return .update(StoreMessage(id: updatedId, globallyUniqueId: nil, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: updatedMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media))
             })
         }
         

@@ -399,7 +399,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 extension StoreMessage {
     convenience init?(apiMessage: Api.Message, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
-            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, replyToTopId, date, message, media, replyMarkup, entities, views, forwards, replies, _, editDate, postAuthor, groupingId, restrictionReason):
+            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, replyToTopId, date, message, media, replyMarkup, entities, views, forwards, replies, recentRepliers, editDate, postAuthor, groupingId, restrictionReason):
                 let peerId: PeerId
                 var authorId: PeerId?
                 switch toId {
@@ -514,10 +514,17 @@ extension StoreMessage {
                     attributes.append(InlineBotMessageAttribute(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: viaBotId), title: nil))
                 }
                 
+                var threadId: Int64?
                 if let replyToMsgId = replyToMsgId {
                     var threadMessageId: MessageId?
                     if let replyToTopId = replyToTopId {
-                        threadMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
+                        let threadIdValue = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
+                        threadMessageId = threadIdValue
+                        threadId = makeMessageThreadId(threadIdValue)
+                    } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                        let threadIdValue = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
+                        threadMessageId = threadIdValue
+                        threadId = makeMessageThreadId(threadIdValue)
                     }
                     attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
                 }
@@ -569,7 +576,14 @@ extension StoreMessage {
                 }*/
                 
                 if let replies = replies {
-                    attributes.append(ReplyThreadMessageAttribute(count: replies))
+                    let recentRepliersPeerIds: [PeerId]?
+                    if let recentRepliers = recentRepliers {
+                        recentRepliersPeerIds = recentRepliers.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: $0) }
+                    } else {
+                        recentRepliersPeerIds = nil
+                    }
+                    
+                    attributes.append(ReplyThreadMessageAttribute(count: replies, latestUsers: recentRepliersPeerIds ?? []))
                 }
                 
                 if let restrictionReason = restrictionReason {
@@ -612,7 +626,7 @@ extension StoreMessage {
                 
                 storeFlags.insert(.CanBeGroupedIntoFeed)
                 
-                self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
+                self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingId, threadId: threadId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
             case .messageEmpty:
                 return nil
             case let .messageService(flags, id, fromId, toId, replyToMsgId, date, action):
@@ -681,7 +695,7 @@ extension StoreMessage {
                     storeFlags.insert(.WasScheduled)
                 }
                 
-                self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: nil, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
+                self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: nil, threadId: nil, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
             }
     }
 }

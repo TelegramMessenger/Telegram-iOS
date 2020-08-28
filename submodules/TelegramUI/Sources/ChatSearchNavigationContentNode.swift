@@ -9,6 +9,7 @@ import TelegramPresentationData
 import SearchBarNode
 import LocalizedPeerData
 import SwiftSignalKit
+import AccountContext
 
 private let searchBarFont = Font.regular(17.0)
 
@@ -31,10 +32,8 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
         self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: strings, fieldStyle: .modern)
         let placeholderText: String
         switch chatLocation {
-            case .peer:
+            case .peer, .replyThread:
                 placeholderText = strings.Conversation_SearchPlaceholder
-            /*case .group:
-                placeholderText = "Search this feed"*/
         }
         self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
         
@@ -94,10 +93,8 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
                     self.searchBar.prefixString = nil
                     let placeholderText: String
                     switch self.chatLocation {
-                        case .peer:
+                        case .peer, .replyThread:
                             placeholderText = self.strings.Conversation_SearchPlaceholder
-                        /*case .group:
-                            placeholderText = "Search this feed"*/
                     }
                     self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
                 case .members:

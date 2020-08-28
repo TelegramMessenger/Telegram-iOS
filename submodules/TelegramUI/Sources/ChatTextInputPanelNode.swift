@@ -790,6 +790,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     } else {
                         placeholder = interfaceState.strings.Conversation_InputTextBroadcastPlaceholder
                     }
+                } else if case .replyThread = interfaceState.chatLocation {
+                    //TODO:localize
+                    placeholder = "Reply"
                 } else {
                     placeholder = interfaceState.strings.Conversation_InputTextPlaceholder
                 }

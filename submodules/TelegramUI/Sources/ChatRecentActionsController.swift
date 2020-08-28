@@ -125,7 +125,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, openScheduledMessages: {
         }, openPeersNearby: {
         }, displaySearchResultsTooltip: { _, _ in
-        }, unarchivePeer: {}, statuses: nil)
+        }, unarchivePeer: {}, viewReplies: { _ in }, statuses: nil)
         
         self.navigationItem.titleView = self.titleView
         

@@ -436,6 +436,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, greetingStickerNode: {
             return nil
         }, openPeerContextMenu: { _, _, _, _ in
+        }, openMessageReplies: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
@@ -553,7 +554,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, openScheduledMessages: {
         }, openPeersNearby: {
         }, displaySearchResultsTooltip: { _, _ in
-        }, unarchivePeer: {}, statuses: nil)
+        }, unarchivePeer: {}, viewReplies: { _ in }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })
         

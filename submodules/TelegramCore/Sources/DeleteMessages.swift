@@ -40,16 +40,14 @@ public func deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [M
     for id in ids {
         if id.peerId.namespace == Namespaces.Peer.CloudChannel && id.namespace == Namespaces.Message.Cloud {
             if let message = transaction.getMessage(id) {
-                findAttribute: for attribute in message.attributes {
-                    if let attribute = attribute as? ReplyMessageAttribute {
-                        if id.peerId.namespace == Namespaces.Peer.CloudChannel {
-                            if let manualAddMessageThreadStatsDifference = manualAddMessageThreadStatsDifference {
-                                manualAddMessageThreadStatsDifference(attribute.messageId, 0, 1)
-                            } else {
-                                updateMessageThreadStats(transaction: transaction, threadMessageId: attribute.effectiveReplyThreadMessageId, difference: -1) 
-                            }
+                if let threadId = message.threadId {
+                    let messageThreadId = makeThreadIdMessageId(peerId: message.id.peerId, threadId: threadId)
+                    if id.peerId.namespace == Namespaces.Peer.CloudChannel {
+                        if let manualAddMessageThreadStatsDifference = manualAddMessageThreadStatsDifference {
+                            manualAddMessageThreadStatsDifference(messageThreadId, 0, 1)
+                        } else {
+                            updateMessageThreadStats(transaction: transaction, threadMessageId: messageThreadId, difference: -1, addedMessagePeers: [])
                         }
-                        break findAttribute
                     }
                 }
             }

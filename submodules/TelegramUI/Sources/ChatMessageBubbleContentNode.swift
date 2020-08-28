@@ -42,7 +42,7 @@ enum ChatMessageBubbleMergeStatus {
 enum ChatMessageBubbleRelativePosition {
     case None(ChatMessageBubbleMergeStatus)
     case BubbleNeighbour
-    case Neighbour
+    case Neighbour(Bool)
 }
 
 enum ChatMessageBubbleContentMosaicNeighbor {

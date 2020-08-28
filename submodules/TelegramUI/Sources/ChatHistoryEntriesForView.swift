@@ -4,6 +4,7 @@ import TelegramCore
 import SyncCore
 import TemporaryCachedPeerDataManager
 import Emoji
+import AccountContext
 
 func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView, includeUnreadEntry: Bool, includeEmptyEntry: Bool, includeChatInfoEntry: Bool, includeSearchEntry: Bool, reverse: Bool, groupMessages: Bool, selectedMessages: Set<MessageId>?, presentationData: ChatPresentationData, historyAppearsCleared: Bool, associatedData: ChatMessageItemAssociatedData, updatingMedia: [MessageId: ChatUpdatingMessageMedia]) -> [ChatHistoryEntry] {
     if historyAppearsCleared {

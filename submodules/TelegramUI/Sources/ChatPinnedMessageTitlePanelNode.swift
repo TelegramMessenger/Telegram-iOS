@@ -115,6 +115,15 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.separatorNode.backgroundColor = interfaceState.theme.chat.historyNavigation.strokeColor
         }
         
+        let isReplyThread: Bool
+        if case .replyThread = interfaceState.chatLocation {
+            isReplyThread = true
+        } else {
+            isReplyThread = false
+        }
+        
+        self.closeButton.isHidden = isReplyThread
+        
         var messageUpdated = false
         if let currentMessage = self.currentMessage, let pinnedMessage = interfaceState.pinnedMessage {
             if currentMessage.id != pinnedMessage.id || currentMessage.stableVersion != pinnedMessage.stableVersion {
@@ -129,7 +138,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.currentMessage = interfaceState.pinnedMessage
             
             if let currentMessage = currentMessage, let currentLayout = self.currentLayout {
-                self.enqueueTransition(width: currentLayout.0, leftInset: currentLayout.1, rightInset: currentLayout.2, transition: .immediate, message: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, accountPeerId: self.context.account.peerId, firstTime: previousMessageWasNil)
+                self.enqueueTransition(width: currentLayout.0, leftInset: currentLayout.1, rightInset: currentLayout.2, transition: .immediate, message: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, accountPeerId: self.context.account.peerId, firstTime: previousMessageWasNil, isReplyThread: isReplyThread)
             }
         }
         
@@ -148,14 +157,14 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.currentLayout = (width, leftInset, rightInset)
             
             if let currentMessage = self.currentMessage {
-                self.enqueueTransition(width: width, leftInset: leftInset, rightInset: rightInset, transition: .immediate, message: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, accountPeerId: interfaceState.accountPeerId, firstTime: true)
+                self.enqueueTransition(width: width, leftInset: leftInset, rightInset: rightInset, transition: .immediate, message: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, accountPeerId: interfaceState.accountPeerId, firstTime: true, isReplyThread: isReplyThread)
             }
         }
         
         return panelHeight
     }
     
-    private func enqueueTransition(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, message: Message, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId, firstTime: Bool) {
+    private func enqueueTransition(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, message: Message, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId, firstTime: Bool, isReplyThread: Bool) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         let imageNodeLayout = self.imageNode.asyncLayout()
@@ -201,6 +210,14 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                     case .quiz:
                         titleString = strings.Conversation_PinnedQuiz
                     }
+                }
+            }
+            
+            if isReplyThread {
+                if let author = message.effectiveAuthor {
+                    titleString = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+                } else {
+                    titleString = ""
                 }
             }
             

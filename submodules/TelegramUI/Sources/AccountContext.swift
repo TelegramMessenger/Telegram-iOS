@@ -298,6 +298,15 @@ public final class AccountContextImpl: AccountContext {
             return nil
         }
     }
+    
+    public func chatLocationInput(for location: ChatLocation) -> ChatLocationInput {
+        switch location {
+        case let .peer(peerId):
+            return .peer(peerId)
+        case let .replyThread(messageId):
+            return .external(messageId.peerId, self.peerChannelMemberCategoriesContextsManager.replyThread(account: self.account, messageId: messageId))
+        }
+    }
 }
 
 func getAppConfiguration(transaction: Transaction) -> AppConfiguration {

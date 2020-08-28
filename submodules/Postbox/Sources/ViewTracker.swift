@@ -29,6 +29,9 @@ final class ViewTracker {
     private let messageHistoryHolesView = MutableMessageHistoryHolesView()
     private let messageHistoryHolesViewSubscribers = Bag<ValuePipe<MessageHistoryHolesView>>()
     
+    private let externalMessageHistoryHolesView = MutableMessageHistoryExternalHolesView()
+    private let externalMessageHistoryHolesViewSubscribers = Bag<ValuePipe<MessageHistoryExternalHolesView>>()
+    
     private let chatListHolesView = MutableChatListHolesView()
     private let chatListHolesViewSubscribers = Bag<ValuePipe<ChatListHolesView>>()
     
@@ -309,7 +312,7 @@ final class ViewTracker {
                 case .associated:
                     var ids = Set<PeerId>()
                     switch mutableView.peerIds {
-                        case .single:
+                        case .single, .external:
                             assertionFailure()
                         case let .associated(mainPeerId, associatedId):
                             ids.insert(mainPeerId)
@@ -326,6 +329,8 @@ final class ViewTracker {
                             }
                         }
                     }
+                case .external:
+                    break
             }
             
             mutableView.updatePeerIds(transaction: transaction)
@@ -473,6 +478,19 @@ final class ViewTracker {
                 }
                 firstHolesAndTags.insert(MessageHistoryHolesViewEntry(hole: hole, direction: direction, space: space, count: count))
             }
+        }
+        
+        if self.messageHistoryHolesView.update(firstHolesAndTags) {
+            for subscriber in self.messageHistoryHolesViewSubscribers.copyItems() {
+                subscriber.putNext(MessageHistoryHolesView(self.messageHistoryHolesView))
+            }
+        }
+        
+        var firstExternalHolesAndTags = Set<MessageHistoryExternalHolesViewEntry>()
+        for (view, _) in self.messageHistoryViews.copyItems() {
+            /*if let (hole, direction, count) = view.firstExternalHole() {
+                firstExternalHolesAndTags.insert(MessageHistoryHolesViewEntry(hole: hole, direction: direction, count: count))
+            }*/
         }
         
         if self.messageHistoryHolesView.update(firstHolesAndTags) {

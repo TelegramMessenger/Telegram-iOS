@@ -18,7 +18,7 @@ import PhoneNumberFormat
 import ChatTitleActivityNode
 
 enum ChatTitleContent {
-    case peer(peerView: PeerView, onlineMemberCount: Int32?, isScheduledMessages: Bool)
+    case peer(peerView: PeerView, onlineMemberCount: Int32?, isScheduledMessages: Bool, isReplyThread: Bool)
     case group([Peer])
     case custom(String)
 }
@@ -100,8 +100,12 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 var titleScamIcon = false
                 var isEnabled = true
                 switch titleContent {
-                    case let .peer(peerView, _, isScheduledMessages):
-                        if isScheduledMessages {
+                    case let .peer(peerView, _, isScheduledMessages, isReplyThread):
+                        if isReplyThread {
+                            //TODO:localize
+                            string = NSAttributedString(string: "Replies", font: Font.medium(17.0), textColor: titleTheme.rootController.navigationBar.primaryTextColor)
+                            isEnabled = false
+                        } else if isScheduledMessages {
                             if peerView.peerId == self.account.peerId {
                                  string = NSAttributedString(string: self.strings.ScheduledMessages_RemindersTitle, font: Font.medium(17.0), textColor: titleTheme.rootController.navigationBar.primaryTextColor)
                             } else {
@@ -178,9 +182,9 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         var inputActivitiesAllowed = true
         if let titleContent = self.titleContent {
             switch titleContent {
-            case let .peer(peerView, _, isScheduledMessages):
+            case let .peer(peerView, _, isScheduledMessages, isReplyThread):
                 if let peer = peerViewMainPeer(peerView) {
-                    if peer.id == self.account.peerId || isScheduledMessages {
+                    if peer.id == self.account.peerId || isScheduledMessages || isReplyThread {
                         inputActivitiesAllowed = false
                     }
                 }
@@ -266,10 +270,10 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
             } else {
                 if let titleContent = self.titleContent {
                     switch titleContent {
-                        case let .peer(peerView, onlineMemberCount, isScheduledMessages):
+                        case let .peer(peerView, onlineMemberCount, isScheduledMessages, isReplyThread):
                             if let peer = peerViewMainPeer(peerView) {
                                 let servicePeer = isServicePeer(peer)
-                                if peer.id == self.account.peerId || isScheduledMessages {
+                                if peer.id == self.account.peerId || isScheduledMessages || isReplyThread {
                                     let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                     state = .info(string, .generic)
                                 } else if let user = peer as? TelegramUser {

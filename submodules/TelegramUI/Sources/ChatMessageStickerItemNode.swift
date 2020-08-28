@@ -249,8 +249,21 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     } else if incoming {
                         hasAvatar = true
                     }
-                /*case .group:
-                    hasAvatar = true*/
+                case let .replyThread(messageId):
+                    if messageId.peerId != item.context.account.peerId {
+                        if messageId.peerId.isGroupOrChannel && item.message.author != nil {
+                            var isBroadcastChannel = false
+                            if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                                isBroadcastChannel = true
+                            }
+                            
+                            if !isBroadcastChannel {
+                                hasAvatar = true
+                            }
+                        }
+                    } else if incoming {
+                        hasAvatar = true
+                    }
             }
             
             if hasAvatar {
@@ -344,7 +357,9 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 } else if let attribute = attribute as? ViewCountMessageAttribute {
                     viewCount = attribute.count
                 } else if let attribute = attribute as? ReplyThreadMessageAttribute {
-                    dateReplies = Int(attribute.count)
+                    if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
+                        dateReplies = Int(attribute.count)
+                    }
                 }
             }
             
@@ -396,7 +411,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                 }
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-                    replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                    if case let .replyThread(replyThreadMessageId) = item.chatLocation, replyThreadMessageId == replyAttribute.messageId {
+                    } else {
+                        replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                    }
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
                     replyMarkup = attribute
                 }

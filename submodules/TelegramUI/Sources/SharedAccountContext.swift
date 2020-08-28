@@ -915,8 +915,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.navigateToChatImpl(accountId, peerId, messageId)
     }
     
-    public func messageFromPreloadedChatHistoryViewForLocation(id: MessageId, location: ChatHistoryLocationInput, account: Account, chatLocation: ChatLocation, tagMask: MessageTags?) -> Signal<(MessageIndex?, Bool), NoError> {
-        let historyView = preloadedChatHistoryViewForLocation(location, account: account, chatLocation: chatLocation, fixedCombinedReadStates: nil, tagMask: tagMask, additionalData: [])
+    public func messageFromPreloadedChatHistoryViewForLocation(id: MessageId, location: ChatHistoryLocationInput, context: AccountContext, chatLocation: ChatLocation, tagMask: MessageTags?) -> Signal<(MessageIndex?, Bool), NoError> {
+        let historyView = preloadedChatHistoryViewForLocation(location, context: context, chatLocation: chatLocation, fixedCombinedReadStates: nil, tagMask: tagMask, additionalData: [])
         return historyView
         |> mapToSignal { historyView -> Signal<(MessageIndex?, Bool), NoError> in
             switch historyView {
@@ -1194,6 +1194,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }, greetingStickerNode: {
                 return nil
             }, openPeerContextMenu: { _, _, _, _ in
+            }, openMessageReplies: { _ in
             }, requestMessageUpdate: { _ in
             }, cancelInteractiveKeyboardGestures: {
             }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

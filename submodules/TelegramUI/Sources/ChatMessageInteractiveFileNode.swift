@@ -300,7 +300,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         } else if let attribute = attribute as? ViewCountMessageAttribute {
                             viewCount = attribute.count
                         } else if let attribute = attribute as? ReplyThreadMessageAttribute {
-                            dateReplies = Int(attribute.count)
+                            if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
+                                dateReplies = Int(attribute.count)
+                            }
                         }
                     }
                     

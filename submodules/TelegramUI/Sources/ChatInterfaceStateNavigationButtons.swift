@@ -64,6 +64,9 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
 }
 
 func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: ChatPresentationInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?, chatInfoNavigationButton: ChatNavigationButton?) -> ChatNavigationButton? {
+    if case .replyThread = presentationInterfaceState.chatLocation {
+        return nil
+    }
     if let _ = presentationInterfaceState.interfaceState.selectionState {
         if let currentButton = currentButton, currentButton.action == .cancelMessageSelection {
             return currentButton
