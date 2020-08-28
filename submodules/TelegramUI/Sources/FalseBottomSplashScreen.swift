@@ -22,12 +22,12 @@ public enum FalseBottomSplashMode {
     case accountWasHidden
 }
 
-public final class FalseBottomSplashScreen: ViewController {
+public final class FalseBottomSplashScreen: FlowViewController {
     private let presentationData: PresentationData
     private let mode: FalseBottomSplashMode
     
     var buttonPressedWithEnabledSwitch: ((Bool) -> Void)?
-    var buttonPressed: (() -> Void)?
+    var buttonPressed: ((ViewController?) -> Void)?
     var backPressed: (() -> Void)? {
         didSet {
             navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: presentationData.strings.Common_Back, target: self, action: #selector(self.didTapBack))
@@ -69,7 +69,7 @@ public final class FalseBottomSplashScreen: ViewController {
                 }
                 
                 strongSelf.buttonPressedWithEnabledSwitch?(enabled)
-                strongSelf.buttonPressed?()
+                strongSelf.buttonPressed?(strongSelf.nextController)
             })
         } else {
             self.displayNode = FalseBottomSplashScreenNode(presentationData: self.presentationData, mode: self.mode, action: { [weak self] in
@@ -77,7 +77,7 @@ public final class FalseBottomSplashScreen: ViewController {
                     return
                 }
                 
-                strongSelf.buttonPressed?()
+                strongSelf.buttonPressed?(strongSelf.nextController)
             })
         }
         
