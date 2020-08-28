@@ -18,6 +18,7 @@ public enum FalseBottomSplashMode {
     case setMasterPasscode
     case setSecretPasscode
     case disableNotifications
+    case disableNotifications2
     case lockExplanation
     case accountWasHidden
 }
@@ -114,6 +115,7 @@ private final class FalseBottomSwitchScreenNode: ViewControllerTracingNode {
     private let textNode: ImmediateTextNode
     private let subtitleNode: ImmediateTextNode
     private let animationNode: AnimatedStickerNode
+    private let animationNode2: AnimatedStickerNode
     private var animationSize: CGSize = CGSize()
     private let buttonNode: SolidRoundedButtonNode
     
@@ -139,6 +141,13 @@ private final class FalseBottomSwitchScreenNode: ViewControllerTracingNode {
             self.animationNode.visibility = true
         }
         
+        self.animationNode2 = AnimatedStickerNode()
+        if let otherSource = FalseBottomAnimationSource(mode: .disableNotifications2) {
+            self.animationNode2.setup(source: otherSource, width: 528, height: 348, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+            self.animationNode2.visibility = true
+            self.animationNode2.alpha = 0.0
+        }
+        
         self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: SolidRoundedButtonTheme(backgroundColor: presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: presentationData.theme.list.itemCheckColors.foregroundColor), height: 50.0, cornerRadius: 10.0, gloss: false)
         
         self.switchNode = BorderSwitchNode()
@@ -159,9 +168,55 @@ private final class FalseBottomSwitchScreenNode: ViewControllerTracingNode {
         
         super.init()
         
+        Queue.mainQueue().after(1.0) { [weak self] in
+            guard let strongSelf = self else { return }
+            
+            strongSelf.animationNode2.playToCompletionOnStop = true
+            strongSelf.animationNode2.stop()
+        }
+        
+        self.switchNode.valueUpdated = { [weak self] isOn in
+            guard let strongSelf = self else { return }
+            
+            strongSelf.switchNode.isUserInteractionEnabled = false
+            
+            if isOn {
+                strongSelf.animationNode2.finishAnimation(resume: true, fromFrame: 69) { [weak self] in
+                    guard let strongSelf = self else { return }
+                    
+                    strongSelf.animationNode2.pause()
+                    strongSelf.animationNode.alpha = 1.0
+                    strongSelf.animationNode2.alpha = 0.0
+                    strongSelf.animationNode2.seekTo(.start)
+                    strongSelf.animationNode.play()
+                    strongSelf.switchNode.isUserInteractionEnabled = true
+                }
+            } else {
+                var frame = strongSelf.animationNode.currentFrameIndex
+                if frame < 30 {
+                    frame = 120 - frame
+                } else if frame < 90 {
+                    frame = 90
+                }
+                strongSelf.animationNode.finishAnimation(resume: true, fromFrame: frame) { [weak self] in
+                    guard let strongSelf = self else { return }
+                    
+                    strongSelf.animationNode.stop()
+                    strongSelf.animationNode2.alpha = 1.0
+                    strongSelf.animationNode.alpha = 0.0
+                    strongSelf.animationNode2.playTo(frame: 69, fromFrame: 0) { [weak self] in
+                        guard let strongSelf = self else { return }
+                        
+                        strongSelf.switchNode.isUserInteractionEnabled = true
+                    }
+                }
+            }
+        }
+        
         self.backgroundColor = presentationData.theme.list.plainBackgroundColor
         
         self.addSubnode(self.animationNode)
+        self.addSubnode(self.animationNode2)
         self.addSubnode(self.subtitleNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.buttonNode)
@@ -205,6 +260,8 @@ private final class FalseBottomSwitchScreenNode: ViewControllerTracingNode {
         let iconFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: switchFrame.origin.y - (iconSize.height + iconSpacing)), size: iconSize)
         self.animationNode.updateLayout(size: iconFrame.size)
         transition.updateFrameAdditive(node: self.animationNode, frame: iconFrame)
+        self.animationNode2.updateLayout(size: iconFrame.size)
+        transition.updateFrameAdditive(node: self.animationNode2, frame: iconFrame)
         
         let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: switchFrame.maxY + switchSpacing), size: textSize)
         transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
@@ -286,6 +343,9 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             title = presentationData.strings.FalseBottom_AccountWasHidden_Title
             text = NSAttributedString(string: presentationData.strings.FalseBottom_AccountWasHidden_Text, font: textFont, textColor: textColor)
             buttonText = presentationData.strings.FalseBottom_AccountWasHidden_Button
+            
+        default:
+            fatalError()
         }
         
         if let source = source {
@@ -444,6 +504,9 @@ private final class FalseBottomAnimationSource: AnimatedStickerNodeSource {
             
         case .disableNotifications:
             fileName = "FalseBottomNotifications_part_1"
+            
+        case .disableNotifications2:
+            fileName = "FalseBottomNotifications_part_2"
             
         case .lockExplanation:
             fileName = "FalseBottomLocking"
