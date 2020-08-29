@@ -901,10 +901,10 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         return value.timestamp
     })
     
-    let falseBottomDisplayTimeSignal = combineLatest(accountIsHiddenSignal, falseBottomTimestampSignal) |> mapToSignal { accountIsHidden, timestamp -> Signal<Int64?,NoError> in
+    let falseBottomDisplayTimeSignal = combineLatest(accountIsHiddenSignal, falseBottomTimestampSignal) |> mapToSignal { [weak context] accountIsHidden, timestamp -> Signal<Int64?,NoError> in
         let currentTimestamp = Int64(Date().timeIntervalSince1970)
         let timeLeft = timestamp - currentTimestamp
-        if timeLeft <= 0 || accountIsHidden {
+        if timeLeft <= 0 || (context?.account.isHidden ?? false) {
             return .single(nil)
         }
         return Signal { subscriber in
