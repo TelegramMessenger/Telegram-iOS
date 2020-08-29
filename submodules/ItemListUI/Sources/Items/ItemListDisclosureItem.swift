@@ -413,7 +413,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                         if strongSelf.iconNode.supernode == nil {
                             strongSelf.addSubnode(strongSelf.iconNode)
                         }
-                        if updateIcon || displaysAlternativeIcon {
+                        if updateIcon {
                             strongSelf.iconNode.image = icon
                         }
                         let iconY: CGFloat
@@ -428,7 +428,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.iconNode.removeFromSupernode()
                     }
                     
-                    if displaysAlternativeIcon {
+                    if displaysAlternativeIcon, item.longTapIcon != nil {
                         strongSelf.iconNode.alpha = 0.0
                         strongSelf.alternativeIconNode.alpha = 1.0
                     } else {
