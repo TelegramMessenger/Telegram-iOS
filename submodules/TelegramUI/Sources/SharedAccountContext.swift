@@ -734,15 +734,33 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             })
         }
         
-        self.activeAccountsSettingsDisposable = (self.activeAccounts |> delay(1.0, queue: .mainQueue())).start(next:{ [weak self] accounts -> Void in
+        let hasChallengeDataSignal = accountManager.accessChallengeData()
+        |> map { $0.data }
+        |> distinctUntilChanged (isEqual: { lhs, rhs in
+            if (lhs == .none) != (rhs == .none) {
+                return false
+            }
+            return true
+        })
+        |> map { $0 != .none }
+        
+        self.activeAccountsSettingsDisposable = (combineLatest(self.activeAccounts, hasChallengeDataSignal) |> delay(1.0, queue: .mainQueue())).start(next:{ [weak self] accounts, hasChallengeData -> Void in
             if let strongSelf = self {
                 if accounts.accounts.contains(where: { !$0.1.isHidden }) {
                     updatePushNotificationsSettingsAfterLogin(accountManager: strongSelf.accountManager)
+                    if hasChallengeData {
+                        for account in accounts.accounts where account.1.isHidden {
+                            restoreCachedPhoneCallsPrivacyState(account: account.1)
+                        }
+                    }
                 } else {
                     Queue.mainQueue().after(1.0) { [weak self] in
                         guard let strongSelf = self else { return }
                         
                         updatePushNotificationsSettingsAfterAllPublicLogout(accountManager: strongSelf.accountManager)
+                        for account in accounts.accounts where account.1.isHidden {
+                            disablePhoneCallsAndCachePrivacyState(account: account.1)
+                        }
                     }
                 }
             }
