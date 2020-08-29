@@ -337,7 +337,7 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                     arguments.openTwoStepVerification(data)
                 })
             case let .falseBottom(theme, text, value):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/FalseBottom")?.precomposed(), longTapIcon: UIImage(bundleImageName: "Settings/MenuIcons/FalseBottomEaster")?.precomposed(), title: text, label: value, labelStyle: .monospaceText, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/FalseBottom")?.precomposed(), longTapIcon: UIImage(bundleImageName: "Settings/MenuIcons/FalseBottomEaster")?.precomposed(), backgroundIcon: UIImage(bundleImageName: "Settings/MenuIcons/FalseBottomBackground")?.precomposed(), title: text, label: value, labelStyle: .monospaceText, sectionId: self.section, style: .blocks, action: {
                     arguments.openFalseBottomFlow()
                 })
             case let .activeSessions(theme, text, value):
