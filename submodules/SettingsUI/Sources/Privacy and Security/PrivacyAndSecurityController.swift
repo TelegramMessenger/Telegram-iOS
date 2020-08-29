@@ -337,7 +337,7 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                     arguments.openTwoStepVerification(data)
                 })
             case let .falseBottom(theme, text, value):
-                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/FalseBottom")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/MenuIcons/FalseBottom")?.precomposed(), longTapIcon: UIImage(bundleImageName: "Settings/MenuIcons/FalseBottomEaster")?.precomposed(), title: text, label: value, labelStyle: .monospaceText, sectionId: self.section, style: .blocks, action: {
                     arguments.openFalseBottomFlow()
                 })
             case let .activeSessions(theme, text, value):
@@ -949,7 +949,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.PrivacySettings_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: privacyAndSecurityControllerEntries(presentationData: presentationData, state: state, privacySettings: privacySettings, accessChallengeData: accessChallengeData.data, blockedPeerCount: blockedPeersState.totalCount, activeWebsitesCount: activeWebsitesState.sessions.count, hasTwoStepAuth: twoStepAuth.0, twoStepAuthData: twoStepAuth.1, canAutoarchive: canAutoarchive, falseBottomDisplayTime: falseBottomDisplayTime), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: true)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: privacyAndSecurityControllerEntries(presentationData: presentationData, state: state, privacySettings: privacySettings, accessChallengeData: accessChallengeData.data, blockedPeerCount: blockedPeersState.totalCount, activeWebsitesCount: activeWebsitesState.sessions.count, hasTwoStepAuth: twoStepAuth.0, twoStepAuthData: twoStepAuth.1, canAutoarchive: canAutoarchive, falseBottomDisplayTime: falseBottomDisplayTime), style: .blocks, ensureVisibleItemTag: focusOnItemTag, crossfadeState: true)
         
         return (controllerState, (listState, arguments))
     }

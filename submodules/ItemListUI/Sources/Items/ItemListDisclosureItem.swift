@@ -17,6 +17,7 @@ public enum ItemListDisclosureStyle {
 
 public enum ItemListDisclosureLabelStyle {
     case text
+    case monospaceText
     case detailText
     case multilineDetailText
     case badge(UIColor)
@@ -26,6 +27,7 @@ public enum ItemListDisclosureLabelStyle {
 public class ItemListDisclosureItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let icon: UIImage?
+    let longTapIcon: UIImage?
     let title: String
     let titleColor: ItemListDisclosureItemTitleColor
     let enabled: Bool
@@ -38,9 +40,10 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem {
     let clearHighlightAutomatically: Bool
     public let tag: ItemListItemTag?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, title: String, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?, clearHighlightAutomatically: Bool = true, tag: ItemListItemTag? = nil) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, longTapIcon: UIImage? = nil, title: String, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, label: String, labelStyle: ItemListDisclosureLabelStyle = .text, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, action: (() -> Void)?, clearHighlightAutomatically: Bool = true, tag: ItemListItemTag? = nil) {
         self.presentationData = presentationData
         self.icon = icon
+        self.longTapIcon = longTapIcon
         self.title = title
         self.titleColor = titleColor
         self.enabled = enabled
@@ -101,6 +104,8 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem {
 
 private let badgeFont = Font.regular(15.0)
 
+private var displaysAlternativeIcon = false
+
 public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
@@ -125,6 +130,20 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
         } else {
             return false
         }
+    }
+    
+    override public var canBeSuperLongTapped: Bool {
+        return item?.longTapIcon != nil
+    }
+    
+    override public func superLongTapped() {
+        displaysAlternativeIcon.toggle()
+        let displayAlternativeIcon = displaysAlternativeIcon ?? false
+        UIView.transition(with: self.view, duration: 0.3, options: .transitionCrossDissolve, animations: { [weak self] in
+            guard let strongSelf = self else { return }
+
+            strongSelf.iconNode.image = displayAlternativeIcon ? strongSelf.item?.longTapIcon : strongSelf.item?.icon
+        }, completion: nil)
     }
     
     public var tag: ItemListItemTag? {
@@ -277,6 +296,9 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                 labelBadgeColor = item.presentationData.theme.list.itemSecondaryTextColor
                 labelFont = detailFont
                 labelConstrain = params.width - params.rightInset - 40.0 - leftInset
+            case .monospaceText:
+                labelBadgeColor = item.presentationData.theme.list.itemSecondaryTextColor
+                labelFont = Font.monospace(item.presentationData.fontSize.itemListBaseFontSize)
             default:
                 labelBadgeColor = item.presentationData.theme.list.itemSecondaryTextColor
                 labelFont = titleFont
@@ -329,11 +351,18 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.activateArea.accessibilityTraits = .notEnabled
                     }
                     
-                    if let icon = item.icon {
+                    let icon: UIImage?
+                    if displaysAlternativeIcon {
+                        icon = item.longTapIcon ?? item.icon
+                    } else {
+                        icon = item.icon
+                    }
+                    
+                    if let icon = icon {
                         if strongSelf.iconNode.supernode == nil {
                             strongSelf.addSubnode(strongSelf.iconNode)
                         }
-                        if updateIcon {
+                        if updateIcon || displaysAlternativeIcon {
                             strongSelf.iconNode.image = icon
                         }
                         let iconY: CGFloat

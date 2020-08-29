@@ -135,6 +135,10 @@ open class ListViewItemNode: ASDisplayNode {
         return false
     }
     
+    open var canBeSuperLongTapped: Bool {
+        return false
+    }
+    
     open var preventsTouchesToOtherItems: Bool {
         return false
     }
@@ -147,6 +151,9 @@ open class ListViewItemNode: ASDisplayNode {
     }
     
     open func longTapped() {
+    }
+    
+    open func superLongTapped() {
     }
     
     public final var insets: UIEdgeInsets = UIEdgeInsets() {
