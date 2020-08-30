@@ -242,8 +242,14 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                 let challenge = PostboxAccessChallengeData.none
                 let _ = context.sharedContext.accountManager.transaction({ transaction -> Void in
                     transaction.setAccessChallengeData(challenge)
-                    updatePushNotificationsSettingsAfterOffMasterPasscode(transaction: transaction)
                 }).start()
+                
+                Queue.mainQueue().after(1.0) { [weak context] in
+                    guard let context = context else { return }
+                    let _ = context.sharedContext.accountManager.transaction({ transaction -> Void in
+                        updatePushNotificationsSettingsAfterOffMasterPasscode(transaction: transaction)
+                    }).start()
+                }
                 
                 let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
                     passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(challenge)))
