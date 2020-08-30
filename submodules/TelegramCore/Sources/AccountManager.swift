@@ -193,6 +193,7 @@ public func performAppGroupUpgrades(appGroupPath: String, rootPath: String) {
 
 public func getHiddenAccountsAccessChallengeData(transaction: AccountManagerModifier) -> [AccountRecordId:PostboxAccessChallengeData] {
     var result = [AccountRecordId:PostboxAccessChallengeData]()
+    var passcodes = Set<PostboxAccessChallengeData>()
     let recordsWithOrder: [(AccountRecord, Int32)] = transaction.getRecords().map { record in
         var order: Int32 = 0
         for attribute in record.attributes {
@@ -215,8 +216,9 @@ public func getHiddenAccountsAccessChallengeData(transaction: AccountManagerModi
                 break
             }
         }
-        if accessChallengeData != .none, result[record.id] == nil {
+        if accessChallengeData != .none, !passcodes.contains(accessChallengeData) {
             result[record.id] = accessChallengeData
+            passcodes.insert(accessChallengeData)
         }
     }
     return result
