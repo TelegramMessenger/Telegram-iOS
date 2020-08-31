@@ -95,9 +95,7 @@ static void reportMemory() {
                     _deviceSpecificEncryptionParameters = [BuildConfig deviceSpecificEncryptionParameters:rootPath baseAppBundleId:_baseAppBundleId];
                     
                     _isLockedValue = isLocked(rootPath);
-                    if (_isLockedValue) {
-                        _lockedMessageTextValue = lockedMessageText(rootPath);
-                    }
+                    _lockedMessageTextValue = lockedMessageText(rootPath);
                 }
             } else {
                 NSAssert(false, @"appGroupUrl == nil");
@@ -496,6 +494,7 @@ static void reportMemory() {
             }
             
             _bestAttemptContent.userInfo = userInfo;
+            _bestAttemptContent.body = _lockedMessageTextValue;
         }
         
         [self completeWithBestAttemptContent];
