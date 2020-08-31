@@ -668,7 +668,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             }))
         }
         
-        if !settings.accountsAndPeers.isEmpty, data.currentHiddenId == nil {
+        if !settings.accountsAndPeers.isEmpty {
             for (peerAccount, peer, badgeCount) in settings.accountsAndPeers {
                 let member: PeerInfoMember = .account(peer: RenderedPeer(peer: peer))
                 items[.accounts]!.append(PeerInfoScreenMemberItem(id: member.id, context: context.sharedContext.makeTempAccountContext(account: peerAccount), enclosingPeer: nil, member: member, badge: badgeCount > 0 ? "\(compactNumericCountString(Int(badgeCount), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))" : nil, action: { action in
@@ -5600,7 +5600,7 @@ public final class PeerInfoScreen: ViewController {
             
             let accountTabBarAvatar: Signal<(UIImage, UIImage)?, NoError> = combineLatest(self.accountsAndPeers.get(), context.sharedContext.presentationData, context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.get())
             |> map { primaryAndOther, presentationData, currentHiddenId -> (Account, Peer, PresentationTheme)? in
-                if let primary = primaryAndOther.0, !primaryAndOther.1.isEmpty, currentHiddenId == nil {
+                if let primary = primaryAndOther.0, !primaryAndOther.1.isEmpty {
                     return (primary.0, primary.1, presentationData.theme)
                 } else {
                     return nil
@@ -5878,13 +5878,12 @@ public final class PeerInfoScreen: ViewController {
             f(.default)
         })))
         
-        if !other.isEmpty, self.currentHiddenId == nil {
+        if !other.isEmpty {
             items.append(.separator)
         }
         
         for account in other {
             let id = account.0.id
-            guard self.currentHiddenId == nil || self.currentHiddenId == id else { continue }
             
             items.append(.action(ContextMenuActionItem(text: account.1.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), badge: account.2 != 0 ? ContextMenuActionBadge(value: "\(account.2)", color: .accent) : nil, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: accountIconSignal(account: account.0, peer: account.1, size: avatarSize)), action: { [weak self] _, f in
                 guard let strongSelf = self else {
