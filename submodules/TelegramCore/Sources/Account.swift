@@ -933,7 +933,8 @@ public class Account {
     private var lastSmallLogPostTimestamp: Double?
     private let smallLogPostDisposable = MetaDisposable()
     
-    public var keepServiceTaskMasterActiveState = false
+    public private(set) var keepServiceTaskMasterActiveState = false
+    private var keepServiceTaskMasterActiveStateTimer: SwiftSignalKit.Timer?
     
     public init(accountManager: AccountManager, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, supplementary: Bool, isHidden: Bool) {
         self.id = id
@@ -1200,6 +1201,19 @@ public class Account {
         self.smallLogPostDisposable.dispose()
         self.networkTypeDisposable?.dispose()
         self.isHiddenDisposable?.dispose()
+    }
+    
+    public func temporarilyKeepActive() {
+        Queue.mainQueue().async {
+            self.keepServiceTaskMasterActiveState = true
+            self.keepServiceTaskMasterActiveStateTimer?.invalidate()
+            self.keepServiceTaskMasterActiveStateTimer = Timer(timeout: 10.0, repeat: false, completion: { [weak self] in
+                guard let strongSelf = self else { return }
+                
+                strongSelf.keepServiceTaskMasterActiveState = false
+            }, queue: .mainQueue())
+            self.keepServiceTaskMasterActiveStateTimer?.start()
+        }
     }
     
     private func postSmallLogIfNeeded() {

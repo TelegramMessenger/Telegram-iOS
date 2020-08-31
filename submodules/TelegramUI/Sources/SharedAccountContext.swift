@@ -563,12 +563,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     guard let peerView = view.views[peerViewKey] as? PeerView, let peer = peerView.peers[peerView.peerId] else {
                         if account.id != primary?.id {
                             Queue.mainQueue().async {
-                                account.keepServiceTaskMasterActiveState = true
+                                account.temporarilyKeepActive()
                                 account.shouldBeServiceTaskMaster.set(.single(.always))
                                 fetchAccountPeer(account: account)
-                            }
-                            Queue.mainQueue().after(10.0) { [weak account] in
-                                account?.keepServiceTaskMasterActiveState = false
                             }
                         }
                         return nil
@@ -755,32 +752,31 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         |> map { $0 != .none }
         
         self.activeAccountsSettingsDisposable = (combineLatest(self.activeAccounts, hasChallengeDataSignal) |> delay(1.0, queue: .mainQueue())).start(next:{ [weak self] _, hasChallengeData -> Void in
-            if let strongSelf = self, let accounts = strongSelf.activeAccountsValue {
-                if accounts.accounts.contains(where: { !$0.1.isHidden }) {
-                    updatePushNotificationsSettingsAfterLogin(accountManager: strongSelf.accountManager)
-                    
-                    Queue.mainQueue().after(1.0) { [weak self] in
-                        guard let strongSelf = self, let accounts = strongSelf.activeAccountsValue else { return }
-                        
-                        if hasChallengeData {
-                            for account in accounts.accounts where account.1.isHidden {
-                                restoreCachedPhoneCallsPrivacyState(account: account.1)
-                            }
-                        } else {
-                            for account in accounts.accounts where account.1.isHidden {
-                                disablePhoneCallsAndCachePrivacyState(account: account.1)
-                            }
-                        }
+            guard let strongSelf = self, let accounts = strongSelf.activeAccountsValue else { return }
+                
+            let hiddenAccounts = accounts.accounts.map { $0.1 }.filter { $0.isHidden }
+            for account in hiddenAccounts {
+                account.temporarilyKeepActive()
+                account.shouldBeServiceTaskMaster.set(.single(.always))
+            }
+            
+            if accounts.accounts.contains(where: { !$0.1.isHidden }) {
+                updatePushNotificationsSettingsAfterLogin(accountManager: strongSelf.accountManager)
+                
+                if hasChallengeData {
+                    for account in hiddenAccounts {
+                        restoreCachedPhoneCallsPrivacyState(account: account)
                     }
                 } else {
-                    for account in accounts.accounts where account.1.isHidden {
-                        disablePhoneCallsAndCachePrivacyState(account: account.1)
+                    for account in hiddenAccounts {
+                        disablePhoneCallsAndCachePrivacyState(account: account)
                     }
-                    
-                    Queue.mainQueue().after(1.0) { [weak self] in
-                        guard let strongSelf = self, let accounts = strongSelf.activeAccountsValue else { return }
-                        updatePushNotificationsSettingsAfterAllPublicLogout(accountManager: strongSelf.accountManager)
-                    }
+                }
+            } else {
+                updatePushNotificationsSettingsAfterAllPublicLogout(accountManager: strongSelf.accountManager)
+                
+                for account in hiddenAccounts {
+                    disablePhoneCallsAndCachePrivacyState(account: account)
                 }
             }
         })
