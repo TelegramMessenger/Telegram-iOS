@@ -1250,7 +1250,9 @@ final class SharedApplicationContext {
                     statusController.dismiss()
                     if UserDefaults.standard.bool(forKey: "TG_DoubleBottom_AddAccountFlowInProgress"), let authorizedContext = self.contextValue {
                         if self.falseBottomFlow == nil {
-                            self.falseBottomFlow = FalseBottomFlow(context: authorizedContext)
+                            self.falseBottomFlow = FalseBottomFlow(context: authorizedContext) { [weak self] in
+                                self?.falseBottomFlow = nil
+                            }
                         }
                         authorizedContext.rootController.falseBottomAuthViewControllersSignal = context.rootController.viewControllersPromise.get()
                     } else {
@@ -2047,7 +2049,9 @@ final class SharedApplicationContext {
     private func openFalseBottomFlow() {
         guard let context = self.contextValue else { return }
         
-        falseBottomFlow = FalseBottomFlow(context: context)
+        falseBottomFlow = FalseBottomFlow(context: context) { [weak self] in
+            self?.falseBottomFlow = nil
+        }
         falseBottomFlow?.start()
     }
     

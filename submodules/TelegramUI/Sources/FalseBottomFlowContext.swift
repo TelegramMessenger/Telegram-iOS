@@ -14,7 +14,7 @@ import LocalAuth
 import TelegramCore
 
 public class FlowViewController: ViewController {
-    var nextController: ViewController?
+    weak var nextController: ViewController?
 }
 
 final class FalseBottomFlowContext {
@@ -176,12 +176,15 @@ final class FalseBottomFlow {
     
     private(set) var falseBottomContext: FalseBottomFlowContext?
     
+    private let finish: () -> Void
+    
     let context: AuthorizedApplicationContext
     let accountContext: SharedAccountContext
     
-    init(context: AuthorizedApplicationContext) {
+    init(context: AuthorizedApplicationContext, finish: @escaping () -> Void) {
         self.context = context
         self.accountContext = context.sharedApplicationContext.sharedContext
+        self.finish = finish
         self.falseBottomContext = FalseBottomFlowContext(accountContext: accountContext, context: context)
     }
     
@@ -205,13 +208,14 @@ final class FalseBottomFlow {
         (accountContext.appLockContext.lockingIsCompletePromise
             .get()
             |> distinctUntilChanged
-            |> mapToSignal { [weak accountContext] complete -> Signal<Void, NoError> in
+            |> mapToSignal { [weak accountContext, weak self] complete -> Signal<Void, NoError> in
                 guard complete, let accountContext = accountContext else { return .single(()) }
                 
                 return accountContext.accountManager.transaction({ transaction -> Void in
                     if let publicId = transaction.getRecords().first(where: { $0.isPublic })?.id {
                         transaction.setCurrentId(publicId)
                     }
+                    self?.finish()
                 })
             }
             |> deliverOnMainQueue).start()
