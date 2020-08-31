@@ -933,6 +933,8 @@ public class Account {
     private var lastSmallLogPostTimestamp: Double?
     private let smallLogPostDisposable = MetaDisposable()
     
+    public var keepServiceTaskMasterActiveState = false
+    
     public init(accountManager: AccountManager, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, supplementary: Bool, isHidden: Bool) {
         self.id = id
         self.basePath = basePath

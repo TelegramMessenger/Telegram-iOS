@@ -561,6 +561,16 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 return account.postbox.combinedView(keys: [peerViewKey])
                 |> map { view -> AccountWithInfo? in
                     guard let peerView = view.views[peerViewKey] as? PeerView, let peer = peerView.peers[peerView.peerId] else {
+                        if account.id != primary?.id {
+                            Queue.mainQueue().async {
+                                account.keepServiceTaskMasterActiveState = true
+                                account.shouldBeServiceTaskMaster.set(.single(.always))
+                                fetchAccountPeer(account: account)
+                            }
+                            Queue.mainQueue().after(10.0) { [weak account] in
+                                account?.keepServiceTaskMasterActiveState = false
+                            }
+                        }
                         return nil
                     }
                     return AccountWithInfo(account: account, peer: peer)
