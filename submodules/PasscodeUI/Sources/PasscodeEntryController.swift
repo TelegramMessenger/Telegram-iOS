@@ -167,8 +167,14 @@ public final class PasscodeEntryController: ViewController {
             case .none:
                 return true
             case let .numericalPassword(code):
+                if passcodeType == .alphanumeric {
+                    return false
+                }
                 return passcode == normalizeArabicNumeralString(code, type: .western)
             case let .plaintextPassword(code):
+                if passcodeType != .alphanumeric {
+                    return false
+                }
                 return passcode == code
             }
         }
