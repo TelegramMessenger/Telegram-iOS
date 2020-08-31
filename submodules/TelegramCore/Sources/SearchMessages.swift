@@ -270,7 +270,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 } 
             }
             |> mapToSignal { (nextRate, lowerBound, inputPeer) in
-                return account.network.request(Api.functions.messages.searchGlobal(flags: 0, folderId: nil, q: query, filter: filter, offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit), automaticFloodWait: false)
+                return account.network.request(Api.functions.messages.searchGlobal(flags: 0, folderId: nil, q: query, offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit), automaticFloodWait: false)
                 |> map { result -> (Api.messages.Messages?, Api.messages.Messages?) in
                     return (result, nil)
                 }
@@ -293,12 +293,13 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                     return (inputChannel, 0, lowerBound, .inputPeerEmpty)
                 }
             }
-            |> mapToSignal { (inputChannel, nextRate, lowerBound, inputPeer) in
+            |> mapToSignal { (inputChannel, nextRate, lowerBound, inputPeer) -> Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError> in
                 guard let inputChannel = inputChannel else {
                     return .complete()
                 }
+                return .single((nil, nil))
                 
-                let request = Api.functions.stats.getMessagePublicForwards(channel: inputChannel, msgId: messageId.id, offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit)
+                /*let request = Api.functions.stats.getMessagePublicForwards(channel: inputChannel, msgId: messageId.id, offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit)
                 let signal: Signal<Api.messages.Messages, MTRpcError>
                 if let datacenterId = datacenterId, account.network.datacenterId != datacenterId {
                     signal = account.network.download(datacenterId: datacenterId, isMedia: false, tag: nil)
@@ -315,7 +316,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 }
                 |> `catch` { _ -> Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError> in
                     return .single((nil, nil))
-                }
+                }*/
         }
     }
     

@@ -255,7 +255,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[889491791] = { return Api.Update.parse_updateDialogFilters($0) }
     dict[643940105] = { return Api.Update.parse_updatePhoneCallSignalingData($0) }
     dict[1708307556] = { return Api.Update.parse_updateChannelParticipant($0) }
-    dict[1854571743] = { return Api.Update.parse_updateChannelMessageForwards($0) }
     dict[136574537] = { return Api.messages.VotesList.parse_votesList($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[-373643672] = { return Api.FolderPeer.parse_folderPeer($0) }
@@ -388,7 +387,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1694474197] = { return Api.messages.Chats.parse_chats($0) }
     dict[-1663561404] = { return Api.messages.Chats.parse_chatsSlice($0) }
     dict[482797855] = { return Api.InputSingleMedia.parse_inputSingleMedia($0) }
-    dict[1831138451] = { return Api.MessageViews.parse_messageViews($0) }
     dict[218751099] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowContacts($0) }
     dict[407582158] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowAll($0) }
     dict[320652927] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowUsers($0) }
@@ -602,7 +600,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1820043071] = { return Api.User.parse_user($0) }
     dict[-2082087340] = { return Api.Message.parse_messageEmpty($0) }
     dict[-1642487306] = { return Api.Message.parse_messageService($0) }
-    dict[-181507201] = { return Api.Message.parse_message($0) }
+    dict[1160515173] = { return Api.Message.parse_message($0) }
     dict[831924812] = { return Api.StatsGroupTopInviter.parse_statsGroupTopInviter($0) }
     dict[186120336] = { return Api.messages.RecentStickers.parse_recentStickersNotModified($0) }
     dict[586395571] = { return Api.messages.RecentStickers.parse_recentStickers($0) }
@@ -687,7 +685,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[364538944] = { return Api.messages.Dialogs.parse_dialogs($0) }
     dict[1910543603] = { return Api.messages.Dialogs.parse_dialogsSlice($0) }
     dict[-253500010] = { return Api.messages.Dialogs.parse_dialogsNotModified($0) }
-    dict[-1986399595] = { return Api.stats.MessageStats.parse_messageStats($0) }
     dict[-709641735] = { return Api.EmojiKeyword.parse_emojiKeyword($0) }
     dict[594408994] = { return Api.EmojiKeyword.parse_emojiKeywordDeleted($0) }
     dict[-290921362] = { return Api.upload.CdnFile.parse_cdnFileReuploadNeeded($0) }
@@ -1113,8 +1110,6 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputSingleMedia:
                 _1.serialize(buffer, boxed)
-            case let _1 as Api.MessageViews:
-                _1.serialize(buffer, boxed)
             case let _1 as Api.InputPrivacyRule:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.DhConfig:
@@ -1378,8 +1373,6 @@ public struct Api {
             case let _1 as Api.MessagesFilter:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.Dialogs:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.stats.MessageStats:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.EmojiKeyword:
                 _1.serialize(buffer, boxed)

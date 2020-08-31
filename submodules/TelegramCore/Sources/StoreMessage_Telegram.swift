@@ -137,7 +137,7 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
 
 func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
     switch message {
-        case let .message(flags, _, fromId, toId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _, _):
+        case let .message(flags, _, fromId, toId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _):
             let peerId: PeerId
             switch toId {
                 case let .peerUser(userId):
@@ -241,7 +241,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
 
 func apiMessageAssociatedMessageIds(_ message: Api.Message) -> [MessageId]? {
     switch message {
-        case let .message(flags, _, fromId, toId, _, _, replyToMsgId, _, _, _, _, _, _, _, _, _, _, _):
+        case let .message(flags, _, fromId, toId, _, _, replyToMsgId, _, _, _, _, _, _, _, _, _, _):
             if let replyToMsgId = replyToMsgId {
                 let peerId: PeerId
                     switch toId {
@@ -399,7 +399,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 extension StoreMessage {
     convenience init?(apiMessage: Api.Message, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
-            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, replyMarkup, entities, views, forwards, editDate, postAuthor, groupingId, restrictionReason):
+            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, replyMarkup, entities, views, editDate, postAuthor, groupingId, restrictionReason):
                 let peerId: PeerId
                 var authorId: PeerId?
                 switch toId {
@@ -523,9 +523,9 @@ extension StoreMessage {
                         attributes.append(ViewCountMessageAttribute(count: Int(views)))
                     }
                     
-                    if let forwards = forwards {
+                    /*if let forwards = forwards {
                         attributes.append(ForwardCountMessageAttribute(count: Int(forwards)))
-                    }
+                    }*/
                 }
                 
                 if let editDate = editDate {
