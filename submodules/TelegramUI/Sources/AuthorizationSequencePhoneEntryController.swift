@@ -104,7 +104,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
             }
             strongSelf.view.endEditing(true)
             self?.present(debugController(sharedContext: strongSelf.sharedContext, context: nil, modal: true), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        }, hasOtherAccounts: self.otherAccountPhoneNumbers.0 != nil)
+            }, hasOtherAccounts: self.otherAccountPhoneNumbers.0 != nil || self.otherAccountPhoneNumbers.1.contains(where: { $0.0 != nil }))
         self.controllerNode.accountUpdated = { [weak self] account in
             guard let strongSelf = self else {
                 return
