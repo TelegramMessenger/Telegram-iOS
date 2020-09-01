@@ -72,15 +72,21 @@ final class MutableItemCollectionInfosView: MutablePostboxView {
             }
             self.entriesByNamespace = entriesByNamespace
         } else if !reloadTopItemCollectionIds.isEmpty {
+            var entriesByNamespace = self.entriesByNamespace
             for (namespace, entries) in self.entriesByNamespace {
+                var items: [ItemCollectionInfoEntry] = []
                 for i in 0 ..< entries.count {
                     if reloadTopItemCollectionIds.contains(entries[i].id) {
                         updated = true
                         let firstItem = postbox.itemCollectionItemTable.higherItems(collectionId: entries[i].id, itemIndex: ItemCollectionItemIndex.lowerBound, count: 1).first
-                        self.entriesByNamespace[namespace]![i] = ItemCollectionInfoEntry(id: entries[i].id, info: entries[i].info, count: postbox.itemCollectionItemTable.itemCount(collectionId: entries[i].id), firstItem: firstItem)
+                        items.append(ItemCollectionInfoEntry(id: entries[i].id, info: entries[i].info, count: postbox.itemCollectionItemTable.itemCount(collectionId: entries[i].id), firstItem: firstItem))
+                    } else {
+                        items.append(entriesByNamespace[namespace]![i])
                     }
                 }
+                entriesByNamespace[namespace] = items
             }
+            self.entriesByNamespace = entriesByNamespace
         }
         return updated
     }
@@ -88,6 +94,8 @@ final class MutableItemCollectionInfosView: MutablePostboxView {
     func immutableView() -> PostboxView {
         return ItemCollectionInfosView(self)
     }
+    
+   
 }
 
 public final class ItemCollectionInfosView: PostboxView {
