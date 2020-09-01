@@ -172,8 +172,6 @@ public class ShareRootControllerImpl {
             let hiddenAccountManager = HiddenAccountManagerImpl()
             let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", hiddenAccountManager: hiddenAccountManager)
             
-            updateHiddenAccountsAccessChallengeData(manager: accountManager)
-            
             if let globalInternalContext = globalInternalContext {
                 internalContext = globalInternalContext
             } else {

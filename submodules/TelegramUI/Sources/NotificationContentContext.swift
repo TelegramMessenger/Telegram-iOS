@@ -115,7 +115,6 @@ public final class NotificationViewControllerImpl {
             initializeAccountManagement()
             let hiddenAccountManager = HiddenAccountManagerImpl()
             let accountManager = AccountManager(basePath: rootPath + "/accounts-metadata", hiddenAccountManager: hiddenAccountManager)
-            updateHiddenAccountsAccessChallengeData(manager: accountManager)
             
             var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
             let semaphore = DispatchSemaphore(value: 0)

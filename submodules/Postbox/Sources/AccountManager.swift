@@ -32,6 +32,7 @@ public protocol HiddenAccountManager {
     var currentAccountRecordIdPromise: Promise<AccountRecordId?> { get }
     
     func hasPublicAccounts(accountManager: AccountManager) -> Signal<Bool, NoError>
+    func configureHiddenAccountsAccessChallengeData(accountManager: AccountManager)
 }
 
 final class AccountManagerImpl {
@@ -502,6 +503,7 @@ public final class AccountManager {
         self.mediaBox = MediaBox(basePath: basePath + "/media")
         self.hiddenAccountManager = hiddenAccountManager
         hiddenAccountManager.currentAccountRecordIdPromise.set(self.accountRecords() |> map { $0.currentRecord?.id })
+        hiddenAccountManager.configureHiddenAccountsAccessChallengeData(accountManager: self)
     }
     
     public func transaction<T>(ignoreDisabled: Bool = false, _ f: @escaping (AccountManagerModifier) -> T) -> Signal<T, NoError> {

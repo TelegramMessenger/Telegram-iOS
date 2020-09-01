@@ -698,7 +698,6 @@ final class SharedApplicationContext {
                         self.mainWindow.coveringView = nil
                     }
                 }
-                updateHiddenAccountsAccessChallengeData(manager: accountManager)
                 subscriber.putNext(accountManager)
                 subscriber.putCompletion()
             })

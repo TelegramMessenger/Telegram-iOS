@@ -191,49 +191,6 @@ public func performAppGroupUpgrades(appGroupPath: String, rootPath: String) {
     }
 }
 
-public func getHiddenAccountsAccessChallengeData(transaction: AccountManagerModifier) -> [AccountRecordId:PostboxAccessChallengeData] {
-    var result = [AccountRecordId:PostboxAccessChallengeData]()
-    var passcodes = Set<PostboxAccessChallengeData>()
-    let recordsWithOrder: [(AccountRecord, Int32)] = transaction.getRecords().map { record in
-        var order: Int32 = 0
-        for attribute in record.attributes {
-            if let attribute = attribute as? AccountSortOrderAttribute {
-                order = attribute.order
-                break
-            }
-        }
-        return (record, order)
-    }
-    let records = recordsWithOrder.sorted(by: { $0.1 > $1.1 })
-        .map { $0.0 }
-    for record in records {
-        guard !record.attributes.contains(where: { $0 is LoggedOutAccountAttribute }) else { continue }
-        
-        var accessChallengeData = PostboxAccessChallengeData.none
-        for attribute in record.attributes {
-            if let attribute = attribute as? HiddenAccountAttribute {
-                accessChallengeData = attribute.accessChallengeData
-                break
-            }
-        }
-        if accessChallengeData != .none, !passcodes.contains(accessChallengeData) {
-            result[record.id] = accessChallengeData
-            passcodes.insert(accessChallengeData)
-        }
-    }
-    return result
-}
-
-public func getHiddenAccountsAccessChallengeData(manager: AccountManager) -> Signal<[AccountRecordId:PostboxAccessChallengeData], NoError> {
-    manager.transaction { transaction in
-        return getHiddenAccountsAccessChallengeData(transaction: transaction)
-    }
-}
-
-public func updateHiddenAccountsAccessChallengeData(manager: AccountManager) {
-    manager.hiddenAccountManager.getHiddenAccountsAccessChallengeDataPromise.set(getHiddenAccountsAccessChallengeData(manager: manager))
-}
-
 public final class HiddenAccountManagerImpl: HiddenAccountManager {
     public let unlockedHiddenAccountRecordIdPromise = ValuePromise<AccountRecordId?>(nil)
     public var unlockedHiddenAccountRecordId: AccountRecordId?
@@ -253,6 +210,44 @@ public final class HiddenAccountManagerImpl: HiddenAccountManager {
                 strongSelf.unlockedHiddenAccountRecordId = value
                 strongSelf.accountManagerRecordIdPromise.set(value)
             })
+    }
+    
+    public func configureHiddenAccountsAccessChallengeData(accountManager: AccountManager) {
+        self.getHiddenAccountsAccessChallengeDataPromise.set(accountManager.accountRecords()
+            |> map { view in
+                var result = [AccountRecordId:PostboxAccessChallengeData]()
+                var passcodes = Set<PostboxAccessChallengeData>()
+                let recordsWithOrder: [(AccountRecord, Int32)] = view.records.map { record in
+                    var order: Int32 = 0
+                    for attribute in record.attributes {
+                        if let attribute = attribute as? AccountSortOrderAttribute {
+                            order = attribute.order
+                            break
+                        }
+                    }
+                    return (record, order)
+                }
+                let records = recordsWithOrder.sorted(by: { $0.1 > $1.1 })
+                    .map { $0.0 }
+                for record in records {
+                    guard !record.attributes.contains(where: { $0 is LoggedOutAccountAttribute }) else { continue }
+                    
+                    var accessChallengeData = PostboxAccessChallengeData.none
+                    for attribute in record.attributes {
+                        if let attribute = attribute as? HiddenAccountAttribute {
+                            accessChallengeData = attribute.accessChallengeData
+                            break
+                        }
+                    }
+                    if accessChallengeData != .none, !passcodes.contains(accessChallengeData) {
+                        result[record.id] = accessChallengeData
+                        passcodes.insert(accessChallengeData)
+                    }
+                }
+                return result
+            }
+            |> distinctUntilChanged(isEqual: ==)
+        )
     }
     
     public func hasPublicAccounts(accountManager: AccountManager) -> Signal<Bool, NoError> {
@@ -391,8 +386,6 @@ public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManage
                 return nil
             }
         })
-        let hiddenAccountsAccessChallengeData = getHiddenAccountsAccessChallengeData(transaction: transaction)
-        accountManager.hiddenAccountManager.getHiddenAccountsAccessChallengeDataPromise.set(.single(hiddenAccountsAccessChallengeData))
     }
 }
 

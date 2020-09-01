@@ -193,9 +193,6 @@ final class FalseBottomFlow {
         falseBottomContext?.setSecretPasscode()
         falseBottomContext?.setNotificationsSettings()
         
-        let accountContext = context.sharedApplicationContext.sharedContext
-        updateHiddenAccountsAccessChallengeData(manager: accountContext.accountManager)
-        
         falseBottomContext?.flowIsReady = true
     }
     
