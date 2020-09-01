@@ -414,7 +414,12 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                             let logsPath = callLogsPath(account: context.account)
                             let logPath = logsPath + "/" + logName
                             let start = logName.index(logName.startIndex, offsetBy: "\(id)".count + 1)
-                            let end = logName.index(logName.endIndex, offsetBy: -4 - 5)
+                            let end: String.Index
+                            if logName.hasSuffix(".log.json") {
+                                end = logName.index(logName.endIndex, offsetBy: -4 - 5)
+                            } else {
+                                end = logName.index(logName.endIndex, offsetBy: -4)
+                            }
                             let accessHash = logName[start..<end]
                             if let accessHash = Int64(accessHash) {
                                 callId = CallId(id: id, accessHash: accessHash)
