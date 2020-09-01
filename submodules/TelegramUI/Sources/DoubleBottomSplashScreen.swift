@@ -144,8 +144,15 @@ private final class DoubleBottomSwitchScreenNode: ViewControllerTracingNode {
         self.animationNode2 = AnimatedStickerNode()
         if let otherSource = DoubleBottomAnimationSource(mode: .disableNotifications2) {
             self.animationNode2.setup(source: otherSource, width: 528, height: 348, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
-            self.animationNode2.visibility = false
-            self.animationNode2.alpha = 0.0
+            self.animationNode2.visibility = true
+            let node = self.animationNode2
+            self.animationNode2.started = { [weak node] in
+                guard let node = node else { return }
+                
+                node.started = {}
+                node.pause()
+                node.alpha = 0.0
+            }
         }
         
         self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: SolidRoundedButtonTheme(backgroundColor: presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: presentationData.theme.list.itemCheckColors.foregroundColor), height: 50.0, cornerRadius: 10.0, gloss: false)
@@ -197,17 +204,12 @@ private final class DoubleBottomSwitchScreenNode: ViewControllerTracingNode {
                     strongSelf.animationNode.stop()
                     strongSelf.animationNode2.visibility = true
                     strongSelf.animationNode2.alpha = 1.0
-                    Queue.mainQueue().after(0.1) { [weak self] in
+                    strongSelf.animationNode.alpha = 0.0
+                    strongSelf.animationNode2.playTo(frame: 69, fromFrame: 0) { [weak self] in
                         guard let strongSelf = self else { return }
                         
-                        strongSelf.animationNode.alpha = 0.0
-                        strongSelf.animationNode2.playTo(frame: 69, fromFrame: 0) { [weak self] in
-                            guard let strongSelf = self else { return }
-                            
-                            strongSelf.switchNode.isUserInteractionEnabled = true
-                        }
+                        strongSelf.switchNode.isUserInteractionEnabled = true
                     }
-                    
                 }
             }
         }
