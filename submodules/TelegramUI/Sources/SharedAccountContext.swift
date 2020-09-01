@@ -164,6 +164,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public let openFalseBottomFlow: () -> Void
     private var activeAccountsSettingsDisposable: Disposable?
     
+    private var applicationInForeground = true
+    private var applicationInForegroundDisposable: Disposable?
+    
     public init(mainWindow: Window1?, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, legacyCache: LegacyCache?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }, openFalseBottomFlow: @escaping () -> Void) {
         assert(Queue.mainQueue().isCurrent())
         
@@ -257,6 +260,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             
             return navigationController.acceptPossibleControllerDropContent(content: content)
         }
+        
+        self.applicationInForegroundDisposable = (applicationBindings.applicationInForeground |> deliverOnMainQueue).start(next: { [weak self] applicationInForeground in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            strongSelf.applicationInForeground = applicationInForeground
+        })
         
         self._autodownloadSettings.set(.single(initialPresentationDataAndSettings.autodownloadSettings)
         |> then(accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings])
@@ -755,9 +766,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             guard let strongSelf = self, let accounts = strongSelf.activeAccountsValue else { return }
                 
             let hiddenAccounts = accounts.accounts.map { $0.1 }.filter { $0.isHidden }
-            for account in hiddenAccounts {
-                account.temporarilyKeepActive()
-                account.shouldBeServiceTaskMaster.set(.single(.always))
+            if strongSelf.applicationInForeground {
+                for account in hiddenAccounts {
+                    account.temporarilyKeepActive()
+                    account.shouldBeServiceTaskMaster.set(.single(.always))
+                }
             }
             
             if accounts.accounts.contains(where: { !$0.1.isHidden }) {
@@ -794,6 +807,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.callStateDisposable?.dispose()
         self.currentCallStatusTextTimer?.invalidate()
         self.activeAccountsSettingsDisposable?.dispose()
+        self.applicationInForegroundDisposable?.dispose()
     }
     
     private func updateAccountBackupData(account: Account) -> Signal<Never, NoError> {
@@ -877,13 +891,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             }
             
-            let hasPublicAccounts = activeAccounts.contains(where: { !$0.1.isHidden })
-            
             for (_, account, _) in activeAccounts {
-                if account.isHidden || !hasPublicAccounts {
+                if account.isHidden, self.applicationInForeground {
+                    account.temporarilyKeepActive()
                     account.shouldBeServiceTaskMaster.set(.single(.always))
-                    account.postbox.becomeMasterClient()
-                    account.resetStateManagement()
                 }
                 
                 let appliedAps: Signal<Never, NoError>
