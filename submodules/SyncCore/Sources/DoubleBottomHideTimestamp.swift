@@ -1,11 +1,11 @@
 import Foundation
 import Postbox
 
-public struct FalseBottomHideTimestamp: PreferencesEntry, Equatable {
+public struct DoubleBottomHideTimestamp: PreferencesEntry, Equatable {
     public var timestamp: Int64
     
-    public static var defaultValue: FalseBottomHideTimestamp {
-        return FalseBottomHideTimestamp(timestamp: 0)
+    public static var defaultValue: DoubleBottomHideTimestamp {
+        return DoubleBottomHideTimestamp(timestamp: 0)
     }
     
     init(timestamp: Int64) {
@@ -21,7 +21,7 @@ public struct FalseBottomHideTimestamp: PreferencesEntry, Equatable {
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {
-        guard let to = to as? FalseBottomHideTimestamp else {
+        guard let to = to as? DoubleBottomHideTimestamp else {
             return false
         }
         return self == to

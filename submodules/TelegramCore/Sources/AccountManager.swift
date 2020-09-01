@@ -77,7 +77,7 @@ private var declaredEncodables: Void = {
     declareEncodable(AccountEnvironmentAttribute.self, f: { AccountEnvironmentAttribute(decoder: $0) })
     declareEncodable(AccountSortOrderAttribute.self, f: { AccountSortOrderAttribute(decoder: $0) })
     declareEncodable(HiddenAccountAttribute.self, f: { HiddenAccountAttribute(decoder: $0) })
-    declareEncodable(ContinueFalseBottomFlowAttribute.self, f: { ContinueFalseBottomFlowAttribute(decoder: $0) })
+    declareEncodable(ContinueDoubleBottomFlowAttribute.self, f: { ContinueDoubleBottomFlowAttribute(decoder: $0) })
     declareEncodable(CloudChatClearHistoryOperation.self, f: { CloudChatClearHistoryOperation(decoder: $0) })
     declareEncodable(OutgoingContentInfoMessageAttribute.self, f: { OutgoingContentInfoMessageAttribute(decoder: $0) })
     declareEncodable(ConsumableContentMessageAttribute.self, f: { ConsumableContentMessageAttribute(decoder: $0) })
@@ -165,7 +165,7 @@ private var declaredEncodables: Void = {
     declareEncodable(CachedChatContextResult.self, f: { CachedChatContextResult(decoder: $0) })
     declareEncodable(PeerAccessRestrictionInfo.self, f: { PeerAccessRestrictionInfo(decoder: $0) })
     declareEncodable(TelegramMediaImage.VideoRepresentation.self, f: { TelegramMediaImage.VideoRepresentation(decoder: $0) })
-    declareEncodable(FalseBottomHideTimestamp.self, f: { FalseBottomHideTimestamp(decoder: $0) })
+    declareEncodable(DoubleBottomHideTimestamp.self, f: { DoubleBottomHideTimestamp(decoder: $0) })
     
     return
 }()

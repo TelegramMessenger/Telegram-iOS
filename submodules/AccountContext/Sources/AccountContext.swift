@@ -518,7 +518,7 @@ public protocol SharedAccountContext: class {
     
     var presentGlobalController: (ViewController, Any?) -> Void { get }
     
-    var openFalseBottomFlow: () -> Void { get }
+    var openDoubleBottomFlow: () -> Void { get }
     
     func makeTempAccountContext(account: Account) -> AccountContext
     
@@ -568,7 +568,7 @@ public protocol SharedAccountContext: class {
     
     func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: ViewController?, withChatListController chatListController: ViewController?)
     func beginNewAuth(testingEnvironment: Bool)
-    func beginNewAuthAndContinueFalseBottomFlow(testingEnvironment: Bool)
+    func beginNewAuthAndContinueDoubleBottomFlow(testingEnvironment: Bool)
 }
 
 #if ENABLE_WALLET

@@ -12,7 +12,7 @@ import TelegramPresentationData
 import PresentationDataUtils
 import GZip
 
-public enum FalseBottomSplashMode {
+public enum DoubleBottomSplashMode {
     case hideAccount
     case addOneMoreAccount
     case setMasterPasscode
@@ -23,9 +23,9 @@ public enum FalseBottomSplashMode {
     case accountWasHidden
 }
 
-public final class FalseBottomSplashScreen: FlowViewController {
+public final class DoubleBottomSplashScreen: FlowViewController {
     private let presentationData: PresentationData
-    private let mode: FalseBottomSplashMode
+    private let mode: DoubleBottomSplashMode
     
     var buttonPressedWithEnabledSwitch: ((Bool) -> Void)?
     var buttonPressed: ((ViewController?) -> Void)?
@@ -37,7 +37,7 @@ public final class FalseBottomSplashScreen: FlowViewController {
     
     var poppedInteractively: (() -> Void)?
     
-    public init(presentationData: PresentationData, mode: FalseBottomSplashMode) {
+    public init(presentationData: PresentationData, mode: DoubleBottomSplashMode) {
         self.presentationData = presentationData
         self.mode = mode
         
@@ -64,7 +64,7 @@ public final class FalseBottomSplashScreen: FlowViewController {
     
     override public func loadDisplayNode() {
         if mode == .disableNotifications {
-            self.displayNode = FalseBottomSwitchScreenNode(presentationData: self.presentationData, action: { [weak self] enabled in
+            self.displayNode = DoubleBottomSwitchScreenNode(presentationData: self.presentationData, action: { [weak self] enabled in
                 guard let strongSelf = self else {
                     return
                 }
@@ -73,7 +73,7 @@ public final class FalseBottomSplashScreen: FlowViewController {
                 strongSelf.buttonPressed?(strongSelf.nextController)
             })
         } else {
-            self.displayNode = FalseBottomSplashScreenNode(presentationData: self.presentationData, mode: self.mode, action: { [weak self] in
+            self.displayNode = DoubleBottomSplashScreenNode(presentationData: self.presentationData, mode: self.mode, action: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
@@ -88,11 +88,11 @@ public final class FalseBottomSplashScreen: FlowViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        if let displayNode = self.displayNode as? FalseBottomSplashScreenNode {
+        if let displayNode = self.displayNode as? DoubleBottomSplashScreenNode {
             displayNode.containerLayoutUpdated(layout: layout, navigationHeight: self.navigationHeight, transition: transition)
         }
         
-        if let displayNode = self.displayNode as? FalseBottomSwitchScreenNode {
+        if let displayNode = self.displayNode as? DoubleBottomSwitchScreenNode {
             displayNode.containerLayoutUpdated(layout: layout, navigationHeight: self.navigationHeight, transition: transition)
         }
     }
@@ -110,7 +110,7 @@ public final class FalseBottomSplashScreen: FlowViewController {
     }
 }
 
-private final class FalseBottomSwitchScreenNode: ViewControllerTracingNode {
+private final class DoubleBottomSwitchScreenNode: ViewControllerTracingNode {
     private let switchNode: BorderSwitchNode
     private let textNode: ImmediateTextNode
     private let subtitleNode: ImmediateTextNode
@@ -129,10 +129,10 @@ private final class FalseBottomSwitchScreenNode: ViewControllerTracingNode {
         let switchOnColorForLightBackground = UIColor(rgb: 0xA6A6A6)
         let switchOnColorForDarkBackground = UIColor(rgb: 0x494949)
         
-        let text = NSAttributedString(string: presentationData.strings.FalseBottom_DisableNotifications_Text, font: textFont, textColor: textColor)
-        let subtitle = NSAttributedString(string: presentationData.strings.FalseBottom_DisableNotifications_Subtitle, font: subtitleFont, textColor: subtitleColor)
+        let text = NSAttributedString(string: presentationData.strings.DoubleBottom_DisableNotifications_Text, font: textFont, textColor: textColor)
+        let subtitle = NSAttributedString(string: presentationData.strings.DoubleBottom_DisableNotifications_Subtitle, font: subtitleFont, textColor: subtitleColor)
         let buttonText = presentationData.strings.Common_Next
-        let source = FalseBottomAnimationSource(mode: .disableNotifications)
+        let source = DoubleBottomAnimationSource(mode: .disableNotifications)
         
         self.animationNode = AnimatedStickerNode()
         if let source = source {
@@ -142,7 +142,7 @@ private final class FalseBottomSwitchScreenNode: ViewControllerTracingNode {
         }
         
         self.animationNode2 = AnimatedStickerNode()
-        if let otherSource = FalseBottomAnimationSource(mode: .disableNotifications2) {
+        if let otherSource = DoubleBottomAnimationSource(mode: .disableNotifications2) {
             self.animationNode2.setup(source: otherSource, width: 528, height: 348, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
             self.animationNode2.visibility = false
             self.animationNode2.alpha = 0.0
@@ -270,9 +270,9 @@ private final class FalseBottomSwitchScreenNode: ViewControllerTracingNode {
     }
 }
 
-private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
+private final class DoubleBottomSplashScreenNode: ViewControllerTracingNode {
     private let presentationData: PresentationData
-    private let mode: FalseBottomSplashMode
+    private let mode: DoubleBottomSplashMode
     
     private var animationSize: CGSize = CGSize()
     private let animationNode: AnimatedStickerNode
@@ -287,7 +287,7 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
         }
     }
     
-    init(presentationData: PresentationData, mode: FalseBottomSplashMode, action: @escaping () -> Void) {
+    init(presentationData: PresentationData, mode: DoubleBottomSplashMode, action: @escaping () -> Void) {
         self.presentationData = presentationData
         self.mode = mode
         
@@ -299,34 +299,34 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
         
         let textFont = Font.regular(16.0)
         let textColor = self.presentationData.theme.list.itemPrimaryTextColor
-        let source = FalseBottomAnimationSource(mode: mode)
+        let source = DoubleBottomAnimationSource(mode: mode)
         
         self.animationSize = UIScreen.main.isIphone4 ? CGSize(width: 211.0, height: 139.0) : CGSize(width: 264.0, height: 174.0)
 
         switch mode {
         case .hideAccount:
-            title = presentationData.strings.FalseBottom_HideAccount_Title
-            text = NSAttributedString(string: presentationData.strings.FalseBottom_HideAccount_Text, font: textFont, textColor: textColor)
-            buttonText = presentationData.strings.FalseBottom_HideAccount_Button
+            title = presentationData.strings.DoubleBottom_HideAccount_Title
+            text = NSAttributedString(string: presentationData.strings.DoubleBottom_HideAccount_Text, font: textFont, textColor: textColor)
+            buttonText = presentationData.strings.DoubleBottom_HideAccount_Button
             
         case .addOneMoreAccount:
-            title = presentationData.strings.FalseBottom_AddOneMoreAccount_Title
-            text = NSAttributedString(string: presentationData.strings.FalseBottom_AddOneMoreAccount_Text, font: textFont, textColor: textColor)
-            buttonText = presentationData.strings.FalseBottom_AddOneMoreAccount_Button
+            title = presentationData.strings.DoubleBottom_AddOneMoreAccount_Title
+            text = NSAttributedString(string: presentationData.strings.DoubleBottom_AddOneMoreAccount_Text, font: textFont, textColor: textColor)
+            buttonText = presentationData.strings.DoubleBottom_AddOneMoreAccount_Button
             
             if let source = source {
                 self.animationSize = UIScreen.main.isIphone4 ? CGSize(width: 70.0, height: 139.0) : CGSize(width: 87.0, height: 174.0)
         }
             
         case .setMasterPasscode:
-            title = presentationData.strings.FalseBottom_SetMasterPasscode_Title
-            text = NSAttributedString(string: presentationData.strings.FalseBottom_SetMasterPasscode_Text, font: textFont, textColor: textColor)
-            buttonText = presentationData.strings.FalseBottom_SetMasterPasscode_Button
+            title = presentationData.strings.DoubleBottom_SetMasterPasscode_Title
+            text = NSAttributedString(string: presentationData.strings.DoubleBottom_SetMasterPasscode_Text, font: textFont, textColor: textColor)
+            buttonText = presentationData.strings.DoubleBottom_SetMasterPasscode_Button
             
         case .setSecretPasscode:
-            title = presentationData.strings.FalseBottom_SetSecretPasscode_Title
-            text = NSAttributedString(string: presentationData.strings.FalseBottom_SetSecretPasscode_Text, font: textFont, textColor: textColor)
-            buttonText = presentationData.strings.FalseBottom_SetSecretPasscode_Button
+            title = presentationData.strings.DoubleBottom_SetSecretPasscode_Title
+            text = NSAttributedString(string: presentationData.strings.DoubleBottom_SetSecretPasscode_Text, font: textFont, textColor: textColor)
+            buttonText = presentationData.strings.DoubleBottom_SetSecretPasscode_Button
             
         case .disableNotifications:
             title = ""
@@ -334,14 +334,14 @@ private final class FalseBottomSplashScreenNode: ViewControllerTracingNode {
             buttonText = ""
             
         case .lockExplanation:
-            title = presentationData.strings.FalseBottom_LockExplanation_Title
-            text = NSAttributedString(string: presentationData.strings.FalseBottom_LockExplanation_Text, font: textFont, textColor: textColor)
-            buttonText = presentationData.strings.FalseBottom_LockExplanation_Button
+            title = presentationData.strings.DoubleBottom_LockExplanation_Title
+            text = NSAttributedString(string: presentationData.strings.DoubleBottom_LockExplanation_Text, font: textFont, textColor: textColor)
+            buttonText = presentationData.strings.DoubleBottom_LockExplanation_Button
 
         case .accountWasHidden:
-            title = presentationData.strings.FalseBottom_AccountWasHidden_Title
-            text = NSAttributedString(string: presentationData.strings.FalseBottom_AccountWasHidden_Text, font: textFont, textColor: textColor)
-            buttonText = presentationData.strings.FalseBottom_AccountWasHidden_Button
+            title = presentationData.strings.DoubleBottom_AccountWasHidden_Title
+            text = NSAttributedString(string: presentationData.strings.DoubleBottom_AccountWasHidden_Text, font: textFont, textColor: textColor)
+            buttonText = presentationData.strings.DoubleBottom_AccountWasHidden_Button
             
         default:
             fatalError()
@@ -482,36 +482,36 @@ private extension CGFloat {
     }
 }
 
-private final class FalseBottomAnimationSource: AnimatedStickerNodeSource {
+private final class DoubleBottomAnimationSource: AnimatedStickerNodeSource {
     public let path: String
     
-    public init?(mode: FalseBottomSplashMode) {
+    public init?(mode: DoubleBottomSplashMode) {
         let fileName: String
         
         switch mode {
         case .hideAccount:
-            fileName = "FalseBottomHideAccount"
+            fileName = "DoubleBottomHideAccount"
             
         case .addOneMoreAccount:
-            fileName = "FalseBottomAddOneMoreAccount"
+            fileName = "DoubleBottomAddOneMoreAccount"
             
         case .setMasterPasscode:
-            fileName = "FalseBottomSetMasterPasscode"
+            fileName = "DoubleBottomSetMasterPasscode"
             
         case .setSecretPasscode:
-            fileName = "FalseBottomHiddenPassword"
+            fileName = "DoubleBottomHiddenPassword"
             
         case .disableNotifications:
-            fileName = "FalseBottomNotifications_part_1"
+            fileName = "DoubleBottomNotifications_part_1"
             
         case .disableNotifications2:
-            fileName = "FalseBottomNotifications_part_2"
+            fileName = "DoubleBottomNotifications_part_2"
             
         case .lockExplanation:
-            fileName = "FalseBottomLocking"
+            fileName = "DoubleBottomLocking"
             
         case .accountWasHidden:
-            fileName = "FalseBottomAccountIsHidden"
+            fileName = "DoubleBottomAccountIsHidden"
         }
         
         guard let path = getAppBundle().path(forResource: fileName, ofType: "tgs") else { return nil }

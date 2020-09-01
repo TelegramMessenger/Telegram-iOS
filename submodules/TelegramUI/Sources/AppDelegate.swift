@@ -215,7 +215,7 @@ final class SharedApplicationContext {
     
     private var _notificationTokenPromise: Promise<Data>?
     private let voipTokenPromise = Promise<Data>()
-    private var falseBottomFlow: FalseBottomFlow?
+    private var doubleBottomFlow: DoubleBottomFlow?
     
     private var notificationTokenPromise: Promise<Data> {
         if let current = self._notificationTokenPromise {
@@ -244,7 +244,7 @@ final class SharedApplicationContext {
     
     private let deviceToken = Promise<Data?>(nil)
     
-    private var falseBottomAddAccountFlowInProgress = false
+    private var doubleBottomAddAccountFlowInProgress = false
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         precondition(!testIsLaunched)
@@ -817,8 +817,8 @@ final class SharedApplicationContext {
                         self.mainWindow.coveringView = nil
                     }
                 }
-            }, openFalseBottomFlow: { [weak self] in
-                self?.openFalseBottomFlow()
+            }, openDoubleBottomFlow: { [weak self] in
+                self?.openDoubleBottomFlow()
             })
             
             presentationDataPromise.set(sharedContext.presentationData)
@@ -1186,10 +1186,10 @@ final class SharedApplicationContext {
                 }))
                 
                 context.context.account.postbox.transaction({ transaction -> Void in
-                    var value = transaction.getPreferencesEntry(key: PreferencesKeys.falseBottomHideTimestamp) as? FalseBottomHideTimestamp ?? FalseBottomHideTimestamp.defaultValue
+                    var value = transaction.getPreferencesEntry(key: PreferencesKeys.doubleBottomHideTimestamp) as? DoubleBottomHideTimestamp ?? DoubleBottomHideTimestamp.defaultValue
                     if value.timestamp == 0 {
                         value.timestamp = Int64(Date().timeIntervalSince1970) + 60
-                        transaction.setPreferencesEntry(key: PreferencesKeys.falseBottomHideTimestamp, value: value)
+                        transaction.setPreferencesEntry(key: PreferencesKeys.doubleBottomHideTimestamp, value: value)
                     }
                     }).start()
             } else {
@@ -1213,9 +1213,9 @@ final class SharedApplicationContext {
             if let authContextValue = self.authContextValue {
                 authContextValue.account.shouldBeServiceTaskMaster.set(.single(.never))
                  if authContextValue.authorizationCompleted {
-                    if let _ = self.falseBottomFlow?.falseBottomContext {
-                        self.falseBottomFlow?.falseBottomContext?.falseBottomAddAccountFlowInProgress = false
-                        self.falseBottomFlow?.continueAfterAddingAccount(with: authContextValue.account.id)
+                    if let _ = self.doubleBottomFlow?.doubleBottomContext {
+                        self.doubleBottomFlow?.doubleBottomContext?.doubleBottomAddAccountFlowInProgress = false
+                        self.doubleBottomFlow?.continueAfterAddingAccount(with: authContextValue.account.id)
                     } else {
                         let accountId = authContextValue.account.id
                         let _ = (self.context.get()
@@ -1238,7 +1238,7 @@ final class SharedApplicationContext {
             if let context = context {
                 let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
                 let statusController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
-                if !(self.falseBottomFlow?.falseBottomContext?.falseBottomAddAccountFlowInProgress ?? false) || self.contextValue == nil {
+                if !(self.doubleBottomFlow?.doubleBottomContext?.doubleBottomAddAccountFlowInProgress ?? false) || self.contextValue == nil {
                     self.mainWindow.present(statusController, on: .root)
                 }
                 let isReady: Signal<Bool, NoError> = context.isReady.get()
@@ -1248,12 +1248,12 @@ final class SharedApplicationContext {
                 |> deliverOnMainQueue).start(next: { _ in
                     statusController.dismiss()
                     if UserDefaults.standard.bool(forKey: "TG_DoubleBottom_AddAccountFlowInProgress"), let authorizedContext = self.contextValue {
-                        if self.falseBottomFlow == nil {
-                            self.falseBottomFlow = FalseBottomFlow(context: authorizedContext) { [weak self] in
-                                self?.falseBottomFlow = nil
+                        if self.doubleBottomFlow == nil {
+                            self.doubleBottomFlow = DoubleBottomFlow(context: authorizedContext) { [weak self] in
+                                self?.doubleBottomFlow = nil
                             }
                         }
-                        authorizedContext.rootController.falseBottomAuthViewControllersSignal = context.rootController.viewControllersPromise.get()
+                        authorizedContext.rootController.doubleBottomAuthViewControllersSignal = context.rootController.viewControllersPromise.get()
                     } else {
                         self.mainWindow.present(context.rootController, on: .root)
                     }
@@ -1454,7 +1454,7 @@ final class SharedApplicationContext {
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
-        falseBottomFlow?.blockInterfaceInNeeded()
+        doubleBottomFlow?.blockInterfaceInNeeded()
         
         let _ = (self.sharedContextPromise.get()
         |> take(1)
@@ -1513,7 +1513,7 @@ final class SharedApplicationContext {
     }
     
     func applicationWillTerminate(_ application: UIApplication) {
-        falseBottomFlow?.blockInterfaceInNeeded()
+        doubleBottomFlow?.blockInterfaceInNeeded()
         Logger.shared.log("App \(self.episodeId)", "terminating")
     }
     
@@ -2045,13 +2045,13 @@ final class SharedApplicationContext {
         }))
     }
     
-    private func openFalseBottomFlow() {
+    private func openDoubleBottomFlow() {
         guard let context = self.contextValue else { return }
         
-        falseBottomFlow = FalseBottomFlow(context: context) { [weak self] in
-            self?.falseBottomFlow = nil
+        doubleBottomFlow = DoubleBottomFlow(context: context) { [weak self] in
+            self?.doubleBottomFlow = nil
         }
-        falseBottomFlow?.start()
+        doubleBottomFlow?.start()
     }
     
     @available(iOS 10.0, *)

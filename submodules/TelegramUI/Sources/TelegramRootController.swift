@@ -28,11 +28,11 @@ public final class TelegramRootController: NavigationController {
     private var presentationDataDisposable: Disposable?
     private var presentationData: PresentationData
     
-    public var falseBottomAuthViewControllersSignal: Signal<[ViewController], NoError>? {
+    public var doubleBottomAuthViewControllersSignal: Signal<[ViewController], NoError>? {
         didSet {
-            self.falseBottomAuthViewControllersDisposable?.dispose()
-            self.falseBottomAuthViewControllers = []
-            self.falseBottomAuthViewControllersDisposable = falseBottomAuthViewControllersSignal?.start(next: { [weak self] viewControllers in
+            self.doubleBottomAuthViewControllersDisposable?.dispose()
+            self.doubleBottomAuthViewControllers = []
+            self.doubleBottomAuthViewControllersDisposable = doubleBottomAuthViewControllersSignal?.start(next: { [weak self] viewControllers in
                 guard let strongSelf = self, !viewControllers.isEmpty else { return }
                 
                 let setViewControllers: ([UIViewController]) -> Void = { [weak self] controllers in
@@ -49,9 +49,9 @@ public final class TelegramRootController: NavigationController {
                     strongSelf.allowInteractiveDismissal = false
                 }
                 
-                let ownControllers = strongSelf.viewControllers.compactMap { $0 as? ViewController}.filter { !strongSelf.falseBottomAuthViewControllers.contains($0) }
+                let ownControllers = strongSelf.viewControllers.compactMap { $0 as? ViewController}.filter { !strongSelf.doubleBottomAuthViewControllers.contains($0) }
                 
-                if strongSelf.falseBottomAuthViewControllers.count > 2,
+                if strongSelf.doubleBottomAuthViewControllers.count > 2,
                     viewControllers.count == 2,
                     viewControllers.last is AuthorizationSequencePhoneEntryController {
                     _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction in
@@ -60,18 +60,18 @@ public final class TelegramRootController: NavigationController {
                         guard let strongSelf = self else { return }
                         
                         setViewControllers(ownControllers)
-                        strongSelf.falseBottomAuthViewControllers = []
+                        strongSelf.doubleBottomAuthViewControllers = []
                     })
                 } else {
                     setViewControllers(ownControllers + viewControllers)
-                    strongSelf.falseBottomAuthViewControllers = viewControllers
+                    strongSelf.doubleBottomAuthViewControllers = viewControllers
                 }
             })
         }
     }
     
-    private var falseBottomAuthViewControllers = [ViewController]()
-    private var falseBottomAuthViewControllersDisposable: Disposable?
+    private var doubleBottomAuthViewControllers = [ViewController]()
+    private var doubleBottomAuthViewControllersDisposable: Disposable?
         
     public init(context: AccountContext) {
         self.context = context
@@ -122,7 +122,7 @@ public final class TelegramRootController: NavigationController {
     deinit {
         self.permissionsDisposable?.dispose()
         self.presentationDataDisposable?.dispose()
-        self.falseBottomAuthViewControllersDisposable?.dispose()
+        self.doubleBottomAuthViewControllersDisposable?.dispose()
     }
     
     public func addRootControllers(showCallsTab: Bool) {

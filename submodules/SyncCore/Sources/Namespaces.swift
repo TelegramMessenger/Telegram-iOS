@@ -211,7 +211,7 @@ private enum PreferencesKeyValues: Int32 {
     case chatListFilters = 20
     case peersNearby = 21
     case chatListFiltersFeaturedState = 22
-    case falseBottomHideTimestamp = 44
+    case doubleBottomHideTimestamp = 44
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -341,9 +341,9 @@ public struct PreferencesKeys {
         return key
     }()
     
-    public static let falseBottomHideTimestamp: ValueBoxKey = {
+    public static let doubleBottomHideTimestamp: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
-        key.setInt32(0, value: PreferencesKeyValues.falseBottomHideTimestamp.rawValue)
+        key.setInt32(0, value: PreferencesKeyValues.doubleBottomHideTimestamp.rawValue)
         return key
     }()
 }

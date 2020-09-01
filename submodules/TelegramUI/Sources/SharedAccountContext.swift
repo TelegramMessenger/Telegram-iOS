@@ -161,13 +161,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private let encryptionParameters: ValueBoxEncryptionParameters
     private let rootPath: String
     
-    public let openFalseBottomFlow: () -> Void
+    public let openDoubleBottomFlow: () -> Void
     private var activeAccountsSettingsDisposable: Disposable?
     
     private var applicationInForeground = true
     private var applicationInForegroundDisposable: Disposable?
     
-    public init(mainWindow: Window1?, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, legacyCache: LegacyCache?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }, openFalseBottomFlow: @escaping () -> Void) {
+    public init(mainWindow: Window1?, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, legacyCache: LegacyCache?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }, openDoubleBottomFlow: @escaping () -> Void) {
         assert(Queue.mainQueue().isCurrent())
         
         precondition(!testHasInstance)
@@ -185,7 +185,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.encryptionParameters = encryptionParameters
         self.rootPath = rootPath
         
-        self.openFalseBottomFlow = openFalseBottomFlow
+        self.openDoubleBottomFlow = openDoubleBottomFlow
         
         self.accountManager.mediaBox.fetchCachedResourceRepresentation = { (resource, representation) -> Signal<CachedMediaResourceRepresentationResult, NoError> in
             return fetchCachedSharedResourceRepresentation(accountManager: accountManager, resource: resource, representation: representation)
@@ -956,11 +956,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }).start()
     }
     
-    public func beginNewAuthAndContinueFalseBottomFlow(testingEnvironment: Bool) {
+    public func beginNewAuthAndContinueDoubleBottomFlow(testingEnvironment: Bool) {
         let _ = self.accountManager.transaction({ transaction -> Void in
             var attributes: [AccountRecordAttribute] = [AccountEnvironmentAttribute(environment: testingEnvironment ? .test : .production)]
             if let accountRecordId = transaction.getCurrent()?.0 {
-                attributes.append(ContinueFalseBottomFlowAttribute(accountRecordId: accountRecordId))
+                attributes.append(ContinueDoubleBottomFlowAttribute(accountRecordId: accountRecordId))
             }
             let _ = transaction.createAuth(attributes)
         }).start()

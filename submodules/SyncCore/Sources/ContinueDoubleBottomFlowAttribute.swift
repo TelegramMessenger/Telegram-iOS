@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 
-public final class ContinueFalseBottomFlowAttribute: AccountRecordAttribute {
+public final class ContinueDoubleBottomFlowAttribute: AccountRecordAttribute {
     public let accountRecordId: AccountRecordId
     
     public init(accountRecordId: AccountRecordId) {
@@ -18,6 +18,6 @@ public final class ContinueFalseBottomFlowAttribute: AccountRecordAttribute {
     }
     
     public func isEqual(to: AccountRecordAttribute) -> Bool {
-        return to is ContinueFalseBottomFlowAttribute
+        return to is ContinueDoubleBottomFlowAttribute
     }
 }

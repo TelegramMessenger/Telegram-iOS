@@ -1,5 +1,5 @@
 //
-//  FalseBottomFlowContext.swift
+//  DoubleBottomFlowContext.swift
 //  TelegramUI#shared
 
 import UIKit
@@ -17,7 +17,7 @@ public class FlowViewController: ViewController {
     weak var nextController: ViewController?
 }
 
-final class FalseBottomFlowContext {
+final class DoubleBottomFlowContext {
     private let accountContext: SharedAccountContext
     private let context: AuthorizedApplicationContext
     
@@ -26,7 +26,7 @@ final class FalseBottomFlowContext {
     var shouldEnableNotification: Bool = true
     
     var flowIsReady: Bool = false
-    var falseBottomAddAccountFlowInProgress: Bool {
+    var doubleBottomAddAccountFlowInProgress: Bool {
         get {
             UserDefaults.standard.bool(forKey: "TG_DoubleBottom_AddAccountFlowInProgress")
         }
@@ -97,9 +97,9 @@ final class FalseBottomFlowContext {
     }
 }
 
-final class FalseBottomFlow {
-    private lazy var doneController: FalseBottomSplashScreen = {
-        let doneController = createFalseBottomScreen(withMode: .accountWasHidden)
+final class DoubleBottomFlow {
+    private lazy var doneController: DoubleBottomSplashScreen = {
+        let doneController = createDoubleBottomScreen(withMode: .accountWasHidden)
         doneController.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
         doneController.buttonPressed = { [weak self] _ in
             self?.blockInterface()
@@ -107,8 +107,8 @@ final class FalseBottomFlow {
         return doneController
     }()
     
-    private lazy var lockExplanationController: FalseBottomSplashScreen = {
-        let lockExplanationController = createFalseBottomScreen(withMode: .lockExplanation) { [weak self] in
+    private lazy var lockExplanationController: DoubleBottomSplashScreen = {
+        let lockExplanationController = createDoubleBottomScreen(withMode: .lockExplanation) { [weak self] in
             guard let strongSelf = self else { return }
             
             strongSelf.hideCurrentAccount()
@@ -117,35 +117,35 @@ final class FalseBottomFlow {
         return lockExplanationController
     }()
     
-    private lazy var disableNotificationsController: FalseBottomSplashScreen = {
-        let disableNotificationsController = createFalseBottomScreen(withMode: .disableNotifications)
-        disableNotificationsController.buttonPressedWithEnabledSwitch = { [weak falseBottomContext] enabled in
-            falseBottomContext?.shouldEnableNotification = enabled
+    private lazy var disableNotificationsController: DoubleBottomSplashScreen = {
+        let disableNotificationsController = createDoubleBottomScreen(withMode: .disableNotifications)
+        disableNotificationsController.buttonPressedWithEnabledSwitch = { [weak doubleBottomContext] enabled in
+            doubleBottomContext?.shouldEnableNotification = enabled
         }
         disableNotificationsController.nextController = lockExplanationController
         return disableNotificationsController
     }()
     
-    private lazy var secretPasscodeIntroController: FalseBottomSplashScreen = {
-        let secretPasscodeIntroController = createFalseBottomScreen(withMode: .setSecretPasscode) { [weak self] in
-            guard let strongSelf = self, let falseBottomContext = strongSelf.falseBottomContext else { return }
+    private lazy var secretPasscodeIntroController: DoubleBottomSplashScreen = {
+        let secretPasscodeIntroController = createDoubleBottomScreen(withMode: .setSecretPasscode) { [weak self] in
+            guard let strongSelf = self, let doubleBottomContext = strongSelf.doubleBottomContext else { return }
             
-            let secretPasscodeSetupController = strongSelf.createSecretPasscodeSetupController(accountContext: strongSelf.accountContext, falseBottomContext: falseBottomContext, nextController: strongSelf.disableNotificationsController)
+            let secretPasscodeSetupController = strongSelf.createSecretPasscodeSetupController(accountContext: strongSelf.accountContext, doubleBottomContext: doubleBottomContext, nextController: strongSelf.disableNotificationsController)
             
             strongSelf.context.rootController.pushViewController(secretPasscodeSetupController, animated: true)
         }
         return secretPasscodeIntroController
     }()
     
-    private lazy var mainPasscodeIntroController: FalseBottomSplashScreen = {
-        let mainPasscodeIntroController = createFalseBottomScreen(withMode: .setMasterPasscode) { [weak self] in
+    private lazy var mainPasscodeIntroController: DoubleBottomSplashScreen = {
+        let mainPasscodeIntroController = createDoubleBottomScreen(withMode: .setMasterPasscode) { [weak self] in
             guard let strongSelf = self else { return }
             
             let mainPasscodeSetupController = PasscodeSetupController(context: strongSelf.accountContext, mode: .setup(change: false, .digits6), isOpaqueNavigationBar: true)
             mainPasscodeSetupController.complete = { [weak self] passcode, numerical in
-                guard let strongSelf = self, let falseBottomContext = strongSelf.falseBottomContext else { return }
+                guard let strongSelf = self, let doubleBottomContext = strongSelf.doubleBottomContext else { return }
                 
-                falseBottomContext.mainPasscode = (passcode, numerical)
+                doubleBottomContext.mainPasscode = (passcode, numerical)
                 
                 strongSelf.context.rootController.pushViewController(strongSelf.secretPasscodeIntroController, animated: true) { [weak strongSelf] in
                     guard let root = strongSelf?.context.rootController, let top = root.viewControllers.last else { return }
@@ -159,22 +159,22 @@ final class FalseBottomFlow {
         return mainPasscodeIntroController
     }()
     
-    private lazy var addMainAccountController: FalseBottomSplashScreen = {
-        let addMainAccountController = createFalseBottomScreen(withMode: .addOneMoreAccount) { [weak context, weak falseBottomContext] in
-            guard let context = context, let falseBottomContext = falseBottomContext else { return }
+    private lazy var addMainAccountController: DoubleBottomSplashScreen = {
+        let addMainAccountController = createDoubleBottomScreen(withMode: .addOneMoreAccount) { [weak context, weak doubleBottomContext] in
+            guard let context = context, let doubleBottomContext = doubleBottomContext else { return }
 
-            falseBottomContext.falseBottomAddAccountFlowInProgress = true
+            doubleBottomContext.doubleBottomAddAccountFlowInProgress = true
             let isTestingEnvironment = context.context.account.testingEnvironment
-            context.sharedApplicationContext.sharedContext.beginNewAuthAndContinueFalseBottomFlow(testingEnvironment: isTestingEnvironment)
+            context.sharedApplicationContext.sharedContext.beginNewAuthAndContinueDoubleBottomFlow(testingEnvironment: isTestingEnvironment)
         }
         return addMainAccountController
     }()
     
-    private lazy var hideAccountController: FalseBottomSplashScreen = {
-        return createFalseBottomScreen(withMode: .hideAccount)
+    private lazy var hideAccountController: DoubleBottomSplashScreen = {
+        return createDoubleBottomScreen(withMode: .hideAccount)
     }()
     
-    private(set) var falseBottomContext: FalseBottomFlowContext?
+    private(set) var doubleBottomContext: DoubleBottomFlowContext?
     
     private let finish: () -> Void
     
@@ -185,15 +185,15 @@ final class FalseBottomFlow {
         self.context = context
         self.accountContext = context.sharedApplicationContext.sharedContext
         self.finish = finish
-        self.falseBottomContext = FalseBottomFlowContext(accountContext: accountContext, context: context)
+        self.doubleBottomContext = DoubleBottomFlowContext(accountContext: accountContext, context: context)
     }
     
     func hideCurrentAccount() {
-        falseBottomContext?.setMainPasscodeInNeeded()
-        falseBottomContext?.setSecretPasscode()
-        falseBottomContext?.setNotificationsSettings()
+        doubleBottomContext?.setMainPasscodeInNeeded()
+        doubleBottomContext?.setSecretPasscode()
+        doubleBottomContext?.setNotificationsSettings()
         
-        falseBottomContext?.flowIsReady = true
+        doubleBottomContext?.flowIsReady = true
     }
     
     func blockInterface() {
@@ -201,7 +201,7 @@ final class FalseBottomFlow {
         
         accountContext.appLockContext.lock()
         context.rootController.allowInteractiveDismissal = true
-        falseBottomContext = nil
+        doubleBottomContext = nil
         (accountContext.appLockContext.lockingIsCompletePromise
             .get()
             |> distinctUntilChanged
@@ -219,19 +219,19 @@ final class FalseBottomFlow {
     }
     
     func blockInterfaceInNeeded() {
-        if falseBottomContext?.flowIsReady ?? false {
+        if doubleBottomContext?.flowIsReady ?? false {
             blockInterface()
         }
     }
     
     func start() {
-        falseBottomContext = FalseBottomFlowContext(accountContext: accountContext, context: context)
+        doubleBottomContext = DoubleBottomFlowContext(accountContext: accountContext, context: context)
         
-        let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { [weak falseBottomContext] transaction -> (Bool, Bool) in
+        let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { [weak doubleBottomContext] transaction -> (Bool, Bool) in
             let hasMoreThanOnePublic = transaction.getRecords().filter({ $0.isPublic }).count > 1
             
             let accessChallengeData = transaction.getAccessChallengeData()
-            falseBottomContext?.mainPasscode = accessChallengeData.convert()
+            doubleBottomContext?.mainPasscode = accessChallengeData.convert()
             
             let hasMainPasscode = accessChallengeData != .none
             
@@ -254,17 +254,17 @@ final class FalseBottomFlow {
                     strongSelf.hideAccountController.nextController = strongSelf.addMainAccountController
                 }
                 
-                strongSelf.falseBottomContext?.falseBottomAddAccountFlowInProgress = false
+                strongSelf.doubleBottomContext?.doubleBottomAddAccountFlowInProgress = false
                 strongSelf.context.rootController.pushViewController(strongSelf.hideAccountController, animated: true)
         })
     }
     
     func continueAfterAddingAccount(with accountId: AccountRecordId) {
-        let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { [weak falseBottomContext] transaction -> (Bool, Bool) in
+        let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { [weak doubleBottomContext] transaction -> (Bool, Bool) in
             let hasMoreThanOnePublic = transaction.getRecords().filter({ $0.isPublic }).count > 1
             
             let accessChallengeData = transaction.getAccessChallengeData()
-            falseBottomContext?.mainPasscode = accessChallengeData.convert()
+            doubleBottomContext?.mainPasscode = accessChallengeData.convert()
             
             let hasMainPasscode = accessChallengeData != .none
             
@@ -273,7 +273,7 @@ final class FalseBottomFlow {
             .start(next: { [weak self] hasMoreThanOnePublic, hasMainPasscode in
                 guard let strongSelf = self else { return }
                 
-                var viewController: FalseBottomSplashScreen?
+                var viewController: DoubleBottomSplashScreen?
                 
                 switch (hasMoreThanOnePublic, hasMainPasscode) {
                 case (true, true):
@@ -292,7 +292,7 @@ final class FalseBottomFlow {
                     viewController.poppedInteractively = { [weak strongSelf] in
                         guard let strongSelf = self else { return }
                         
-                        strongSelf.falseBottomContext?.falseBottomAddAccountFlowInProgress = false
+                        strongSelf.doubleBottomContext?.doubleBottomAddAccountFlowInProgress = false
                         let _ = (logoutFromAccount(id: accountId, accountManager: strongSelf.context.sharedApplicationContext.sharedContext.accountManager, alreadyLoggedOutRemotely: false) |> deliverOnMainQueue).start()
                     }
                     viewController.backPressed = { [weak strongSelf] in
@@ -316,10 +316,10 @@ final class FalseBottomFlow {
     }
 }
 
-private extension FalseBottomFlow {
-    func createFalseBottomScreen(withMode mode: FalseBottomSplashMode, action: (() -> Void)? = nil) -> FalseBottomSplashScreen {
+private extension DoubleBottomFlow {
+    func createDoubleBottomScreen(withMode mode: DoubleBottomSplashMode, action: (() -> Void)? = nil) -> DoubleBottomSplashScreen {
         let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
-        let controller = FalseBottomSplashScreen(presentationData: presentationData, mode: mode)
+        let controller = DoubleBottomSplashScreen(presentationData: presentationData, mode: mode)
         controller.buttonPressed = { [weak context] nextController in
             if let next = nextController {
                 context?.rootController.pushViewController(next, animated: true)
@@ -330,24 +330,24 @@ private extension FalseBottomFlow {
         return controller
     }
     
-    func createSecretPasscodeSetupController(accountContext: SharedAccountContext, falseBottomContext: FalseBottomFlowContext, nextController: ViewController) -> ViewController {
-        assert(falseBottomContext.mainPasscode != nil)
+    func createSecretPasscodeSetupController(accountContext: SharedAccountContext, doubleBottomContext: DoubleBottomFlowContext, nextController: ViewController) -> ViewController {
+        assert(doubleBottomContext.mainPasscode != nil)
         
         let passcodeType: PasscodeEntryFieldType
-        if falseBottomContext.mainPasscode!.1 {
-            passcodeType = falseBottomContext.mainPasscode!.0.count == 6 ? .digits6 : .digits4
+        if doubleBottomContext.mainPasscode!.1 {
+            passcodeType = doubleBottomContext.mainPasscode!.0.count == 6 ? .digits6 : .digits4
         } else {
             passcodeType = .alphanumeric
         }
         
         let secretPasscodeSetupController = PasscodeSetupController(context: accountContext, mode: .setup(change: false, passcodeType), isChangeModeAllowed: false, isOpaqueNavigationBar: true)
         secretPasscodeSetupController.checkSetupPasscode = { passcode in
-            return falseBottomContext.mainPasscode?.0 != passcode
+            return doubleBottomContext.mainPasscode?.0 != passcode
         }
         secretPasscodeSetupController.complete = { [weak self] passcode, numerical in
             guard let strongSelf = self else { return }
             
-            strongSelf.falseBottomContext?.secretPasscode = (passcode, numerical)
+            strongSelf.doubleBottomContext?.secretPasscode = (passcode, numerical)
             
             strongSelf.context.rootController.pushViewController(nextController, animated: true) { [weak strongSelf] in
                 guard let root = strongSelf?.context.rootController, let top = root.viewControllers.last else { return }
