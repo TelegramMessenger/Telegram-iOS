@@ -272,7 +272,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             .enableAGC = true,
             .enableCallUpgrade = false,
             .logPath = logPath.length == 0 ? "" : std::string(logPath.UTF8String),
-            .maxApiLayer = [OngoingCallThreadLocalContext maxLayer]
+            .maxApiLayer = maxLayer
         };
         
         std::vector<uint8_t> encryptionKeyValue;
