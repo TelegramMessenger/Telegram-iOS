@@ -485,19 +485,6 @@ final class ViewTracker {
                 subscriber.putNext(MessageHistoryHolesView(self.messageHistoryHolesView))
             }
         }
-        
-        var firstExternalHolesAndTags = Set<MessageHistoryExternalHolesViewEntry>()
-        for (view, _) in self.messageHistoryViews.copyItems() {
-            /*if let (hole, direction, count) = view.firstExternalHole() {
-                firstExternalHolesAndTags.insert(MessageHistoryHolesViewEntry(hole: hole, direction: direction, count: count))
-            }*/
-        }
-        
-        if self.messageHistoryHolesView.update(firstHolesAndTags) {
-            for subscriber in self.messageHistoryHolesViewSubscribers.copyItems() {
-                subscriber.putNext(MessageHistoryHolesView(self.messageHistoryHolesView))
-            }
-        }
     }
     
     private func unsentViewUpdated() {

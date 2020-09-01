@@ -246,15 +246,18 @@ public struct MessageHistoryViewOrderStatistics: OptionSet {
 public final class MessageHistoryViewExternalInput: Equatable {
     public let peerId: PeerId
     public let threadId: Int64
+    public let maxReadMessageId: MessageId?
     public let holes: [MessageId.Namespace: IndexSet]
     
     public init(
         peerId: PeerId,
         threadId: Int64,
+        maxReadMessageId: MessageId?,
         holes: [MessageId.Namespace: IndexSet]
     ) {
         self.peerId = peerId
         self.threadId = threadId
+        self.maxReadMessageId = maxReadMessageId
         self.holes = holes
     }
     
@@ -952,66 +955,122 @@ public final class MessageHistoryView {
         
         self.fixedReadStates = mutableView.combinedReadStates
         
-        if let combinedReadStates = mutableView.combinedReadStates {
-            switch combinedReadStates {
-            case let .peer(states):
-                var hasUnread = false
-                for (_, readState) in states {
-                    if readState.count > 0 {
-                        hasUnread = true
-                        break
+        switch mutableView.peerIds {
+        case .single, .associated:
+            if let combinedReadStates = mutableView.combinedReadStates {
+                switch combinedReadStates {
+                case let .peer(states):
+                    var hasUnread = false
+                    for (_, readState) in states {
+                        if readState.count > 0 {
+                            hasUnread = true
+                            break
+                        }
                     }
+                    
+                    var maxIndex: MessageIndex?
+                    
+                    if hasUnread {
+                        var peerIds = Set<PeerId>()
+                        for entry in entries {
+                            peerIds.insert(entry.index.id.peerId)
+                        }
+                        for peerId in peerIds {
+                            if let combinedReadState = states[peerId] {
+                                for (namespace, state) in combinedReadState.states {
+                                    var maxNamespaceIndex: MessageIndex?
+                                    var index = entries.count - 1
+                                    for entry in entries.reversed() {
+                                        if entry.index.id.peerId == peerId && entry.index.id.namespace == namespace && state.isIncomingMessageIndexRead(entry.index) {
+                                            maxNamespaceIndex = entry.index
+                                            break
+                                        }
+                                        index -= 1
+                                    }
+                                    if maxNamespaceIndex == nil && index == -1 && entries.count != 0 {
+                                        index = 0
+                                        for entry in entries {
+                                            if entry.index.id.peerId == peerId && entry.index.id.namespace == namespace {
+                                                maxNamespaceIndex = entry.index.predecessor()
+                                                break
+                                            }
+                                            index += 1
+                                        }
+                                    }
+                                    if let _ = maxNamespaceIndex , index + 1 < entries.count {
+                                        for i in index + 1 ..< entries.count {
+                                            if entries[i].message.flags.intersection(.IsIncomingMask).isEmpty {
+                                                maxNamespaceIndex = entries[i].message.index
+                                            } else {
+                                                break
+                                            }
+                                        }
+                                    }
+                                    if let maxNamespaceIndex = maxNamespaceIndex , maxIndex == nil || maxIndex! < maxNamespaceIndex {
+                                        maxIndex = maxNamespaceIndex
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    self.maxReadIndex = maxIndex
                 }
-                
+            } else {
+                self.maxReadIndex = nil
+            }
+        case let .external(input):
+            if let maxReadMesageId = input.maxReadMessageId {
                 var maxIndex: MessageIndex?
                 
+                let hasUnread = true
                 if hasUnread {
                     var peerIds = Set<PeerId>()
                     for entry in entries {
                         peerIds.insert(entry.index.id.peerId)
                     }
                     for peerId in peerIds {
-                        if let combinedReadState = states[peerId] {
-                            for (namespace, state) in combinedReadState.states {
-                                var maxNamespaceIndex: MessageIndex?
-                                var index = entries.count - 1
-                                for entry in entries.reversed() {
-                                    if entry.index.id.peerId == peerId && entry.index.id.namespace == namespace && state.isIncomingMessageIndexRead(entry.index) {
-                                        maxNamespaceIndex = entry.index
-                                        break
-                                    }
-                                    index -= 1
+                        if peerId != maxReadMesageId.peerId {
+                            continue
+                        }
+                        let namespace = maxReadMesageId.namespace
+                        
+                        var maxNamespaceIndex: MessageIndex?
+                        var index = entries.count - 1
+                        for entry in entries.reversed() {
+                            if entry.index.id.peerId == peerId && entry.index.id.namespace == namespace && entry.index.id <= maxReadMesageId {
+                                maxNamespaceIndex = entry.index
+                                break
+                            }
+                            index -= 1
+                        }
+                        if maxNamespaceIndex == nil && index == -1 && entries.count != 0 {
+                            index = 0
+                            for entry in entries {
+                                if entry.index.id.peerId == peerId && entry.index.id.namespace == namespace {
+                                    maxNamespaceIndex = entry.index.predecessor()
+                                    break
                                 }
-                                if maxNamespaceIndex == nil && index == -1 && entries.count != 0 {
-                                    index = 0
-                                    for entry in entries {
-                                        if entry.index.id.peerId == peerId && entry.index.id.namespace == namespace {
-                                            maxNamespaceIndex = entry.index.predecessor()
-                                            break
-                                        }
-                                        index += 1
-                                    }
-                                }
-                                if let _ = maxNamespaceIndex , index + 1 < entries.count {
-                                    for i in index + 1 ..< entries.count {
-                                        if entries[i].message.flags.intersection(.IsIncomingMask).isEmpty {
-                                            maxNamespaceIndex = entries[i].message.index
-                                        } else {
-                                            break
-                                        }
-                                    }
-                                }
-                                if let maxNamespaceIndex = maxNamespaceIndex , maxIndex == nil || maxIndex! < maxNamespaceIndex {
-                                    maxIndex = maxNamespaceIndex
+                                index += 1
+                            }
+                        }
+                        if let _ = maxNamespaceIndex , index + 1 < entries.count {
+                            for i in index + 1 ..< entries.count {
+                                if entries[i].message.flags.intersection(.IsIncomingMask).isEmpty {
+                                    maxNamespaceIndex = entries[i].message.index
+                                } else {
+                                    break
                                 }
                             }
+                        }
+                        if let maxNamespaceIndex = maxNamespaceIndex , maxIndex == nil || maxIndex! < maxNamespaceIndex {
+                            maxIndex = maxNamespaceIndex
                         }
                     }
                 }
                 self.maxReadIndex = maxIndex
+            } else {
+                self.maxReadIndex = nil
             }
-        } else {
-            self.maxReadIndex = nil
         }
         
         self.entries = entries

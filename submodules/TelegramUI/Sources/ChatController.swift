@@ -66,7 +66,7 @@ extension ChatLocation {
         switch self {
         case let .peer(peerId):
             return peerId
-        case let .replyThread(messageId):
+        case let .replyThread(messageId, _):
             return messageId.peerId
         }
     }
@@ -337,6 +337,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
     private var hasEmbeddedTitleContent = false
     private var isEmbeddedTitleContentHidden = false
+    
+    private let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
 
     public override var customData: Any? {
         return self.chatLocation
@@ -1610,7 +1612,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             switch strongSelf.chatLocation {
                 case let .peer(peerId):
                     strongSelf.navigateToMessage(from: nil, to: .index(MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: timestamp - Int32(NSTimeZone.local.secondsFromGMT()))), scrollPosition: .bottom(0.0), rememberInStack: false, animated: true, completion: nil)
-                case let .replyThread(messageId):
+                case let .replyThread(messageId, _):
                     let peerId = messageId.peerId
                     strongSelf.navigateToMessage(from: nil, to: .index(MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: timestamp - Int32(NSTimeZone.local.secondsFromGMT()))), scrollPosition: .bottom(0.0), rememberInStack: false, animated: true, completion: nil)
             }
@@ -2161,7 +2163,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            let foundIndex = Promise<MessageIndex?>()
+            let foundIndex = Promise<ChatReplyThreadMessage?>()
             foundIndex.set(fetchChannelReplyThreadMessage(account: strongSelf.context.account, messageId: messageId))
                 
             var cancelImpl: (() -> Void)?
@@ -2172,16 +2174,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             let disposable = (foundIndex.get()
             |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak statusController] resultIndex in
+            |> deliverOnMainQueue).start(next: { [weak statusController] result in
                 statusController?.dismiss()
                 
                 guard let strongSelf = self else {
                     return
                 }
                 
-                if let resultIndex = resultIndex {
+                if let result = result {
                     if let navigationController = strongSelf.navigationController as? NavigationController {
-                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(resultIndex.id), keepStack: .always))
+                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(threadMessageId: result.messageId, maxReadMessageId: result.maxReadMessageId), keepStack: .always))
                     }
                 }
             })
@@ -2324,7 +2326,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         switch chatLocation {
         case let .peer(peerId):
             chatLocationPeerId = peerId
-        case let .replyThread(messageId):
+        case let .replyThread(messageId, _):
             chatLocationPeerId = messageId.peerId
         }
         
@@ -2377,14 +2379,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self.reportIrrelvantGeoNoticePromise.set(.single(nil))
                 }
                 
-                if !isScheduledMessages && peerId.namespace != Namespaces.Peer.SecretChat {
+                if case .peer = chatLocation, !isScheduledMessages, peerId.namespace != Namespaces.Peer.SecretChat {
+                    let chatLocationContextHolder = self.chatLocationContextHolder
                     hasScheduledMessages = peerView.get()
                     |> take(1)
                     |> mapToSignal { view -> Signal<Bool, NoError> in
                         if let peer = peerViewMainPeer(view) as? TelegramChannel, !peer.hasPermission(.sendMessages) {
                             return .single(false)
                         } else {
-                            return context.account.viewTracker.scheduledMessagesViewForLocation(context.chatLocationInput(for: chatLocation))
+                            return context.account.viewTracker.scheduledMessagesViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder))
                             |> map { view, _, _ in
                                 return !view.entries.isEmpty
                             }
@@ -2393,18 +2396,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 let isReplyThread: Bool
+                let replyThreadType: ChatTitleContent.ReplyThreadType?
                 switch chatLocation {
-                case .peer:
-                    isReplyThread = false
-                case .replyThread:
+                case let .peer(peerId):
+                    //TODO:localize
+                    isReplyThread = peerId.id == 708513
+                    replyThreadType = nil
+                case let .replyThread(_, readMessageId):
                     isReplyThread = true
+                    if readMessageId != nil {
+                        replyThreadType = .comments
+                    } else {
+                        replyThreadType = .replies
+                    }
                 }
                 
                 self.peerDisposable.set((combineLatest(queue: Queue.mainQueue(), peerView.get(), onlineMemberCount, hasScheduledMessages, self.reportIrrelvantGeoNoticePromise.get())
                 |> deliverOnMainQueue).start(next: { [weak self] peerView, onlineMemberCount, hasScheduledMessages, peerReportNotice in
                     if let strongSelf = self {
                         if let peer = peerViewMainPeer(peerView) {
-                            strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, onlineMemberCount: onlineMemberCount, isScheduledMessages: isScheduledMessages, isReplyThread: isReplyThread)
+                            strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, onlineMemberCount: onlineMemberCount, isScheduledMessages: isScheduledMessages, repleThread: replyThreadType)
                             let imageOverride: AvatarNodeImageOverride?
                             if strongSelf.context.account.peerId == peer.id {
                                 imageOverride = .savedMessagesIcon
@@ -2984,7 +2995,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatControllerNode(context: self.context, chatLocation: self.chatLocation, subject: self.subject, controllerInteraction: self.controllerInteraction!, chatPresentationInterfaceState: self.presentationInterfaceState, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, navigationBar: self.navigationBar, controller: self)
+        self.displayNode = ChatControllerNode(context: self.context, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, subject: self.subject, controllerInteraction: self.controllerInteraction!, chatPresentationInterfaceState: self.presentationInterfaceState, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, navigationBar: self.navigationBar, controller: self)
         
         self.chatDisplayNode.historyNode.didScrollWithOffset = { [weak self] offset, transition, itemNode in
             guard let strongSelf = self else {
@@ -3032,7 +3043,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 } else if let _ = combinedInitialData.cachedData as? CachedSecretChatData {
                 }
                 
-                if case let .replyThread(messageId) = strongSelf.chatLocation {
+                if case let .replyThread(messageId, _) = strongSelf.chatLocation {
                     pinnedMessageId = messageId
                 }
                 
@@ -3175,7 +3186,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 } else if let _ = cachedData as? CachedSecretChatData {
                 }
                 
-                if case let .replyThread(messageId) = strongSelf.chatLocation {
+                if case let .replyThread(messageId, _) = strongSelf.chatLocation {
                     pinnedMessageId = messageId
                 }
                 
@@ -4799,19 +4810,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             unarchiveAutomaticallyArchivedPeer(account: strongSelf.context.account, peerId: peerId)
             
             strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: strongSelf.presentationData.strings.Conversation_UnarchiveDone), elevatedLayout: false, action: { _ in return false }), in: .current)
-        }, viewReplies: { [weak self] messageId in
+        }, viewReplies: { [weak self] sourceMessageId, replyThreadResult in
             guard let strongSelf = self else {
                 return
             }
             
             if let navigationController = strongSelf.effectiveNavigationController {
-                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(messageId), keepStack: .always))
+                let subject: ChatControllerSubject? = nil// sourceMessageId.flatMap(ChatControllerSubject.message)
+                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(threadMessageId: replyThreadResult.messageId, maxReadMessageId: replyThreadResult.maxReadMessageId), subject: subject, keepStack: .always))
             }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()))
         
         do {
             let peerId = self.chatLocation.peerId
             if let subject = self.subject, case .scheduledMessages = subject {
+            } else if case .replyThread = self.chatLocation {
             } else {
                 let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.peer(peerId), .total(nil)])
                 let notificationSettingsKey: PostboxViewKey = .peerNotificationSettings(peerIds: Set([peerId]))
@@ -5411,10 +5424,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.validLayout = layout
         self.chatTitleView?.layout = layout
-        
-        if self.hasScheduledMessages, let h = layout.inputHeight, h > 100.0 {
-            print()
-        }
         
         switch self.presentationInterfaceState.mode {
         case .standard, .inline:
@@ -6468,10 +6477,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }, presentTimerPicker: { [weak self] done in
                 if let strongSelf = self {
-                    strongSelf.presentTimerPicker(style: .media, completion: { [weak self] time in
-                        if let strongSelf = self {
-                            done(time)
-                         }
+                    strongSelf.presentTimerPicker(style: .media, completion: { time in
+                        done(time)
                     })
                 }
             }, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime in
@@ -6681,7 +6688,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }, presentTimerPicker: { [weak self] done in
                         if let strongSelf = self {
-                            strongSelf.presentTimerPicker(style: .media, completion: { [weak self] time in
+                            strongSelf.presentTimerPicker(style: .media, completion: { time in
                                 done(time)
                             })
                         }
@@ -7243,7 +7250,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         switch self.chatLocation {
         case .peer:
             break
-        case let .replyThread(messageId):
+        case let .replyThread(messageId, _):
             defaultReplyMessageId = messageId
         }
         
@@ -7290,7 +7297,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         switch self.chatLocation {
         case let .peer(peerIdValue):
             peerId = peerIdValue
-        case let .replyThread(messageId):
+        case let .replyThread(messageId, _):
             peerId = messageId.peerId
         }
         

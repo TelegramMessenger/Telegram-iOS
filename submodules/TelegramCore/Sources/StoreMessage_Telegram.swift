@@ -137,7 +137,7 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
 
 func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
     switch message {
-        case let .message(flags, _, fromId, toId, fwdHeader, viaBotId, _, _, _, _, media, _, entities, _, _, _, _, _, _, _, _):
+        case let .message(flags, _, fromId, toId, fwdHeader, viaBotId, _, _, _, _, media, _, entities, _, _, _, _, _, _, _):
             let peerId: PeerId
             switch toId {
                 case let .peerUser(userId):
@@ -241,7 +241,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
 
 func apiMessageAssociatedMessageIds(_ message: Api.Message) -> [MessageId]? {
     switch message {
-        case let .message(flags, _, fromId, toId, _, _, replyToMsgId, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+        case let .message(flags, _, fromId, toId, _, _, replyToMsgId, _, _, _, _, _, _, _, _, _, _, _, _, _):
             if let replyToMsgId = replyToMsgId {
                 let peerId: PeerId
                     switch toId {
@@ -399,7 +399,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 extension StoreMessage {
     convenience init?(apiMessage: Api.Message, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
-            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, replyToTopId, date, message, media, replyMarkup, entities, views, forwards, replies, recentRepliers, editDate, postAuthor, groupingId, restrictionReason):
+            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, replyToTopId, date, message, media, replyMarkup, entities, views, forwards, replies, editDate, postAuthor, groupingId, restrictionReason):
                 let peerId: PeerId
                 var authorId: PeerId?
                 switch toId {
@@ -577,13 +577,19 @@ extension StoreMessage {
                 
                 if let replies = replies {
                     let recentRepliersPeerIds: [PeerId]?
-                    if let recentRepliers = recentRepliers {
-                        recentRepliersPeerIds = recentRepliers.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: $0) }
-                    } else {
-                        recentRepliersPeerIds = nil
+                    //messageReplies flags:# comments:flags.0?true replies:int replies_pts:int recent_repliers:flags.1?Vector<int> channel_id:flags.0?int top_msg_id:flags.2?int = MessageReplies;
+                    switch replies {
+                    case let .messageReplies(_, repliesCount, _, recentRepliers, channelId):
+                        if let recentRepliers = recentRepliers {
+                            recentRepliersPeerIds = recentRepliers.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: $0) }
+                        } else {
+                            recentRepliersPeerIds = nil
+                        }
+                        
+                        let commentsPeerId = channelId.flatMap { PeerId(namespace: Namespaces.Peer.CloudChannel, id: $0) }
+                        
+                        attributes.append(ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsPeerId))
                     }
-                    
-                    attributes.append(ReplyThreadMessageAttribute(count: replies, latestUsers: recentRepliersPeerIds ?? []))
                 }
                 
                 if let restrictionReason = restrictionReason {

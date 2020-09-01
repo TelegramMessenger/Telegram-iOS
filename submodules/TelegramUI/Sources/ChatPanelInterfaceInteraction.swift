@@ -120,7 +120,7 @@ final class ChatPanelInterfaceInteraction {
     let displaySearchResultsTooltip: (ASDisplayNode, CGRect) -> Void
     let openPeersNearby: () -> Void
     let unarchivePeer: () -> Void
-    let viewReplies: (MessageId) -> Void
+    let viewReplies: (MessageId?, ChatReplyThreadMessage) -> Void
     let statuses: ChatPanelInterfaceInteractionStatuses?
     
     init(
@@ -194,7 +194,7 @@ final class ChatPanelInterfaceInteraction {
         openPeersNearby: @escaping () -> Void,
         displaySearchResultsTooltip: @escaping (ASDisplayNode, CGRect) -> Void,
         unarchivePeer: @escaping () -> Void,
-        viewReplies: @escaping (MessageId) -> Void,
+        viewReplies: @escaping (MessageId?, ChatReplyThreadMessage) -> Void,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
         self.setupReplyMessage = setupReplyMessage

@@ -9,82 +9,111 @@ private class ReplyThreadHistoryContextImpl {
     private let account: Account
     private let messageId: MessageId
     
-    private var currentHole: (MessageHistoryExternalHolesViewEntry, Disposable)?
-    
-    struct NamespaceState: Equatable {
-        var sortedMessageIds: [MessageId]
-        var holeIndices: IndexSet
-    }
+    private var currentHole: (MessageHistoryHolesViewEntry, Disposable)?
     
     struct State: Equatable {
-        let messageId: MessageId
-        let namespaces: [MessageId.Namespace]
-        let namespaceStates: [MessageId.Namespace: NamespaceState]
+        var messageId: MessageId
+        var holeIndices: [MessageId.Namespace: IndexSet]
+        var maxReadMessageId: MessageId?
     }
     
     let state = Promise<State>()
     private var stateValue: State {
         didSet {
-            self.state.set(.single(self.stateValue))
+            if self.stateValue != oldValue {
+                self.state.set(.single(self.stateValue))
+            }
         }
     }
     
-    init(queue: Queue, account: Account, messageId: MessageId) {
+    private var holesDisposable: Disposable?
+    private let readDisposable = MetaDisposable()
+    
+    init(queue: Queue, account: Account, messageId: MessageId, maxReadMessageId: MessageId?) {
         self.queue = queue
         self.account = account
         self.messageId = messageId
         
-        self.stateValue = State(messageId: self.messageId, namespaces: [Namespaces.Message.Cloud, Namespaces.Message.Local], namespaceStates: [:])
+        self.stateValue = State(messageId: self.messageId, holeIndices: [Namespaces.Message.Cloud: IndexSet(integersIn: 1 ..< Int(Int32.max))], maxReadMessageId: maxReadMessageId)
         self.state.set(.single(self.stateValue))
         
-        /*self.setCurrentHole(hole: MessageHistoryExternalHolesViewEntry(
-            hole: .peer(MessageHistoryViewPeerHole(peerId: self.messageId.peerId, namespace: Namespaces.Message.Cloud, threadId: makeMessageThreadId(self.messageId))),
-            direction: .range(start: MessageId(peerId: self.messageId.peerId, namespace: Namespaces.Message.Cloud, id: Int32.max - 1), end: MessageId(peerId: self.messageId.peerId, namespace: Namespaces.Message.Cloud, id: 1)),
-            count: 100
-        ))*/
+        let threadId = makeMessageThreadId(messageId)
+        
+        self.holesDisposable = (account.postbox.messageHistoryHolesView()
+        |> map { view -> MessageHistoryHolesViewEntry? in
+            for entry in view.entries {
+                switch entry.hole {
+                case let .peer(hole):
+                    if hole.threadId == threadId {
+                        return entry
+                    }
+                }
+            }
+            return nil
+        }
+        |> distinctUntilChanged
+        |> deliverOn(self.queue)).start(next: { [weak self] entry in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.setCurrentHole(entry: entry)
+        })
     }
     
-    func setCurrentHole(hole: MessageHistoryExternalHolesViewEntry?) {
-        if self.currentHole?.0 != hole {
+    deinit {
+        self.holesDisposable?.dispose()
+        self.readDisposable.dispose()
+    }
+    
+    func setCurrentHole(entry: MessageHistoryHolesViewEntry?) {
+        if self.currentHole?.0 != entry {
             self.currentHole?.1.dispose()
-            if let hole = hole {
-                self.currentHole = (hole, self.fetchHole(hole: hole).start())
+            if let entry = entry {
+                self.currentHole = (entry, self.fetchHole(entry: entry).start(next: { [weak self] removedHoleIndices in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if var currentHoles = strongSelf.stateValue.holeIndices[Namespaces.Message.Cloud] {
+                        currentHoles.subtract(removedHoleIndices)
+                        strongSelf.stateValue.holeIndices[Namespaces.Message.Cloud] = currentHoles
+                    }
+                }))
             } else {
                 self.currentHole = nil
             }
         }
     }
     
-    private func fetchHole(hole: MessageHistoryExternalHolesViewEntry) -> Signal<Never, NoError> {
-        let messageId = self.messageId
+    private func fetchHole(entry: MessageHistoryHolesViewEntry) -> Signal<IndexSet, NoError> {
+        switch entry.hole {
+        case let .peer(hole):
+            let fetchCount = min(entry.count, 100)
+            return fetchMessageHistoryHole(accountPeerId: self.account.peerId, source: .network(self.account.network), postbox: self.account.postbox, peerId: hole.peerId, namespace: hole.namespace, direction: entry.direction, space: entry.space, threadId: hole.threadId.flatMap { makeThreadIdMessageId(peerId: self.messageId.peerId, threadId: $0) }, count: fetchCount)
+        }
+    }
+    
+    func applyMaxReadIndex(messageIndex: MessageIndex) {
         let account = self.account
-        return self.account.postbox.transaction { transaction -> Api.InputPeer? in
-            return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
+        let messageId = self.messageId
+        
+        if messageIndex.id.namespace != messageId.namespace {
+            return
+        }
+        
+        let signal = self.account.postbox.transaction { transaction -> Api.InputPeer? in
+            return transaction.getPeer(messageIndex.id.peerId).flatMap(apiInputPeer)
         }
         |> mapToSignal { inputPeer -> Signal<Never, NoError> in
             guard let inputPeer = inputPeer else {
                 return .complete()
             }
-            return account.network.request(Api.functions.messages.getReplies(peer: inputPeer, msgId: messageId.id, offsetId: Int32.max - 1, addOffset: 0, limit: Int32(hole.count), maxId: Int32.max - 1, minId: 1, hash: 0))
-            |> map(Optional.init)
-            |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
-                return .single(nil)
+            return account.network.request(Api.functions.messages.readDiscussion(peer: inputPeer, msgId: messageId.id, readMaxId: messageIndex.id.id))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
             }
-            |> mapToSignal { result -> Signal<Never, NoError> in
-                guard let result = result else {
-                    return .complete()
-                }
-                return account.postbox.transaction { transaction -> Void in
-                    switch result {
-                    case .messages(let messages, let chats, let users), .messagesSlice(_, _, _, let messages, let chats, let users), .channelMessages(_, _, _, let messages, let chats, let users):
-                        break
-                    case .messagesNotModified:
-                        break
-                    }
-                }
-                |> ignoreValues
-            }
+            |> ignoreValues
         }
+        self.readDisposable.set(signal.start())
     }
 }
 
@@ -111,7 +140,10 @@ public class ReplyThreadHistoryContext {
             self.impl.with { impl in
                 let stateDisposable = impl.state.get().start(next: { state in
                     subscriber.putNext(MessageHistoryViewExternalInput(
-                        peerId: state.messageId.peerId, threadId: makeMessageThreadId(state.messageId), holes: [:]
+                        peerId: state.messageId.peerId,
+                        threadId: makeMessageThreadId(state.messageId),
+                        maxReadMessageId: state.maxReadMessageId,
+                        holes: state.holeIndices
                     ))
                 })
                 disposable.set(stateDisposable)
@@ -121,43 +153,82 @@ public class ReplyThreadHistoryContext {
         }
     }
     
-    public init(account: Account, peerId: PeerId, threadMessageId: MessageId) {
+    public init(account: Account, peerId: PeerId, threadMessageId: MessageId, maxReadMessageId: MessageId?) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return ReplyThreadHistoryContextImpl(queue: queue, account: account, messageId: threadMessageId)
+            return ReplyThreadHistoryContextImpl(queue: queue, account: account, messageId: threadMessageId, maxReadMessageId: maxReadMessageId)
         })
+    }
+    
+    public func applyMaxReadIndex(messageIndex: MessageIndex) {
+        self.impl.with { impl in
+            impl.applyMaxReadIndex(messageIndex: messageIndex)
+        }
     }
 }
 
-public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageId) -> Signal<MessageIndex?, NoError> {
+public struct ChatReplyThreadMessage {
+    public var messageId: MessageId
+    public var maxReadMessageId: MessageId?
+    
+    public init(messageId: MessageId, maxReadMessageId: MessageId?) {
+        self.messageId = messageId
+        self.maxReadMessageId = maxReadMessageId
+    }
+}
+
+public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageId) -> Signal<ChatReplyThreadMessage?, NoError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
     }
-    |> mapToSignal { inputPeer -> Signal<MessageIndex?, NoError> in
+    |> mapToSignal { inputPeer -> Signal<ChatReplyThreadMessage?, NoError> in
         guard let inputPeer = inputPeer else {
             return .single(nil)
         }
         return account.network.request(Api.functions.messages.getDiscussionMessage(peer: inputPeer, msgId: messageId.id))
         |> map(Optional.init)
-        |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
+        |> `catch` { _ -> Signal<Api.messages.DiscussionMessage?, NoError> in
             return .single(nil)
         }
-        |> mapToSignal { result -> Signal<MessageIndex?, NoError> in
+        |> mapToSignal { result -> Signal<ChatReplyThreadMessage?, NoError> in
             guard let result = result else {
                 return .single(nil)
             }
-            return account.postbox.transaction { transaction -> MessageIndex? in
+            return account.postbox.transaction { transaction -> ChatReplyThreadMessage? in
                 switch result {
-                case .messages(let messages, let chats, let users), .messagesSlice(_, _, _, let messages, let chats, let users), .channelMessages(_, _, _, let messages, let chats, let users):
-                    guard let message = messages.first else {
+                case let .discussionMessage(message, readMaxId, chats, users):
+                    guard let parsedMessage = StoreMessage(apiMessage: message), let parsedIndex = parsedMessage.index else {
                         return nil
                     }
-                    guard let parsedMessage = StoreMessage(apiMessage: message) else {
-                        return nil
+                    
+                    var peers: [Peer] = []
+                    var peerPresences: [PeerId: PeerPresence] = [:]
+                    
+                    for chat in chats {
+                        if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                            peers.append(groupOrChannel)
+                        }
                     }
-                    return parsedMessage.index
-                case .messagesNotModified:
-                    return nil
+                    for user in users {
+                        let telegramUser = TelegramUser(user: user)
+                        peers.append(telegramUser)
+                        if let presence = TelegramUserPresence(apiUser: user) {
+                            peerPresences[telegramUser.id] = presence
+                        }
+                    }
+                    
+                    let _ = transaction.addMessages([parsedMessage], location: .Random)
+                    
+                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                        return updated
+                    })
+                    
+                    updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                    
+                    return ChatReplyThreadMessage(
+                        messageId: parsedIndex.id,
+                        maxReadMessageId: MessageId(peerId: parsedIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: readMaxId)
+                    )
                 }
             }
         }

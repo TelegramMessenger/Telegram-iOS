@@ -127,14 +127,14 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                     rawText = "Leave a Comment"
                 }
                 
-                let imageSize: CGFloat = 28.0
-                let imageSpacing: CGFloat = 26.0
+                let imageSize: CGFloat = 30.0
+                let imageSpacing: CGFloat = 20.0
                 
                 var textLeftInset: CGFloat = 0.0
                 if replyPeers.isEmpty {
                     textLeftInset = 32.0
                 } else {
-                    textLeftInset = 8.0 + imageSize * min(3.0, CGFloat(replyPeers.count))
+                    textLeftInset = 8.0 + imageSize * min(1.0, CGFloat(replyPeers.count)) + imageSpacing * max(0.0, min(2.0, CGFloat(replyPeers.count - 1)))
                 }
                 
                 let textConstrainedSize = CGSize(width: min(maxTextWidth, constrainedSize.width - horizontalInset - textLeftInset - 20.0), height: constrainedSize.height)
@@ -151,7 +151,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                 
                 let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets, lineColor: messageTheme.accentControlColor))
                 
-                var textFrame = CGRect(origin: CGPoint(x: -textInsets.left + textLeftInset, y: -textInsets.top + 4.0), size: textLayout.size)
+                var textFrame = CGRect(origin: CGPoint(x: -textInsets.left + textLeftInset, y: -textInsets.top + 5.0), size: textLayout.size)
                 var textFrameWithoutInsets = CGRect(origin: CGPoint(x: textFrame.origin.x + textInsets.left, y: textFrame.origin.y + textInsets.top), size: CGSize(width: textFrame.width - textInsets.left - textInsets.right, height: textFrame.height - textInsets.top - textInsets.bottom))
                 
                 textFrame = textFrame.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top - 2.0)
@@ -210,7 +210,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
 
                             if let arrowImage = arrowImage {
                                 strongSelf.arrowNode.image = arrowImage
-                                strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: boundingWidth - 27.0, y: 7.0), size: arrowImage.size)
+                                strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: boundingWidth - 27.0, y: 8.0), size: arrowImage.size)
                             }
 
                             strongSelf.iconNode.isHidden = !replyPeers.isEmpty
@@ -218,7 +218,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                             let avatarsFrame = CGRect(origin: CGPoint(x: 10.0, y: 5.0), size: CGSize(width: imageSize * 3.0, height: imageSize))
                             strongSelf.avatarsNode.frame = avatarsFrame
                             strongSelf.avatarsNode.updateLayout(size: avatarsFrame.size)
-                            strongSelf.avatarsNode.update(context: item.context, peers: replyPeers, synchronousLoad: synchronousLoad, imageSize: imageSize, imageSpacing: imageSpacing)
+                            strongSelf.avatarsNode.update(context: item.context, peers: replyPeers, synchronousLoad: synchronousLoad, imageSize: imageSize, imageSpacing: imageSpacing, borderWidth: 2.0)
                             
                             strongSelf.separatorNode.backgroundColor = messageTheme.polls.separator
                             strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -1.0), size: CGSize(width: boundingWidth, height: UIScreenPixel))
@@ -248,10 +248,17 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
     }
     
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
-        if self.bounds.contains(point) {
+        if self.buttonNode.frame.contains(point) {
             return .ignore
         }
         return .none
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.buttonNode.frame.contains(point) {
+            return self.buttonNode.view
+        }
+        return nil
     }
 }
 

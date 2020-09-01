@@ -78,15 +78,15 @@ private func updateMessageThreadStatsInternal(transaction: Transaction, threadMe
         loop: for j in 0 ..< attributes.count {
             if let attribute = attributes[j] as? ReplyThreadMessageAttribute {
                 let count = max(0, attribute.count + countDifference)
-                attributes[j] = ReplyThreadMessageAttribute(count: count, latestUsers: mergeLatestUsers(current: attribute.latestUsers, added: addedMessagePeers, isGroup: isGroup, isEmpty: count == 0))
+                attributes[j] = ReplyThreadMessageAttribute(count: count, latestUsers: mergeLatestUsers(current: attribute.latestUsers, added: addedMessagePeers, isGroup: isGroup, isEmpty: count == 0), commentsPeerId: attribute.commentsPeerId)
                 updated = true
             } else if let attribute = attributes[j] as? SourceReferenceMessageAttribute {
                 channelThreadMessageId = attribute.messageId
             }
         }
-        if !updated {
+        if !updated && isGroup {
             let count = max(0, countDifference)
-            attributes.append(ReplyThreadMessageAttribute(count: count, latestUsers: mergeLatestUsers(current: [], added: addedMessagePeers, isGroup: isGroup, isEmpty: count == 0)))
+            attributes.append(ReplyThreadMessageAttribute(count: count, latestUsers: mergeLatestUsers(current: [], added: addedMessagePeers, isGroup: isGroup, isEmpty: count == 0), commentsPeerId: nil))
         }
         return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
     })

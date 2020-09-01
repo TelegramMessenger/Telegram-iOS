@@ -143,7 +143,7 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
     
     var canReply = false
     switch chatPresentationInterfaceState.chatLocation {
-        case .peer, .replyThread:
+        case .peer:
             if let channel = peer as? TelegramChannel {
                 if case .member = channel.participationStatus {
                     canReply = channel.hasPermission(.sendMessages)
@@ -155,6 +155,8 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
             } else {
                 canReply = true
             }
+        case .replyThread:
+            canReply = true
     }
     return canReply
 }
@@ -591,14 +593,14 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             actions.append(.action(ContextMenuActionItem(text: "View Replies", icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replies"), color: theme.actionSheet.primaryTextColor)
             }, action: { c, _ in
-                let foundIndex = Promise<MessageIndex?>()
+                let foundIndex = Promise<ChatReplyThreadMessage?>()
                 if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel, case .broadcast = channel.info {
                     foundIndex.set(fetchChannelReplyThreadMessage(account: context.account, messageId: messages[0].id))
                 }
                 c.dismiss(completion: {
                     if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
                         if case .group = channel.info {
-                            interfaceInteraction.viewReplies(replyThreadId)
+                            interfaceInteraction.viewReplies(messages[0].id, ChatReplyThreadMessage(messageId: replyThreadId, maxReadMessageId: nil))
                         } else {
                             var cancelImpl: (() -> Void)?
                             let statusController = OverlayStatusController(theme: chatPresentationInterfaceState.theme, type: .loading(cancelled: {
@@ -608,11 +610,11 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                             
                             let disposable = (foundIndex.get()
                             |> take(1)
-                            |> deliverOnMainQueue).start(next: { [weak statusController] resultIndex in
+                            |> deliverOnMainQueue).start(next: { [weak statusController] result in
                                 statusController?.dismiss()
                                 
-                                if let resultIndex = resultIndex {
-                                    interfaceInteraction.viewReplies(resultIndex.id)
+                                if let result = result {
+                                    interfaceInteraction.viewReplies(nil, result)
                                 }
                             })
                             

@@ -67,6 +67,11 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
     if case .replyThread = presentationInterfaceState.chatLocation {
         return nil
     }
+    if case let .peer(peerId) = presentationInterfaceState.chatLocation {
+        if peerId.id == 708513 {
+            return nil
+        }
+    }
     if let _ = presentationInterfaceState.interfaceState.selectionState {
         if let currentButton = currentButton, currentButton.action == .cancelMessageSelection {
             return currentButton

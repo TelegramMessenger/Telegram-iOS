@@ -507,7 +507,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private var loadedMessagesFromCachedDataDisposable: Disposable?
     
-    public init(context: AccountContext, chatLocation: ChatLocation, tagMask: MessageTags?, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles) {
+    public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles) {
         self.context = context
         self.chatLocation = chatLocation
         self.subject = subject
@@ -562,6 +562,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         if let subject = subject, case .scheduledMessages = subject {
             scheduled = true
         }
+        var isAuxiliaryChat = scheduled
+        if case .replyThread = chatLocation {
+            isAuxiliaryChat = true
+        }
         
         var additionalData: [AdditionalMessageHistoryViewData] = []
         if case let .peer(peerId) = chatLocation {
@@ -576,10 +580,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 additionalData.append(.peerIsContact(peerId))
             }
         }
-        if !scheduled {
+        if !isAuxiliaryChat {
             additionalData.append(.totalUnreadState)
         }
-        if case let .replyThread(messageId) = chatLocation {
+        if case let .replyThread(messageId, _) = chatLocation {
             additionalData.append(.message(messageId))
         }
 
@@ -588,7 +592,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let historyViewUpdate = self.chatHistoryLocationPromise.get()
         |> distinctUntilChanged
         |> mapToSignal { location in
-            return chatHistoryViewForLocation(location, context: context, chatLocation: chatLocation, scheduled: scheduled, fixedCombinedReadStates: fixedCombinedReadStates.with { $0 }, tagMask: tagMask, additionalData: additionalData)
+            return chatHistoryViewForLocation(location, context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, scheduled: scheduled, fixedCombinedReadStates: fixedCombinedReadStates.with { $0 }, tagMask: tagMask, additionalData: additionalData)
             |> beforeNext { viewUpdate in
                 switch viewUpdate {
                     case let .HistoryView(view, _, _, _, _, _, _):
@@ -706,7 +710,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             strongSelf._initialData.set(.single(combinedInitialData))
                         }
                         
-                        strongSelf._cachedPeerDataAndMessages.set(.single((nil, nil)))
+                        let cachedData = initialData?.cachedData
+                        let cachedDataMessages = initialData?.cachedDataMessages
+                        
+                        strongSelf._cachedPeerDataAndMessages.set(.single((cachedData, cachedDataMessages)))
                         
                         let loadState: ChatHistoryNodeLoadState = .loading
                         if strongSelf.loadState != loadState {
@@ -827,9 +834,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
                 if apply {
                     switch chatLocation {
-                        case .peer, .replyThread:
-                            if !context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
-                                let _ = applyMaxReadIndexInteractively(postbox: context.account.postbox, stateManager: context.account.stateManager, index: messageIndex).start()
+                    case .peer, .replyThread:
+                        if !context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                            context.applyMaxReadIndex(for: chatLocation, contextHolder: chatLocationContextHolder, messageIndex: messageIndex)
                         }
                     }
                 }
@@ -1446,12 +1453,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         }
                     }
                     strongSelf.loadState = loadState
-                    strongSelf.loadStateUpdated?(loadState, animated)
+                    strongSelf.loadStateUpdated?(loadState, animated || transition.animateIn || animateIn)
                 }
                 
-                if let range = visibleRange.loadedRange {
+                if let _ = visibleRange.loadedRange {
                     if let visible = visibleRange.visibleRange {
-                        var visibleFirstIndex = visible.firstIndex
+                        let visibleFirstIndex = visible.firstIndex
                         /*if !visible.firstIndexFullyVisible {
                             visibleFirstIndex += 1
                         }*/

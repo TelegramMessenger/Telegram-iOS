@@ -608,16 +608,27 @@ public final class AccountViewTracker {
                                         return account.postbox.transaction { transaction -> Void in
                                             for i in 0 ..< messageIds.count {
                                                 if i < viewCounts.count {
-                                                    if case let .messageViews(_, views, forwards, replies, _, recentRepliers) = viewCounts[i] {
+                                                    if case let .messageViews(_, views, forwards, replies) = viewCounts[i] {
                                                         transaction.updateMessage(messageIds[i], update: { currentMessage in
                                                             let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
                                                             var attributes = currentMessage.attributes
                                                             var foundReplies = false
-                                                            let recentRepliersPeerIds: [PeerId]?
-                                                            if let recentRepliers = recentRepliers {
-                                                                recentRepliersPeerIds = recentRepliers.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: $0) }
-                                                            } else {
-                                                                recentRepliersPeerIds = nil
+                                                            var commentsChannelId: PeerId?
+                                                            var recentRepliersPeerIds: [PeerId]?
+                                                            var repliesCount: Int32?
+                                                            if let replies = replies {
+                                                                switch replies {
+                                                                case let .messageReplies(_, repliesCountValue, _, recentRepliers, channelId):
+                                                                    if let channelId = channelId {
+                                                                        commentsChannelId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                                                                    }
+                                                                    repliesCount = repliesCountValue
+                                                                    if let recentRepliers = recentRepliers {
+                                                                        recentRepliersPeerIds = recentRepliers.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: $0) }
+                                                                    } else {
+                                                                        recentRepliersPeerIds = nil
+                                                                    }
+                                                                }
                                                             }
                                                             loop: for j in 0 ..< attributes.count {
                                                                 if let attribute = attributes[j] as? ViewCountMessageAttribute {
@@ -630,13 +641,13 @@ public final class AccountViewTracker {
                                                                     }
                                                                 } else if let _ = attributes[j] as? ReplyThreadMessageAttribute {
                                                                     foundReplies = true
-                                                                    if let replies = replies {
-                                                                        attributes[j] = ReplyThreadMessageAttribute(count: replies, latestUsers: recentRepliersPeerIds ?? [])
+                                                                    if let repliesCount = repliesCount {
+                                                                        attributes[j] = ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsChannelId)
                                                                     }
                                                                 }
                                                             }
-                                                            if !foundReplies, let replies = replies {
-                                                                attributes.append(ReplyThreadMessageAttribute(count: replies, latestUsers: recentRepliersPeerIds ?? []))
+                                                            if !foundReplies, let repliesCount = repliesCount {
+                                                                attributes.append(ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsChannelId))
                                                             }
                                                             return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                                                         })

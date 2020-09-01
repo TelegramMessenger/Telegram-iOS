@@ -252,7 +252,7 @@ public enum ChatSearchDomain: Equatable {
 
 public enum ChatLocation: Equatable {
     case peer(PeerId)
-    case replyThread(MessageId)
+    case replyThread(threadMessageId: MessageId, maxReadMessageId: MessageId?)
 }
 
 public final class NavigateToChatControllerParams {
@@ -638,6 +638,9 @@ public final class TonContext {
 
 #endif
 
+public protocol ChatLocationContextHolder: class {
+}
+
 public protocol AccountContext: class {
     var sharedContext: SharedAccountContext { get }
     var account: Account { get }
@@ -666,5 +669,6 @@ public protocol AccountContext: class {
     func storeSecureIdPassword(password: String)
     func getStoredSecureIdPassword() -> String?
     
-    func chatLocationInput(for location: ChatLocation) -> ChatLocationInput
+    func chatLocationInput(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> ChatLocationInput
+    func applyMaxReadIndex(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>, messageIndex: MessageIndex)
 }

@@ -1097,7 +1097,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makePeerSharedMediaController(context: AccountContext, peerId: PeerId) -> ViewController? {
-        return peerSharedMediaControllerImpl(context: context, peerId: peerId)
+        return nil
     }
     
     public func makeChatRecentActionsController(context: AccountContext, peer: Peer, adminPeerId: PeerId?) -> ViewController {

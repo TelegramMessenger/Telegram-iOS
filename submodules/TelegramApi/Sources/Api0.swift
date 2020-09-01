@@ -256,6 +256,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[643940105] = { return Api.Update.parse_updatePhoneCallSignalingData($0) }
     dict[1708307556] = { return Api.Update.parse_updateChannelParticipant($0) }
     dict[1854571743] = { return Api.Update.parse_updateChannelMessageForwards($0) }
+    dict[295679367] = { return Api.Update.parse_updateReadDiscussion($0) }
     dict[136574537] = { return Api.messages.VotesList.parse_votesList($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[-373643672] = { return Api.FolderPeer.parse_folderPeer($0) }
@@ -388,7 +389,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1694474197] = { return Api.messages.Chats.parse_chats($0) }
     dict[-1663561404] = { return Api.messages.Chats.parse_chatsSlice($0) }
     dict[482797855] = { return Api.InputSingleMedia.parse_inputSingleMedia($0) }
-    dict[-119526594] = { return Api.MessageViews.parse_messageViews($0) }
+    dict[1163625789] = { return Api.MessageViews.parse_messageViews($0) }
     dict[218751099] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowContacts($0) }
     dict[407582158] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowAll($0) }
     dict[320652927] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowUsers($0) }
@@ -434,6 +435,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-886477832] = { return Api.LabeledPrice.parse_labeledPrice($0) }
     dict[-438840932] = { return Api.messages.ChatFull.parse_chatFull($0) }
     dict[-618540889] = { return Api.InputSecureValue.parse_inputSecureValue($0) }
+    dict[-765481584] = { return Api.messages.DiscussionMessage.parse_discussionMessage($0) }
     dict[1722786150] = { return Api.help.DeepLinkInfo.parse_deepLinkInfoEmpty($0) }
     dict[1783556146] = { return Api.help.DeepLinkInfo.parse_deepLinkInfo($0) }
     dict[-313079300] = { return Api.account.WebAuthorizations.parse_webAuthorizations($0) }
@@ -520,6 +522,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-402498398] = { return Api.messages.SavedGifs.parse_savedGifsNotModified($0) }
     dict[772213157] = { return Api.messages.SavedGifs.parse_savedGifs($0) }
     dict[-914167110] = { return Api.CdnPublicKey.parse_cdnPublicKey($0) }
+    dict[-2099001323] = { return Api.MessageReplies.parse_messageReplies($0) }
     dict[53231223] = { return Api.InputGame.parse_inputGameID($0) }
     dict[-1020139510] = { return Api.InputGame.parse_inputGameShortName($0) }
     dict[1107543535] = { return Api.help.CountryCode.parse_countryCode($0) }
@@ -603,7 +606,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1820043071] = { return Api.User.parse_user($0) }
     dict[-2082087340] = { return Api.Message.parse_messageEmpty($0) }
     dict[-1642487306] = { return Api.Message.parse_messageService($0) }
-    dict[-739735064] = { return Api.Message.parse_message($0) }
+    dict[-1971453315] = { return Api.Message.parse_message($0) }
     dict[831924812] = { return Api.StatsGroupTopInviter.parse_statsGroupTopInviter($0) }
     dict[186120336] = { return Api.messages.RecentStickers.parse_recentStickersNotModified($0) }
     dict[586395571] = { return Api.messages.RecentStickers.parse_recentStickers($0) }
@@ -1144,6 +1147,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputSecureValue:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.DiscussionMessage:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.help.DeepLinkInfo:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.WebAuthorizations:
@@ -1235,6 +1240,8 @@ public struct Api {
             case let _1 as Api.messages.SavedGifs:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.CdnPublicKey:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.MessageReplies:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputGame:
                 _1.serialize(buffer, boxed)

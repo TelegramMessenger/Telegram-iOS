@@ -1517,7 +1517,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             let avatarsFrame = CGRect(origin: CGPoint(x: typeFrame.maxX + 6.0, y: typeFrame.minY + floor((typeFrame.height - defaultMergedImageSize) / 2.0)), size: CGSize(width: defaultMergedImageSize + defaultMergedImageSpacing * 2.0, height: defaultMergedImageSize))
                             strongSelf.avatarsNode.frame = avatarsFrame
                             strongSelf.avatarsNode.updateLayout(size: avatarsFrame.size)
-                            strongSelf.avatarsNode.update(context: item.context, peers: avatarPeers, synchronousLoad: synchronousLoad, imageSize: defaultMergedImageSize, imageSpacing: defaultMergedImageSpacing)
+                            strongSelf.avatarsNode.update(context: item.context, peers: avatarPeers, synchronousLoad: synchronousLoad, imageSize: defaultMergedImageSize, imageSpacing: defaultMergedImageSpacing, borderWidth: defaultBorderWidth)
                             strongSelf.avatarsNode.isHidden = isBotChat
                             let alphaTransition: ContainedViewLayoutTransition
                             if animation.isAnimated {
@@ -1794,17 +1794,20 @@ private final class MergedAvatarsNodeArguments: NSObject {
     let images: [PeerId: UIImage]
     let imageSize: CGFloat
     let imageSpacing: CGFloat
+    let borderWidth: CGFloat
     
-    init(peers: [PeerAvatarReference], images: [PeerId: UIImage], imageSize: CGFloat, imageSpacing: CGFloat) {
+    init(peers: [PeerAvatarReference], images: [PeerId: UIImage], imageSize: CGFloat, imageSpacing: CGFloat, borderWidth: CGFloat) {
         self.peers = peers
         self.images = images
         self.imageSize = imageSize
         self.imageSpacing = imageSpacing
+        self.borderWidth = borderWidth
     }
 }
 
 private let defaultMergedImageSize: CGFloat = 16.0
 private let defaultMergedImageSpacing: CGFloat = 15.0
+private let defaultBorderWidth: CGFloat = 1.0
 
 private let avatarFont = avatarPlaceholderFont(size: 8.0)
 
@@ -1815,6 +1818,7 @@ final class MergedAvatarsNode: ASDisplayNode {
     private let buttonNode: HighlightTrackingButtonNode
     private var imageSize: CGFloat = defaultMergedImageSize
     private var imageSpacing: CGFloat = defaultMergedImageSpacing
+    private var borderWidthValue: CGFloat = defaultBorderWidth
     
     var pressed: (() -> Void)?
     
@@ -1843,9 +1847,10 @@ final class MergedAvatarsNode: ASDisplayNode {
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
     }
     
-    func update(context: AccountContext, peers: [Peer], synchronousLoad: Bool, imageSize: CGFloat, imageSpacing: CGFloat) {
+    func update(context: AccountContext, peers: [Peer], synchronousLoad: Bool, imageSize: CGFloat, imageSpacing: CGFloat, borderWidth: CGFloat) {
         self.imageSize = imageSize
         self.imageSpacing = imageSpacing
+        self.borderWidthValue = borderWidth
         var filteredPeers = peers.map(PeerAvatarReference.init)
         if filteredPeers.count > 3 {
             filteredPeers = filteredPeers.dropLast(filteredPeers.count - 3)
@@ -1907,7 +1912,7 @@ final class MergedAvatarsNode: ASDisplayNode {
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol {
-        return MergedAvatarsNodeArguments(peers: self.peers, images: self.images, imageSize: self.imageSize, imageSpacing: self.imageSpacing)
+        return MergedAvatarsNodeArguments(peers: self.peers, images: self.images, imageSize: self.imageSize, imageSpacing: self.imageSpacing, borderWidth: self.borderWidthValue)
     }
     
     @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -1925,16 +1930,16 @@ final class MergedAvatarsNode: ASDisplayNode {
             return
         }
         
-        context.setBlendMode(.copy)
-        
         let mergedImageSize = parameters.imageSize
         let mergedImageSpacing = parameters.imageSpacing
         
         var currentX = mergedImageSize + mergedImageSpacing * CGFloat(parameters.peers.count - 1) - mergedImageSize
         for i in (0 ..< parameters.peers.count).reversed() {
             let imageRect = CGRect(origin: CGPoint(x: currentX, y: 0.0), size: CGSize(width: mergedImageSize, height: mergedImageSize))
+            context.setBlendMode(.copy)
             context.setFillColor(UIColor.clear.cgColor)
-            context.fillEllipse(in: imageRect.insetBy(dx: -1.0, dy: -1.0))
+            context.fillEllipse(in: imageRect.insetBy(dx: -parameters.borderWidth, dy: -parameters.borderWidth))
+            context.setBlendMode(.normal)
             
             context.saveGState()
             switch parameters.peers[i] {
@@ -1942,7 +1947,7 @@ final class MergedAvatarsNode: ASDisplayNode {
                 context.translateBy(x: currentX, y: 0.0)
                 drawPeerAvatarLetters(context: context, size: CGSize(width: mergedImageSize, height: mergedImageSize), font: avatarFont, letters: letters, peerId: peerId)
                 context.translateBy(x: -currentX, y: 0.0)
-            case let .image(reference):
+            case .image:
                 if let image = parameters.images[parameters.peers[i].peerId] {
                     context.translateBy(x: imageRect.midX, y: imageRect.midY)
                     context.scaleBy(x: 1.0, y: -1.0)

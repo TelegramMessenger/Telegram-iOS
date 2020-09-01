@@ -55,7 +55,6 @@ private final class PeerChannelMemberCategoriesContextsManagerImpl {
     fileprivate var onlineContexts: [PeerId: PeerChannelMembersOnlineContext] = [:]
     fileprivate var profileDataPreloadContexts: [PeerId: ProfileDataPreloadContext] = [:]
     fileprivate var profileDataPhotoPreloadContexts: [PeerId: ProfileDataPhotoPreloadContext] = [:]
-    fileprivate var replyThreadHistoryContexts: [MessageId: ReplyThreadHistoryContext] = [:]
     
     func getContext(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, key: PeerChannelMemberContextKey, requestUpdate: Bool, updated: @escaping (ChannelMemberListState) -> Void) -> (Disposable, PeerChannelMemberCategoryControl) {
         if let current = self.contexts[peerId] {
@@ -261,17 +260,6 @@ private final class PeerChannelMemberCategoriesContextsManagerImpl {
                 }
             }
         }
-    }
-    
-    func replyThread(account: Account, messageId: MessageId) -> Signal<MessageHistoryViewExternalInput, NoError> {
-        let context: ReplyThreadHistoryContext
-        if let current = self.replyThreadHistoryContexts[messageId] {
-            context = current
-        } else {
-            context = ReplyThreadHistoryContext(account: account, peerId: messageId.peerId, threadMessageId: messageId)
-            self.replyThreadHistoryContexts[messageId] = context
-        }
-        return context.state
     }
 }
 
@@ -574,23 +562,6 @@ public final class PeerChannelMemberCategoriesContextsManager {
                 })
             })
             return disposable ?? EmptyDisposable
-        }
-        |> runOn(Queue.mainQueue())
-    }
-    
-    public func replyThread(account: Account, messageId: MessageId) -> Signal<MessageHistoryViewExternalInput, NoError> {
-        return Signal { [weak self] subscriber in
-            guard let strongSelf = self else {
-                subscriber.putCompletion()
-                return EmptyDisposable
-            }
-            let disposable = MetaDisposable()
-            strongSelf.impl.with { impl in
-                disposable.set(impl.replyThread(account: account, messageId: messageId).start(next: { state in
-                    subscriber.putNext(state)
-                }))
-            }
-            return disposable
         }
         |> runOn(Queue.mainQueue())
     }

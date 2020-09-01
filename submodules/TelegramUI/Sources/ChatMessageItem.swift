@@ -317,7 +317,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         switch chatLocation {
         case let .peer(peerId):
             messagePeerId = peerId
-        case let .replyThread(messageId):
+        case let .replyThread(messageId, _):
             messagePeerId = messageId.peerId
         }
         

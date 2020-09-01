@@ -123,6 +123,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         }
         
         self.closeButton.isHidden = isReplyThread
+        self.tapButton.isUserInteractionEnabled = !isReplyThread
         
         var messageUpdated = false
         if let currentMessage = self.currentMessage, let pinnedMessage = interfaceState.pinnedMessage {

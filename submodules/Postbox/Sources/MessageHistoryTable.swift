@@ -72,6 +72,7 @@ final class MessageHistoryTable: Table {
     let unsentTable: MessageHistoryUnsentTable
     let failedTable: MessageHistoryFailedTable
     let tagsTable: MessageHistoryTagsTable
+    let threadsTable: MessageHistoryThreadsTable
     let globalTagsTable: GlobalMessageHistoryTagsTable
     let localTagsTable: LocalMessageHistoryTagsTable
     let readStateTable: MessageHistoryReadStateTable
@@ -80,7 +81,7 @@ final class MessageHistoryTable: Table {
     let summaryTable: MessageHistoryTagsSummaryTable
     let pendingActionsTable: PendingMessageActionsTable
     
-    init(valueBox: ValueBox, table: ValueBoxTable, seedConfiguration: SeedConfiguration, messageHistoryIndexTable: MessageHistoryIndexTable, messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable, unsentTable: MessageHistoryUnsentTable, failedTable: MessageHistoryFailedTable, tagsTable: MessageHistoryTagsTable, globalTagsTable: GlobalMessageHistoryTagsTable, localTagsTable: LocalMessageHistoryTagsTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable, textIndexTable: MessageHistoryTextIndexTable, summaryTable: MessageHistoryTagsSummaryTable, pendingActionsTable: PendingMessageActionsTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, seedConfiguration: SeedConfiguration, messageHistoryIndexTable: MessageHistoryIndexTable, messageHistoryHoleIndexTable: MessageHistoryHoleIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, globallyUniqueMessageIdsTable: MessageGloballyUniqueIdTable, unsentTable: MessageHistoryUnsentTable, failedTable: MessageHistoryFailedTable, tagsTable: MessageHistoryTagsTable, threadsTable: MessageHistoryThreadsTable, globalTagsTable: GlobalMessageHistoryTagsTable, localTagsTable: LocalMessageHistoryTagsTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable, textIndexTable: MessageHistoryTextIndexTable, summaryTable: MessageHistoryTagsSummaryTable, pendingActionsTable: PendingMessageActionsTable) {
         self.seedConfiguration = seedConfiguration
         self.messageHistoryIndexTable = messageHistoryIndexTable
         self.messageHistoryHoleIndexTable = messageHistoryHoleIndexTable
@@ -90,6 +91,7 @@ final class MessageHistoryTable: Table {
         self.unsentTable = unsentTable
         self.failedTable = failedTable
         self.tagsTable = tagsTable
+        self.threadsTable = threadsTable
         self.globalTagsTable = globalTagsTable
         self.localTagsTable = localTagsTable
         self.readStateTable = readStateTable
@@ -268,6 +270,9 @@ final class MessageHistoryTable: Table {
                                 self.tagsTable.add(tags: tag, index: message.index, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
                             }
                         }
+                    }
+                    if let threadId = message.threadId {
+                        self.threadsTable.add(threadId: threadId, index: message.index)
                     }
                     let globalTags = message.globalTags.rawValue
                     if globalTags != 0 {
@@ -1244,6 +1249,9 @@ final class MessageHistoryTable: Table {
             for tag in message.tags {
                 self.tagsTable.remove(tags: tag, index: index, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
             }
+            if let threadId = message.threadId {
+                self.threadsTable.remove(threadId: threadId, index: index)
+            }
             for tag in message.globalTags {
                 self.globalTagsTable.remove(tag, index: index)
             }
@@ -1424,6 +1432,14 @@ final class MessageHistoryTable: Table {
                 }
                 if !message.tags.isEmpty {
                     self.tagsTable.add(tags: message.tags, index: message.index, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
+                }
+            }
+            if previousMessage.threadId != message.threadId || index != message.index {
+                if let threadId = previousMessage.threadId {
+                    self.threadsTable.remove(threadId: threadId, index: index)
+                }
+                if let threadId = message.threadId {
+                    self.threadsTable.add(threadId: threadId, index: message.index)
                 }
             }
             
@@ -2708,7 +2724,31 @@ final class MessageHistoryTable: Table {
         precondition(fromIndex.id.namespace == toIndex.id.namespace)
         var result: [IntermediateMessage] = []
         if let threadId = threadId {
-            var startKey: ValueBoxKey
+            let indices: [MessageIndex]
+            if fromIndex < toIndex {
+                indices = self.threadsTable.laterIndices(threadId: threadId, peerId: peerId, namespace: namespace, index: fromIndex, includeFrom: includeFrom, count: limit)
+            } else {
+                indices = self.threadsTable.earlierIndices(threadId: threadId, peerId: peerId, namespace: namespace, index: fromIndex, includeFrom: includeFrom, count: limit)
+            }
+            for index in indices {
+                if fromIndex < toIndex {
+                    if index < fromIndex || index > toIndex {
+                        continue
+                    }
+                } else {
+                    if index < toIndex || index > fromIndex {
+                        continue
+                    }
+                }
+                if let message = self.getMessage(index) {
+                    result.append(message)
+                } else {
+                    assertionFailure()
+                }
+            }
+            
+            // Unoptimized
+            /*var startKey: ValueBoxKey
             if includeFrom && fromIndex != MessageIndex.upperBound(peerId: peerId, namespace: namespace) {
                 if fromIndex < toIndex {
                     startKey = self.key(fromIndex).predecessor
@@ -2745,7 +2785,7 @@ final class MessageHistoryTable: Table {
                     break
                 }
                 startKey = lastKey
-            }
+            }*/
         } else if let tag = tag {
             let indices: [MessageIndex]
             if fromIndex < toIndex {
