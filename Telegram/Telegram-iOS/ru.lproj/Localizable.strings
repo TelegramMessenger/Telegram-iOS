@@ -1,0 +1,30 @@
+"DoubleBottom.Settings.Text" = "Двойное дно";
+"DoubleBottom.Toast.HideAccount" = "Скрыть аккаунт";
+"DoubleBottom.HideAccount.Title" = "Двойное дно";
+"DoubleBottom.HideAccount.Text" = "Скройте аккаунт, чтобы получать к нему доступ только через уникальный код-пароль.";
+"DoubleBottom.HideAccount.Button" = "Включить";
+"DoubleBottom.AddOneMoreAccount.Title" = "Основной аккаунт";
+"DoubleBottom.AddOneMoreAccount.Text" = "Для скрытия текущего аккаунта необходимо добавить еще один аккаунт в качестве основного.";
+"DoubleBottom.AddOneMoreAccount.Button" = "Добавить аккаунт";
+"DoubleBottom.SetMasterPasscode.Title" = "Основной код-пароль";
+"DoubleBottom.SetMasterPasscode.Text" = "Установите основной код-пароль для всех нескрытых (основных) аккаунтов.";
+"DoubleBottom.SetMasterPasscode.Button" = "Установить код-пароль";
+"DoubleBottom.SetSecretPasscode.Title" = "Скрытый код-пароль";
+"DoubleBottom.SetSecretPasscode.Text" = "Установите код-пароль для аккаунта, который вы хотите скрыть.";
+"DoubleBottom.SetSecretPasscode.Button" = "Установить код-пароль";
+"DoubleBottom.LockExplanation.Title" = "Замочек";
+"DoubleBottom.LockExplanation.Text" = "Для перехода в скрытый аккаунт, заблокируйте приложение, нажав на замочек.";
+"DoubleBottom.LockExplanation.Button" = "Понятно";
+"DoubleBottom.AccountWasHidden.Title" = "Аккаунт скрыт";
+"DoubleBottom.AccountWasHidden.Text" = "Теперь вы можете, вводя скрытый или основной код-пароль, зайти в нужный вам аккаунт.";
+"DoubleBottom.AccountWasHidden.Button" = "Ввести код-пароль";
+
+"PasscodeSettings.AutoLock.Immediately" = "Мгновенно";
+"PasscodeSettings.MatchMaster" = "Совпадает с общим паролем. Пожалуйста, введите другой.";
+
+"DoubleBottom.CancelHide.Text" = "Внимание. Скрытие аккаунта доступно только после добавления аккаунта. Если вы захотите скрыть этот аккаунт в дальнейшем, вам надо будет удалить его и добавить заново. Вы хотите остановить процесс скрытия этого аккаунта?";
+"DoubleBottom.CancelHide.Continue" = "Продолжить";
+"DoubleBottom.CancelHide.Stop" = "Остановить";
+
+"DoubleBottom.DisableNotifications.Text" = "Вы можете отключить уведомления и звонки для скрытого аккаунта.";
+"DoubleBottom.DisableNotifications.Subtitle" = "Применяется на все устройства, где авторизован скрытый аккаунт.";

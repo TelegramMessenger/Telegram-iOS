@@ -2,6 +2,19 @@ import Foundation
 import AppBundle
 import StringPluralization
 
+private let ruFallbackDict: [String: String] = {
+    guard let mainPath = getAppBundle().path(forResource: "ru", ofType: "lproj"), let bundle = Bundle(path: mainPath) else {
+        return [:]
+    }
+    guard let path = bundle.path(forResource: "Localizable", ofType: "strings") else {
+        return [:]
+    }
+    guard let dict = NSDictionary(contentsOf: URL(fileURLWithPath: path)) as? [String: String] else {
+        return [:]
+    }
+    return dict
+}()
+
 private let fallbackDict: [String: String] = {
     guard let mainPath = getAppBundle().path(forResource: "en", ofType: "lproj"), let bundle = Bundle(path: mainPath) else {
         return [:]
@@ -53,6 +66,8 @@ private func getValue(_ primaryComponent: PresentationStringsComponent, _ second
         return value
     } else if let secondaryComponent = secondaryComponent, let value = secondaryComponent.dict[key] {
         return value
+    } else if primaryComponent.languageCode == "ru", let value = ruFallbackDict[key] {
+         return value
     } else if let value = fallbackDict[key] {
         return value
     } else {
