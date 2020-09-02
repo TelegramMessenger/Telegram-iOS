@@ -94,11 +94,8 @@ public final class AppLockContextImpl: AppLockContext {
     
     private var hiddenAccountsAccessChallengeDataDisposable: Disposable?
     public private(set) var hiddenAccountsAccessChallengeData = [AccountRecordId:PostboxAccessChallengeData]()
-    
-    public var unlockedHiddenAccountRecordId: ValuePromise<AccountRecordId?>
-    
+
     private var applicationInForegroundDisposable: Disposable?
-    private let hiddenAccountManager: HiddenAccountManager
     
     public var lockingIsCompletePromise = Promise<Bool>()
     
@@ -109,18 +106,18 @@ public final class AppLockContextImpl: AppLockContext {
             |> mapToSignal { [weak self] _ in
                 guard let strongSelf = self else { return .never() }
                 
-                return strongSelf.unlockedHiddenAccountRecordId.get()
+                return strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.get()
                 |> mapToSignal { unlockedHiddenAccountRecordId in
                     if unlockedHiddenAccountRecordId == nil {
                         return .single(())
                     } else {
-                        return strongSelf.hiddenAccountManager.didFinishChangingAccountPromise.get() |> delay(0.1, queue: .mainQueue())
+                        return strongSelf.accountManager.hiddenAccountManager.didFinishChangingAccountPromise.get() |> delay(0.1, queue: .mainQueue())
                     }
                 }
         }
     }
     
-    public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, hiddenAccountManager: HiddenAccountManager, lockIconInitialFrame: @escaping () -> CGRect?) {
+    public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
         assert(Queue.mainQueue().isCurrent())
         
         self.applicationBindings = applicationBindings
@@ -129,8 +126,6 @@ public final class AppLockContextImpl: AppLockContext {
         self.rootPath = rootPath
         self.window = window
         self.rootController = rootController
-        self.hiddenAccountManager = hiddenAccountManager
-        self.unlockedHiddenAccountRecordId = hiddenAccountManager.unlockedHiddenAccountRecordIdPromise
         
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: self.rootPath))), let current = try? JSONDecoder().decode(LockState.self, from: data) {
             self.currentStateValue = current
@@ -139,7 +134,7 @@ public final class AppLockContextImpl: AppLockContext {
         }
         self.autolockTimeout.set(self.currentStateValue.autolockTimeout)
         
-        self.hiddenAccountsAccessChallengeDataDisposable = (hiddenAccountManager.getHiddenAccountsAccessChallengeDataPromise.get() |> deliverOnMainQueue).start(next: { [weak self] value in
+        self.hiddenAccountsAccessChallengeDataDisposable = (accountManager.hiddenAccountManager.getHiddenAccountsAccessChallengeDataPromise.get() |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {
                 return
             }
@@ -232,11 +227,11 @@ public final class AppLockContextImpl: AppLockContext {
                             } else {
                                 return CGRect()
                             }
-                        }), hasPublicAccountsSignal: hiddenAccountManager.hasPublicAccounts(accountManager: accountManager))
+                        }), hasPublicAccountsSignal: accountManager.hiddenAccountManager.hasPublicAccounts(accountManager: accountManager))
                         if becameActiveRecently, appInForeground {
                             passcodeController.presentationCompleted = { [weak passcodeController, weak self] in
                                 if let strongSelf = self {
-                                    strongSelf.unlockedHiddenAccountRecordId.set(nil)
+                                    strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
                                     strongSelf.lockingIsCompletePromise.set(.single(true))
                                 }
                                 if case .enabled = biometrics {
@@ -247,7 +242,7 @@ public final class AppLockContextImpl: AppLockContext {
                         } else {
                             passcodeController.presentationCompleted = { [weak self] in
                                 if let strongSelf = self {
-                                    strongSelf.unlockedHiddenAccountRecordId.set(nil)
+                                    strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
                                     strongSelf.lockingIsCompletePromise.set(.single(true))
                                 }
                             }
@@ -302,7 +297,7 @@ public final class AppLockContextImpl: AppLockContext {
             |> deliverOnMainQueue).start(next: { [weak self] _ in
                 guard let strongSelf = self else { return }
                 
-                strongSelf.unlockedHiddenAccountRecordId.set(nil)
+                strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
         })
         
         let _ = (self.autolockTimeout.get()

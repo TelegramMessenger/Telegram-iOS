@@ -200,8 +200,6 @@ public final class HiddenAccountManagerImpl: HiddenAccountManager {
     public let getHiddenAccountsAccessChallengeDataPromise = Promise<[AccountRecordId:PostboxAccessChallengeData]>()
     public let didFinishChangingAccountPromise = Promise<Void>()
     
-    public var currentAccountRecordIdPromise = Promise<AccountRecordId?>(nil)
-    
     public init() {
         unlockedHiddenAccountRecordIdDisposable = (unlockedHiddenAccountRecordIdPromise.get()
             |> deliverOnMainQueue).start(next: { [weak self] value in

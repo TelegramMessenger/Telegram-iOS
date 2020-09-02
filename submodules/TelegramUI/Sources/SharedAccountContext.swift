@@ -968,7 +968,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: ViewController? = nil, withChatListController chatListController: ViewController? = nil) {
         if let unlockedHiddenAccountRecordId = accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId, unlockedHiddenAccountRecordId != id {
-            appLockContext.unlockedHiddenAccountRecordId.set(nil)
+            self.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
         }
         
         if self.activeAccountsValue?.primary?.id == id {

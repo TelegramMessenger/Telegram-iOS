@@ -479,7 +479,6 @@ public protocol AppLockContext: class {
     var invalidAttempts: Signal<AccessChallengeAttempts?, NoError> { get }
     var autolockDeadline: Signal<Int32?, NoError> { get }
     var lockingIsCompletePromise: Promise<Bool> { get }
-    var unlockedHiddenAccountRecordId: ValuePromise<AccountRecordId?> { get }
     var hiddenAccountsAccessChallengeData: [AccountRecordId:PostboxAccessChallengeData] { get }
     
     func lock()

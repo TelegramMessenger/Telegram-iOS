@@ -29,7 +29,6 @@ public protocol HiddenAccountManager {
     var getHiddenAccountsAccessChallengeDataPromise: Promise<[AccountRecordId:PostboxAccessChallengeData]> { get }
     var accountManagerRecordIdPromise: ValuePromise<AccountRecordId?> { get }
     var didFinishChangingAccountPromise: Promise<Void> { get }
-    var currentAccountRecordIdPromise: Promise<AccountRecordId?> { get }
     
     func hasPublicAccounts(accountManager: AccountManager) -> Signal<Bool, NoError>
     func configureHiddenAccountsAccessChallengeData(accountManager: AccountManager)
@@ -502,7 +501,6 @@ public final class AccountManager {
         })
         self.mediaBox = MediaBox(basePath: basePath + "/media")
         self.hiddenAccountManager = hiddenAccountManager
-        hiddenAccountManager.currentAccountRecordIdPromise.set(self.accountRecords() |> map { $0.currentRecord?.id })
         hiddenAccountManager.configureHiddenAccountsAccessChallengeData(accountManager: self)
     }
     

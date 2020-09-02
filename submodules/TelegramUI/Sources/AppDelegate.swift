@@ -792,7 +792,7 @@ final class SharedApplicationContext {
             let legacyCache = LegacyCache(path: legacyBasePath + "/Caches")
             
             let presentationDataPromise = Promise<PresentationData>()
-            let appLockContext = AppLockContextImpl(rootPath: rootPath, window: self.mainWindow!, rootController: self.window?.rootViewController, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), hiddenAccountManager: hiddenAccountManager, lockIconInitialFrame: {
+            let appLockContext = AppLockContextImpl(rootPath: rootPath, window: self.mainWindow!, rootController: self.window?.rootViewController, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), lockIconInitialFrame: {
                 return (self.mainWindow?.viewController as? TelegramRootController)?.chatListController?.lockViewFrame
             })
             
@@ -1340,7 +1340,7 @@ final class SharedApplicationContext {
                     |> take(1)
                     |> map { primaryAndAccounts -> (Account, Peer, Int32)? in
                         let accounts = primaryAndAccounts.1
-                        if context.context.sharedContext.appLockContext.unlockedHiddenAccountRecordId != nil {
+                        if context.context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId != nil {
                             if accounts.count > 1 {
                                 return accounts.first
                             } else {
