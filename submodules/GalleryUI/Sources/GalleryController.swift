@@ -383,6 +383,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
     private let updateVisibleDisposable = MetaDisposable()
     
     private var screenCaptureEventsDisposable: Disposable?
+    private var applicationInForegroundDisposable: Disposable?
     
     public init(context: AccountContext, source: GalleryControllerItemSource, invertItemOrder: Bool = false, streamSingleVideo: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, synchronousLoad: Bool = false, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, baseNavigationController: NavigationController?, actionInteraction: GalleryControllerActionInteraction? = nil) {
         self.context = context
@@ -422,6 +423,18 @@ public class GalleryController: ViewController, StandalonePresentableController 
             case let .standaloneMessage(m):
                 message = .single(m)
         }
+        
+        self.applicationInForegroundDisposable = (context.sharedContext.applicationBindings.applicationInForeground
+            |> filter({ !$0 })
+            |> deliverOnMainQueue)
+            .start(next: { [weak self] _ in
+                guard let strongSelf = self else { return }
+                
+                guard strongSelf.context.account.isHidden else { return }
+                
+                strongSelf.galleryNode.setControlsHidden(false, animated: false)
+                strongSelf.dismiss(forceAway: false)
+            })
         
         let messageView = message
         |> filter({ $0 != nil })
