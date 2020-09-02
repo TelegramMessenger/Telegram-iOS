@@ -785,6 +785,8 @@ public class Window1 {
                 
                 if let coveringView = self.coveringView {
                     self.hostView.containerView.insertSubview(controller.view, belowSubview: coveringView)
+                } else if let topController = self.topPresentationContext.controllers.first {
+                    self.hostView.containerView.insertSubview(controller.view, belowSubview: topController.0.displayNode.view)
                 } else {
                     self.hostView.containerView.addSubview(controller.view)
                 }
