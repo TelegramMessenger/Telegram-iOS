@@ -126,8 +126,6 @@ final class AuthorizedApplicationContext {
     private var displayAlertsDisposable: Disposable?
     private var removeNotificationsDisposable: Disposable?
     
-    private var applicationInForegroundDisposable: Disposable?
-    
     private var showCallsTab: Bool
     private var showCallsTabDisposable: Disposable?
     private var enablePostboxTransactionsDiposable: Disposable?
