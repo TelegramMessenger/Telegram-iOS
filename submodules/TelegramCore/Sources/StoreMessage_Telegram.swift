@@ -114,8 +114,12 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
             let fromId = message.fromId
             let toId = message.toId
             switch toId {
-                case let .peerUser(userId):
-                    return PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
+                case .peerUser:
+                    if (flags & Int32(2)) != 0 {
+                        return toId.peerId
+                    } else {
+                        return fromId.peerId
+                    }
                 case let .peerChat(chatId):
                     return PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
                 case let .peerChannel(channelId):
@@ -125,8 +129,12 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
             return nil
         case let .messageService(flags, _, fromId, toId, _, _, _):
             switch toId {
-                case let .peerUser(userId):
-                    return PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
+                case .peerUser:
+                    if (flags & Int32(2)) != 0 {
+                        return toId.peerId
+                    } else {
+                        return fromId.peerId
+                    }
                 case let .peerChat(chatId):
                     return PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
                 case let .peerChannel(channelId):
@@ -140,8 +148,12 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
         case let .message(flags, _, fromId, toId, fwdHeader, viaBotId, _, _, _, _, media, _, entities, _, _, _, _, _, _, _):
             let peerId: PeerId
             switch toId {
-                case let .peerUser(userId):
-                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
+                case .peerUser:
+                    if (flags & Int32(2)) != 0 {
+                        peerId = toId.peerId
+                    } else {
+                        peerId = fromId.peerId
+                    }
                 case let .peerChat(chatId):
                     peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
                 case let .peerChannel(channelId):
@@ -150,18 +162,15 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             
             var result = [peerId]
             
-            if let fromId = fromId, PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId) != peerId {
-                result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId))
+            if fromId.peerId != peerId {
+                result.append(fromId.peerId)
             }
         
             if let fwdHeader = fwdHeader {
                 switch fwdHeader {
                     case let .messageFwdHeader(messageFwdHeader):
-                        if let channelId = messageFwdHeader.channelId {
-                            result.append(PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId))
-                        }
                         if let fromId = messageFwdHeader.fromId {
-                            result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId))
+                            result.append(fromId.peerId)
                         }
                         if let savedFromPeer = messageFwdHeader.savedFromPeer {
                             result.append(savedFromPeer.peerId)
@@ -201,8 +210,12 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
         case let .messageService(flags, _, fromId, toId, _, _, action):
             let peerId: PeerId
             switch toId {
-                case let .peerUser(userId):
-                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
+                case .peerUser:
+                    if (flags & Int32(2)) != 0 {
+                        peerId = toId.peerId
+                    } else {
+                        peerId = fromId.peerId
+                    }
                 case let .peerChat(chatId):
                     peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
                 case let .peerChannel(channelId):
@@ -210,8 +223,8 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             }
             var result = [peerId]
             
-            if let fromId = fromId, PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId) != peerId {
-                result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId))
+            if fromId.peerId != peerId {
+                result.append(fromId.peerId)
             }
             
             switch action {
@@ -245,8 +258,12 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> [MessageId]? {
             if let replyToMsgId = replyToMsgId {
                 let peerId: PeerId
                     switch toId {
-                    case let .peerUser(userId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
+                    case .peerUser:
+                        if (flags & Int32(2)) != 0 {
+                            peerId = toId.peerId
+                        } else {
+                            peerId = fromId.peerId
+                        }
                     case let .peerChat(chatId):
                         peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
                     case let .peerChannel(channelId):
@@ -261,8 +278,12 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> [MessageId]? {
             if let replyToMsgId = replyToMsgId {
                 let peerId: PeerId
                 switch toId {
-                    case let .peerUser(userId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
+                    case .peerUser:
+                        if (flags & Int32(2)) != 0 {
+                            peerId = toId.peerId
+                        } else {
+                            peerId = fromId.peerId
+                        }
                     case let .peerChat(chatId):
                         peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
                     case let .peerChannel(channelId):
@@ -403,27 +424,19 @@ extension StoreMessage {
                 let peerId: PeerId
                 var authorId: PeerId?
                 switch toId {
-                    case let .peerUser(userId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
-                        if let fromId = fromId {
-                            authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
+                    case .peerUser:
+                        if (flags & Int32(2)) != 0 {
+                            peerId = toId.peerId
                         } else {
-                            authorId = peerId
+                            peerId = fromId.peerId
                         }
+                        authorId = fromId.peerId
                     case let .peerChat(chatId):
                         peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                        if let fromId = fromId {
-                            authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
-                        } else {
-                            authorId = peerId
-                        }
+                        authorId = fromId.peerId
                     case let .peerChannel(channelId):
                         peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                        if let fromId = fromId {
-                            authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
-                        } else {
-                            authorId = peerId
-                        }
+                        authorId = fromId.peerId
                 }
                 
                 var attributes: [MessageAttribute] = []
@@ -431,20 +444,22 @@ extension StoreMessage {
                 var forwardInfo: StoreMessageForwardInfo?
                 if let fwdFrom = fwdFrom {
                     switch fwdFrom {
-                        case let .messageFwdHeader(_, fromId, fromName, date, channelId, channelPost, postAuthor, savedFromPeer, savedFromMsgId, psaType):
+                        case let .messageFwdHeader(_, fromId, fromName, date, channelPost, postAuthor, savedFromPeer, savedFromMsgId, psaType):
                             var authorId: PeerId?
                             var sourceId: PeerId?
                             var sourceMessageId: MessageId?
                             
                             if let fromId = fromId {
-                                authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
-                            }
-                            if let channelId = channelId {
-                                let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                                sourceId = peerId
-                                
-                                if let channelPost = channelPost {
-                                    sourceMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: channelPost)
+                                switch fromId {
+                                case .peerChannel:
+                                    let peerId = fromId.peerId
+                                    sourceId = peerId
+                                    
+                                    if let channelPost = channelPost {
+                                        sourceMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: channelPost)
+                                    }
+                                default:
+                                    authorId = fromId.peerId
                                 }
                             }
                             
@@ -639,27 +654,19 @@ extension StoreMessage {
                 let peerId: PeerId
                 var authorId: PeerId?
                 switch toId {
-                    case let .peerUser(userId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
-                        if let fromId = fromId {
-                            authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
+                    case .peerUser:
+                        if (flags & Int32(2)) != 0 {
+                            peerId = toId.peerId
                         } else {
-                            authorId = peerId
+                            peerId = fromId.peerId
                         }
+                        authorId = fromId.peerId
                     case let .peerChat(chatId):
                         peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                        if let fromId = fromId {
-                            authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
-                        } else {
-                            authorId = peerId
-                        }
+                        authorId = fromId.peerId
                     case let .peerChannel(channelId):
                         peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                        if let fromId = fromId {
-                            authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
-                        } else {
-                            authorId = peerId
-                        }
+                        authorId = fromId.peerId
                 }
                 
                 var attributes: [MessageAttribute] = []

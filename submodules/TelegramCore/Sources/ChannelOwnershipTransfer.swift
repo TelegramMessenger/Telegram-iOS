@@ -92,7 +92,7 @@ public func updateChannelOwnership(account: Account, accountStateManager: Accoun
                     flags = TelegramChatAdminRightsFlags.groupSpecific
                 }
                     
-                let updatedParticipant = ChannelParticipant.creator(id: user.id, rank: currentParticipant?.rank)
+                let updatedParticipant = ChannelParticipant.creator(id: user.id, adminInfo: nil, rank: currentParticipant?.rank)
                 let updatedPreviousCreator = ChannelParticipant.member(id: accountUser.id, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: flags), promotedBy: accountUser.id, canBeEditedByAccountPeer: false), banInfo: nil, rank: currentCreator?.rank)
                 
                 let checkPassword = twoStepAuthData(account.network)

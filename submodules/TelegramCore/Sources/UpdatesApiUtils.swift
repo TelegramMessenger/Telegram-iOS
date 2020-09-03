@@ -117,13 +117,17 @@ extension Api.Message {
                 let peerId: PeerId
                 switch toId {
                     case let .peerUser(userId):
-                        let id: PeerId.Id
+                        let id: PeerId
                         if namespace == Namespaces.Message.ScheduledCloud {
-                            id = userId
+                            id = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                         } else {
-                            id = (flags & Int32(2)) != 0 ? userId : (fromId ?? userId)
+                            if (flags & Int32(2)) != 0 {
+                                id = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                            } else {
+                                id = fromId.peerId
+                            }
                         }
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: id)
+                        peerId = id
                     case let .peerChat(chatId):
                         peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
                     case let .peerChannel(channelId):
@@ -136,7 +140,17 @@ extension Api.Message {
                 let peerId: PeerId
                 switch toId {
                     case let .peerUser(userId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
+                        let id: PeerId
+                        if namespace == Namespaces.Message.ScheduledCloud {
+                            id = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                        } else {
+                            if (flags & Int32(2)) != 0 {
+                                id = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                            } else {
+                                id = fromId.peerId
+                            }
+                        }
+                        peerId = id
                     case let .peerChat(chatId):
                         peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
                     case let .peerChannel(channelId):

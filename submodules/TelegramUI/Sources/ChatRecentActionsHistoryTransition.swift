@@ -649,7 +649,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 } else {
                     var appendedRightsHeader = false
                     
-                    if case let .creator(_, prevRank) = prev.participant, case let .creator(_, newRank) = new.participant, prevRank != newRank {
+                    if case let .creator(_, _, prevRank) = prev.participant, case let .creator(_, _, newRank) = new.participant, prevRank != newRank {
                         appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessageRankName(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), newRank ?? "") : self.presentationData.strings.Channel_AdminLog_MessageRankUsername(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), "@" + new.peer.addressName!, newRank ?? ""), generateEntities: { index in
                             var result: [MessageTextEntityType] = []
                             if index == 0 {

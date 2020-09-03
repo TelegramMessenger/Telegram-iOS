@@ -2417,8 +2417,12 @@ public final class Postbox {
                             anchor = .index(scrollIndex)
                         }
                     }
-                case .external:
-                    anchor = .upperBound
+                case let .external(input):
+                    if let maxReadMessageId = input.maxReadMessageId {
+                        anchor = .message(maxReadMessageId)
+                    } else {
+                        anchor = .upperBound
+                    }
                 }
                 return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, count: count, clipHoles: clipHoles, anchor: anchor, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, namespaces: namespaces, orderStatistics: orderStatistics, additionalData: additionalData)
             })

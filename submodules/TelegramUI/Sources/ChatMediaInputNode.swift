@@ -474,7 +474,7 @@ final class ChatMediaInputNode: ChatInputNode {
         return self._ready.get()
     }
     
-    init(context: AccountContext, peerId: PeerId?, controllerInteraction: ChatControllerInteraction, chatWallpaper: TelegramWallpaper, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, gifPaneIsActiveUpdated: @escaping (Bool) -> Void) {
+    init(context: AccountContext, peerId: PeerId?, chatLocation: ChatLocation?, controllerInteraction: ChatControllerInteraction, chatWallpaper: TelegramWallpaper, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, gifPaneIsActiveUpdated: @escaping (Bool) -> Void) {
         self.context = context
         self.peerId = peerId
         self.controllerInteraction = controllerInteraction
@@ -752,7 +752,7 @@ final class ChatMediaInputNode: ChatInputNode {
         
         let inputNodeInteraction = self.inputNodeInteraction!
         let peerSpecificPack: Signal<(PeerSpecificPackData?, CanInstallPeerSpecificPack), NoError>
-        if let peerId = peerId {
+        if let peerId = peerId, case .peer = chatLocation {
             self.dismissedPeerSpecificStickerPack.set(context.account.postbox.transaction { transaction -> Bool in
                 guard let state = transaction.getPeerChatInterfaceState(peerId) as? ChatInterfaceState else {
                     return false
