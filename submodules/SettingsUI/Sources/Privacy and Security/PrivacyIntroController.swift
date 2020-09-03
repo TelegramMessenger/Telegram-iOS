@@ -94,7 +94,7 @@ final class PrivacyIntroController: ViewController {
     
     private var isDismissed: Bool = false
     
-    public init(context: AccountContext, mode: PrivacyIntroControllerMode, arguments: PrivacyIntroControllerPresentationArguments = PrivacyIntroControllerPresentationArguments(), proceedAction: @escaping () -> Void) {
+    init(context: AccountContext, mode: PrivacyIntroControllerMode, arguments: PrivacyIntroControllerPresentationArguments = PrivacyIntroControllerPresentationArguments(), proceedAction: @escaping () -> Void) {
         self.context = context
         self.mode = mode
         self.arguments = arguments

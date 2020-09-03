@@ -654,7 +654,7 @@ private struct SettingsState: Equatable {
     var isSearching: Bool
 }
 
-private func settingsEntries(account: Account, presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, notificationsAuthorizationStatus: AccessType, notificationsWarningSuppressed: Bool, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, privacySettings: AccountPrivacySettings?, hasWallet: Bool, hasPassport: Bool, hasWatchApp: Bool, accountsAndPeers: [(Account, Peer, Int32)], inAppNotificationSettings: InAppNotificationSettings, experimentalUISettings: ExperimentalUISettings, displayPhoneNumberConfirmation: Bool, otherSessionCount: Int, enableQRLogin: Bool, enableFilters: Bool, currentHiddenId: AccountRecordId?) -> [SettingsEntry] {
+private func settingsEntries(account: Account, presentationData: PresentationData, state: SettingsState, view: PeerView, proxySettings: ProxySettings, notifyExceptions: NotificationExceptionsList?, notificationsAuthorizationStatus: AccessType, notificationsWarningSuppressed: Bool, unreadTrendingStickerPacks: Int, archivedPacks: [ArchivedStickerPackItem]?, privacySettings: AccountPrivacySettings?, hasWallet: Bool, hasPassport: Bool, hasWatchApp: Bool, accountsAndPeers: [(Account, Peer, Int32)], inAppNotificationSettings: InAppNotificationSettings, experimentalUISettings: ExperimentalUISettings, displayPhoneNumberConfirmation: Bool, otherSessionCount: Int, enableQRLogin: Bool, enableFilters: Bool) -> [SettingsEntry] {
     var entries: [SettingsEntry] = []
     
     if let peer = peerViewMainPeer(view) as? TelegramUser {
@@ -674,7 +674,7 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
             entries.append(.changePhone(presentationData.theme, presentationData.strings.Settings_ChangePhoneNumber))
         }
         
-        if !accountsAndPeers.isEmpty, currentHiddenId == nil {
+        if !accountsAndPeers.isEmpty {
             var index = 0
             for (peerAccount, peer, badgeCount) in accountsAndPeers {
                 entries.append(.account(index, peerAccount, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, inAppNotificationSettings.displayNotificationsFromAllAccounts ? badgeCount : 0, state.accountIdWithRevealedOptions == peerAccount.id))
@@ -1623,8 +1623,8 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     }
     enableFilters.set(enableFiltersSignal)
     
-    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), privacySettings.get(), displayPhoneNumberConfirmation.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasWallet, hasPassport.get(), hasWatchApp, enableQRLogin.get(), enableFilters.get()), accountsAndPeers.get(), activeSessionsContextAndCount.get(), accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.get())
-    |> map { context, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasWalletPassportAndWatch, accountsAndPeers, activeSessionsContextAndCount, currentHiddenId -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(queue: Queue.mainQueue(), contextValue.get(), updatedPresentationData, statePromise.get(), peerView, combineLatest(queue: Queue.mainQueue(), preferences, notifyExceptions.get(), notificationsAuthorizationStatus.get(), notificationsWarningSuppressed.get(), privacySettings.get(), displayPhoneNumberConfirmation.get()), combineLatest(featuredStickerPacks, archivedPacks.get()), combineLatest(hasWallet, hasPassport.get(), hasWatchApp, enableQRLogin.get(), enableFilters.get()), accountsAndPeers.get(), activeSessionsContextAndCount.get())
+    |> map { context, presentationData, state, view, preferencesAndExceptions, featuredAndArchived, hasWalletPassportAndWatch, accountsAndPeers, activeSessionsContextAndCount -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let otherSessionCount = activeSessionsContextAndCount.1
 
         let proxySettings: ProxySettings = preferencesAndExceptions.0.entries[SharedDataKeys.proxySettings] as? ProxySettings ?? ProxySettings.defaultSettings
@@ -1664,7 +1664,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         }, getNavigationController: getNavigationControllerImpl, exceptionsList: notifyExceptions.get(), archivedStickerPacks: archivedPacks.get(), privacySettings: privacySettings.get(), hasWallet: hasWallet, activeSessionsContext: activeSessionsContextAndCountSignal |> map { $0.0 } |> distinctUntilChanged(isEqual: { $0 === $1 }), webSessionsContext: activeSessionsContextAndCountSignal |> map { $0.2 } |> distinctUntilChanged(isEqual: { $0 === $1 }))
         
         let (hasWallet, hasPassport, hasWatchApp, enableQRLogin, enableFilters) = hasWalletPassportAndWatch
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, privacySettings: preferencesAndExceptions.4, hasWallet: hasWallet, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1, inAppNotificationSettings: inAppNotificationSettings, experimentalUISettings: experimentalUISettings, displayPhoneNumberConfirmation: preferencesAndExceptions.5, otherSessionCount: otherSessionCount, enableQRLogin: enableQRLogin, enableFilters: enableFilters, currentHiddenId: currentHiddenId), style: .blocks, searchItem: searchItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up))
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, privacySettings: preferencesAndExceptions.4, hasWallet: hasWallet, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1, inAppNotificationSettings: inAppNotificationSettings, experimentalUISettings: experimentalUISettings, displayPhoneNumberConfirmation: preferencesAndExceptions.5, otherSessionCount: otherSessionCount, enableQRLogin: enableQRLogin, enableFilters: enableFilters), style: .blocks, searchItem: searchItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up))
         
         return (controllerState, (listState, arguments))
     }
