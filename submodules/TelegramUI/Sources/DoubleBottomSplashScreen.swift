@@ -59,9 +59,6 @@ public final class DoubleBottomSplashScreen: FlowViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
-    deinit {
-    }
-    
     override public func loadDisplayNode() {
         if mode == .disableNotifications {
             self.displayNode = DoubleBottomSwitchScreenNode(presentationData: self.presentationData, action: { [weak self] enabled in

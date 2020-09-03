@@ -244,8 +244,6 @@ final class SharedApplicationContext {
     
     private let deviceToken = Promise<Data?>(nil)
     
-    private var doubleBottomAddAccountFlowInProgress = false
-    
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         precondition(!testIsLaunched)
         testIsLaunched = true

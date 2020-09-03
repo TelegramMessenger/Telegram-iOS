@@ -3,7 +3,6 @@ import SwiftSignalKit
 
 public struct AccountManagerModifier {
     public let getRecords: () -> [AccountRecord]
-    public let getAllRecords: () -> [AccountRecord]
     public let updateRecord: (AccountRecordId, (AccountRecord?) -> (AccountRecord?)) -> Void
     public let getCurrent: () -> (AccountRecordId, [AccountRecordAttribute])?
     public let setCurrentId: (AccountRecordId) -> Void
@@ -146,8 +145,6 @@ final class AccountManagerImpl {
                 self.valueBox.begin()
                 
                 let transaction = AccountManagerModifier(getRecords: {
-                    return self.currentAtomicState.records.map { $0.1 }
-                }, getAllRecords: {
                     return self.currentAtomicState.records.map { $0.1 }
                 }, updateRecord: { id, update in
                     let current = self.currentAtomicState.records[id]
