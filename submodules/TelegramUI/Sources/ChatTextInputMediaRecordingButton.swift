@@ -129,6 +129,7 @@ private final class ChatTextInputMediaRecordingButtonPresenter : NSObject, TGMod
             presentationController.presentingViewController?.dismiss(animated: false, completion: {})
             self.presentationController = nil
         }
+        self.applicationInForegroundDisposable?.dispose()
     }
     
     func view() -> UIView! {

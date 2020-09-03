@@ -853,6 +853,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
         }
         self.updateVisibleDisposable.dispose()
         self.screenCaptureEventsDisposable?.dispose()
+        self.applicationInForegroundDisposable?.dispose()
     }
     
     @objc private func donePressed() {

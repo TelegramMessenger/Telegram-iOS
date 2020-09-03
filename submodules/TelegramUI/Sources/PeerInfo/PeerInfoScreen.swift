@@ -1417,15 +1417,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     private var didSetReady = false
     
-    var currentHiddenId: AccountRecordId?
-    {
-        didSet {
-            if let (layout, navigationHeight) = self.validLayout {
-                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
-            }
-        }
-    }
-    
     init(controller: PeerInfoScreen, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool, ignoreGroupInCommon: PeerId?) {
         self.controller = controller
         self.context = context
@@ -5523,9 +5514,6 @@ public final class PeerInfoScreen: ViewController {
     
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
-    private var currentHiddenId: AccountRecordId?
-    private var currentHiddenIdDisposable: Disposable?
-    
     public init(context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool = false, ignoreGroupInCommon: PeerId? = nil) {
         self.context = context
         self.peerId = peerId
@@ -5582,9 +5570,9 @@ public final class PeerInfoScreen: ViewController {
             }
             |> distinctUntilChanged
             
-            let accountTabBarAvatarBadge: Signal<Int32, NoError> = combineLatest(notificationsFromAllAccounts, self.accountsAndPeers.get(), context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.get())
-                |> map { notificationsFromAllAccounts, primaryAndOther, currentHiddenId -> Int32 in
-                if !notificationsFromAllAccounts || currentHiddenId != nil {
+            let accountTabBarAvatarBadge: Signal<Int32, NoError> = combineLatest(notificationsFromAllAccounts, self.accountsAndPeers.get())
+                |> map { notificationsFromAllAccounts, primaryAndOther -> Int32 in
+                if !notificationsFromAllAccounts {
                     return 0
                 }
                 let (primary, other) = primaryAndOther
@@ -5598,8 +5586,8 @@ public final class PeerInfoScreen: ViewController {
             }
             |> distinctUntilChanged
             
-            let accountTabBarAvatar: Signal<(UIImage, UIImage)?, NoError> = combineLatest(self.accountsAndPeers.get(), context.sharedContext.presentationData, context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.get())
-            |> map { primaryAndOther, presentationData, currentHiddenId -> (Account, Peer, PresentationTheme)? in
+            let accountTabBarAvatar: Signal<(UIImage, UIImage)?, NoError> = combineLatest(self.accountsAndPeers.get(), context.sharedContext.presentationData)
+            |> map { primaryAndOther, presentationData -> (Account, Peer, PresentationTheme)? in
                 if let primary = primaryAndOther.0, !primaryAndOther.1.isEmpty {
                     return (primary.0, primary.1, presentationData.theme)
                 } else {
@@ -5777,13 +5765,6 @@ public final class PeerInfoScreen: ViewController {
                 }
             }
         })
-        
-        self.currentHiddenIdDisposable = (context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.get() |> deliverOnMainQueue).start(next: { [weak self] currentHiddenId -> Void in
-            guard let strongSelf = self else { return }
-            
-            strongSelf.currentHiddenId = currentHiddenId
-            strongSelf.controllerNode.currentHiddenId = currentHiddenId
-        })
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -5794,7 +5775,6 @@ public final class PeerInfoScreen: ViewController {
         self.presentationDataDisposable?.dispose()
         self.accountsAndPeersDisposable?.dispose()
         self.tabBarItemDisposable?.dispose()
-        self.currentHiddenIdDisposable?.dispose()
     }
     
     override public func loadDisplayNode() {
