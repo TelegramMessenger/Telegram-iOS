@@ -426,44 +426,6 @@ private final class DoubleBottomSplashScreenNode: ViewControllerTracingNode {
 }
 
 private extension UIColor {
-    var lottieColor: String {
-        let (r, g, b, _) = rgba
-        return "\(r),\(g),\(b),1"
-    }
-    
-    func interpolated(to color: UIColor, percentage: CGFloat) -> UIColor {
-        let fromHSBA = hsba
-        let toHSBA = color.hsba
-        let h = fromHSBA.h.interpolated(to: toHSBA.h, percentage: percentage)
-        let s = fromHSBA.s.interpolated(to: toHSBA.s, percentage: percentage)
-        let b = fromHSBA.b.interpolated(to: toHSBA.b, percentage: percentage)
-        let a = fromHSBA.a.interpolated(to: toHSBA.a, percentage: percentage)
-        return UIColor(hue: h, saturation: s, brightness:b, alpha: a)
-    }
-    
-    var hsba: (h: CGFloat, s: CGFloat, b: CGFloat, a: CGFloat) {
-        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        getHue(&h, saturation: &s, brightness:&b, alpha: &a)
-        return (h, s, b, a)
-    }
-    
-    var rgba: (h: CGFloat, s: CGFloat, b: CGFloat, a: CGFloat) {
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        getRed(&r, green: &g, blue:&b, alpha: &a)
-        return (r, g, b, a)
-    }
-    
-    var grayscale: UIColor {
-        let (r, g, b, a) = rgba
-        return UIColor(white: 0.299 * r + 0.587 * g + 0.114 * b, alpha: a)
-    }
-    
-    var complement: UIColor {
-        let (h, s, b, a) = hsba
-        var newHue = h > 0.5 ? h - 0.5 : h + 0.5
-        return UIColor(hue: newHue, saturation: s, brightness:b, alpha: a)
-    }
-    
     var isDark: Bool {
         let color = CIColor(color: self)
         
@@ -474,13 +436,6 @@ private extension UIColor {
         var luma = 0.2126 * red + 0.7152 * green + 0.0722 * blue
         
         return luma < 40
-    }
-}
-
-private extension CGFloat {
-    func interpolated(to value: CGFloat, percentage: CGFloat) -> CGFloat {
-        let delta = value - self
-        return self + delta * percentage
     }
 }
 

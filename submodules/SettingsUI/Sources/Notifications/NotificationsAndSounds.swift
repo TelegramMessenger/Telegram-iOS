@@ -16,7 +16,6 @@ import PresentationDataUtils
 import TelegramNotices
 import NotificationSoundSelectionUI
 import TelegramStringFormatting
-import TelegramUIPreferences
 
 private struct CounterTagSettings: OptionSet {
     var rawValue: Int32
@@ -299,19 +298,19 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
             case .badgeHeader:
                 return 29
             case .includeChannels:
-                return 30
-            case .unreadCountCategory:
-                return 31
-            case .unreadCountCategoryInfo:
                 return 32
-            case .joinedNotifications:
+            case .unreadCountCategory:
                 return 33
-            case .joinedNotificationsInfo:
+            case .unreadCountCategoryInfo:
                 return 34
-            case .reset:
+            case .joinedNotifications:
                 return 35
-            case .resetNotice:
+            case .joinedNotificationsInfo:
                 return 36
+            case .reset:
+                return 37
+            case .resetNotice:
+                return 38
         }
     }
     
