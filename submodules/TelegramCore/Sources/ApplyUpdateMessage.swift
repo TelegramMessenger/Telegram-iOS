@@ -301,20 +301,21 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         var sentStickers: [TelegramMediaFile] = []
         var sentGifs: [TelegramMediaFile] = []
         
-        var updatedGroupingKey: Int64?
-        for (_, _, updatedMessage) in mapping {
-            if let updatedGroupingKey = updatedGroupingKey {
-                assert(updatedGroupingKey == updatedMessage.groupingKey)
+        var updatedGroupingKey: [Int64 : [MessageId]] = [:]
+        for (message, _, updatedMessage) in mapping {
+            if let groupingKey = updatedMessage.groupingKey {
+                var ids = updatedGroupingKey[groupingKey] ?? []
+                ids.append(message.id)
+                updatedGroupingKey[groupingKey] = ids
             }
-            updatedGroupingKey = updatedMessage.groupingKey
         }
         
         if let latestPreviousId = latestPreviousId, let latestIndex = mapping.last?.1 {
             transaction.offsetPendingMessagesTimestamps(lowerBound: latestPreviousId, excludeIds: Set(mapping.map { $0.0.id }), timestamp: latestIndex.timestamp)
         }
         
-        if let updatedGroupingKey = updatedGroupingKey {
-            transaction.updateMessageGroupingKeysAtomically(mapping.map { $0.0.id }, groupingKey: updatedGroupingKey)
+        for (key, ids) in updatedGroupingKey {
+            transaction.updateMessageGroupingKeysAtomically(ids, groupingKey: key)
         }
         
         for (message, _, updatedMessage) in mapping {

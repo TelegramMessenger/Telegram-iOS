@@ -601,7 +601,7 @@ public final class AccountViewTracker {
                                         return .single(nil)
                                     }
                                     |> mapToSignal { result -> Signal<Void, NoError> in
-                                        guard case let .messageViews(viewCounts, _) = result else {
+                                        guard case let .messageViews(viewCounts, _)? = result else {
                                             return .complete()
                                         }
                                         

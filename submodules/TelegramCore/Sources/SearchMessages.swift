@@ -9,7 +9,7 @@ import SyncCore
 public enum SearchMessagesLocation: Equatable {
     case general(tags: MessageTags?)
     case group(PeerGroupId)
-    case peer(peerId: PeerId, fromId: PeerId?, tags: MessageTags?)
+    case peer(peerId: PeerId, fromId: PeerId?, tags: MessageTags?, topMsgId: MessageId?)
     case publicForwards(messageId: MessageId, datacenterId: Int?)
 }
 
@@ -180,7 +180,7 @@ private func mergedResult(_ state: SearchMessagesState) -> SearchMessagesResult 
 public func searchMessages(account: Account, location: SearchMessagesLocation, query: String, state: SearchMessagesState?, limit: Int32 = 100) -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> {
     let remoteSearchResult: Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError>
     switch location {
-        case let .peer(peerId, fromId, tags):
+        case let .peer(peerId, fromId, tags, topMsgId):
             if peerId.namespace == Namespaces.Peer.SecretChat {
                 return account.postbox.transaction { transaction -> (SearchMessagesResult, SearchMessagesState) in
                     var readStates: [PeerId: CombinedPeerReadState] = [:]
