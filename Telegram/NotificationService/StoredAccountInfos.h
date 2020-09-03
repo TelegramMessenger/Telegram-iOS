@@ -50,6 +50,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, strong, readonly) NSString *peerName;
 @property (nonatomic, strong, readonly) NSDictionary<NSNumber *, AccountDatacenterInfo *> *datacenters;
 @property (nonatomic, strong, readonly) AccountNotificationKey *notificationKey;
+@property (nonatomic, readonly) bool isHidden;
 
 @end
 
@@ -57,13 +58,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, strong, readonly) AccountProxyConnection * _Nullable proxy;
 @property (nonatomic, strong, readonly) NSArray<StoredAccountInfo *> *accounts;
-@property (nonatomic, strong, readonly) NSDictionary<NSString *, AccountNotificationKey *> * _Nullable hiddenNotificationKeys;
 
 + (StoredAccountInfos * _Nullable)loadFromPath:(NSString *)path;
 
 @end
 
-NSDictionary * _Nullable decryptedNotificationPayload(NSArray<StoredAccountInfo *> *accounts, NSData *data, int *selectedAccountIndex);
-NSDictionary * _Nullable decryptedHiddenAccountNotificationPayload(NSDictionary<NSString *, AccountNotificationKey *> * _Nullable hiddenNotificationKeys, NSData *data, int64_t *accountId);
+NSDictionary * _Nullable decryptedNotificationPayload(NSArray<StoredAccountInfo *> *accounts, NSData *data, int *selectedAccountIndex, bool *isHidden);
 
 NS_ASSUME_NONNULL_END

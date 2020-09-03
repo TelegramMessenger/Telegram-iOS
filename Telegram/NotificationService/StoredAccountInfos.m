@@ -210,7 +210,7 @@
 
 @implementation StoredAccountInfo
 
-- (instancetype)initWithAccountId:(int64_t)accountId primaryId:(int32_t)primaryId isTestingEnvironment:(bool)isTestingEnvironment peerName:(NSString *)peerName datacenters:(NSDictionary<NSNumber *, AccountDatacenterInfo *> *)datacenters notificationKey:(AccountNotificationKey *)notificationKey {
+- (instancetype)initWithAccountId:(int64_t)accountId primaryId:(int32_t)primaryId isTestingEnvironment:(bool)isTestingEnvironment peerName:(NSString *)peerName datacenters:(NSDictionary<NSNumber *, AccountDatacenterInfo *> *)datacenters notificationKey:(AccountNotificationKey *)notificationKey isHidden:(bool)isHidden {
     self = [super init];
     if (self != nil) {
         _accountId = accountId;
@@ -219,6 +219,7 @@
         _peerName = peerName;
         _datacenters = datacenters;
         _notificationKey = notificationKey;
+        _isHidden = isHidden;
     }
     return self;
 }
@@ -243,6 +244,13 @@
     }
     
     bool isTestingEnvironment = [isTestingEnvironmentNumber intValue] != 0;
+    
+    NSNumber *isHiddenNumber = dict[@"isHidden"];
+    if (![isHiddenNumber isKindOfClass:[NSNumber class]]) {
+        return nil;
+    }
+    
+    bool isHidden = [isHiddenNumber intValue] != 0;
     
     NSString *peerNameString = dict[@"peerName"];
     if (![peerNameString isKindOfClass:[NSString class]]) {
@@ -284,19 +292,18 @@
         return nil;
     }
     
-    return [[StoredAccountInfo alloc] initWithAccountId:accountId primaryId:primaryId isTestingEnvironment:isTestingEnvironment peerName:peerName datacenters:datacenters notificationKey:notificationKey];
+    return [[StoredAccountInfo alloc] initWithAccountId:accountId primaryId:primaryId isTestingEnvironment:isTestingEnvironment peerName:peerName datacenters:datacenters notificationKey:notificationKey isHidden:isHidden];
 }
 
 @end
 
 @implementation StoredAccountInfos
 
-- (instancetype)initWithProxy:(AccountProxyConnection * _Nullable)proxy accounts:(NSArray<StoredAccountInfo *> *)accounts hiddenNotificationKeys:(NSDictionary<NSString *, AccountNotificationKey *> * _Nullable)hiddenNotificationKeys {
+- (instancetype)initWithProxy:(AccountProxyConnection * _Nullable)proxy accounts:(NSArray<StoredAccountInfo *> *)accounts {
     self = [super init];
     if (self != nil) {
         _proxy = proxy;
         _accounts = accounts;
-        _hiddenNotificationKeys = hiddenNotificationKeys;
     }
     return self;
 }
@@ -331,19 +338,7 @@
         }
     }
     
-    NSMutableDictionary<NSString *, AccountNotificationKey *> * _Nullable hiddenNotificationKeys = [[NSMutableDictionary alloc] init];
-    NSDictionary *hiddenKeys = dict[@"hiddenNotificationKeys"];
-    if ([hiddenKeys isKindOfClass:[NSDictionary class]]) {
-        for (NSString *accountRecordId in hiddenKeys) {
-            id notificationKeyDict = hiddenKeys[accountRecordId];
-            if ([notificationKeyDict isKindOfClass:[NSDictionary class]]) {
-                AccountNotificationKey *notificationKey = [AccountNotificationKey parse:notificationKeyDict];
-                hiddenNotificationKeys[accountRecordId] = notificationKey;
-            }
-        }
-    }
-    
-    return [[StoredAccountInfos alloc] initWithProxy:proxy accounts:accounts hiddenNotificationKeys:hiddenNotificationKeys];
+    return [[StoredAccountInfos alloc] initWithProxy:proxy accounts:accounts];
 }
 
 @end
@@ -370,7 +365,7 @@ static NSData *concatData3(NSData *data1, NSData *data2, NSData *data3) {
     return data;
 }
 
-NSDictionary * _Nullable decryptedNotificationPayload(NSArray<StoredAccountInfo *> *accounts, NSData *data, int *selectedAccountIndex) {
+NSDictionary * _Nullable decryptedNotificationPayload(NSArray<StoredAccountInfo *> *accounts, NSData *data, int *selectedAccountIndex, bool *isHidden) {
     if (data.length < 8 + 16) {
         return nil;
     }
@@ -419,63 +414,7 @@ NSDictionary * _Nullable decryptedNotificationPayload(NSArray<StoredAccountInfo 
         }
         if (selectedAccountIndex != nil) {
             *selectedAccountIndex = accountIndex;
-        }
-        return dict;
-    }
-    return nil;
-}
-
-NSDictionary * _Nullable decryptedHiddenAccountNotificationPayload(NSDictionary<NSString *, AccountNotificationKey *> * _Nullable hiddenNotificationKeys, NSData *data, int64_t *accountId) {
-    if (hiddenNotificationKeys == nil) {
-        return nil;
-    }
-    
-    if (data.length < 8 + 16) {
-        return nil;
-    }
-    
-   for (NSString *accountRecordId in hiddenNotificationKeys) {
-        AccountNotificationKey *notificationKey = hiddenNotificationKeys[accountRecordId];
-        
-        if (![[data subdataWithRange:NSMakeRange(0, 8)] isEqualToData:notificationKey.keyId]) {
-            continue;
-        }
-        
-        int x = 8;
-        NSData *msgKey = [data subdataWithRange:NSMakeRange(8, 16)];
-        NSData *rawData = [data subdataWithRange:NSMakeRange(8 + 16, data.length - (8 + 16))];
-        
-        NSData *sha256_a = sha256Digest(concatData(msgKey, [notificationKey.data subdataWithRange:NSMakeRange(x, 36)]));
-        NSData *sha256_b = sha256Digest(concatData([notificationKey.data subdataWithRange:NSMakeRange(40 + x, 36)], msgKey));
-        NSData *aesKey = concatData3([sha256_a subdataWithRange:NSMakeRange(0, 8)], [sha256_b subdataWithRange:NSMakeRange(8, 16)], [sha256_a subdataWithRange:NSMakeRange(24, 8)]);
-        NSData *aesIv = concatData3([sha256_b subdataWithRange:NSMakeRange(0, 8)], [sha256_a subdataWithRange:NSMakeRange(8, 16)], [sha256_b subdataWithRange:NSMakeRange(24, 8)]);
-        
-        NSData *decryptedData = MTAesDecrypt(rawData, aesKey, aesIv);
-        if (decryptedData.length <= 4) {
-            return nil;
-        }
-        
-        int32_t dataLength = 0;
-        [decryptedData getBytes:&dataLength range:NSMakeRange(0, 4)];
-        
-        if (dataLength < 0 || dataLength > decryptedData.length - 4) {
-            return nil;
-        }
-        
-        NSData *checkMsgKeyLarge = sha256Digest(concatData([notificationKey.data subdataWithRange:NSMakeRange(88 + x, 32)], decryptedData));
-        NSData *checkMsgKey = [checkMsgKeyLarge subdataWithRange:NSMakeRange(8, 16)];
-        
-        if (![checkMsgKey isEqualToData:msgKey]) {
-            return nil;
-        }
-        
-        NSData *contentData = [decryptedData subdataWithRange:NSMakeRange(4, dataLength)];
-        NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:contentData options:0 error:nil];
-        if (![dict isKindOfClass:[NSDictionary class]]) {
-            return nil;
-        }
-        if (accountId != nil) {
-            *accountId = [accountRecordId longLongValue];
+            *isHidden = account.isHidden;
         }
         return dict;
     }

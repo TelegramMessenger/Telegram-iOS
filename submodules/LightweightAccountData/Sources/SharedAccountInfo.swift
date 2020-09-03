@@ -67,35 +67,35 @@ public struct StoredAccountInfo: Codable {
     public let peerName: String
     public let datacenters: [Int32: AccountDatacenterInfo]
     public let notificationKey: AccountNotificationKey
+    public let isHidden: Bool
     
-    public init(id: Int64, primaryId: Int32, isTestingEnvironment: Bool, peerName: String, datacenters: [Int32: AccountDatacenterInfo], notificationKey: AccountNotificationKey) {
+    public init(id: Int64, primaryId: Int32, isTestingEnvironment: Bool, peerName: String, datacenters: [Int32: AccountDatacenterInfo], notificationKey: AccountNotificationKey, isHidden: Bool) {
         self.id = id
         self.primaryId = primaryId
         self.isTestingEnvironment = isTestingEnvironment
         self.peerName = peerName
         self.datacenters = datacenters
         self.notificationKey = notificationKey
+        self.isHidden = isHidden
     }
 }
 
 public struct StoredAccountInfos: Codable {
     public let proxy: AccountProxyConnection?
     public let accounts: [StoredAccountInfo]
-    public let hiddenNotificationKeys: [String: AccountNotificationKey]?
     
-    public init(proxy: AccountProxyConnection?, accounts: [StoredAccountInfo], hiddenNotificationKeys: [String: AccountNotificationKey]?) {
+    public init(proxy: AccountProxyConnection?, accounts: [StoredAccountInfo]) {
         self.proxy = proxy
         self.accounts = accounts
-        self.hiddenNotificationKeys = hiddenNotificationKeys
     }
 }
 
 public func loadAccountsData(rootPath: String) -> StoredAccountInfos {
     guard let data = try? Data(contentsOf: URL(fileURLWithPath: rootPath + "/accounts-shared-data")) else {
-        return StoredAccountInfos(proxy: nil, accounts: [], hiddenNotificationKeys: nil)
+        return StoredAccountInfos(proxy: nil, accounts: [])
     }
     guard let value = try? JSONDecoder().decode(StoredAccountInfos.self, from: data) else {
-        return StoredAccountInfos(proxy: nil, accounts: [], hiddenNotificationKeys: nil)
+        return StoredAccountInfos(proxy: nil, accounts: [])
     }
     return value
 }
