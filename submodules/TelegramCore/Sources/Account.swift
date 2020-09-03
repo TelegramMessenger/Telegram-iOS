@@ -729,30 +729,6 @@ public struct MasterNotificationKey: Codable {
     public let data: Data
 }
 
-public func masterNotificationsKey(rootPath: String, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<MasterNotificationKey?, NoError> {
-    let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters)
-    return postbox
-    |> mapToSignal { value -> Signal<MasterNotificationKey?, NoError> in
-        switch value {
-        case let .postbox(postbox):
-            return postbox.transaction(ignoreDisabled: false, { transaction -> MasterNotificationKey? in
-                if let value = transaction.keychainEntryForKey("master-notification-secret"), !value.isEmpty {
-                    let authKeyHash = sha1Digest(value)
-                    let authKeyId = authKeyHash.subdata(in: authKeyHash.count - 8 ..< authKeyHash.count)
-                    let keyData = MasterNotificationKey(id: authKeyId, data: value)
-                    return keyData
-                } else {
-                    return nil
-                }
-            })
-            
-        default:
-            return .complete()
-        }
-    }
-}
-
 public func masterNotificationsKey(account: Account, ignoreDisabled: Bool) -> Signal<MasterNotificationKey, NoError> {
     return masterNotificationsKey(masterNotificationKeyValue: account.masterNotificationKey, postbox: account.postbox, ignoreDisabled: ignoreDisabled)
 }
