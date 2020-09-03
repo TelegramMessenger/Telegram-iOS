@@ -897,7 +897,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
                 
                 let appliedAps: Signal<Never, NoError>
-                let appliedVoip: Signal<Never, NoError>
+//                let appliedVoip: Signal<Never, NoError>
                 
                 if !activeProductionUserIds.contains(account.peerId.id) && !activeTestingUserIds.contains(account.peerId.id) {
                     appliedAps = self.apsNotificationToken
@@ -908,14 +908,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         }
                         return unregisterNotificationToken(account: account, token: token, type: .aps(encrypt: false), otherAccountUserIds: (account.testingEnvironment ? allTestingUserIds : allProductionUserIds).filter({ $0 != account.peerId.id }))
                     }
-                    appliedVoip = self.voipNotificationToken
-                    |> distinctUntilChanged(isEqual: { $0 == $1 })
-                    |> mapToSignal { token -> Signal<Never, NoError> in
-                        guard let token = token else {
-                            return .complete()
-                        }
-                        return unregisterNotificationToken(account: account, token: token, type: .voip, otherAccountUserIds: (account.testingEnvironment ? allTestingUserIds : allProductionUserIds).filter({ $0 != account.peerId.id }))
-                    }
+//                    appliedVoip = self.voipNotificationToken
+//                    |> distinctUntilChanged(isEqual: { $0 == $1 })
+//                    |> mapToSignal { token -> Signal<Never, NoError> in
+//                        guard let token = token else {
+//                            return .complete()
+//                        }
+//                        return unregisterNotificationToken(account: account, token: token, type: .voip, otherAccountUserIds: (account.testingEnvironment ? allTestingUserIds : allProductionUserIds).filter({ $0 != account.peerId.id }))
+//                    }
                 } else {
                     appliedAps = self.apsNotificationToken
                     |> distinctUntilChanged(isEqual: { $0 == $1 })
@@ -931,18 +931,18 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         }
                         return registerNotificationToken(account: account, token: token, type: .aps(encrypt: encrypt), sandbox: sandbox, otherAccountUserIds: (account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.peerId.id }), excludeMutedChats: !settings.includeMuted)
                     }
-                    appliedVoip = self.voipNotificationToken
-                    |> distinctUntilChanged(isEqual: { $0 == $1 })
-                    |> mapToSignal { token -> Signal<Never, NoError> in
-                        guard let token = token else {
-                            return .complete()
-                        }
-                        return registerNotificationToken(account: account, token: token, type: .voip, sandbox: sandbox, otherAccountUserIds: (account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.peerId.id }), excludeMutedChats: !settings.includeMuted)
-                    }
+//                    appliedVoip = self.voipNotificationToken
+//                    |> distinctUntilChanged(isEqual: { $0 == $1 })
+//                    |> mapToSignal { token -> Signal<Never, NoError> in
+//                        guard let token = token else {
+//                            return .complete()
+//                        }
+//                        return registerNotificationToken(account: account, token: token, type: .voip, sandbox: sandbox, otherAccountUserIds: (account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.peerId.id }), excludeMutedChats: !settings.includeMuted)
+//                    }
                 }
                 
                 applied.append(appliedAps)
-                applied.append(appliedVoip)
+//                applied.append(appliedVoip)
             }
             return combineLatest(applied)
             |> ignoreValues
