@@ -29,7 +29,6 @@ func switchToAuthorizedAccount(transaction: AccountManagerModifier, account: Una
     if let currentAuthAttribues = transaction.getCurrentAuth()?.attributes {
         for attribute in currentAuthAttribues {
             if let attribute = attribute as? ContinueDoubleBottomFlowAttribute {
-                account.continueDoubleBottomFlowAccountRecordId = attribute.accountRecordId
                 shouldSwitchToAccount = false
             } else if attribute is HiddenAccountAttribute {
                 attributes.append(attribute)

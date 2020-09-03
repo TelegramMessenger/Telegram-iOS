@@ -957,11 +957,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func beginNewAuthAndContinueDoubleBottomFlow(testingEnvironment: Bool) {
         let _ = self.accountManager.transaction({ transaction -> Void in
-            var attributes: [AccountRecordAttribute] = [AccountEnvironmentAttribute(environment: testingEnvironment ? .test : .production)]
-            if let accountRecordId = transaction.getCurrent()?.0 {
-                attributes.append(ContinueDoubleBottomFlowAttribute(accountRecordId: accountRecordId))
-            }
-            let _ = transaction.createAuth(attributes)
+            let _ = transaction.createAuth([AccountEnvironmentAttribute(environment: testingEnvironment ? .test : .production), ContinueDoubleBottomFlowAttribute()])
         }).start()
     }
     

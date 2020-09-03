@@ -39,10 +39,6 @@ import PresentationDataUtils
 import TelegramIntents
 import AccountUtils
 import CoreSpotlight
-import PasscodeUI
-import LocalAuth
-import TelegramUIPreferences
-import TelegramStringFormatting
 
 #if canImport(BackgroundTasks)
 import BackgroundTasks
@@ -243,8 +239,6 @@ final class SharedApplicationContext {
     }
     
     private let deviceToken = Promise<Data?>(nil)
-    
-    private var doubleBottomAddAccountFlowInProgress = false
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         precondition(!testIsLaunched)
@@ -2581,19 +2575,6 @@ private func downloadHTTPData(url: URL) -> Signal<Data, DownloadFileError> {
             if !completed.with({ $0 }) {
                 downloadTask.cancel()
             }
-        }
-    }
-}
-
-fileprivate extension PostboxAccessChallengeData {
-    public func isEqual(to passcode: String) -> Bool {
-        switch self {
-        case .none:
-            return true
-        case let .numericalPassword(code):
-            return passcode == normalizeArabicNumeralString(code, type: .western)
-        case let .plaintextPassword(code):
-            return passcode == code
         }
     }
 }

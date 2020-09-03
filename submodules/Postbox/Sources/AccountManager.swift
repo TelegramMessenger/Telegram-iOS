@@ -3,7 +3,6 @@ import SwiftSignalKit
 
 public struct AccountManagerModifier {
     public let getRecords: () -> [AccountRecord]
-    public let getAllRecords: () -> [AccountRecord]
     public let updateRecord: (AccountRecordId, (AccountRecord?) -> (AccountRecord?)) -> Void
     public let getCurrent: () -> (AccountRecordId, [AccountRecordAttribute])?
     public let setCurrentId: (AccountRecordId) -> Void
@@ -68,7 +67,6 @@ final class AccountManagerImpl {
     private let hiddenAccountManager: HiddenAccountManager
     
     private var unlockedHiddenAccountRecordIdDisposable: Disposable?
-    private var hiddenRecordIdPromise: ValuePromise<AccountRecordId?>
     
     fileprivate init(queue: Queue, basePath: String, temporarySessionId: Int64, hiddenAccountManager: HiddenAccountManager) {
         let startTime = CFAbsoluteTimeGetCurrent()
@@ -86,7 +84,6 @@ final class AccountManagerImpl {
         self.legacyRecordTable = AccountManagerRecordTable(valueBox: self.valueBox, table: AccountManagerRecordTable.tableSpec(1))
         self.sharedDataTable = AccountManagerSharedDataTable(valueBox: self.valueBox, table: AccountManagerSharedDataTable.tableSpec(2))
         self.noticeTable = NoticeTable(valueBox: self.valueBox, table: NoticeTable.tableSpec(3))
-        self.hiddenRecordIdPromise = hiddenAccountManager.unlockedHiddenAccountRecordIdPromise
         
         do {
             let data = try Data(contentsOf: URL(fileURLWithPath: self.atomicStatePath))
@@ -149,8 +146,6 @@ final class AccountManagerImpl {
                 
                 let transaction = AccountManagerModifier(getRecords: {
                     return self.currentAtomicState.records.map { $0.1 }
-                }, getAllRecords: {
-                    return self.currentAtomicState.records.map { $0.1 }
                 }, updateRecord: { id, update in
                     let current = self.currentAtomicState.records[id]
                     let updated = update(current)
@@ -173,7 +168,7 @@ final class AccountManagerImpl {
                     self.currentAtomicState.currentRecordId = id
                     self.currentMetadataOperations.append(.updateCurrentAccountId(id))
                     self.currentAtomicStateUpdated = true
-                    self.hiddenRecordIdPromise.set(nil)
+                    self.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
                 }, getCurrentAuth: {
                     if let record = self.currentAtomicState.currentAuthRecord {
                         return record

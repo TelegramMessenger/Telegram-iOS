@@ -12,7 +12,7 @@ import ImageBlur
 import FastBlur
 import AppLockState
 
-private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: LockState) -> Bool {
+private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: LockState, isApplicationActive: Bool) -> Bool {
     if state.isManuallyLocked {
         return true
     } else if let autolockTimeout = passcodeSettings.autolockTimeout {
@@ -26,7 +26,7 @@ private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: Loc
             if timestamp.bootTimestamp != applicationActivityTimestamp.bootTimestamp {
                 return true
             }
-            if timestamp.uptime > applicationActivityTimestamp.uptime + autolockTimeout {
+            if timestamp.uptime >= applicationActivityTimestamp.uptime + autolockTimeout {
                 return true
             }
         } else {
@@ -203,7 +203,7 @@ public final class AppLockContextImpl: AppLockContext {
                 
                 strongSelf.autolockTimeout.set(passcodeSettings.autolockTimeout)
                 
-                if isLocked(passcodeSettings: passcodeSettings, state: state) {
+                if isLocked(passcodeSettings: passcodeSettings, state: state, isApplicationActive: appInForeground) {
                     isCurrentlyLocked = true
                     
                     let biometrics: PasscodeEntryControllerBiometricsMode
@@ -313,7 +313,7 @@ public final class AppLockContextImpl: AppLockContext {
     private func updateTimestampRenewTimer(shouldRun: Bool) {
         if shouldRun {
             if self.timestampRenewTimer == nil {
-                let timestampRenewTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
+                let timestampRenewTimer = SwiftSignalKit.Timer(timeout: 5.0, repeat: true, completion: { [weak self] in
                     guard let strongSelf = self else {
                         return
                     }

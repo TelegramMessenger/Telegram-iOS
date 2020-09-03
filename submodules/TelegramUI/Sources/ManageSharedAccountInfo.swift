@@ -4,7 +4,6 @@ import TelegramCore
 import SyncCore
 import Postbox
 import LightweightAccountData
-import BuildConfig
 
 private func accountInfo(account: Account) -> Signal<StoredAccountInfo, NoError> {
     let peerName = account.postbox.transaction { transaction -> String in
