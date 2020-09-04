@@ -86,7 +86,9 @@ public struct StoredAccountInfos: Codable {
     
     public init(proxy: AccountProxyConnection?, accounts: [StoredAccountInfo]) {
         self.proxy = proxy
-        self.accounts = accounts
+        self.accounts = accounts.sorted(by: { lhs, _ in
+            return !lhs.isHidden
+        })
     }
 }
 
