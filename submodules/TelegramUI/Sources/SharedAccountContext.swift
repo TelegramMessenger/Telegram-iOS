@@ -739,7 +739,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             |> distinctUntilChanged
             self.spotlightDataContext = SpotlightDataContext(appBasePath: applicationBindings.containerPath, accountManager: accountManager, accounts: combineLatest(enableSpotlight, self.activeAccounts
             |> map { _, accounts, _ in
-                return accounts.map { _, account, _ in
+                return accounts.filter { !$0.1.isHidden }.map { _, account, _ in
                     return account
                 }
             }) |> map { enableSpotlight, accounts in
