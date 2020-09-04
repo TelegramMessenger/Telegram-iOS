@@ -286,7 +286,7 @@ private enum GalleryMessageHistoryView {
 }
 
 public enum GalleryControllerItemSource {
-    case peerMessagesAtId(MessageId)
+    case peerMessagesAtId(messageId: MessageId, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>)
     case standaloneMessage(Message)
 }
 
@@ -417,7 +417,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
         
         let message: Signal<Message?, NoError>
         switch source {
-            case let .peerMessagesAtId(messageId):
+            case let .peerMessagesAtId(messageId, _, _):
                 message = context.account.postbox.messageAtId(messageId)
             case let .standaloneMessage(m):
                 message = .single(m)
@@ -427,7 +427,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
         |> filter({ $0 != nil })
         |> mapToSignal { message -> Signal<GalleryMessageHistoryView?, NoError> in
             switch source {
-                case .peerMessagesAtId:
+            case let .peerMessagesAtId(_, chatLocation, chatLocationContextHolder):
                     if let tags = tagsForMessage(message!) {
                         let namespaces: MessageIdNamespaces
                         if Namespaces.Message.allScheduled.contains(message!.id.namespace) {
@@ -435,7 +435,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         } else {
                             namespaces = .not(Namespaces.Message.allScheduled)
                         }
-                        return context.account.postbox.aroundMessageHistoryViewForLocation(.peer(message!.id.peerId), anchor: .index(message!.index), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, namespaces: namespaces, orderStatistics: [.combinedLocation])
+                        return context.account.postbox.aroundMessageHistoryViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), anchor: .index(message!.index), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, namespaces: namespaces, orderStatistics: [.combinedLocation])
                         |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
                             let mapped = GalleryMessageHistoryView.view(view)
                             return .single(mapped)
@@ -470,7 +470,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         loop: for i in 0 ..< entries.count {
                             let message = entries[i].message
                             switch source {
-                                case let .peerMessagesAtId(messageId):
+                                case let .peerMessagesAtId(messageId, _, _):
                                     if message.id == messageId {
                                         centralEntryStableId = message.stableId
                                         break loop
@@ -813,7 +813,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
         self.isOpaqueWhenInOverlay = true
         
         switch source {
-        case let .peerMessagesAtId(id):
+        case let .peerMessagesAtId(id, _, _):
             if id.peerId.namespace == Namespaces.Peer.SecretChat {
                 self.screenCaptureEventsDisposable = (screenCaptureEvents()
                 |> deliverOnMainQueue).start(next: { [weak self] _ in
@@ -984,7 +984,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                     }
                     
                     switch strongSelf.source {
-                    case let .peerMessagesAtId(initialMessageId):
+                    case let .peerMessagesAtId(initialMessageId, chatLocation, chatLocationContextHolder):
                         var reloadAroundIndex: MessageIndex?
                         if index <= 2 && strongSelf.hasLeftEntries {
                             reloadAroundIndex = strongSelf.entries.first?.index
@@ -998,7 +998,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                             } else {
                                 namespaces = .not(Namespaces.Message.allScheduled)
                             }
-                            let signal = strongSelf.context.account.postbox.aroundMessageHistoryViewForLocation(.peer(initialMessageId.peerId), anchor: .index(reloadAroundIndex), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [.combinedLocation])
+                            let signal = strongSelf.context.account.postbox.aroundMessageHistoryViewForLocation(strongSelf.context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), anchor: .index(reloadAroundIndex), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [.combinedLocation])
                             |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
                                 let mapped = GalleryMessageHistoryView.view(view)
                                 return .single(mapped)

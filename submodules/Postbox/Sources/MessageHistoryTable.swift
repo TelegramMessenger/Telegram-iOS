@@ -2724,11 +2724,34 @@ final class MessageHistoryTable: Table {
         precondition(fromIndex.id.namespace == toIndex.id.namespace)
         var result: [IntermediateMessage] = []
         if let threadId = threadId {
-            let indices: [MessageIndex]
-            if fromIndex < toIndex {
-                indices = self.threadsTable.laterIndices(threadId: threadId, peerId: peerId, namespace: namespace, index: fromIndex, includeFrom: includeFrom, count: limit)
-            } else {
-                indices = self.threadsTable.earlierIndices(threadId: threadId, peerId: peerId, namespace: namespace, index: fromIndex, includeFrom: includeFrom, count: limit)
+            var indices: [MessageIndex] = []
+            var startIndex = fromIndex
+            var localIncludeFrom = includeFrom
+            while true {
+                let sliceIndices: [MessageIndex]
+                if fromIndex < toIndex {
+                    sliceIndices = self.threadsTable.laterIndices(threadId: threadId, peerId: peerId, namespace: namespace, index: startIndex, includeFrom: localIncludeFrom, count: limit)
+                } else {
+                    sliceIndices = self.threadsTable.earlierIndices(threadId: threadId, peerId: peerId, namespace: namespace, index: startIndex, includeFrom: localIncludeFrom, count: limit)
+                }
+                if sliceIndices.isEmpty {
+                    break
+                }
+                startIndex = sliceIndices[sliceIndices.count - 1]
+                localIncludeFrom = false
+                
+                for index in sliceIndices {
+                    if let tag = tag {
+                        if self.tagsTable.entryExists(tag: tag, index: index) {
+                            indices.append(index)
+                        }
+                    } else {
+                        indices.append(index)
+                    }
+                }
+                if indices.count >= limit {
+                    break
+                }
             }
             for index in indices {
                 if fromIndex < toIndex {
@@ -2746,46 +2769,6 @@ final class MessageHistoryTable: Table {
                     assertionFailure()
                 }
             }
-            
-            // Unoptimized
-            /*var startKey: ValueBoxKey
-            if includeFrom && fromIndex != MessageIndex.upperBound(peerId: peerId, namespace: namespace) {
-                if fromIndex < toIndex {
-                    startKey = self.key(fromIndex).predecessor
-                } else {
-                    startKey = self.key(fromIndex).successor
-                }
-            } else {
-                startKey = self.key(fromIndex)
-            }
-            while true {
-                var found = false
-                var lastKey = startKey
-                self.valueBox.range(self.table, start: startKey, end: self.key(toIndex), values: { key, value in
-                    lastKey = key
-                    found = true
-                    
-                    let message = self.readIntermediateEntry(key, value: value).message
-                    assert(message.id.peerId == peerId && message.id.namespace == namespace)
-                    assert(message.index == extractKey(key))
-                    if message.threadId == threadId {
-                        result.append(message)
-                        
-                        if result.count >= limit {
-                            return false
-                        }
-                    }
-                    return true
-                }, limit: max(64, limit - result.count))
-                
-                if !found {
-                    break
-                }
-                if result.count >= limit {
-                    break
-                }
-                startKey = lastKey
-            }*/
         } else if let tag = tag {
             let indices: [MessageIndex]
             if fromIndex < toIndex {

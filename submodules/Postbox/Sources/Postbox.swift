@@ -2344,14 +2344,17 @@ public final class Postbox {
         }
     }
     
-    func resolvedChatLocationInput(chatLocation: ChatLocationInput) -> Signal<ResolvedChatLocationInput, NoError> {
+    func resolvedChatLocationInput(chatLocation: ChatLocationInput) -> Signal<(ResolvedChatLocationInput, Bool), NoError> {
         switch chatLocation {
         case let .peer(peerId):
-            return .single(.peer(peerId))
+            return .single((.peer(peerId), false))
         case let .external(_, input):
+            var isHoleFill = false
             return input
-            |> map { value -> ResolvedChatLocationInput in
-                return .external(value)
+            |> map { value -> (ResolvedChatLocationInput, Bool) in
+                let wasHoleFill = isHoleFill
+                isHoleFill = true
+                return (.external(value), wasHoleFill)
             }
         }
     }
@@ -2372,8 +2375,10 @@ public final class Postbox {
     
     public func aroundMessageOfInterestHistoryViewForChatLocation(_ chatLocation: ChatLocationInput, count: Int, clipHoles: Bool = true, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData]) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         return self.resolvedChatLocationInput(chatLocation: chatLocation)
-        |> mapToSignal { chatLocation in
-            return self.transactionSignal(userInteractive: true, { subscriber, transaction in
+        |> mapToSignal { chatLocationData in
+            let (chatLocation, isHoleFill) = chatLocationData
+            
+            let signal: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> = self.transactionSignal(userInteractive: true, { subscriber, transaction in
                 let peerIds = self.peerIdsForLocation(chatLocation)
                 
                 var anchor: HistoryViewInputAnchor = .upperBound
@@ -2426,26 +2431,56 @@ public final class Postbox {
                 }
                 return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, count: count, clipHoles: clipHoles, anchor: anchor, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, namespaces: namespaces, orderStatistics: orderStatistics, additionalData: additionalData)
             })
+                
+            return signal
+            |> map { (view, updateType, data) -> (MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?) in
+                if isHoleFill {
+                    return (view, .FillHole, data)
+                } else {
+                    return (view, updateType, data)
+                }
+            }
         }
     }
     
     public func aroundIdMessageHistoryViewForLocation(_ chatLocation: ChatLocationInput, count: Int, clipHoles: Bool = true, messageId: MessageId, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         return self.resolvedChatLocationInput(chatLocation: chatLocation)
-        |> mapToSignal { chatLocation in
-            return self.transactionSignal { subscriber, transaction in
+        |> mapToSignal { chatLocationData in
+            let (chatLocation, isHoleFill) = chatLocationData
+            let signal: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> = self.transactionSignal { subscriber, transaction in
                 let peerIds = self.peerIdsForLocation(chatLocation)
                 return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, count: count, clipHoles: clipHoles, anchor: .message(messageId), fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, namespaces: namespaces, orderStatistics: orderStatistics, additionalData: additionalData)
+            }
+                
+            return signal
+            |> map { (view, updateType, data) -> (MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?) in
+                if isHoleFill {
+                    return (view, .FillHole, data)
+                } else {
+                    return (view, updateType, data)
+                }
             }
         }
     }
     
     public func aroundMessageHistoryViewForLocation(_ chatLocation: ChatLocationInput, anchor: HistoryViewInputAnchor, count: Int, clipHoles: Bool = true, fixedCombinedReadStates: MessageHistoryViewReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         return self.resolvedChatLocationInput(chatLocation: chatLocation)
-        |> mapToSignal { chatLocation in
-            return self.transactionSignal { subscriber, transaction in
+        |> mapToSignal { chatLocationData -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
+            let (chatLocation, isHoleFill) = chatLocationData
+            let signal: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> = self.transactionSignal { subscriber, transaction in
                 let peerIds = self.peerIdsForLocation(chatLocation)
                 
                 return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, count: count, clipHoles: clipHoles, anchor: anchor, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, namespaces: namespaces, orderStatistics: orderStatistics, additionalData: additionalData)
+            }
+                
+            return signal
+            |> map { viewData -> (MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?) in
+                let (view, updateType, data) = viewData
+                if isHoleFill {
+                    return (view, .FillHole, data)
+                } else {
+                    return (view, updateType, data)
+                }
             }
         }
     }

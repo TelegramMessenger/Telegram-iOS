@@ -249,7 +249,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     } else if incoming {
                         hasAvatar = true
                     }
-                case let .replyThread(messageId, _):
+                case let .replyThread(messageId, _, _):
                     if messageId.peerId != item.context.account.peerId {
                         if messageId.peerId.isGroupOrChannel && item.message.author != nil {
                             var isBroadcastChannel = false
@@ -411,7 +411,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                 }
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-                    if case let .replyThread(replyThreadMessageId, _) = item.chatLocation, replyThreadMessageId == replyAttribute.messageId {
+                    if case let .replyThread(replyThreadMessageId, isChannelPost, _) = item.chatLocation, isChannelPost, replyThreadMessageId == replyAttribute.messageId {
                     } else {
                         replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                     }

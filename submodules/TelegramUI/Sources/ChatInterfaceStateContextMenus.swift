@@ -575,6 +575,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         var threadId: Int64?
+        var threadMessageCount: Int = 0
         if case .peer = chatPresentationInterfaceState.chatLocation {
             if let value = messages[0].threadId {
                 threadId = value
@@ -582,6 +583,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 for attribute in messages[0].attributes {
                     if let attribute = attribute as? ReplyThreadMessageAttribute, attribute.count > 0 {
                         threadId = makeMessageThreadId(messages[0].id)
+                        threadMessageCount = Int(attribute.count)
                     }
                 }
             }
@@ -590,7 +592,17 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         if let threadId = threadId {
             let replyThreadId = makeThreadIdMessageId(peerId: messages[0].id.peerId, threadId: threadId)
             //TODO:localize
-            actions.append(.action(ContextMenuActionItem(text: "View Replies", icon: { theme in
+            let text: String
+            if threadMessageCount != 0 {
+                if threadMessageCount == 1 {
+                    text = "View 1 reply"
+                } else {
+                    text = "View \(threadMessageCount) replies"
+                }
+            } else {
+                text = "View Thread"
+            }
+            actions.append(.action(ContextMenuActionItem(text: text, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replies"), color: theme.actionSheet.primaryTextColor)
             }, action: { c, _ in
                 let foundIndex = Promise<ChatReplyThreadMessage?>()
@@ -728,7 +740,11 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopyLink, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
-                let _ = (exportMessageLink(account: context.account, peerId: message.id.peerId, messageId: message.id)
+                var threadMessageId: MessageId?
+                if case let .replyThread(replyThread, _, _) = chatPresentationInterfaceState.chatLocation {
+                    threadMessageId = replyThread
+                }
+                let _ = (exportMessageLink(account: context.account, peerId: message.id.peerId, messageId: message.id, threadMessageId: threadMessageId)
                 |> map { result -> String? in
                     return result
                 }

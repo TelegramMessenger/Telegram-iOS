@@ -347,7 +347,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     
     @objc func contentTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state, let message = self.currentMessage {
-            self.interfaceInteraction?.navigateToMessage(message.id)
+            self.interfaceInteraction?.navigateToMessage(message.id, false)
         }
     }
 }

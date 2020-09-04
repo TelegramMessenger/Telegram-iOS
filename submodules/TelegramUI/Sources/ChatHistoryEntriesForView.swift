@@ -111,6 +111,42 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
         }
     }
     
+    if case let .replyThread(messageId, isChannelPost, _) = location, !isChannelPost {
+        loop: for entry in view.additionalData {
+            switch entry {
+            case let .message(id, message) where id == messageId:
+                if let message = message {
+                    let selection: ChatHistoryMessageSelection
+                    if let selectedMessages = selectedMessages {
+                        selection = .selectable(selected: selectedMessages.contains(message.id))
+                    } else {
+                        selection = .none
+                    }
+                    
+                    var adminRank: CachedChannelAdminRank?
+                    if let author = message.author {
+                        adminRank = adminRanks[author.id]
+                    }
+                    
+                    var contentTypeHint: ChatMessageEntryContentType = .generic
+                    if presentationData.largeEmoji, message.media.isEmpty {
+                        if stickersEnabled && message.text.count == 1, let _ = associatedData.animatedEmojiStickers[message.text.basicEmoji.0] {
+                            contentTypeHint = .animatedEmoji
+                        } else if message.text.count < 10 && messageIsElligibleForLargeEmoji(message) {
+                            contentTypeHint = .largeEmoji
+                        }
+                    }
+                    
+                    
+                    entries.insert(.MessageEntry(message, presentationData, false, nil, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: false, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id])), at: 0)
+                }
+                break loop
+            default:
+                break
+            }
+        }
+    }
+    
     if includeChatInfoEntry {
         if view.earlierId == nil {
             var cachedPeerData: CachedPeerData?

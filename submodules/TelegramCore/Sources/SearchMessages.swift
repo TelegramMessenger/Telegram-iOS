@@ -222,7 +222,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                         flags |= (1 << 0)
                     }
                 }
-                if let topMsgId = topMsgId {
+                if let _ = topMsgId {
                     flags |= (1 << 1)
                 }
                 let peerMessages: Signal<Api.messages.Messages?, NoError>

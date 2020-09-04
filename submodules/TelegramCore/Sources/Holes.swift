@@ -357,7 +357,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             assertionFailure()
                             minMaxRange = 1 ... 1
                             request = .never()
-                    }
+                        }
                 }
                 
                 return request
@@ -419,7 +419,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     return withResolvedAssociatedMessages(postbox: postbox, source: source, peers: Dictionary(peers.map({ ($0.id, $0) }), uniquingKeysWith: { lhs, _ in lhs }), storeMessages: storeMessages, { transaction, additionalPeers, additionalMessages -> IndexSet in
                         let _ = transaction.addMessages(storeMessages, location: .Random)
                         let _ = transaction.addMessages(additionalMessages, location: .Random)
-                        let filledRange: ClosedRange<MessageId.Id>
+                        var filledRange: ClosedRange<MessageId.Id>
                         let ids = storeMessages.compactMap { message -> MessageId.Id? in
                             switch message.id {
                             case let .Id(id):
@@ -444,6 +444,11 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             switch direction {
                                 case let .aroundId(aroundId):
                                     filledRange = min(aroundId.id, messageRange.lowerBound) ... max(aroundId.id, messageRange.upperBound)
+                                    if threadId != nil {
+                                        if ids.count <= count / 2 - 1 {
+                                            filledRange = minMaxRange
+                                        }
+                                    }
                                 case let .range(start, end):
                                     if start.id <= end.id {
                                         let minBound = start.id

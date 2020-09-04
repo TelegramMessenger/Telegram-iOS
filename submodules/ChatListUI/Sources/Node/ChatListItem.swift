@@ -637,7 +637,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         if let peer = peer {
             var overrideImage: AvatarNodeImageOverride?
-            if peer.id == item.context.account.peerId && !displayAsMessage {
+            if peer.id.isReplies {
+                overrideImage = .savedMessagesIcon
+            } else if peer.id == item.context.account.peerId && !displayAsMessage {
                 overrideImage = .savedMessagesIcon
             } else if peer.isDeleted {
                 overrideImage = .deletedIcon

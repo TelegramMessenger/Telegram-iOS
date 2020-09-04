@@ -773,7 +773,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         let nameFont = Font.medium(fontSize)
 
         let inlineBotPrefixFont = Font.regular(fontSize)
-        let inlineBotNameFont = nameFont
         
         let baseWidth = params.width - params.leftInset - params.rightInset
         
@@ -792,7 +791,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         var isCrosspostFromChannel = false
         if let _ = sourceReference {
-            if firstMessage.id.peerId != item.context.account.peerId {
+            if !firstMessage.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                 isCrosspostFromChannel = true
             }
         }
@@ -809,13 +808,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         switch item.chatLocation {
         case let .peer(peerId):
             chatLocationPeerId = peerId
-        case let .replyThread(messageId, _):
+        case let .replyThread(messageId, _, _):
             chatLocationPeerId = messageId.peerId
         }
         
         do {
             let peerId = chatLocationPeerId
-            if item.message.id.peerId == item.context.account.peerId {
+            if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                 if let forwardInfo = item.content.firstMessage.forwardInfo {
                     ignoreForward = true
                     effectiveAuthor = forwardInfo.author
@@ -838,7 +837,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 }
             }
         
-            if peerId != item.context.account.peerId {
+            if !peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                 if peerId.isGroupOrChannel && effectiveAuthor != nil {
                     var isBroadcastChannel = false
                     if let peer = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
@@ -871,7 +870,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         var needShareButton = false
         if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
             needShareButton = false
-        } else if item.message.id.peerId == item.context.account.peerId {
+        } else if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
             if let _ = sourceReference {
                 needShareButton = true
             }
@@ -1003,7 +1002,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     inlineBotNameString = attribute.title
                 }
             } else if let attribute = attribute as? ReplyMessageAttribute {
-                if case let .replyThread(replyThreadMessageId, _) = item.chatLocation, replyThreadMessageId == attribute.messageId {
+                if case let .replyThread(replyThreadMessageId, isChannelPost, _) = item.chatLocation, isChannelPost, replyThreadMessageId == attribute.messageId {
                 } else {
                     replyMessage = firstMessage.associatedMessages[attribute.messageId]
                 }
@@ -1677,7 +1676,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 updatedShareButtonNode = currentShareButtonNode
                 if item.presentationData.theme !== currentItem?.presentationData.theme {
                     let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
-                    if item.message.id.peerId == item.context.account.peerId {
+                    if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                         updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
                     } else {
                         updatedShareButtonBackground = graphics.chatBubbleShareButtonImage
@@ -1687,7 +1686,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 let buttonNode = HighlightableButtonNode()
                 let buttonIcon: UIImage?
                 let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
-                if item.message.id.peerId == item.context.account.peerId {
+                if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                     buttonIcon = graphics.chatBubbleNavigateButtonImage
                 } else {
                     buttonIcon = graphics.chatBubbleShareButtonImage
@@ -2425,7 +2424,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             var openPeerId = item.effectiveAuthorId ?? author.id
                             var navigate: ChatControllerInteractionNavigateToPeer
                             
-                            if item.content.firstMessage.id.peerId == item.context.account.peerId {
+                            if item.content.firstMessage.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                                 navigate = .chat(textInputState: nil, subject: nil, peekData: nil)
                             } else {
                                 navigate = .info
@@ -2441,7 +2440,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
                                 item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
                             } else {
-                                if item.message.id.peerId == item.context.account.peerId, let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
+                                if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId), let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
                                     if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
                                     } else if case .member = channel.participationStatus {
                                     } else {
@@ -3008,7 +3007,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     
     @objc func shareButtonPressed() {
         if let item = self.item {
-            if item.content.firstMessage.id.peerId == item.context.account.peerId {
+            if item.content.firstMessage.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                 for attribute in item.content.firstMessage.attributes {
                     if let attribute = attribute as? SourceReferenceMessageAttribute {
                         item.controllerInteraction.navigateToMessage(item.content.firstMessage.id, attribute.messageId)

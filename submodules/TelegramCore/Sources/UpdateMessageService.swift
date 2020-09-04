@@ -58,24 +58,23 @@ class UpdateMessageService: NSObject, MTMessageService {
                     self.putNext(groups)
                 }
             case let .updateShortChatMessage(flags, id, fromId, chatId, message, pts, ptsCount, date, fwdFrom, viaBotId, replyToMsgId, entities):
-                let generatedMessage = Api.Message.message(flags: flags, id: id, fromId: .peerChat(chatId: fromId), toId: Api.Peer.peerChat(chatId: chatId), fwdFrom: fwdFrom, viaBotId: viaBotId, replyToMsgId: replyToMsgId, replyToTopId: nil, date: date, message: message, media: Api.MessageMedia.messageMediaEmpty, replyMarkup: nil, entities: entities, views: nil, forwards: nil, replies: nil, editDate: nil, postAuthor: nil, groupedId: nil, restrictionReason: nil)
+                let generatedMessage = Api.Message.message(flags: flags, id: id, fromId: .peerChat(chatId: fromId), peerId: Api.Peer.peerChat(chatId: chatId), fwdFrom: fwdFrom, viaBotId: viaBotId, replyToMsgId: replyToMsgId, replyToTopId: nil, date: date, message: message, media: Api.MessageMedia.messageMediaEmpty, replyMarkup: nil, entities: entities, views: nil, forwards: nil, replies: nil, editDate: nil, postAuthor: nil, groupedId: nil, restrictionReason: nil)
                 let update = Api.Update.updateNewMessage(message: generatedMessage, pts: pts, ptsCount: ptsCount)
                 let groups = groupUpdates([update], users: [], chats: [], date: date, seqRange: nil)
                 if groups.count != 0 {
                     self.putNext(groups)
                 }
             case let .updateShortMessage(flags, id, userId, message, pts, ptsCount, date, fwdFrom, viaBotId, replyToMsgId, entities):
-                let generatedFromId: Int32
-                let generatedToId: Api.Peer
-                if (Int(flags) & 2) != 0 {
-                    generatedFromId = self.peerId.id
-                    generatedToId = Api.Peer.peerUser(userId: userId)
+                let generatedFromId: Api.Peer
+                if (Int(flags) & 1 << 1) != 0 {
+                    generatedFromId = Api.Peer.peerUser(userId: self.peerId.id)
                 } else {
-                    generatedFromId = userId
-                    generatedToId = Api.Peer.peerUser(userId: self.peerId.id)
+                    generatedFromId = Api.Peer.peerUser(userId: userId)
                 }
                 
-                let generatedMessage = Api.Message.message(flags: flags, id: id, fromId: .peerUser(userId: userId), toId: generatedToId, fwdFrom: fwdFrom, viaBotId: viaBotId, replyToMsgId: replyToMsgId, replyToTopId: nil, date: date, message: message, media: Api.MessageMedia.messageMediaEmpty, replyMarkup: nil, entities: entities, views: nil, forwards: nil, replies: nil, editDate: nil, postAuthor: nil, groupedId: nil, restrictionReason: nil)
+                let generatedPeerId = Api.Peer.peerUser(userId: userId)
+                
+                let generatedMessage = Api.Message.message(flags: flags, id: id, fromId: generatedFromId, peerId: generatedPeerId, fwdFrom: fwdFrom, viaBotId: viaBotId, replyToMsgId: replyToMsgId, replyToTopId: nil, date: date, message: message, media: Api.MessageMedia.messageMediaEmpty, replyMarkup: nil, entities: entities, views: nil, forwards: nil, replies: nil, editDate: nil, postAuthor: nil, groupedId: nil, restrictionReason: nil)
                 let update = Api.Update.updateNewMessage(message: generatedMessage, pts: pts, ptsCount: ptsCount)
                 let groups = groupUpdates([update], users: [], chats: [], date: date, seqRange: nil)
                 if groups.count != 0 {

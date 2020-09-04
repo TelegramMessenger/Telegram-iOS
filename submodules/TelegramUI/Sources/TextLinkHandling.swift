@@ -58,6 +58,10 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                         if let navigationController = controller.navigationController as? NavigationController {
                             context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: .message(messageId)))
                         }
+                    case let .replyThreadMessage(replyThreadMessageId, isChannelPost, maxReadMessageId, messageId):
+                        if let navigationController = controller.navigationController as? NavigationController {
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .replyThread(threadMessageId: replyThreadMessageId, isChannelPost: isChannelPost, maxReadMessageId: maxReadMessageId), subject: .message(messageId)))
+                        }
                     case let .stickerPack(name):
                         let packReference: StickerPackReference = .name(name)
                         controller.present(StickerPackScreen(context: context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controller.navigationController as? NavigationController), in: .window(.root))

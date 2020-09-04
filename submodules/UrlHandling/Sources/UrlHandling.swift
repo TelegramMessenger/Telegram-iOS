@@ -18,6 +18,7 @@ public enum ParsedInternalPeerUrlParameter {
     case botStart(String)
     case groupBotStart(String)
     case channelMessage(Int32)
+    case replyThread(Int32, Int32)
 }
 
 public enum ParsedInternalUrl {
@@ -243,7 +244,24 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         return nil
                     }
                 } else if let value = Int(pathComponents[1]) {
-                    return .peerName(peerName, .channelMessage(Int32(value)))
+                    var commentId: Int32?
+                    if let queryItems = components.queryItems {
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "comment" {
+                                    if let intValue = Int32(value) {
+                                        commentId = intValue
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if let commentId = commentId {
+                        return .peerName(peerName, .replyThread(Int32(value), commentId))
+                    } else {
+                        return .peerName(peerName, .channelMessage(Int32(value)))
+                    }
                 } else {
                     return nil
                 }
@@ -269,26 +287,35 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                     }
                 }
             }
-            |> map { peer -> ResolvedUrl? in
+            |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
                 if let peer = peer {
                     if let parameter = parameter {
                         switch parameter {
                             case let .botStart(payload):
-                                return .botStart(peerId: peer.id, payload: payload)
+                                return .single(.botStart(peerId: peer.id, payload: payload))
                             case let .groupBotStart(payload):
-                                return .groupBotStart(peerId: peer.id, payload: payload)
+                                return .single(.groupBotStart(peerId: peer.id, payload: payload))
                             case let .channelMessage(id):
-                                return .channelMessage(peerId: peer.id, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id))
+                                return .single(.channelMessage(peerId: peer.id, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id)))
+                            case let .replyThread(id, replyId):
+                                let replyThreadMessageId = MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id)
+                                return fetchChannelReplyThreadMessage(account: account, messageId: replyThreadMessageId)
+                                |> map { result -> ResolvedUrl? in
+                                    guard let result = result else {
+                                        return .channelMessage(peerId: peer.id, messageId: replyThreadMessageId)
+                                    }
+                                    return .replyThreadMessage(replyThreadMessageId: result.messageId, isChannelPost: true, maxReadMessageId: result.maxReadMessageId, messageId: MessageId(peerId: result.messageId.peerId, namespace: Namespaces.Message.Cloud, id: replyId))
+                                }
                         }
                     } else {
                         if let peer = peer as? TelegramUser, peer.botInfo == nil {
-                            return .peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil))
+                            return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
                         } else {
-                            return .peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil))
+                            return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
                         }
                     }
                 } else {
-                    return .peer(nil, .info)
+                    return .single(.peer(nil, .info))
                 }
             }
         case let .peerId(peerId):

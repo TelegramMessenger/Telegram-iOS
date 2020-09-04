@@ -28,6 +28,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private var currentMessage: Message?
     private var previousMediaReference: AnyMediaReference?
     
+    private var isReplyThread: Bool = false
+    
     private let fetchDisposable = MetaDisposable()
 
     private let queue = Queue()
@@ -121,9 +123,9 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         } else {
             isReplyThread = false
         }
+        self.isReplyThread = isReplyThread
         
         self.closeButton.isHidden = isReplyThread
-        self.tapButton.isUserInteractionEnabled = !isReplyThread
         
         var messageUpdated = false
         if let currentMessage = self.currentMessage, let pinnedMessage = interfaceState.pinnedMessage {
@@ -296,7 +298,15 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     
     @objc func tapped() {
         if let interfaceInteraction = self.interfaceInteraction, let message = self.currentMessage {
-            interfaceInteraction.navigateToMessage(message.id)
+            if self.isReplyThread {
+                if let sourceReference = message.sourceReference {
+                    interfaceInteraction.navigateToMessage(sourceReference.messageId, true)
+                } else {
+                    interfaceInteraction.navigateToMessage(message.id, false)
+                }
+            } else {
+                interfaceInteraction.navigateToMessage(message.id, false)
+            }
         }
     }
     

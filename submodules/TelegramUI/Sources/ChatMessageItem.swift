@@ -119,12 +119,12 @@ private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs
         }
     }
     
-    if lhs.id.peerId == accountPeerId {
+    if lhs.id.peerId.isRepliesOrSavedMessages(accountPeerId: accountPeerId) {
         if let forwardInfo = lhs.forwardInfo {
             lhsEffectiveAuthor = forwardInfo.author
         }
     }
-    if rhs.id.peerId == accountPeerId {
+    if rhs.id.peerId.isRepliesOrSavedMessages(accountPeerId: accountPeerId) {
         if let forwardInfo = rhs.forwardInfo {
             rhsEffectiveAuthor = forwardInfo.author
         }
@@ -317,13 +317,13 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         switch chatLocation {
         case let .peer(peerId):
             messagePeerId = peerId
-        case let .replyThread(messageId, _):
+        case let .replyThread(messageId, _, _):
             messagePeerId = messageId.peerId
         }
         
         do {
             let peerId = messagePeerId
-            if peerId == context.account.peerId {
+            if peerId.isRepliesOrSavedMessages(accountPeerId: context.account.peerId) {
                 if let forwardInfo = content.firstMessage.forwardInfo {
                     effectiveAuthor = forwardInfo.author
                     if effectiveAuthor == nil, let authorSignature = forwardInfo.authorSignature  {

@@ -2,7 +2,7 @@ import Foundation
 
 public enum MessageHistoryInput: Equatable, Hashable {
     case automatic(MessageTags?)
-    case external(MessageHistoryViewExternalInput)
+    case external(MessageHistoryViewExternalInput, MessageTags?)
     
     public func hash(into hasher: inout Hasher) {
         switch self {
@@ -19,8 +19,8 @@ private extension MessageHistoryInput {
         switch self {
         case let .automatic(tag):
             return postbox.messageHistoryTable.fetch(peerId: peerId, namespace: namespace, tag: tag, threadId: nil, from: fromIndex, includeFrom: includeFrom, to: toIndex, limit: limit)
-        case let .external(input):
-            return postbox.messageHistoryTable.fetch(peerId: peerId, namespace: namespace, tag: nil, threadId: input.threadId, from: fromIndex, includeFrom: includeFrom, to: toIndex, limit: limit)
+        case let .external(input, tag):
+            return postbox.messageHistoryTable.fetch(peerId: peerId, namespace: namespace, tag: tag, threadId: input.threadId, from: fromIndex, includeFrom: includeFrom, to: toIndex, limit: limit)
         }
     }
     
@@ -344,7 +344,7 @@ private func sampleHoleRanges(input: MessageHistoryInput, orderedEntriesBySpace:
     switch input {
     case let .automatic(value):
         tag = value
-    case let .external(value):
+    case let .external(value, _):
         threadId = value.threadId
     }
     
@@ -858,7 +858,7 @@ final class HistoryViewLoadedState {
                 input = .automatic(tag)
             case let .external(external):
                 peerIds.append(external.peerId)
-                input = .external(external)
+                input = .external(external, tag)
         }
         self.input = input
         
@@ -1347,7 +1347,7 @@ private func fetchHoles(postbox: Postbox, locations: MessageHistoryViewInput, ta
                 if namespaces.contains(namespace) {
                     if !indices.isEmpty {
                         let peerIdAndNamespace = PeerIdAndNamespace(peerId: peerId, namespace: namespace)
-                        assert(canContainHoles(peerIdAndNamespace, input: .external(input), seedConfiguration: postbox.seedConfiguration))
+                        assert(canContainHoles(peerIdAndNamespace, input: .external(input, tag), seedConfiguration: postbox.seedConfiguration))
                         holesBySpace[peerIdAndNamespace] = indices
                     }
                 }

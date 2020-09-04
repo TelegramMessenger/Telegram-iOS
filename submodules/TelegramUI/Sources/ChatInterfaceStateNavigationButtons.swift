@@ -65,11 +65,23 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
 
 func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: ChatPresentationInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?, chatInfoNavigationButton: ChatNavigationButton?) -> ChatNavigationButton? {
     if case .replyThread = presentationInterfaceState.chatLocation {
-        return nil
+        if case .search = currentButton?.action {
+            return currentButton
+        } else {
+            let buttonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)
+            buttonItem.accessibilityLabel = strings.Conversation_Search
+            return ChatNavigationButton(action: .search, buttonItem: buttonItem)
+        }
     }
     if case let .peer(peerId) = presentationInterfaceState.chatLocation {
-        if peerId.id == 708513 {
-            return nil
+        if peerId.isReplies {
+            if case .search = currentButton?.action {
+                return currentButton
+            } else {
+                let buttonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)
+                buttonItem.accessibilityLabel = strings.Conversation_Search
+                return ChatNavigationButton(action: .search, buttonItem: buttonItem)
+            }
         }
     }
     if let _ = presentationInterfaceState.interfaceState.selectionState {

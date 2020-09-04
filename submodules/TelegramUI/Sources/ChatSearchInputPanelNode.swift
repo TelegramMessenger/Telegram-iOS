@@ -189,6 +189,10 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
                 canSearchMembers = false
             }
         }
+        if case .replyThread = interfaceState.chatLocation {
+            self.calendarButton.isHidden = true
+            canSearchMembers = false
+        }
         self.membersButton.isHidden = (!(interfaceState.search?.query.isEmpty ?? true)) || self.displayActivity || !canSearchMembers
         
         let resultsEnabled = (resultCount ?? 0) > 0

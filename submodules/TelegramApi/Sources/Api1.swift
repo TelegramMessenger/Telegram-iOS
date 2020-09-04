@@ -17373,8 +17373,8 @@ public extension Api {
     }
     public enum Message: TypeConstructorDescription {
         case messageEmpty(id: Int32)
-        case message(flags: Int32, id: Int32, fromId: Api.Peer, toId: Api.Peer, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyToMsgId: Int32?, replyToTopId: Int32?, date: Int32, message: String, media: Api.MessageMedia?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, views: Int32?, forwards: Int32?, replies: Api.MessageReplies?, editDate: Int32?, postAuthor: String?, groupedId: Int64?, restrictionReason: [Api.RestrictionReason]?)
-        case messageService(flags: Int32, id: Int32, fromId: Api.Peer, toId: Api.Peer, replyToMsgId: Int32?, date: Int32, action: Api.MessageAction)
+        case message(flags: Int32, id: Int32, fromId: Api.Peer, peerId: Api.Peer, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyToMsgId: Int32?, replyToTopId: Int32?, date: Int32, message: String, media: Api.MessageMedia?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, views: Int32?, forwards: Int32?, replies: Api.MessageReplies?, editDate: Int32?, postAuthor: String?, groupedId: Int64?, restrictionReason: [Api.RestrictionReason]?)
+        case messageService(flags: Int32, id: Int32, fromId: Api.Peer, peerId: Api.Peer, replyToMsgId: Int32?, date: Int32, action: Api.MessageAction)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -17384,14 +17384,14 @@ public extension Api {
                     }
                     serializeInt32(id, buffer: buffer, boxed: false)
                     break
-                case .message(let flags, let id, let fromId, let toId, let fwdFrom, let viaBotId, let replyToMsgId, let replyToTopId, let date, let message, let media, let replyMarkup, let entities, let views, let forwards, let replies, let editDate, let postAuthor, let groupedId, let restrictionReason):
+                case .message(let flags, let id, let fromId, let peerId, let fwdFrom, let viaBotId, let replyToMsgId, let replyToTopId, let date, let message, let media, let replyMarkup, let entities, let views, let forwards, let replies, let editDate, let postAuthor, let groupedId, let restrictionReason):
                     if boxed {
-                        buffer.appendInt32(-146464169)
+                        buffer.appendInt32(951660196)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
                     fromId.serialize(buffer, true)
-                    toId.serialize(buffer, true)
+                    peerId.serialize(buffer, true)
                     if Int(flags) & Int(1 << 2) != 0 {fwdFrom!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 11) != 0 {serializeInt32(viaBotId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 3) != 0 {serializeInt32(replyToMsgId!, buffer: buffer, boxed: false)}
@@ -17417,14 +17417,14 @@ public extension Api {
                         item.serialize(buffer, true)
                     }}
                     break
-                case .messageService(let flags, let id, let fromId, let toId, let replyToMsgId, let date, let action):
+                case .messageService(let flags, let id, let fromId, let peerId, let replyToMsgId, let date, let action):
                     if boxed {
-                        buffer.appendInt32(-116603007)
+                        buffer.appendInt32(797820163)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
                     fromId.serialize(buffer, true)
-                    toId.serialize(buffer, true)
+                    peerId.serialize(buffer, true)
                     if Int(flags) & Int(1 << 3) != 0 {serializeInt32(replyToMsgId!, buffer: buffer, boxed: false)}
                     serializeInt32(date, buffer: buffer, boxed: false)
                     action.serialize(buffer, true)
@@ -17436,10 +17436,10 @@ public extension Api {
         switch self {
                 case .messageEmpty(let id):
                 return ("messageEmpty", [("id", id)])
-                case .message(let flags, let id, let fromId, let toId, let fwdFrom, let viaBotId, let replyToMsgId, let replyToTopId, let date, let message, let media, let replyMarkup, let entities, let views, let forwards, let replies, let editDate, let postAuthor, let groupedId, let restrictionReason):
-                return ("message", [("flags", flags), ("id", id), ("fromId", fromId), ("toId", toId), ("fwdFrom", fwdFrom), ("viaBotId", viaBotId), ("replyToMsgId", replyToMsgId), ("replyToTopId", replyToTopId), ("date", date), ("message", message), ("media", media), ("replyMarkup", replyMarkup), ("entities", entities), ("views", views), ("forwards", forwards), ("replies", replies), ("editDate", editDate), ("postAuthor", postAuthor), ("groupedId", groupedId), ("restrictionReason", restrictionReason)])
-                case .messageService(let flags, let id, let fromId, let toId, let replyToMsgId, let date, let action):
-                return ("messageService", [("flags", flags), ("id", id), ("fromId", fromId), ("toId", toId), ("replyToMsgId", replyToMsgId), ("date", date), ("action", action)])
+                case .message(let flags, let id, let fromId, let peerId, let fwdFrom, let viaBotId, let replyToMsgId, let replyToTopId, let date, let message, let media, let replyMarkup, let entities, let views, let forwards, let replies, let editDate, let postAuthor, let groupedId, let restrictionReason):
+                return ("message", [("flags", flags), ("id", id), ("fromId", fromId), ("peerId", peerId), ("fwdFrom", fwdFrom), ("viaBotId", viaBotId), ("replyToMsgId", replyToMsgId), ("replyToTopId", replyToTopId), ("date", date), ("message", message), ("media", media), ("replyMarkup", replyMarkup), ("entities", entities), ("views", views), ("forwards", forwards), ("replies", replies), ("editDate", editDate), ("postAuthor", postAuthor), ("groupedId", groupedId), ("restrictionReason", restrictionReason)])
+                case .messageService(let flags, let id, let fromId, let peerId, let replyToMsgId, let date, let action):
+                return ("messageService", [("flags", flags), ("id", id), ("fromId", fromId), ("peerId", peerId), ("replyToMsgId", replyToMsgId), ("date", date), ("action", action)])
     }
     }
     
@@ -17532,7 +17532,7 @@ public extension Api {
             let _c19 = (Int(_1!) & Int(1 << 17) == 0) || _19 != nil
             let _c20 = (Int(_1!) & Int(1 << 22) == 0) || _20 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 {
-                return Api.Message.message(flags: _1!, id: _2!, fromId: _3!, toId: _4!, fwdFrom: _5, viaBotId: _6, replyToMsgId: _7, replyToTopId: _8, date: _9!, message: _10!, media: _11, replyMarkup: _12, entities: _13, views: _14, forwards: _15, replies: _16, editDate: _17, postAuthor: _18, groupedId: _19, restrictionReason: _20)
+                return Api.Message.message(flags: _1!, id: _2!, fromId: _3!, peerId: _4!, fwdFrom: _5, viaBotId: _6, replyToMsgId: _7, replyToTopId: _8, date: _9!, message: _10!, media: _11, replyMarkup: _12, entities: _13, views: _14, forwards: _15, replies: _16, editDate: _17, postAuthor: _18, groupedId: _19, restrictionReason: _20)
             }
             else {
                 return nil
@@ -17567,7 +17567,7 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.Message.messageService(flags: _1!, id: _2!, fromId: _3!, toId: _4!, replyToMsgId: _5, date: _6!, action: _7!)
+                return Api.Message.messageService(flags: _1!, id: _2!, fromId: _3!, peerId: _4!, replyToMsgId: _5, date: _6!, action: _7!)
             }
             else {
                 return nil

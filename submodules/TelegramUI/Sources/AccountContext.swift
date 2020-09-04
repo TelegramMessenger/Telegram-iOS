@@ -303,7 +303,7 @@ public final class AccountContextImpl: AccountContext {
         switch location {
         case let .peer(peerId):
             return .peer(peerId)
-        case let .replyThread(messageId, maxReadMessageId):
+        case let .replyThread(messageId, _, maxReadMessageId):
             let context = chatLocationContext(holder: contextHolder, account: self.account, messageId: messageId, maxReadMessageId: maxReadMessageId)
             return .external(messageId.peerId, context.state)
         }
@@ -313,7 +313,7 @@ public final class AccountContextImpl: AccountContext {
         switch location {
         case .peer:
             let _ = applyMaxReadIndexInteractively(postbox: self.account.postbox, stateManager: self.account.stateManager, index: messageIndex).start()
-        case let .replyThread(messageId, maxReadMessageId):
+        case let .replyThread(messageId, _, maxReadMessageId):
             let context = chatLocationContext(holder: contextHolder, account: self.account, messageId: messageId, maxReadMessageId: maxReadMessageId)
             context.applyMaxReadIndex(messageIndex: messageIndex)
         }
