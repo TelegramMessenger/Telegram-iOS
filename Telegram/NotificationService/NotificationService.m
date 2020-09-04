@@ -386,7 +386,11 @@ static void reportMemory() {
                     }
                 }
                 
-                if (accountInfos.accounts.count > 1) {
+                NSArray *publicAccounts = [accountInfos.accounts filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(StoredAccountInfo* object, NSDictionary *bindings) {
+                    return !object.isHidden;
+                }]];
+                
+                if (publicAccounts.count > 1) {
                     if (_bestAttemptContent.title.length != 0 && account.peerName.length != 0) {
                         _bestAttemptContent.title = [NSString stringWithFormat:@"%@ → %@", _bestAttemptContent.title, account.peerName];
                     }
