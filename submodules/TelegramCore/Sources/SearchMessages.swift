@@ -9,7 +9,7 @@ import SyncCore
 public enum SearchMessagesLocation: Equatable {
     case general(tags: MessageTags?, minDate: Int32?, maxDate: Int32?)
     case group(PeerGroupId)
-    case peer(peerId: PeerId, fromId: PeerId?, tags: MessageTags?, minDate: Int32?, maxDate: Int32?)
+    case peer(peerId: PeerId, fromId: PeerId?, tags: MessageTags?, topMsgId: MessageId?, minDate: Int32?, maxDate: Int32?)
     case publicForwards(messageId: MessageId, datacenterId: Int?)
 }
 
@@ -187,7 +187,7 @@ private func mergedResult(_ state: SearchMessagesState) -> SearchMessagesResult 
 public func searchMessages(account: Account, location: SearchMessagesLocation, query: String, state: SearchMessagesState?, limit: Int32 = 100) -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> {
     let remoteSearchResult: Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError>
     switch location {
-        case let .peer(peerId, fromId, tags, minDate, maxDate):
+        case let .peer(peerId, fromId, tags, topMsgId, minDate, maxDate):
             if peerId.namespace == Namespaces.Peer.SecretChat {
                 return account.postbox.transaction { transaction -> (SearchMessagesResult, SearchMessagesState) in
                     var readStates: [PeerId: CombinedPeerReadState] = [:]
@@ -330,7 +330,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
     |> mapToSignal { result, additionalResult -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> in
         return account.postbox.transaction { transaction -> (SearchMessagesResult, SearchMessagesState) in
             var additional: SearchMessagesPeerState? = mergedState(transaction: transaction, state: state?.additional, result: additionalResult)
-            if state?.additional == nil, case let .general(tags, minDate, maxDate) = location {
+            if state?.additional == nil, case let .general(tags, _, _) = location {
                 let secretMessages = transaction.searchMessages(peerId: nil, query: query, tags: tags)
                 var readStates: [PeerId: CombinedPeerReadState] = [:]
                 for message in secretMessages {

@@ -514,8 +514,19 @@ extension StoreMessage {
                     attributes.append(InlineBotMessageAttribute(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: viaBotId), title: nil))
                 }
                 
+                var threadId: Int64?
                 if let replyToMsgId = replyToMsgId {
-                    attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)))
+                    var threadMessageId: MessageId?
+                    if let replyToTopId = replyToTopId {
+                        let threadIdValue = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
+                        threadMessageId = threadIdValue
+                        threadId = makeMessageThreadId(threadIdValue)
+                    } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                        let threadIdValue = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
+                        threadMessageId = threadIdValue
+                        threadId = makeMessageThreadId(threadIdValue)
+                    }
+                    attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
                 }
                 
                 if namespace != Namespaces.Message.ScheduledCloud {
@@ -564,6 +575,23 @@ extension StoreMessage {
                     attributes.append(ReactionsMessageAttribute(apiReactions: reactions))
                 }*/
                 
+                if let replies = replies {
+                    let recentRepliersPeerIds: [PeerId]?
+                    //messageReplies flags:# comments:flags.0?true replies:int replies_pts:int recent_repliers:flags.1?Vector<int> channel_id:flags.0?int top_msg_id:flags.2?int = MessageReplies;
+                    switch replies {
+                    case let .messageReplies(_, repliesCount, _, recentRepliers, channelId):
+                        if let recentRepliers = recentRepliers {
+                            recentRepliersPeerIds = recentRepliers.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: $0) }
+                        } else {
+                            recentRepliersPeerIds = nil
+                        }
+                        
+                        let commentsPeerId = channelId.flatMap { PeerId(namespace: Namespaces.Peer.CloudChannel, id: $0) }
+                        
+                        attributes.append(ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsPeerId))
+                    }
+                }
+                
                 if let restrictionReason = restrictionReason {
                     attributes.append(RestrictedContentMessageAttribute(rules: restrictionReason.map(RestrictionRule.init(apiReason:))))
                 }
@@ -604,7 +632,7 @@ extension StoreMessage {
                 
                 storeFlags.insert(.CanBeGroupedIntoFeed)
                 
-                self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
+                self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingId, threadId: threadId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
             case .messageEmpty:
                 return nil
             case let .messageService(flags, id, fromId, toId, replyToMsgId, date, action):
@@ -636,7 +664,7 @@ extension StoreMessage {
                 
                 var attributes: [MessageAttribute] = []
                 if let replyToMsgId = replyToMsgId {
-                    attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)))
+                    attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: nil))
                 }
                 
                 if (flags & (1 << 17)) != 0 {
@@ -673,7 +701,7 @@ extension StoreMessage {
                     storeFlags.insert(.WasScheduled)
                 }
                 
-                self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: nil, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
+                self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: nil, threadId: nil, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
             }
     }
 }

@@ -824,6 +824,66 @@ public struct messages {
         }
     
     }
+    public enum DiscussionMessage: TypeConstructorDescription {
+        case discussionMessage(message: Api.Message, readMaxId: Int32, chats: [Api.Chat], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .discussionMessage(let message, let readMaxId, let chats, let users):
+                    if boxed {
+                        buffer.appendInt32(-765481584)
+                    }
+                    message.serialize(buffer, true)
+                    serializeInt32(readMaxId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .discussionMessage(let message, let readMaxId, let chats, let users):
+                return ("discussionMessage", [("message", message), ("readMaxId", readMaxId), ("chats", chats), ("users", users)])
+    }
+    }
+    
+        public static func parse_discussionMessage(_ reader: BufferReader) -> DiscussionMessage? {
+            var _1: Api.Message?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Message
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _4: [Api.User]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.messages.DiscussionMessage.discussionMessage(message: _1!, readMaxId: _2!, chats: _3!, users: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum SearchCounter: TypeConstructorDescription {
         case searchCounter(flags: Int32, filter: Api.MessagesFilter, count: Int32)
     
@@ -1203,6 +1263,56 @@ public struct messages {
             let _c6 = _6 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
                 return Api.messages.Messages.messagesSlice(flags: _1!, count: _2!, nextRate: _3, messages: _4!, chats: _5!, users: _6!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum MessageViews: TypeConstructorDescription {
+        case messageViews(views: [Api.MessageViews], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .messageViews(let views, let users):
+                    if boxed {
+                        buffer.appendInt32(742337250)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(views.count))
+                    for item in views {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageViews(let views, let users):
+                return ("messageViews", [("views", views), ("users", users)])
+    }
+    }
+    
+        public static func parse_messageViews(_ reader: BufferReader) -> MessageViews? {
+            var _1: [Api.MessageViews]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageViews.self)
+            }
+            var _2: [Api.User]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.MessageViews.messageViews(views: _1!, users: _2!)
             }
             else {
                 return nil
@@ -6039,6 +6149,7 @@ public extension Api {
         case updatePhoneCallSignalingData(phoneCallId: Int64, data: Buffer)
         case updateChannelParticipant(flags: Int32, channelId: Int32, date: Int32, userId: Int32, prevParticipant: Api.ChannelParticipant?, newParticipant: Api.ChannelParticipant?, qts: Int32)
         case updateChannelMessageForwards(channelId: Int32, id: Int32, forwards: Int32)
+        case updateReadDiscussion(peer: Api.Peer, msgId: Int32, readMaxId: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -6739,6 +6850,14 @@ public extension Api {
                     serializeInt32(id, buffer: buffer, boxed: false)
                     serializeInt32(forwards, buffer: buffer, boxed: false)
                     break
+                case .updateReadDiscussion(let peer, let msgId, let readMaxId):
+                    if boxed {
+                        buffer.appendInt32(295679367)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    serializeInt32(readMaxId, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -6910,6 +7029,8 @@ public extension Api {
                 return ("updateChannelParticipant", [("flags", flags), ("channelId", channelId), ("date", date), ("userId", userId), ("prevParticipant", prevParticipant), ("newParticipant", newParticipant), ("qts", qts)])
                 case .updateChannelMessageForwards(let channelId, let id, let forwards):
                 return ("updateChannelMessageForwards", [("channelId", channelId), ("id", id), ("forwards", forwards)])
+                case .updateReadDiscussion(let peer, let msgId, let readMaxId):
+                return ("updateReadDiscussion", [("peer", peer), ("msgId", msgId), ("readMaxId", readMaxId)])
     }
     }
     
@@ -8300,6 +8421,25 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.Update.updateChannelMessageForwards(channelId: _1!, id: _2!, forwards: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateReadDiscussion(_ reader: BufferReader) -> Update? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateReadDiscussion(peer: _1!, msgId: _2!, readMaxId: _3!)
             }
             else {
                 return nil
@@ -15002,13 +15142,13 @@ public extension Api {
     
     }
     public enum MessageReplies: TypeConstructorDescription {
-        case messageReplies(flags: Int32, replies: Int32, repliesPts: Int32, recentRepliers: [Int32]?, channelId: Int32?, topMsgId: Int32?)
+        case messageReplies(flags: Int32, replies: Int32, repliesPts: Int32, recentRepliers: [Int32]?, channelId: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .messageReplies(let flags, let replies, let repliesPts, let recentRepliers, let channelId, let topMsgId):
+                case .messageReplies(let flags, let replies, let repliesPts, let recentRepliers, let channelId):
                     if boxed {
-                        buffer.appendInt32(1355885018)
+                        buffer.appendInt32(-2099001323)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(replies, buffer: buffer, boxed: false)
@@ -15019,15 +15159,14 @@ public extension Api {
                         serializeInt32(item, buffer: buffer, boxed: false)
                     }}
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(channelId!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(topMsgId!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .messageReplies(let flags, let replies, let repliesPts, let recentRepliers, let channelId, let topMsgId):
-                return ("messageReplies", [("flags", flags), ("replies", replies), ("repliesPts", repliesPts), ("recentRepliers", recentRepliers), ("channelId", channelId), ("topMsgId", topMsgId)])
+                case .messageReplies(let flags, let replies, let repliesPts, let recentRepliers, let channelId):
+                return ("messageReplies", [("flags", flags), ("replies", replies), ("repliesPts", repliesPts), ("recentRepliers", recentRepliers), ("channelId", channelId)])
     }
     }
     
@@ -15044,16 +15183,13 @@ public extension Api {
             } }
             var _5: Int32?
             if Int(_1!) & Int(1 << 0) != 0 {_5 = reader.readInt32() }
-            var _6: Int32?
-            if Int(_1!) & Int(1 << 2) != 0 {_6 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.MessageReplies.messageReplies(flags: _1!, replies: _2!, repliesPts: _3!, recentRepliers: _4, channelId: _5, topMsgId: _6)
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.MessageReplies.messageReplies(flags: _1!, replies: _2!, repliesPts: _3!, recentRepliers: _4, channelId: _5)
             }
             else {
                 return nil

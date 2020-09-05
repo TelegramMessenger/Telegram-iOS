@@ -251,11 +251,16 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }
             let sentViaBot = false
             var viewCount: Int? = nil
+            var dateReplies = 0
             for attribute in item.message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute {
                    edited = !attribute.isHidden
                 } else if let attribute = attribute as? ViewCountMessageAttribute {
                     viewCount = attribute.count
+                } else if let attribute = attribute as? ReplyThreadMessageAttribute {
+                    if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
+                        dateReplies = Int(attribute.count)
+                    }
                 }
             }
             
@@ -280,7 +285,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             } else {
                 maxDateAndStatusWidth = width - videoFrame.midX - 85.0
             }
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude), dateReactions)
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies)
             
             var contentSize = imageSize
             var dateAndStatusOverflow = false

@@ -466,8 +466,21 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 } else if incoming {
                     hasAvatar = true
                 }
-                /*case .group:
-                 hasAvatar = true*/
+            case let .replyThread(messageId, _):
+                if messageId.peerId != item.context.account.peerId {
+                    if messageId.peerId.isGroupOrChannel && item.message.author != nil {
+                        var isBroadcastChannel = false
+                        if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                            isBroadcastChannel = true
+                        }
+                        
+                        if !isBroadcastChannel {
+                            hasAvatar = true
+                        }
+                    }
+                } else if incoming {
+                    hasAvatar = true
+                }
             }
             
             if hasAvatar {
@@ -558,11 +571,16 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             var edited = false
             var viewCount: Int? = nil
+            var dateReplies = 0
             for attribute in item.message.attributes {
                 if let _ = attribute as? EditedMessageAttribute, isEmoji {
                     edited = true
                 } else if let attribute = attribute as? ViewCountMessageAttribute {
                     viewCount = attribute.count
+                } else if let attribute = attribute as? ReplyThreadMessageAttribute {
+                    if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
+                        dateReplies = Int(attribute.count)
+                    }
                 }
             }
             
@@ -581,7 +599,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .minimal, reactionCount: dateReactionCount)
             
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), dateReactions)
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies)
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
@@ -629,7 +647,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-                    replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableContentWidth, height: CGFloat.greatestFiniteMagnitude))
+                    if case let .replyThread(replyThreadMessageId, _) = item.chatLocation, replyThreadMessageId == replyAttribute.messageId {
+                    } else {
+                        replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableContentWidth, height: CGFloat.greatestFiniteMagnitude))
+                    }
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
                     replyMarkup = attribute
                 }

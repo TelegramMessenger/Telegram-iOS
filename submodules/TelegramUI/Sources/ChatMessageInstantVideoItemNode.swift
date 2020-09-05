@@ -178,24 +178,29 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             let avatarInset: CGFloat
             var hasAvatar = false
             
+            let messagePeerId: PeerId
             switch item.chatLocation {
-                case let .peer(peerId):
-                    if peerId != item.context.account.peerId {
-                        if peerId.isGroupOrChannel && item.message.author != nil {
-                            var isBroadcastChannel = false
-                            if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                                isBroadcastChannel = true
-                            }
-                            
-                            if !isBroadcastChannel {
-                                hasAvatar = true
-                            }
+            case let .peer(peerId):
+                messagePeerId = peerId
+            case let .replyThread(messageId, _):
+                messagePeerId = messageId.peerId
+            }
+            
+            do {
+                if messagePeerId != item.context.account.peerId {
+                    if messagePeerId.isGroupOrChannel && item.message.author != nil {
+                        var isBroadcastChannel = false
+                        if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                            isBroadcastChannel = true
                         }
-                    } else if incoming {
-                        hasAvatar = true
+                        
+                        if !isBroadcastChannel {
+                            hasAvatar = true
+                        }
                     }
-                /*case .group:
-                    hasAvatar = true*/
+                } else if incoming {
+                    hasAvatar = true
+                }
             }
             
             if hasAvatar {
@@ -332,7 +337,10 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 }
                 
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-                    replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                    if case let .replyThread(replyThreadMessageId, _) = item.chatLocation, replyThreadMessageId == replyAttribute.messageId {
+                    } else {
+                        replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                    }
                 } else if let _ = attribute as? InlineBotMessageAttribute {
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
                     replyMarkup = attribute

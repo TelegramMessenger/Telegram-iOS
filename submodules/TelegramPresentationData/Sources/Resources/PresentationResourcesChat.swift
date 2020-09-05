@@ -1090,4 +1090,20 @@ public struct PresentationResourcesChat {
             }
         })
     }
+    
+    public static func chatMessageCommentsIcon(_ theme: PresentationTheme, incoming: Bool) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatMessageCommentsIcon(incoming: incoming), { theme in
+            let messageTheme = incoming ? theme.chat.message.incoming : theme.chat.message.outgoing
+            
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BubbleComments"), color: messageTheme.accentTextColor)
+        })
+    }
+    
+    public static func chatMessageCommentsArrowIcon(_ theme: PresentationTheme, incoming: Bool) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatMessageCommentsArrowIcon(incoming: incoming), { theme in
+            let messageTheme = incoming ? theme.chat.message.incoming : theme.chat.message.outgoing
+            
+            return generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: messageTheme.accentTextColor)
+        })
+    }
 }

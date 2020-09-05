@@ -71,7 +71,8 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         self.selectedMessages = chatControllerInteraction.selectionState.flatMap { $0.selectedIds }
         self.selectedMessagesPromise.set(.single(self.selectedMessages))
         
-        self.listNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: tagMask, subject: nil, controllerInteraction: chatControllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), mode: .list(search: false, reversed: false, displayHeaders: .allButLast, isGlobalSearch: false))
+        let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
+        self.listNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), chatLocationContextHolder: chatLocationContextHolder, tagMask: tagMask, subject: nil, controllerInteraction: chatControllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), mode: .list(search: false, reversed: false, displayHeaders: .allButLast, isGlobalSearch: false))
         self.listNode.defaultToSynchronousTransactionWhileScrolling = true
         
         if tagMask == .music {
@@ -268,7 +269,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                     }
                     if let id = state.id as? PeerMessagesMediaPlaylistItemId {
                         if type == .music {
-                            let signal = strongSelf.context.sharedContext.messageFromPreloadedChatHistoryViewForLocation(id: id.messageId, location: ChatHistoryLocationInput(content: .InitialSearch(location: .id(id.messageId), count: 60), id: 0), account: account, chatLocation: .peer(id.messageId.peerId), tagMask: MessageTags.music)
+                            let signal = strongSelf.context.sharedContext.messageFromPreloadedChatHistoryViewForLocation(id: id.messageId, location: ChatHistoryLocationInput(content: .InitialSearch(location: .id(id.messageId), count: 60), id: 0), context: strongSelf.context, chatLocation: .peer(id.messageId.peerId), tagMask: MessageTags.music)
                             
                             var cancelImpl: (() -> Void)?
                             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }

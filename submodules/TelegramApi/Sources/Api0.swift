@@ -256,6 +256,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[643940105] = { return Api.Update.parse_updatePhoneCallSignalingData($0) }
     dict[1708307556] = { return Api.Update.parse_updateChannelParticipant($0) }
     dict[1854571743] = { return Api.Update.parse_updateChannelMessageForwards($0) }
+    dict[295679367] = { return Api.Update.parse_updateReadDiscussion($0) }
     dict[136574537] = { return Api.messages.VotesList.parse_votesList($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[-373643672] = { return Api.FolderPeer.parse_folderPeer($0) }
@@ -434,6 +435,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-886477832] = { return Api.LabeledPrice.parse_labeledPrice($0) }
     dict[-438840932] = { return Api.messages.ChatFull.parse_chatFull($0) }
     dict[-618540889] = { return Api.InputSecureValue.parse_inputSecureValue($0) }
+    dict[-765481584] = { return Api.messages.DiscussionMessage.parse_discussionMessage($0) }
     dict[1722786150] = { return Api.help.DeepLinkInfo.parse_deepLinkInfoEmpty($0) }
     dict[1783556146] = { return Api.help.DeepLinkInfo.parse_deepLinkInfo($0) }
     dict[-313079300] = { return Api.account.WebAuthorizations.parse_webAuthorizations($0) }
@@ -520,7 +522,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-402498398] = { return Api.messages.SavedGifs.parse_savedGifsNotModified($0) }
     dict[772213157] = { return Api.messages.SavedGifs.parse_savedGifs($0) }
     dict[-914167110] = { return Api.CdnPublicKey.parse_cdnPublicKey($0) }
-    dict[1355885018] = { return Api.MessageReplies.parse_messageReplies($0) }
+    dict[-2099001323] = { return Api.MessageReplies.parse_messageReplies($0) }
     dict[53231223] = { return Api.InputGame.parse_inputGameID($0) }
     dict[-1020139510] = { return Api.InputGame.parse_inputGameShortName($0) }
     dict[1107543535] = { return Api.help.CountryCode.parse_countryCode($0) }
@@ -542,6 +544,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[480546647] = { return Api.InputChatPhoto.parse_inputChatPhotoEmpty($0) }
     dict[-1991004873] = { return Api.InputChatPhoto.parse_inputChatPhoto($0) }
     dict[-968723890] = { return Api.InputChatPhoto.parse_inputChatUploadedPhoto($0) }
+    dict[742337250] = { return Api.messages.MessageViews.parse_messageViews($0) }
     dict[-368917890] = { return Api.PaymentCharge.parse_paymentCharge($0) }
     dict[-1387279939] = { return Api.MessageInteractionCounters.parse_messageInteractionCounters($0) }
     dict[-1107852396] = { return Api.stats.BroadcastStats.parse_broadcastStats($0) }
@@ -1144,6 +1147,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputSecureValue:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.DiscussionMessage:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.help.DeepLinkInfo:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.WebAuthorizations:
@@ -1261,6 +1266,8 @@ public struct Api {
             case let _1 as Api.auth.SentCode:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputChatPhoto:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.MessageViews:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PaymentCharge:
                 _1.serialize(buffer, boxed)

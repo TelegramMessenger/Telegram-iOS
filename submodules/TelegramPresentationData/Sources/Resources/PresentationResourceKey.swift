@@ -256,4 +256,7 @@ public enum PresentationResourceParameterKey: Hashable {
     case chatMessageLike(incoming: Bool, isSelected: Bool)
     case chatMessageFreeLike(isSelected: Bool)
     case chatMessageMediaLike(isSelected: Bool)
+    
+    case chatMessageCommentsIcon(incoming: Bool)
+    case chatMessageCommentsArrowIcon(incoming: Bool)
 }

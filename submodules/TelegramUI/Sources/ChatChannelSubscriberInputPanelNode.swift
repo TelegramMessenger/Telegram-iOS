@@ -46,7 +46,11 @@ private func actionForPeer(peer: Peer, isMuted: Bool) -> SubscriberAction? {
                 }
         }
     } else {
-        return nil
+        if isMuted {
+            return .unmuteNotifications
+        } else {
+            return .muteNotifications
+        }
     }
 }
 
