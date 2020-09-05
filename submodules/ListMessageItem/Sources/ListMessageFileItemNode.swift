@@ -18,6 +18,7 @@ import PhotoResources
 import MusicAlbumArtResources
 import UniversalMediaPlayer
 import ContextUI
+import FileMediaResourceStatus
 
 private let extensionImageCache = Atomic<[UInt32: UIImage]>(value: [:])
 
@@ -88,6 +89,36 @@ private func extensionImage(fileExtension: String?) -> UIImage? {
 }
 private let extensionFont = Font.with(size: 15.0, design: .round, traits: [.bold])
 
+func fullAuthorString(for item: ListMessageItem) -> String {
+    var authorString = ""
+    if let author = item.message.author, [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(item.message.id.peerId.namespace) {
+        var authorName = ""
+        if author.id == item.context.account.peerId {
+            authorName = item.presentationData.strings.DialogList_You
+        } else {
+            authorName = author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+        }
+        if let peer = item.message.peers[item.message.id.peerId], author.id != peer.id {
+            authorString = "\(authorName) → \(peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder))"
+        } else {
+            authorString = authorName
+        }
+    } else if let peer = item.message.peers[item.message.id.peerId] {
+        if item.message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
+            authorString = peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+        } else {
+            if item.message.id.peerId == item.context.account.peerId {
+                authorString = item.presentationData.strings.DialogList_SavedMessages
+            } else if item.message.flags.contains(.Incoming) {
+                authorString = peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+            } else {
+                authorString = "\(item.presentationData.strings.DialogList_You) → \(peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder))"
+            }
+        }
+    }
+    return authorString
+}
+
 private struct FetchControls {
     let fetch: () -> Void
     let cancel: () -> Void
@@ -122,7 +153,7 @@ private enum FileIconImage: Equatable {
     }
 }
 
-final class ListMessageFileItemNode: ListMessageNode {
+public final class ListMessageFileItemNode: ListMessageNode {
     private let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
     private let extractedBackgroundImageNode: ASImageNode
@@ -140,6 +171,7 @@ final class ListMessageFileItemNode: ListMessageNode {
     private let titleNode: TextNode
     private let descriptionNode: TextNode
     private let descriptionProgressNode: ImmediateTextNode
+    private let dateNode: TextNode
     
     private let extensionIconNode: ASImageNode
     private let extensionIconText: TextNode
@@ -195,6 +227,9 @@ final class ListMessageFileItemNode: ListMessageNode {
         self.descriptionProgressNode.isUserInteractionEnabled = false
         self.descriptionProgressNode.maximumNumberOfLines = 1
         
+        self.dateNode = TextNode()
+        self.dateNode.isUserInteractionEnabled = false
+        
         self.extensionIconNode = ASImageNode()
         self.extensionIconNode.isLayerBacked = true
         self.extensionIconNode.displaysAsynchronously = false
@@ -228,6 +263,7 @@ final class ListMessageFileItemNode: ListMessageNode {
         self.offsetContainerNode.addSubnode(self.titleNode)
         self.offsetContainerNode.addSubnode(self.descriptionNode)
         self.offsetContainerNode.addSubnode(self.descriptionProgressNode)
+        self.offsetContainerNode.addSubnode(self.dateNode)
         self.offsetContainerNode.addSubnode(self.extensionIconNode)
         self.offsetContainerNode.addSubnode(self.extensionIconText)
         self.offsetContainerNode.addSubnode(self.iconStatusNode)
@@ -237,7 +273,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                 return
             }
             
-            item.controllerInteraction.openMessageContextMenu(item.message, false, strongSelf.contextSourceNode, strongSelf.contextSourceNode.bounds, gesture)
+            item.interaction.openMessageContextMenu(item.message, false, strongSelf.contextSourceNode, strongSelf.contextSourceNode.bounds, gesture)
         }
         
         self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
@@ -246,7 +282,7 @@ final class ListMessageFileItemNode: ListMessageNode {
             }
             
             if isExtracted {
-                strongSelf.extractedBackgroundImageNode.image = generateStretchableFilledCircleImage(diameter: 28.0, color: item.theme.list.plainBackgroundColor)
+                strongSelf.extractedBackgroundImageNode.image = generateStretchableFilledCircleImage(diameter: 28.0, color: item.presentationData.theme.theme.list.plainBackgroundColor)
             }
             
             if let extractedRect = strongSelf.extractedRect, let nonExtractedRect = strongSelf.nonExtractedRect {
@@ -260,6 +296,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                     self?.extractedBackgroundImageNode.image = nil
                 }
             })
+            transition.updateAlpha(node: strongSelf.dateNode, alpha: isExtracted ? 0.0 : 1.0)
         }
     }
     
@@ -294,14 +331,15 @@ final class ListMessageFileItemNode: ListMessageNode {
         self.addTransitionOffsetAnimation(0.0, duration: duration, beginAt: currentTimestamp)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     
-    override func asyncLayout() -> (_ item: ListMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    override public func asyncLayout() -> (_ item: ListMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let titleNodeMakeLayout = TextNode.asyncLayout(self.titleNode)
         let descriptionNodeMakeLayout = TextNode.asyncLayout(self.descriptionNode)
         let extensionIconTextMakeLayout = TextNode.asyncLayout(self.extensionIconText)
+        let dateNodeMakeLayout = TextNode.asyncLayout(self.dateNode)
         let iconImageLayout = self.iconImageNode.asyncLayout()
         
         let currentMedia = self.currentMedia
@@ -315,13 +353,14 @@ final class ListMessageFileItemNode: ListMessageNode {
         return { [weak self] item, params, _, _, dateHeaderAtBottom in
             var updatedTheme: PresentationTheme?
             
-            if currentItem?.theme !== item.theme {
-                updatedTheme = item.theme
+            if currentItem?.presentationData.theme.theme !== item.presentationData.theme.theme {
+                updatedTheme = item.presentationData.theme.theme
             }
             
-            let titleFont = Font.semibold(floor(item.fontSize.baseDisplaySize * 16.0 / 17.0))
-            let audioTitleFont = Font.semibold(floor(item.fontSize.baseDisplaySize * 16.0 / 17.0))
-            let descriptionFont = Font.regular(floor(item.fontSize.baseDisplaySize * 14.0 / 17.0))
+            let titleFont = Font.semibold(floor(item.presentationData.fontSize.baseDisplaySize * 16.0 / 17.0))
+            let audioTitleFont = Font.semibold(floor(item.presentationData.fontSize.baseDisplaySize * 16.0 / 17.0))
+            let descriptionFont = Font.regular(floor(item.presentationData.fontSize.baseDisplaySize * 14.0 / 17.0))
+            let dateFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
             
             var leftInset: CGFloat = 65.0 + params.leftInset
             let rightInset: CGFloat = 8.0 + params.rightInset
@@ -329,7 +368,7 @@ final class ListMessageFileItemNode: ListMessageNode {
             var leftOffset: CGFloat = 0.0
             var selectionNodeWidthAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
             if case let .selectable(selected) = item.selection {
-                let (selectionWidth, selectionApply) = selectionNodeLayout(item.theme.list.itemCheckColors.strokeColor, item.theme.list.itemCheckColors.fillColor, item.theme.list.itemCheckColors.foregroundColor, selected, false)
+                let (selectionWidth, selectionApply) = selectionNodeLayout(item.presentationData.theme.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.theme.list.itemCheckColors.fillColor, item.presentationData.theme.theme.list.itemCheckColors.foregroundColor, selected, false)
                 selectionNodeWidthAndApply = (selectionWidth, selectionApply)
                 leftOffset += selectionWidth
             }
@@ -363,24 +402,37 @@ final class ListMessageFileItemNode: ListMessageNode {
                             isAudio = true
                             isVoice = voice
                             
-                            titleText = NSAttributedString(string: title ?? (file.fileName ?? "Unknown Track"), font: audioTitleFont, textColor: item.theme.list.itemPrimaryTextColor)
+                            titleText = NSAttributedString(string: title ?? (file.fileName ?? "Unknown Track"), font: audioTitleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
                             
-                            let descriptionString: String
+                            var descriptionString: String
                             if let performer = performer {
-                                descriptionString = "\(stringForDuration(Int32(duration))) • \(performer)"
+                                if item.isGlobalSearchResult {
+                                    descriptionString = performer
+                                } else {
+                                    descriptionString = "\(stringForDuration(Int32(duration))) • \(performer)"
+                                }
                             } else if let size = file.size {
-                                descriptionString = dataSizeString(size, decimalSeparator: item.dateTimeFormat.decimalSeparator)
+                                descriptionString = dataSizeString(size, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
                             } else {
                                 descriptionString = ""
                             }
                             
-                            descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor)
+                            if item.isGlobalSearchResult {
+                                let authorString = fullAuthorString(for: item)
+                                if descriptionString.isEmpty {
+                                    descriptionString = authorString
+                                } else {
+                                    descriptionString = "\(descriptionString) • \(authorString)"
+                                }
+                            }
+                            
+                            descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
                             
                             if !voice {
                                 iconImage = .albumArt(file, SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: false)))
                             } else {
-                                titleText = NSAttributedString(string: " ", font: audioTitleFont, textColor: item.theme.list.itemPrimaryTextColor)
-                                descriptionText = NSAttributedString(string: item.message.author?.displayTitle(strings: item.strings, displayOrder: .firstLast) ?? " ", font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor)
+                                titleText = NSAttributedString(string: " ", font: audioTitleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
+                                descriptionText = NSAttributedString(string: item.message.author?.displayTitle(strings: item.presentationData.strings, displayOrder: .firstLast) ?? " ", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
                             }
                         }
                     }
@@ -389,23 +441,23 @@ final class ListMessageFileItemNode: ListMessageNode {
                         let authorName: String
                         if let author = message.forwardInfo?.author {
                             if author.id == item.context.account.peerId {
-                                authorName = item.strings.DialogList_You
+                                authorName = item.presentationData.strings.DialogList_You
                             } else {
-                                authorName = author.displayTitle(strings: item.strings, displayOrder: .firstLast)
+                                authorName = author.displayTitle(strings: item.presentationData.strings, displayOrder: .firstLast)
                             }
                         } else if let signature = message.forwardInfo?.authorSignature {
                             authorName = signature
                         } else if let author = message.author {
                             if author.id == item.context.account.peerId {
-                                authorName = item.strings.DialogList_You
+                                authorName = item.presentationData.strings.DialogList_You
                             } else {
-                                authorName = author.displayTitle(strings: item.strings, displayOrder: .firstLast)
+                                authorName = author.displayTitle(strings: item.presentationData.strings, displayOrder: .firstLast)
                             }
                         } else {
                             authorName = " "
                         }
-                        titleText = NSAttributedString(string: authorName, font: audioTitleFont, textColor: item.theme.list.itemPrimaryTextColor)
-                        let dateString = stringForFullDate(timestamp: item.message.timestamp, strings: item.strings, dateTimeFormat: item.dateTimeFormat)
+                        titleText = NSAttributedString(string: authorName, font: audioTitleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
+                        let dateString = stringForFullDate(timestamp: item.message.timestamp, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat)
                         let descriptionString: String
                         if let duration = file.duration {
                             descriptionString = "\(stringForDuration(Int32(duration))) • \(dateString)"
@@ -413,11 +465,11 @@ final class ListMessageFileItemNode: ListMessageNode {
                             descriptionString = dateString
                         }
                         
-                        descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor)
+                        descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
                         iconImage = .roundVideo(file)
                     } else if !isAudio {
                         let fileName: String = file.fileName ?? ""
-                        titleText = NSAttributedString(string: fileName, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
+                        titleText = NSAttributedString(string: fileName, font: titleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
                         
                         var fileExtension: String?
                         if let range = fileName.range(of: ".", options: [.backwards]) {
@@ -432,16 +484,31 @@ final class ListMessageFileItemNode: ListMessageNode {
                             iconImage = .imageRepresentation(file, representation)
                         }
                         
-                        let dateString = stringForFullDate(timestamp: item.message.timestamp, strings: item.strings, dateTimeFormat: item.dateTimeFormat)
+                        let dateString = stringForFullDate(timestamp: item.message.timestamp, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat)
                         
-                        let descriptionString: String
+                        var descriptionString: String = ""
                         if let size = file.size {
-                            descriptionString = "\(dataSizeString(size, decimalSeparator: item.dateTimeFormat.decimalSeparator)) • \(dateString)"
+                            if item.isGlobalSearchResult {
+                                descriptionString = (dataSizeString(size, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator))
+                            } else {
+                                descriptionString = "\(dataSizeString(size, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)) • \(dateString)"
+                            }
                         } else {
-                            descriptionString = "\(dateString)"
+                            if !item.isGlobalSearchResult {
+                                descriptionString = "\(dateString)"
+                            }
+                        }
+                        
+                        if item.isGlobalSearchResult {
+                            let authorString = fullAuthorString(for: item)
+                            if descriptionString.isEmpty {
+                                descriptionString = authorString
+                            } else {
+                                descriptionString = "\(descriptionString) • \(authorString)"
+                            }
                         }
                     
-                        descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor)
+                        descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
                     }
                     
                     break
@@ -478,7 +545,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                 }
                 
                 if statusUpdated {
-                    updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: selectedMedia, message: message, isRecentActions: false, isSharedMedia: true)
+                    updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: selectedMedia, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult)
                     
                     if isAudio || isInstantVideo {
                         if let currentUpdatedStatusSignal = updatedStatusSignal {
@@ -494,14 +561,20 @@ final class ListMessageFileItemNode: ListMessageNode {
                         }
                     }
                     if isVoice {
-                        updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: item.context, file: selectedMedia, message: message, isRecentActions: false)
+                        updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: item.context, file: selectedMedia, message: message, isRecentActions: false, isGlobalSearch: item.isGlobalSearchResult)
                     }
                 }
             }
             
-            let (titleNodeLayout, titleNodeApply) = titleNodeMakeLayout(TextNodeLayoutArguments(attributedString: titleText, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .middle, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 40.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+            let dateText = stringForRelativeTimestamp(strings: item.presentationData.strings, relativeTimestamp: item.message.timestamp, relativeTo: timestamp, dateTimeFormat: item.presentationData.dateTimeFormat)
+            let dateAttributedString = NSAttributedString(string: dateText, font: dateFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
             
-            let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(TextNodeLayoutArguments(attributedString: descriptionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 12.0 - 40.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (dateNodeLayout, dateNodeApply) = dateNodeMakeLayout(TextNodeLayoutArguments(attributedString: dateAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 12.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (titleNodeLayout, titleNodeApply) = titleNodeMakeLayout(TextNodeLayoutArguments(attributedString: titleText, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .middle, constrainedSize: CGSize(width: params.width - leftInset - rightInset - dateNodeLayout.size.width, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(TextNodeLayoutArguments(attributedString: descriptionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 12.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (extensionTextLayout, extensionTextApply) = extensionIconTextMakeLayout(TextNodeLayoutArguments(attributedString: extensionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 38.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -511,17 +584,17 @@ final class ListMessageFileItemNode: ListMessageNode {
                     case let .imageRepresentation(_, representation):
                         let iconSize = CGSize(width: 40.0, height: 40.0)
                         let imageCorners = ImageCorners(radius: 6.0)
-                        let arguments = TransformImageArguments(corners: imageCorners, imageSize: representation.dimensions.cgSize.aspectFilled(iconSize), boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.theme.list.mediaPlaceholderColor)
+                        let arguments = TransformImageArguments(corners: imageCorners, imageSize: representation.dimensions.cgSize.aspectFilled(iconSize), boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.presentationData.theme.theme.list.mediaPlaceholderColor)
                         iconImageApply = iconImageLayout(arguments)
                     case .albumArt:
                         let iconSize = CGSize(width: 40.0, height: 40.0)
                         let imageCorners = ImageCorners(radius: iconSize.width / 2.0)
-                        let arguments = TransformImageArguments(corners: imageCorners, imageSize: iconSize, boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.theme.list.mediaPlaceholderColor)
+                        let arguments = TransformImageArguments(corners: imageCorners, imageSize: iconSize, boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.presentationData.theme.theme.list.mediaPlaceholderColor)
                         iconImageApply = iconImageLayout(arguments)
                     case let .roundVideo(file):
                         let iconSize = CGSize(width: 40.0, height: 40.0)
                         let imageCorners = ImageCorners(radius: iconSize.width / 2.0)
-                        let arguments = TransformImageArguments(corners: imageCorners, imageSize: (file.dimensions ?? PixelDimensions(width: 320, height: 320)).cgSize.aspectFilled(iconSize), boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.theme.list.mediaPlaceholderColor)
+                        let arguments = TransformImageArguments(corners: imageCorners, imageSize: (file.dimensions ?? PixelDimensions(width: 320, height: 320)).cgSize.aspectFilled(iconSize), boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.presentationData.theme.theme.list.mediaPlaceholderColor)
                         iconImageApply = iconImageLayout(arguments)
                 }
             }
@@ -532,7 +605,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                         case let .imageRepresentation(file, representation):
                             updateIconImageSignal = chatWebpageSnippetFile(account: item.context.account, fileReference: .message(message: MessageReference(message), media: file), representation: representation)
                         case let .albumArt(file, albumArt):
-                            updateIconImageSignal = playerAlbumArt(postbox: item.context.account.postbox, fileReference: .message(message: MessageReference(message), media: file), albumArt: albumArt, thumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3), emptyColor: item.theme.list.itemAccentColor)
+                            updateIconImageSignal = playerAlbumArt(postbox: item.context.account.postbox, fileReference: .message(message: MessageReference(message), media: file), albumArt: albumArt, thumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3), emptyColor: item.presentationData.theme.theme.list.itemAccentColor)
                         case let .roundVideo(file):
                             updateIconImageSignal = mediaGridMessageVideo(postbox: item.context.account.postbox, videoReference: FileMediaReference.message(message: MessageReference(message), media: file), autoFetchFullSizeThumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3))
                     }
@@ -583,9 +656,9 @@ final class ListMessageFileItemNode: ListMessageNode {
                     strongSelf.currentLeftOffset = leftOffset
                     
                     if let _ = updatedTheme {
-                        strongSelf.separatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
-                        strongSelf.highlightedBackgroundNode.backgroundColor = item.theme.list.itemHighlightedBackgroundColor
-                        strongSelf.linearProgressNode?.updateTheme(theme: item.theme)
+                        strongSelf.separatorNode.backgroundColor = item.presentationData.theme.theme.list.itemPlainSeparatorColor
+                        strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.theme.list.itemHighlightedBackgroundColor
+                        strongSelf.linearProgressNode?.updateTheme(theme: item.presentationData.theme.theme)
                     }
                     
                     if let (selectionWidth, selectionApply) = selectionNodeWidthAndApply {
@@ -631,6 +704,10 @@ final class ListMessageFileItemNode: ListMessageNode {
                     
                     transition.updateFrame(node: strongSelf.descriptionNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset + descriptionOffset, y: strongSelf.titleNode.frame.maxY + 1.0), size: descriptionNodeLayout.size))
                     let _ = descriptionNodeApply()
+                    
+                    let _ = dateNodeApply()
+                    transition.updateFrame(node: strongSelf.dateNode, frame: CGRect(origin: CGPoint(x: params.width - rightInset - dateNodeLayout.size.width, y: 11.0), size: dateNodeLayout.size))
+                    strongSelf.dateNode.isHidden = !item.isGlobalSearchResult
                     
                     let iconFrame: CGRect
                     if isAudio {
@@ -732,8 +809,8 @@ final class ListMessageFileItemNode: ListMessageNode {
         var iconStatusForegroundColor: UIColor = .white
         
         if isVoice {
-            iconStatusBackgroundColor = item.theme.list.itemAccentColor
-            iconStatusForegroundColor = item.theme.list.itemCheckColors.foregroundColor
+            iconStatusBackgroundColor = item.presentationData.theme.theme.list.itemAccentColor
+            iconStatusForegroundColor = item.presentationData.theme.theme.list.itemCheckColors.foregroundColor
         }
         
         if !isAudio && !isInstantVideo {
@@ -767,7 +844,7 @@ final class ListMessageFileItemNode: ListMessageNode {
         self.iconStatusNode.transitionToState(iconStatusState)
     }
     
-    override func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
+    override public func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
         
         if highlighted, let item = self.item, case .none = item.selection {
@@ -793,7 +870,7 @@ final class ListMessageFileItemNode: ListMessageNode {
         }
     }
     
-    override func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    override public func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let item = self.item, item.message.id == id, self.iconImageNode.supernode != nil {
             let iconImageNode = self.iconImageNode
             return (self.iconImageNode, self.iconImageNode.bounds, { [weak iconImageNode] in
@@ -803,15 +880,15 @@ final class ListMessageFileItemNode: ListMessageNode {
         return nil
     }
     
-    override func updateHiddenMedia() {
-        if let controllerInteraction = self.controllerInteraction, let item = self.item, controllerInteraction.hiddenMedia[item.message.id] != nil {
+    override public func updateHiddenMedia() {
+        if let interaction = self.interaction, let item = self.item, interaction.getHiddenMedia()[item.message.id] != nil {
             self.iconImageNode.isHidden = true
         } else {
             self.iconImageNode.isHidden = false
         }
     }
     
-    override func updateSelectionState(animated: Bool) {
+    override public func updateSelectionState(animated: Bool) {
     }
     
     private func updateProgressFrame(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -831,7 +908,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                     switch fetchStatus {
                         case let .Fetching(_, progress):
                             if let file = self.currentMedia as? TelegramMediaFile, let size = file.size {
-                                downloadingString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, decimalSeparator: item.dateTimeFormat.decimalSeparator)) / \(dataSizeString(size, forceDecimal: true, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
+                                downloadingString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)) / \(dataSizeString(size, forceDecimal: true, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator))"
                             }
                             descriptionOffset = 14.0
                         case .Remote:
@@ -849,7 +926,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                         linearProgressNode = current
                     } else {
                         linearProgressNode = LinearProgressNode()
-                        linearProgressNode.updateTheme(theme: item.theme)
+                        linearProgressNode.updateTheme(theme: item.presentationData.theme.theme)
                         self.linearProgressNode = linearProgressNode
                         self.addSubnode(linearProgressNode)
                     }
@@ -859,7 +936,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                     if self.downloadStatusIconNode.supernode == nil {
                         self.offsetContainerNode.addSubnode(self.downloadStatusIconNode)
                     }
-                    self.downloadStatusIconNode.image = PresentationResourcesChat.sharedMediaFileDownloadPauseIcon(item.theme)
+                    self.downloadStatusIconNode.image = PresentationResourcesChat.sharedMediaFileDownloadPauseIcon(item.presentationData.theme.theme)
                 case .Local:
                     if let linearProgressNode = self.linearProgressNode {
                         self.linearProgressNode = nil
@@ -883,7 +960,7 @@ final class ListMessageFileItemNode: ListMessageNode {
                     if self.downloadStatusIconNode.supernode == nil {
                         self.offsetContainerNode.addSubnode(self.downloadStatusIconNode)
                     }
-                    self.downloadStatusIconNode.image = PresentationResourcesChat.sharedMediaFileDownloadStartIcon(item.theme)
+                    self.downloadStatusIconNode.image = PresentationResourcesChat.sharedMediaFileDownloadStartIcon(item.presentationData.theme.theme)
                 }
         } else {
             if let linearProgressNode = self.linearProgressNode {
@@ -911,8 +988,8 @@ final class ListMessageFileItemNode: ListMessageNode {
             self.descriptionProgressNode.isHidden = true
             self.descriptionNode.isHidden = false
         }
-        let descriptionFont = Font.regular(floor(item.fontSize.baseDisplaySize * 13.0 / 17.0))
-        self.descriptionProgressNode.attributedText = NSAttributedString(string: downloadingString ?? "", font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor)
+        let descriptionFont = Font.regular(floor(item.presentationData.fontSize.baseDisplaySize * 13.0 / 17.0))
+        self.descriptionProgressNode.attributedText = NSAttributedString(string: downloadingString ?? "", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
         let descriptionSize = self.descriptionProgressNode.updateLayout(CGSize(width: size.width - 14.0, height: size.height))
         transition.updateFrame(node: self.descriptionProgressNode, frame: CGRect(origin: self.descriptionNode.frame.origin, size: descriptionSize))
         
@@ -936,8 +1013,8 @@ final class ListMessageFileItemNode: ListMessageNode {
                                 fetch()
                             }
                         case .Local:
-                            if let item = self.item, let controllerInteraction = self.controllerInteraction {
-                                let _ = controllerInteraction.openMessage(item.message, .default)
+                            if let item = self.item, let interaction = self.interaction {
+                                let _ = interaction.openMessage(item.message, .default)
                             }
                         }
                 case .playbackStatus:
@@ -948,11 +1025,11 @@ final class ListMessageFileItemNode: ListMessageNode {
         }
     }
     
-    override func header() -> ListViewItemHeader? {
+    override public func header() -> ListViewItemHeader? {
         return self.item?.header
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let item = self.item, case .selectable = item.selection {
             if self.bounds.contains(point) {
                 return self.view

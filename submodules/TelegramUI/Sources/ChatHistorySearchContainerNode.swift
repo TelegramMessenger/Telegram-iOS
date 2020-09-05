@@ -11,6 +11,7 @@ import MergeLists
 import AccountContext
 import SearchUI
 import TelegramUIPreferences
+import ListMessageItem
 
 private enum ChatHistorySearchEntryStableId: Hashable {
     case messageId(MessageId)
@@ -88,7 +89,7 @@ private enum ChatHistorySearchEntry: Comparable, Identifiable {
     func item(context: AccountContext, peerId: PeerId, interaction: ChatControllerInteraction) -> ListViewItem {
         switch self {
             case let .message(message, theme, strings, dateTimeFormat, fontSize):
-                return ListMessageItem(theme: theme, strings: strings, fontSize: fontSize, dateTimeFormat: dateTimeFormat, context: context, chatLocation: .peer(peerId), controllerInteraction: interaction, message: message, selection: .none, displayHeader: true)
+                return ListMessageItem(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: .builtin(WallpaperSettings())), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0.0, auxiliaryRadius: 0.0, mergeBubbleCorners: false)), context: context, chatLocation: .peer(peerId), interaction: ListMessageItemInteraction(controllerInteraction: interaction), message: message, selection: .none, displayHeader: true)
         }
     }
 }
@@ -185,7 +186,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
             if let strongSelf = self {
                 let signal: Signal<([ChatHistorySearchEntry], [MessageId: Message])?, NoError>
                 if let query = query, !query.isEmpty {
-                    let foundRemoteMessages: Signal<[Message], NoError> = searchMessages(account: context.account, location: .peer(peerId: peerId, fromId: nil, tags: tagMask), query: query, state: nil)
+                    let foundRemoteMessages: Signal<[Message], NoError> = searchMessages(account: context.account, location: .peer(peerId: peerId, fromId: nil, tags: tagMask, minDate: nil, maxDate: nil), query: query, state: nil)
                     |> map { $0.0.messages }
                     |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     

@@ -594,7 +594,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                                     } else {
                                         controllerContext = strongSelf.context.sharedContext.makeTempAccountContext(account: account)
                                     }
-                                    let controller = strongSelf.context.sharedContext.makeOverlayAudioPlayerController(context: controllerContext, peerId: id.messageId.peerId, type: type, initialMessageId: id.messageId, initialOrder: order, parentNavigationController: strongSelf.navigationController as? NavigationController)
+                                    let controller = strongSelf.context.sharedContext.makeOverlayAudioPlayerController(context: controllerContext, peerId: id.messageId.peerId, type: type, initialMessageId: id.messageId, initialOrder: order, isGlobalSearch: false, parentNavigationController: strongSelf.navigationController as? NavigationController)
                                     strongSelf.displayNode.view.window?.endEditing(true)
                                     strongSelf.present(controller, in: .window(.root))
                                 } else if index.1 {

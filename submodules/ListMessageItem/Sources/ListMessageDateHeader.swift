@@ -16,7 +16,7 @@ private let timezoneOffset: Int32 = {
     return Int32(timeinfoNow.tm_gmtoff)
 }()
 
-func listMessageDateHeaderId(timestamp: Int32) -> Int64 {
+public func listMessageDateHeaderId(timestamp: Int32) -> Int64 {
     let unclippedValue: Int64 = min(Int64(Int32.max), Int64(timestamp) + Int64(timezoneOffset))
     
     var time: time_t = time_t(Int32(clamping: unclippedValue))
@@ -28,7 +28,7 @@ func listMessageDateHeaderId(timestamp: Int32) -> Int64 {
     return Int64(roundedTimestamp)
 }
 
-func listMessageDateHeaderInfo(timestamp: Int32) -> (year: Int32, month: Int32) {
+public func listMessageDateHeaderInfo(timestamp: Int32) -> (year: Int32, month: Int32) {
     var time: time_t = time_t(timestamp + timezoneOffset)
     var timeinfo: tm = tm()
     localtime_r(&time, &timeinfo)
@@ -76,7 +76,7 @@ final class ListMessageDateHeader: ListViewItemHeader {
     }
 }
 
-final class ListMessageDateHeaderNode: ListViewItemHeaderNode {
+public final class ListMessageDateHeaderNode: ListViewItemHeaderNode {
     var theme: PresentationTheme
     var strings: PresentationStrings
     let headerNode: ListSectionHeaderNode
@@ -99,7 +99,7 @@ final class ListMessageDateHeaderNode: ListViewItemHeaderNode {
         self.headerNode.title = stringForMonth(strings: strings, month: month, ofYear: year).uppercased()
     }
     
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+    public func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
         self.headerNode.updateTheme(theme: theme)
         
@@ -109,7 +109,7 @@ final class ListMessageDateHeaderNode: ListViewItemHeaderNode {
         self.setNeedsLayout()
     }
     
-    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
         let headerFrame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: size.width, height: size.height + UIScreenPixel))
         self.headerNode.frame = headerFrame
             self.headerNode.updateLayout(size: headerFrame.size, leftInset: leftInset, rightInset: rightInset)

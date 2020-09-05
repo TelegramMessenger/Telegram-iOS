@@ -32,12 +32,18 @@ public final class SearchDisplayController {
         self.searchBar.textUpdated = { [weak contentNode] text, _ in
             contentNode?.searchTextUpdated(text: text)
         }
+        self.searchBar.tokensUpdated = { [weak contentNode] tokens in
+            contentNode?.searchTokensUpdated(tokens: tokens)
+        }
         self.searchBar.cancel = { [weak self] in
             self?.isDeactivating = true
             cancel()
         }
         self.searchBar.clearPrefix = { [weak contentNode] in
             contentNode?.searchTextClearPrefix()
+        }
+        self.searchBar.clearTokens = { [weak contentNode] in
+            contentNode?.searchTextClearTokens()
         }
         self.contentNode.cancel = { [weak self] in
             self?.isDeactivating = true
@@ -46,8 +52,9 @@ public final class SearchDisplayController {
         self.contentNode.dismissInput = { [weak self] in
             self?.searchBar.deactivate(clear: false)
         }
-        self.contentNode.setQuery = { [weak self] prefix, query in
+        self.contentNode.setQuery = { [weak self] prefix, tokens, query in
             self?.searchBar.prefixString = prefix
+            self?.searchBar.tokens = tokens
             self?.searchBar.text = query
         }
         if let placeholder = placeholder {
@@ -101,7 +108,7 @@ public final class SearchDisplayController {
         self.containerLayout = (layout, navigationBarFrame.maxY)
         
         transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarFrame.maxY, transition: transition)
+        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarHeight, transition: transition)
     }
     
     public func activate(insertSubnode: (ASDisplayNode, Bool) -> Void, placeholder: SearchBarPlaceholderNode?) {

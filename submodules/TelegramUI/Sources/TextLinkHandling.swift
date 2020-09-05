@@ -15,6 +15,7 @@ import HashtagSearchUI
 import StickerPackPreviewUI
 import JoinLinkPreviewUI
 import PresentationDataUtils
+import UrlWhitelist
 
 func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigateDisposable: MetaDisposable, controller: ViewController, action: TextLinkItemActionType, itemLink: TextLinkItem) {
     let presentImpl: (ViewController, Any?) -> Void = { controllerToPresent, _ in

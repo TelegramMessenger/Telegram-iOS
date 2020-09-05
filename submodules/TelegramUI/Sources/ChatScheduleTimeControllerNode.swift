@@ -8,7 +8,6 @@ import SyncCore
 import TelegramPresentationData
 import TelegramStringFormatting
 import AccountContext
-import ShareController
 import SolidRoundedButtonNode
 import PresentationDataUtils
 

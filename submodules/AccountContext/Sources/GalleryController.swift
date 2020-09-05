@@ -1,5 +1,12 @@
 import Foundation
 import Postbox
+import TelegramCore
+
+public enum GalleryControllerItemSource {
+    case peerMessagesAtId(MessageId)
+    case standaloneMessage(Message)
+    case searchResult(SearchMessagesResult, SearchMessagesState, MessageId)
+}
 
 public final class GalleryControllerActionInteraction {
     public let openUrl: (String, Bool) -> Void

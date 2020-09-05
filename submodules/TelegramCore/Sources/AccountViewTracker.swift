@@ -591,7 +591,7 @@ public final class AccountViewTracker {
                             if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
                                 return account.network.request(Api.functions.messages.getMessagesViews(peer: inputPeer, id: messageIds.map { $0.id }, increment: .boolTrue))
                                     |> map(Optional.init)
-                                    |> `catch` { _ -> Signal<[Int32]?, NoError> in
+                                    |> `catch` { _ -> Signal<[Api.MessageViews]?, NoError> in
                                         return .single(nil)
                                     }
                                     |> mapToSignal { viewCounts -> Signal<Void, NoError> in
@@ -599,22 +599,21 @@ public final class AccountViewTracker {
                                             return account.postbox.transaction { transaction -> Void in
                                                 for i in 0 ..< messageIds.count {
                                                     if i < viewCounts.count {
-                                                        /*if case let .messageViews(views, forwards) = viewCounts[i] {*/
-                                                        let views = viewCounts[i]
+                                                        if case let .messageViews(_, views, forwards, _) = viewCounts[i] {
                                                             transaction.updateMessage(messageIds[i], update: { currentMessage in
                                                                 let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
                                                                 var attributes = currentMessage.attributes
                                                                 loop: for j in 0 ..< attributes.count {
-                                                                    if let attribute = attributes[j] as? ViewCountMessageAttribute {
+                                                                    if let attribute = attributes[j] as? ViewCountMessageAttribute, let views = views {
                                                                         attributes[j] = ViewCountMessageAttribute(count: max(attribute.count, Int(views)))
                                                                     }
-                                                                    /*if let _ = attributes[j] as? ForwardCountMessageAttribute {
+                                                                    if let _ = attributes[j] as? ForwardCountMessageAttribute, let forwards = forwards {
                                                                         attributes[j] = ForwardCountMessageAttribute(count: Int(forwards))
-                                                                    }*/
+                                                                    }
                                                                 }
                                                                 return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                                                             })
-                                                        //}
+                                                        }
                                                     }
                                                 }
                                             }

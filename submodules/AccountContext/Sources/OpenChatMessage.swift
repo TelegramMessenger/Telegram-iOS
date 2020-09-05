@@ -6,6 +6,7 @@ import SyncCore
 import SwiftSignalKit
 import Display
 import AsyncDisplayKit
+import UniversalMediaPlayer
 
 public enum ChatControllerInteractionOpenMessageMode {
     case `default`
@@ -36,6 +37,8 @@ public final class OpenChatMessageParams {
     public let setupTemporaryHiddenMedia: (Signal<Any?, NoError>, Int, Media) -> Void
     public let chatAvatarHiddenMedia: (Signal<MessageId?, NoError>, Media) -> Void
     public let actionInteraction: GalleryControllerActionInteraction?
+    public let playlistLocation: PeerMessagesPlaylistLocation?
+    public let gallerySource: GalleryControllerItemSource?
     
     public init(
         context: AccountContext,
@@ -56,7 +59,9 @@ public final class OpenChatMessageParams {
         sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?,
         setupTemporaryHiddenMedia: @escaping (Signal<Any?, NoError>, Int, Media) -> Void,
         chatAvatarHiddenMedia: @escaping (Signal<MessageId?, NoError>, Media) -> Void,
-        actionInteraction: GalleryControllerActionInteraction? = nil
+        actionInteraction: GalleryControllerActionInteraction? = nil,
+        playlistLocation: PeerMessagesPlaylistLocation? = nil,
+        gallerySource: GalleryControllerItemSource? = nil
     ) {
         self.context = context
         self.message = message
@@ -77,5 +82,7 @@ public final class OpenChatMessageParams {
         self.setupTemporaryHiddenMedia = setupTemporaryHiddenMedia
         self.chatAvatarHiddenMedia = chatAvatarHiddenMedia
         self.actionInteraction = actionInteraction
+        self.playlistLocation = playlistLocation
+        self.gallerySource = gallerySource
     }
 }
