@@ -5,7 +5,7 @@ import MtProtoKit
 
 import SyncCore
 
-public func addAppLogEvent(postbox: Postbox, time: Double, type: String, peerId: PeerId?, data: JSON) {
+public func addAppLogEvent(postbox: Postbox, time: Double = Date().timeIntervalSince1970, type: String, peerId: PeerId? = nil, data: JSON = .dictionary([:])) {
     let tag: PeerOperationLogTag = OperationLogTags.SynchronizeAppLogEvents
     let peerId = PeerId(namespace: 0, id: 0)
     let _ = (postbox.transaction { transaction in

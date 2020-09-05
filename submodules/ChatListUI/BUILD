@@ -46,6 +46,9 @@ swift_library(
         "//submodules/ItemListPeerActionItem:ItemListPeerActionItem",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/TooltipUI:TooltipUI",
+        "//submodules/ListMessageItem:ListMessageItem",
+        "//submodules/ChatMessageInteractiveMediaBadge:ChatMessageInteractiveMediaBadge",
+        "//submodules/MediaPlayer:UniversalMediaPlayer",
     ],
     visibility = [
         "//visibility:public",

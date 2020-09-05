@@ -199,94 +199,6 @@ private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: M
     }
 }
 
-enum PeerMessagesPlaylistLocation: Equatable, SharedMediaPlaylistLocation {
-    case messages(peerId: PeerId, tagMask: MessageTags, at: MessageId)
-    case singleMessage(MessageId)
-    case recentActions(Message)
-
-    var playlistId: PeerMessagesMediaPlaylistId {
-        switch self {
-            case let .messages(peerId, _, _):
-                return .peer(peerId)
-            case let .singleMessage(id):
-                return .peer(id.peerId)
-            case let .recentActions(message):
-                return .recentActions(message.id.peerId)
-        }
-    }
-    
-    var messageId: MessageId? {
-        switch self {
-            case let .messages(_, _, messageId), let .singleMessage(messageId):
-                return messageId
-            default:
-                return nil
-        }
-    }
-    
-    func isEqual(to: SharedMediaPlaylistLocation) -> Bool {
-        if let to = to as? PeerMessagesPlaylistLocation {
-            return self == to
-        } else {
-            return false
-        }
-    }
-    
-    static func ==(lhs: PeerMessagesPlaylistLocation, rhs: PeerMessagesPlaylistLocation) -> Bool {
-        switch lhs {
-            case let .messages(peerId, tagMask, at):
-                if case .messages(peerId, tagMask, at) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .singleMessage(messageId):
-                if case .singleMessage(messageId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .recentActions(lhsMessage):
-                if case let .recentActions(rhsMessage) = rhs, lhsMessage.id == rhsMessage.id {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-}
-
-enum PeerMessagesMediaPlaylistId: Equatable, SharedMediaPlaylistId {
-    case peer(PeerId)
-    case recentActions(PeerId)
-    
-    func isEqual(to: SharedMediaPlaylistId) -> Bool {
-        if let to = to as? PeerMessagesMediaPlaylistId {
-            return self == to
-        }
-        return false
-    }
-}
-    
-func peerMessageMediaPlayerType(_ message: Message) -> MediaManagerPlayerType? {
-    if let file = extractFileMedia(message) {
-        if file.isVoice || file.isInstantVideo {
-            return .voice
-        } else if file.isMusic {
-            return .music
-        }
-    }
-    return nil
-}
-    
-func peerMessagesMediaPlaylistAndItemId(_ message: Message, isRecentActions: Bool) -> (SharedMediaPlaylistId, SharedMediaPlaylistItemId)? {
-    if isRecentActions {
-        return (PeerMessagesMediaPlaylistId.recentActions(message.id.peerId), PeerMessagesMediaPlaylistItemId(messageId: message.id))
-    } else {
-        return (PeerMessagesMediaPlaylistId.peer(message.id.peerId), PeerMessagesMediaPlaylistItemId(messageId: message.id))
-    }
-}
-
 private struct PlaybackStack {
     var ids: [MessageId] = []
     var set: Set<MessageId> = []
@@ -383,6 +295,10 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                 self.loadingItem = false
                 self.currentItem = (message, [])
                 self.updateState()
+            case let .searchResults(_, _, messages, messageId):
+                self.loadingItem = false
+                self.currentItem = (messages.first(where: { $0.id == messageId })!, messages)
+                self.updateState()
         }
     }
     
@@ -430,7 +346,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                             self.currentItem = nil
                             self.updateState()
                         } else {
-                             self.loadItem(anchor: .index(currentItem.current.index), navigation: navigation)
+                            self.loadItem(anchor: .index(currentItem.current.index), navigation: navigation)
                         }
                     }
                 }
@@ -562,6 +478,10 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                 }
             case let .index(index):
                 switch self.messagesLocation {
+                    case let .searchResults(_, _, messages, _):
+                        self.loadingItem = false
+                        self.currentItem = (messages.first(where: { $0.id == index.id })!, messages)
+                        self.updateState()
                     case let .messages(peerId, tagMask, _):
                         let inputIndex: Signal<MessageIndex, NoError>
                         let looping = self.looping

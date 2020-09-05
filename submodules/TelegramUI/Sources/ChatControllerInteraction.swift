@@ -35,16 +35,6 @@ struct ChatInterfaceStickerSettings: Equatable {
     }
 }
 
-public enum ChatControllerInteractionLongTapAction {
-    case url(String)
-    case mention(String)
-    case peerMention(PeerId, String)
-    case command(String)
-    case hashtag(String)
-    case timecode(Double, String)
-    case bankCard(String)
-}
-
 struct ChatInterfacePollActionState: Equatable {
     var pollMessageIdsInProgress: [MessageId: [Data]] = [:]
 }

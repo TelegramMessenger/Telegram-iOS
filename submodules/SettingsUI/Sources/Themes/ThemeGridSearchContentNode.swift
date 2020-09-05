@@ -674,7 +674,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                         text = query
                         placeholder = self.presentationData.strings.Wallpaper_SearchShort
                 }
-                self.setQuery?(prefix, text)
+                self.setQuery?(prefix, [], text)
                 self.setPlaceholder?(placeholder)
             }
         }

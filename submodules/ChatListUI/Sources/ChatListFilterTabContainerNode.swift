@@ -625,7 +625,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
         let previousContentWidth = self.scrollNode.view.contentSize.width
         
         if self.currentParams?.presentationData.theme !== presentationData.theme {
-            self.selectedLineNode.image = generateImage(CGSize(width: 7.0, height: 4.0), rotatedContext: { size, context in
+            self.selectedLineNode.image = generateImage(CGSize(width: 8.0, height: 4.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 context.setFillColor(presentationData.theme.list.itemAccentColor.cgColor)
                 context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.width)))

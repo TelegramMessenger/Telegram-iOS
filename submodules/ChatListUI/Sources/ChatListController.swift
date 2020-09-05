@@ -1548,7 +1548,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             
             let isEmpty = resolvedItems.count <= 1 || displayTabsAtBottom
             
-            if wasEmpty != isEmpty {
+            if wasEmpty != isEmpty, strongSelf.displayNavigationBar {
                 strongSelf.navigationBar?.setSecondaryContentNode(isEmpty ? nil : strongSelf.tabContainerNode)
                 if let parentController = strongSelf.parent as? TabBarController {
                     parentController.navigationBar?.setSecondaryContentNode(isEmpty ? nil : strongSelf.tabContainerNode)
@@ -1681,20 +1681,70 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 if let scrollToTop = strongSelf.scrollToTop {
                     scrollToTop()
                 }
+                                
                 if let searchContentNode = strongSelf.searchContentNode {
-                    strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode)
+                    var updatedSearchOptionsImpl: ((ChatListSearchOptions?) -> Void)?
+                    
+                    if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, navigationController: strongSelf.navigationController as? NavigationController, updatedSearchOptions: { options in
+                        updatedSearchOptionsImpl?(options)
+                    }) {
+                        let (filterContainerNode, activate) = filterContainerNodeAndActivate
+                        strongSelf.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: true)
+                        if let parentController = strongSelf.parent as? TabBarController {
+                            parentController.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: true)
+                        }
+                        activate()
+                        
+                        updatedSearchOptionsImpl = { [weak self, weak filterContainerNode] options in
+                            guard let strongSelf = self, let strongFilterContainerNode = filterContainerNode else {
+                                return
+                            }
+                            var node: ASDisplayNode?
+                            if let options = options, options.messageTags != nil {
+                            } else {
+                                node = strongFilterContainerNode
+                            }
+                            
+                            strongSelf.navigationBar?.setSecondaryContentNode(node, animated: true)
+                            if let parentController = strongSelf.parent as? TabBarController {
+                                parentController.navigationBar?.setSecondaryContentNode(node, animated: true)
+                            }
+                            
+                            let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
+                            if let layout = strongSelf.validLayout {
+                                strongSelf.containerLayoutUpdated(layout, transition: transition)
+                                (strongSelf.parent as? TabBarController)?.updateLayout(transition: transition)
+                            }
+                        }
+                    }
                 }
-                strongSelf.setDisplayNavigationBar(false, transition: .animated(duration: 0.5, curve: .spring))
+                
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
+                strongSelf.setDisplayNavigationBar(false, transition: transition)
             })
         }
     }
     
     public func deactivateSearch(animated: Bool) {
         if !self.displayNavigationBar {
-            self.setDisplayNavigationBar(true, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate)
             if let searchContentNode = self.searchContentNode {
                 self.chatListDisplayNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
             }
+            
+            let filtersIsEmpty: Bool
+            if let (resolvedItems, displayTabsAtBottom) = tabContainerData {
+                filtersIsEmpty = resolvedItems.count <= 1 || displayTabsAtBottom
+            } else {
+                filtersIsEmpty = true
+            }
+
+            self.navigationBar?.setSecondaryContentNode(filtersIsEmpty ? nil : self.tabContainerNode, animated: animated)
+            if let parentController = self.parent as? TabBarController {
+                parentController.navigationBar?.setSecondaryContentNode(filtersIsEmpty ? nil : self.tabContainerNode, animated: animated)
+            }
+            
+            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.5, curve: .spring) : .immediate
+            self.setDisplayNavigationBar(true, transition: transition)
         }
     }
     
