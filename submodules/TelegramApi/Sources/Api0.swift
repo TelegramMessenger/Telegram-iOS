@@ -489,6 +489,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1556570557] = { return Api.EmojiKeywordsDifference.parse_emojiKeywordsDifference($0) }
     dict[1493171408] = { return Api.HighScore.parse_highScore($0) }
     dict[-305282981] = { return Api.TopPeer.parse_topPeer($0) }
+    dict[-1495959709] = { return Api.MessageReplyHeader.parse_messageReplyHeader($0) }
     dict[411017418] = { return Api.SecureValue.parse_secureValue($0) }
     dict[-316748368] = { return Api.SecureValueHash.parse_secureValueHash($0) }
     dict[1444661369] = { return Api.ContactBlocked.parse_contactBlocked($0) }
@@ -605,7 +606,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[537022650] = { return Api.User.parse_userEmpty($0) }
     dict[-1820043071] = { return Api.User.parse_user($0) }
     dict[-2082087340] = { return Api.Message.parse_messageEmpty($0) }
-    dict[951660196] = { return Api.Message.parse_message($0) }
+    dict[998150060] = { return Api.Message.parse_message($0) }
     dict[797820163] = { return Api.Message.parse_messageService($0) }
     dict[831924812] = { return Api.StatsGroupTopInviter.parse_statsGroupTopInviter($0) }
     dict[186120336] = { return Api.messages.RecentStickers.parse_recentStickersNotModified($0) }
@@ -1192,6 +1193,8 @@ public struct Api {
             case let _1 as Api.HighScore:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.TopPeer:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.MessageReplyHeader:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SecureValue:
                 _1.serialize(buffer, boxed)

@@ -121,7 +121,7 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
 
 func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
     switch message {
-        case let .message(flags, _, fromId, chatPeerId, fwdHeader, viaBotId, _, _, _, _, media, _, entities, _, _, _, _, _, _, _):
+        case let .message(flags, _, fromId, chatPeerId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _, _, _):
             let peerId: PeerId = chatPeerId.peerId
             
             var result = [peerId]
@@ -206,11 +206,14 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
 
 func apiMessageAssociatedMessageIds(_ message: Api.Message) -> [MessageId]? {
     switch message {
-        case let .message(flags, _, fromId, chatPeerId, _, _, replyToMsgId, _, _, _, _, _, _, _, _, _, _, _, _, _):
-            if let replyToMsgId = replyToMsgId {
+        case let .message(flags, _, fromId, chatPeerId, _, _, replyTo, _, _, _, _, _, _, _, _, _, _, _, _):
+            if let replyTo = replyTo {
                 let peerId: PeerId = chatPeerId.peerId
                 
-                return [MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)]
+                switch replyTo {
+                case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, _):
+                    return [MessageId(peerId: replyToPeerId?.peerId ?? peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)]
+                }
             }
         case .messageEmpty:
             break
@@ -348,7 +351,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 extension StoreMessage {
     convenience init?(apiMessage: Api.Message, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
-            case let .message(flags, id, fromId, chatPeerId, fwdFrom, viaBotId, replyToMsgId, replyToTopId, date, message, media, replyMarkup, entities, views, forwards, replies, editDate, postAuthor, groupingId, restrictionReason):
+            case let .message(flags, id, fromId, chatPeerId, fwdFrom, viaBotId, replyTo, date, message, media, replyMarkup, entities, views, forwards, replies, editDate, postAuthor, groupingId, restrictionReason):
                 let peerId: PeerId
                 var authorId: PeerId?
                 switch chatPeerId {
@@ -454,18 +457,22 @@ extension StoreMessage {
                 }
                 
                 var threadId: Int64?
-                if let replyToMsgId = replyToMsgId {
+                if let replyTo = replyTo {
                     var threadMessageId: MessageId?
-                    if let replyToTopId = replyToTopId {
-                        let threadIdValue = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
-                        threadMessageId = threadIdValue
-                        threadId = makeMessageThreadId(threadIdValue)
-                    } else if peerId.namespace == Namespaces.Peer.CloudChannel {
-                        let threadIdValue = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
-                        threadMessageId = threadIdValue
-                        threadId = makeMessageThreadId(threadIdValue)
+                    switch replyTo {
+                    case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyToTopId):
+                        let replyPeerId = replyToPeerId?.peerId ?? peerId
+                        if let replyToTopId = replyToTopId {
+                            let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
+                            threadMessageId = threadIdValue
+                            threadId = makeMessageThreadId(threadIdValue)
+                        } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                            let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
+                            threadMessageId = threadIdValue
+                            threadId = makeMessageThreadId(threadIdValue)
+                        }
+                        attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
                     }
-                    attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
                 }
                 
                 if namespace != Namespaces.Message.ScheduledCloud {
