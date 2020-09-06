@@ -152,7 +152,7 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
                     }
                     var textOffset: CGFloat = 0.0
                     if constrainedSize.height >= 36.0 {
-                        textOffset += UIScreenPixel
+                        textOffset += 1.0
                     }
                     let labelFrame = CGRect(origin: CGPoint(x: floor((constrainedSize.width - totalWidth) / 2.0) + iconSize.width + spacing, y: floorToScreenPixels((height - labelLayoutResult.size.height) / 2.0) + textOffset), size: labelLayoutResult.size)
                     transition.updateFrame(node: strongSelf.labelNode, frame: labelFrame)

@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SyncCore
 import TelegramUIPreferences
+import TelegramPresentationData
 import AccountContext
 
 enum ChatMessageBubbleContentBackgroundHiding {

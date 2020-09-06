@@ -13,24 +13,6 @@ import WebsiteType
 import InstantPageUI
 import UrlHandling
 
-enum InstantPageType {
-    case generic
-    case album
-}
-
-func instantPageType(of webpage: TelegramMediaWebpageLoadedContent) -> InstantPageType {
-    if let type = webpage.type, type == "telegram_album" {
-        return .album
-    }
-    
-    switch websiteType(of: webpage.websiteName) {
-        case .instagram, .twitter:
-            return .album
-        default:
-            return .generic
-    }
-}
-
 func instantPageGalleryMedia(webpageId: MediaId, page: InstantPage, galleryMedia: Media) -> [InstantPageGalleryEntry] {
     var result: [InstantPageGalleryEntry] = []
     var counter: Int = 0

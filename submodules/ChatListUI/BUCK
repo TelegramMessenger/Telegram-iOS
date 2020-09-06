@@ -46,6 +46,9 @@ static_library(
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/TooltipUI:TooltipUI",
+        "//submodules/ListMessageItem:ListMessageItem",
+        "//submodules/ChatMessageInteractiveMediaBadge:ChatMessageInteractiveMediaBadge",
+        "//submodules/MediaPlayer:UniversalMediaPlayer",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

@@ -10,42 +10,60 @@ import TelegramPresentationData
 import AccountContext
 import TelegramUIPreferences
 
-final class ListMessageItem: ListViewItem {
-    let theme: PresentationTheme
-    let strings: PresentationStrings
-    let fontSize: PresentationFontSize
-    let dateTimeFormat: PresentationDateTimeFormat
+public final class ListMessageItemInteraction {
+    let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
+    let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void
+    let toggleMessagesSelection: ([MessageId], Bool) -> Void
+    let openUrl: (String, Bool, Bool?, Message?) -> Void
+    let openInstantPage: (Message, ChatMessageItemAssociatedData?) -> Void
+    let longTap: (ChatControllerInteractionLongTapAction, Message?) -> Void
+    let getHiddenMedia: () -> [MessageId: [Media]]
+    
+    public init(openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool, openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void, toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void, openUrl: @escaping (String, Bool, Bool?, Message?) -> Void, openInstantPage: @escaping (Message, ChatMessageItemAssociatedData?) -> Void, longTap: @escaping (ChatControllerInteractionLongTapAction, Message?) -> Void, getHiddenMedia: @escaping () -> [MessageId: [Media]]) {
+        self.openMessage = openMessage
+        self.openMessageContextMenu = openMessageContextMenu
+        self.toggleMessagesSelection = toggleMessagesSelection
+        self.openUrl = openUrl
+        self.openInstantPage = openInstantPage
+        self.longTap = longTap
+        self.getHiddenMedia = getHiddenMedia
+    }
+}
+
+public final class ListMessageItem: ListViewItem {
+    let presentationData: ChatPresentationData
     let context: AccountContext
     let chatLocation: ChatLocation
-    let controllerInteraction: ChatControllerInteraction
+    let interaction: ListMessageItemInteraction
     let message: Message
     let selection: ChatHistoryMessageSelection
+    let isGlobalSearchResult: Bool
     
-    let header: ListMessageDateHeader?
+    let header: ListViewItemHeader?
     
-    let selectable: Bool = true
+    public let selectable: Bool = true
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, context: AccountContext, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, message: Message, selection: ChatHistoryMessageSelection, displayHeader: Bool) {
-        self.theme = theme
-        self.strings = strings
-        self.fontSize = fontSize
-        self.dateTimeFormat = dateTimeFormat
+    public init(presentationData: ChatPresentationData, context: AccountContext, chatLocation: ChatLocation, interaction: ListMessageItemInteraction, message: Message, selection: ChatHistoryMessageSelection, displayHeader: Bool, customHeader: ListViewItemHeader? = nil, isGlobalSearchResult: Bool = false) {
+        self.presentationData = presentationData
         self.context = context
         self.chatLocation = chatLocation
-        self.controllerInteraction = controllerInteraction
+        self.interaction = interaction
         self.message = message
-        if displayHeader {
-            self.header = ListMessageDateHeader(timestamp: message.timestamp, theme: theme, strings: strings, fontSize: fontSize)
+        if let header = customHeader {
+            self.header = header
+        } else if displayHeader {
+            self.header = ListMessageDateHeader(timestamp: message.timestamp, theme: presentationData.theme.theme, strings: presentationData.strings, fontSize: presentationData.fontSize)
         } else {
             self.header = nil
         }
         self.selection = selection
+        self.isGlobalSearchResult = isGlobalSearchResult
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         var viewClassName: AnyClass = ListMessageSnippetItemNode.self
         
-        for media in message.media {
+        for media in self.message.media {
             if let _ = media as? TelegramMediaFile {
                 viewClassName = ListMessageFileItemNode.self
                 break
@@ -54,7 +72,7 @@ final class ListMessageItem: ListViewItem {
         
         let configure = { () -> Void in
             let node = (viewClassName as! ListMessageNode.Type).init()
-            node.controllerInteraction = self.controllerInteraction
+            node.interaction = self.interaction
             node.setupItem(self)
             
             let nodeLayout = node.asyncLayout()
@@ -106,11 +124,11 @@ final class ListMessageItem: ListViewItem {
         }
     }
     
-    func selected(listView: ListView) {
+    public func selected(listView: ListView) {
         listView.clearHighlightAnimated(true)
         
         if case let .selectable(selected) = self.selection {
-            self.controllerInteraction.toggleMessagesSelection([self.message.id], !selected)
+            self.interaction.toggleMessagesSelection([self.message.id], !selected)
         } else {
             listView.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ListMessageFileItemNode {

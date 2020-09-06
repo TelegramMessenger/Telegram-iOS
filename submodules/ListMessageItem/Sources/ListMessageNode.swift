@@ -3,10 +3,11 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import Postbox
+import AccountContext
 
-class ListMessageNode: ListViewItemNode {
+public class ListMessageNode: ListViewItemNode {
     var item: ListMessageItem?
-    var controllerInteraction: ChatControllerInteraction?
+    var interaction: ListMessageItemInteraction?
     
     required init() {
         super.init(layerBacked: false, dynamicBounce: false)
@@ -19,7 +20,7 @@ class ListMessageNode: ListViewItemNode {
     override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
     }
     
-    func asyncLayout() -> (_ item: ListMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    public func asyncLayout() -> (_ item: ListMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         return { _, params, _, _, _ in
             return (ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 1.0), insets: UIEdgeInsets()), { _ in
                 
@@ -27,13 +28,13 @@ class ListMessageNode: ListViewItemNode {
         }
     }
     
-    func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    public func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         return nil
     }
     
-    func updateHiddenMedia() {
+    public func updateHiddenMedia() {
     }
     
-    func updateSelectionState(animated: Bool) {
+    public func updateSelectionState(animated: Bool) {
     }
 }

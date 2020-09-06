@@ -480,9 +480,9 @@ extension StoreMessage {
                         attributes.append(ViewCountMessageAttribute(count: Int(views)))
                     }
                     
-                    /*if let forwards = forwards {
+                    if let forwards = forwards {
                         attributes.append(ForwardCountMessageAttribute(count: Int(forwards)))
-                    }*/
+                    }
                 }
                 
                 if let editDate = editDate {

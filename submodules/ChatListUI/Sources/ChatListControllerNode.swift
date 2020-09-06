@@ -1147,12 +1147,12 @@ final class ChatListControllerNode: ASDisplayNode {
         }
     }
     
-    func activateSearch(placeholderNode: SearchBarPlaceholderNode) {
+    func activateSearch(placeholderNode: SearchBarPlaceholderNode, navigationController: NavigationController?, updatedSearchOptions: ((ChatListSearchOptions?) -> Void)?) -> (ASDisplayNode, () -> Void)? {
         guard let (containerLayout, _, _, cleanNavigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
-            return
+            return nil
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChatListSearchContainerNode(context: self.context, filter: [], groupId: self.groupId, openPeer: { [weak self] peer, dismissSearch in
+        let contentNode = ChatListSearchContainerNode(context: self.context, filter: [], groupId: self.groupId, openPeer: { [weak self] peer, dismissSearch in
             self?.requestOpenPeerFromSearch?(peer, dismissSearch)
         }, openDisabledPeer: { _ in
         }, openRecentPeerOptions: { [weak self] peer in
@@ -1165,25 +1165,34 @@ final class ChatListControllerNode: ASDisplayNode {
             if let requestAddContact = self?.requestAddContact {
                 requestAddContact(phoneNumber)
             }
-        }, peerContextAction: self.peerContextAction, present: { [weak self] c in
-            self?.controller?.present(c, in: .window(.root))
-        }), cancel: { [weak self] in
+        }, peerContextAction: self.peerContextAction, present: { [weak self] c, a in
+            self?.controller?.present(c, in: .window(.root), with: a)
+        }, navigationController: navigationController, updatedSearchOptions: { options in
+            updatedSearchOptions?(options)
+        })
+        
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: contentNode, cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {
                 requestDeactivateSearch()
             }
         })
         self.containerNode.accessibilityElementsHidden = true
-        
-        self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: cleanNavigationBarHeight, transition: .immediate)
-        self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in
-            if let strongSelf = self, let strongPlaceholderNode = placeholderNode {
-                if isSearchBar {
-                    strongPlaceholderNode.supernode?.insertSubnode(subnode, aboveSubnode: strongPlaceholderNode)
-                } else {
-                    strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
-                }
+                
+        return (contentNode.filterContainerNode, { [weak self] in
+            guard let strongSelf = self else {
+                return
             }
-        }, placeholder: placeholderNode)
+            strongSelf.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: cleanNavigationBarHeight, transition: .immediate)
+            strongSelf.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in
+                if let strongSelf = self, let strongPlaceholderNode = placeholderNode {
+                    if isSearchBar {
+                        strongPlaceholderNode.supernode?.insertSubnode(subnode, aboveSubnode: strongPlaceholderNode)
+                    } else {
+                        strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
+                    }
+                }
+            }, placeholder: placeholderNode)
+        })
     }
     
     func deactivateSearch(placeholderNode: SearchBarPlaceholderNode, animated: Bool) {

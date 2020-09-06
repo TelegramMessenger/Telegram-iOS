@@ -13,6 +13,7 @@ import TelegramUIPreferences
 import UniversalMediaPlayer
 import TelegramBaseController
 import OverlayStatusController
+import ListMessageItem
 
 private final class PassthroughContainerNode: ASDisplayNode {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -71,7 +72,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         self.selectedMessagesPromise.set(.single(self.selectedMessages))
         
         let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
-        self.listNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), chatLocationContextHolder: chatLocationContextHolder, tagMask: tagMask, subject: nil, controllerInteraction: chatControllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), mode: .list(search: false, reversed: false, displayHeaders: .allButLast))
+        self.listNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), chatLocationContextHolder: chatLocationContextHolder, tagMask: tagMask, subject: nil, controllerInteraction: chatControllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), mode: .list(search: false, reversed: false, displayHeaders: .allButLast, isGlobalSearch: false))
         self.listNode.defaultToSynchronousTransactionWhileScrolling = true
         
         if tagMask == .music {
@@ -305,7 +306,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                                     } else {
                                         controllerContext = strongSelf.context.sharedContext.makeTempAccountContext(account: account)
                                     }
-                                    let controller = strongSelf.context.sharedContext.makeOverlayAudioPlayerController(context: controllerContext, peerId: id.messageId.peerId, type: type, initialMessageId: id.messageId, initialOrder: order, parentNavigationController: strongSelf.chatControllerInteraction.navigationController())
+                                    let controller = strongSelf.context.sharedContext.makeOverlayAudioPlayerController(context: controllerContext, peerId: id.messageId.peerId, type: type, initialMessageId: id.messageId, initialOrder: order, isGlobalSearch: false, parentNavigationController: strongSelf.chatControllerInteraction.navigationController())
                                     strongSelf.view.window?.endEditing(true)
                                     strongSelf.chatControllerInteraction.presentController(controller, nil)
                                 } else if index.1 {

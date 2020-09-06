@@ -13,6 +13,8 @@ import TextFormat
 import AccountContext
 import UrlEscaping
 import PhotoResources
+import WebsiteType
+import ChatMessageInteractiveMediaBadge
 
 private let buttonFont = Font.semibold(13.0)
 

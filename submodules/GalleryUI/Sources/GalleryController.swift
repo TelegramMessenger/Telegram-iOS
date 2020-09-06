@@ -247,6 +247,7 @@ public final class GalleryControllerPresentationArguments {
 private enum GalleryMessageHistoryView {
     case view(MessageHistoryView)
     case single(MessageHistoryEntry)
+    case searchResults(SearchMessagesResult, SearchMessagesState)
     
     var entries: [MessageHistoryEntry] {
         switch self {
@@ -254,12 +255,14 @@ private enum GalleryMessageHistoryView {
                 return view.entries
             case let .single(entry):
                 return [entry]
+            case let .searchResults(result, _):
+                return result.messages.map { MessageHistoryEntry(message: $0, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) }
         }
     }
     
     var tagMask: MessageTags? {
         switch self {
-        case .single:
+        case .single, .searchResults:
             return nil
         case let .view(view):
             return view.tagMask
@@ -272,6 +275,8 @@ private enum GalleryMessageHistoryView {
             return false
         case let .view(view):
             return view.earlierId != nil
+        case let .searchResults(result, _):
+            return false
         }
     }
     
@@ -281,13 +286,10 @@ private enum GalleryMessageHistoryView {
             return false
         case let .view(view):
             return view.laterId != nil
+        case let .searchResults(result, _):
+            return false
         }
     }
-}
-
-public enum GalleryControllerItemSource {
-    case peerMessagesAtId(messageId: MessageId, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>)
-    case standaloneMessage(Message)
 }
 
 public enum GalleryControllerInteractionTapAction {
@@ -421,6 +423,8 @@ public class GalleryController: ViewController, StandalonePresentableController 
                 message = context.account.postbox.messageAtId(messageId)
             case let .standaloneMessage(m):
                 message = .single(m)
+            case let .searchResult(result, _, messageId):
+                message = .single(result.messages.first(where: { $0.id == messageId }))
         }
         
         let messageView = message
@@ -445,6 +449,8 @@ public class GalleryController: ViewController, StandalonePresentableController 
                     }
                 case .standaloneMessage:
                     return .single(GalleryMessageHistoryView.single(MessageHistoryEntry(message: message!, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false))))
+                case let .searchResult(result, state, _):
+                    return .single(GalleryMessageHistoryView.searchResults(result, state))
             }
         }
         |> take(1)
@@ -477,6 +483,11 @@ public class GalleryController: ViewController, StandalonePresentableController 
                                     }
                                 case let .standaloneMessage(m):
                                     if message.id == m.id {
+                                        centralEntryStableId = message.stableId
+                                        break loop
+                                    }
+                                case let .searchResult(result, state, messageId):
+                                    if message.id == messageId {
                                         centralEntryStableId = message.stableId
                                         break loop
                                     }

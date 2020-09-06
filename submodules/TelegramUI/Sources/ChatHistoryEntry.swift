@@ -4,28 +4,7 @@ import SyncCore
 import TelegramPresentationData
 import MergeLists
 import TemporaryCachedPeerDataManager
-
-public enum ChatHistoryMessageSelection: Equatable {
-    case none
-    case selectable(selected: Bool)
-    
-    public static func ==(lhs: ChatHistoryMessageSelection, rhs: ChatHistoryMessageSelection) -> Bool {
-        switch lhs {
-            case .none:
-                if case .none = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .selectable(selected):
-                if case .selectable(selected) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-}
+import AccountContext
 
 public enum ChatMessageEntryContentType {
     case generic

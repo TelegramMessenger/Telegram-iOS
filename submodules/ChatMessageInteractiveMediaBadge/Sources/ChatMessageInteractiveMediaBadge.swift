@@ -7,18 +7,21 @@ import TextFormat
 import RadialStatusNode
 import AppBundle
 
-enum ChatMessageInteractiveMediaDownloadState: Equatable {
+private let font = Font.regular(11.0)
+private let boldFont = Font.semibold(11.0)
+
+public enum ChatMessageInteractiveMediaDownloadState: Equatable {
     case remote
     case fetching(progress: Float?)
     case compactRemote
     case compactFetching(progress: Float)
 }
 
-enum ChatMessageInteractiveMediaBadgeContent: Equatable {
+public enum ChatMessageInteractiveMediaBadgeContent: Equatable {
     case text(inset: CGFloat, backgroundColor: UIColor, foregroundColor: UIColor, text: NSAttributedString)
     case mediaDownload(backgroundColor: UIColor, foregroundColor: UIColor, duration: String, size: String?, muted: Bool, active: Bool)
     
-    static func ==(lhs: ChatMessageInteractiveMediaBadgeContent, rhs: ChatMessageInteractiveMediaBadgeContent) -> Bool {
+    public static func ==(lhs: ChatMessageInteractiveMediaBadgeContent, rhs: ChatMessageInteractiveMediaBadgeContent) -> Bool {
         switch lhs {
             case let .text(lhsInset, lhsBackgroundColor, lhsForegroundColor, lhsText):
                 if case let .text(rhsInset, rhsBackgroundColor, rhsForegroundColor, rhsText) = rhs, lhsInset.isEqual(to: rhsInset), lhsBackgroundColor.isEqual(rhsBackgroundColor), lhsForegroundColor.isEqual(rhsForegroundColor), lhsText.isEqual(to: rhsText) {
@@ -36,12 +39,9 @@ enum ChatMessageInteractiveMediaBadgeContent: Equatable {
     }
 }
 
-private let font = Font.regular(11.0)
-private let boldFont = Font.semibold(11.0)
-
-final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
+public final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
     private var content: ChatMessageInteractiveMediaBadgeContent?
-    var pressed: (() -> Void)?
+    public var pressed: (() -> Void)?
     
     private var mediaDownloadState: ChatMessageInteractiveMediaDownloadState?
     
@@ -56,7 +56,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
     private var iconNode: ASImageNode?
     private var mediaDownloadStatusNode: RadialStatusNode?
     
-    override init() {
+    override public init() {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.clipsToBounds = true
         self.durationNode = ASTextNode()
@@ -68,7 +68,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
         self.backgroundNode.addSubnode(self.durationNode)
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
@@ -87,7 +87,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
         return self.measureNode.measure(CGSize(width: 240.0, height: 160.0)).width
     }
     
-    func update(theme: PresentationTheme?, content: ChatMessageInteractiveMediaBadgeContent?, mediaDownloadState: ChatMessageInteractiveMediaDownloadState?, alignment: NSTextAlignment = .left, animated: Bool, badgeAnimated: Bool = true) {
+    public func update(theme: PresentationTheme?, content: ChatMessageInteractiveMediaBadgeContent?, mediaDownloadState: ChatMessageInteractiveMediaDownloadState?, alignment: NSTextAlignment = .left, animated: Bool, badgeAnimated: Bool = true) {
         var transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
         
         let previousContentSize = self.previousContentSize
@@ -297,7 +297,7 @@ final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
         }
     }
     
-    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+    override public func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         return self.backgroundNode.frame.contains(point)
     }
 }
