@@ -176,11 +176,11 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                     self.controllerInteraction.shareAccountContact()
                 case .openWebApp:
                     if let message = self.message {
-                        self.controllerInteraction.requestMessageActionCallback(message.id, nil, true)
+                        self.controllerInteraction.requestMessageActionCallback(message.id, nil, true, false)
                     }
-                case let .callback(data):
+                case let .callback(requiresPassword, data):
                     if let message = self.message {
-                        self.controllerInteraction.requestMessageActionCallback(message.id, data, false)
+                        self.controllerInteraction.requestMessageActionCallback(message.id, data, false, requiresPassword)
                     }
                 case let .switchInline(samePeer, query):
                     if let message = message {

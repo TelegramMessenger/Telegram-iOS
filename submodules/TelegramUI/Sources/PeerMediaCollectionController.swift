@@ -327,7 +327,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                 return false
             }, sendBotContextResultAsGif: { _, _, _, _ in
                 return false
-            }, requestMessageActionCallback: { _, _, _ in
+            }, requestMessageActionCallback: { _, _, _, _ in
             }, requestMessageActionUrlAuth: { _, _, _ in
             }, activateSwitchInline: { _, _ in
             }, openUrl: { [weak self] url, _, external, _ in
@@ -413,7 +413,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, navigateToFirstDateMessage: { _ in
         }, requestRedeliveryOfFailedMessages: { _ in
         }, addContact: { _ in
-        }, rateCall: { _, _ in
+        }, rateCall: { _, _, _ in
         }, requestSelectMessagePollOptions: { _, _ in
         }, requestOpenMessagePollResults: { _, _ in
         }, openAppStorePage: {

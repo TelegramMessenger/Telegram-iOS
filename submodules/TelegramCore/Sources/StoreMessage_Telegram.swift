@@ -30,6 +30,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
         if let _ = attachment as? TelegramMediaImage {
             if !isSecret {
                 tags.insert(.photoOrVideo)
+                tags.insert(.photo)
             }
         } else if let file = attachment as? TelegramMediaFile {
             var refinedTag: MessageTags? = .file
@@ -41,7 +42,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
                             refinedTag = .voiceOrInstantVideo
                         } else {
                             if !isSecret {
-                                refinedTag = .photoOrVideo
+                                refinedTag = [.photoOrVideo, .video]
                             } else {
                                 refinedTag = nil
                             }
@@ -517,13 +518,15 @@ extension StoreMessage {
                     attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)))
                 }
                 
-                if let views = views, namespace != Namespaces.Message.ScheduledCloud {
-                    attributes.append(ViewCountMessageAttribute(count: Int(views)))
+                if namespace != Namespaces.Message.ScheduledCloud {
+                    if let views = views {
+                        attributes.append(ViewCountMessageAttribute(count: Int(views)))
+                    }
+                    
+                    /*if let forwards = forwards {
+                        attributes.append(ForwardCountMessageAttribute(count: Int(forwards)))
+                    }*/
                 }
-                
-                /*if let forwards = forwards, namespace != Namespaces.Message.ScheduledCloud {
-                    attributes.append(ForwardCountMessageAttribute(count: Int(forwards)))
-                }*/
                 
                 if let editDate = editDate {
                     attributes.append(EditedMessageAttribute(date: editDate, isHidden: (flags & (1 << 21)) != 0))

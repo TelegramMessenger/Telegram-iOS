@@ -945,8 +945,8 @@ public final class Transaction {
         self.postbox?.scanMessages(peerId: peerId, namespace: namespace, tag: tag, f)
     }
     
-    public func scanMessageAttributes(peerId: PeerId, namespace: MessageId.Namespace, _ f: (MessageId, [MessageAttribute]) -> Bool) {
-        self.postbox?.scanMessageAttributes(peerId: peerId, namespace: namespace, f)
+    public func scanMessageAttributes(peerId: PeerId, namespace: MessageId.Namespace, limit: Int, _ f: (MessageId, [MessageAttribute]) -> Bool) {
+        self.postbox?.scanMessageAttributes(peerId: peerId, namespace: namespace, limit: limit, f)
     }
     
     public func invalidateMessageHistoryTagsSummary(peerId: PeerId, namespace: MessageId.Namespace, tagMask: MessageTags) {
@@ -3174,9 +3174,10 @@ public final class Postbox {
         }
     }
     
-    fileprivate func scanMessageAttributes(peerId: PeerId, namespace: MessageId.Namespace, _ f: (MessageId, [MessageAttribute]) -> Bool) {
+    fileprivate func scanMessageAttributes(peerId: PeerId, namespace: MessageId.Namespace, limit: Int, _ f: (MessageId, [MessageAttribute]) -> Bool) {
+        var remainingLimit = limit
         var index = MessageIndex.upperBound(peerId: peerId, namespace: namespace)
-        while true {
+        while remainingLimit > 0 {
             let messages = self.messageHistoryTable.fetch(peerId: peerId, namespace: namespace, tag: nil, from: index, includeFrom: false, to: MessageIndex.lowerBound(peerId: peerId, namespace: namespace), limit: 32)
             for message in messages {
                 let attributes = MessageHistoryTable.renderMessageAttributes(message)
@@ -3184,6 +3185,7 @@ public final class Postbox {
                     break
                 }
             }
+            remainingLimit -= messages.count
             if let last = messages.last {
                 index = last.index
             } else {

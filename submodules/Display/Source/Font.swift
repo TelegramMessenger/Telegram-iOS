@@ -22,6 +22,7 @@ public struct Font {
         
         public static let bold = Traits(rawValue: 1 << 0)
         public static let italic = Traits(rawValue: 1 << 1)
+        public static let monospacedNumbers = Traits(rawValue: 1 << 2)
     }
     
     public enum Weight {
@@ -43,6 +44,15 @@ public struct Font {
                 symbolicTraits.insert(.traitItalic)
             }
             var updatedDescriptor: UIFontDescriptor? = descriptor.withSymbolicTraits(symbolicTraits)
+            if traits.contains(.monospacedNumbers) {
+                updatedDescriptor = descriptor.addingAttributes([
+                UIFontDescriptor.AttributeName.featureSettings: [
+                  [UIFontDescriptor.FeatureKey.featureIdentifier:
+                   kNumberSpacingType,
+                   UIFontDescriptor.FeatureKey.typeIdentifier:
+                   kMonospacedNumbersSelector]
+                ]])
+            }
             switch design {
                 case .serif:
                     updatedDescriptor = updatedDescriptor?.withDesign(.serif)

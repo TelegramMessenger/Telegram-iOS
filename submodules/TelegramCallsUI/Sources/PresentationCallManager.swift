@@ -17,45 +17,14 @@ private func callKitIntegrationIfEnabled(_ integration: CallKitIntegration?, set
     return enabled ? integration : nil
 }
 
-private func auxiliaryServers(appConfiguration: AppConfiguration) -> [CallAuxiliaryServer] {
+private func shouldEnableStunMarking(appConfiguration: AppConfiguration) -> Bool {
     guard let data = appConfiguration.data else {
-        return []
+        return true
     }
-    guard let servers = data["rtc_servers"] as? [[String: Any]] else {
-        return []
+    guard let enableStunMarking = data["voip_enable_stun_marking"] as? Bool else {
+        return true
     }
-    var result: [CallAuxiliaryServer] = []
-    for server in servers {
-        guard let host = server["host"] as? String else {
-            continue
-        }
-        guard let portString = server["port"] as? String else {
-            continue
-        }
-        guard let username = server["username"] as? String else {
-            continue
-        }
-        guard let password = server["password"] as? String else {
-            continue
-        }
-        guard let port = Int(portString) else {
-            continue
-        }
-        result.append(CallAuxiliaryServer(
-            host: host,
-            port: port,
-            connection: .stun
-        ))
-        result.append(CallAuxiliaryServer(
-            host: host,
-            port: port,
-            connection: .turn(
-                username: username,
-                password: password
-            )
-        ))
-    }
-    return result
+    return enableStunMarking
 }
 
 private enum CurrentCall {
@@ -309,12 +278,14 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         isOutgoing: false,
                         peer: firstState.1,
                         proxyServer: strongSelf.proxyServer,
-                        auxiliaryServers: auxiliaryServers(appConfiguration: appConfiguration),
+                        auxiliaryServers: [],
                         currentNetworkType: firstState.4,
                         updatedNetworkType: firstState.0.networkType,
                         startWithVideo: firstState.2.isVideo,
                         isVideoPossible: firstState.2.isVideoPossible,
-                        enableHighBitrateVideoCalls: experimentalSettings.enableHighBitrateVideoCalls
+                        enableStunMarking: shouldEnableStunMarking(appConfiguration: appConfiguration),
+                        enableTCP: experimentalSettings.enableVoipTcp,
+                        preferredVideoCodec: experimentalSettings.preferredVideoCodec
                     )
                     strongSelf.updateCurrentCall(call)
                     strongSelf.currentCallPromise.set(.single(call))
@@ -333,7 +304,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             } else {
                 for (account, _, state, _, _) in ringingStates {
                     if state.id != self.currentCall?.internalId {
-                        account.callSessionManager.drop(internalId: state.id, reason: .missed, debugLog: .single(nil))
+                        account.callSessionManager.drop(internalId: state.id, reason: .busy, debugLog: .single(nil))
                     }
                 }
             }
@@ -551,12 +522,14 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         isOutgoing: true,
                         peer: nil,
                         proxyServer: strongSelf.proxyServer,
-                        auxiliaryServers: auxiliaryServers(appConfiguration: appConfiguration),
+                        auxiliaryServers: [],
                         currentNetworkType: currentNetworkType,
                         updatedNetworkType: account.networkType,
                         startWithVideo: isVideo,
                         isVideoPossible: isVideoPossible,
-                        enableHighBitrateVideoCalls: experimentalSettings.enableHighBitrateVideoCalls
+                        enableStunMarking: shouldEnableStunMarking(appConfiguration: appConfiguration),
+                        enableTCP: experimentalSettings.enableVoipTcp,
+                        preferredVideoCodec: experimentalSettings.preferredVideoCodec
                     )
                     strongSelf.updateCurrentCall(call)
                     strongSelf.currentCallPromise.set(.single(call))

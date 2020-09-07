@@ -40,7 +40,7 @@ public struct PresentationCallState: Equatable {
         case connecting(Data?)
         case active(Double, Int32?, Data)
         case reconnecting(Double, Int32?, Data)
-        case terminating
+        case terminating(CallSessionTerminationReason?)
         case terminated(CallId?, CallSessionTerminationReason?, Bool)
     }
     
@@ -94,19 +94,22 @@ public final class PresentationCallVideoView {
     public let setOnFirstFrameReceived: (((Float) -> Void)?) -> Void
     
     public let getOrientation: () -> Orientation
-    public let setOnOrientationUpdated: (((Orientation) -> Void)?) -> Void
+    public let getAspect: () -> CGFloat
+    public let setOnOrientationUpdated: (((Orientation, CGFloat) -> Void)?) -> Void
     public let setOnIsMirroredUpdated: (((Bool) -> Void)?) -> Void
     
     public init(
         view: UIView,
         setOnFirstFrameReceived: @escaping (((Float) -> Void)?) -> Void,
         getOrientation: @escaping () -> Orientation,
-        setOnOrientationUpdated: @escaping (((Orientation) -> Void)?) -> Void,
+        getAspect: @escaping () -> CGFloat,
+        setOnOrientationUpdated: @escaping (((Orientation, CGFloat) -> Void)?) -> Void,
         setOnIsMirroredUpdated: @escaping (((Bool) -> Void)?) -> Void
     ) {
         self.view = view
         self.setOnFirstFrameReceived = setOnFirstFrameReceived
         self.getOrientation = getOrientation
+        self.getAspect = getAspect
         self.setOnOrientationUpdated = setOnOrientationUpdated
         self.setOnIsMirroredUpdated = setOnIsMirroredUpdated
     }
@@ -137,6 +140,7 @@ public protocol PresentationCall: class {
     func toggleIsMuted()
     func setIsMuted(_ value: Bool)
     func requestVideo()
+    func setRequestedVideoAspect(_ aspect: Float)
     func disableVideo()
     func setOutgoingVideoIsPaused(_ isPaused: Bool)
     func switchVideoCamera()

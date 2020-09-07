@@ -782,9 +782,9 @@ public class ChatMessageItemView: ListViewItemNode {
                 case .requestPhone:
                     item.controllerInteraction.shareAccountContact()
                 case .openWebApp:
-                    item.controllerInteraction.requestMessageActionCallback(item.message.id, nil, true)
-                case let .callback(data):
-                    item.controllerInteraction.requestMessageActionCallback(item.message.id, data, false)
+                    item.controllerInteraction.requestMessageActionCallback(item.message.id, nil, true, false)
+                case let .callback(requiresPassword, data):
+                    item.controllerInteraction.requestMessageActionCallback(item.message.id, data, false, requiresPassword)
                 case let .switchInline(samePeer, query):
                     var botPeer: Peer?
                     
