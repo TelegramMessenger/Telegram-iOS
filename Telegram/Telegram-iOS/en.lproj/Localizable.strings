@@ -5759,6 +5759,13 @@ Any member of this group will be able to see messages in the channel.";
 "ChatList.Search.Messages_many" = "%@ messages";
 "ChatList.Search.Messages_any" = "%@ messages";
 
+"ChatList.Search.Photos_0" = "%@ photos";
+"ChatList.Search.Photos_1" = "%@ photo";
+"ChatList.Search.Photos_2" = "%@ photos";
+"ChatList.Search.Photos_3_10" = "%@ photos";
+"ChatList.Search.Photos_many" = "%@ photos";
+"ChatList.Search.Photos_any" = "%@ photos";
+
 "ChatList.Search.Links_0" = "%@ links";
 "ChatList.Search.Links_1" = "%@ link";
 "ChatList.Search.Links_2" = "%@ links";

@@ -698,7 +698,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
             
             if let (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = self.currentParams {
                 if totalCount > 0 {
-                    self.headerNode.title = presentationData.strings.ChatList_Search_Messages(totalCount).uppercased()
+                    self.headerNode.title = presentationData.strings.ChatList_Search_Photos(totalCount).uppercased()
                 }
                 
                 self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: true, transition: .immediate)
