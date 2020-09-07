@@ -7,7 +7,7 @@ import MtProtoKit
 import SyncCore
 
 public enum SearchMessagesLocation: Equatable {
-    case general
+    case general(tags: MessageTags?)
     case group(PeerGroupId)
     case peer(peerId: PeerId, fromId: PeerId?, tags: MessageTags?)
     case publicForwards(messageId: MessageId, datacenterId: Int?)
@@ -192,21 +192,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 }
             }
             
-            let filter: Api.MessagesFilter
-            
-            if let tags = tags {
-                if tags.contains(.file) {
-                    filter = .inputMessagesFilterDocument
-                } else if tags.contains(.music) {
-                    filter = .inputMessagesFilterMusic
-                } else if tags.contains(.webPage) {
-                    filter = .inputMessagesFilterUrl
-                } else {
-                    filter = .inputMessagesFilterEmpty
-                }
-            } else {
-                filter = .inputMessagesFilterEmpty
-            }
+            let filter: Api.MessagesFilter = tags.flatMap { messageFilterForTagMask($0) } ?? .inputMessagesFilterEmpty
             remoteSearchResult = account.postbox.transaction { transaction -> (peer: Peer, additionalPeer: Peer?, from: Peer?)? in
                 guard let peer = transaction.getPeer(peerId) else {
                     return nil
@@ -270,7 +256,8 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
             }
         case .group:
             remoteSearchResult = .single((nil, nil))
-        case .general:
+        case let .general(tags):
+            let filter: Api.MessagesFilter = tags.flatMap { messageFilterForTagMask($0) } ?? .inputMessagesFilterEmpty
             remoteSearchResult = account.postbox.transaction { transaction -> (Int32, MessageIndex?, Api.InputPeer) in
                 var lowerBound: MessageIndex?
                 if let state = state, let message = state.main.messages.last {
@@ -292,8 +279,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 }
             }
         case let .publicForwards(messageId, datacenterId):
-            remoteSearchResult = .single((nil, nil))
-            /*remoteSearchResult = account.postbox.transaction { transaction -> (Api.InputChannel?, Int32, MessageIndex?, Api.InputPeer) in
+            remoteSearchResult = account.postbox.transaction { transaction -> (Api.InputChannel?, Int32, MessageIndex?, Api.InputPeer) in
                 let sourcePeer = transaction.getPeer(messageId.peerId)
                 let inputChannel = sourcePeer.flatMap { apiInputChannel($0) }
                 
@@ -307,12 +293,13 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                     return (inputChannel, 0, lowerBound, .inputPeerEmpty)
                 }
             }
-            |> mapToSignal { (inputChannel, nextRate, lowerBound, inputPeer) in
+            |> mapToSignal { (inputChannel, nextRate, lowerBound, inputPeer) -> Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError> in
                 guard let inputChannel = inputChannel else {
                     return .complete()
                 }
+                return .single((nil, nil))
                 
-                let request = Api.functions.stats.getMessagePublicForwards(channel: inputChannel, msgId: messageId.id, offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit)
+                /*let request = Api.functions.stats.getMessagePublicForwards(channel: inputChannel, msgId: messageId.id, offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit)
                 let signal: Signal<Api.messages.Messages, MTRpcError>
                 if let datacenterId = datacenterId, account.network.datacenterId != datacenterId {
                     signal = account.network.download(datacenterId: datacenterId, isMedia: false, tag: nil)
@@ -329,16 +316,16 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 }
                 |> `catch` { _ -> Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError> in
                     return .single((nil, nil))
-                }
-        }*/
+                }*/
+        }
     }
     
     return remoteSearchResult
     |> mapToSignal { result, additionalResult -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> in
         return account.postbox.transaction { transaction -> (SearchMessagesResult, SearchMessagesState) in
             var additional: SearchMessagesPeerState? = mergedState(transaction: transaction, state: state?.additional, result: additionalResult)
-            if state?.additional == nil, case .general = location {
-                let secretMessages = transaction.searchMessages(peerId: nil, query: query, tags: nil)
+            if state?.additional == nil, case let .general(tags) = location {
+                let secretMessages = transaction.searchMessages(peerId: nil, query: query, tags: tags)
                 var readStates: [PeerId: CombinedPeerReadState] = [:]
                 for message in secretMessages {
                     if let readState = transaction.getCombinedPeerReadState(message.id.peerId) {

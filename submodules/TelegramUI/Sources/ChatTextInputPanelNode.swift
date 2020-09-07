@@ -809,7 +809,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     self.textPlaceholderNode.frame = CGRect(origin: self.textPlaceholderNode.frame.origin, size: placeholderSize)
                 }
                 
-                self.actionButtons.sendButtonLongPressEnabled = peer.id.namespace != Namespaces.Peer.SecretChat && !interfaceState.isScheduledMessages
+                self.actionButtons.sendButtonLongPressEnabled = !interfaceState.isScheduledMessages
             }
             
             let sendButtonHasApplyIcon = interfaceState.interfaceState.editMessage != nil
@@ -1060,13 +1060,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
             
             animateDotAppearing = transition.isAnimated && !hideInfo
+            if let mediaRecordingState = mediaRecordingState, case .waitingForPreview = mediaRecordingState {
+                animateDotAppearing = false
+            }
             
-            audioRecordingDotNode.frame = CGRect(origin: CGPoint(x: leftInset + 2.0 - UIScreenPixel, y: panelHeight - 44 + 1), size: CGSize(width: 40.0, height: 40))
+            audioRecordingDotNode.frame = CGRect(origin: CGPoint(x: leftInset + 2.0 - UIScreenPixel, y: audioRecordingTimeNode.frame.midY - 20), size: CGSize(width: 40.0, height: 40))
             if animateDotAppearing {
-                let dotStartScale: CGFloat = (audioRecordingDotNode.layer.presentation()?.value(forKeyPath: "transform.scale.x") as? CGFloat) ?? 1
-                audioRecordingDotNode.layer.animateScale(from: dotStartScale, to: 1, duration: 0.15, delay: 0, removeOnCompletion: false)
+                audioRecordingDotNode.layer.animateScale(from: 0.3, to: 1, duration: 0.15, delay: 0, removeOnCompletion: false)
                 if audioRecordingDotNode.layer.animation(forKey: "recording") == nil {
-                    audioRecordingDotNode.layer.animateAlpha(from: CGFloat(audioRecordingDotNode.layer.presentation()?.opacity ?? 1), to: 1, duration: 0.15, delay: 0, completion: { [weak audioRecordingDotNode] finished in
+                    audioRecordingDotNode.layer.animateAlpha(from: CGFloat(audioRecordingDotNode.layer.presentation()?.opacity ?? 0), to: 1, duration: 0.15, delay: 0, completion: { [weak audioRecordingDotNode] finished in
                         if finished {
                             let animation = CAKeyframeAnimation(keyPath: "opacity")
                             animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.0 as NSNumber]

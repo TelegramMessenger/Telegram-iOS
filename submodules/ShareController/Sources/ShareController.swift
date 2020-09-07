@@ -674,7 +674,25 @@ public final class ShareController: ViewController {
                                             activityItems.append(url)
                                     }
                                 }
-                                let activityController = UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+                                
+                                var activities: [UIActivity]?
+                                if false, #available(iOS 10.0, *), strongSelf.sharedContext.applicationBindings.canOpenUrl("instagram-stories://"), case let .messages(messages) = strongSelf.subject, let message = messages.first, let peer = message.peers[message.id.peerId] {
+                                    let shareToInstagram = ShareToInstagramActivity(action: { sharedItems in
+                                        let renderer = MessageStoryRenderer(context: strongSelf.currentContext, messages: messages)
+                                        
+                                        let layout = ContainerViewLayout(size: CGSize(width: 414.0, height: 896.0), metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: .iPhoneX, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: 0.0, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)
+                                        renderer.update(layout: layout) { image in
+                                            if let data = image?.pngData() {
+                                                let pasteboardItems: [[String: Any]] = [["com.instagram.sharedSticker.backgroundImage": data,
+                                                                                         "com.instagram.sharedSticker.contentURL": "https://t.me/\(peer.addressName ?? "")/\(message.id.id)"]]
+                                                UIPasteboard.general.setItems(pasteboardItems, options: [.expirationDate: Date().addingTimeInterval(5 * 60)])
+                                                strongSelf.sharedContext.applicationBindings.openUrl("instagram-stories://share")
+                                            }
+                                        }
+                                    })
+                                    activities = [shareToInstagram]
+                                }
+                                let activityController = UIActivityViewController(activityItems: activityItems, applicationActivities: activities)
                                 
                                 if let window = strongSelf.view.window, let rootViewController = window.rootViewController {
                                     activityController.popoverPresentationController?.sourceView = window
@@ -863,5 +881,173 @@ public final class ShareController: ViewController {
                 }
             }
         }))
+    }
+}
+
+
+final class MessageStoryRenderer {
+    private let context: AccountContext
+    private let presentationData: PresentationData
+    private let messages: [Message]
+    
+    let containerNode: ASDisplayNode
+    private let instantChatBackgroundNode: WallpaperBackgroundNode
+    private let messagesContainerNode: ASDisplayNode
+    private var dateHeaderNode: ListViewItemHeaderNode?
+    private var messageNodes: [ListViewItemNode]?
+    private let addressNode: ImmediateTextNode
+    
+    init(context: AccountContext, messages: [Message]) {
+        self.context = context
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.messages = messages
+
+        self.containerNode = ASDisplayNode()
+        
+        self.instantChatBackgroundNode = WallpaperBackgroundNode()
+        self.instantChatBackgroundNode.displaysAsynchronously = false
+        self.instantChatBackgroundNode.image = chatControllerBackgroundImage(theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
+        
+        self.messagesContainerNode = ASDisplayNode()
+        self.messagesContainerNode.clipsToBounds = true
+        self.messagesContainerNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
+        
+        let message = messages.first!
+        let addressName = message.peers[message.id.peerId]?.addressName ?? ""
+
+        self.addressNode = ImmediateTextNode()
+        self.addressNode.displaysAsynchronously = false
+        self.addressNode.attributedText = NSAttributedString(string: "t.me/\(addressName)/\(message.id.id)", font: Font.medium(14.0), textColor: UIColor(rgb: 0xffffff))
+        self.addressNode.textShadowColor = UIColor(rgb: 0x929292, alpha: 0.8)
+        
+        self.containerNode.addSubnode(self.instantChatBackgroundNode)
+        self.containerNode.addSubnode(self.messagesContainerNode)
+        self.containerNode.addSubnode(self.addressNode)
+    }
+    
+    func update(layout: ContainerViewLayout, completion: @escaping (UIImage?) -> Void) {
+        self.updateMessagesLayout(layout: layout)
+        
+        Queue.mainQueue().after(0.01) {
+            UIGraphicsBeginImageContextWithOptions(layout.size, false, 3.0)
+            self.containerNode.view.drawHierarchy(in: CGRect(origin: CGPoint(), size: layout.size), afterScreenUpdates: true)
+            let img = UIGraphicsGetImageFromCurrentImageContext()
+            UIGraphicsEndImageContext()
+            completion(img)
+        }
+    }
+    
+    private func updateMessagesLayout(layout: ContainerViewLayout) {
+        let size = layout.size
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+        self.instantChatBackgroundNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+        self.instantChatBackgroundNode.updateLayout(size: size, transition: .immediate)
+        self.messagesContainerNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+        
+        let addressLayout = self.addressNode.updateLayout(size)
+        
+        let theme = self.presentationData.theme.withUpdated(preview: true)
+        let headerItem = self.context.sharedContext.makeChatMessageDateHeaderItem(context: self.context, timestamp: self.messages.first?.timestamp ?? 0, theme: theme, strings: self.presentationData.strings, wallpaper: self.presentationData.chatWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder)
+    
+        let items: [ListViewItem] = [self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: self.messages, theme: theme, strings: self.presentationData.strings, wallpaper: self.presentationData.theme.chat.defaultWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil)]
+    
+        let inset: CGFloat = 16.0
+        let width = layout.size.width - inset * 2.0
+        let params = ListViewItemLayoutParams(width: width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
+        if let messageNodes = self.messageNodes {
+            for i in 0 ..< items.count {
+                let itemNode = messageNodes[i]
+                items[i].updateNode(async: { $0() }, node: {
+                    return itemNode
+                }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None, completion: { (layout, apply) in
+                    let nodeFrame = CGRect(origin: CGPoint(x: 0.0, y: floor((size.height - layout.size.height) / 2.0)), size: CGSize(width: width, height: layout.size.height))
+                    
+                    itemNode.contentSize = layout.contentSize
+                    itemNode.insets = layout.insets
+                    itemNode.frame = nodeFrame
+                    itemNode.isUserInteractionEnabled = false
+                    
+                    apply(ListViewItemApply(isOnScreen: true))
+                })
+            }
+        } else {
+            var messageNodes: [ListViewItemNode] = []
+            for i in 0 ..< items.count {
+                var itemNode: ListViewItemNode?
+                items[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: true, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], completion: { node, apply in
+                    itemNode = node
+                    apply().1(ListViewItemApply(isOnScreen: true))
+                })
+                itemNode!.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+                itemNode!.isUserInteractionEnabled = false
+                messageNodes.append(itemNode!)
+                self.messagesContainerNode.addSubnode(itemNode!)
+            }
+            self.messageNodes = messageNodes
+        }
+        
+        var bottomOffset: CGFloat = 0.0
+        if let messageNodes = self.messageNodes {
+            for itemNode in messageNodes {
+                itemNode.frame = CGRect(origin: CGPoint(x: inset, y: floor((size.height - itemNode.frame.height) / 2.0)), size: itemNode.frame.size)
+                bottomOffset += itemNode.frame.maxY
+                itemNode.updateFrame(itemNode.frame, within: layout.size)
+            }
+        }
+        
+        self.addressNode.frame = CGRect(origin: CGPoint(x: inset + 16.0, y: bottomOffset + 3.0), size: CGSize(width: addressLayout.width, height: addressLayout.height + 3.0))
+        
+        let dateHeaderNode: ListViewItemHeaderNode
+        if let currentDateHeaderNode = self.dateHeaderNode {
+            dateHeaderNode = currentDateHeaderNode
+            headerItem.updateNode(dateHeaderNode, previous: nil, next: headerItem)
+        } else {
+            dateHeaderNode = headerItem.node()
+            dateHeaderNode.subnodeTransform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+            self.messagesContainerNode.addSubnode(dateHeaderNode)
+            self.dateHeaderNode = dateHeaderNode
+        }
+        
+        dateHeaderNode.frame = CGRect(origin: CGPoint(x: 0.0, y: bottomOffset), size: CGSize(width: layout.size.width, height: headerItem.height))
+        dateHeaderNode.updateLayout(size: self.containerNode.frame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
+    }
+}
+
+private class ShareToInstagramActivity: UIActivity {
+    private var activityItems = [Any]()
+    private var action: ([Any]) -> Void
+    
+    init(action: @escaping ([Any]) -> Void) {
+        self.action = action
+        super.init()
+    }
+    
+    override var activityTitle: String? {
+        return "Share to Instagram Stories"
+    }
+
+    override var activityImage: UIImage? {
+        return nil
+    }
+    
+    override var activityType: UIActivity.ActivityType? {
+        return UIActivity.ActivityType(rawValue: "org.telegram.Telegram.ShareToInstagram")
+    }
+
+    override class var activityCategory: UIActivity.Category {
+        return .action
+    }
+    
+    override func canPerform(withActivityItems activityItems: [Any]) -> Bool {
+        return true
+    }
+    
+    override func prepare(withActivityItems activityItems: [Any]) {
+        self.activityItems = activityItems
+    }
+    
+    override func perform() {
+        self.action(self.activityItems)
+        activityDidFinish(true)
     }
 }

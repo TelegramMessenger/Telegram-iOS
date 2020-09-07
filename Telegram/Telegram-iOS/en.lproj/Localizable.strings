@@ -2446,6 +2446,7 @@ Unused sets are archived when you add more.";
 "Call.StatusBar" = "Touch to return to call %@";
 
 "Call.ParticipantVersionOutdatedError" = "%@'s app does not support calls. They need to update their app before you can call them.";
+"Call.ParticipantVideoVersionOutdatedError" = "%@'s app does not support video calls. They need to update their app before you can call them.";
 
 "Privacy.Calls" = "Voice Calls";
 
@@ -2755,6 +2756,7 @@ Unused sets are archived when you add more.";
 
 "Channel.EditAdmin.CannotEdit" = "You cannot edit the rights of this admin.";
 "Call.RateCall" = "Rate This Call";
+"Call.ShareStats" = "Share Statistics";
 
 "Settings.ApplyProxyAlert" = "Are you sure you want to enable this proxy?\nServer: %1$@\nPort: %2$@\n\nYou can change your proxy server later it in the Settings (Data and Storage).";
 "Settings.ApplyProxyAlertCredentials" = "Are you sure you want to enable this proxy?\nServer: %1$@\nPort: %2$@\nUsername: %3$@\nPassword: %4$@\n\nYou can change your proxy server later it in the Settings (Data and Storage).";
@@ -4002,6 +4004,8 @@ Unused sets are archived when you add more.";
 "CallFeedback.ReasonSilentLocal" = "I couldn't hear the other side";
 "CallFeedback.ReasonSilentRemote" = "The other side couldn't hear me";
 "CallFeedback.ReasonDropped" = "Call ended unexpectedly";
+"CallFeedback.VideoReasonDistorted" = "Video was distorted";
+"CallFeedback.VideoReasonLowQuality" = "Video was pixelated";
 "CallFeedback.AddComment" = "Add an optional comment";
 "CallFeedback.IncludeLogs" = "Include technical information";
 "CallFeedback.IncludeLogsInfo" = "This won't reveal the contents of your conversation, but will help us fix the issue sooner.";
@@ -5735,3 +5739,5 @@ Any member of this group will be able to see messages in the channel.";
 "Call.AudioRouteMute" = "Mute Yourself";
 
 "AccessDenied.VideoCallCamera" = "Telegram needs access to your camera to make video calls.\n\nPlease go to Settings > Privacy > Camera and set Telegram to ON.";
+
+"Call.AccountIsLoggedOnCurrentDevice" = "Sorry, you can't call %@ because that account is logged in to Telegram on the device you're using for the call.";

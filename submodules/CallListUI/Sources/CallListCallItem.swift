@@ -139,8 +139,8 @@ class CallListCallItem: ListViewItem {
         for media in self.topMessage.media {
             if let action = media as? TelegramMediaAction {
                 if case let .phoneCall(_, _, _, isVideoValue) = action.action {
-                    break
                     isVideo = isVideoValue
+                    break
                 }
             }
         }

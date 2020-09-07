@@ -1,6 +1,29 @@
 import Foundation
 import AppBundle
 
+public func emojiFlagForISOCountryCode(_ countryCode: String) -> String {
+    if countryCode.count != 2 {
+        return ""
+    }
+    
+    if countryCode == "XG" {
+        return "🛰️"
+    } else if countryCode == "XV" {
+        return "🌍"
+    }
+    
+    if ["YL"].contains(countryCode) {
+        return ""
+    }
+    
+    let base : UInt32 = 127397
+    var s = ""
+    for v in countryCode.unicodeScalars {
+        s.unicodeScalars.append(UnicodeScalar(base + v.value)!)
+    }
+    return String(s)
+}
+
 private func loadCountriesInfo() -> [(Int, String, String)] {
     guard let filePath = getAppBundle().path(forResource: "PhoneCountries", ofType: "txt") else {
         return []

@@ -273,7 +273,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-994444869] = { return Api.Error.parse_error($0) }
     dict[-1560655744] = { return Api.KeyboardButton.parse_keyboardButton($0) }
     dict[629866245] = { return Api.KeyboardButton.parse_keyboardButtonUrl($0) }
-    dict[1748655686] = { return Api.KeyboardButton.parse_keyboardButtonCallback($0) }
     dict[-1318425559] = { return Api.KeyboardButton.parse_keyboardButtonRequestPhone($0) }
     dict[-59151553] = { return Api.KeyboardButton.parse_keyboardButtonRequestGeoLocation($0) }
     dict[90744648] = { return Api.KeyboardButton.parse_keyboardButtonSwitchInline($0) }
@@ -282,6 +281,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[280464681] = { return Api.KeyboardButton.parse_keyboardButtonUrlAuth($0) }
     dict[-802258988] = { return Api.KeyboardButton.parse_inputKeyboardButtonUrlAuth($0) }
     dict[-1144565411] = { return Api.KeyboardButton.parse_keyboardButtonRequestPoll($0) }
+    dict[901503851] = { return Api.KeyboardButton.parse_keyboardButtonCallback($0) }
     dict[-748155807] = { return Api.ContactStatus.parse_contactStatus($0) }
     dict[1679398724] = { return Api.SecureFile.parse_secureFileEmpty($0) }
     dict[-534283678] = { return Api.SecureFile.parse_secureFile($0) }
@@ -447,6 +447,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-524237339] = { return Api.PageTableRow.parse_pageTableRow($0) }
     dict[-40996577] = { return Api.DraftMessage.parse_draftMessage($0) }
     dict[453805082] = { return Api.DraftMessage.parse_draftMessageEmpty($0) }
+    dict[-1014526429] = { return Api.help.Country.parse_country($0) }
     dict[418631927] = { return Api.StatsGroupTopPoster.parse_statsGroupTopPoster($0) }
     dict[-2128640689] = { return Api.account.SentEmailCode.parse_sentEmailCode($0) }
     dict[-1038136962] = { return Api.EncryptedFile.parse_encryptedFileEmpty($0) }
@@ -519,6 +520,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-914167110] = { return Api.CdnPublicKey.parse_cdnPublicKey($0) }
     dict[53231223] = { return Api.InputGame.parse_inputGameID($0) }
     dict[-1020139510] = { return Api.InputGame.parse_inputGameShortName($0) }
+    dict[1107543535] = { return Api.help.CountryCode.parse_countryCode($0) }
     dict[-1502174430] = { return Api.InputMessage.parse_inputMessageID($0) }
     dict[-1160215659] = { return Api.InputMessage.parse_inputMessageReplyTo($0) }
     dict[-2037963464] = { return Api.InputMessage.parse_inputMessagePinned($0) }
@@ -789,6 +791,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1041346555] = { return Api.updates.ChannelDifference.parse_channelDifferenceEmpty($0) }
     dict[543450958] = { return Api.updates.ChannelDifference.parse_channelDifference($0) }
     dict[-1531132162] = { return Api.updates.ChannelDifference.parse_channelDifferenceTooLong($0) }
+    dict[-1815339214] = { return Api.help.CountriesList.parse_countriesListNotModified($0) }
+    dict[-2016381538] = { return Api.help.CountriesList.parse_countriesList($0) }
     dict[-309659827] = { return Api.channels.AdminLogResults.parse_adminLogResults($0) }
     dict[-264117680] = { return Api.ChatOnlines.parse_chatOnlines($0) }
     dict[488313413] = { return Api.InputAppEvent.parse_inputAppEvent($0) }
@@ -1148,6 +1152,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.DraftMessage:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.help.Country:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.StatsGroupTopPoster:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.SentEmailCode:
@@ -1225,6 +1231,8 @@ public struct Api {
             case let _1 as Api.CdnPublicKey:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputGame:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.help.CountryCode:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputMessage:
                 _1.serialize(buffer, boxed)
@@ -1441,6 +1449,8 @@ public struct Api {
             case let _1 as Api.payments.SavedInfo:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.updates.ChannelDifference:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.help.CountriesList:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.channels.AdminLogResults:
                 _1.serialize(buffer, boxed)

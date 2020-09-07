@@ -39,7 +39,7 @@ public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, co
         if peer is TelegramUser {
             controller.hasTimer = hasSchedule
         }
-        controller.hasSilentPosting = !isSecretChat
+        controller.hasSilentPosting = true
     }
     controller.hasSchedule = hasSchedule
     controller.reminder = peer.id == context.account.peerId

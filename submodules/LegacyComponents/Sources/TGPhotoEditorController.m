@@ -162,13 +162,21 @@
         _initialAdjustments = adjustments;
         _screenImage = screenImage;
         
+        CGSize originalSize = _item.originalSize;
+        if ([self presentedForAvatarCreation]) {
+            CGFloat maxSide = [GPUImageContext maximumTextureSizeForThisDevice];
+            if (MAX(_item.originalSize.width, _item.originalSize.height) > maxSide) {
+                originalSize = TGScaleToFit(_item.originalSize, CGSizeMake(maxSide, maxSide));
+            }
+        }
+        
         _queue = [[SQueue alloc] init];
-        _photoEditor = [[PGPhotoEditor alloc] initWithOriginalSize:_item.originalSize adjustments:adjustments forVideo:item.isVideo enableStickers:(intent & TGPhotoEditorControllerSignupAvatarIntent) == 0];
+        _photoEditor = [[PGPhotoEditor alloc] initWithOriginalSize:originalSize adjustments:adjustments forVideo:item.isVideo enableStickers:(intent & TGPhotoEditorControllerSignupAvatarIntent) == 0];
         if ([self presentedForAvatarCreation])
         {
             _photoEditor.cropOnLast = true;
-            CGFloat shortSide = MIN(_item.originalSize.width, _item.originalSize.height);
-            _photoEditor.cropRect = CGRectMake((_item.originalSize.width - shortSide) / 2, (_item.originalSize.height - shortSide) / 2, shortSide, shortSide);
+            CGFloat shortSide = MIN(originalSize.width, originalSize.height);
+            _photoEditor.cropRect = CGRectMake((originalSize.width - shortSide) / 2, (originalSize.height - shortSide) / 2, shortSide, shortSide);
         }
                 
         if ([adjustments isKindOfClass:[TGVideoEditAdjustments class]])
@@ -354,7 +362,7 @@
     [_scrubberView addSubview:_dotMarkerView];
     _dotMarkerView.center = CGPointMake(30.0, -20.0);
     
-    _dotImageView = [[TGMediaPickerGalleryVideoScrubberThumbnailView alloc] initWithImage:nil originalSize:_item.originalSize cropRect:CGRectZero cropOrientation:UIImageOrientationUp cropMirrored:false];
+    _dotImageView = [[TGMediaPickerGalleryVideoScrubberThumbnailView alloc] initWithImage:nil originalSize:_photoEditor.originalSize cropRect:CGRectZero cropOrientation:UIImageOrientationUp cropMirrored:false];
     _dotImageView.frame = CGRectMake(0.0, 0.0, 160.0, 160.0);
     _dotImageView.userInteractionEnabled = true;
     
@@ -505,7 +513,13 @@
             }] map:^UIImage *(UIImage *image)
             {
                 if (avatar) {
-                    return image;
+                    CGFloat maxSide = [GPUImageContext maximumTextureSizeForThisDevice];
+                    if (MAX(image.size.width, image.size.height) > maxSide) {
+                        CGSize fittedSize = TGScaleToFit(image.size, CGSizeMake(maxSide, maxSide));
+                        return TGScaleImageToPixelSize(image, fittedSize);
+                    } else {
+                        return image;
+                    }
                 } else {
                     return TGPhotoEditorCrop(image, nil, photoEditor.cropOrientation, photoEditor.cropRotation, photoEditor.cropRect, photoEditor.cropMirrored, TGPhotoEditorScreenImageMaxSize(), photoEditor.originalSize, true);
                 }
