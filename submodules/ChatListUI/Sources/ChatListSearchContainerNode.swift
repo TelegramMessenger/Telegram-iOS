@@ -26,6 +26,7 @@ import PresentationDataUtils
 import AnimatedStickerNode
 import AppBundle
 import GalleryData
+import InstantPageUI
 
 private final class PassthroughContainerNode: ASDisplayNode {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -1451,8 +1452,13 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     self?.view.window?.endEditing(true)
                 }, contentContext: nil)
             })
-        }, openInstantPage: { message, data in
-            
+        }, openInstantPage: { [weak self] message, data in
+            if let strongSelf = self {
+                if let (webpage, anchor) = instantPageAndAnchor(message: message) {
+                    let pageController = InstantPageController(context: context, webPage: webpage, sourcePeerType: .channel, anchor: anchor)
+                    navigationController?.pushViewController(pageController)
+                }
+            }
         }, longTap: { action, message in
             
         }, getHiddenMedia: {

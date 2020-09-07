@@ -50,6 +50,7 @@ swift_library(
         "//submodules/ChatMessageInteractiveMediaBadge:ChatMessageInteractiveMediaBadge",
         "//submodules/MediaPlayer:UniversalMediaPlayer",
         "//submodules/GalleryData:GalleryData",
+        "//submodules/InstantPageUI:InstantPageUI",
     ],
     visibility = [
         "//visibility:public",

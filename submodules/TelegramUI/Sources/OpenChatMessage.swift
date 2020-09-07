@@ -239,52 +239,9 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
 }
 
 func openChatInstantPage(context: AccountContext, message: Message, sourcePeerType: MediaAutoDownloadPeerType?, navigationController: NavigationController) {
-    for media in message.media {
-        if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-            if let _ = content.instantPage {
-                var textUrl: String?
-                if let pageUrl = URL(string: content.url) {
-                    inner: for attribute in message.attributes {
-                        if let attribute = attribute as? TextEntitiesMessageAttribute {
-                            for entity in attribute.entities {
-                                switch entity.type {
-                                case let .TextUrl(url):
-                                    if let parsedUrl = URL(string: url) {
-                                        if pageUrl.scheme == parsedUrl.scheme && pageUrl.host == parsedUrl.host && pageUrl.path == parsedUrl.path {
-                                            textUrl = url
-                                        }
-                                    }
-                                case .Url:
-                                    let nsText = message.text as NSString
-                                    var entityRange = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
-                                    if entityRange.location + entityRange.length > nsText.length {
-                                        entityRange.location = max(0, nsText.length - entityRange.length)
-                                        entityRange.length = nsText.length - entityRange.location
-                                    }
-                                    let url = nsText.substring(with: entityRange)
-                                    if let parsedUrl = URL(string: url) {
-                                        if pageUrl.scheme == parsedUrl.scheme && pageUrl.host == parsedUrl.host && pageUrl.path == parsedUrl.path {
-                                            textUrl = url
-                                        }
-                                    }
-                                default:
-                                    break
-                                }
-                            }
-                            break inner
-                        }
-                    }
-                }
-                var anchor: String?
-                if let textUrl = textUrl, let anchorRange = textUrl.range(of: "#") {
-                    anchor = String(textUrl[anchorRange.upperBound...])
-                }
-                
-                let pageController = InstantPageController(context: context, webPage: webpage, sourcePeerType: sourcePeerType ?? .channel, anchor: anchor)
-                navigationController.pushViewController(pageController)
-            }
-            break
-        }
+    if let (webpage, anchor) = instantPageAndAnchor(message: message) {
+        let pageController = InstantPageController(context: context, webPage: webpage, sourcePeerType: sourcePeerType ?? .channel, anchor: anchor)
+        navigationController.pushViewController(pageController)
     }
 }
 
