@@ -18,6 +18,7 @@ swift_library(
         "//submodules/TelegramBaseController:TelegramBaseController",
         "//submodules/ChatListUI:ChatListUI",
         "//submodules/SegmentedControlNode:SegmentedControlNode",
+        "//submodules/ListMessageItem:ListMessageItem",
     ],
     visibility = [
         "//visibility:public",

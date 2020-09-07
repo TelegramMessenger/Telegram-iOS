@@ -374,7 +374,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
         }
     }
     
-    public func item(context: AccountContext, presentationData: PresentationData, enableHeaders: Bool, filter: ChatListNodePeersFilter, interaction: ChatListNodeInteraction, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, toggleExpandLocalResults: @escaping () -> Void, toggleExpandGlobalResults: @escaping () -> Void, presentDatePicker: @escaping () -> Void, searchPeer: @escaping (Peer) -> Void, searchResults: [Message], searchOptions: ChatListSearchOptions?, messageContextAction: ((Message, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void)?) -> ListViewItem {
+    public func item(context: AccountContext, presentationData: PresentationData, enableHeaders: Bool, filter: ChatListNodePeersFilter, interaction: ChatListNodeInteraction, listInteraction: ListMessageItemInteraction, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, toggleExpandLocalResults: @escaping () -> Void, toggleExpandGlobalResults: @escaping () -> Void, presentDatePicker: @escaping () -> Void, searchPeer: @escaping (Peer) -> Void, searchResults: [Message], searchOptions: ChatListSearchOptions?, messageContextAction: ((Message, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void)?) -> ListViewItem {
         switch self {
             case let .localPeer(peer, associatedPeer, unreadBadge, _, theme, strings, nameSortOrder, nameDisplayOrder, expandType):
                 let primaryPeer: Peer
@@ -536,48 +536,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                 }
                 
                 if let tags = searchOptions?.messageTags, tags != .photoOrVideo {
-                    let interaction = ListMessageItemInteraction(openMessage: { message, mode -> Bool in
-                        if let peer = peer.peer {
-                            return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatLocationContextHolder: nil, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: nil, dismissInput: {
-                                
-                            }, present: { c, a in
-                                interaction.present(c)
-                                    //                                   self?.controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
-                            }, transitionNode: { messageId, media in
-                                
-                                return nil
-                                //                                   return strongSelf.paneContainerNode.transitionNodeForGallery(messageId: messageId, media: media)
-                            }, addToTransitionSurface: { view in
-                                
-                                //                                   strongSelf.paneContainerNode.currentPane?.node.addToTransitionSurface(view: view)
-                            }, openUrl: { url in
-                                //                                   self?.openUrl(url: url, concealed: false, external: false)
-                            }, openPeer: { peer, navigation in
-                                //                                   self?.openPeer(peerId: peer.id, navigation: navigation)
-                            }, callPeer: { peerId, isVideo in
-                                //self?.controllerInteraction?.callPeer(peerId)
-                            }, enqueueMessage: { _ in
-                            }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, playlistLocation: .searchResults(query: "", peerId: nil, messages: searchResults, at: message.id)))
-                            
-                            //                        interaction.messageSelected(peer, message, nil)
-                        }
-                        return true
-                    }, openMessageContextMenu: { message, bool, node, rect, gesture in
-                        messageContextAction?(message, node, rect, gesture)
-                    }, toggleMessagesSelection: { messageId, selected in
-                        
-                    }, openUrl: { url, _, _, message in
-                        
-                    }, openInstantPage: { message, data in
-                        
-                    }, longTap: { action, message in
-                        
-                    }, getHiddenMedia: {
-                        return [:]
-                    })
-                    
-                    
-                    return ListMessageItem(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .builtin(WallpaperSettings())), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0.0, auxiliaryRadius: 0.0, mergeBubbleCorners: false)), context: context, chatLocation: .peer(peer.peerId), interaction: interaction, message: message, selection: .none, displayHeader: false, customHeader: header, isGlobalSearchResult: true)
+                    return ListMessageItem(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .builtin(WallpaperSettings())), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0.0, auxiliaryRadius: 0.0, mergeBubbleCorners: false)), context: context, chatLocation: .peer(peer.peerId), interaction: listInteraction, message: message, selection: .none, displayHeader: false, customHeader: header, isGlobalSearchResult: true)
                 } else {
                     return ChatListItem(presentationData: presentationData, context: context, peerGroupId: .root, filterData: nil, index: ChatListIndex(pinningIndex: nil, messageIndex: message.index), content: .peer(messages: [message], peer: peer, combinedReadState: readState, isRemovedFromTotalUnreadCount: false, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, promoInfo: nil, ignoreUnreadBadge: true, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: header, enableContextActions: false, hiddenOffset: false, interaction: interaction)
                 }
@@ -623,12 +582,12 @@ private func chatListSearchContainerPreparedRecentTransition(from fromEntries: [
     return ChatListSearchContainerRecentTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
 
-public func chatListSearchContainerPreparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], displayingResults: Bool, isEmpty: Bool, searchQuery: String, context: AccountContext, presentationData: PresentationData, enableHeaders: Bool, filter: ChatListNodePeersFilter, interaction: ChatListNodeInteraction, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, toggleExpandLocalResults: @escaping () -> Void, toggleExpandGlobalResults: @escaping () -> Void, presentDatePicker: @escaping () -> Void, searchPeer: @escaping (Peer) -> Void, searchResults: [Message], searchOptions: ChatListSearchOptions?, messageContextAction: ((Message, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void)?) -> ChatListSearchContainerTransition {
+public func chatListSearchContainerPreparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], displayingResults: Bool, isEmpty: Bool, searchQuery: String, context: AccountContext, presentationData: PresentationData, enableHeaders: Bool, filter: ChatListNodePeersFilter, interaction: ChatListNodeInteraction, listInteraction: ListMessageItemInteraction, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, toggleExpandLocalResults: @escaping () -> Void, toggleExpandGlobalResults: @escaping () -> Void, presentDatePicker: @escaping () -> Void, searchPeer: @escaping (Peer) -> Void, searchResults: [Message], searchOptions: ChatListSearchOptions?, messageContextAction: ((Message, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void)?) -> ChatListSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enableHeaders: enableHeaders, filter: filter, interaction: interaction, peerContextAction: peerContextAction, toggleExpandLocalResults: toggleExpandLocalResults, toggleExpandGlobalResults: toggleExpandGlobalResults, presentDatePicker: presentDatePicker, searchPeer: searchPeer, searchResults: searchResults, searchOptions: searchOptions, messageContextAction: messageContextAction), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enableHeaders: enableHeaders, filter: filter, interaction: interaction, peerContextAction: peerContextAction, toggleExpandLocalResults: toggleExpandLocalResults, toggleExpandGlobalResults: toggleExpandGlobalResults, presentDatePicker: presentDatePicker, searchPeer: searchPeer, searchResults: searchResults, searchOptions: searchOptions, messageContextAction: messageContextAction), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enableHeaders: enableHeaders, filter: filter, interaction: interaction, listInteraction: listInteraction, peerContextAction: peerContextAction, toggleExpandLocalResults: toggleExpandLocalResults, toggleExpandGlobalResults: toggleExpandGlobalResults, presentDatePicker: presentDatePicker, searchPeer: searchPeer, searchResults: searchResults, searchOptions: searchOptions, messageContextAction: messageContextAction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enableHeaders: enableHeaders, filter: filter, interaction: interaction, listInteraction: listInteraction, peerContextAction: peerContextAction, toggleExpandLocalResults: toggleExpandLocalResults, toggleExpandGlobalResults: toggleExpandGlobalResults, presentDatePicker: presentDatePicker, searchPeer: searchPeer, searchResults: searchResults, searchOptions: searchOptions, messageContextAction: messageContextAction), directionHint: nil) }
     
     return ChatListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, displayingResults: displayingResults, isEmpty: isEmpty, query: searchQuery)
 }
@@ -1229,19 +1188,19 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }, openUrl: { [weak self] url in
                 openUserGeneratedUrl(context: context, url: url, concealed: false, present: { [weak self] c in
                     present(c, nil)
-                    }, openResolved: { [weak self] resolved in
-                        context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peerId, navigation in
-                            //                            self?.openPeer(peerId: peerId, navigation: navigation)
-                        }, sendFile: nil,
-                           sendSticker: nil,
-                           present: { c, a in
-                            present(c, a)
-                        }, dismissInput: {
-                            self?.view.window?.endEditing(true)
-                        }, contentContext: nil)
+                }, openResolved: { [weak self] resolved in
+                    context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peerId, navigation in
+                        //                            self?.openPeer(peerId: peerId, navigation: navigation)
+                    }, sendFile: nil,
+                       sendSticker: nil,
+                       present: { c, a in
+                        present(c, a)
+                    }, dismissInput: {
+                        self?.view.window?.endEditing(true)
+                    }, contentContext: nil)
                 })
-                }, openPeer: { peer, navigation in
-                    //self?.openPeer(peerId: peer.id, navigation: navigation)
+            }, openPeer: { peer, navigation in
+                //self?.openPeer(peerId: peer.id, navigation: navigation)
             }, callPeer: { _, _ in
             }, enqueueMessage: { _ in
             }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, gallerySource: .custom(messages: foundMessages, messageId: message.id, loadMore: {
@@ -1454,6 +1413,52 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }
         }))
         
+        let listInteraction = ListMessageItemInteraction(openMessage: { [weak self] message, mode -> Bool in
+            return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatLocationContextHolder: nil, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: nil, dismissInput: { [weak self] in
+                self?.view.window?.endEditing(true)
+            }, present: { c, a in
+                present(c, a)
+            }, transitionNode: { messageId, media in
+                return transitionNodeImpl?(messageId, media)
+            }, addToTransitionSurface: { view in
+                
+                //                                   strongSelf.paneContainerNode.currentPane?.node.addToTransitionSurface(view: view)
+            }, openUrl: { url in
+                //                                   self?.openUrl(url: url, concealed: false, external: false)
+            }, openPeer: { peer, navigation in
+                //                                   self?.openPeer(peerId: peer.id, navigation: navigation)
+            }, callPeer: { peerId, isVideo in
+                //self?.controllerInteraction?.callPeer(peerId)
+            }, enqueueMessage: { _ in
+            }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, playlistLocation: .searchResults(query: "", peerId: nil, messages: [], at: message.id)))
+        
+            return true
+        }, openMessageContextMenu: { [weak self] message, bool, node, rect, gesture in
+            self?.messageContextAction(message, node: node, rect: rect, gesture: gesture)
+        }, toggleMessagesSelection: { messageId, selected in
+            
+        }, openUrl: { url, _, _, message in
+            openUserGeneratedUrl(context: context, url: url, concealed: false, present: { c in
+                present(c, nil)
+            }, openResolved: { [weak self] resolved in
+                context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peerId, navigation in
+                    //                            self?.openPeer(peerId: peerId, navigation: navigation)
+                }, sendFile: nil,
+                   sendSticker: nil,
+                   present: { c, a in
+                    present(c, a)
+                }, dismissInput: {
+                    self?.view.window?.endEditing(true)
+                }, contentContext: nil)
+            })
+        }, openInstantPage: { message, data in
+            
+        }, longTap: { action, message in
+            
+        }, getHiddenMedia: {
+            return [:]
+        })
+        
         self.searchDisposable.set((foundItems
         |> deliverOnMainQueue).start(next: { [weak self] entriesAndFlags in
             if let strongSelf = self {
@@ -1466,7 +1471,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 let newEntries = entriesAndFlags?.0 ?? []
                 
                 let firstTime = previousEntries == nil
-                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: newEntries, displayingResults: entriesAndFlags?.0 != nil, isEmpty: !isSearching && (entriesAndFlags?.0.isEmpty ?? false), searchQuery: strongSelf.searchQueryValue ?? "", context: context, presentationData: strongSelf.presentationData, enableHeaders: true, filter: filter, interaction: interaction, peerContextAction: peerContextAction,
+                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: newEntries, displayingResults: entriesAndFlags?.0 != nil, isEmpty: !isSearching && (entriesAndFlags?.0.isEmpty ?? false), searchQuery: strongSelf.searchQueryValue ?? "", context: context, presentationData: strongSelf.presentationData, enableHeaders: true, filter: filter, interaction: interaction, listInteraction: listInteraction, peerContextAction: peerContextAction,
                 toggleExpandLocalResults: {
                     guard let strongSelf = self else {
                         return

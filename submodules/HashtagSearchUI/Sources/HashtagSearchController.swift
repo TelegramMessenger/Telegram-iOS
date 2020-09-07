@@ -9,6 +9,7 @@ import TelegramPresentationData
 import TelegramBaseController
 import AccountContext
 import ChatListUI
+import ListMessageItem
 
 public final class HashtagSearchController: TelegramBaseController {
     private let queue = Queue()
@@ -82,8 +83,23 @@ public final class HashtagSearchController: TelegramBaseController {
             if let strongSelf = self {
                 let previousEntries = previousSearchItems.swap(entries)
                 
+                let listInteraction = ListMessageItemInteraction(openMessage: { message, mode -> Bool in
+                    return true
+                }, openMessageContextMenu: { message, bool, node, rect, gesture in
+                    
+                }, toggleMessagesSelection: { messageId, selected in
+                    
+                }, openUrl: { url, _, _, message in
+                }, openInstantPage: { message, data in
+                    
+                }, longTap: { action, message in
+                    
+                }, getHiddenMedia: {
+                    return [:]
+                })
+                
                 let firstTime = previousEntries == nil
-                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, isEmpty: entries.isEmpty, searchQuery: "", context: strongSelf.context, presentationData: strongSelf.presentationData, enableHeaders: false, filter: [], interaction: interaction, peerContextAction: nil, toggleExpandLocalResults: {
+                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, isEmpty: entries.isEmpty, searchQuery: "", context: strongSelf.context, presentationData: strongSelf.presentationData, enableHeaders: false, filter: [], interaction: interaction, listInteraction: listInteraction, peerContextAction: nil, toggleExpandLocalResults: {
                 }, toggleExpandGlobalResults: {
                 }, presentDatePicker: {
                 }, searchPeer: { _ in
