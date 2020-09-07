@@ -100,7 +100,7 @@
             
             [strongSelf setCurrentItemWithIndex:index];
         };
-        _interfaceView.captionSet = ^(id<TGModernGalleryEditableItem> item, NSString *caption, NSArray *entities)
+        _interfaceView.captionSet = ^(id<TGModernGalleryItem> item, NSString *caption, NSArray *entities)
         {
             __strong TGClipboardGalleryModel *strongSelf = weakSelf;
             if (strongSelf == nil || strongSelf.saveItemCaption == nil)

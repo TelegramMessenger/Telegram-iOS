@@ -34,8 +34,6 @@ private func callConnectionDescriptionsWebrtc(_ connection: CallSessionConnectio
     }
 }
 
-private let callLogsLimit = 20
-
 public func callLogNameForId(id: Int64, account: Account) -> String? {
     let path = callLogsPath(account: account)
     let namePrefix = "\(id)_"
@@ -44,6 +42,9 @@ public func callLogNameForId(id: Int64, account: Account) -> String? {
         for url in enumerator {
             if let url = url as? URL {
                 if url.lastPathComponent.hasPrefix(namePrefix) {
+                    if url.lastPathComponent.hasSuffix(".log.json") {
+                        continue
+                    }
                     return url.lastPathComponent
                 }
             }
@@ -63,26 +64,25 @@ private func cleanupCallLogs(account: Account) {
         try? fileManager.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
     }
     
-    var oldest: (URL, Date)? = nil
+    var oldest: [(URL, Date)] = []
     var count = 0
     if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: path), includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
         for url in enumerator {
             if let url = url as? URL {
                 if let date = (try? url.resourceValues(forKeys: Set([.contentModificationDateKey])))?.contentModificationDate {
-                    if let currentOldest = oldest {
-                        if date < currentOldest.1 {
-                            oldest = (url, date)
-                        }
-                    } else {
-                        oldest = (url, date)
-                    }
+                    oldest.append((url, date))
                     count += 1
                 }
             }
         }
     }
-    if count > callLogsLimit, let oldest = oldest {
-        try? fileManager.removeItem(atPath: oldest.0.path)
+    let callLogsLimit = 40
+    if count > callLogsLimit {
+        oldest.sort(by: { $0.1 > $1.1 })
+        while oldest.count > callLogsLimit {
+            try? fileManager.removeItem(atPath: oldest[oldest.count - 1].0.path)
+            oldest.removeLast()
+        }
     }
 }
 
@@ -271,6 +271,7 @@ private protocol OngoingCallThreadLocalContextProtocol: class {
     func nativeSetIsMuted(_ value: Bool)
     func nativeSetIsLowBatteryLevel(_ value: Bool)
     func nativeRequestVideo(_ capturer: OngoingCallVideoCapturer)
+    func nativeSetRequestedVideoAspect(_ aspect: Float)
     func nativeDisableVideo()
     func nativeStop(_ completion: @escaping (String?, Int64, Int64, Int64, Int64) -> Void)
     func nativeBeginTermination()
@@ -309,6 +310,9 @@ extension OngoingCallThreadLocalContext: OngoingCallThreadLocalContextProtocol {
     func nativeRequestVideo(_ capturer: OngoingCallVideoCapturer) {
     }
     
+    func nativeSetRequestedVideoAspect(_ aspect: Float) {
+    }
+    
     func nativeDisableVideo() {
     }
     
@@ -335,8 +339,8 @@ public final class OngoingCallVideoCapturer {
         self.impl = OngoingCallThreadLocalContextVideoCapturer()
     }
     
-    public func switchCamera() {
-        self.impl.switchVideoCamera()
+    public func switchVideoInput(isFront: Bool) {
+        self.impl.switchVideoInput(isFront ? "" : "back")
     }
     
     public func makeOutgoingVideoView(completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
@@ -347,10 +351,24 @@ public final class OngoingCallVideoCapturer {
                     setOnFirstFrameReceived: { [weak view] f in
                         view?.setOnFirstFrameReceived(f)
                     },
-                    getOrientation: {
-                        return .rotation0
+                    getOrientation: { [weak view] in
+                        if let view = view {
+                            return OngoingCallVideoOrientation(view.orientation)
+                        } else {
+                            return .rotation0
+                        }
                     },
-                    setOnOrientationUpdated: { _ in
+                    getAspect: { [weak view] in
+                        if let view = view {
+                            return view.aspect
+                        } else {
+                            return 0.0
+                        }
+                    },
+                    setOnOrientationUpdated: { [weak view] f in
+                        view?.setOnOrientationUpdated { value, aspect in
+                            f?(OngoingCallVideoOrientation(value), aspect)
+                        }
                     },
                     setOnIsMirroredUpdated: { [weak view] f in
                         view?.setOnIsMirroredUpdated(f)
@@ -390,6 +408,10 @@ extension OngoingCallThreadLocalContextWebrtc: OngoingCallThreadLocalContextProt
     
     func nativeRequestVideo(_ capturer: OngoingCallVideoCapturer) {
         self.requestVideo(capturer.impl)
+    }
+    
+    func nativeSetRequestedVideoAspect(_ aspect: Float) {
+        self.setRequestedVideoAspect(aspect)
     }
     
     func nativeDisableVideo() {
@@ -471,19 +493,22 @@ public final class OngoingCallContextPresentationCallVideoView {
     public let view: UIView
     public let setOnFirstFrameReceived: (((Float) -> Void)?) -> Void
     public let getOrientation: () -> OngoingCallVideoOrientation
-    public let setOnOrientationUpdated: (((OngoingCallVideoOrientation) -> Void)?) -> Void
+    public let getAspect: () -> CGFloat
+    public let setOnOrientationUpdated: (((OngoingCallVideoOrientation, CGFloat) -> Void)?) -> Void
     public let setOnIsMirroredUpdated: (((Bool) -> Void)?) -> Void
     
     public init(
         view: UIView,
         setOnFirstFrameReceived: @escaping (((Float) -> Void)?) -> Void,
         getOrientation: @escaping () -> OngoingCallVideoOrientation,
-        setOnOrientationUpdated: @escaping (((OngoingCallVideoOrientation) -> Void)?) -> Void,
+        getAspect: @escaping () -> CGFloat,
+        setOnOrientationUpdated: @escaping (((OngoingCallVideoOrientation, CGFloat) -> Void)?) -> Void,
         setOnIsMirroredUpdated: @escaping (((Bool) -> Void)?) -> Void
     ) {
         self.view = view
         self.setOnFirstFrameReceived = setOnFirstFrameReceived
         self.getOrientation = getOrientation
+        self.getAspect = getAspect
         self.setOnOrientationUpdated = setOnOrientationUpdated
         self.setOnIsMirroredUpdated = setOnIsMirroredUpdated
     }
@@ -541,6 +566,9 @@ public final class OngoingCallContext {
         return OngoingCallThreadLocalContext.maxLayer()
     }
     
+    private let tempLogFile: TempBoxFile
+    private let tempStatsLogFile: TempBoxFile
+    
     public static func versions(includeExperimental: Bool, includeReference: Bool) -> [(version: String, supportsVideo: Bool)] {
         var result: [(version: String, supportsVideo: Bool)] = [(OngoingCallThreadLocalContext.version(), false)]
         if includeExperimental {
@@ -551,7 +579,7 @@ public final class OngoingCallContext {
         return result
     }
 
-    public init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, key: Data, isOutgoing: Bool, video: OngoingCallVideoCapturer?, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, allowP2P: Bool, enableHighBitrateVideoCalls: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String) {
+    public init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, key: Data, isOutgoing: Bool, video: OngoingCallVideoCapturer?, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, allowP2P: Bool, enableTCP: Bool, enableStunMarking: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String, preferredVideoCodec: String?) {
         let _ = setupLogs
         OngoingCallThreadLocalContext.applyServerConfig(serializedData)
         
@@ -560,6 +588,11 @@ public final class OngoingCallContext {
         self.callSessionManager = callSessionManager
         self.logPath = logName.isEmpty ? "" : callLogsPath(account: self.account) + "/" + logName + ".log"
         let logPath = self.logPath
+        self.tempLogFile = TempBox.shared.tempFile(fileName: "CallLog.txt")
+        let tempLogPath = self.tempLogFile.path
+        
+        self.tempStatsLogFile = TempBox.shared.tempFile(fileName: "CallStats.json")
+        let tempStatsLogPath = self.tempStatsLogFile.path
         
         let queue = self.queue
         
@@ -581,11 +614,6 @@ public final class OngoingCallContext {
                         }
                     }
                     
-                    let screenSize = UIScreen.main.bounds.size
-                    let portraitSize = CGSize(width: min(screenSize.width, screenSize.height), height: max(screenSize.width, screenSize.height))
-                    let preferredAspectRatio = portraitSize.width / portraitSize.height
-                    
-                    
                     let unfilteredConnections = [connections.primary] + connections.alternatives
                     var processedConnections: [CallSessionConnection] = []
                     var filteredConnections: [OngoingCallConnectionDescriptionWebrtc] = []
@@ -597,9 +625,9 @@ public final class OngoingCallContext {
                         filteredConnections.append(contentsOf: callConnectionDescriptionsWebrtc(connection))
                     }
                     
-                    let context = OngoingCallThreadLocalContextWebrtc(version: version, queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, connections: filteredConnections, maxLayer: maxLayer, allowP2P: allowP2P, logPath: logPath, sendSignalingData: { [weak callSessionManager] data in
+                    let context = OngoingCallThreadLocalContextWebrtc(version: version, queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, connections: filteredConnections, maxLayer: maxLayer, allowP2P: allowP2P, allowTCP: enableTCP, enableStunMarking: enableStunMarking, logPath: tempLogPath, statsLogPath: tempStatsLogPath, sendSignalingData: { [weak callSessionManager] data in
                         callSessionManager?.sendSignalingData(internalId: internalId, data: data)
-                    }, videoCapturer: video?.impl, preferredAspectRatio: Float(preferredAspectRatio), enableHighBitrateVideoCalls: enableHighBitrateVideoCalls)
+                    }, videoCapturer: video?.impl, preferredVideoCodec: preferredVideoCodec)
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
                     context.stateChanged = { [weak callSessionManager] state, videoState, remoteVideoState, remoteAudioState, remoteBatteryLevel, _ in
@@ -748,10 +776,15 @@ public final class OngoingCallContext {
     public func stop(callId: CallId? = nil, sendDebugLogs: Bool = false, debugLogValue: Promise<String?>) {
         let account = self.account
         let logPath = self.logPath
+        var statsLogPath = ""
+        if !logPath.isEmpty {
+            statsLogPath = logPath + ".json"
+        }
+        let tempLogPath = self.tempLogFile.path
+        let tempStatsLogPath = self.tempStatsLogFile.path
         
         self.withContextThenDeallocate { context in
             context.nativeStop { debugLog, bytesSentWifi, bytesReceivedWifi, bytesSentMobile, bytesReceivedMobile in
-                debugLogValue.set(.single(debugLog))
                 let delta = NetworkUsageStatsConnectionsEntry(
                     cellular: NetworkUsageStatsDirectionsEntry(
                         incoming: bytesReceivedMobile,
@@ -761,17 +794,22 @@ public final class OngoingCallContext {
                         outgoing: bytesSentWifi))
                 updateAccountNetworkUsageStats(account: self.account, category: .call, delta: delta)
                 
-                if !logPath.isEmpty, let debugLog = debugLog {
+                if !logPath.isEmpty {
                     let logsPath = callLogsPath(account: account)
                     let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
-                    if let data = debugLog.data(using: .utf8) {
-                        let _ = try? data.write(to: URL(fileURLWithPath: logPath))
-                    }
+                    let _ = try? FileManager.default.moveItem(atPath: tempLogPath, toPath: logPath)
                 }
                 
-                if let callId = callId, let debugLog = debugLog {
+                if !statsLogPath.isEmpty {
+                    let logsPath = callLogsPath(account: account)
+                    let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
+                    let _ = try? FileManager.default.moveItem(atPath: tempStatsLogPath, toPath: statsLogPath)
+                }
+                
+                if let callId = callId, !statsLogPath.isEmpty, let data = try? Data(contentsOf: URL(fileURLWithPath: statsLogPath)), let dataString = String(data: data, encoding: .utf8) {
+                    debugLogValue.set(.single(dataString))
                     if sendDebugLogs {
-                        let _ = saveCallDebugLog(network: self.account.network, callId: callId, log: debugLog).start()
+                        let _ = saveCallDebugLog(network: self.account.network, callId: callId, log: dataString).start()
                     }
                 }
             }
@@ -797,6 +835,12 @@ public final class OngoingCallContext {
     public func requestVideo(_ capturer: OngoingCallVideoCapturer) {
         self.withContext { context in
             context.nativeRequestVideo(capturer)
+        }
+    }
+    
+    public func setRequestedVideoAspect(_ aspect: Float) {
+        self.withContext { context in
+            context.nativeSetRequestedVideoAspect(aspect)
         }
     }
     
@@ -837,9 +881,16 @@ public final class OngoingCallContext {
                                     return .rotation0
                                 }
                             },
+                            getAspect: { [weak view] in
+                                if let view = view {
+                                    return view.aspect
+                                } else {
+                                    return 0.0
+                                }
+                            },
                             setOnOrientationUpdated: { [weak view] f in
-                                view?.setOnOrientationUpdated { value in
-                                    f?(OngoingCallVideoOrientation(value))
+                                view?.setOnOrientationUpdated { value, aspect in
+                                    f?(OngoingCallVideoOrientation(value), aspect)
                                 }
                             },
                             setOnIsMirroredUpdated: { [weak view] f in

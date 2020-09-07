@@ -730,6 +730,7 @@ plist_fragment(
         <string>onionhttp</string>
         <string>ucbrowser</string>
         <string>dolphin</string>
+        <string>instagram-stories</string>
     </array>
     <key>LSRequiresIPhoneOS</key>
     <true/>

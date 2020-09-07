@@ -300,15 +300,12 @@ private class CallControllerToastItemNode: ASDisplayNode {
         let initialFrame = CGRect(x: floor((self.frame.width - 44.0) / 2.0), y: 0.0, width: 44.0, height: 28.0)
         
         self.clipNode.frame = initialFrame
-//        self.effectView.frame = CGRect(origin: CGPoint(), size: initialFrame.size)
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-        self.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.45, damping: 105.0, completion: { _ in
+        self.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.3, damping: 105.0, completion: { _ in
             self.clipNode.frame = targetFrame
-//            self.effectView.frame = CGRect(origin: CGPoint(), size: targetFrame.size)
             
             self.clipNode.layer.animateFrame(from: initialFrame, to: targetFrame, duration: 0.35, timingFunction: kCAMediaTimingFunctionSpring)
-//            self.effectView.layer.animateFrame(from: initialFrame, to: targetFrame, duration: 0.35, timingFunction: kCAMediaTimingFunctionSpring)
         })
     }
     

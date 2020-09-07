@@ -11,6 +11,7 @@ import AccountContext
 import TelegramPresentationData
 import PresentationDataUtils
 import GZip
+import MediaResources
 
 public enum DoubleBottomSplashMode {
     case hideAccount
@@ -438,6 +439,8 @@ private extension UIColor {
 
 private final class DoubleBottomAnimationSource: AnimatedStickerNodeSource {
     public let path: String
+    
+    public let fitzModifier: EmojiFitzModifier? = nil
     
     public init?(mode: DoubleBottomSplashMode) {
         let fileName: String

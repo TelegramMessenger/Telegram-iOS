@@ -9,9 +9,11 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
     public var chatListPhotos: Bool
     public var knockoutWallpaper: Bool
     public var foldersTabAtBottom: Bool
-    public var enableHighBitrateVideoCalls: Bool
     public var playerEmbedding: Bool
     public var playlistPlayback: Bool
+    public var preferredVideoCodec: String?
+    public var disableVideoAspectScaling: Bool
+    public var enableVoipTcp: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -21,9 +23,11 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
             chatListPhotos: false,
             knockoutWallpaper: false,
             foldersTabAtBottom: false,
-            enableHighBitrateVideoCalls: false,
             playerEmbedding: false,
-            playlistPlayback: false
+            playlistPlayback: false,
+            preferredVideoCodec: nil,
+            disableVideoAspectScaling: false,
+            enableVoipTcp: false
         )
     }
     
@@ -34,9 +38,11 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         chatListPhotos: Bool,
         knockoutWallpaper: Bool,
         foldersTabAtBottom: Bool,
-        enableHighBitrateVideoCalls: Bool,
         playerEmbedding: Bool,
-        playlistPlayback: Bool
+        playlistPlayback: Bool,
+        preferredVideoCodec: String?,
+        disableVideoAspectScaling: Bool,
+        enableVoipTcp: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -44,9 +50,11 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         self.chatListPhotos = chatListPhotos
         self.knockoutWallpaper = knockoutWallpaper
         self.foldersTabAtBottom = foldersTabAtBottom
-        self.enableHighBitrateVideoCalls = enableHighBitrateVideoCalls
         self.playerEmbedding = playerEmbedding
         self.playlistPlayback = playlistPlayback
+        self.preferredVideoCodec = preferredVideoCodec
+        self.disableVideoAspectScaling = disableVideoAspectScaling
+        self.enableVoipTcp = enableVoipTcp
     }
     
     public init(decoder: PostboxDecoder) {
@@ -56,9 +64,11 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         self.chatListPhotos = decoder.decodeInt32ForKey("chatListPhotos", orElse: 0) != 0
         self.knockoutWallpaper = decoder.decodeInt32ForKey("knockoutWallpaper", orElse: 0) != 0
         self.foldersTabAtBottom = decoder.decodeInt32ForKey("foldersTabAtBottom", orElse: 0) != 0
-        self.enableHighBitrateVideoCalls = decoder.decodeInt32ForKey("enableHighBitrateVideoCalls", orElse: 0) != 0
         self.playerEmbedding = decoder.decodeInt32ForKey("playerEmbedding", orElse: 0) != 0
         self.playlistPlayback = decoder.decodeInt32ForKey("playlistPlayback", orElse: 0) != 0
+        self.preferredVideoCodec = decoder.decodeOptionalStringForKey("preferredVideoCodec")
+        self.disableVideoAspectScaling = decoder.decodeInt32ForKey("disableVideoAspectScaling", orElse: 0) != 0
+        self.enableVoipTcp = decoder.decodeInt32ForKey("enableVoipTcp", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -68,9 +78,13 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         encoder.encodeInt32(self.chatListPhotos ? 1 : 0, forKey: "chatListPhotos")
         encoder.encodeInt32(self.knockoutWallpaper ? 1 : 0, forKey: "knockoutWallpaper")
         encoder.encodeInt32(self.foldersTabAtBottom ? 1 : 0, forKey: "foldersTabAtBottom")
-        encoder.encodeInt32(self.enableHighBitrateVideoCalls ? 1 : 0, forKey: "enableHighBitrateVideoCalls")
         encoder.encodeInt32(self.playerEmbedding ? 1 : 0, forKey: "playerEmbedding")
         encoder.encodeInt32(self.playlistPlayback ? 1 : 0, forKey: "playlistPlayback")
+        if let preferredVideoCodec = self.preferredVideoCodec {
+            encoder.encodeString(preferredVideoCodec, forKey: "preferredVideoCodec")
+        }
+        encoder.encodeInt32(self.disableVideoAspectScaling ? 1 : 0, forKey: "disableVideoAspectScaling")
+        encoder.encodeInt32(self.enableVoipTcp ? 1 : 0, forKey: "enableVoipTcp")
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {

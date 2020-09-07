@@ -141,7 +141,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
             if peer is TelegramUser {
                 carouselItem.hasTimer = hasSchedule
             }
-            carouselItem.hasSilentPosting = !isSecretChat
+            carouselItem.hasSilentPosting = true
         }
         carouselItem.hasSchedule = hasSchedule
         carouselItem.reminder = peer.id == context.account.peerId
