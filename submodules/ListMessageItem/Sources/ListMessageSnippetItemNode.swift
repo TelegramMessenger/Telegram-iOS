@@ -373,6 +373,50 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                     descriptionText = mutableDescriptionText
                                 }
                                 break loop
+                            case let .TextUrl(url):
+                                var range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
+                                let nsString = item.message.text as NSString
+                                if range.location + range.length > nsString.length {
+                                    range.location = max(0, nsString.length - range.length)
+                                    range.length = nsString.length - range.location
+                                }
+                                let tempTitleString = (nsString.substring(with: range) as String).trimmingCharacters(in: .whitespacesAndNewlines)
+                               
+                                var (urlString, concealed) = parseUrl(url: url, wasConcealed: false)
+                                let rawUrlString = urlString
+                                var parsedUrl = URL(string: urlString)
+                                if parsedUrl == nil || parsedUrl!.host == nil || parsedUrl!.host!.isEmpty {
+                                    urlString = "http://" + urlString
+                                    parsedUrl = URL(string: urlString)
+                                }
+                                let host: String? = concealed ? urlString : parsedUrl?.host
+                                if let url = parsedUrl, let host = host {
+                                    primaryUrl = urlString
+                                    title = NSAttributedString(string: tempTitleString as String, font: titleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
+                                    if url.path.hasPrefix("/addstickers/") {
+                                        iconText = NSAttributedString(string: "S", font: iconFont, textColor: UIColor.white)
+                                    } else {
+                                        iconText = NSAttributedString(string: host[..<host.index(after: host.startIndex)].uppercased(), font: iconFont, textColor: UIColor.white)
+                                    }
+                                    let mutableDescriptionText = NSMutableAttributedString()
+                                    
+                                    let (messageTextUrl, _) = parseUrl(url: item.message.text, wasConcealed: false)
+                                    
+                                    if messageTextUrl != rawUrlString, !item.isGlobalSearchResult {
+                                        mutableDescriptionText.append(NSAttributedString(string: item.message.text + "\n", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor))
+                                    }
+                                    
+                                    let urlAttributedString = NSMutableAttributedString()
+                                    urlAttributedString.append(NSAttributedString(string: urlString, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemAccentColor))
+                                    if item.presentationData.theme.theme.list.itemAccentColor.isEqual(item.presentationData.theme.theme.list.itemPrimaryTextColor) {
+                                        urlAttributedString.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: NSMakeRange(0, urlAttributedString.length))
+                                    }
+                                    urlAttributedString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.URL), value: urlString, range: NSMakeRange(0, urlAttributedString.length))
+                                    linkText = urlAttributedString
+                                    
+                                    descriptionText = mutableDescriptionText
+                                }
+                                break loop
                             default:
                                 break
                         }
@@ -423,7 +467,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                 authorString = fullAuthorString(for: item)
             }
             
-            let authorText = NSAttributedString(string: authorString, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
+            let authorText = NSAttributedString(string: authorString, font: authorFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
             
             let (authorNodeLayout, authorNodeApply) = authorNodeMakeLayout(TextNodeLayoutArguments(attributedString: authorText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - params.rightInset - 30.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             

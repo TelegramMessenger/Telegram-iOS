@@ -52,6 +52,7 @@ static_library(
 	"//submodules/TelegramUIPreferences:TelegramUIPreferences",
 	"//submodules/GalleryData:GalleryData",
 	"//submodules/InstantPageUI:InstantPageUI",
+	"//submodules/ListSectionHeaderNode:ListSectionHeaderNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

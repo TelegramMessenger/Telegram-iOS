@@ -51,6 +51,7 @@ swift_library(
         "//submodules/MediaPlayer:UniversalMediaPlayer",
         "//submodules/GalleryData:GalleryData",
         "//submodules/InstantPageUI:InstantPageUI",
+        "//submodules/ListSectionHeaderNode:ListSectionHeaderNode",
     ],
     visibility = [
         "//visibility:public",

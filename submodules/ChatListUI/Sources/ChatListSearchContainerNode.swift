@@ -1471,7 +1471,18 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 let isSearching = entriesAndFlags?.1 ?? false
                 strongSelf._isSearching.set(isSearching)
                 
-                strongSelf.mediaNode.updateHistory(entries: entriesAndFlags?.0 ?? [], updateType: .Initial)
+                if strongSelf.searchOptionsValue?.messageTags == .photoOrVideo {
+                    var totalCount: Int32 = 0
+                    if let entries = entriesAndFlags?.0 {
+                        for entry in entries {
+                            if case let .message(_, _, _, _, count) = entry {
+                                totalCount = count
+                                break
+                            }
+                        }
+                    }
+                    strongSelf.mediaNode.updateHistory(entries: entriesAndFlags?.0 ?? [], totalCount: totalCount, updateType: .Initial)
+                }
                 
                 let previousEntries = previousSearchItems.swap(entriesAndFlags?.0)
                 let newEntries = entriesAndFlags?.0 ?? []

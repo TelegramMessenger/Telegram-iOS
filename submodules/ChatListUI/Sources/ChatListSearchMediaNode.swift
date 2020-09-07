@@ -12,6 +12,7 @@ import RadialStatusNode
 import TelegramStringFormatting
 import UniversalMediaPlayer
 import ListMessageItem
+import ListSectionHeaderNode
 import ChatMessageInteractiveMediaBadge
 
 private let mediaBadgeBackgroundColor = UIColor(white: 0.0, alpha: 0.6)
@@ -583,6 +584,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
     private let contentType: ContentType
     
     private let scrollNode: ASScrollNode
+    private var headerNode: ListSectionHeaderNode
     private let floatingHeaderNode: FloatingHeaderNode
     private var flashHeaderDelayTimer: Foundation.Timer?
     private var isDeceleratingAfterTracking = false
@@ -624,6 +626,8 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
         self.floatingHeaderNode = FloatingHeaderNode()
         self.floatingHeaderNode.alpha = 0.0
         
+        self.headerNode = ListSectionHeaderNode(theme: context.sharedContext.currentPresentationData.with { $0 }.theme)
+        
         super.init()
         
         self._itemInteraction = VisualMediaItemInteraction(
@@ -649,6 +653,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.view.delegate = self
         
         self.addSubnode(self.scrollNode)
+        self.addSubnode(self.headerNode)
         self.addSubnode(self.floatingHeaderNode)
         
         self.hiddenMediaDisposable = context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
@@ -675,7 +680,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     
-    func updateHistory(entries: [ChatListSearchEntry], updateType: ViewUpdateType) {
+    func updateHistory(entries: [ChatListSearchEntry], totalCount: Int32, updateType: ViewUpdateType) {
         switch updateType {
         case .FillHole:
             break
@@ -692,7 +697,12 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
             self.initialized = true
             
             if let (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = self.currentParams {
+                if totalCount > 0 {
+                    self.headerNode.title = presentationData.strings.ChatList_Search_Messages(totalCount).uppercased()
+                }
+                
                 self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: true, transition: .immediate)
+                self.headerNode.alpha = self.mediaItems.isEmpty ? 0.0 : 1.0
                 if !self.didSetReady {
                     self.didSetReady = true
                     self.ready.set(.single(true))
@@ -757,7 +767,11 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         self.currentParams = (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
         
-        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: size))
+        let headerSize = CGSize(width: size.width, height: 28.0)
+        self.headerNode.frame = CGRect(origin: CGPoint(), size: headerSize)
+        self.headerNode.updateLayout(size: headerSize, leftInset: sideInset, rightInset: sideInset)
+        
+        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: headerSize.height), size: CGSize(width: size.width, height: size.height - headerSize.height)))
         
         let availableWidth = size.width - sideInset * 2.0
         
@@ -881,7 +895,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
         if let headerItem = headerItem {
             let (year, month) = listMessageDateHeaderInfo(timestamp: headerItem.timestamp)
             let headerSize = self.floatingHeaderNode.update(constrainedWidth: size.width, year: year, month: month, theme: theme, strings: strings)
-            self.floatingHeaderNode.frame = CGRect(origin: CGPoint(x: floor((size.width - headerSize.width) / 2.0), y: 7.0), size: headerSize)
+            self.floatingHeaderNode.frame = CGRect(origin: CGPoint(x: floor((size.width - headerSize.width) / 2.0), y: 7.0 + 28.0), size: headerSize)
             self.floatingHeaderNode.isHidden = false
         } else {
             self.floatingHeaderNode.isHidden = true
