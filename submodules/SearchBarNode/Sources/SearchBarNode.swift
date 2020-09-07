@@ -231,7 +231,7 @@ private class SearchBarTextField: UITextField {
         }
         
         if !tokenSizes.isEmpty {
-            leftOffset -= 4.0
+            leftOffset -= 6.0
         }
         
         self.tokensWidth = leftOffset
@@ -300,7 +300,7 @@ private class SearchBarTextField: UITextField {
         if bounds.size.width.isZero {
             return CGRect(origin: CGPoint(), size: CGSize())
         }
-        var rect = bounds.insetBy(dx: 4.0, dy: 4.0)
+        var rect = bounds.insetBy(dx: 7.0, dy: 4.0)
         rect.origin.y += 1.0
         
         let prefixSize = self.measurePrefixLabel.updateLayout(CGSize(width: floor(bounds.size.width * 0.7), height: bounds.size.height))
@@ -682,16 +682,16 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         
         if let iconImage = self.iconNode.image {
             let iconSize = iconImage.size
-            transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 8.0, y: textBackgroundFrame.minY + floor((textBackgroundFrame.size.height - iconSize.height) / 2.0)), size: iconSize))
+            transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 5.0, y: textBackgroundFrame.minY + floor((textBackgroundFrame.size.height - iconSize.height) / 2.0) - UIScreenPixel), size: iconSize))
         }
         
         if let activityIndicator = self.activityIndicator {
             let indicatorSize = activityIndicator.measure(CGSize(width: 32.0, height: 32.0))
-            transition.updateFrame(node: activityIndicator, frame: CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 7.0, y: textBackgroundFrame.minY + floor((textBackgroundFrame.size.height - indicatorSize.height) / 2.0)), size: indicatorSize))
+            transition.updateFrame(node: activityIndicator, frame: CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 9.0 + UIScreenPixel, y: textBackgroundFrame.minY + floor((textBackgroundFrame.size.height - indicatorSize.height) / 2.0) - 1.0), size: indicatorSize))
         }
         
         let clearSize = self.clearButton.measure(CGSize(width: 100.0, height: 100.0))
-        transition.updateFrame(node: self.clearButton, frame: CGRect(origin: CGPoint(x: textBackgroundFrame.maxX - 8.0 - clearSize.width, y: textBackgroundFrame.minY + floor((textBackgroundFrame.size.height - clearSize.height) / 2.0)), size: clearSize))
+        transition.updateFrame(node: self.clearButton, frame: CGRect(origin: CGPoint(x: textBackgroundFrame.maxX - 6.0 - clearSize.width, y: textBackgroundFrame.minY + floor((textBackgroundFrame.size.height - clearSize.height) / 2.0)), size: clearSize))
         
         self.textField.frame = textFrame
     }
@@ -729,7 +729,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textBackgroundNode.layer.animateFrame(from: initialTextBackgroundFrame, to: self.textBackgroundNode.frame, duration: duration, timingFunction: timingFunction)
         
         let textFieldFrame = self.textField.frame
-        let initialLabelNodeFrame = CGRect(origin: node.labelNode.frame.offsetBy(dx: initialTextBackgroundFrame.origin.x - 4.0, dy: initialTextBackgroundFrame.origin.y - 8.0).origin, size: textFieldFrame.size)
+        let initialLabelNodeFrame = CGRect(origin: node.labelNode.frame.offsetBy(dx: initialTextBackgroundFrame.origin.x - 7.0, dy: initialTextBackgroundFrame.origin.y - 8.0).origin, size: textFieldFrame.size)
         self.textField.layer.animateFrame(from: initialLabelNodeFrame, to: self.textField.frame, duration: duration, timingFunction: timingFunction)
         
         let iconFrame = self.iconNode.frame
@@ -808,7 +808,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         transitionBackgroundNode.layer.animateFrame(from: self.textBackgroundNode.frame, to: targetTextBackgroundFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
         
         let textFieldFrame = self.textField.frame
-        let targetLabelNodeFrame = CGRect(origin: CGPoint(x: node.labelNode.frame.minX + targetTextBackgroundFrame.origin.x - 4.0, y: targetTextBackgroundFrame.minY + floorToScreenPixels((targetTextBackgroundFrame.size.height - textFieldFrame.size.height) / 2.0) - UIScreenPixel), size: textFieldFrame.size)
+        let targetLabelNodeFrame = CGRect(origin: CGPoint(x: node.labelNode.frame.minX + targetTextBackgroundFrame.origin.x - 7.0, y: targetTextBackgroundFrame.minY + floorToScreenPixels((targetTextBackgroundFrame.size.height - textFieldFrame.size.height) / 2.0) - UIScreenPixel), size: textFieldFrame.size)
         self.textField.layer.animateFrame(from: self.textField.frame, to: targetLabelNodeFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             if let snapshot = node.labelNode.layer.snapshotContentTree() {

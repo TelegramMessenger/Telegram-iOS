@@ -49,6 +49,7 @@ static_library(
         "//submodules/ListMessageItem:ListMessageItem",
         "//submodules/ChatMessageInteractiveMediaBadge:ChatMessageInteractiveMediaBadge",
         "//submodules/MediaPlayer:UniversalMediaPlayer",
+	"//submodules/TelegramUIPreferences:TelegramUIPreferences",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

@@ -1167,6 +1167,8 @@ final class ChatListControllerNode: ASDisplayNode {
             }
         }, peerContextAction: self.peerContextAction, present: { [weak self] c, a in
             self?.controller?.present(c, in: .window(.root), with: a)
+        }, presentInGlobalOverlay: { [weak self] c, a in
+            self?.controller?.presentInGlobalOverlay(c, with: a)
         }, navigationController: navigationController, updatedSearchOptions: { options in
             updatedSearchOptions?(options)
         })

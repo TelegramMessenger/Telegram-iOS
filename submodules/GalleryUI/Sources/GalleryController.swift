@@ -246,23 +246,20 @@ public final class GalleryControllerPresentationArguments {
 
 private enum GalleryMessageHistoryView {
     case view(MessageHistoryView)
-    case single(MessageHistoryEntry)
-    case searchResults(SearchMessagesResult, SearchMessagesState)
+    case entries([MessageHistoryEntry], Bool, Bool)
     
     var entries: [MessageHistoryEntry] {
         switch self {
             case let .view(view):
                 return view.entries
-            case let .single(entry):
-                return [entry]
-            case let .searchResults(result, _):
-                return result.messages.map { MessageHistoryEntry(message: $0, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) }
+            case let .entries(entries, _, _):
+                return entries
         }
     }
     
     var tagMask: MessageTags? {
         switch self {
-        case .single, .searchResults:
+        case .entries:
             return nil
         case let .view(view):
             return view.tagMask
@@ -271,23 +268,19 @@ private enum GalleryMessageHistoryView {
     
     var hasEarlier: Bool {
         switch self {
-        case .single:
-            return false
+        case let .entries(_, hasEarlier, _):
+            return hasEarlier
         case let .view(view):
             return view.earlierId != nil
-        case let .searchResults(result, _):
-            return false
         }
     }
     
     var hasLater: Bool {
         switch self {
-        case .single:
-            return false
+        case let .entries(_ , _, hasLater):
+            return hasLater
         case let .view(view):
             return view.laterId != nil
-        case let .searchResults(result, _):
-            return false
         }
     }
 }
@@ -423,15 +416,19 @@ public class GalleryController: ViewController, StandalonePresentableController 
                 message = context.account.postbox.messageAtId(messageId)
             case let .standaloneMessage(m):
                 message = .single(m)
-            case let .searchResult(result, _, messageId):
-                message = .single(result.messages.first(where: { $0.id == messageId }))
+            case let .custom(messages, messageId, _):
+                message = messages
+                |> take(1)
+                |> map { messages, _, _ in
+                    return messages.first(where: { $0.id == messageId })
+                }
         }
         
         let messageView = message
         |> filter({ $0 != nil })
         |> mapToSignal { message -> Signal<GalleryMessageHistoryView?, NoError> in
             switch source {
-            case let .peerMessagesAtId(_, chatLocation, chatLocationContextHolder):
+                case let .peerMessagesAtId(_, chatLocation, chatLocationContextHolder):
                     if let tags = tagsForMessage(message!) {
                         let namespaces: MessageIdNamespaces
                         if Namespaces.Message.allScheduled.contains(message!.id.namespace) {
@@ -440,17 +437,26 @@ public class GalleryController: ViewController, StandalonePresentableController 
                             namespaces = .not(Namespaces.Message.allScheduled)
                         }
                         return context.account.postbox.aroundMessageHistoryViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), anchor: .index(message!.index), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, namespaces: namespaces, orderStatistics: [.combinedLocation])
-                        |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
-                            let mapped = GalleryMessageHistoryView.view(view)
-                            return .single(mapped)
+                            |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
+                                let mapped = GalleryMessageHistoryView.view(view)
+                                return .single(mapped)
                         }
                     } else {
-                        return .single(GalleryMessageHistoryView.single(MessageHistoryEntry(message: message!, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false))))
-                    }
+                        return .single(GalleryMessageHistoryView.entries([MessageHistoryEntry(message: message!, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false))], false, false))
+                }
                 case .standaloneMessage:
-                    return .single(GalleryMessageHistoryView.single(MessageHistoryEntry(message: message!, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false))))
-                case let .searchResult(result, state, _):
-                    return .single(GalleryMessageHistoryView.searchResults(result, state))
+                    return .single(GalleryMessageHistoryView.entries([MessageHistoryEntry(message: message!, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false))], false ,false))
+                case let .custom(messages, _, _):
+                    return messages
+                    |> map { messages, totalCount, hasMore in
+                        var entries: [MessageHistoryEntry] = []
+                        var index = messages.count - 1
+                        for message in messages.reversed() {
+                            entries.append(MessageHistoryEntry(message: message, isRead: false, location: MessageHistoryEntryLocation(index: index, count: Int(totalCount)), monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)))
+                            index -= 1
+                        }
+                        return GalleryMessageHistoryView.entries(entries, false, hasMore)
+                    }
             }
         }
         |> take(1)
@@ -486,7 +492,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                                         centralEntryStableId = message.stableId
                                         break loop
                                     }
-                                case let .searchResult(result, state, messageId):
+                                case let .custom(_, messageId, _):
                                     if message.id == messageId {
                                         centralEntryStableId = message.stableId
                                         break loop
@@ -995,70 +1001,74 @@ public class GalleryController: ViewController, StandalonePresentableController 
                     }
                     
                     switch strongSelf.source {
-                    case let .peerMessagesAtId(initialMessageId, chatLocation, chatLocationContextHolder):
-                        var reloadAroundIndex: MessageIndex?
-                        if index <= 2 && strongSelf.hasLeftEntries {
-                            reloadAroundIndex = strongSelf.entries.first?.index
-                        } else if index >= strongSelf.entries.count - 3 && strongSelf.hasRightEntries {
-                            reloadAroundIndex = strongSelf.entries.last?.index
-                        }
-                        if let reloadAroundIndex = reloadAroundIndex, let tagMask = strongSelf.tagMask {
-                            let namespaces: MessageIdNamespaces
-                            if Namespaces.Message.allScheduled.contains(message.id.namespace) {
-                                namespaces = .just(Namespaces.Message.allScheduled)
-                            } else {
-                                namespaces = .not(Namespaces.Message.allScheduled)
+                        case let .peerMessagesAtId(_, chatLocation, chatLocationContextHolder):
+                            var reloadAroundIndex: MessageIndex?
+                            if index <= 2 && strongSelf.hasLeftEntries {
+                                reloadAroundIndex = strongSelf.entries.first?.index
+                            } else if index >= strongSelf.entries.count - 3 && strongSelf.hasRightEntries {
+                                reloadAroundIndex = strongSelf.entries.last?.index
                             }
-                            let signal = strongSelf.context.account.postbox.aroundMessageHistoryViewForLocation(strongSelf.context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), anchor: .index(reloadAroundIndex), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [.combinedLocation])
-                            |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
-                                let mapped = GalleryMessageHistoryView.view(view)
-                                return .single(mapped)
-                            }
-                            |> take(1)
-                            
-                            strongSelf.updateVisibleDisposable.set((signal
-                            |> deliverOnMainQueue).start(next: { view in
-                                guard let strongSelf = self, let view = view else {
-                                    return
-                                }
-                                
-                                let entries = view.entries
-                                
-                                if strongSelf.invertItemOrder {
-                                    strongSelf.entries = entries.reversed()
-                                    strongSelf.hasLeftEntries = view.hasLater
-                                    strongSelf.hasRightEntries = view.hasEarlier
+                            if let reloadAroundIndex = reloadAroundIndex, let tagMask = strongSelf.tagMask {
+                                let namespaces: MessageIdNamespaces
+                                if Namespaces.Message.allScheduled.contains(message.id.namespace) {
+                                    namespaces = .just(Namespaces.Message.allScheduled)
                                 } else {
-                                    strongSelf.entries = entries
-                                    strongSelf.hasLeftEntries = view.hasEarlier
-                                    strongSelf.hasRightEntries = view.hasLater
+                                    namespaces = .not(Namespaces.Message.allScheduled)
                                 }
-                                if strongSelf.isViewLoaded {
-                                    var items: [GalleryItem] = []
-                                    var centralItemIndex: Int?
-                                    for entry in strongSelf.entries {
-                                        var isCentral = false
-                                        if entry.message.stableId == strongSelf.centralEntryStableId {
-                                            isCentral = true
-                                        }
-                                        if let item = galleryItemForEntry(context: strongSelf.context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: false, fromPlayingVideo: isCentral && strongSelf.fromPlayingVideo, landscape: isCentral && strongSelf.landscape, timecode: isCentral ? strongSelf.timecode : nil, configuration: strongSelf.configuration, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions, storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _ in }, present: { [weak self] c, a in
-                                            if let strongSelf = self {
-                                                strongSelf.presentInGlobalOverlay(c, with: a)
-                                            }
-                                        }) {
-                                            if isCentral {
-                                                centralItemIndex = items.count
-                                            }
-                                            items.append(item)
-                                        }
+                                let signal = strongSelf.context.account.postbox.aroundMessageHistoryViewForLocation(strongSelf.context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), anchor: .index(reloadAroundIndex), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [.combinedLocation])
+                                    |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
+                                        let mapped = GalleryMessageHistoryView.view(view)
+                                        return .single(mapped)
                                     }
-                                    
-                                    strongSelf.galleryNode.pager.replaceItems(items, centralItemIndex: centralItemIndex)
-                                }
-                            }))
+                                    |> take(1)
+                                
+                                strongSelf.updateVisibleDisposable.set((signal
+                                    |> deliverOnMainQueue).start(next: { view in
+                                        guard let strongSelf = self, let view = view else {
+                                            return
+                                        }
+                                        
+                                        let entries = view.entries
+                                        
+                                        if strongSelf.invertItemOrder {
+                                            strongSelf.entries = entries.reversed()
+                                            strongSelf.hasLeftEntries = view.hasLater
+                                            strongSelf.hasRightEntries = view.hasEarlier
+                                        } else {
+                                            strongSelf.entries = entries
+                                            strongSelf.hasLeftEntries = view.hasEarlier
+                                            strongSelf.hasRightEntries = view.hasLater
+                                        }
+                                        if strongSelf.isViewLoaded {
+                                            var items: [GalleryItem] = []
+                                            var centralItemIndex: Int?
+                                            for entry in strongSelf.entries {
+                                                var isCentral = false
+                                                if entry.message.stableId == strongSelf.centralEntryStableId {
+                                                    isCentral = true
+                                                }
+                                                if let item = galleryItemForEntry(context: strongSelf.context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: false, fromPlayingVideo: isCentral && strongSelf.fromPlayingVideo, landscape: isCentral && strongSelf.landscape, timecode: isCentral ? strongSelf.timecode : nil, configuration: strongSelf.configuration, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions, storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _ in }, present: { [weak self] c, a in
+                                                    if let strongSelf = self {
+                                                        strongSelf.presentInGlobalOverlay(c, with: a)
+                                                    }
+                                                }) {
+                                                    if isCentral {
+                                                        centralItemIndex = items.count
+                                                    }
+                                                    items.append(item)
+                                                }
+                                            }
+                                            
+                                            strongSelf.galleryNode.pager.replaceItems(items, centralItemIndex: centralItemIndex)
+                                        }
+                                    }))
                         }
-                    default:
-                        break
+                        case let .custom(_, _, loadMore):
+                            if index >= strongSelf.entries.count - 3 && strongSelf.hasRightEntries {
+                                loadMore?()
+                            }
+                        default:
+                            break
                     }
                 }
                 if strongSelf.didSetReady {

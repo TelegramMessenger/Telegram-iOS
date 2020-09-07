@@ -50,6 +50,7 @@ import TelegramNotices
 import SaveToCameraRoll
 import PeerInfoUI
 import ListMessageItem
+import GalleryData
 
 protocol PeerInfoScreenItem: class {
     var id: AnyHashable { get }

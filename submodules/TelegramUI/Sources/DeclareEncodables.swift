@@ -9,6 +9,7 @@ import WebSearchUI
 import InstantPageCache
 import SettingsUI
 import WallpaperResources
+import MediaResources
 import LocationUI
 
 private var telegramUIDeclaredEncodables: Void = {

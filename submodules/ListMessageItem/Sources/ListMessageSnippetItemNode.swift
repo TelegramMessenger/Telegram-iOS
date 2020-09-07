@@ -425,7 +425,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
             
             let authorText = NSAttributedString(string: authorString, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
             
-            let (authorNodeLayout, authorNodeApply) = authorNodeMakeLayout(TextNodeLayoutArguments(attributedString: authorText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - params.rightInset - 12.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (authorNodeLayout, authorNodeApply) = authorNodeMakeLayout(TextNodeLayoutArguments(attributedString: authorText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - params.rightInset - 30.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var contentHeight = 9.0 + titleNodeLayout.size.height + 10.0 + descriptionNodeLayout.size.height + linkNodeLayout.size.height
             if item.isGlobalSearchResult {

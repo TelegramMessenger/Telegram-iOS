@@ -143,7 +143,7 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
                     
                     var iconSize = CGSize()
                     var totalWidth = labelLayoutResult.size.width
-                    let spacing: CGFloat = 8.0
+                    let spacing: CGFloat = 6.0
                     
                     if let iconImage = strongSelf.iconNode.image {
                         iconSize = iconImage.size

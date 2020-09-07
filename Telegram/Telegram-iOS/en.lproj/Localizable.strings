@@ -5754,3 +5754,31 @@ Any member of this group will be able to see messages in the channel.";
 
 "ChatList.Search.NoResults" = "No Results";
 "ChatList.Search.NoResultsDescription" = "There were no results for \"%@\".\nTry a new search.";
+
+"ChatList.Search.Messages_0" = "%@ messages";
+"ChatList.Search.Messages_1" = "%@ message";
+"ChatList.Search.Messages_2" = "%@ messages";
+"ChatList.Search.Messages_3_10" = "%@ messages";
+"ChatList.Search.Messages_many" = "%@ messages";
+"ChatList.Search.Messages_any" = "%@ messages";
+
+"ChatList.Search.Links_0" = "%@ links";
+"ChatList.Search.Links_1" = "%@ link";
+"ChatList.Search.Links_2" = "%@ links";
+"ChatList.Search.Links_3_10" = "%@ links";
+"ChatList.Search.Links_many" = "%@ links";
+"ChatList.Search.Links_any" = "%@ links";
+
+"ChatList.Search.Files_0" = "%@ files";
+"ChatList.Search.Files_1" = "%@ file";
+"ChatList.Search.Files_2" = "%@ files";
+"ChatList.Search.Files_3_10" = "%@ files";
+"ChatList.Search.Files_many" = "%@ files";
+"ChatList.Search.Files_any" = "%@ files";
+
+"ChatList.Search.Music_0" = "%@ audio files";
+"ChatList.Search.Music_1" = "%@ audio file";
+"ChatList.Search.Music_2" = "%@ audio files";
+"ChatList.Search.Music_3_10" = "%@ audio files";
+"ChatList.Search.Music_many" = "%@ audio files";
+"ChatList.Search.Music_any" = "%@ audio files";

@@ -156,6 +156,11 @@ public struct MessageHistoryEntryLocation: Equatable {
     public let index: Int
     public let count: Int
     
+    public init(index: Int, count: Int) {
+        self.index = index
+        self.count = count
+    }
+    
     var predecessor: MessageHistoryEntryLocation? {
         if index == 0 {
             return nil

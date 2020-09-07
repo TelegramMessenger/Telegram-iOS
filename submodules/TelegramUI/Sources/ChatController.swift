@@ -60,6 +60,8 @@ import UrlWhitelist
 import TelegramIntents
 import TooltipUI
 import StatisticsUI
+import MediaResources
+import GalleryData
 
 extension ChatLocation {
     var peerId: PeerId {

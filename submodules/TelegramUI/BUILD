@@ -204,6 +204,7 @@ swift_library(
         "//submodules/ListMessageItem:ListMessageItem",
         "//submodules/FileMediaResourceStatus:FileMediaResourceStatus",
         "//submodules/ChatMessageInteractiveMediaBadge:ChatMessageInteractiveMediaBadge",
+        "//submodules/GalleryData:GalleryData",
     ],
     visibility = [
         "//visibility:public",

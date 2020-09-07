@@ -1721,6 +1721,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
                 strongSelf.setDisplayNavigationBar(false, transition: transition)
+                
+                (strongSelf.parent as? TabBarController)?.updateIsTabBarHidden(true, transition: .animated(duration: 0.4, curve: .spring))
             })
         }
     }
@@ -1743,8 +1745,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 parentController.navigationBar?.setSecondaryContentNode(filtersIsEmpty ? nil : self.tabContainerNode, animated: animated)
             }
             
-            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.5, curve: .spring) : .immediate
+            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .spring) : .immediate
             self.setDisplayNavigationBar(true, transition: transition)
+            
+            (self.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.4, curve: .spring))
         }
     }
     

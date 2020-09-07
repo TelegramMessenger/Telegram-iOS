@@ -15,6 +15,7 @@ import UrlEscaping
 import PhotoResources
 import WebsiteType
 import ChatMessageInteractiveMediaBadge
+import GalleryData
 
 private let buttonFont = Font.semibold(13.0)
 

@@ -49,6 +49,7 @@ swift_library(
         "//submodules/ListMessageItem:ListMessageItem",
         "//submodules/ChatMessageInteractiveMediaBadge:ChatMessageInteractiveMediaBadge",
         "//submodules/MediaPlayer:UniversalMediaPlayer",
+        "//submodules/GalleryData:GalleryData",
     ],
     visibility = [
         "//visibility:public",

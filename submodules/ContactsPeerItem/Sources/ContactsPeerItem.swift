@@ -673,6 +673,10 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             
             additionalTitleInset += badgeSize
             
+            if let arrowButtonImage = arrowButtonImage {
+                additionalTitleInset += arrowButtonImage.size.width
+            }
+            
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset - additionalTitleInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: multilineStatus ? 3 : 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset - badgeSize), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))

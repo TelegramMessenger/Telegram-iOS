@@ -209,6 +209,7 @@ framework(
         "//submodules/ListMessageItem:ListMessageItem",
         "//submodules/FileMediaResourceStatus:FileMediaResourceStatus",
         "//submodules/ChatMessageInteractiveMediaBadge:ChatMessageInteractiveMediaBadge",
+        "//submodules/GalleryData:GalleryData",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

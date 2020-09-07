@@ -13,6 +13,7 @@ import TelegramUIPreferences
 import AccountContext
 import TelegramUniversalVideoContent
 import DeviceProximity
+import MediaResources
 
 enum SharedMediaPlayerGroup: Int {
     case music = 0

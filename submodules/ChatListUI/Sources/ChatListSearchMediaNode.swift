@@ -573,12 +573,6 @@ private enum ItemsLayout {
     }
 }
 
-private func getStableId(message: Message) -> Int32 {
-    var hash = message.id.id
-    hash = hash &* 31 &+ message.id.peerId.id
-    return hash
-}
-
 final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
     enum ContentType {
         case photoOrVideo
@@ -612,18 +606,17 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
     private var hiddenMediaDisposable: Disposable?
     private var mediaItems: [VisualMediaItem] = []
     private var itemsLayout: ItemsLayout?
-    private var visibleMediaItems: [Int32: VisualMediaItemNode] = [:]
-    
-    private var numberOfItemsToRequest: Int = 50
-    private var currentView: MessageHistoryView?
-    private var isRequestingView: Bool = false
-    private var isFirstHistoryView: Bool = true
+    private var visibleMediaItems: [UInt32: VisualMediaItemNode] = [:]
+    private var initialized = false
     
     private var decelerationAnimator: ConstantDisplayLinkAnimator?
     
     private var animationTimer: SwiftSignalKit.Timer?
     
-    init(context: AccountContext, contentType: ContentType, openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Void) {
+    public var beganInteractiveDragging: (() -> Void)?
+    public var loadMore: (() -> Void)?
+    
+    init(context: AccountContext, contentType: ContentType, openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Void, messageContextAction: @escaping (Message, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void) {
         self.context = context
         self.contentType = contentType
         
@@ -638,7 +631,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
                 let _ = openMessage(message, .default)
             },
             openMessageContextActions: { [weak self] message, sourceNode, sourceRect, gesture in
-//                self?.chatControllerInteraction.openMessageContextActions(message, sourceNode, sourceRect, gesture)
+                messageContextAction(message, sourceNode, sourceRect, gesture)
             },
             toggleSelection: { [weak self] id, value in
 //                self?.chatControllerInteraction.toggleMessagesSelection([id], value)
@@ -657,8 +650,6 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.addSubnode(self.scrollNode)
         self.addSubnode(self.floatingHeaderNode)
-        
-        self.requestHistoryAroundVisiblePosition()
         
         self.hiddenMediaDisposable = context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
             guard let strongSelf = self else {
@@ -683,41 +674,25 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
         self.animationTimer?.invalidate()
     }
     
-    private func requestHistoryAroundVisiblePosition() {
-//        if self.isRequestingView {
-//            return
-//        }
-//        self.isRequestingView = true
-//        self.listDisposable.set((self.context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(self.peerId), index: .upperBound, anchorIndex: .upperBound, count: self.numberOfItemsToRequest, fixedCombinedReadStates: nil, tagMask: tagMaskForType(self.contentType))
-//        |> deliverOnMainQueue).start(next: { [weak self] (view, updateType, _) in
-//            guard let strongSelf = self else {
-//                return
-//            }
-//            strongSelf.updateHistory(view: view, updateType: updateType)
-//            strongSelf.isRequestingView = false
-//        }))
-    }
     
     func updateHistory(entries: [ChatListSearchEntry], updateType: ViewUpdateType) {
-//        self.currentView = view
-        
         switch updateType {
         case .FillHole:
-            self.requestHistoryAroundVisiblePosition()
+            break
         default:
             self.mediaItems.removeAll()
-            for entry in entries.reversed() {
-                if case let .message(message, _, _, _) = entry {
+            for entry in entries {
+                if case let .message(message, _, _, _, _) = entry {
                     self.mediaItems.append(VisualMediaItem(message: message))
                 }
             }
             self.itemsLayout = nil
             
-            let wasFirstHistoryView = self.isFirstHistoryView
-            self.isFirstHistoryView = false
+            let wasInitialized = self.initialized
+            self.initialized = true
             
             if let (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = self.currentParams {
-                self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: wasFirstHistoryView, transition: .immediate)
+                self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: true, transition: .immediate)
                 if !self.didSetReady {
                     self.didSetReady = true
                     self.ready.set(.single(true))
@@ -749,51 +724,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
             itemNode.updateHiddenMedia()
         }
     }
-    
-    func transferVelocity(_ velocity: CGFloat) {
-        if velocity > 0.0 {
-            //print("transferVelocity \(velocity)")
-            self.decelerationAnimator?.isPaused = true
-            let startTime = CACurrentMediaTime()
-            var currentOffset = self.scrollNode.view.contentOffset
-            let decelerationRate: CGFloat = 0.998
-            self.scrollViewDidEndDragging(self.scrollNode.view, willDecelerate: true)
-            self.decelerationAnimator = ConstantDisplayLinkAnimator(update: { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                let t = CACurrentMediaTime() - startTime
-                var currentVelocity = velocity * 15.0 * CGFloat(pow(Double(decelerationRate), 1000.0 * t))
-                //print("value at \(t) = \(currentVelocity)")
-                currentOffset.y += currentVelocity
-                let maxOffset = strongSelf.scrollNode.view.contentSize.height - strongSelf.scrollNode.bounds.height
-                if currentOffset.y >= maxOffset {
-                    currentOffset.y = maxOffset
-                    currentVelocity = 0.0
-                }
-                if currentOffset.y < 0.0 {
-                    currentOffset.y = 0.0
-                    currentVelocity = 0.0
-                }
-                
-                var didEnd = false
-                if abs(currentVelocity) < 0.1 {
-                    strongSelf.decelerationAnimator?.isPaused = true
-                    strongSelf.decelerationAnimator = nil
-                    didEnd = true
-                }
-                var contentOffset = strongSelf.scrollNode.view.contentOffset
-                contentOffset.y = floorToScreenPixels(currentOffset.y)
-                strongSelf.scrollNode.view.setContentOffset(contentOffset, animated: false)
-                strongSelf.scrollViewDidScroll(strongSelf.scrollNode.view)
-                if didEnd {
-                    strongSelf.scrollViewDidEndDecelerating(strongSelf.scrollNode.view)
-                }
-            })
-            self.decelerationAnimator?.isPaused = false
-        }
-    }
-    
+        
     func cancelPreviewGestures() {
         for (_, itemNode) in self.visibleMediaItems {
             itemNode.cancelPreviewGesture()
@@ -803,7 +734,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
     func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         for item in self.mediaItems {
             if item.message.id == messageId {
-                if let itemNode = self.visibleMediaItems[getStableId(message: item.message)] {
+                if let itemNode = self.visibleMediaItems[item.message.stableId] {
                     return itemNode.transitionNode()
                 }
                 break
@@ -863,17 +794,16 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         self.updateHeaderFlashing(animated: true)
+        
+        self.beganInteractiveDragging?()
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if let (size, sideInset, bottomInset, visibleHeight, _, _, presentationData) = self.currentParams {
             self.updateVisibleItems(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, theme: presentationData.theme, strings: presentationData.strings, synchronousLoad: false)
             
-            if scrollView.contentOffset.y >= scrollView.contentSize.height - scrollView.bounds.height * 2.0, let currentView = self.currentView, currentView.earlierId != nil {
-                if !self.isRequestingView {
-                    self.numberOfItemsToRequest += 50
-                    self.requestHistoryAroundVisiblePosition()
-                }
+            if scrollView.contentOffset.y >= scrollView.contentSize.height - scrollView.bounds.height * 2.0 {
+                self.loadMore?()
             }
         }
     }
@@ -908,13 +838,10 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
         
         var headerItem: Message?
         
-        var validIds = Set<Int32>()
+        var validIds = Set<UInt32>()
         if minVisibleIndex <= maxVisibleIndex {
             for i in minVisibleIndex ... maxVisibleIndex {
-                var stableId = Int32(self.mediaItems[i].message.stableId)
-                if stableId == 0 {
-                    stableId = getStableId(message: self.mediaItems[i].message)
-                }
+                let stableId = self.mediaItems[i].message.stableId
                 validIds.insert(stableId)
                 
                 let itemFrame = itemsLayout.frame(forItemAt: i, sideInset: sideInset)
@@ -939,7 +866,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
                 itemNode.updateIsVisible(itemFrame.intersects(activeRect))
             }
         }
-        var removeKeys: [Int32] = []
+        var removeKeys: [UInt32] = []
         for (id, _) in self.visibleMediaItems {
             if !validIds.contains(id) {
                 removeKeys.append(id)
