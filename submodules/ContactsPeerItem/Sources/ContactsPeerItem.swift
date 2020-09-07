@@ -674,7 +674,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             additionalTitleInset += badgeSize
             
             if let arrowButtonImage = arrowButtonImage {
-                additionalTitleInset += arrowButtonImage.size.width
+                additionalTitleInset += arrowButtonImage.size.width + 4.0
             }
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset - additionalTitleInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
@@ -905,7 +905,12 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 badgeBackgroundNode.image = currentBadgeBackgroundImage
                                 
                                 badgeBackgroundWidth = max(badgeTextLayout.size.width + 10.0, currentBadgeBackgroundImage.size.width)
-                                let badgeBackgroundFrame = CGRect(x: revealOffset + params.width - params.rightInset - badgeBackgroundWidth - 6.0, y: floor((nodeLayout.contentSize.height - currentBadgeBackgroundImage.size.height) / 2.0), width: badgeBackgroundWidth, height: currentBadgeBackgroundImage.size.height)
+                                var badgeBackgroundFrame = CGRect(x: revealOffset + params.width - params.rightInset - badgeBackgroundWidth - 6.0, y: floor((nodeLayout.contentSize.height - currentBadgeBackgroundImage.size.height) / 2.0), width: badgeBackgroundWidth, height: currentBadgeBackgroundImage.size.height)
+                                
+                                if let arrowButtonImage = arrowButtonImage {
+                                    badgeBackgroundFrame.origin.x -= arrowButtonImage.size.width + 6.0
+                                }
+                                
                                 let badgeTextFrame = CGRect(origin: CGPoint(x: badgeBackgroundFrame.midX - badgeTextLayout.size.width / 2.0, y: badgeBackgroundFrame.minY + 2.0), size: badgeTextLayout.size)
                                 
                                 let badgeTextNode = badgeTextApply()
