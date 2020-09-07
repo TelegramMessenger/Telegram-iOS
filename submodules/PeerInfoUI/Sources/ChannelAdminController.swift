@@ -487,6 +487,8 @@ private func stringForRight(strings: PresentationStrings, right: TelegramChatAdm
         return strings.Channel_EditAdmin_PermissionPinMessages
     } else if right.contains(.canAddAdmins) {
         return strings.Channel_EditAdmin_PermissionAddAdmins
+    } else if right.contans(.canBeAnonymous) {
+        return strings.Channel_AdminLog_CanBeAnonymous
     } else {
         return ""
     }
@@ -508,6 +510,8 @@ private func rightDependencies(_ right: TelegramChatAdminRightsFlags) -> [Telegr
     } else if right.contains(.canPinMessages) {
         return []
     } else if right.contains(.canAddAdmins) {
+        return []
+    } else if right.contains(.canBeAnonymous) {
         return []
     } else {
         return []
@@ -607,6 +611,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                     .canBanUsers,
                     .canInviteUsers,
                     .canPinMessages,
+                    .canBeAnonymous,
                     .canAddAdmins
                 ]
         }
@@ -731,6 +736,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                     .canBanUsers,
                     .canInviteUsers,
                     .canPinMessages,
+                    .canBeAnonymous,
                     .canAddAdmins
                 ]
         
