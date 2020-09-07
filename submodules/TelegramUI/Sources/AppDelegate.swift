@@ -1145,9 +1145,12 @@ final class SharedApplicationContext {
                     if firstTime {
                         let layer = context.rootController.view.layer
                         layer.allowsGroupOpacity = true
-                        layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak layer] _ in
+                        layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak layer, weak context] _ in
                             if let layer = layer {
                                 layer.allowsGroupOpacity = false
+                            }
+                            Queue.mainQueue().justDispatch {
+                                context?.context.sharedContext.appLockContext.updateSnapshot(force: true)
                             }
                         })
                     }
@@ -1177,6 +1180,12 @@ final class SharedApplicationContext {
                     self.registerForNotifications(context: context.context, authorize: authorizeNotifications)
                     
                     self.resetIntentsIfNeeded(context: context.context)
+                    
+                    if !firstTime {
+                        Queue.mainQueue().justDispatch {
+                            context.context.sharedContext.appLockContext.updateSnapshot(force: true)
+                        }
+                    }
                 }))
                 
                 context.context.account.postbox.transaction({ transaction -> Void in

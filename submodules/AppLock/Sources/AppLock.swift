@@ -62,6 +62,37 @@ private func getCoveringViewSnaphot(window: Window1) -> UIImage? {
     }).flatMap(applyScreenshotEffectToImage)
 }
 
+private func getCoveringViewSnapshotForPublicAccount(window: Window1) -> UIImage? {
+    let scale: CGFloat = 0.5
+    let unscaledSize = window.hostView.containerView.frame.size
+    return generateImage(CGSize(width: floor(unscaledSize.width * scale), height: floor(unscaledSize.height * scale)), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.scaleBy(x: scale, y: scale)
+        let snapshot = window.hostView.containerView.snapshotView(afterScreenUpdates: false)
+        if let snapshot = snapshot {
+            window.hostView.containerView.superview?.addSubview(snapshot)
+        }
+        UIGraphicsPushContext(context)
+        
+        window.forEachViewController({ controller in
+            if let controller = controller as? PasscodeEntryController {
+                controller.displayNode.alpha = 0.0
+            }
+            return true
+        })
+        window.hostView.containerView.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: true)
+        window.forEachViewController({ controller in
+            if let controller = controller as? PasscodeEntryController {
+                controller.displayNode.alpha = 1.0
+            }
+            return true
+        })
+        
+        UIGraphicsPopContext()
+        snapshot?.removeFromSuperview()
+    }).flatMap(applyScreenshotEffectToImage)
+}
+
 public final class AppLockContextImpl: AppLockContext {
     private let rootPath: String
     private let syncQueue = Queue()
@@ -88,6 +119,7 @@ public final class AppLockContextImpl: AppLockContext {
         return self.isCurrentlyLockedPromise.get()
         |> distinctUntilChanged
     }
+    private var isCurrentlyLockedValue: Bool = false
     
     private var lastActiveTimestamp: Double?
     private var lastActiveValue: Bool = false
@@ -96,8 +128,10 @@ public final class AppLockContextImpl: AppLockContext {
     public private(set) var hiddenAccountsAccessChallengeData = [AccountRecordId:PostboxAccessChallengeData]()
 
     private var applicationInForegroundDisposable: Disposable?
+    private var requiresSnapshotUpdateDisposable: Disposable?
     
     public var lockingIsCompletePromise = Promise<Bool>()
+    private var lockingAnimationInProgress: Bool = false
     
     public var isUnlockedAndReady: Signal<Void, NoError> {
         return self.isCurrentlyLockedPromise.get()
@@ -116,6 +150,9 @@ public final class AppLockContextImpl: AppLockContext {
                 }
         }
     }
+    
+    private var snapshot: UIImage?
+    private var requiresSnapshotUpdate = true
     
     public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
         assert(Queue.mainQueue().isCurrent())
@@ -140,6 +177,33 @@ public final class AppLockContextImpl: AppLockContext {
             }
             
             strongSelf.hiddenAccountsAccessChallengeData = value
+        })
+        
+        let unlockedHiddenAccountRecordIdPromise = accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise
+        
+        let requiresSnapshotUpdateSignal: Signal<AccountRecordId?, NoError> = accountManager.accountRecords()
+        |> map { $0.currentRecord?.id }
+        |> distinctUntilChanged(isEqual: ==)
+        |> mapToSignal { currentId -> Signal<AccountRecordId?, NoError> in
+            return unlockedHiddenAccountRecordIdPromise.get()
+            |> map { hiddenId -> AccountRecordId? in
+                if hiddenId != nil {
+                    return nil
+                }
+                return currentId
+            }
+            |> filter { $0 != nil }
+            |> distinctUntilChanged(isEqual: ==)
+        }
+        |> distinctUntilChanged(isEqual: ==)
+        
+        self.requiresSnapshotUpdateDisposable = (requiresSnapshotUpdateSignal |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            strongSelf.requiresSnapshotUpdate = true
+            strongSelf.updateSnapshot(force: false)
         })
         
         let _ = (combineLatest(queue: .mainQueue(),
@@ -220,6 +284,7 @@ public final class AppLockContextImpl: AppLockContext {
                         passcodeController.ensureInputFocused()
                     } else {
                         strongSelf.lockingIsCompletePromise.set(.single(false))
+                        strongSelf.lockingAnimationInProgress = false
                         
                         let passcodeController = PasscodeEntryController(applicationBindings: strongSelf.applicationBindings, accountManager: strongSelf.accountManager, appLockContext: strongSelf, presentationData: presentationData, presentationDataSignal: strongSelf.presentationDataSignal, challengeData: accessChallengeData.data, hiddenAccountsAccessChallengeData: strongSelf.hiddenAccountsAccessChallengeData, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: !becameActiveRecently, lockIconInitialFrame: { [weak self] in
                             if let lockViewFrame = lockIconInitialFrame() {
@@ -233,6 +298,12 @@ public final class AppLockContextImpl: AppLockContext {
                                 if let strongSelf = self {
                                     strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
                                     strongSelf.lockingIsCompletePromise.set(.single(true))
+                                    Queue.mainQueue().after(0.25) { [weak self] in
+                                        guard let strongSelf = self else { return }
+                                        
+                                        strongSelf.lockingAnimationInProgress = true
+                                        strongSelf.updateSnapshot(force: false)
+                                    }
                                 }
                                 if case .enabled = biometrics {
                                     passcodeController?.requestBiometrics()
@@ -244,6 +315,12 @@ public final class AppLockContextImpl: AppLockContext {
                                 if let strongSelf = self {
                                     strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
                                     strongSelf.lockingIsCompletePromise.set(.single(true))
+                                    Queue.mainQueue().after(0.25) { [weak self] in
+                                        guard let strongSelf = self else { return }
+                                        
+                                        strongSelf.lockingAnimationInProgress = true
+                                        strongSelf.updateSnapshot(force: false)
+                                    }
                                 }
                             }
                         }
@@ -266,6 +343,7 @@ public final class AppLockContextImpl: AppLockContext {
             
             strongSelf.updateTimestampRenewTimer(shouldRun: appInForeground && !isCurrentlyLocked)
             strongSelf.isCurrentlyLockedPromise.set(.single(!appInForeground || isCurrentlyLocked))
+            strongSelf.isCurrentlyLockedValue = !appInForeground || isCurrentlyLocked
             
             if shouldDisplayCoveringView {
                 if strongSelf.coveringView == nil, let window = strongSelf.window {
@@ -295,11 +373,14 @@ public final class AppLockContextImpl: AppLockContext {
             |> distinctUntilChanged(isEqual: ==)
             |> filter { !$0 }
             |> deliverOnMainQueue).start(next: { [weak self] _ in
-                guard let strongSelf = self else { return }
+                guard let strongSelf = self, strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId != nil else { return }
                 
-                if strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId != nil {
-                    UIApplication.shared.isStatusBarHidden = false
+                UIApplication.shared.isStatusBarHidden = false
+                
+                if let coveringView = strongSelf.coveringView, let snapshot = strongSelf.snapshot {
+                    coveringView.updateSnapshot(strongSelf.snapshot)
                 }
+                
                 strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
         })
         
@@ -311,6 +392,15 @@ public final class AppLockContextImpl: AppLockContext {
                 return state
             }
         })
+    }
+    
+    public func updateSnapshot(force: Bool) {
+        guard self.lockingAnimationInProgress, (self.requiresSnapshotUpdate || force), let window = self.window, window.coveringView == nil, self.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId == nil else { return }
+        
+        if let snapshot = getCoveringViewSnapshotForPublicAccount(window: window) {
+            self.snapshot = snapshot
+            self.requiresSnapshotUpdate = false
+        }
     }
     
     private func updateTimestampRenewTimer(shouldRun: Bool) {
@@ -428,5 +518,6 @@ public final class AppLockContextImpl: AppLockContext {
     deinit {
         self.hiddenAccountsAccessChallengeDataDisposable?.dispose()
         self.applicationInForegroundDisposable?.dispose()
+        self.requiresSnapshotUpdateDisposable?.dispose()
     }
 }
