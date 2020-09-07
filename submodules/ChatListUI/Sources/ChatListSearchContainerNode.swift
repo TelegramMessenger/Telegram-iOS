@@ -830,23 +830,6 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         self.listNode.isHidden = true
         self.mediaNode.isHidden = true
-        self.listNode.visibleBottomContentOffsetChanged = { offset in
-            guard case let .known(value) = offset, value < 160.0 else {
-                return
-            }
-            updateSearchContext { previous in
-                guard let previous = previous else {
-                    return (nil, false)
-                }
-                if previous.loadMoreIndex != nil {
-                    return (previous, false)
-                }
-                guard let last = previous.result.messages.last else {
-                    return (previous, false)
-                }
-                return (ChatListSearchMessagesContext(result: previous.result, loadMoreIndex: last.index), true)
-            }
-        }
         self.recentListNode.isHidden = filter.contains(.excludeRecent)
             
         let currentRemotePeers = Atomic<([FoundPeer], [FoundPeer])?>(value: nil)
@@ -1177,8 +1160,24 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 return ([], 0, false)
             }
         }
+        
+        let loadMore = {
+            updateSearchContext { previous in
+                guard let previous = previous else {
+                    return (nil, false)
+                }
+                if previous.loadMoreIndex != nil {
+                    return (previous, false)
+                }
+                guard let last = previous.result.messages.last else {
+                    return (previous, false)
+                }
+                return (ChatListSearchMessagesContext(result: previous.result, loadMoreIndex: last.index), true)
+            }
+        }
+        
         openMediaMessageImpl = { [weak self] message, mode in
-            let _ = context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatLocationContextHolder: nil, message: message, standalone: false, reverseMessageGalleryOrder: true, navigationController: nil, dismissInput: {
+            let _ = context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatLocationContextHolder: nil, message: message, standalone: false, reverseMessageGalleryOrder: true, navigationController: navigationController, dismissInput: {
                 self?.view.window?.endEditing(true)
             }, present: { c, a in
                 present(c, a)
@@ -1205,18 +1204,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }, callPeer: { _, _ in
             }, enqueueMessage: { _ in
             }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, gallerySource: .custom(messages: foundMessages, messageId: message.id, loadMore: {
-                updateSearchContext { previous in
-                    guard let previous = previous else {
-                        return (nil, false)
-                    }
-                    if previous.loadMoreIndex != nil {
-                        return (previous, false)
-                    }
-                    guard let last = previous.result.messages.last else {
-                        return (previous, false)
-                    }
-                    return (ChatListSearchMessagesContext(result: previous.result, loadMoreIndex: last.index), true)
-                }
+                loadMore()
             })))
         }
         
@@ -1415,25 +1403,33 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         }))
         
         let listInteraction = ListMessageItemInteraction(openMessage: { [weak self] message, mode -> Bool in
-            return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatLocationContextHolder: nil, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: nil, dismissInput: { [weak self] in
+            return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatLocationContextHolder: nil, message: message, standalone: false, reverseMessageGalleryOrder: true, navigationController: navigationController, dismissInput: { [weak self] in
                 self?.view.window?.endEditing(true)
             }, present: { c, a in
                 present(c, a)
-            }, transitionNode: { messageId, media in
-                return transitionNodeImpl?(messageId, media)
+            }, transitionNode: { [weak self] messageId, media in
+                var transitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
+                if let strongSelf = self {
+                    strongSelf.listNode.forEachItemNode { itemNode in
+                        if let itemNode = itemNode as? ListMessageNode {
+                            if let result = itemNode.transitionNode(id: messageId, media: media) {
+                                transitionNode = result
+                            }
+                        }
+                    }
+                }
+                return transitionNode
             }, addToTransitionSurface: { view in
-                
-                //                                   strongSelf.paneContainerNode.currentPane?.node.addToTransitionSurface(view: view)
+                self?.view.addSubview(view)
             }, openUrl: { url in
                 //                                   self?.openUrl(url: url, concealed: false, external: false)
             }, openPeer: { peer, navigation in
                 //                                   self?.openPeer(peerId: peer.id, navigation: navigation)
-            }, callPeer: { peerId, isVideo in
-                //self?.controllerInteraction?.callPeer(peerId)
+            }, callPeer: { _, _ in
             }, enqueueMessage: { _ in
-            }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, playlistLocation: .searchResults(query: "", peerId: nil, messages: [], at: message.id)))
-        
-            return true
+            }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, playlistLocation: .searchResults(query: "", peerId: nil, messages: [], at: message.id), gallerySource: .custom(messages: foundMessages, messageId: message.id, loadMore: {
+                loadMore()
+            })))
         }, openMessageContextMenu: { [weak self] message, bool, node, rect, gesture in
             self?.messageContextAction(message, node: node, rect: rect, gesture: gesture)
         }, toggleMessagesSelection: { messageId, selected in
@@ -1452,12 +1448,10 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     self?.view.window?.endEditing(true)
                 }, contentContext: nil)
             })
-        }, openInstantPage: { [weak self] message, data in
-            if let strongSelf = self {
-                if let (webpage, anchor) = instantPageAndAnchor(message: message) {
-                    let pageController = InstantPageController(context: context, webPage: webpage, sourcePeerType: .channel, anchor: anchor)
-                    navigationController?.pushViewController(pageController)
-                }
+        }, openInstantPage: { message, data in
+            if let (webpage, anchor) = instantPageAndAnchor(message: message) {
+                let pageController = InstantPageController(context: context, webPage: webpage, sourcePeerType: .channel, anchor: anchor)
+                navigationController?.pushViewController(pageController)
             }
         }, longTap: { action, message in
             
@@ -1554,19 +1548,15 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             self?.dismissInput?()
         }
         
-        self.mediaNode.loadMore = {
-            updateSearchContext { previous in
-                guard let previous = previous else {
-                    return (nil, false)
-                }
-                if previous.loadMoreIndex != nil {
-                    return (previous, false)
-                }
-                guard let last = previous.result.messages.last else {
-                    return (previous, false)
-                }
-                return (ChatListSearchMessagesContext(result: previous.result, loadMoreIndex: last.index), true)
+        self.listNode.visibleBottomContentOffsetChanged = { offset in
+            guard case let .known(value) = offset, value < 160.0 else {
+                return
             }
+            loadMore()
+        }
+        
+        self.mediaNode.loadMore = {
+            loadMore()
         }
         
         self.filterContainerNode.filterPressed = { [weak self] filter in

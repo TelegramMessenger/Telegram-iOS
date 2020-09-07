@@ -451,9 +451,9 @@ public class GalleryController: ViewController, StandalonePresentableController 
                     return messages
                     |> map { messages, totalCount, hasMore in
                         var entries: [MessageHistoryEntry] = []
-                        var index = messages.count - 1
+                        var index = messages.count
                         for message in messages.reversed() {
-                            entries.append(MessageHistoryEntry(message: message, isRead: false, location: MessageHistoryEntryLocation(index: index, count: Int(totalCount)), monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)))
+                            entries.append(MessageHistoryEntry(message: message, isRead: false, location: MessageHistoryEntryLocation(index: Int(totalCount) - index, count: Int(totalCount)), monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)))
                             index -= 1
                         }
                         return GalleryMessageHistoryView.entries(entries, hasMore, false)
@@ -1076,9 +1076,9 @@ public class GalleryController: ViewController, StandalonePresentableController 
                                     }
                                     
                                     var entries: [MessageHistoryEntry] = []
-                                    var index = messages.count - 1
+                                    var index = messages.count
                                     for message in messages.reversed() {
-                                        entries.append(MessageHistoryEntry(message: message, isRead: false, location: MessageHistoryEntryLocation(index: index, count: Int(totalCount)), monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)))
+                                        entries.append(MessageHistoryEntry(message: message, isRead: false, location: MessageHistoryEntryLocation(index: Int(totalCount) - index, count: Int(totalCount)), monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)))
                                         index -= 1
                                     }
                                     
