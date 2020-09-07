@@ -527,7 +527,7 @@ extension StoreMessage {
                     switch replies {
                     case let .messageReplies(_, repliesCount, _, recentRepliers, channelId):
                         if let recentRepliers = recentRepliers {
-                            recentRepliersPeerIds = recentRepliers.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: $0) }
+                            recentRepliersPeerIds = recentRepliers.map { $0.peerId }
                         } else {
                             recentRepliersPeerIds = nil
                         }
