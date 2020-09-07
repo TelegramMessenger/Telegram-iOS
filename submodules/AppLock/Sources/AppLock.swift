@@ -297,6 +297,9 @@ public final class AppLockContextImpl: AppLockContext {
             |> deliverOnMainQueue).start(next: { [weak self] _ in
                 guard let strongSelf = self else { return }
                 
+                if strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId != nil {
+                    UIApplication.shared.isStatusBarHidden = false
+                }
                 strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
         })
         
