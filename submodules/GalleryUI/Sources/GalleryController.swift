@@ -352,6 +352,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
     private var entries: [MessageHistoryEntry] = []
     private var hasLeftEntries: Bool = false
     private var hasRightEntries: Bool = false
+    private var loadingMore: Bool = false
     private var tagMask: MessageTags?
     private var centralEntryStableId: UInt32?
     private var configuration: GalleryConfiguration?
@@ -455,7 +456,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                             entries.append(MessageHistoryEntry(message: message, isRead: false, location: MessageHistoryEntryLocation(index: index, count: Int(totalCount)), monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)))
                             index -= 1
                         }
-                        return GalleryMessageHistoryView.entries(entries, false, hasMore)
+                        return GalleryMessageHistoryView.entries(entries, hasMore, false)
                     }
             }
         }
@@ -1063,9 +1064,60 @@ public class GalleryController: ViewController, StandalonePresentableController 
                                         }
                                     }))
                         }
-                        case let .custom(_, _, loadMore):
-                            if index >= strongSelf.entries.count - 3 && strongSelf.hasRightEntries {
+                        case let .custom(messages, _, loadMore):
+                            if index >= strongSelf.entries.count - 3 && strongSelf.hasRightEntries && !strongSelf.loadingMore {
+                                strongSelf.loadingMore = true
                                 loadMore?()
+                                
+                                strongSelf.updateVisibleDisposable.set((messages
+                                |> deliverOnMainQueue).start(next: { messages, totalCount, hasMore in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    
+                                    var entries: [MessageHistoryEntry] = []
+                                    var index = messages.count - 1
+                                    for message in messages.reversed() {
+                                        entries.append(MessageHistoryEntry(message: message, isRead: false, location: MessageHistoryEntryLocation(index: index, count: Int(totalCount)), monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)))
+                                        index -= 1
+                                    }
+                                    
+                                    if entries.count > strongSelf.entries.count {
+                                        if strongSelf.invertItemOrder {
+                                            strongSelf.entries = entries.reversed()
+                                            strongSelf.hasLeftEntries = false
+                                            strongSelf.hasRightEntries = hasMore
+                                        } else {
+                                            strongSelf.entries = entries
+                                            strongSelf.hasLeftEntries = hasMore
+                                            strongSelf.hasRightEntries = false
+                                        }
+                                        if strongSelf.isViewLoaded {
+                                            var items: [GalleryItem] = []
+                                            var centralItemIndex: Int?
+                                            for entry in strongSelf.entries {
+                                                var isCentral = false
+                                                if entry.message.stableId == strongSelf.centralEntryStableId {
+                                                    isCentral = true
+                                                }
+                                                if let item = galleryItemForEntry(context: strongSelf.context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: false, fromPlayingVideo: isCentral && strongSelf.fromPlayingVideo, landscape: isCentral && strongSelf.landscape, timecode: isCentral ? strongSelf.timecode : nil, configuration: strongSelf.configuration, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions, storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _ in }, present: { [weak self] c, a in
+                                                    if let strongSelf = self {
+                                                        strongSelf.presentInGlobalOverlay(c, with: a)
+                                                    }
+                                                }) {
+                                                    if isCentral {
+                                                        centralItemIndex = items.count
+                                                    }
+                                                    items.append(item)
+                                                }
+                                            }
+                                            
+                                            strongSelf.galleryNode.pager.replaceItems(items, centralItemIndex: centralItemIndex)
+                                        }
+                                    }
+                                    
+                                    strongSelf.loadingMore = false
+                                }))
                             }
                         default:
                             break

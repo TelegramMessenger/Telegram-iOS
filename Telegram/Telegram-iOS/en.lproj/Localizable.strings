@@ -5742,9 +5742,6 @@ Any member of this group will be able to see messages in the channel.";
 
 "Call.AccountIsLoggedOnCurrentDevice" = "Sorry, you can't call %@ because that account is logged in to Telegram on the device you're using for the call.";
 
-"ChatList.Search.SearchBeforeDate" = "Search before %@";
-"ChatList.Search.SearchAfterDate" = "Search after %@";
-
 "ChatList.Search.FilterMedia" = "Media";
 "ChatList.Search.FilterPhotos" = "Photos";
 "ChatList.Search.FilterVideos" = "Video";
