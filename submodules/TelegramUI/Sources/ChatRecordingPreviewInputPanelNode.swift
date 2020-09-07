@@ -101,7 +101,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         super.init()
         
         self.addSubnode(self.deleteButton)
-        self.deleteButton.addSubnode(binNode)
+        self.deleteButton.addSubnode(self.binNode)
         self.addSubnode(self.waveformBackgroundNode)
         self.addSubnode(self.sendButton)
         self.addSubnode(self.waveformScubberNode)
@@ -190,8 +190,8 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         
         let panelHeight = defaultHeight(metrics: metrics)
         
-        transition.updateFrame(node: self.deleteButton, frame: CGRect(origin: CGPoint(x: leftInset + 2.0 - UIScreenPixel, y: panelHeight - 44 + 1), size: CGSize(width: 40.0, height: 40)))
-        transition.updateFrame(node: self.sendButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 43.0 - UIScreenPixel, y: -UIScreenPixel), size: CGSize(width: 44.0, height: panelHeight)))
+        transition.updateFrame(node: self.deleteButton, frame: CGRect(origin: CGPoint(x: leftInset + 2.0 - UIScreenPixel, y: 1), size: CGSize(width: 40.0, height: 40)))
+        transition.updateFrame(node: self.sendButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 43.0 - UIScreenPixel, y: 2 - UIScreenPixel), size: CGSize(width: 44.0, height: 44)))
         self.binNode.frame = self.deleteButton.bounds
         
         if let slowmodeState = interfaceState.slowmodeState, !interfaceState.isScheduledMessages {
@@ -230,9 +230,10 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
             self.prevInputPanelNode = nil
             
             if let audioRecordingDotNode = prevTextInputPanelNode.audioRecordingDotNode {
-                audioRecordingDotNode.layer.animateScale(from: 1.0, to: 0.3, duration: 0.15, removeOnCompletion: false)
+                let startAlpha = CGFloat(audioRecordingDotNode.layer.presentation()?.opacity ?? 1.0)
                 audioRecordingDotNode.layer.removeAllAnimations()
-                audioRecordingDotNode.layer.animateAlpha(from: CGFloat(audioRecordingDotNode.layer.presentation()?.opacity ?? 1.0), to: 0.0, duration: 0.15, removeOnCompletion: false)
+                audioRecordingDotNode.layer.animateScale(from: 1.0, to: 0.3, duration: 0.15, removeOnCompletion: false)
+                audioRecordingDotNode.layer.animateAlpha(from: startAlpha, to: 0.0, duration: 0.15, removeOnCompletion: false)
             }
             
             if let audioRecordingTimeNode = prevTextInputPanelNode.audioRecordingTimeNode {

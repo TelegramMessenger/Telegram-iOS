@@ -12,6 +12,9 @@ import OverlayStatusController
 import AccountContext
 
 private enum CallFeedbackReason: Int32, CaseIterable {
+    case videoDistorted
+    case videoLowQuality
+    
     case echo
     case noise
     case interruption
@@ -36,6 +39,19 @@ private enum CallFeedbackReason: Int32, CaseIterable {
                 return "silent_remote"
             case .dropped:
                 return "dropped"
+            case .videoDistorted:
+                return "distorted_video"
+            case .videoLowQuality:
+                return "pixelated_video"
+        }
+    }
+    
+    var isVideoRelated: Bool {
+        switch self {
+        case .videoDistorted, .videoLowQuality:
+            return true
+        default:
+            return false
         }
     }
     
@@ -55,6 +71,10 @@ private enum CallFeedbackReason: Int32, CaseIterable {
                 return strings.CallFeedback_ReasonSilentRemote
             case .dropped:
                 return strings.CallFeedback_ReasonDropped
+            case .videoDistorted:
+                return strings.CallFeedback_VideoReasonDistorted
+            case .videoLowQuality:
+                return strings.CallFeedback_VideoReasonLowQuality
         }
     }
 }
@@ -214,11 +234,22 @@ private struct CallFeedbackState: Equatable {
     }
 }
 
-private func callFeedbackControllerEntries(theme: PresentationTheme, strings: PresentationStrings, state: CallFeedbackState) -> [CallFeedbackControllerEntry] {
+private func callFeedbackControllerEntries(theme: PresentationTheme, strings: PresentationStrings, state: CallFeedbackState, isVideo: Bool) -> [CallFeedbackControllerEntry] {
     var entries: [CallFeedbackControllerEntry] = []
     
     entries.append(.reasonsHeader(theme, strings.CallFeedback_WhatWentWrong))
+    if isVideo {
+        for reason in CallFeedbackReason.allCases {
+            if !reason.isVideoRelated {
+                continue
+            }
+            entries.append(.reason(theme, reason, CallFeedbackReason.localizedString(for: reason, strings: strings), state.reasons.contains(reason)))
+        }
+    }
     for reason in CallFeedbackReason.allCases {
+        if reason.isVideoRelated {
+            continue
+        }
         entries.append(.reason(theme, reason, CallFeedbackReason.localizedString(for: reason, strings: strings), state.reasons.contains(reason)))
     }
     
@@ -230,7 +261,7 @@ private func callFeedbackControllerEntries(theme: PresentationTheme, strings: Pr
     return entries
 }
 
-public func callFeedbackController(sharedContext: SharedAccountContext, account: Account, callId: CallId, rating: Int, userInitiated: Bool) -> ViewController {
+public func callFeedbackController(sharedContext: SharedAccountContext, account: Account, callId: CallId, rating: Int, userInitiated: Bool, isVideo: Bool) -> ViewController {
     let initialState = CallFeedbackState()
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -290,7 +321,7 @@ public func callFeedbackController(sharedContext: SharedAccountContext, account:
         })
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.CallFeedback_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: callFeedbackControllerEntries(theme: presentationData.theme, strings: presentationData.strings, state: state), style: .blocks, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: callFeedbackControllerEntries(theme: presentationData.theme, strings: presentationData.strings, state: state, isVideo: isVideo), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

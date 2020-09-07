@@ -34,7 +34,6 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private var iconNode: TransformImageNode?
     private var statusNode: SemanticStatusNode?
     private var playbackAudioLevelView: VoiceBlobView?
-    private var displayLinkAnimator: ConstantDisplayLinkAnimator?
     private var streamingStatusNode: RadialStatusNode?
     private var tapRecognizer: UITapGestureRecognizer?
     
@@ -63,21 +62,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     
     var visibility: Bool = false {
         didSet {
-            if self.visibility != oldValue {
-                if self.visibility {
-                    if self.displayLinkAnimator == nil {
-                        self.displayLinkAnimator = ConstantDisplayLinkAnimator(update: { [weak self] in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            strongSelf.currentAudioLevel = strongSelf.currentAudioLevel * 0.9 + strongSelf.inputAudioLevel * 0.1
-                            strongSelf.playbackAudioLevelView?.tick(strongSelf.currentAudioLevel)
-                        })
-                    }
-                    self.displayLinkAnimator?.isPaused = false
-                } else {
-                    self.displayLinkAnimator?.isPaused = true
-                }
+            guard self.visibility != oldValue else { return }
+            
+            if !self.visibility {
+                self.playbackAudioLevelView?.stopAnimating()
             }
         }
     }
@@ -449,8 +437,13 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 if hasThumbnail {
                     minLayoutWidth = max(titleLayout.size.width, descriptionMaxWidth) + 86.0
                 } else if isVoice {
+                    var descriptionAndStatusWidth = descriptionLayout.size.width
+                    if let statusSize = statusSize {
+                        descriptionAndStatusWidth += 6 + statusSize.width
+                    }
                     let calcDuration = max(minVoiceLength, min(maxVoiceLength, CGFloat(audioDuration)))
                     minLayoutWidth = minVoiceWidth + (maxVoiceWidth - minVoiceWidth) * (calcDuration - minVoiceLength) / (maxVoiceLength - minVoiceLength)
+                    minLayoutWidth = max(descriptionAndStatusWidth + 56, minLayoutWidth)
                 } else {
                     minLayoutWidth = max(titleLayout.size.width, descriptionMaxWidth) + 44.0 + 8.0
                 }
@@ -477,7 +470,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 }
                 
                 return (minLayoutWidth, { boundingWidth in
-                    let progressDiameter: CGFloat = (isVoice && !hasThumbnail) ? 37.0 : 44.0
+                    let progressDiameter: CGFloat = 44.0
                     
                     var iconFrame: CGRect?
                     let progressFrame: CGRect
@@ -487,10 +480,19 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     if hasThumbnail {
                         let currentIconFrame = CGRect(origin: CGPoint(x: -1.0, y: -7.0), size: CGSize(width: 74.0, height: 74.0))
                         iconFrame = currentIconFrame
-                        progressFrame = CGRect(origin: CGPoint(x: currentIconFrame.minX + floor((currentIconFrame.size.width - progressDiameter) / 2.0), y: currentIconFrame.minY + floor((currentIconFrame.size.height - progressDiameter) / 2.0)), size: CGSize(width: progressDiameter, height: progressDiameter))
+                        progressFrame = CGRect(
+                            origin: CGPoint(
+                                x: currentIconFrame.minX + floor((currentIconFrame.size.width - progressDiameter) / 2.0),
+                                y: currentIconFrame.minY + floor((currentIconFrame.size.height - progressDiameter) / 2.0)
+                            ),
+                            size: CGSize(width: progressDiameter, height: progressDiameter)
+                        )
                         controlAreaWidth = 86.0
                     } else {
-                        progressFrame = CGRect(origin: CGPoint(x: 0.0, y: isVoice ? -5.0 : 0.0), size: CGSize(width: progressDiameter, height: progressDiameter))
+                        progressFrame = CGRect(
+                            origin: CGPoint(x: 3.0, y: -3.0),
+                            size: CGSize(width: progressDiameter, height: progressDiameter)
+                        )
                         controlAreaWidth = progressFrame.maxX + 8.0
                     }
                     
@@ -506,7 +508,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     
                     let descriptionFrame: CGRect
                     if isVoice {
-                        descriptionFrame = CGRect(origin: CGPoint(x: 43.0, y: 19.0), size: descriptionLayout.size)
+                        descriptionFrame = CGRect(origin: CGPoint(x: 56.0, y: 22.0), size: descriptionLayout.size)
                     } else {
                         descriptionFrame = CGRect(origin: CGPoint(x: titleFrame.minX, y: titleFrame.maxY - 1.0), size: descriptionLayout.size)
                     }
@@ -516,7 +518,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         let textSizes = titleFrame.union(descriptionFrame).size
                         fittedLayoutSize = CGSize(width: textSizes.width + controlAreaWidth, height: 59.0)
                     } else if isVoice {
-                        fittedLayoutSize = CGSize(width: minLayoutWidth, height: 27.0)
+                        fittedLayoutSize = CGSize(width: minLayoutWidth, height: 38.0)
                     } else {
                         let unionSize = titleFrame.union(descriptionFrame).union(progressFrame).size
                         fittedLayoutSize = CGSize(width: unionSize.width, height: unionSize.height + 6.0)
@@ -529,8 +531,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                     
                     if let statusFrameValue = statusFrame, descriptionFrame.intersects(statusFrameValue)  {
-                        fittedLayoutSize.height += statusFrameValue.height
-                        statusFrame = statusFrameValue.offsetBy(dx: 0.0, dy: statusFrameValue.height)
+                        let intersection = descriptionFrame.intersection(statusFrameValue)
+                        let addedWidth = intersection.width + 20
+                        fittedLayoutSize.width += addedWidth
                     }
                     if let statusFrameValue = statusFrame, let iconFrame = iconFrame, iconFrame.intersects(statusFrameValue) {
                         fittedLayoutSize.height += 15.0
@@ -598,7 +601,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                     strongSelf.waveformScrubbingNode = waveformScrubbingNode
                                     strongSelf.addSubnode(waveformScrubbingNode)
                                 }
-                                strongSelf.waveformScrubbingNode?.frame = CGRect(origin: CGPoint(x: 43.0, y: -1.0), size: CGSize(width: boundingWidth - 41.0, height: 12.0))
+                                strongSelf.waveformScrubbingNode?.frame = CGRect(origin: CGPoint(x: 57.0, y: 1.0), size: CGSize(width: boundingWidth - 60.0, height: 15.0))
                                 let waveformColor: UIColor
                                 if incoming {
                                     if consumableContentIcon != nil {
@@ -679,7 +682,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             strongSelf.waveformNode.displaysAsynchronously = !presentationData.isPreview
                             strongSelf.statusNode?.displaysAsynchronously = !presentationData.isPreview
                             strongSelf.statusNode?.frame = progressFrame
-                            strongSelf.playbackAudioLevelView?.frame = progressFrame.insetBy(dx: -20.0, dy: -20.0)
+                            strongSelf.playbackAudioLevelView?.frame = progressFrame.insetBy(dx: -12.0, dy: -12.0)
                             strongSelf.progressFrame = progressFrame
                             strongSelf.streamingCacheStatusFrame = streamingCacheStatusFrame
                             strongSelf.fileIconImage = fileIconImage
@@ -860,18 +863,34 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             let statusNode = SemanticStatusNode(backgroundNodeColor: backgroundNodeColor, foregroundNodeColor: foregroundNodeColor)
             self.statusNode = statusNode
             statusNode.frame = progressFrame
-            
-            if self.playbackAudioLevelView == nil, false {
-                let playbackAudioLevelView = VoiceBlobView(frame: progressFrame.insetBy(dx: -20.0, dy: -20.0))
-                playbackAudioLevelView.setColor(presentationData.theme.theme.chat.inputPanel.actionControlFillColor)
-                self.playbackAudioLevelView = playbackAudioLevelView
-                self.view.addSubview(playbackAudioLevelView)
-            }
-            
             self.addSubnode(statusNode)
         } else if let statusNode = self.statusNode {
             statusNode.backgroundNodeColor = backgroundNodeColor
         }
+        
+        if state != .none && isVoice && self.playbackAudioLevelView == nil && false {
+            let blobFrame = progressFrame.insetBy(dx: -12.0, dy: -12.0)
+            let playbackAudioLevelView = VoiceBlobView(
+                frame: blobFrame,
+                maxLevel: 0.3,
+                smallBlobRange: (0, 0),
+                mediumBlobRange: (0.7, 0.8),
+                bigBlobRange: (0.8, 0.9)
+            )
+            self.playbackAudioLevelView = playbackAudioLevelView
+            self.view.addSubview(playbackAudioLevelView)
+            
+            let maskRect = CGRect(origin: .zero, size: blobFrame.size)
+            let playbackMaskLayer = CAShapeLayer()
+            playbackMaskLayer.frame = maskRect
+            playbackMaskLayer.fillRule = .evenOdd
+            let maskPath = UIBezierPath()
+            maskPath.append(UIBezierPath(roundedRect: maskRect.insetBy(dx: 12, dy: 12), cornerRadius: 22))
+            maskPath.append(UIBezierPath(rect: maskRect))
+            playbackMaskLayer.path = maskPath.cgPath
+            playbackAudioLevelView.layer.mask = playbackMaskLayer
+        }
+        self.playbackAudioLevelView?.setColor(presentationData.theme.theme.chat.inputPanel.actionControlFillColor)
         
         if streamingState != .none && self.streamingStatusNode == nil {
             let streamingStatusNode = RadialStatusNode(backgroundNodeColor: .clear)
@@ -893,6 +912,13 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     statusNode?.removeFromSupernode()
                 }
             })
+            
+            switch state {
+            case .pause:
+                self.playbackAudioLevelView?.startAnimating()
+            default:
+                self.playbackAudioLevelView?.stopAnimating()
+            }
         }
         
         if let streamingStatusNode = self.streamingStatusNode {

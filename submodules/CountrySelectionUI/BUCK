@@ -9,6 +9,8 @@ static_library(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
         "//submodules/Display:Display#shared",
+        "//submodules/Postbox:Postbox#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/SearchBarNode:SearchBarNode",

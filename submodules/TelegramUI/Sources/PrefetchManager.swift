@@ -38,7 +38,7 @@ private final class PrefetchManagerImpl {
         |> map { networkType -> MediaAutoDownloadNetworkType in
             switch networkType {
                 case .none, .cellular:
-                    return.cellular
+                    return .cellular
                 case .wifi:
                     return .wifi
             }

@@ -8732,7 +8732,6 @@ public extension Api {
     public enum KeyboardButton: TypeConstructorDescription {
         case keyboardButton(text: String)
         case keyboardButtonUrl(text: String, url: String)
-        case keyboardButtonCallback(text: String, data: Buffer)
         case keyboardButtonRequestPhone(text: String)
         case keyboardButtonRequestGeoLocation(text: String)
         case keyboardButtonSwitchInline(flags: Int32, text: String, query: String)
@@ -8741,6 +8740,7 @@ public extension Api {
         case keyboardButtonUrlAuth(flags: Int32, text: String, fwdText: String?, url: String, buttonId: Int32)
         case inputKeyboardButtonUrlAuth(flags: Int32, text: String, fwdText: String?, url: String, bot: Api.InputUser)
         case keyboardButtonRequestPoll(flags: Int32, quiz: Api.Bool?, text: String)
+        case keyboardButtonCallback(flags: Int32, text: String, data: Buffer)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -8756,13 +8756,6 @@ public extension Api {
                     }
                     serializeString(text, buffer: buffer, boxed: false)
                     serializeString(url, buffer: buffer, boxed: false)
-                    break
-                case .keyboardButtonCallback(let text, let data):
-                    if boxed {
-                        buffer.appendInt32(1748655686)
-                    }
-                    serializeString(text, buffer: buffer, boxed: false)
-                    serializeBytes(data, buffer: buffer, boxed: false)
                     break
                 case .keyboardButtonRequestPhone(let text):
                     if boxed {
@@ -8824,6 +8817,14 @@ public extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {quiz!.serialize(buffer, true)}
                     serializeString(text, buffer: buffer, boxed: false)
                     break
+                case .keyboardButtonCallback(let flags, let text, let data):
+                    if boxed {
+                        buffer.appendInt32(901503851)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(text, buffer: buffer, boxed: false)
+                    serializeBytes(data, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -8833,8 +8834,6 @@ public extension Api {
                 return ("keyboardButton", [("text", text)])
                 case .keyboardButtonUrl(let text, let url):
                 return ("keyboardButtonUrl", [("text", text), ("url", url)])
-                case .keyboardButtonCallback(let text, let data):
-                return ("keyboardButtonCallback", [("text", text), ("data", data)])
                 case .keyboardButtonRequestPhone(let text):
                 return ("keyboardButtonRequestPhone", [("text", text)])
                 case .keyboardButtonRequestGeoLocation(let text):
@@ -8851,6 +8850,8 @@ public extension Api {
                 return ("inputKeyboardButtonUrlAuth", [("flags", flags), ("text", text), ("fwdText", fwdText), ("url", url), ("bot", bot)])
                 case .keyboardButtonRequestPoll(let flags, let quiz, let text):
                 return ("keyboardButtonRequestPoll", [("flags", flags), ("quiz", quiz), ("text", text)])
+                case .keyboardButtonCallback(let flags, let text, let data):
+                return ("keyboardButtonCallback", [("flags", flags), ("text", text), ("data", data)])
     }
     }
     
@@ -8874,20 +8875,6 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.KeyboardButton.keyboardButtonUrl(text: _1!, url: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_keyboardButtonCallback(_ reader: BufferReader) -> KeyboardButton? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Buffer?
-            _2 = parseBytes(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.KeyboardButton.keyboardButtonCallback(text: _1!, data: _2!)
             }
             else {
                 return nil
@@ -9016,6 +9003,23 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.KeyboardButton.keyboardButtonRequestPoll(flags: _1!, quiz: _2, text: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_keyboardButtonCallback(_ reader: BufferReader) -> KeyboardButton? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Buffer?
+            _3 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.KeyboardButton.keyboardButtonCallback(flags: _1!, text: _2!, data: _3!)
             }
             else {
                 return nil

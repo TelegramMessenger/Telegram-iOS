@@ -277,7 +277,12 @@ public final class DeviceAccess {
                         if status == PGCameraAuthorizationStatusRestricted {
                             text = presentationData.strings.AccessDenied_CameraRestricted
                         } else {
-                            text = presentationData.strings.AccessDenied_Camera
+                            switch cameraSubject {
+                                case .video:
+                                    text = presentationData.strings.AccessDenied_Camera
+                                case .videoCall:
+                                    text = presentationData.strings.AccessDenied_VideoCallCamera
+                            }
                         }
                         completion(false)
                         present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.AccessDenied_Title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {

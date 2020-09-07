@@ -3,7 +3,7 @@ import Postbox
 public enum ReplyMarkupButtonAction: PostboxCoding, Equatable {
     case text
     case url(String)
-    case callback(MemoryBuffer)
+    case callback(requiresPassword: Bool, data: MemoryBuffer)
     case requestPhone
     case requestMap
     case switchInline(samePeer: Bool, query: String)
@@ -19,7 +19,7 @@ public enum ReplyMarkupButtonAction: PostboxCoding, Equatable {
             case 1:
                 self = .url(decoder.decodeStringForKey("u", orElse: ""))
             case 2:
-                self = .callback(decoder.decodeBytesForKey("d") ?? MemoryBuffer())
+                self = .callback(requiresPassword: decoder.decodeInt32ForKey("p", orElse: 0) != 0, data: decoder.decodeBytesForKey("d") ?? MemoryBuffer())
             case 3:
                 self = .requestPhone
             case 4:
@@ -46,8 +46,9 @@ public enum ReplyMarkupButtonAction: PostboxCoding, Equatable {
         case let .url(url):
             encoder.encodeInt32(1, forKey: "v")
             encoder.encodeString(url, forKey: "u")
-        case let .callback(data):
+        case let .callback(requiresPassword, data):
             encoder.encodeInt32(2, forKey: "v")
+            encoder.encodeInt32(requiresPassword ? 1 : 0, forKey: "p")
             encoder.encodeBytes(data, forKey: "d")
         case .requestPhone:
             encoder.encodeInt32(3, forKey: "v")

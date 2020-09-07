@@ -762,7 +762,30 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 )
             )
             let location: SearchMessagesLocation
-            location = .general
+            let messageTags: MessageTags?
+            if query.hasPrefix("%media ") {
+                messageTags = .photoOrVideo
+            } else if query.hasPrefix("%photo ") {
+                messageTags = .photo
+            } else if query.hasPrefix("%video ") {
+                messageTags = .video
+            } else if query.hasPrefix("%file ") {
+                messageTags = .file
+            } else if query.hasPrefix("%music ") {
+                messageTags = .music
+            } else if query.hasPrefix("%link ") {
+                messageTags = .webPage
+            } else if query.hasPrefix("%gif ") {
+                messageTags = .gif
+            } else {
+                messageTags = nil
+            }
+            location = .general(tags: messageTags)
+            
+            var finalQuery = query
+            if let _ = messageTags, let index = finalQuery.firstIndex(of: " ") {
+                finalQuery = String(finalQuery.suffix(from: finalQuery.index(after: index)))
+            }
             
             updateSearchContext { _ in
                 return (nil, true)
@@ -771,22 +794,22 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             if filter.contains(.doNotSearchMessages) {
                 foundRemoteMessages = .single((([], [:], 0), false))
             } else {
-                if !query.isEmpty {
+                if !finalQuery.isEmpty {
                     addAppLogEvent(postbox: context.account.postbox, time: Date().timeIntervalSince1970, type: "search_global_query", peerId: nil, data: .dictionary([:]))
                 }
                 
-                let searchSignal = searchMessages(account: context.account, location: location, query: query, state: nil, limit: 50)
+                let searchSignal = searchMessages(account: context.account, location: location, query: finalQuery, state: nil, limit: 50)
                 |> map { result, updatedState -> ChatListSearchMessagesResult in
-                    return ChatListSearchMessagesResult(query: query, messages: result.messages.sorted(by: { $0.index > $1.index }), readStates: result.readStates, hasMore: !result.completed, state: updatedState)
+                    return ChatListSearchMessagesResult(query: finalQuery, messages: result.messages.sorted(by: { $0.index > $1.index }), readStates: result.readStates, hasMore: !result.completed, state: updatedState)
                 }
                 
                 let loadMore = searchContext.get()
                 |> mapToSignal { searchContext -> Signal<(([Message], [PeerId: CombinedPeerReadState], Int32), Bool), NoError> in
                     if let searchContext = searchContext {
                         if let _ = searchContext.loadMoreIndex {
-                            return searchMessages(account: context.account, location: location, query: query, state: searchContext.result.state, limit: 80)
+                            return searchMessages(account: context.account, location: location, query: finalQuery, state: searchContext.result.state, limit: 80)
                             |> map { result, updatedState -> ChatListSearchMessagesResult in
-                                return ChatListSearchMessagesResult(query: query, messages: result.messages.sorted(by: { $0.index > $1.index }), readStates: result.readStates, hasMore: !result.completed, state: updatedState)
+                                return ChatListSearchMessagesResult(query: finalQuery, messages: result.messages.sorted(by: { $0.index > $1.index }), readStates: result.readStates, hasMore: !result.completed, state: updatedState)
                             }
                             |> mapToSignal { foundMessages -> Signal<(([Message], [PeerId: CombinedPeerReadState], Int32), Bool), NoError> in
                                 updateSearchContext { previous in
@@ -818,7 +841,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }
             
             let resolvedMessage = .single(nil)
-            |> then(context.sharedContext.resolveUrl(account: context.account, url: query)
+            |> then(context.sharedContext.resolveUrl(account: context.account, url: finalQuery)
             |> mapToSignal { resolvedUrl -> Signal<Message?, NoError> in
                 if case let .channelMessage(peerId, messageId) = resolvedUrl {
                     return downloadMessage(postbox: context.account.postbox, network: context.account.network, messageId: messageId)
@@ -904,60 +927,63 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     globalExpandType = .none
                 }
                 
-                let lowercasedQuery = query.lowercased()
-                if presentationData.strings.DialogList_SavedMessages.lowercased().hasPrefix(lowercasedQuery) || "saved messages".hasPrefix(lowercasedQuery) {
-                    if !existingPeerIds.contains(accountPeer.id), filteredPeer(accountPeer, accountPeer) {
-                        existingPeerIds.insert(accountPeer.id)
-                        entries.append(.localPeer(accountPeer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType))
-                        index += 1
-                    }
-                }
-                
-                var numberOfLocalPeers = 0
-                for renderedPeer in foundLocalPeers.peers {
-                    if case .expand = localExpandType, numberOfLocalPeers >= 5 {
-                        break
+                if let _ = messageTags {
+                } else {
+                    let lowercasedQuery = finalQuery.lowercased()
+                    if presentationData.strings.DialogList_SavedMessages.lowercased().hasPrefix(lowercasedQuery) || "saved messages".hasPrefix(lowercasedQuery) {
+                        if !existingPeerIds.contains(accountPeer.id), filteredPeer(accountPeer, accountPeer) {
+                            existingPeerIds.insert(accountPeer.id)
+                            entries.append(.localPeer(accountPeer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType))
+                            index += 1
+                        }
                     }
                     
-                    if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != context.account.peerId, filteredPeer(peer, accountPeer) {
-                        if !existingPeerIds.contains(peer.id) {
-                            existingPeerIds.insert(peer.id)
-                            var associatedPeer: Peer?
-                            if let associatedPeerId = peer.associatedPeerId {
-                                associatedPeer = renderedPeer.peers[associatedPeerId]
+                    var numberOfLocalPeers = 0
+                    for renderedPeer in foundLocalPeers.peers {
+                        if case .expand = localExpandType, numberOfLocalPeers >= 5 {
+                            break
+                        }
+                        
+                        if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != context.account.peerId, filteredPeer(peer, accountPeer) {
+                            if !existingPeerIds.contains(peer.id) {
+                                existingPeerIds.insert(peer.id)
+                                var associatedPeer: Peer?
+                                if let associatedPeerId = peer.associatedPeerId {
+                                    associatedPeer = renderedPeer.peers[associatedPeerId]
+                                }
+                                entries.append(.localPeer(peer, associatedPeer, foundLocalPeers.unread[peer.id], index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType))
+                                index += 1
+                                numberOfLocalPeers += 1
                             }
-                            entries.append(.localPeer(peer, associatedPeer, foundLocalPeers.unread[peer.id], index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType))
+                        }
+                    }
+                    
+                    for peer in foundRemotePeers.0 {
+                        if case .expand = localExpandType, numberOfLocalPeers >= 5 {
+                            break
+                        }
+                        
+                        if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer, accountPeer) {
+                            existingPeerIds.insert(peer.peer.id)
+                            entries.append(.localPeer(peer.peer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType))
                             index += 1
                             numberOfLocalPeers += 1
                         }
                     }
-                }
-                
-                for peer in foundRemotePeers.0 {
-                    if case .expand = localExpandType, numberOfLocalPeers >= 5 {
-                        break
-                    }
-                    
-                    if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer, accountPeer) {
-                        existingPeerIds.insert(peer.peer.id)
-                        entries.append(.localPeer(peer.peer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType))
-                        index += 1
-                        numberOfLocalPeers += 1
-                    }
-                }
 
-                var numberOfGlobalPeers = 0
-                index = 0
-                for peer in foundRemotePeers.1 {
-                    if case .expand = globalExpandType, numberOfGlobalPeers >= 3 {
-                        break
-                    }
-                    
-                    if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer, accountPeer) {
-                        existingPeerIds.insert(peer.peer.id)
-                        entries.append(.globalPeer(peer, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, globalExpandType))
-                        index += 1
-                        numberOfGlobalPeers += 1
+                    var numberOfGlobalPeers = 0
+                    index = 0
+                    for peer in foundRemotePeers.1 {
+                        if case .expand = globalExpandType, numberOfGlobalPeers >= 3 {
+                            break
+                        }
+                        
+                        if !existingPeerIds.contains(peer.peer.id), filteredPeer(peer.peer, accountPeer) {
+                            existingPeerIds.insert(peer.peer.id)
+                            entries.append(.globalPeer(peer, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, globalExpandType))
+                            index += 1
+                            numberOfGlobalPeers += 1
+                        }
                     }
                 }
                 
@@ -986,8 +1012,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     }
                 }
                 
-                if addContact != nil && isViablePhoneNumber(query) {
-                    entries.append(.addContact(query, presentationData.theme, presentationData.strings))
+                if addContact != nil && isViablePhoneNumber(finalQuery) {
+                    entries.append(.addContact(finalQuery, presentationData.theme, presentationData.strings))
                 }
                 
                 return (entries, isSearching)

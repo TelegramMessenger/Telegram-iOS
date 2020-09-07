@@ -128,10 +128,14 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         
         self.collapsed = collapsed
         
+        guard let (size, _, _) = self.containerLayout else {
+            return
+        }
+        
         let alpha: CGFloat = collapsed ? 0.0 : 1.0
         self.leftTimestampNode.alpha = alpha
         self.rightTimestampNode.alpha = alpha
-        self.infoNode.alpha = alpha
+        self.infoNode.alpha = size.width < size.height && !self.collapsed ? 1.0 : 0.0
         self.updateScrubberVisibility(animated: animated)
     }
     
@@ -161,7 +165,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         self.leftTimestampNode.status = mappedStatus
         self.rightTimestampNode.status = mappedStatus
         
-        if let mappedStatus = mappedStatus {
+        if let mappedStatus = mappedStatus, false {
             self.chapterDisposable.set((mappedStatus
             |> deliverOnMainQueue).start(next: { [weak self] status in
                 if let strongSelf = self, status.duration > 1.0 {

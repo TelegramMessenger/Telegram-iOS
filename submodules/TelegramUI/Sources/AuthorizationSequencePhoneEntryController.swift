@@ -57,7 +57,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         self.presentationData = presentationData
         self.openUrl = openUrl
         self.back = back
-        
+                
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(presentationData.theme), strings: NavigationBarStrings(presentationStrings: presentationData.strings)))
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
@@ -138,6 +138,12 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         self.controllerNode.checkPhone = { [weak self] in
             self?.nextPressed()
         }
+        
+        loadServerCountryCodes(accountManager: sharedContext.accountManager, network: account.network, completion: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.controllerNode.updateCountryCode()
+            }
+        })
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -183,7 +189,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
                 self.loginWithNumber?(self.controllerNode.currentNumber, self.controllerNode.syncContacts)
             }
         } else {
-            hapticFeedback.error()
+            self.hapticFeedback.error()
             self.controllerNode.animateError()
         }
     }

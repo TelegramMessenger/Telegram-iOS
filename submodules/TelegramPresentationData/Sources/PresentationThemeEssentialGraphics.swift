@@ -308,10 +308,13 @@ public final class PrincipalThemeEssentialGraphics {
             self.clockFreeMinImage = emptyImage
             self.dateAndStatusMediaBackground = emptyImage
             self.dateAndStatusFreeBackground = emptyImage
-            self.incomingDateAndStatusImpressionIcon = emptyImage
-            self.outgoingDateAndStatusImpressionIcon = emptyImage
-            self.mediaImpressionIcon = emptyImage
-            self.freeImpressionIcon = emptyImage
+                
+            let impressionCountImage = UIImage(bundleImageName: "Chat/Message/ImpressionCount")!
+            self.incomingDateAndStatusImpressionIcon = generateTintedImage(image: impressionCountImage, color: theme.message.incoming.secondaryTextColor)!
+            self.outgoingDateAndStatusImpressionIcon = generateTintedImage(image: impressionCountImage, color: theme.message.outgoing.secondaryTextColor)!
+            self.mediaImpressionIcon = generateTintedImage(image: impressionCountImage, color: .white)!
+            self.freeImpressionIcon = generateTintedImage(image: impressionCountImage, color: serviceColor.primaryText)!
+            
             self.radialIndicatorFileIconIncoming = emptyImage
             self.radialIndicatorFileIconOutgoing = emptyImage
         } else {

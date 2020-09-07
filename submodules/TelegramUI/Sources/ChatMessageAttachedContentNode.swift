@@ -282,6 +282,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         let currentAdditionalImageBadgeNode = self.additionalImageBadgeNode
         
         return { presentationData, automaticDownloadSettings, associatedData, attributes, context, controllerInteraction, message, messageRead, title, subtitle, text, entities, mediaAndFlags, mediaBadge, actionIcon, actionTitle, displayLine, layoutConstants, constrainedSize in
+            let isPreview = presentationData.isPreview
             let fontSize: CGFloat = floor(presentationData.fontSize.baseDisplaySize * 15.0 / 17.0)
             
             let titleFont = Font.semibold(fontSize)
@@ -526,7 +527,6 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         let imageMode = !((refineContentImageLayout == nil && refineContentFileLayout == nil && contentInstantVideoSizeAndApply == nil) || preferMediaBeforeText)
                         statusInText = !imageMode
                         
-                        
                         if let count = webpageGalleryMediaCount {
                             additionalImageBadgeContent = .text(inset: 0.0, backgroundColor: presentationData.theme.theme.chat.message.mediaDateAndStatusFillColor, foregroundColor: presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor, text: NSAttributedString(string: presentationData.strings.Items_NOfM("1", "\(count)").0))
                             skipStandardStatus = imageMode
@@ -658,7 +658,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 }
                 
                 var continueActionButtonLayout: ((CGFloat) -> (CGSize, () -> ChatMessageAttachedContentButtonNode))?
-                if let actionTitle = actionTitle {
+                if let actionTitle = actionTitle, !isPreview {
                     let buttonImage: UIImage
                     let buttonHighlightedImage: UIImage
                     var buttonIconImage: UIImage?
@@ -780,6 +780,8 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             strongSelf.lineNode.image = lineImage
                             strongSelf.lineNode.frame = CGRect(origin: CGPoint(x: 13.0, y: insets.top), size: CGSize(width: 2.0, height: adjustedLineHeight - insets.top - insets.bottom - 2.0))
                             strongSelf.lineNode.isHidden = !displayLine
+                            
+                            strongSelf.textNode.displaysAsynchronously = !isPreview
                             
                             let _ = textApply()
                             
