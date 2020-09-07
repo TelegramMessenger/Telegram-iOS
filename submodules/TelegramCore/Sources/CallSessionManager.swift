@@ -11,44 +11,9 @@ private let minLayer: Int32 = 65
 public enum CallSessionError: Equatable {
     case generic
     case privacyRestricted
-    case notSupportedByPeer
-    case serverProvided(String)
+    case notSupportedByPeer(isVideo: Bool)
+    case serverProvided(text: String)
     case disconnected
-    
-    public static func ==(lhs: CallSessionError, rhs: CallSessionError) -> Bool {
-        switch lhs {
-        case .generic:
-            if case .generic = rhs {
-                return true
-            } else {
-                return false
-            }
-        case .privacyRestricted:
-            if case .privacyRestricted = rhs {
-                return true
-            } else {
-                return false
-            }
-        case .notSupportedByPeer:
-            if case .notSupportedByPeer = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .serverProvided(text):
-            if case .serverProvided(text) = rhs {
-                return true
-            } else {
-                return false
-            }
-        case .disconnected:
-            if case .disconnected = rhs {
-                return true
-            } else {
-                return false
-            }
-        }
-    }
 }
 
 public enum CallSessionEndedType {
@@ -97,7 +62,7 @@ enum CallSessionInternalState {
     case requested(id: Int64, accessHash: Int64, a: Data, gA: Data, config: SecretChatEncryptionConfig, remoteConfirmationTimestamp: Int32?)
     case confirming(id: Int64, accessHash: Int64, key: Data, keyId: Int64, keyVisualHash: Data, disposable: Disposable)
     case active(id: Int64, accessHash: Int64, beginTimestamp: Int32, key: Data, keyId: Int64, keyVisualHash: Data, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, allowsP2P: Bool)
-    case dropping(Disposable)
+    case dropping(reason: CallSessionTerminationReason, disposable: Disposable)
     case terminated(id: Int64?, accessHash: Int64?, reason: CallSessionTerminationReason, reportRating: Bool, sendDebugLogs: Bool)
 }
 
@@ -138,7 +103,7 @@ public enum CallSessionState {
     case accepting
     case requesting(ringing: Bool)
     case active(id: CallId, key: Data, keyVisualHash: Data, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, allowsP2P: Bool)
-    case dropping
+    case dropping(reason: CallSessionTerminationReason)
     case terminated(id: CallId?, reason: CallSessionTerminationReason, options: CallTerminationOptions)
     
     fileprivate init(_ context: CallSessionContext) {
@@ -155,8 +120,8 @@ public enum CallSessionState {
                 self = .requesting(ringing: remoteConfirmationTimestamp != nil)
             case let .active(id, accessHash, _, key, _, keyVisualHash, connections, maxLayer, version, allowsP2P):
                 self = .active(id: CallId(id: id, accessHash: accessHash), key: key, keyVisualHash: keyVisualHash, connections: connections, maxLayer: maxLayer, version: version, allowsP2P: allowsP2P)
-            case .dropping:
-                self = .dropping
+            case let .dropping(reason, _):
+                self = .dropping(reason: reason)
             case let .terminated(id, accessHash, reason, reportRating, sendDebugLogs):
                 var options = CallTerminationOptions()
                 if reportRating {
@@ -186,6 +151,7 @@ public struct CallSession {
     public let isOutgoing: Bool
     public let type: CallType
     public let state: CallSessionState
+    public let isVideoPossible: Bool
 }
 
 public enum CallSessionConnection: Equatable {
@@ -277,7 +243,7 @@ private final class CallSessionContext {
     let peerId: PeerId
     let isOutgoing: Bool
     var type: CallSession.CallType
-    let isVideoPossible: Bool
+    var isVideoPossible: Bool
     var state: CallSessionInternalState
     let subscribers = Bag<(CallSession) -> Void>()
     let signalingSubscribers = Bag<(Data) -> Void>()
@@ -412,7 +378,7 @@ private final class CallSessionManagerContext {
                     let index = context.subscribers.add { next in
                         subscriber.putNext(next)
                     }
-                    subscriber.putNext(CallSession(id: internalId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context)))
+                    subscriber.putNext(CallSession(id: internalId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context), isVideoPossible: context.isVideoPossible))
                     disposable.set(ActionDisposable {
                         queue.async {
                             if let strongSelf = self, let context = strongSelf.contexts[internalId] {
@@ -473,7 +439,7 @@ private final class CallSessionManagerContext {
     
     private func contextUpdated(internalId: CallSessionInternalId) {
         if let context = self.contexts[internalId] {
-            let session = CallSession(id: internalId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context))
+            let session = CallSession(id: internalId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context), isVideoPossible: context.isVideoPossible)
             for subscriber in context.subscribers.copyItems() {
                 subscriber(session)
             }
@@ -526,7 +492,9 @@ private final class CallSessionManagerContext {
                     wasRinging = true
                     let internalReason: DropCallSessionReason
                     switch reason {
-                        case .busy, .hangUp:
+                        case .busy:
+                            internalReason = .busy
+                        case .hangUp:
                             internalReason = .hangUp(0)
                         case .disconnect:
                             internalReason = .disconnect
@@ -578,7 +546,8 @@ private final class CallSessionManagerContext {
             
             if let (id, accessHash, reason) = dropData {
                 self.contextIdByStableId.removeValue(forKey: id)
-                context.state = .dropping((dropCallSession(network: self.network, addUpdates: self.addUpdates, stableId: id, accessHash: accessHash, isVideo: isVideo, reason: reason)
+                let mappedReason: CallSessionTerminationReason = .ended(.hungUp)
+                context.state = .dropping(reason: mappedReason, disposable: (dropCallSession(network: self.network, addUpdates: self.addUpdates, stableId: id, accessHash: accessHash, isVideo: isVideo, reason: reason)
                 |> deliverOn(self.queue)).start(next: { [weak self] reportRating, sendDebugLogs in
                     if let strongSelf = self {
                         if let context = strongSelf.contexts[internalId] {
@@ -803,6 +772,9 @@ private final class CallSessionManagerContext {
                                     switch callProtocol {
                                         case let .phoneCallProtocol(_, _, maxLayer, versions):
                                             if !versions.isEmpty {
+                                                let isVideoPossible = self.videoVersions().contains(where: { versions.contains($0) })
+                                                context.isVideoPossible = isVideoPossible
+                                                
                                                 context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: calculatedKeyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connections.first!, alternative: Array(connections[1...])), maxLayer: maxLayer, version: versions[0], allowsP2P: allowsP2P)
                                                 self.contextUpdated(internalId: internalId)
                                             } else {
@@ -819,6 +791,9 @@ private final class CallSessionManagerContext {
                             switch callProtocol {
                                 case let .phoneCallProtocol(_, _, maxLayer, versions):
                                     if !versions.isEmpty {
+                                        let isVideoPossible = self.videoVersions().contains(where: { versions.contains($0) })
+                                        context.isVideoPossible = isVideoPossible
+                                        
                                         context.state = .active(id: id, accessHash: accessHash, beginTimestamp: startDate, key: key, keyId: keyId, keyVisualHash: keyVisualHash, connections: parseConnectionSet(primary: connections.first!, alternative: Array(connections[1...])), maxLayer: maxLayer, version: versions[0], allowsP2P: allowsP2P)
                                         self.contextUpdated(internalId: internalId)
                                     } else {
@@ -848,7 +823,7 @@ private final class CallSessionManagerContext {
                         }
                     }
                     if let context = self.contexts[internalId] {
-                        let callSession = CallSession(id: internalId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context))
+                        let callSession = CallSession(id: internalId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context), isVideoPossible: context.isVideoPossible)
                         if let resultRingingStateValue = resultRingingStateValue {
                             resultRingingState = (resultRingingStateValue, callSession)
                         }
@@ -1194,12 +1169,12 @@ private func requestCallSession(postbox: Postbox, network: Network, peerId: Peer
                 |> `catch` { error -> Signal<RequestCallSessionResult, NoError> in
                     switch error.errorDescription {
                         case "PARTICIPANT_VERSION_OUTDATED":
-                            return .single(.failed(.notSupportedByPeer))
+                            return .single(.failed(.notSupportedByPeer(isVideo: isVideo)))
                         case "USER_PRIVACY_RESTRICTED":
                             return .single(.failed(.privacyRestricted))
                         default:
                             if error.errorCode == 406 {
-                                return .single(.failed(.serverProvided(error.errorDescription)))
+                                return .single(.failed(.serverProvided(text: error.errorDescription)))
                             } else {
                                 return .single(.failed(.generic))
                             }

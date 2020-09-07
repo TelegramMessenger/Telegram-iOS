@@ -100,7 +100,7 @@
         };
         
         [model.interfaceView updateSelectionInterface:selectionContext.count counterVisible:(selectionContext.count > 0) animated:false];
-        model.interfaceView.donePressed = ^(TGClipboardGalleryPhotoItem *item)
+        model.interfaceView.donePressed = ^(id<TGModernGalleryItem> item)
         {
             __strong TGClipboardGalleryMixin *strongSelf = weakSelf;
             if (strongSelf == nil)
@@ -109,18 +109,18 @@
             strongSelf->_galleryModel.dismiss(true, false);
             
             if (strongSelf.completeWithItem != nil)
-                strongSelf.completeWithItem(item);
+                strongSelf.completeWithItem((TGClipboardGalleryPhotoItem *)item);
         };
         
         modernGallery.model = model;
-        modernGallery.itemFocused = ^(TGClipboardGalleryPhotoItem *item)
+        modernGallery.itemFocused = ^(id<TGModernGalleryItem> item)
         {
             __strong TGClipboardGalleryMixin *strongSelf = weakSelf;
             if (strongSelf != nil && strongSelf.itemFocused != nil)
-                strongSelf.itemFocused(item);
+                strongSelf.itemFocused((TGClipboardGalleryPhotoItem *)item);
         };
         
-        modernGallery.beginTransitionIn = ^UIView *(TGClipboardGalleryPhotoItem *item, TGModernGalleryItemView *itemView)
+        modernGallery.beginTransitionIn = ^UIView *(id<TGModernGalleryItem> item, TGModernGalleryItemView *itemView)
         {
             __strong TGClipboardGalleryMixin *strongSelf = weakSelf;
             if (strongSelf == nil)
@@ -130,12 +130,12 @@
                 strongSelf.willTransitionIn();
             
             if (strongSelf.referenceViewForItem != nil)
-                return strongSelf.referenceViewForItem(item);
+                return strongSelf.referenceViewForItem((TGClipboardGalleryPhotoItem *)item);
             
             return nil;
         };
         
-        modernGallery.finishedTransitionIn = ^(__unused TGClipboardGalleryPhotoItem *item, __unused TGModernGalleryItemView *itemView)
+        modernGallery.finishedTransitionIn = ^(__unused id<TGModernGalleryItem> item, __unused TGModernGalleryItemView *itemView)
         {
             __strong TGClipboardGalleryMixin *strongSelf = weakSelf;
             if (strongSelf == nil)
@@ -144,7 +144,7 @@
             [strongSelf->_galleryModel.interfaceView setSelectedItemsModel:strongSelf->_galleryModel.selectedItemsModel];
         };
         
-        modernGallery.beginTransitionOut = ^UIView *(TGClipboardGalleryPhotoItem *item, TGModernGalleryItemView *itemView)
+        modernGallery.beginTransitionOut = ^UIView *(id<TGModernGalleryItem> item, TGModernGalleryItemView *itemView)
         {
             __strong TGClipboardGalleryMixin *strongSelf = weakSelf;
             if (strongSelf != nil)
@@ -153,7 +153,7 @@
                     strongSelf.willTransitionOut();
                 
                 if (strongSelf.referenceViewForItem != nil)
-                    return strongSelf.referenceViewForItem(item);
+                    return strongSelf.referenceViewForItem((TGClipboardGalleryPhotoItem *)item);
             }
             return nil;
         };

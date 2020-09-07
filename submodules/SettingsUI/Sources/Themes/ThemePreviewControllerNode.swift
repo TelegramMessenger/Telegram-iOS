@@ -487,7 +487,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         sampleMessages.append(message8)
         
         items = sampleMessages.reversed().map { message in
-            self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message, theme: self.previewTheme, strings: self.presentationData.strings, wallpaper: self.previewTheme.chat.defaultWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: !message.media.isEmpty ? FileMediaResourceStatus(mediaStatus: .playbackStatus(.paused), fetchStatus: .Local) : nil, tapMessage: nil, clickThroughMessage: nil)
+            self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message], theme: self.previewTheme, strings: self.presentationData.strings, wallpaper: self.previewTheme.chat.defaultWallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: !message.media.isEmpty ? FileMediaResourceStatus(mediaStatus: .playbackStatus(.paused), fetchStatus: .Local) : nil, tapMessage: nil, clickThroughMessage: nil)
         }
                 
         let width: CGFloat

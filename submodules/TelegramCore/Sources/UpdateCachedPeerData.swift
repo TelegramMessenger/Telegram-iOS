@@ -355,7 +355,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                             if (flags & (1 << 10)) == 0 {
                                                 channelFlags.insert(.preHistoryEnabled)
                                             }
-                                            if (flags & (1 << 12)) != 0 {
+                                            if (flags & (1 << 20)) != 0 {
                                                 channelFlags.insert(.canViewStats)
                                             }
                                             if (flags & (1 << 7)) != 0 {

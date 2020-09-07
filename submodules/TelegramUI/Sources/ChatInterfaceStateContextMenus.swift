@@ -405,20 +405,27 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         
         if data.messageActions.options.contains(.rateCall) {
             var callId: CallId?
+            var isVideo: Bool = false
             for media in message.media {
-                if let action = media as? TelegramMediaAction, case let .phoneCall(id, discardReason, _, _) = action.action {
+                if let action = media as? TelegramMediaAction, case let .phoneCall(id, discardReason, _, isVideoValue) = action.action {
+                    isVideo = isVideoValue
                     if discardReason != .busy && discardReason != .missed {
                         if let logName = callLogNameForId(id: id, account: context.account) {
                             let logsPath = callLogsPath(account: context.account)
                             let logPath = logsPath + "/" + logName
                             let start = logName.index(logName.startIndex, offsetBy: "\(id)".count + 1)
-                            let end = logName.index(logName.endIndex, offsetBy: -4)
+                            let end: String.Index
+                            if logName.hasSuffix(".log.json") {
+                                end = logName.index(logName.endIndex, offsetBy: -4 - 5)
+                            } else {
+                                end = logName.index(logName.endIndex, offsetBy: -4)
+                            }
                             let accessHash = logName[start..<end]
                             if let accessHash = Int64(accessHash) {
                                 callId = CallId(id: id, accessHash: accessHash)
                             }
                             
-                            actions.append(.action(ContextMenuActionItem(text: "Share Statistics", icon: { theme in
+                            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Call_ShareStats, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.actionSheet.primaryTextColor)
                             }, action: { _, f in
                                 f(.dismissWithoutContent)
@@ -446,7 +453,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Call_RateCall, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
-                    let _ = controllerInteraction.rateCall(message, callId)
+                    let _ = controllerInteraction.rateCall(message, callId, isVideo)
                     f(.dismissWithoutContent)
                 })))
             }

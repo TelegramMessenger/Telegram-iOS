@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import Postbox
 import TelegramCore
 import SyncCore
 import TelegramPresentationData
@@ -57,16 +58,88 @@ private func loadCountryCodes() -> [(String, Int)] {
 
 private let countryCodes: [(String, Int)] = loadCountryCodes()
 
-func localizedContryNamesAndCodes(strings: PresentationStrings) -> [((String, String), String, Int)] {
+func localizedCountryNamesAndCodes(strings: PresentationStrings) -> [((String, String), String, Int)] {
     let locale = localeWithStrings(strings)
     var result: [((String, String), String, Int)] = []
-    for (id, code) in countryCodes {
-        if let englishCountryName = usEnglishLocale.localizedString(forRegionCode: id), let countryName = locale.localizedString(forRegionCode: id) {
-            result.append(((englishCountryName, countryName), id, code))
+    for country in AuthorizationSequenceCountrySelectionController.countries() {
+        if country.hidden {
+            continue
+        }
+        if let englishCountryName = usEnglishLocale.localizedString(forRegionCode: country.id), let countryName = locale.localizedString(forRegionCode: country.id), let codeValue = country.countryCodes.first?.code, let code = Int(codeValue) {
+            result.append(((englishCountryName, countryName), country.id, code))
         } else {
             assertionFailure()
         }
     }
+    return result
+}
+
+private func stringTokens(_ string: String) -> [ValueBoxKey] {
+    let nsString = string.replacingOccurrences(of: ".", with: "").folding(options: .diacriticInsensitive, locale: .current).lowercased() as NSString
+    
+    let flag = UInt(kCFStringTokenizerUnitWord)
+    let tokenizer = CFStringTokenizerCreate(kCFAllocatorDefault, nsString, CFRangeMake(0, nsString.length), flag, CFLocaleCopyCurrent())
+    var tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer)
+    var tokens: [ValueBoxKey] = []
+    
+    var addedTokens = Set<ValueBoxKey>()
+    while tokenType != [] {
+        let currentTokenRange = CFStringTokenizerGetCurrentTokenRange(tokenizer)
+        
+        if currentTokenRange.location >= 0 && currentTokenRange.length != 0 {
+            let token = ValueBoxKey(length: currentTokenRange.length * 2)
+            nsString.getCharacters(token.memory.assumingMemoryBound(to: unichar.self), range: NSMakeRange(currentTokenRange.location, currentTokenRange.length))
+            if !addedTokens.contains(token) {
+                tokens.append(token)
+                addedTokens.insert(token)
+            }
+        }
+        tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer)
+    }
+    
+    return tokens
+}
+
+private func matchStringTokens(_ tokens: [ValueBoxKey], with other: [ValueBoxKey]) -> Bool {
+    if other.isEmpty {
+        return false
+    } else if other.count == 1 {
+        let otherToken = other[0]
+        for token in tokens {
+            if otherToken.isPrefix(to: token) {
+                return true
+            }
+        }
+    } else {
+        for otherToken in other {
+            var found = false
+            for token in tokens {
+                if otherToken.isPrefix(to: token) {
+                    found = true
+                    break
+                }
+            }
+            if !found {
+                return false
+            }
+        }
+        return true
+    }
+    return false
+}
+
+private func searchCountries(items: [((String, String), String, Int)], query: String) -> [((String, String), String, Int)] {
+    let queryTokens = stringTokens(query.lowercased())
+    
+    var result: [((String, String), String, Int)] = []
+    for item in items {
+        let string = "\(item.0) \(item.1)"
+        let tokens = stringTokens(string)
+        if matchStringTokens(tokens, with: queryTokens) {
+            result.append(item)
+        }
+    }
+    
     return result
 }
 
@@ -85,6 +158,7 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
     private let sectionTitles: [String]
     
     private var searchResults: [((String, String), String, Int)] = []
+    private let countryNamesAndCodes: [((String, String), String, Int)]
     
     init(theme: PresentationTheme, strings: PresentationStrings, displayCodes: Bool, itemSelected: @escaping (((String, String), String, Int)) -> Void) {
         self.theme = theme
@@ -103,7 +177,8 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
             self.searchTableView.contentInsetAdjustmentBehavior = .never
         }
         
-        let countryNamesAndCodes = localizedContryNamesAndCodes(strings: strings)
+        let countryNamesAndCodes = localizedCountryNamesAndCodes(strings: strings)
+        self.countryNamesAndCodes = countryNamesAndCodes
         
         var sections: [(String, [((String, String), String, Int)])] = []
         for (names, id, code) in countryNamesAndCodes.sorted(by: { lhs, rhs in
@@ -116,8 +191,7 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
             sections[sections.count - 1].1.append((names, id, code))
         }
         self.sections = sections
-        var sectionTitles = sections.map { $0.0 }
-        self.sectionTitles = sectionTitles
+        self.sectionTitles = sections.map { $0.0 }
         
         super.init()
         
@@ -174,18 +248,7 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
             self.searchTableView.reloadData()
             self.searchTableView.isHidden = true
         } else {
-            let normalizedQuery = query.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-            
-            var results: [((String, String), String, Int)] = []
-            for (_, items) in self.sections {
-                for item in items {
-                    if item.0.0.lowercased().hasPrefix(normalizedQuery) || item.0.1.lowercased().hasPrefix(normalizedQuery) {
-                        results.append(item)
-                    }
-                }
-            }
-            
-            self.searchResults = results
+            self.searchResults = searchCountries(items: self.countryNamesAndCodes, query: query)
             self.searchTableView.isHidden = false
             self.searchTableView.reloadData()
         }
