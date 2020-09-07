@@ -15196,13 +15196,13 @@ public extension Api {
     
     }
     public enum MessageReplies: TypeConstructorDescription {
-        case messageReplies(flags: Int32, replies: Int32, repliesPts: Int32, recentRepliers: [Int32]?, channelId: Int32?)
+        case messageReplies(flags: Int32, replies: Int32, repliesPts: Int32, recentRepliers: [Api.Peer]?, channelId: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messageReplies(let flags, let replies, let repliesPts, let recentRepliers, let channelId):
                     if boxed {
-                        buffer.appendInt32(-2099001323)
+                        buffer.appendInt32(1081274310)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(replies, buffer: buffer, boxed: false)
@@ -15210,7 +15210,7 @@ public extension Api {
                     if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(recentRepliers!.count))
                     for item in recentRepliers! {
-                        serializeInt32(item, buffer: buffer, boxed: false)
+                        item.serialize(buffer, true)
                     }}
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(channelId!, buffer: buffer, boxed: false)}
                     break
@@ -15231,9 +15231,9 @@ public extension Api {
             _2 = reader.readInt32()
             var _3: Int32?
             _3 = reader.readInt32()
-            var _4: [Int32]?
+            var _4: [Api.Peer]?
             if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
             } }
             var _5: Int32?
             if Int(_1!) & Int(1 << 0) != 0 {_5 = reader.readInt32() }
