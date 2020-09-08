@@ -28,7 +28,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     
     private var selectionNode: ChatMessageSelectionNode?
     private var deliveryFailedNode: ChatMessageDeliveryFailedNode?
-    private var shareButtonNode: HighlightableButtonNode?
+    private var shareButtonNode: ChatMessageShareButton?
 
     var telegramFile: TelegramMediaFile?
     private let fetchDisposable = MetaDisposable()
@@ -444,30 +444,12 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 replyBackgroundImage = graphics.chatFreeformContentAdditionalInfoBackgroundImage
             }
             
-            var updatedShareButtonBackground: UIImage?
-            
-            var updatedShareButtonNode: HighlightableButtonNode?
+            var updatedShareButtonNode: ChatMessageShareButton?
             if needShareButton {
                 if currentShareButtonNode != nil {
                     updatedShareButtonNode = currentShareButtonNode
-                    if item.presentationData.theme !== currentItem?.presentationData.theme {
-                        let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
-                        if item.message.id.peerId == item.context.account.peerId {
-                            updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
-                        } else {
-                            updatedShareButtonBackground = graphics.chatBubbleShareButtonImage
-                        }
-                    }
                 } else {
-                    let buttonNode = HighlightableButtonNode()
-                    let buttonIcon: UIImage?
-                    let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
-                    if item.message.id.peerId == item.context.account.peerId {
-                        buttonIcon = graphics.chatBubbleNavigateButtonImage
-                    } else {
-                        buttonIcon = graphics.chatBubbleShareButtonImage
-                    }
-                    buttonNode.setBackgroundImage(buttonIcon, for: [.normal])
+                    let buttonNode = ChatMessageShareButton()
                     updatedShareButtonNode = buttonNode
                 }
             }
@@ -533,20 +515,15 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                             strongSelf.addSubnode(updatedShareButtonNode)
                             updatedShareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
                         }
-                        if let updatedShareButtonBackground = updatedShareButtonBackground {
-                            strongSelf.shareButtonNode?.setBackgroundImage(updatedShareButtonBackground, for: [.normal])
-                        }
-                    } else if let shareButtonNode = strongSelf.shareButtonNode {
-                        shareButtonNode.removeFromSupernode()
-                        strongSelf.shareButtonNode = nil
-                    }
-                    
-                    if let shareButtonNode = strongSelf.shareButtonNode {
-                        var shareButtonFrame = CGRect(origin: CGPoint(x: updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - 30.0 - 10.0), size: CGSize(width: 29.0, height: 29.0))
+                        let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, message: item.message, account: item.context.account)
+                        var shareButtonFrame = CGRect(origin: CGPoint(x: updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - 10.0 - buttonSize.height), size: buttonSize)
                         if isEmoji && incoming {
                             shareButtonFrame.origin.x = dateAndStatusFrame.maxX + 8.0
                         }
-                        transition.updateFrame(node: shareButtonNode, frame: shareButtonFrame)
+                        transition.updateFrame(node: updatedShareButtonNode, frame: shareButtonFrame)
+                    } else if let shareButtonNode = strongSelf.shareButtonNode {
+                        shareButtonNode.removeFromSupernode()
+                        strongSelf.shareButtonNode = nil
                     }
                     
                     if let updatedReplyBackgroundNode = updatedReplyBackgroundNode {
@@ -795,6 +772,15 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     
     @objc func shareButtonPressed() {
         if let item = self.item {
+            if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+                for attribute in item.message.attributes {
+                    if let _ = attribute as? ReplyThreadMessageAttribute {
+                        item.controllerInteraction.openMessageReplies(item.message.id)
+                        return
+                    }
+                }
+            }
+            
             if item.content.firstMessage.id.peerId == item.context.account.peerId {
                 for attribute in item.content.firstMessage.attributes {
                     if let attribute = attribute as? SourceReferenceMessageAttribute {

@@ -136,6 +136,10 @@ private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs
     }
     
     if abs(lhs.timestamp - rhs.timestamp) < Int32(10 * 60) && sameAuthor {
+        if let channel = lhs.peers[lhs.id.peerId] as? TelegramChannel, case .group = channel.info, lhsEffectiveAuthor?.id == channel.id, !lhs.effectivelyIncoming(accountPeerId) {
+            return .none
+        }
+        
         var upperStyle: Int32 = ChatMessageMerge.fullyMerged.rawValue
         var lowerStyle: Int32 = ChatMessageMerge.fullyMerged.rawValue
         for media in lhs.media {

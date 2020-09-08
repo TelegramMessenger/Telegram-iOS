@@ -18,6 +18,13 @@ public enum TelegramChannelPermission {
 public extension TelegramChannel {
     func hasPermission(_ permission: TelegramChannelPermission) -> Bool {
         if self.flags.contains(.isCreator) {
+            if case .canBeAnonymous = permission {
+                if let adminRights = self.adminRights {
+                    return adminRights.flags.contains(.canBeAnonymous)
+                } else {
+                    return false
+                }
+            }
             return true
         }
         switch permission {

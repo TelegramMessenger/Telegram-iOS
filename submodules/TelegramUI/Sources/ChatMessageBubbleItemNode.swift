@@ -831,7 +831,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 displayAuthorInfo = !mergedTop.merged && incoming && effectiveAuthor != nil
             } else {
                 effectiveAuthor = firstMessage.author
-                displayAuthorInfo = !mergedTop.merged && incoming && peerId.isGroupOrChannel && effectiveAuthor != nil
+                
+                var allowAuthor = incoming
+                
+                if let author = firstMessage.author, author is TelegramChannel, author.id == firstMessage.id.peerId, !incoming {
+                    allowAuthor = true
+                }
+                
+                displayAuthorInfo = !mergedTop.merged && allowAuthor && peerId.isGroupOrChannel && effectiveAuthor != nil
                 if let forwardInfo = firstMessage.forwardInfo, forwardInfo.psaType != nil {
                     displayAuthorInfo = false
                 }
@@ -1152,7 +1159,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 authorNameColor = chatMessagePeerIdColors[Int(peer.id.id % 7)]
             } else if let effectiveAuthor = effectiveAuthor {
                 authorNameString = effectiveAuthor.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-                authorNameColor = chatMessagePeerIdColors[Int(effectiveAuthor.id.id % 7)]
+                
+                if incoming {
+                    authorNameColor = chatMessagePeerIdColors[Int(effectiveAuthor.id.id % 7)]
+                } else {
+                    authorNameColor = item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                }
                 
                 var isScam = effectiveAuthor.isScam
                 if case let .peer(peerId) = item.chatLocation, let authorPeerId = item.message.author?.id, authorPeerId == peerId {

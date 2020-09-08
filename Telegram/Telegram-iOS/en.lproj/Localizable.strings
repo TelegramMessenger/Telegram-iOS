@@ -5755,3 +5755,5 @@ Any member of this group will be able to see messages in the channel.";
 
 "ChatList.Search.NoResults" = "No Results";
 "ChatList.Search.NoResultsDescription" = "There were no results for \"%@\".\nTry a new search.";
+
+"Conversation.InputTextAnonymousPlaceholder" = "Send anonymously";

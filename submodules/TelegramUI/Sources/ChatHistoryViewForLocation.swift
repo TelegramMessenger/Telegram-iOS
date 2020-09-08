@@ -211,6 +211,12 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, context: A
                 |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
                     let (cachedData, cachedDataMessages, readStateData) = extractAdditionalData(view: view, chatLocation: chatLocation)
                     
+                    let combinedInitialData = ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData)
+                    
+                    if view.isLoading {
+                        return ChatHistoryViewUpdate.Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
+                    }
+                    
                     let genericType: ViewUpdateType
                     let scrollPosition: ChatHistoryViewScrollPosition? = first ? chatScrollPosition : nil
                     if first {
@@ -219,7 +225,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, context: A
                     } else {
                         genericType = updateType
                     }
-                    return .HistoryView(view: view, type: .Generic(type: genericType), scrollPosition: scrollPosition, flashIndicators: animated, originalScrollPosition: chatScrollPosition, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
+                    return .HistoryView(view: view, type: .Generic(type: genericType), scrollPosition: scrollPosition, flashIndicators: animated, originalScrollPosition: chatScrollPosition, initialData: combinedInitialData, id: location.id)
                 }
         }
     }

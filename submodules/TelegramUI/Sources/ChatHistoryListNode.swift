@@ -419,6 +419,7 @@ private struct ChatHistoryAnimatedEmojiConfiguration {
 public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let context: AccountContext
     private let chatLocation: ChatLocation
+    private let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
     private let subject: ChatControllerSubject?
     private let tagMask: MessageTags?
     private let controllerInteraction: ChatControllerInteraction
@@ -532,6 +533,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles) {
         self.context = context
         self.chatLocation = chatLocation
+        self.chatLocationContextHolder = chatLocationContextHolder
         self.subject = subject
         self.tagMask = tagMask
         self.controllerInteraction = controllerInteraction
@@ -706,6 +708,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         } else {
                             if let subject = subject, case let .message(messageId) = subject {
                                 strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
+                            } else if var chatHistoryLocation = strongSelf.chatHistoryLocationValue {
+                                chatHistoryLocation.id += 1
+                                strongSelf.chatHistoryLocationValue = chatHistoryLocation
                             } else {
                                 strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Initial(count: 60), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             }
@@ -1286,7 +1291,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             case .known(0.0):
                 break
             default:
-                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Scroll(index: .upperBound, anchorIndex: .upperBound, sourceIndex: .lowerBound, scrollPosition: .top(0.0), animated: true), id: self.takeNextHistoryLocationId())
+                let locationInput = ChatHistoryLocationInput(content: .Scroll(index: .upperBound, anchorIndex: .upperBound, sourceIndex: .lowerBound, scrollPosition: .top(0.0), animated: true), id: self.takeNextHistoryLocationId())
+                self.chatHistoryLocationValue = locationInput
         }
     }
     
@@ -1522,12 +1528,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 if transition.animateIn || animateIn {
                     let heightNorm = strongSelf.bounds.height - strongSelf.insets.top
                     strongSelf.forEachVisibleItemNode { itemNode in
+                        let delayFactor = itemNode.frame.minY / heightNorm
+                        let delay = Double(delayFactor * 0.1)
+                        
                         if let itemNode = itemNode as? ChatMessageItemView {
-                            let delayFactor = itemNode.frame.minY / heightNorm
-                            let delay = Double(delayFactor * 0.1)
-                            
                             itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
-                            itemNode.layer.animateScale(from: 0.9, to: 1.0, duration: 0.4, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
+                            itemNode.layer.animateScale(from: 0.94, to: 1.0, duration: 0.4, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
+                        } else if let itemNode = itemNode as? ChatUnreadItemNode {
+                            itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
                         }
                     }
                     strongSelf.forEachItemHeaderNode { itemNode in
@@ -1535,7 +1543,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         let delay = Double(delayFactor * 0.2)
                         
                         itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
-                        itemNode.layer.animateScale(from: 0.9, to: 1.0, duration: 0.4, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
+                        itemNode.layer.animateScale(from: 0.94, to: 1.0, duration: 0.4, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
                     }
                 }
                 

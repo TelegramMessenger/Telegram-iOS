@@ -1106,4 +1106,17 @@ public struct PresentationResourcesChat {
             return generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: messageTheme.accentTextColor)
         })
     }
+    
+    public static func chatFreeCommentButtonBackground(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatFreeCommentButtonBackground.rawValue, { _ in
+            let strokeColor = bubbleVariableColor(variableColor: theme.chat.message.shareButtonStrokeColor, wallpaper: wallpaper)
+            return generateStretchableFilledCircleImage(diameter: 30.0, color: bubbleVariableColor(variableColor: theme.chat.message.shareButtonFillColor, wallpaper: wallpaper), strokeColor: strokeColor, strokeWidth: strokeColor.alpha.isZero ? nil : 1.0)
+        })
+    }
+    
+    public static func chatFreeCommentButtonIcon(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatFreeCommentButtonIcon.rawValue, { _ in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/FreeRepliesIcon"), color: bubbleVariableColor(variableColor: theme.chat.message.shareButtonForegroundColor, wallpaper: wallpaper))
+        })
+    }
 }
