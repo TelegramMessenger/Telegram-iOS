@@ -15,6 +15,7 @@ import Emoji
 private let deletedIcon = UIImage(bundleImageName: "Avatar/DeletedIcon")?.precomposed()
 private let savedMessagesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/SavedMessagesIcon"), color: .white)
 private let archivedChatsIcon = UIImage(bundleImageName: "Avatar/ArchiveAvatarIcon")?.precomposed()
+private let repliesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/RepliesMessagesIcon"), color: .white)
 
 public func avatarPlaceholderFont(size: CGFloat) -> UIFont {
     return Font.with(size: size, design: .round, traits: [.bold])
@@ -100,6 +101,7 @@ private func ==(lhs: AvatarNodeState, rhs: AvatarNodeState) -> Bool {
 private enum AvatarNodeIcon: Equatable {
     case none
     case savedMessagesIcon
+    case repliesIcon
     case archivedChatsIcon(hiddenByDefault: Bool)
     case editAvatarIcon
     case deletedIcon
@@ -109,6 +111,7 @@ public enum AvatarNodeImageOverride: Equatable {
     case none
     case image(TelegramMediaImageRepresentation)
     case savedMessagesIcon
+    case repliesIcon
     case archivedChatsIcon(hiddenByDefault: Bool)
     case editAvatarIcon
     case deletedIcon
@@ -308,6 +311,9 @@ public final class AvatarNode: ASDisplayNode {
                 case .savedMessagesIcon:
                     representation = nil
                     icon = .savedMessagesIcon
+                case .repliesIcon:
+                    representation = nil
+                    icon = .repliesIcon
                 case let .archivedChatsIcon(hiddenByDefault):
                     representation = nil
                     icon = .archivedChatsIcon(hiddenByDefault: hiddenByDefault)
@@ -452,6 +458,8 @@ public final class AvatarNode: ASDisplayNode {
                 colorsArray = grayscaleColors
             } else if case .savedMessagesIcon = parameters.icon {
                 colorsArray = savedMessagesColors
+            } else if case .repliesIcon = parameters.icon {
+                colorsArray = savedMessagesColors
             } else if case .editAvatarIcon = parameters.icon, let theme = parameters.theme {
                 colorsArray = [theme.list.itemAccentColor.withAlphaComponent(0.1).cgColor, theme.list.itemAccentColor.withAlphaComponent(0.1).cgColor]
             } else if case let .archivedChatsIcon(hiddenByDefault) = parameters.icon, let theme = parameters.theme {
@@ -505,6 +513,15 @@ public final class AvatarNode: ASDisplayNode {
                 
                 if let savedMessagesIcon = savedMessagesIcon {
                     context.draw(savedMessagesIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - savedMessagesIcon.size.width) / 2.0), y: floor((bounds.size.height - savedMessagesIcon.size.height) / 2.0)), size: savedMessagesIcon.size))
+                }
+            } else if case .repliesIcon = parameters.icon {
+                let factor = bounds.size.width / 60.0
+                context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
+                context.scaleBy(x: factor, y: -factor)
+                context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
+                
+                if let repliesIcon = repliesIcon {
+                    context.draw(repliesIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - repliesIcon.size.width) / 2.0), y: floor((bounds.size.height - repliesIcon.size.height) / 2.0)), size: repliesIcon.size))
                 }
             } else if case .editAvatarIcon = parameters.icon, let theme = parameters.theme, !parameters.hasImage {
                 context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)

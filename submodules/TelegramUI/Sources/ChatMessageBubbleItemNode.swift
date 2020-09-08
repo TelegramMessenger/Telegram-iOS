@@ -161,6 +161,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
             if canComment {
                 result.append((firstMessage, ChatMessageCommentFooterContentNode.self, ChatMessageEntryAttributes(), false))
             }
+        } else if firstMessage.id.peerId.isReplies {
+            result.append((firstMessage, ChatMessageCommentFooterContentNode.self, ChatMessageEntryAttributes(), false))
         }
     }
     
@@ -903,10 +905,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         var needShareButton = false
         if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
             needShareButton = false
-        } else if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
+        } else if item.message.id.peerId == item.context.account.peerId {
             if let _ = sourceReference {
                 needShareButton = true
             }
+        } else if item.message.id.peerId.isReplies {
+            needShareButton = false
         } else if item.message.effectivelyIncoming(item.context.account.peerId) {
             if let _ = sourceReference {
                 needShareButton = true
@@ -1178,7 +1182,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         } else {
             if inlineBotNameString == nil && (ignoreForward || firstMessage.forwardInfo == nil) && replyMessage == nil {
                 if let first = contentPropertiesAndLayouts.first, first.1.hidesSimpleAuthorHeader {
-                    initialDisplayHeader = false
+                    if let author = firstMessage.author as? TelegramChannel, case .group = author.info, author.id == firstMessage.id.peerId, !incoming {
+                    } else {
+                        initialDisplayHeader = false
+                    }
                 }
             }
         }

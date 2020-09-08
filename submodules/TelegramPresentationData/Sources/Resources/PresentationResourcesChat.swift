@@ -1099,6 +1099,14 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatMessageRepliesIcon(_ theme: PresentationTheme, incoming: Bool) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatMessageRepliesIcon(incoming: incoming), { theme in
+            let messageTheme = incoming ? theme.chat.message.incoming : theme.chat.message.outgoing
+            
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BubbleReplies"), color: messageTheme.accentTextColor)
+        })
+    }
+    
     public static func chatMessageCommentsArrowIcon(_ theme: PresentationTheme, incoming: Bool) -> UIImage? {
         return theme.image(PresentationResourceParameterKey.chatMessageCommentsArrowIcon(incoming: incoming), { theme in
             let messageTheme = incoming ? theme.chat.message.incoming : theme.chat.message.outgoing

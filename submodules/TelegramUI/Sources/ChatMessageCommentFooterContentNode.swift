@@ -81,7 +81,16 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
         guard let item = self.item else {
             return
         }
-        item.controllerInteraction.openMessageReplies(item.message.id)
+        if item.message.id.peerId.isReplies {
+            for attribute in item.message.attributes {
+                if let attribute = attribute as? SourceReferenceMessageAttribute {
+                    item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
+                    break
+                }
+            }
+        } else {
+            item.controllerInteraction.openMessageReplies(item.message.id)
+        }
     }
     
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
@@ -100,13 +109,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
                 
-                var maxTextWidth = CGFloat.greatestFiniteMagnitude
-                for media in item.message.media {
-                    if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.type == "telegram_background" || content.type == "telegram_theme" {
-                        maxTextWidth = layoutConstants.wallpapers.maxTextWidth
-                        break
-                    }
-                }
+                let maxTextWidth = CGFloat.greatestFiniteMagnitude
                 
                 let horizontalInset = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 
@@ -124,7 +127,9 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                 //TODO:localize
                 let rawText: String
                 
-                if dateReplies > 0 {
+                if item.message.id.peerId.isReplies {
+                    rawText = "View Reply"
+                } else if dateReplies > 0 {
                     if dateReplies == 1 {
                         rawText = "1 Comment"
                     } else {
@@ -144,7 +149,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                     textLeftInset = 15.0 + imageSize * min(1.0, CGFloat(replyPeers.count)) + (imageSpacing) * max(0.0, min(2.0, CGFloat(replyPeers.count - 1)))
                 }
                 
-                let textConstrainedSize = CGSize(width: min(maxTextWidth, constrainedSize.width - horizontalInset - textLeftInset - 20.0), height: constrainedSize.height)
+                let textConstrainedSize = CGSize(width: min(maxTextWidth, constrainedSize.width - horizontalInset - textLeftInset - 28.0), height: constrainedSize.height)
                 
                 let attributedText: NSAttributedString
                 
@@ -166,9 +171,17 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
 
                 var suggestedBoundingWidth: CGFloat
                 suggestedBoundingWidth = textFrameWithoutInsets.width
-                suggestedBoundingWidth += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right + textLeftInset + 20.0
+                suggestedBoundingWidth += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right + textLeftInset + 28.0
                 
-                let iconImage = PresentationResourcesChat.chatMessageCommentsIcon(item.presentationData.theme.theme, incoming: incoming)
+                let iconImage: UIImage?
+                let iconOffset: CGPoint
+                if item.message.id.peerId.isReplies {
+                    iconImage = PresentationResourcesChat.chatMessageRepliesIcon(item.presentationData.theme.theme, incoming: incoming)
+                    iconOffset = CGPoint(x: -4.0, y: -4.0)
+                } else {
+                    iconImage = PresentationResourcesChat.chatMessageCommentsIcon(item.presentationData.theme.theme, incoming: incoming)
+                    iconOffset = CGPoint()
+                }
                 let arrowImage = PresentationResourcesChat.chatMessageCommentsArrowIcon(item.presentationData.theme.theme, incoming: incoming)
                 
                 return (suggestedBoundingWidth, { boundingWidth in
@@ -212,12 +225,12 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                             
                             if let iconImage = iconImage {
                                 strongSelf.iconNode.image = iconImage
-                                strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: 15.0, y: 6.0), size: iconImage.size)
+                                strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: 15.0 + iconOffset.x, y: 6.0 + iconOffset.y), size: iconImage.size)
                             }
 
                             if let arrowImage = arrowImage {
                                 strongSelf.arrowNode.image = arrowImage
-                                strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: boundingWidth - 27.0, y: 6.0), size: arrowImage.size)
+                                strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: boundingWidth - 33.0, y: 6.0), size: arrowImage.size)
                             }
 
                             strongSelf.iconNode.isHidden = !replyPeers.isEmpty

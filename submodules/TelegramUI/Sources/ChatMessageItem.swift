@@ -131,7 +131,7 @@ private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs
     }
     
     var sameAuthor = false
-    if lhsEffectiveAuthor?.id == rhsEffectiveAuthor?.id {
+    if lhsEffectiveAuthor?.id == rhsEffectiveAuthor?.id && lhs.effectivelyIncoming(accountPeerId) == rhs.effectivelyIncoming(accountPeerId) {
         sameAuthor = true
     }
     

@@ -2851,6 +2851,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if let peer = peer {
             if peer.id == self.context.account.peerId && !self.isSettings {
                 titleString = NSAttributedString(string: presentationData.strings.Conversation_SavedMessages, font: Font.medium(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+            } else if peer.id == self.context.account.peerId && !self.isSettings {
+                titleString = NSAttributedString(string: presentationData.strings.DialogList_Replies, font: Font.medium(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             } else {
                 titleString = NSAttributedString(string: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.medium(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             }

@@ -2425,6 +2425,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let imageOverride: AvatarNodeImageOverride?
                             if strongSelf.context.account.peerId == peer.id {
                                 imageOverride = .savedMessagesIcon
+                            } else if peer.id.isReplies {
+                                imageOverride = .repliesIcon
                             } else if peer.isDeleted {
                                 imageOverride = .deletedIcon
                             } else {
