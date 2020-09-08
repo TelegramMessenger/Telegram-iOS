@@ -516,7 +516,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                             updatedShareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
                         }
                         let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, message: item.message, account: item.context.account)
-                        var shareButtonFrame = CGRect(origin: CGPoint(x: updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - 10.0 - buttonSize.height), size: buttonSize)
+                        var shareButtonFrame = CGRect(origin: CGPoint(x: updatedImageFrame.maxX + 6.0, y: updatedImageFrame.maxY - 10.0 - buttonSize.height - 4.0), size: buttonSize)
                         if isEmoji && incoming {
                             shareButtonFrame.origin.x = dateAndStatusFrame.maxX + 8.0
                         }
