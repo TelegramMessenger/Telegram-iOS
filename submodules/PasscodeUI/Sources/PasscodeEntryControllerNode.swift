@@ -52,6 +52,8 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     var checkPasscode: ((String) -> Void)?
     var requestBiometrics: (() -> Void)?
     
+    public var allPresentationAnimationsCompleted: (() -> Void)?
+    
     init(accountManager: AccountManager, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, passcodeType: PasscodeEntryFieldType, biometricsType: LocalAuthBiometricAuthentication?, arguments: PasscodeEntryControllerPresentationArguments, statusBar: StatusBar, modalPresentation: Bool) {
         self.accountManager = accountManager
         self.theme = theme
@@ -299,7 +301,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             self.deleteButtonNode.isHidden = false
             self.biometricButtonNode.isHidden = false
             
-            self.subtitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+            self.subtitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { [weak self] _ in
+                self?.allPresentationAnimationsCompleted?()
+            })
             
             self.inputFieldNode.animateIn()
             self.keyboardNode.animateIn()

@@ -201,6 +201,8 @@ private let buttonsData = [
 final class PasscodeEntryKeyboardNode: ASDisplayNode {
     private var background: PasscodeBackground?
     
+    public var keyboardNodePresentationCompleted: (() -> Void)?
+    
     var charactedEntered: ((String) -> Void)?
     
     private func updateButtons() {
