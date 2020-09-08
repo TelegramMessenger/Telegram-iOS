@@ -14,6 +14,7 @@ import UniversalMediaPlayer
 import ListMessageItem
 import ListSectionHeaderNode
 import ChatMessageInteractiveMediaBadge
+import ShimmerEffect
 
 private let mediaBadgeBackgroundColor = UIColor(white: 0.0, alpha: 0.6)
 private let mediaBadgeTextColor = UIColor.white
@@ -41,8 +42,6 @@ private final class VisualMediaItemNode: ASDisplayNode {
     private let context: AccountContext
     private let interaction: VisualMediaItemInteraction
     
-//    private var videoLayerFrameManager: SoftwareVideoLayerFrameManager?
-//    private var sampleBufferLayer: SampleBufferLayer?
     private var displayLink: ConstantDisplayLinkAnimator?
     private var displayLinkTimestamp: Double = 0.0
     
@@ -50,6 +49,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
     private let imageNode: TransformImageNode
     private var statusNode: RadialStatusNode
     private let mediaBadgeNode: ChatMessageInteractiveMediaBadge
+    private var placeholderNode: ShimmerEffectNode?
     
     private let fetchStatusDisposable = MetaDisposable()
     private let fetchDisposable = MetaDisposable()
@@ -84,7 +84,9 @@ private final class VisualMediaItemNode: ASDisplayNode {
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            strongSelf.interaction.openMessageContextActions(item.0.message, strongSelf.containerNode, strongSelf.containerNode.bounds, gesture)
+            if let message = item.0.message {
+                strongSelf.interaction.openMessageContextActions(message, strongSelf.containerNode, strongSelf.containerNode.bounds, gesture)
+            }
         }
     }
     
@@ -108,12 +110,15 @@ private final class VisualMediaItemNode: ASDisplayNode {
     }
     
     @objc func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        guard let message = self.item?.0.message else {
+            return
+        }
         if case .ended = recognizer.state {
             if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
                 if case .tap = gesture {
                     if let (item, _, _, _) = self.item {
                         var media: Media?
-                        for value in item.message.media {
+                        for value in message.media {
                             if let image = value as? TelegramMediaImage {
                                 media = image
                                 break
@@ -125,13 +130,13 @@ private final class VisualMediaItemNode: ASDisplayNode {
                         
                         if let media = media {
                             if let file = media as? TelegramMediaFile {
-                                if isMediaStreamable(message: item.message, media: file) {
-                                    self.interaction.openMessage(item.message)
+                                if isMediaStreamable(message: message, media: file) {
+                                    self.interaction.openMessage(message)
                                 } else {
                                     self.progressPressed()
                                 }
                             } else {
-                                self.interaction.openMessage(item.message)
+                                self.interaction.openMessage(message)
                             }
                         }
                     }
@@ -172,50 +177,34 @@ private final class VisualMediaItemNode: ASDisplayNode {
         self.containerNode.cancelGesture()
     }
     
+    func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {
+        self.placeholderNode?.updateAbsoluteRect(absoluteRect, within: containerSize)
+    }
+    
     func update(size: CGSize, item: VisualMediaItem, theme: PresentationTheme, synchronousLoad: Bool) {
         if item === self.item?.0 && size == self.item?.2 {
             return
         }
         self.theme = theme
         var media: Media?
-        for value in item.message.media {
-            if let image = value as? TelegramMediaImage {
-                media = image
-                break
-            } else if let file = value as? TelegramMediaFile {
-                media = file
-                break
+        if let message = item.message {
+            for value in message.media {
+                if let image = value as? TelegramMediaImage {
+                    media = image
+                    break
+                } else if let file = value as? TelegramMediaFile {
+                    media = file
+                    break
+                }
             }
         }
         
-//        if let file = media as? TelegramMediaFile, file.isAnimated {
-//            if self.videoLayerFrameManager == nil {
-//                let sampleBufferLayer: SampleBufferLayer
-//                if let current = self.sampleBufferLayer {
-//                    sampleBufferLayer = current
-//                } else {
-//                    sampleBufferLayer = takeSampleBufferLayer()
-//                    self.sampleBufferLayer = sampleBufferLayer
-//                    self.imageNode.layer.addSublayer(sampleBufferLayer.layer)
-//                }
-//
-//                self.videoLayerFrameManager = SoftwareVideoLayerFrameManager(account: self.context.account, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: file), layerHolder: sampleBufferLayer)
-//                self.videoLayerFrameManager?.start()
-//            }
-//        } else {
-//            if let sampleBufferLayer = self.sampleBufferLayer {
-//                sampleBufferLayer.layer.removeFromSuperlayer()
-//                self.sampleBufferLayer = nil
-//            }
-//            self.videoLayerFrameManager = nil
-//        }
-        
-        if let media = media, (self.item?.1 == nil || !media.isEqual(to: self.item!.1!)) {
+        if let media = media, (self.item?.1 == nil || !media.isEqual(to: self.item!.1!)), let message = item.message {
             var mediaDimensions: CGSize?
             if let image = media as? TelegramMediaImage, let largestSize = largestImageRepresentation(image.representations)?.dimensions {
                 mediaDimensions = largestSize.cgSize
                
-                self.imageNode.setSignal(mediaGridMessagePhoto(account: context.account, photoReference: .message(message: MessageReference(item.message), media: image), fullRepresentationSize: CGSize(width: 300.0, height: 300.0), synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad, dispatchOnDisplayLink: true)
+                self.imageNode.setSignal(mediaGridMessagePhoto(account: context.account, photoReference: .message(message: MessageReference(message), media: image), fullRepresentationSize: CGSize(width: 300.0, height: 300.0), synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad, dispatchOnDisplayLink: true)
                 
                 self.fetchStatusDisposable.set(nil)
                 self.statusNode.transitionToState(.none, completion: { [weak self] in
@@ -225,7 +214,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 self.resourceStatus = nil
             } else if let file = media as? TelegramMediaFile, file.isVideo {
                 mediaDimensions = file.dimensions?.cgSize
-                self.imageNode.setSignal(mediaGridMessageVideo(postbox: context.account.postbox, videoReference: .message(message: MessageReference(item.message), media: file), synchronousLoad: synchronousLoad, autoFetchFullSizeThumbnail: true), attemptSynchronously: synchronousLoad)
+                self.imageNode.setSignal(mediaGridMessageVideo(postbox: context.account.postbox, videoReference: .message(message: MessageReference(message), media: file), synchronousLoad: synchronousLoad, autoFetchFullSizeThumbnail: true), attemptSynchronously: synchronousLoad)
                 
                 self.mediaBadgeNode.isHidden = file.isAnimated
                 
@@ -233,12 +222,12 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 
                 self.item = (item, media, size, mediaDimensions)
                 
-                self.fetchStatusDisposable.set((messageMediaFileStatus(context: context, messageId: item.message.id, file: file)
+                self.fetchStatusDisposable.set((messageMediaFileStatus(context: context, messageId: message.id, file: file)
                 |> deliverOnMainQueue).start(next: { [weak self] status in
                     if let strongSelf = self, let (item, _, _, _) = strongSelf.item {
                         strongSelf.resourceStatus = status
                         
-                        let isStreamable = isMediaStreamable(message: item.message, media: file)
+                        let isStreamable = isMediaStreamable(message: message, media: file)
                         
                         var statusState: RadialStatusNodeState = .none
                         if isStreamable || file.isAnimated {
@@ -310,18 +299,26 @@ private final class VisualMediaItemNode: ASDisplayNode {
             self.mediaBadgeNode.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 18.0 - 3.0), size: CGSize(width: 50.0, height: 50.0))
             
             self.updateHiddenMedia()
+            
+            if let placeholderNode = self.placeholderNode {
+                self.placeholderNode = nil
+                placeholderNode.removeFromSupernode()
+            }
+        } else if item.isEmpty, self.placeholderNode == nil {
+            let placeholderNode = ShimmerEffectNode()
+            placeholderNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: [.rect(rect: CGRect(origin: CGPoint(), size: size))], size: size)
+            self.addSubnode(placeholderNode)
+            self.placeholderNode = placeholderNode
         }
+        
+        let imageFrame = CGRect(origin: CGPoint(), size: size)
+        self.placeholderNode?.frame = imageFrame
         
         if let (item, media, _, mediaDimensions) = self.item {
             self.item = (item, media, size, mediaDimensions)
             
-            let imageFrame = CGRect(origin: CGPoint(), size: size)
-            
             self.containerNode.frame = imageFrame
             self.imageNode.frame = imageFrame
-//            if let sampleBufferLayer = self.sampleBufferLayer {
-//                sampleBufferLayer.layer.frame = imageFrame
-//            }
             
             if let mediaDimensions = mediaDimensions {
                 let imageSize = mediaDimensions.aspectFilled(imageFrame.size)
@@ -379,8 +376,8 @@ private final class VisualMediaItemNode: ASDisplayNode {
     }
     
     func updateHiddenMedia() {
-        if let (item, _, _, _) = self.item {
-            if let _ = self.interaction.hiddenMedia[item.message.id] {
+        if let (item, _, _, _) = self.item, let message = item.message {
+            if let _ = self.interaction.hiddenMedia[message.id] {
                 self.isHidden = true
             } else {
                 self.isHidden = false
@@ -393,11 +390,22 @@ private final class VisualMediaItemNode: ASDisplayNode {
 }
 
 private final class VisualMediaItem {
-    let message: Message
+    let index: UInt32?
+    let message: Message?
     let dimensions: CGSize
     let aspectRatio: CGFloat
+    let isEmpty: Bool
+    
+    init(index: UInt32) {
+        self.index = index
+        self.message = nil
+        self.dimensions = CGSize(width: 100.0, height: 100.0)
+        self.aspectRatio = 1.0
+        self.isEmpty = true
+    }
     
     init(message: Message) {
+        self.index = nil
         self.message = message
         
         var aspectRatio: CGFloat = 1.0
@@ -412,6 +420,17 @@ private final class VisualMediaItem {
         }
         self.aspectRatio = aspectRatio
         self.dimensions = dimensions
+        self.isEmpty = false
+    }
+    
+    var stableId: UInt32 {
+        if let message = self.message {
+            return message.stableId
+        } else if let index = self.index {
+            return index
+        } else {
+            return 0
+        }
     }
 }
 
@@ -680,15 +699,24 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     
-    func updateHistory(entries: [ChatListSearchEntry], totalCount: Int32, updateType: ViewUpdateType) {
+    func updateHistory(entries: [ChatListSearchEntry]?, totalCount: Int32, updateType: ViewUpdateType) {
         switch updateType {
         case .FillHole:
             break
         default:
             self.mediaItems.removeAll()
-            for entry in entries {
-                if case let .message(message, _, _, _, _) = entry {
-                    self.mediaItems.append(VisualMediaItem(message: message))
+            let loading: Bool
+            if let entries = entries {
+                loading = false
+                for entry in entries {
+                    if case let .message(message, _, _, _, _) = entry {
+                        self.mediaItems.append(VisualMediaItem(message: message))
+                    }
+                }
+            } else {
+                loading = true
+                for i in 0 ..< 21 {
+                    self.mediaItems.append(VisualMediaItem(index: UInt32(i)))
                 }
             }
             self.itemsLayout = nil
@@ -697,12 +725,14 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
             self.initialized = true
             
             if let (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = self.currentParams {
-                if totalCount > 0 {
+                if loading {
+                    self.headerNode.title = ""
+                } else if totalCount > 0 {
                     self.headerNode.title = presentationData.strings.ChatList_Search_Photos(totalCount).uppercased()
                 }
                 
                 self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: true, transition: .immediate)
-                self.headerNode.alpha = self.mediaItems.isEmpty ? 0.0 : 1.0
+                self.headerNode.alpha = self.mediaItems.isEmpty && !loading ? 0.0 : 1.0
                 if !self.didSetReady {
                     self.didSetReady = true
                     self.ready.set(.single(true))
@@ -722,7 +752,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
     
     func findLoadedMessage(id: MessageId) -> Message? {
         for item in self.mediaItems {
-            if item.message.id == id {
+            if item.message?.id == id {
                 return item.message
             }
         }
@@ -743,8 +773,8 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
     
     func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         for item in self.mediaItems {
-            if item.message.id == messageId {
-                if let itemNode = self.visibleMediaItems[item.message.stableId] {
+            if let message = item.message, message.id == messageId {
+                if let itemNode = self.visibleMediaItems[message.stableId] {
                     return itemNode.transitionNode()
                 }
                 break
@@ -855,7 +885,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
         var validIds = Set<UInt32>()
         if minVisibleIndex <= maxVisibleIndex {
             for i in minVisibleIndex ... maxVisibleIndex {
-                let stableId = self.mediaItems[i].message.stableId
+                let stableId = self.mediaItems[i].stableId
                 validIds.insert(stableId)
                 
                 let itemFrame = itemsLayout.frame(forItemAt: i, sideInset: sideInset)
@@ -869,6 +899,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
                     self.scrollNode.addSubnode(itemNode)
                 }
                 itemNode.frame = itemFrame
+                itemNode.updateAbsoluteRect(itemFrame, within: self.scrollNode.view.bounds.size)
                 if headerItem == nil && itemFrame.maxY > headerItemMinY {
                     headerItem = self.mediaItems[i].message
                 }

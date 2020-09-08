@@ -20,6 +20,7 @@ import LanguageLinkPreviewUI
 import SettingsUI
 import UrlHandling
 import ShareController
+import ChatInterfaceState
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {

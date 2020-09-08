@@ -128,6 +128,12 @@ private class SearchBarTextField: UITextField {
             self.setNeedsLayout()
         }
     }
+    var selectedTokenIndex: Int? {
+        didSet {
+            self.layoutTokens(transition: .animated(duration: 0.2, curve: .easeInOut))
+            self.setNeedsLayout()
+        }
+    }
     
     var theme: SearchBarNodeTheme
     

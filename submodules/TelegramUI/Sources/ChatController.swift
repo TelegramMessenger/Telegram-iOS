@@ -62,6 +62,7 @@ import TooltipUI
 import StatisticsUI
 import MediaResources
 import GalleryData
+import ChatInterfaceState
 
 extension ChatLocation {
     var peerId: PeerId {

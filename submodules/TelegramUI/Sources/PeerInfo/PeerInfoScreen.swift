@@ -51,6 +51,7 @@ import SaveToCameraRoll
 import PeerInfoUI
 import ListMessageItem
 import GalleryData
+import ChatInterfaceState
 
 protocol PeerInfoScreenItem: class {
     var id: AnyHashable { get }

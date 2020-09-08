@@ -10,6 +10,7 @@ import AccountContext
 import TextSelectionNode
 import ReactionSelectionNode
 import ContextUI
+import ChatInterfaceState
 
 struct ChatInterfaceHighlightedState: Equatable {
     let messageStableId: UInt32

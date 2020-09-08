@@ -37,13 +37,14 @@ public final class ListMessageItem: ListViewItem {
     let interaction: ListMessageItemInteraction
     let message: Message
     let selection: ChatHistoryMessageSelection
+    let hintIsLink: Bool
     let isGlobalSearchResult: Bool
     
     let header: ListViewItemHeader?
     
     public let selectable: Bool = true
     
-    public init(presentationData: ChatPresentationData, context: AccountContext, chatLocation: ChatLocation, interaction: ListMessageItemInteraction, message: Message, selection: ChatHistoryMessageSelection, displayHeader: Bool, customHeader: ListViewItemHeader? = nil, isGlobalSearchResult: Bool = false) {
+    public init(presentationData: ChatPresentationData, context: AccountContext, chatLocation: ChatLocation, interaction: ListMessageItemInteraction, message: Message, selection: ChatHistoryMessageSelection, displayHeader: Bool, customHeader: ListViewItemHeader? = nil, hintIsLink: Bool = false, isGlobalSearchResult: Bool = false) {
         self.presentationData = presentationData
         self.context = context
         self.chatLocation = chatLocation
@@ -57,16 +58,19 @@ public final class ListMessageItem: ListViewItem {
             self.header = nil
         }
         self.selection = selection
+        self.hintIsLink = hintIsLink
         self.isGlobalSearchResult = isGlobalSearchResult
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         var viewClassName: AnyClass = ListMessageSnippetItemNode.self
         
-        for media in self.message.media {
-            if let _ = media as? TelegramMediaFile {
-                viewClassName = ListMessageFileItemNode.self
-                break
+        if !self.hintIsLink {
+            for media in self.message.media {
+                if let _ = media as? TelegramMediaFile {
+                    viewClassName = ListMessageFileItemNode.self
+                    break
+                }
             }
         }
         

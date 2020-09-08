@@ -17,6 +17,7 @@ import ContextUI
 import GalleryUI
 import OverlayStatusController
 import PresentationDataUtils
+import ChatInterfaceState
 
 struct PeerSpecificPackData {
     let peer: Peer

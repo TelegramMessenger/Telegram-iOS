@@ -27,6 +27,8 @@ import AnimatedStickerNode
 import AppBundle
 import GalleryData
 import InstantPageUI
+import ChatInterfaceState
+import ShareController
 
 private final class PassthroughContainerNode: ASDisplayNode {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -595,20 +597,26 @@ public func chatListSearchContainerPreparedTransition(from fromEntries: [ChatLis
 
 private struct ChatListSearchContainerNodeState: Equatable {
     let peerIdWithRevealedOptions: PeerId?
+    let selectedMessageIds: Set<MessageId>?
     
-    init(peerIdWithRevealedOptions: PeerId? = nil) {
+    init(peerIdWithRevealedOptions: PeerId? = nil, selectedMessageIds: Set<MessageId>? = nil) {
         self.peerIdWithRevealedOptions = peerIdWithRevealedOptions
+        self.selectedMessageIds = selectedMessageIds
     }
     
     static func ==(lhs: ChatListSearchContainerNodeState, rhs: ChatListSearchContainerNodeState) -> Bool {
-        if lhs.peerIdWithRevealedOptions != rhs.peerIdWithRevealedOptions {
+        if lhs.peerIdWithRevealedOptions != rhs.peerIdWithRevealedOptions || lhs.selectedMessageIds != rhs.selectedMessageIds {
             return false
         }
         return true
     }
     
     func withUpdatedPeerIdWithRevealedOptions(_ peerIdWithRevealedOptions: PeerId?) -> ChatListSearchContainerNodeState {
-        return ChatListSearchContainerNodeState(peerIdWithRevealedOptions: peerIdWithRevealedOptions)
+        return ChatListSearchContainerNodeState(peerIdWithRevealedOptions: peerIdWithRevealedOptions, selectedMessageIds: self.selectedMessageIds)
+    }
+    
+    func withUpdatedSelectedMessageIds(_ selectedMessageIds: Set<MessageId>?) -> ChatListSearchContainerNodeState {
+        return ChatListSearchContainerNodeState(peerIdWithRevealedOptions: self.peerIdWithRevealedOptions, selectedMessageIds: selectedMessageIds)
     }
 }
 
@@ -681,12 +689,13 @@ public struct ChatListSearchOptions {
 
 public final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     private let context: AccountContext
-    private let filter: ChatListNodePeersFilter
+    private let peersFilter: ChatListNodePeersFilter
     private var interaction: ChatListNodeInteraction?
     private let openMessage: (Peer, MessageId) -> Void
     private let navigationController: NavigationController?
     
     let filterContainerNode: ChatListSearchFiltersContainerNode
+    private var selectionPanelNode: ChatListSearchMessageSelectionPanelNode?
     private let recentListNode: ListView
     private let listNode: ListView
     private let mediaNode: ChatListSearchMediaNode
@@ -695,7 +704,10 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private var enqueuedTransitions: [(ChatListSearchContainerTransition, Bool)] = []
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
+    private var present: ((ViewController, Any?) -> Void)?
     private var presentInGlobalOverlay: ((ViewController, Any?) -> Void)?
+    
+    private let activeActionDisposable = MetaDisposable()
     
     private let recentDisposable = MetaDisposable()
     private let updatedRecentPeersDisposable = MetaDisposable()
@@ -738,11 +750,12 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     public init(context: AccountContext, filter: ChatListNodePeersFilter, groupId: PeerGroupId, openPeer originalOpenPeer: @escaping (Peer, Bool) -> Void, openDisabledPeer: @escaping (Peer) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage originalOpenMessage: @escaping (Peer, MessageId) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, navigationController: NavigationController?, updatedSearchOptions: ((ChatListSearchOptions?) -> Void)? = nil) {
         self.context = context
-        self.filter = filter
+        self.peersFilter = filter
         self.dimNode = ASDisplayNode()
         self.navigationController = navigationController
         self.updatedSearchOptions = updatedSearchOptions
         
+        self.present = present
         self.presentInGlobalOverlay = presentInGlobalOverlay
         
         self.openMessage = originalOpenMessage
@@ -1475,7 +1488,11 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                             }
                         }
                     }
-                    strongSelf.mediaNode.updateHistory(entries: entriesAndFlags?.0 ?? [], totalCount: totalCount, updateType: .Initial)
+                    var entries: [ChatListSearchEntry]? = entriesAndFlags?.0 ?? []
+                    if isSearching && (entries?.isEmpty ?? true) {
+                        entries = nil
+                    }
+                    strongSelf.mediaNode.updateHistory(entries: entries, totalCount: totalCount, updateType: .Initial)
                 }
                 
                 let previousEntries = previousSearchItems.swap(entriesAndFlags?.0)
@@ -1621,6 +1638,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     }
     
     deinit {
+        self.activeActionDisposable.dispose()
         self.updatedRecentPeersDisposable.dispose()
         self.recentDisposable.dispose()
         self.searchDisposable.dispose()
@@ -1701,8 +1719,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     }
     
     private func updateTheme(theme: PresentationTheme) {
-        self.backgroundColor = self.filter.contains(.excludeRecent) ? nil : theme.chatList.backgroundColor
-        self.dimNode.backgroundColor = self.filter.contains(.excludeRecent) ? UIColor.black.withAlphaComponent(0.5) : theme.chatList.backgroundColor
+        self.backgroundColor = self.peersFilter.contains(.excludeRecent) ? nil : theme.chatList.backgroundColor
+        self.dimNode.backgroundColor = self.peersFilter.contains(.excludeRecent) ? UIColor.black.withAlphaComponent(0.5) : theme.chatList.backgroundColor
         self.recentListNode.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
         self.listNode.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
         
@@ -1811,9 +1829,9 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     strongSelf.emptyResultsTextNode.isHidden = !emptyResults
                     strongSelf.emptyResultsAnimationNode.visibility = emptyResults
                     
-                    strongSelf.recentListNode.isHidden = displayingResults || strongSelf.filter.contains(.excludeRecent)
+                    strongSelf.recentListNode.isHidden = displayingResults || strongSelf.peersFilter.contains(.excludeRecent)
                     strongSelf.dimNode.isHidden = displayingResults
-                    strongSelf.backgroundColor = !displayingResults && strongSelf.filter.contains(.excludeRecent) ? nil : strongSelf.presentationData.theme.chatList.backgroundColor
+                    strongSelf.backgroundColor = !displayingResults && strongSelf.peersFilter.contains(.excludeRecent) ? nil : strongSelf.presentationData.theme.chatList.backgroundColor
                     
                     if let (layout, navigationBarHeight) = strongSelf.validLayout {
                         strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
@@ -2036,6 +2054,66 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         transition.updateFrame(node: self.filterContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight + 6.0), size: CGSize(width: layout.size.width, height: 37.0)))
         self.filterContainerNode.update(size: CGSize(width: layout.size.width, height: 37.0), sideInset: layout.safeInsets.left, filters: ChatListSearchFilter.allCases.map { .filter($0) }, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
         
+        
+        if let selectedMessageIds = self.stateValue.selectedMessageIds {
+            var wasAdded = false
+            let selectionPanelNode: ChatListSearchMessageSelectionPanelNode
+            if let current = self.selectionPanelNode {
+                selectionPanelNode = current
+            } else {
+                wasAdded = true
+                selectionPanelNode = ChatListSearchMessageSelectionPanelNode(context: self.context, deleteMessages: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.deleteMessages(messageIds: nil)
+                }, shareMessages: { [weak self] in
+                    guard let strongSelf = self, let messageIds = strongSelf.stateValue.selectedMessageIds, !messageIds.isEmpty else {
+                        return
+                    }
+                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Message] in
+                        var messages: [Message] = []
+                        for id in messageIds {
+                            if let message = transaction.getMessage(id) {
+                                messages.append(message)
+                            }
+                        }
+                        return messages
+                    }
+                    |> deliverOnMainQueue).start(next: { messages in
+                        if let strongSelf = self, !messages.isEmpty {
+                            let shareController = ShareController(context: strongSelf.context, subject: .messages(messages.sorted(by: { lhs, rhs in
+                                return lhs.index < rhs.index
+                            })), externalShare: true, immediateExternalShare: true)
+                            strongSelf.view.endEditing(true)
+                            strongSelf.present?(shareController, nil)
+                        }
+                    })
+                }, forwardMessages: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.forwardMessages(messageIds: nil)
+                })
+                self.selectionPanelNode = selectionPanelNode
+                self.addSubnode(selectionPanelNode)
+            }
+            selectionPanelNode.selectedMessages = selectedMessageIds
+            let panelHeight = selectionPanelNode.update(layout: layout, presentationData: self.presentationData, transition: wasAdded ? .immediate : transition)
+            let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight))
+            if wasAdded {
+                selectionPanelNode.frame = panelFrame
+                transition.animatePositionAdditive(node: selectionPanelNode, offset: CGPoint(x: 0.0, y: panelHeight))
+            } else {
+                transition.updateFrame(node: selectionPanelNode, frame: panelFrame)
+            }
+        } else if let selectionPanelNode = self.selectionPanelNode {
+            self.selectionPanelNode = nil
+            transition.updateFrame(node: selectionPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: selectionPanelNode.bounds.size), completion: { [weak selectionPanelNode] _ in
+                selectionPanelNode?.removeFromSupernode()
+            })
+        }
+        
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         
         self.recentListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
@@ -2180,15 +2258,18 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuMore, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/More"), color: theme.actionSheet.primaryTextColor)
                     }, action: { _, f in
-                        guard let strongSelf = self else {
-                            return
+                        if let strongSelf = self {
+                            strongSelf.updateState { state in
+                                return state.withUpdatedSelectedMessageIds([message.id])
+                            }
+                            
+                            if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                                strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                            }
                         }
-//                        strongSelf.chatInterfaceInteraction.toggleMessagesSelection([message.id], true)
-//                        strongSelf.expandTabs()
+                        
                         f(.default)
                     })))
-
-//                    }
                     
                     switch previewData {
                         case let .gallery(gallery):
@@ -2245,12 +2326,17 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         })))
         
         items.append(.separator)
-        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuMore, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/More"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuMore, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/More"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
             c.dismiss(completion: {
-//                if let strongSelf = self {
-//                    strongSelf.chatInterfaceInteraction.toggleMessagesSelection([message.id], true)
-//                    strongSelf.expandTabs()
-//                }
+                if let strongSelf = self {
+                    strongSelf.updateState { state in
+                        return state.withUpdatedSelectedMessageIds([message.id])
+                    }
+                    
+                    if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                        strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                    }
+                }
             })
         })))
         
@@ -2262,74 +2348,83 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.updateSearchOptions(nil)
         self.setQuery?(nil, [], self.searchQueryValue ?? "")
     }
+    func deleteMessages(messageIds: Set<MessageId>?) {
+        
+    }
     
     func forwardMessages(messageIds: Set<MessageId>?) {
-//        if let messageIds = messageIds, !messageIds.isEmpty {
-//            let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled]))
-//            peerSelectionController.peerSelected = { [weak self, weak peerSelectionController] peerId in
-//                if let strongSelf = self, let _ = peerSelectionController {
-//                    if peerId == strongSelf.context.account.peerId {
-////                        strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
-//
-//                        let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messageIds.map { id -> EnqueueMessage in
-//                            return .forward(source: id, grouping: .auto, attributes: [])
-//                        })
-//                            |> deliverOnMainQueue).start(next: { [weak self] messageIds in
-//                                if let strongSelf = self {
-//                                    let signals: [Signal<Bool, NoError>] = messageIds.compactMap({ id -> Signal<Bool, NoError>? in
-//                                        guard let id = id else {
-//                                            return nil
-//                                        }
-//                                        return strongSelf.context.account.pendingMessageManager.pendingMessageStatus(id)
-//                                            |> mapToSignal { status, _ -> Signal<Bool, NoError> in
-//                                                if status != nil {
-//                                                    return .never()
-//                                                } else {
-//                                                    return .single(true)
-//                                                }
-//                                            }
-//                                            |> take(1)
-//                                    })
-//                                    strongSelf.activeActionDisposable.set((combineLatest(signals)
-//                                        |> deliverOnMainQueue).start(completed: {
-//                                            guard let strongSelf = self else {
-//                                                return
-//                                            }
-//                                            strongSelf.controller?.present(OverlayStatusController(theme: strongSelf.presentationData.theme, type: .success), in: .window(.root))
-//                                        }))
-//                                }
-//                            })
-//                        if let peerSelectionController = peerSelectionController {
-//                            peerSelectionController.dismiss()
-//                        }
-//                    } else {
-//                        let _ = (strongSelf.context.account.postbox.transaction({ transaction -> Void in
-//                            transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
-//                                if let currentState = currentState as? ChatInterfaceState {
-//                                    return currentState.withUpdatedForwardMessageIds(Array(messageIds))
-//                                } else {
-//                                    return ChatInterfaceState().withUpdatedForwardMessageIds(Array(messageIds))
-//                                }
-//                            })
-//                        }) |> deliverOnMainQueue).start(completed: {
-//                            if let strongSelf = self {
+        if let messageIds = messageIds, !messageIds.isEmpty {
+            let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled]))
+            peerSelectionController.peerSelected = { [weak self, weak peerSelectionController] peerId in
+                if let strongSelf = self, let _ = peerSelectionController {
+                    if peerId == strongSelf.context.account.peerId {
+//                        strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
+
+                        let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messageIds.map { id -> EnqueueMessage in
+                            return .forward(source: id, grouping: .auto, attributes: [])
+                        })
+                            |> deliverOnMainQueue).start(next: { [weak self] messageIds in
+                                if let strongSelf = self {
+                                    let signals: [Signal<Bool, NoError>] = messageIds.compactMap({ id -> Signal<Bool, NoError>? in
+                                        guard let id = id else {
+                                            return nil
+                                        }
+                                        return strongSelf.context.account.pendingMessageManager.pendingMessageStatus(id)
+                                            |> mapToSignal { status, _ -> Signal<Bool, NoError> in
+                                                if status != nil {
+                                                    return .never()
+                                                } else {
+                                                    return .single(true)
+                                                }
+                                            }
+                                            |> take(1)
+                                    })
+                                    strongSelf.activeActionDisposable.set((combineLatest(signals)
+                                        |> deliverOnMainQueue).start(completed: {
+                                            guard let strongSelf = self else {
+                                                return
+                                            }
+                                            strongSelf.present?(OverlayStatusController(theme: strongSelf.presentationData.theme, type: .success), nil)
+                                        }))
+                                }
+                            })
+                        if let peerSelectionController = peerSelectionController {
+                            peerSelectionController.dismiss()
+                        }
+                    } else {
+                        let _ = (strongSelf.context.account.postbox.transaction({ transaction -> Void in
+                            transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
+                                if let currentState = currentState as? ChatInterfaceState {
+                                    return currentState.withUpdatedForwardMessageIds(Array(messageIds))
+                                } else {
+                                    return ChatInterfaceState().withUpdatedForwardMessageIds(Array(messageIds))
+                                }
+                            })
+                        }) |> deliverOnMainQueue).start(completed: {
+                            if let strongSelf = self {
 //                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
-//
-//                                let ready = Promise<Bool>()
-//                                strongSelf.activeActionDisposable.set((ready.get() |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { _ in
-//                                    if let peerSelectionController = peerSelectionController {
-//                                        peerSelectionController.dismiss()
-//                                    }
-//                                }))
-//
-//                                (strongSelf.controller?.navigationController as? NavigationController)?.replaceTopController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
-//                            }
-//                        })
-//                    }
-//                }
-//            }
-//            self.controller?.push(peerSelectionController)
-//        }
+
+                                let ready = Promise<Bool>()
+                                let signal = ready.get()
+                                |> filter({ $0 })
+                                |> take(1)
+                                |> deliverOnMainQueue
+                                
+                                strongSelf.activeActionDisposable.set(signal.start(next: { _ in
+                                    if let peerSelectionController = peerSelectionController {
+                                        peerSelectionController.dismiss()
+                                    }
+                                }))
+
+                                let controller = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
+                                strongSelf.navigationController?.replaceTopController(controller, animated: false, ready: ready)
+                            }
+                        })
+                    }
+                }
+            }
+            self.navigationController?.pushViewController(peerSelectionController)
+        }
     }
 }
 

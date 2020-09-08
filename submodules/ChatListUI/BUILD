@@ -52,6 +52,8 @@ swift_library(
         "//submodules/GalleryData:GalleryData",
         "//submodules/InstantPageUI:InstantPageUI",
         "//submodules/ListSectionHeaderNode:ListSectionHeaderNode",
+        "//submodules/ChatInterfaceState:ChatInterfaceState",
+        "//submodules/ShareController:ShareController",
     ],
     visibility = [
         "//visibility:public",

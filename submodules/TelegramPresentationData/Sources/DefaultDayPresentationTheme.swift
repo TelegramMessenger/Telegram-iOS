@@ -354,7 +354,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         controlColor: UIColor(rgb: 0x7e8791),
         accentTextColor: UIColor(rgb: 0x007ee5),
         backgroundColor: UIColor(rgb: 0xf7f7f7),
-        separatorColor: UIColor(rgb: 0xb1b1b1),
+        separatorColor: UIColor(rgb: 0xc8c7cc),
         badgeBackgroundColor: UIColor(rgb: 0xff3b30),
         badgeStrokeColor: UIColor(rgb: 0xff3b30),
         badgeTextColor: UIColor(rgb: 0xffffff),
@@ -374,7 +374,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         inputPlaceholderTextColor: UIColor(rgb: 0x8e8e93),
         inputIconColor: UIColor(rgb: 0x8e8e93),
         inputClearButtonColor: UIColor(rgb: 0x7b7b81),
-        separatorColor: UIColor(rgb: 0xb1b1b1)
+        separatorColor: UIColor(rgb: 0xc8c7cc)
     )
         
     let rootController = PresentationThemeRootController(
@@ -685,7 +685,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
     
     let historyNavigation = PresentationThemeChatHistoryNavigation(
         fillColor: UIColor(rgb: 0xf7f7f7),
-        strokeColor: UIColor(rgb: 0xb1b1b1),
+        strokeColor: UIColor(rgb: 0xc8c7cc),
         foregroundColor: UIColor(rgb: 0x88888d),
         badgeBackgroundColor: UIColor(rgb: 0x007ee5),
         badgeStrokeColor: UIColor(rgb: 0x007ee5),
@@ -751,7 +751,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
                 backgroundColor: UIColor(rgb: 0xffffff),
                 primaryTextColor: UIColor(rgb: 0x000000),
                 controlColor: UIColor(rgb: 0x7e8791),
-                separatorColor: UIColor(rgb: 0xb1b1b1)
+                separatorColor: UIColor(rgb: 0xc8c7cc)
             )
         )
     )

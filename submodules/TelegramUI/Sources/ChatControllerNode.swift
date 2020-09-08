@@ -13,6 +13,7 @@ import AccountContext
 import TelegramNotices
 import ReactionSelectionNode
 import TelegramUniversalVideoContent
+import ChatInterfaceState
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
