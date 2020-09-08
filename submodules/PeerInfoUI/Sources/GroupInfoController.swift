@@ -896,7 +896,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                 } else {
                     if cachedChannelData.flags.contains(.canChangeUsername) {
                         entries.append(GroupInfoEntry.groupTypeSetup(presentationData.theme, presentationData.strings.GroupInfo_GroupType, isPublic ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_TypePrivate))
-                        if let linkedDiscussionPeerId = cachedChannelData.linkedDiscussionPeerId, let peer = view.peers[linkedDiscussionPeerId] {
+                        if case let .known(maybeLinkedDiscussionPeerId) = cachedChannelData.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = view.peers[linkedDiscussionPeerId] {
                             let peerTitle: String
                             if let addressName = peer.addressName, !addressName.isEmpty {
                                 peerTitle = "@\(addressName)"

@@ -2825,7 +2825,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 })
             }
         case .discussion:
-            if let cachedData = self.data?.cachedData as? CachedChannelData, let linkedDiscussionPeerId = cachedData.linkedDiscussionPeerId {
+            if let cachedData = self.data?.cachedData as? CachedChannelData, case let .known(maybeLinkedDiscussionPeerId) = cachedData.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId {
                 if let navigationController = controller.navigationController as? NavigationController {
                     self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(linkedDiscussionPeerId)))
                 }

@@ -46,11 +46,11 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
         
         inner: for media in message.media {
             if let _ = media as? TelegramMediaImage {
-                result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, false))
+                result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, true))
             } else if let file = media as? TelegramMediaFile {
                 let isVideo = file.isVideo || (file.isAnimated && file.dimensions != nil)
                 if isVideo {
-                    result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, false))
+                    result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, true))
                 } else {
                     result.append((message, ChatMessageFileBubbleContentNode.self, itemAttributes, false))
                 }
@@ -62,7 +62,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
                     result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, false))
                 }
             } else if let _ = media as? TelegramMediaMap {
-                result.append((message, ChatMessageMapBubbleContentNode.self, itemAttributes, false))
+                result.append((message, ChatMessageMapBubbleContentNode.self, itemAttributes, true))
             } else if let _ = media as? TelegramMediaGame {
                 skipText = true
                 result.append((message, ChatMessageGameBubbleContentNode.self, itemAttributes, false))
@@ -134,8 +134,34 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
     }
     
     let firstMessage = item.content.firstMessage
-    if !isAction, let channel = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
-        result.append((firstMessage, ChatMessageCommentFooterContentNode.self, ChatMessageEntryAttributes(), true))
+    if !isAction {
+        var hasDiscussion = false
+        if let channel = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
+            hasDiscussion = true
+        }
+        
+        if hasDiscussion {
+            var canComment = false
+            if firstMessage.id.namespace == Namespaces.Message.Local {
+                canComment = true
+            } else {
+                for attribute in firstMessage.attributes {
+                    if let attribute = attribute as? ReplyThreadMessageAttribute, let commentsPeerId = attribute.commentsPeerId {
+                        switch item.associatedData.channelDiscussionGroup {
+                        case .unknown:
+                            canComment = true
+                        case let .known(groupId):
+                            canComment = groupId == commentsPeerId
+                        }
+                        break
+                    }
+                }
+            }
+            
+            if canComment {
+                result.append((firstMessage, ChatMessageCommentFooterContentNode.self, ChatMessageEntryAttributes(), false))
+            }
+        }
     }
     
     return result
@@ -1074,8 +1100,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             let topPosition: ChatMessageBubbleRelativePosition
             let bottomPosition: ChatMessageBubbleRelativePosition
             
-            topPosition = .Neighbour(false)
-            bottomPosition = .Neighbour(false)
+            if index != 0 && contentPropertiesAndPrepareLayouts[index - 1].3 {
+                topPosition = .Neighbour(true, .freeform)
+            } else {
+                topPosition = .Neighbour(false, .freeform)
+            }
+            bottomPosition = .Neighbour(false, .freeform)
             
             let prepareContentPosition: ChatMessageBubblePreparePosition
             if let mosaicRange = mosaicRange, mosaicRange.contains(index) {
@@ -1208,7 +1238,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         let firstNodeTopPosition: ChatMessageBubbleRelativePosition
         if displayHeader {
-            firstNodeTopPosition = .Neighbour(false)
+            firstNodeTopPosition = .Neighbour(false, .freeform)
         } else {
             firstNodeTopPosition = .None(topNodeMergeStatus)
         }
@@ -1502,7 +1532,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 if mosaicRange.upperBound - 1 == contentNodeCount - 1 {
                     lastMosaicBottomPosition = lastNodeTopPosition
                 } else {
-                    lastMosaicBottomPosition = .Neighbour(false)
+                    lastMosaicBottomPosition = .Neighbour(false, .freeform)
                 }
                 
                 if position.contains(.bottom), case .Neighbour = lastMosaicBottomPosition {
@@ -1567,22 +1597,22 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
 
                         if i == 0 {
                             topPosition = firstNodeTopPosition
+                        } else if i == contentNodeCount - 1 && i != 0 && contentPropertiesAndLayouts[i - 1].3 {
+                            topPosition = .Neighbour(true, .freeform)
                         } else {
-                            topPosition = .Neighbour(false)
+                            topPosition = .Neighbour(false, .freeform)
                         }
                         
                         if i == contentNodeCount - 1 {
                             bottomPosition = lastNodeTopPosition
-                        } else if i == contentNodeCount - 2 && contentPropertiesAndLayouts[contentNodeCount - 1].3 {
-                            bottomPosition = .Neighbour(true)
                         } else {
-                            bottomPosition = .Neighbour(false)
+                            bottomPosition = .Neighbour(false, .freeform)
                         }
                     
                         contentPosition = .linear(top: topPosition, bottom: bottomPosition)
                     case .mosaic:
                         assertionFailure()
-                        contentPosition = .linear(top: .Neighbour(false), bottom: .Neighbour(false))
+                        contentPosition = .linear(top: .Neighbour(false, .freeform), bottom: .Neighbour(false, .freeform))
                 }
                 let (contentNodeWidth, contentNodeFinalize) = contentNodeLayout(CGSize(width: maximumNodeWidth, height: CGFloat.greatestFiniteMagnitude), contentPosition)
                 #if DEBUG

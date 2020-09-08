@@ -637,7 +637,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 } else if let initialParticipant = initialParticipant, case let .creator(_, maybeAdminRights, _) = initialParticipant, let adminRights = maybeAdminRights {
                     currentRightsFlags = adminRights.rights.flags
                 } else {
-                    currentRightsFlags = accountUserRightsFlags.subtracting(.canAddAdmins)
+                    currentRightsFlags = accountUserRightsFlags.subtracting(.canAddAdmins).subtracting(.canBeAnonymous)
                 }
                 
                 var index = 0
@@ -667,7 +667,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 } else if let initialParticipant = initialParticipant, case let .member(_, _, maybeAdminRights, _, _) = initialParticipant, let adminRights = maybeAdminRights {
                     currentRightsFlags = adminRights.rights.flags
                 } else {
-                    currentRightsFlags = accountUserRightsFlags.subtracting(.canAddAdmins)
+                    currentRightsFlags = accountUserRightsFlags.subtracting(.canAddAdmins).subtracting(.canBeAnonymous)
                 }
                 
                 var index = 0

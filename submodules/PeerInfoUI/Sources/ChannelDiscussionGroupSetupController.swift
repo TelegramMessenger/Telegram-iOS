@@ -166,7 +166,7 @@ private func channelDiscussionGroupSetupControllerEntries(presentationData: Pres
     
     var entries: [ChannelDiscussionGroupSetupControllerEntry] = []
     
-    if let linkedDiscussionPeerId = cachedData.linkedDiscussionPeerId {
+    if case let .known(maybeLinkedDiscussionPeerId) = cachedData.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId {
         if let group = view.peers[linkedDiscussionPeerId] {
             if case .group = peer.info {
                 entries.append(.header(presentationData.theme, presentationData.strings, group.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), true, presentationData.strings.Channel_DiscussionGroup_HeaderLabel))
@@ -299,7 +299,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                 return
             }
             
-            if groupId == cachedData.linkedDiscussionPeerId {
+            if case let .known(maybeLinkedDiscussionPeerId) = cachedData.linkedDiscussionPeerId, maybeLinkedDiscussionPeerId == groupId {
                 navigateToGroupImpl?(groupId)
                 return
             }
@@ -483,7 +483,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
             let applyPeerId: PeerId
             if case .broadcast = peer.info {
                 applyPeerId = peerId
-            } else if let linkedDiscussionPeerId = cachedData.linkedDiscussionPeerId {
+            } else if case let .known(maybeLinkedDiscussionPeerId) = cachedData.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId {
                 applyPeerId = linkedDiscussionPeerId
             } else {
                 return

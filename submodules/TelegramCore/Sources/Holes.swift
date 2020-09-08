@@ -138,9 +138,49 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
     }
     |> take(1)
     |> mapToSignal { _ -> Signal<IndexSet, NoError> in
-        return postbox.loadedPeerWithId(peerId)
-        |> take(1)
-        |> mapToSignal { peer in
+        return postbox.transaction { transaction -> (Peer?, Int32) in
+            var hash: Int32 = 0
+            switch space {
+            case .everywhere:
+                if let threadId = threadId {
+                    let offsetId: Int32
+                    let addOffset: Int32
+                    let selectedLimit = count
+                    let maxId: Int32
+                    let minId: Int32
+                    
+                    switch direction {
+                        case let .range(start, end):
+                            if start.id <= end.id {
+                                offsetId = start.id <= 1 ? 1 : (start.id - 1)
+                                addOffset = Int32(-selectedLimit)
+                                maxId = end.id
+                                minId = start.id - 1
+                            } else {
+                                offsetId = start.id == Int32.max ? start.id : (start.id + 1)
+                                addOffset = 0
+                                maxId = start.id == Int32.max ? start.id : (start.id + 1)
+                                minId = end.id
+                            }
+                        case let .aroundId(id):
+                            offsetId = id.id
+                            addOffset = Int32(-selectedLimit / 2)
+                            maxId = Int32.max
+                            minId = 1
+                    }
+                    
+                    //request = source.request(Api.functions.messages.getReplies(peer: inputPeer, msgId: threadId.id, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: 0))
+                }
+            default:
+                break
+            }
+            
+            return (transaction.getPeer(peerId), hash)
+        }
+        |> mapToSignal { (peer, hash) -> Signal<IndexSet, NoError> in
+            guard let peer = peer else {
+                return .single(IndexSet())
+            }
             if let inputPeer = forceApiInputPeer(peer) {
                 print("fetchMessageHistoryHole for \(peer.id) \(peer.debugDisplayTitle) \(direction) space \(space)")
                 Logger.shared.log("fetchMessageHistoryHole", "fetch for \(peer.id) \(peer.debugDisplayTitle) \(direction) space \(space)")
@@ -197,7 +237,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                                     minMaxRange = 1 ... (Int32.max - 1)
                             }
                             
-                            request = source.request(Api.functions.messages.getReplies(peer: inputPeer, msgId: threadId.id, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: 0))
+                            request = source.request(Api.functions.messages.getReplies(peer: inputPeer, msgId: threadId.id, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: hash))
                         } else {
                             let offsetId: Int32
                             let addOffset: Int32

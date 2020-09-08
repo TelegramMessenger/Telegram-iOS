@@ -948,6 +948,14 @@ public final class Transaction {
         return postbox.messageHistoryTagsTable.earlierIndices(tag: tag, peerId: peerId, namespace: namespace, index: nil, includeFrom: false, count: 1000)
     }
     
+    public func getMessagesWithThreadId(peerId: PeerId, namespace: MessageId.Namespace, threadId: Int64, from: MessageIndex, includeFrom: Bool, to: MessageIndex, limit: Int) -> [Message] {
+        assert(!self.disposed)
+        guard let postbox = self.postbox else {
+            return []
+        }
+        return postbox.messageHistoryTable.fetch(peerId: peerId, namespace: namespace, tag: nil, threadId: threadId, from: from, includeFrom: includeFrom, to: to, limit: limit).map(postbox.renderIntermediateMessage(_:))
+    }
+    
     public func scanMessages(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags, _ f: (Message) -> Bool) {
         assert(!self.disposed)
         self.postbox?.scanMessages(peerId: peerId, namespace: namespace, tag: tag, f)

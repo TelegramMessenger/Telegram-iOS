@@ -143,7 +143,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     case let .linear(_, neighbor):
                         if case .None = neighbor {
                             displayStatus = true
-                        } else if case .Neighbour(true) = neighbor {
+                        } else if case .Neighbour(true, _) = neighbor {
                             displayStatus = true
                         }
                     default:

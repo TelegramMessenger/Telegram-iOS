@@ -497,7 +497,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
             
             let discussionGroupTitle: String
             if let cachedData = view.cachedData as? CachedChannelData {
-                if let linkedDiscussionPeerId = cachedData.linkedDiscussionPeerId, let peer = view.peers[linkedDiscussionPeerId] {
+                if case let .known(maybeLinkedDiscussionPeerId) = cachedData.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = view.peers[linkedDiscussionPeerId] {
                     if let addressName = peer.addressName, !addressName.isEmpty {
                         discussionGroupTitle = "@\(addressName)"
                     } else {
@@ -532,7 +532,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
             if let _ = state.editingState, let adminRights = peer.adminRights, !adminRights.isEmpty {
                 let discussionGroupTitle: String?
                 if let cachedData = view.cachedData as? CachedChannelData {
-                    if let linkedDiscussionPeerId = cachedData.linkedDiscussionPeerId, let peer = view.peers[linkedDiscussionPeerId] {
+                    if case let .known(maybeLinkedDiscussionPeerId) = cachedData.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = view.peers[linkedDiscussionPeerId] {
                         if let addressName = peer.addressName, !addressName.isEmpty {
                             discussionGroupTitle = "@\(addressName)"
                         } else {
@@ -951,7 +951,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                 if canEditChannel {
                     hasSomethingToEdit = true
                 } else if let adminRights = peer.adminRights, !adminRights.isEmpty {
-                    if let cachedData = view.cachedData as? CachedChannelData, let _ = cachedData.linkedDiscussionPeerId {
+                    if let cachedData = view.cachedData as? CachedChannelData, case let .known(maybeLinkedDiscussionPeerId) = cachedData.linkedDiscussionPeerId, let _ = maybeLinkedDiscussionPeerId {
                         hasSomethingToEdit = true
                     }
                 }
