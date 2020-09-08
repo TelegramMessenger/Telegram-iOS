@@ -5753,6 +5753,7 @@ Any member of this group will be able to see messages in the channel.";
 "ChatList.Search.NoResults" = "No Results";
 "ChatList.Search.NoResultsDescription" = "There were no results for \"%@\".\nTry a new search.";
 
+<<<<<<< HEAD
 "ChatList.Search.Messages_0" = "%@ messages";
 "ChatList.Search.Messages_1" = "%@ message";
 "ChatList.Search.Messages_2" = "%@ messages";
@@ -5787,5 +5788,6 @@ Any member of this group will be able to see messages in the channel.";
 "ChatList.Search.Music_3_10" = "%@ audio files";
 "ChatList.Search.Music_many" = "%@ audio files";
 "ChatList.Search.Music_any" = "%@ audio files";
-
+=======
 "Conversation.InputTextAnonymousPlaceholder" = "Send anonymously";
+>>>>>>> features/comments

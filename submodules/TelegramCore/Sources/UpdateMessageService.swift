@@ -57,17 +57,14 @@ class UpdateMessageService: NSObject, MTMessageService {
                 if groups.count != 0 {
                     self.putNext(groups)
                 }
-            case let .updateShortChatMessage(flags, id, fromId, chatId, message, pts, ptsCount, date, fwdFrom, viaBotId, replyToMsgId, entities):
-                let replyHeader = replyToMsgId.flatMap { replyToMsgId -> Api.MessageReplyHeader in
-                    return Api.MessageReplyHeader.messageReplyHeader(flags: 0, replyToMsgId: replyToMsgId, replyToPeerId: nil, replyToTopId: nil)
-                }
+            case let .updateShortChatMessage(flags, id, fromId, chatId, message, pts, ptsCount, date, fwdFrom, viaBotId, replyHeader, entities):
                 let generatedMessage = Api.Message.message(flags: flags, id: id, fromId: .peerChat(chatId: fromId), peerId: Api.Peer.peerChat(chatId: chatId), fwdFrom: fwdFrom, viaBotId: viaBotId, replyTo: replyHeader, date: date, message: message, media: Api.MessageMedia.messageMediaEmpty, replyMarkup: nil, entities: entities, views: nil, forwards: nil, replies: nil, editDate: nil, postAuthor: nil, groupedId: nil, restrictionReason: nil)
                 let update = Api.Update.updateNewMessage(message: generatedMessage, pts: pts, ptsCount: ptsCount)
                 let groups = groupUpdates([update], users: [], chats: [], date: date, seqRange: nil)
                 if groups.count != 0 {
                     self.putNext(groups)
                 }
-            case let .updateShortMessage(flags, id, userId, message, pts, ptsCount, date, fwdFrom, viaBotId, replyToMsgId, entities):
+            case let .updateShortMessage(flags, id, userId, message, pts, ptsCount, date, fwdFrom, viaBotId, replyHeader, entities):
                 let generatedFromId: Api.Peer
                 if (Int(flags) & 1 << 1) != 0 {
                     generatedFromId = Api.Peer.peerUser(userId: self.peerId.id)
@@ -76,10 +73,6 @@ class UpdateMessageService: NSObject, MTMessageService {
                 }
                 
                 let generatedPeerId = Api.Peer.peerUser(userId: userId)
-                
-                let replyHeader = replyToMsgId.flatMap { replyToMsgId -> Api.MessageReplyHeader in
-                    return Api.MessageReplyHeader.messageReplyHeader(flags: 0, replyToMsgId: replyToMsgId, replyToPeerId: nil, replyToTopId: nil)
-                }
                 
                 let generatedMessage = Api.Message.message(flags: flags, id: id, fromId: generatedFromId, peerId: generatedPeerId, fwdFrom: fwdFrom, viaBotId: viaBotId, replyTo: replyHeader, date: date, message: message, media: Api.MessageMedia.messageMediaEmpty, replyMarkup: nil, entities: entities, views: nil, forwards: nil, replies: nil, editDate: nil, postAuthor: nil, groupedId: nil, restrictionReason: nil)
                 let update = Api.Update.updateNewMessage(message: generatedMessage, pts: pts, ptsCount: ptsCount)

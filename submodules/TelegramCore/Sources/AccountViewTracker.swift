@@ -624,7 +624,7 @@ public final class AccountViewTracker {
                                                                     }
                                                                     repliesCount = repliesCountValue
                                                                     if let recentRepliers = recentRepliers {
-                                                                        recentRepliersPeerIds = recentRepliers.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: $0) }
+                                                                        recentRepliersPeerIds = recentRepliers.map { $0.peerId }
                                                                     } else {
                                                                         recentRepliersPeerIds = nil
                                                                     }

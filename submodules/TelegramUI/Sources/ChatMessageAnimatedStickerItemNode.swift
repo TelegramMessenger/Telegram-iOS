@@ -32,7 +32,7 @@ extension AnimatedStickerNode: GenericAnimatedStickerNode {
     
 }
 
-class ChatMessageShareButton: HighlightTrackingButtonNode {
+class ChatMessageShareButton: HighlightableButtonNode {
     private let backgroundNode: ASImageNode
     private let iconNode: ASImageNode
     
@@ -74,17 +74,23 @@ class ChatMessageShareButton: HighlightTrackingButtonNode {
             
             let graphics = PresentationResourcesChat.additionalGraphics(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
             var updatedShareButtonBackground: UIImage?
+            var updatedIconImage: UIImage?
             if isReplies {
-                updatedShareButtonBackground = chatBubbleActionButtonImage(fillColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.message.shareButtonFillColor, wallpaper: presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.message.shareButtonStrokeColor, wallpaper: presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: presentationData.theme.wallpaper), image: UIImage(bundleImageName: "Chat/Message/FreeRepliesIcon"), iconOffset: CGPoint(x: 0.5, y: 1.0))?.stretchableImage(withLeftCapWidth: 29 / 2, topCapHeight: 29 / 2)
+                updatedShareButtonBackground = PresentationResourcesChat.chatFreeCommentButtonBackground(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+                updatedIconImage = PresentationResourcesChat.chatFreeCommentButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             } else if message.id.peerId == account.peerId {
                 updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
             } else {
                 updatedShareButtonBackground = graphics.chatBubbleShareButtonImage
             }
             self.backgroundNode.image = updatedShareButtonBackground
+            self.iconNode.image = updatedIconImage
         }
-        var size = CGSize(width: 29.0, height: 29.0)
+        var size = CGSize(width: 30.0, height: 30.0)
+        var offsetIcon = false
         if isReplies, replyCount > 0 {
+            offsetIcon = true
+            
             let textNode: ImmediateTextNode
             if let current = self.textNode {
                 textNode = current
@@ -94,11 +100,29 @@ class ChatMessageShareButton: HighlightTrackingButtonNode {
                 self.addSubnode(textNode)
             }
             
+            let textColor = bubbleVariableColor(variableColor: presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: presentationData.theme.wallpaper)
+            
+            let countString: String
+            if replyCount >= 1000 * 1000 {
+                countString = "\(replyCount / 1000_000)M"
+            } else if replyCount >= 1000 {
+                countString = "\(replyCount / 1000)K"
+            } else {
+                countString = "\(replyCount)"
+            }
+            
+            textNode.attributedText = NSAttributedString(string: countString, font: Font.regular(11.0), textColor: textColor)
+            let textSize = textNode.updateLayout(CGSize(width: 100.0, height: 100.0))
+            size.height += textSize.height - 1.0
+            textNode.frame = CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: size.height - textSize.height - 4.0), size: textSize)
         } else if let textNode = self.textNode {
             self.textNode = nil
             textNode.removeFromSupernode()
         }
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        if let image = self.iconNode.image {
+            self.iconNode.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.width - image.size.width) / 2.0) - (offsetIcon ? 1.0 : 0.0)), size: image.size)
+        }
         return size
     }
 }
@@ -898,7 +922,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             updatedShareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
                         }
                         let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, message: item.message, account: item.context.account)
-                        updatedShareButtonNode.frame = CGRect(origin: CGPoint(x: updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - 30.0), size: buttonSize)
+                        updatedShareButtonNode.frame = CGRect(origin: CGPoint(x: updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - buttonSize.height), size: buttonSize)
                     } else if let shareButtonNode = strongSelf.shareButtonNode {
                         shareButtonNode.removeFromSupernode()
                         strongSelf.shareButtonNode = nil

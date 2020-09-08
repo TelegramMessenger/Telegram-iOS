@@ -3743,6 +3743,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                     } else if case let .peer(peerId) = strongSelf.chatLocation {
                         strongSelf.navigateToMessage(messageLocation: .upperBound(peerId), animated: true)
+                     } else if case .replyThread = strongSelf.chatLocation {
+                        strongSelf.scrollToEndOfHistory()
                     } else {
                         strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                     }
@@ -8068,7 +8070,67 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func scrollToEndOfHistory() {
-        self.chatDisplayNode.historyNode.scrollToEndOfHistory()
+        let locationInput = ChatHistoryLocationInput(content: .Scroll(index: .upperBound, anchorIndex: .upperBound, sourceIndex: .lowerBound, scrollPosition: .top(0.0), animated: true), id: 0)
+        
+        let historyView = preloadedChatHistoryViewForLocation(locationInput, context: self.context, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
+        let signal = historyView
+        |> mapToSignal { historyView -> Signal<(MessageIndex?, Bool), NoError> in
+            switch historyView {
+            case .Loading:
+                return .single((nil, true))
+            case .HistoryView:
+                return .single((nil, false))
+            }
+        }
+        |> take(until: { index in
+            return SignalTakeAction(passthrough: true, complete: !index.1)
+        })
+        
+        var cancelImpl: (() -> Void)?
+        let presentationData = self.presentationData
+        let displayTime = CACurrentMediaTime()
+        let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                if CACurrentMediaTime() - displayTime > 1.5 {
+                    cancelImpl?()
+                }
+            }))
+            self?.present(controller, in: .window(.root))
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.05, queue: Queue.mainQueue())
+        let progressDisposable = MetaDisposable()
+        var progressStarted = false
+        self.messageIndexDisposable.set((signal
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] index in
+            if index.1 {
+                if !progressStarted {
+                    progressStarted = true
+                    progressDisposable.set(progressSignal.start())
+                }
+            }
+        }, completed: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.loadingMessage.set(false)
+                strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
+            }
+        }))
+        cancelImpl = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.loadingMessage.set(false)
+                strongSelf.messageIndexDisposable.set(nil)
+            }
+        }
     }
     
     func updateDownButtonVisibility() {
