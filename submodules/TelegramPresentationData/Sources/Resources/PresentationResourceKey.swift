@@ -229,6 +229,9 @@ public enum PresentationResourceKey: Int32 {
     case groupInfoMembersIcon
     
     case emptyChatListCheckIcon
+    
+    case chatFreeCommentButtonBackground
+    case chatFreeCommentButtonIcon
 }
 
 public enum PresentationResourceParameterKey: Hashable {

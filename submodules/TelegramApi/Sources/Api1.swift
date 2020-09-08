@@ -15841,12 +15841,12 @@ public extension Api {
     }
     public enum Updates: TypeConstructorDescription {
         case updatesTooLong
-        case updateShortMessage(flags: Int32, id: Int32, userId: Int32, message: String, pts: Int32, ptsCount: Int32, date: Int32, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyToMsgId: Int32?, entities: [Api.MessageEntity]?)
-        case updateShortChatMessage(flags: Int32, id: Int32, fromId: Int32, chatId: Int32, message: String, pts: Int32, ptsCount: Int32, date: Int32, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyToMsgId: Int32?, entities: [Api.MessageEntity]?)
         case updateShort(update: Api.Update, date: Int32)
         case updatesCombined(updates: [Api.Update], users: [Api.User], chats: [Api.Chat], date: Int32, seqStart: Int32, seq: Int32)
         case updates(updates: [Api.Update], users: [Api.User], chats: [Api.Chat], date: Int32, seq: Int32)
         case updateShortSentMessage(flags: Int32, id: Int32, pts: Int32, ptsCount: Int32, date: Int32, media: Api.MessageMedia?, entities: [Api.MessageEntity]?)
+        case updateShortMessage(flags: Int32, id: Int32, userId: Int32, message: String, pts: Int32, ptsCount: Int32, date: Int32, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyTo: Api.MessageReplyHeader?, entities: [Api.MessageEntity]?)
+        case updateShortChatMessage(flags: Int32, id: Int32, fromId: Int32, chatId: Int32, message: String, pts: Int32, ptsCount: Int32, date: Int32, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyTo: Api.MessageReplyHeader?, entities: [Api.MessageEntity]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -15855,47 +15855,6 @@ public extension Api {
                         buffer.appendInt32(-484987010)
                     }
                     
-                    break
-                case .updateShortMessage(let flags, let id, let userId, let message, let pts, let ptsCount, let date, let fwdFrom, let viaBotId, let replyToMsgId, let entities):
-                    if boxed {
-                        buffer.appendInt32(-1857044719)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    serializeInt32(userId, buffer: buffer, boxed: false)
-                    serializeString(message, buffer: buffer, boxed: false)
-                    serializeInt32(pts, buffer: buffer, boxed: false)
-                    serializeInt32(ptsCount, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 2) != 0 {fwdFrom!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 11) != 0 {serializeInt32(viaBotId!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(replyToMsgId!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 7) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(entities!.count))
-                    for item in entities! {
-                        item.serialize(buffer, true)
-                    }}
-                    break
-                case .updateShortChatMessage(let flags, let id, let fromId, let chatId, let message, let pts, let ptsCount, let date, let fwdFrom, let viaBotId, let replyToMsgId, let entities):
-                    if boxed {
-                        buffer.appendInt32(377562760)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    serializeInt32(fromId, buffer: buffer, boxed: false)
-                    serializeInt32(chatId, buffer: buffer, boxed: false)
-                    serializeString(message, buffer: buffer, boxed: false)
-                    serializeInt32(pts, buffer: buffer, boxed: false)
-                    serializeInt32(ptsCount, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 2) != 0 {fwdFrom!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 11) != 0 {serializeInt32(viaBotId!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(replyToMsgId!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 7) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(entities!.count))
-                    for item in entities! {
-                        item.serialize(buffer, true)
-                    }}
                     break
                 case .updateShort(let update, let date):
                     if boxed {
@@ -15965,6 +15924,47 @@ public extension Api {
                         item.serialize(buffer, true)
                     }}
                     break
+                case .updateShortMessage(let flags, let id, let userId, let message, let pts, let ptsCount, let date, let fwdFrom, let viaBotId, let replyTo, let entities):
+                    if boxed {
+                        buffer.appendInt32(580309704)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    serializeString(message, buffer: buffer, boxed: false)
+                    serializeInt32(pts, buffer: buffer, boxed: false)
+                    serializeInt32(ptsCount, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {fwdFrom!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 11) != 0 {serializeInt32(viaBotId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {replyTo!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 7) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(entities!.count))
+                    for item in entities! {
+                        item.serialize(buffer, true)
+                    }}
+                    break
+                case .updateShortChatMessage(let flags, let id, let fromId, let chatId, let message, let pts, let ptsCount, let date, let fwdFrom, let viaBotId, let replyTo, let entities):
+                    if boxed {
+                        buffer.appendInt32(1076714939)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    serializeInt32(fromId, buffer: buffer, boxed: false)
+                    serializeInt32(chatId, buffer: buffer, boxed: false)
+                    serializeString(message, buffer: buffer, boxed: false)
+                    serializeInt32(pts, buffer: buffer, boxed: false)
+                    serializeInt32(ptsCount, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {fwdFrom!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 11) != 0 {serializeInt32(viaBotId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {replyTo!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 7) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(entities!.count))
+                    for item in entities! {
+                        item.serialize(buffer, true)
+                    }}
+                    break
     }
     }
     
@@ -15972,10 +15972,6 @@ public extension Api {
         switch self {
                 case .updatesTooLong:
                 return ("updatesTooLong", [])
-                case .updateShortMessage(let flags, let id, let userId, let message, let pts, let ptsCount, let date, let fwdFrom, let viaBotId, let replyToMsgId, let entities):
-                return ("updateShortMessage", [("flags", flags), ("id", id), ("userId", userId), ("message", message), ("pts", pts), ("ptsCount", ptsCount), ("date", date), ("fwdFrom", fwdFrom), ("viaBotId", viaBotId), ("replyToMsgId", replyToMsgId), ("entities", entities)])
-                case .updateShortChatMessage(let flags, let id, let fromId, let chatId, let message, let pts, let ptsCount, let date, let fwdFrom, let viaBotId, let replyToMsgId, let entities):
-                return ("updateShortChatMessage", [("flags", flags), ("id", id), ("fromId", fromId), ("chatId", chatId), ("message", message), ("pts", pts), ("ptsCount", ptsCount), ("date", date), ("fwdFrom", fwdFrom), ("viaBotId", viaBotId), ("replyToMsgId", replyToMsgId), ("entities", entities)])
                 case .updateShort(let update, let date):
                 return ("updateShort", [("update", update), ("date", date)])
                 case .updatesCombined(let updates, let users, let chats, let date, let seqStart, let seq):
@@ -15984,104 +15980,15 @@ public extension Api {
                 return ("updates", [("updates", updates), ("users", users), ("chats", chats), ("date", date), ("seq", seq)])
                 case .updateShortSentMessage(let flags, let id, let pts, let ptsCount, let date, let media, let entities):
                 return ("updateShortSentMessage", [("flags", flags), ("id", id), ("pts", pts), ("ptsCount", ptsCount), ("date", date), ("media", media), ("entities", entities)])
+                case .updateShortMessage(let flags, let id, let userId, let message, let pts, let ptsCount, let date, let fwdFrom, let viaBotId, let replyTo, let entities):
+                return ("updateShortMessage", [("flags", flags), ("id", id), ("userId", userId), ("message", message), ("pts", pts), ("ptsCount", ptsCount), ("date", date), ("fwdFrom", fwdFrom), ("viaBotId", viaBotId), ("replyTo", replyTo), ("entities", entities)])
+                case .updateShortChatMessage(let flags, let id, let fromId, let chatId, let message, let pts, let ptsCount, let date, let fwdFrom, let viaBotId, let replyTo, let entities):
+                return ("updateShortChatMessage", [("flags", flags), ("id", id), ("fromId", fromId), ("chatId", chatId), ("message", message), ("pts", pts), ("ptsCount", ptsCount), ("date", date), ("fwdFrom", fwdFrom), ("viaBotId", viaBotId), ("replyTo", replyTo), ("entities", entities)])
     }
     }
     
         public static func parse_updatesTooLong(_ reader: BufferReader) -> Updates? {
             return Api.Updates.updatesTooLong
-        }
-        public static func parse_updateShortMessage(_ reader: BufferReader) -> Updates? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: String?
-            _4 = parseString(reader)
-            var _5: Int32?
-            _5 = reader.readInt32()
-            var _6: Int32?
-            _6 = reader.readInt32()
-            var _7: Int32?
-            _7 = reader.readInt32()
-            var _8: Api.MessageFwdHeader?
-            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
-                _8 = Api.parse(reader, signature: signature) as? Api.MessageFwdHeader
-            } }
-            var _9: Int32?
-            if Int(_1!) & Int(1 << 11) != 0 {_9 = reader.readInt32() }
-            var _10: Int32?
-            if Int(_1!) & Int(1 << 3) != 0 {_10 = reader.readInt32() }
-            var _11: [Api.MessageEntity]?
-            if Int(_1!) & Int(1 << 7) != 0 {if let _ = reader.readInt32() {
-                _11 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
-            } }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = _7 != nil
-            let _c8 = (Int(_1!) & Int(1 << 2) == 0) || _8 != nil
-            let _c9 = (Int(_1!) & Int(1 << 11) == 0) || _9 != nil
-            let _c10 = (Int(_1!) & Int(1 << 3) == 0) || _10 != nil
-            let _c11 = (Int(_1!) & Int(1 << 7) == 0) || _11 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
-                return Api.Updates.updateShortMessage(flags: _1!, id: _2!, userId: _3!, message: _4!, pts: _5!, ptsCount: _6!, date: _7!, fwdFrom: _8, viaBotId: _9, replyToMsgId: _10, entities: _11)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_updateShortChatMessage(_ reader: BufferReader) -> Updates? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            var _5: String?
-            _5 = parseString(reader)
-            var _6: Int32?
-            _6 = reader.readInt32()
-            var _7: Int32?
-            _7 = reader.readInt32()
-            var _8: Int32?
-            _8 = reader.readInt32()
-            var _9: Api.MessageFwdHeader?
-            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
-                _9 = Api.parse(reader, signature: signature) as? Api.MessageFwdHeader
-            } }
-            var _10: Int32?
-            if Int(_1!) & Int(1 << 11) != 0 {_10 = reader.readInt32() }
-            var _11: Int32?
-            if Int(_1!) & Int(1 << 3) != 0 {_11 = reader.readInt32() }
-            var _12: [Api.MessageEntity]?
-            if Int(_1!) & Int(1 << 7) != 0 {if let _ = reader.readInt32() {
-                _12 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
-            } }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = _7 != nil
-            let _c8 = _8 != nil
-            let _c9 = (Int(_1!) & Int(1 << 2) == 0) || _9 != nil
-            let _c10 = (Int(_1!) & Int(1 << 11) == 0) || _10 != nil
-            let _c11 = (Int(_1!) & Int(1 << 3) == 0) || _11 != nil
-            let _c12 = (Int(_1!) & Int(1 << 7) == 0) || _12 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
-                return Api.Updates.updateShortChatMessage(flags: _1!, id: _2!, fromId: _3!, chatId: _4!, message: _5!, pts: _6!, ptsCount: _7!, date: _8!, fwdFrom: _9, viaBotId: _10, replyToMsgId: _11, entities: _12)
-            }
-            else {
-                return nil
-            }
         }
         public static func parse_updateShort(_ reader: BufferReader) -> Updates? {
             var _1: Api.Update?
@@ -16188,6 +16095,103 @@ public extension Api {
             let _c7 = (Int(_1!) & Int(1 << 7) == 0) || _7 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
                 return Api.Updates.updateShortSentMessage(flags: _1!, id: _2!, pts: _3!, ptsCount: _4!, date: _5!, media: _6, entities: _7)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateShortMessage(_ reader: BufferReader) -> Updates? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: Int32?
+            _6 = reader.readInt32()
+            var _7: Int32?
+            _7 = reader.readInt32()
+            var _8: Api.MessageFwdHeader?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.MessageFwdHeader
+            } }
+            var _9: Int32?
+            if Int(_1!) & Int(1 << 11) != 0 {_9 = reader.readInt32() }
+            var _10: Api.MessageReplyHeader?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _10 = Api.parse(reader, signature: signature) as? Api.MessageReplyHeader
+            } }
+            var _11: [Api.MessageEntity]?
+            if Int(_1!) & Int(1 << 7) != 0 {if let _ = reader.readInt32() {
+                _11 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 2) == 0) || _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 11) == 0) || _9 != nil
+            let _c10 = (Int(_1!) & Int(1 << 3) == 0) || _10 != nil
+            let _c11 = (Int(_1!) & Int(1 << 7) == 0) || _11 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
+                return Api.Updates.updateShortMessage(flags: _1!, id: _2!, userId: _3!, message: _4!, pts: _5!, ptsCount: _6!, date: _7!, fwdFrom: _8, viaBotId: _9, replyTo: _10, entities: _11)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateShortChatMessage(_ reader: BufferReader) -> Updates? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: Int32?
+            _6 = reader.readInt32()
+            var _7: Int32?
+            _7 = reader.readInt32()
+            var _8: Int32?
+            _8 = reader.readInt32()
+            var _9: Api.MessageFwdHeader?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _9 = Api.parse(reader, signature: signature) as? Api.MessageFwdHeader
+            } }
+            var _10: Int32?
+            if Int(_1!) & Int(1 << 11) != 0 {_10 = reader.readInt32() }
+            var _11: Api.MessageReplyHeader?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _11 = Api.parse(reader, signature: signature) as? Api.MessageReplyHeader
+            } }
+            var _12: [Api.MessageEntity]?
+            if Int(_1!) & Int(1 << 7) != 0 {if let _ = reader.readInt32() {
+                _12 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 2) == 0) || _9 != nil
+            let _c10 = (Int(_1!) & Int(1 << 11) == 0) || _10 != nil
+            let _c11 = (Int(_1!) & Int(1 << 3) == 0) || _11 != nil
+            let _c12 = (Int(_1!) & Int(1 << 7) == 0) || _12 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
+                return Api.Updates.updateShortChatMessage(flags: _1!, id: _2!, fromId: _3!, chatId: _4!, message: _5!, pts: _6!, ptsCount: _7!, date: _8!, fwdFrom: _9, viaBotId: _10, replyTo: _11, entities: _12)
             }
             else {
                 return nil
@@ -17422,7 +17426,7 @@ public extension Api {
     public enum Message: TypeConstructorDescription {
         case messageEmpty(id: Int32)
         case message(flags: Int32, id: Int32, fromId: Api.Peer, peerId: Api.Peer, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int32?, replyTo: Api.MessageReplyHeader?, date: Int32, message: String, media: Api.MessageMedia?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, views: Int32?, forwards: Int32?, replies: Api.MessageReplies?, editDate: Int32?, postAuthor: String?, groupedId: Int64?, restrictionReason: [Api.RestrictionReason]?)
-        case messageService(flags: Int32, id: Int32, fromId: Api.Peer, peerId: Api.Peer, replyToMsgId: Int32?, date: Int32, action: Api.MessageAction)
+        case messageService(flags: Int32, id: Int32, fromId: Api.Peer, peerId: Api.Peer, replyTo: Api.MessageReplyHeader?, date: Int32, action: Api.MessageAction)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -17464,15 +17468,15 @@ public extension Api {
                         item.serialize(buffer, true)
                     }}
                     break
-                case .messageService(let flags, let id, let fromId, let peerId, let replyToMsgId, let date, let action):
+                case .messageService(let flags, let id, let fromId, let peerId, let replyTo, let date, let action):
                     if boxed {
-                        buffer.appendInt32(797820163)
+                        buffer.appendInt32(-1245570157)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
                     fromId.serialize(buffer, true)
                     peerId.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(replyToMsgId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {replyTo!.serialize(buffer, true)}
                     serializeInt32(date, buffer: buffer, boxed: false)
                     action.serialize(buffer, true)
                     break
@@ -17485,8 +17489,8 @@ public extension Api {
                 return ("messageEmpty", [("id", id)])
                 case .message(let flags, let id, let fromId, let peerId, let fwdFrom, let viaBotId, let replyTo, let date, let message, let media, let replyMarkup, let entities, let views, let forwards, let replies, let editDate, let postAuthor, let groupedId, let restrictionReason):
                 return ("message", [("flags", flags), ("id", id), ("fromId", fromId), ("peerId", peerId), ("fwdFrom", fwdFrom), ("viaBotId", viaBotId), ("replyTo", replyTo), ("date", date), ("message", message), ("media", media), ("replyMarkup", replyMarkup), ("entities", entities), ("views", views), ("forwards", forwards), ("replies", replies), ("editDate", editDate), ("postAuthor", postAuthor), ("groupedId", groupedId), ("restrictionReason", restrictionReason)])
-                case .messageService(let flags, let id, let fromId, let peerId, let replyToMsgId, let date, let action):
-                return ("messageService", [("flags", flags), ("id", id), ("fromId", fromId), ("peerId", peerId), ("replyToMsgId", replyToMsgId), ("date", date), ("action", action)])
+                case .messageService(let flags, let id, let fromId, let peerId, let replyTo, let date, let action):
+                return ("messageService", [("flags", flags), ("id", id), ("fromId", fromId), ("peerId", peerId), ("replyTo", replyTo), ("date", date), ("action", action)])
     }
     }
     
@@ -17597,8 +17601,10 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _4 = Api.parse(reader, signature: signature) as? Api.Peer
             }
-            var _5: Int32?
-            if Int(_1!) & Int(1 << 3) != 0 {_5 = reader.readInt32() }
+            var _5: Api.MessageReplyHeader?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.MessageReplyHeader
+            } }
             var _6: Int32?
             _6 = reader.readInt32()
             var _7: Api.MessageAction?
@@ -17613,7 +17619,7 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.Message.messageService(flags: _1!, id: _2!, fromId: _3!, peerId: _4!, replyToMsgId: _5, date: _6!, action: _7!)
+                return Api.Message.messageService(flags: _1!, id: _2!, fromId: _3!, peerId: _4!, replyTo: _5, date: _6!, action: _7!)
             }
             else {
                 return nil

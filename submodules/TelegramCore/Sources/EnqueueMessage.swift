@@ -366,8 +366,14 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     }
                 
                     let authorId: PeerId?
-                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                        authorId = peer.id
+                    if let peer = peer as? TelegramChannel {
+                        if case .broadcast = peer.info {
+                            authorId = peer.id
+                        } else if case .group = peer.info, peer.hasPermission(.canBeAnonymous) {
+                            authorId = peer.id
+                        } else {
+                            authorId = account.peerId
+                        }
                     }  else {
                         authorId = account.peerId
                     }
@@ -529,8 +535,14 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         }
                         
                         let authorId: PeerId?
-                        if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                            authorId = peer.id
+                        if let peer = peer as? TelegramChannel {
+                            if case .broadcast = peer.info {
+                                authorId = peer.id
+                            } else if case .group = peer.info, peer.hasPermission(.canBeAnonymous) {
+                                authorId = peer.id
+                            } else {
+                                authorId = account.peerId
+                            }
                         }  else {
                             authorId = account.peerId
                         }
