@@ -126,8 +126,10 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             
             var result = [peerId]
             
-            if fromId.peerId != peerId {
-                result.append(fromId.peerId)
+            let resolvedFromId = fromId?.peerId ?? chatPeerId.peerId
+            
+            if resolvedFromId != peerId {
+                result.append(resolvedFromId)
             }
         
             if let fwdHeader = fwdHeader {
@@ -175,8 +177,10 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             let peerId: PeerId = chatPeerId.peerId
             var result = [peerId]
             
-            if fromId.peerId != peerId {
-                result.append(fromId.peerId)
+            let resolvedFromId = fromId?.peerId ?? chatPeerId.peerId
+            
+            if resolvedFromId != peerId {
+                result.append(resolvedFromId)
             }
             
             switch action {
@@ -353,18 +357,20 @@ extension StoreMessage {
     convenience init?(apiMessage: Api.Message, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
             case let .message(flags, id, fromId, chatPeerId, fwdFrom, viaBotId, replyTo, date, message, media, replyMarkup, entities, views, forwards, replies, editDate, postAuthor, groupingId, restrictionReason):
+                let resolvedFromId = fromId?.peerId ?? chatPeerId.peerId
+                
                 let peerId: PeerId
                 var authorId: PeerId?
                 switch chatPeerId {
                     case .peerUser:
                         peerId = chatPeerId.peerId
-                        authorId = fromId.peerId
+                        authorId = resolvedFromId
                     case let .peerChat(chatId):
                         peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                        authorId = fromId.peerId
+                        authorId = resolvedFromId
                     case let .peerChannel(channelId):
                         peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                        authorId = fromId.peerId
+                        authorId = resolvedFromId
                 }
                 
                 var attributes: [MessageAttribute] = []
@@ -584,7 +590,7 @@ extension StoreMessage {
                 return nil
             case let .messageService(flags, id, fromId, chatPeerId, replyTo, date, action):
                 let peerId: PeerId = chatPeerId.peerId
-                var authorId: PeerId? = fromId.peerId
+                var authorId: PeerId? = fromId?.peerId ?? chatPeerId.peerId
                 
                 var attributes: [MessageAttribute] = []
                 
