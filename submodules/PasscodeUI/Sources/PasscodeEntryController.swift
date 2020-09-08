@@ -49,6 +49,7 @@ public final class PasscodeEntryController: ViewController {
     private let arguments: PasscodeEntryControllerPresentationArguments
     
     public var presentationCompleted: (() -> Void)?
+    public var allPresentationAnimationsCompleted: (() -> Void)?
     public var completed: (() -> Void)?
     
     private let biometricsDisposable = MetaDisposable()
@@ -223,6 +224,9 @@ public final class PasscodeEntryController: ViewController {
                 strongSelf.requestBiometrics(force: true)
             }
         }
+        self.controllerNode.allPresentationAnimationsCompleted = { [weak self] in
+            self?.allPresentationAnimationsCompleted?()
+        }
     }
     
     override public func viewDidAppear(_ animated: Bool) {
@@ -234,6 +238,7 @@ public final class PasscodeEntryController: ViewController {
         if !isActive {
             self.controllerNode.initialAppearance()
             self.presentationCompleted?()
+            self.allPresentationAnimationsCompleted?()
         }
         else if self.arguments.animated {
             self.controllerNode.animateIn(iconFrame: self.arguments.lockIconInitialFrame(), completion: { [weak self] in
@@ -242,6 +247,7 @@ public final class PasscodeEntryController: ViewController {
         } else {
             self.controllerNode.initialAppearance(fadeIn: self.arguments.fadeIn)
             self.presentationCompleted?()
+            self.allPresentationAnimationsCompleted?()
         }
     }
     

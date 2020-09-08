@@ -284,7 +284,7 @@ public final class AppLockContextImpl: AppLockContext {
                         passcodeController.ensureInputFocused()
                     } else {
                         strongSelf.lockingIsCompletePromise.set(.single(false))
-                        strongSelf.lockingAnimationInProgress = false
+                        strongSelf.lockingAnimationInProgress = true
                         
                         let passcodeController = PasscodeEntryController(applicationBindings: strongSelf.applicationBindings, accountManager: strongSelf.accountManager, appLockContext: strongSelf, presentationData: presentationData, presentationDataSignal: strongSelf.presentationDataSignal, challengeData: accessChallengeData.data, hiddenAccountsAccessChallengeData: strongSelf.hiddenAccountsAccessChallengeData, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: !becameActiveRecently, lockIconInitialFrame: { [weak self] in
                             if let lockViewFrame = lockIconInitialFrame() {
@@ -298,12 +298,6 @@ public final class AppLockContextImpl: AppLockContext {
                                 if let strongSelf = self {
                                     strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
                                     strongSelf.lockingIsCompletePromise.set(.single(true))
-                                    Queue.mainQueue().after(0.25) { [weak self] in
-                                        guard let strongSelf = self else { return }
-                                        
-                                        strongSelf.lockingAnimationInProgress = true
-                                        strongSelf.updateSnapshot(force: false)
-                                    }
                                 }
                                 if case .enabled = biometrics {
                                     passcodeController?.requestBiometrics()
@@ -315,15 +309,17 @@ public final class AppLockContextImpl: AppLockContext {
                                 if let strongSelf = self {
                                     strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
                                     strongSelf.lockingIsCompletePromise.set(.single(true))
-                                    Queue.mainQueue().after(0.25) { [weak self] in
-                                        guard let strongSelf = self else { return }
-                                        
-                                        strongSelf.lockingAnimationInProgress = true
-                                        strongSelf.updateSnapshot(force: false)
-                                    }
                                 }
                             }
                         }
+                        
+                        passcodeController.allPresentationAnimationsCompleted = { [weak self] in
+                            guard let strongSelf = self else { return }
+                            
+                            strongSelf.lockingAnimationInProgress = false
+                            strongSelf.updateSnapshot(force: false)
+                        }
+                        
                         passcodeController.presentedOverCoveringView = true
                         passcodeController.isOpaqueWhenInOverlay = true
                         strongSelf.passcodeController = passcodeController
@@ -398,7 +394,7 @@ public final class AppLockContextImpl: AppLockContext {
     }
     
     public func updateSnapshot(force: Bool) {
-        guard self.lockingAnimationInProgress, (self.requiresSnapshotUpdate || force), let window = self.window, window.coveringView == nil, self.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId == nil else { return }
+        guard !self.lockingAnimationInProgress, (self.requiresSnapshotUpdate || force), let window = self.window, window.coveringView == nil, self.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId == nil else { return }
         
         if let snapshot = getCoveringViewSnapshotForPublicAccount(window: window) {
             self.snapshot = snapshot
