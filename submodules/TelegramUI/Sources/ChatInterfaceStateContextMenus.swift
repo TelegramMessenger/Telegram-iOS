@@ -297,7 +297,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     
     let message = messages[0]
     
-    if Namespaces.Message.allScheduled.contains(message.id.namespace) {
+    if Namespaces.Message.allScheduled.contains(message.id.namespace) || message.id.peerId.isReplies {
         canReply = false
         canPin = false
     } else if messages[0].flags.intersection([.Failed, .Unsent]).isEmpty {
@@ -758,7 +758,15 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                         UIPasteboard.general.string = link
                         
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        if channel.addressName == nil {
+                        
+                        var warnAboutPrivate = false
+                        if case let .peer = chatPresentationInterfaceState.chatLocation {
+                            if channel.addressName == nil {
+                                warnAboutPrivate = true
+                            }
+                        }
+                        
+                        if warnAboutPrivate {
                             controllerInteraction.presentGlobalOverlayController(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Conversation_PrivateMessageLinkCopied, true)), nil)
                         } else {
                             controllerInteraction.presentGlobalOverlayController(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.GroupInfo_InviteLink_CopyAlert_Success, false)), nil)
@@ -1050,7 +1058,7 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                             }
                         }
                     } else if let user = peer as? TelegramUser {
-                        if !isScheduled && message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction {
+                        if !isScheduled && message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction && !message.id.peerId.isReplies {
                             if !(message.flags.isSending || message.flags.contains(.Failed)) {
                                 optionsMap[id]!.insert(.forward)
                             }
@@ -1073,7 +1081,7 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                         if canDeleteGlobally {
                             optionsMap[id]!.insert(.deleteGlobally)
                         }
-                        if user.botInfo != nil {
+                        if user.botInfo != nil && !user.id.isReplies {
                             optionsMap[id]!.insert(.report)
                         }
                     } else if let _ = peer as? TelegramSecretChat {

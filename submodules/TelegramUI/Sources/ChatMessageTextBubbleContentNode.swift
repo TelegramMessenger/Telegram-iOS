@@ -140,14 +140,14 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 let statusType: ChatMessageDateAndStatusType?
                 var displayStatus = false
                 switch position {
-                    case let .linear(_, neighbor):
-                        if case .None = neighbor {
-                            displayStatus = true
-                        } else if case .Neighbour(true, _) = neighbor {
-                            displayStatus = true
-                        }
-                    default:
-                        break
+                case let .linear(_, neighbor):
+                    if case .None = neighbor {
+                        displayStatus = true
+                    } else if case .Neighbour(true, _) = neighbor {
+                        displayStatus = true
+                    }
+                default:
+                    break
                 }
                 if displayStatus {
                     if incoming {

@@ -212,7 +212,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let statusType: ChatMessageDateAndStatusType?
                 switch position {
-                    case .linear(_, .None):
+                    case .linear(_, .None), .linear(_, .Neighbour(true, _)):
                         if selectedMedia?.venue != nil || activeLiveBroadcastingTimeout != nil {
                             if item.message.effectivelyIncoming(item.context.account.peerId) {
                                 statusType = .BubbleIncoming

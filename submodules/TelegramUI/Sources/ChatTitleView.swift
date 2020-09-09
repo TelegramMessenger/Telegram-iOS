@@ -203,6 +203,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                     self.setNeedsLayout()
                 }
                 self.isUserInteractionEnabled = isEnabled
+                self.button.isUserInteractionEnabled = isEnabled
                 self.updateStatus()
             }
         }
@@ -635,6 +636,9 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if !self.isUserInteractionEnabled {
+            return nil
+        }
         if self.button.frame.contains(point) {
             return self.button.view
         }

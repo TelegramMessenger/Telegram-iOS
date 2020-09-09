@@ -207,7 +207,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     let statusType: ChatMessageDateAndStatusType?
                     switch position {
-                        case .linear(_, .None):
+                        case .linear(_, .None), .linear(_, .Neighbour(true, _)):
                             if item.message.effectivelyIncoming(item.context.account.peerId) {
                                 statusType = .ImageIncoming
                             } else {
