@@ -238,7 +238,6 @@ public final class PasscodeEntryController: ViewController {
         if !isActive {
             self.controllerNode.initialAppearance()
             self.presentationCompleted?()
-            self.allPresentationAnimationsCompleted?()
         }
         else if self.arguments.animated {
             self.controllerNode.animateIn(iconFrame: self.arguments.lockIconInitialFrame(), completion: { [weak self] in
