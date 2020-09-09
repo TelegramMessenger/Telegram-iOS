@@ -1643,6 +1643,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     messageTags = .file
                 case .music:
                     messageTags = .music
+                case .voice:
+                    messageTags = .voiceOrInstantVideo
                 case let .date(date, _):
                     messageTags = strongSelf.currentSearchOptions.messageTags
                     maxDate = date
@@ -1757,6 +1759,9 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             } else if messageTags == .music {
                 title = self.presentationData.strings.ChatList_Search_FilterMusic
                 icon = UIImage(bundleImageName: "Chat List/Search/Music")
+            } else if messageTags == .voiceOrInstantVideo {
+                title = self.presentationData.strings.ChatList_Search_FilterVoice
+                icon = UIImage(bundleImageName: "Chat List/Search/Voice")
             }
             
             if let title = title {
@@ -2168,7 +2173,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             let title = formatter.string(from: possibleDate)
             filters = [.date(Int32(possibleDate.timeIntervalSince1970), title)]
         } else {
-            filters = [.media, .links, .files, .music]
+            filters = [.media, .links, .files, .music, .voice]
         }
         
         self.filterContainerNode.update(size: CGSize(width: layout.size.width, height: 37.0), sideInset: layout.safeInsets.left, filters: filters.map { .filter($0) }, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))

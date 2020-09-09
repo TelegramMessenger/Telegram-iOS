@@ -12,6 +12,7 @@ enum ChatListSearchFilter: Equatable {
     case links
     case files
     case music
+    case voice
     case date(Int32, String)
     
     var id: Int32 {
@@ -24,6 +25,8 @@ enum ChatListSearchFilter: Equatable {
                 return 2
             case .music:
                 return 3
+            case .voice:
+                return 4
             case let .date(date, _):
                 return date
         }
@@ -107,6 +110,9 @@ private final class ItemNode: ASDisplayNode {
             case .music:
                 title = presentationData.strings.ChatList_Search_FilterMusic
                 icon = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/Music"), color: color)
+            case .voice:
+                title = presentationData.strings.ChatList_Search_FilterVoice
+                icon = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/Voice"), color: color)
             case let .date(_, dateTitle):
                 title = dateTitle
                 icon = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/Calendar"), color: color)
