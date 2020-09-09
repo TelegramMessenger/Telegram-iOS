@@ -54,6 +54,10 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
             self?.interaction.toggleMembersSearch(false)
         }
         
+        self.searchBar.clearTokens = { [weak self] in
+            self?.interaction.toggleMembersSearch(false)
+        }
+        
         if let statuses = interaction.statuses {
             self.searchingActivityDisposable = (statuses.searching
             |> deliverOnMainQueue).start(next: { [weak self] value in
@@ -90,6 +94,7 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
             
             switch search.domain {
                 case .everything:
+                    self.searchBar.tokens = []
                     self.searchBar.prefixString = nil
                     let placeholderText: String
                     switch self.chatLocation {
@@ -98,13 +103,12 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
                     }
                     self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
                 case .members:
+                    self.searchBar.tokens = []
                     self.searchBar.prefixString = NSAttributedString(string: strings.Conversation_SearchByName_Prefix, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputTextColor)
                     self.searchBar.placeholderString = nil
                 case let .member(peer):
-                    let prefixString = NSMutableAttributedString()
-                    prefixString.append(NSAttributedString(string: self.strings.Conversation_SearchByName_Prefix, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputTextColor))
-                    prefixString.append(NSAttributedString(string: "\(peer.compactDisplayTitle) ", font: searchBarFont, textColor: theme.rootController.navigationSearchBar.accentColor))
-                    self.searchBar.prefixString = prefixString
+                    self.searchBar.tokens = [SearchBarToken(id: peer.id, icon: UIImage(bundleImageName: "Chat List/Search/User"), title: peer.compactDisplayTitle)]
+                    self.searchBar.prefixString = nil
                     self.searchBar.placeholderString = nil
             }
             

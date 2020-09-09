@@ -28,14 +28,28 @@ private func generateBackground(foregroundColor: UIColor, diameter: CGFloat) -> 
 
 
 public struct SearchBarToken {
+    public struct Style {
+        public let backgroundColor: UIColor
+        public let foregroundColor: UIColor
+        public let strokeColor: UIColor
+        
+        public init(backgroundColor: UIColor, foregroundColor: UIColor, strokeColor: UIColor) {
+            self.backgroundColor = backgroundColor
+            self.foregroundColor = foregroundColor
+            self.strokeColor = strokeColor
+        }
+    }
+    
     public let id: AnyHashable
     public let icon: UIImage?
     public let title: String
+    public let style: Style?
     
-    public init(id: AnyHashable, icon: UIImage?, title: String) {
+    public init(id: AnyHashable, icon: UIImage?, title: String, style: Style? = nil) {
         self.id = id
         self.icon = icon
         self.title = title
+        self.style = style
     }
 }
 
@@ -48,6 +62,8 @@ private final class TokenNode: ASDisplayNode {
     
     var isSelected: Bool = false
     var isCollapsed: Bool = false
+    
+    var tapped: (() -> Void)?
     
     init(theme: SearchBarNodeTheme, token: SearchBarToken) {
         self.theme = theme
@@ -62,7 +78,6 @@ private final class TokenNode: ASDisplayNode {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 8.0, color: theme.inputIcon)
         
         super.init()
         
@@ -70,18 +85,44 @@ private final class TokenNode: ASDisplayNode {
         
         self.addSubnode(self.backgroundNode)
         
-        self.iconNode.image = generateTintedImage(image: token.icon, color: .white)
+        let backgroundColor = token.style?.backgroundColor ?? theme.inputIcon
+        let strokeColor = token.style?.strokeColor ?? backgroundColor
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 8.0, color: backgroundColor, strokeColor: strokeColor, strokeWidth: UIScreenPixel, backgroundColor: nil)
+        
+        let foregroundColor = token.style?.foregroundColor ?? .white
+        self.iconNode.image = generateTintedImage(image: token.icon, color: foregroundColor)
         self.addSubnode(self.iconNode)
-        self.titleNode.attributedText = NSAttributedString(string: token.title, font: Font.regular(17.0), textColor: .white)
+        
+        self.titleNode.attributedText = NSAttributedString(string: token.title, font: Font.regular(17.0), textColor: foregroundColor)
         self.addSubnode(self.titleNode)
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture)))
+    }
+    
+    @objc private func tapGesture() {
+        self.tapped?()
+    }
+    
     func update(theme: SearchBarNodeTheme, token: SearchBarToken, isSelected: Bool, isCollapsed: Bool) {
+        let wasSelected = self.isSelected
         self.isSelected = isSelected
         self.isCollapsed = isCollapsed
         
-        if theme !== self.theme {
-            self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 8.0, color: isSelected ? self.theme.accent : self.theme.inputIcon)
+        if theme !== self.theme || isSelected != wasSelected {
+            let backgroundColor = isSelected ? self.theme.accent : (token.style?.backgroundColor ?? self.theme.inputIcon)
+            let strokeColor = isSelected ? backgroundColor : (token.style?.strokeColor ?? backgroundColor)
+            self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 8.0, color: backgroundColor, strokeColor: strokeColor, strokeWidth: UIScreenPixel, backgroundColor: nil)
+            
+            let foregroundColor = isSelected ? .white : (token.style?.foregroundColor ?? .white)
+            
+            if let image = token.icon {
+                self.iconNode.image = generateTintedImage(image: image, color: foregroundColor)
+            }
+            self.titleNode.attributedText = NSAttributedString(string: token.title, font: Font.regular(17.0), textColor: foregroundColor)
         }
     }
     
@@ -124,14 +165,47 @@ private class SearchBarTextField: UITextField {
     var tokenNodes: [AnyHashable: TokenNode] = [:]
     var tokens: [SearchBarToken] = [] {
         didSet {
+            self._selectedTokenIndex = nil
             self.layoutTokens(transition: .animated(duration: 0.2, curve: .easeInOut))
             self.setNeedsLayout()
+            self.updateCursorColor()
         }
     }
+    
+    var _selectedTokenIndex: Int?
     var selectedTokenIndex: Int? {
-        didSet {
+        get {
+            return self._selectedTokenIndex
+        }
+        set {
+            _selectedTokenIndex = newValue
             self.layoutTokens(transition: .animated(duration: 0.2, curve: .easeInOut))
             self.setNeedsLayout()
+            self.updateCursorColor()
+        }
+    }
+    
+    private func updateCursorColor() {
+        if self._selectedTokenIndex != nil {
+            super.tintColor = UIColor.clear
+        } else {
+            super.tintColor = self._tintColor
+        }
+    }
+    
+    var _tintColor: UIColor = .black
+    override var tintColor: UIColor! {
+        get {
+            return super.tintColor
+        }
+        set {
+            if newValue != UIColor.clear {
+                self._tintColor = newValue
+                
+                if self.selectedTokenIndex == nil {
+                    super.tintColor = newValue
+                }
+            }
         }
     }
     
@@ -142,15 +216,19 @@ private class SearchBarTextField: UITextField {
             let token = self.tokens[i]
 
             let tokenNode: TokenNode
-            var tokenNodeTransition = transition
             if let current = self.tokenNodes[token.id] {
                 tokenNode = current
             } else {
-                tokenNodeTransition = .immediate
                 tokenNode = TokenNode(theme: self.theme, token: token)
                 self.tokenNodes[token.id] = tokenNode
             }
-            tokenNode.update(theme: self.theme, token: token, isSelected: false, isCollapsed: i < self.tokens.count - 1)
+            tokenNode.tapped = { [weak self] in
+                self?.selectedTokenIndex = i
+                self?.becomeFirstResponder()
+            }
+            let isSelected = i == self.selectedTokenIndex
+            let isCollapsed = !isSelected && i < self.tokens.count - 1
+            tokenNode.update(theme: self.theme, token: token, isSelected: isSelected, isCollapsed: isCollapsed)
         }
         var removeKeys: [AnyHashable] = []
         for (id, _) in self.tokenNodes {
@@ -350,7 +428,16 @@ private class SearchBarTextField: UITextField {
     }
     
     override func deleteBackward() {
-        if self.text == nil || self.text!.isEmpty {
+        var processed = false
+        if let selectedRange = self.selectedTextRange {
+            let cursorPosition = self.offset(from: self.beginningOfDocument, to: selectedRange.start)
+            if cursorPosition == 0 && !self.tokens.isEmpty && self.selectedTokenIndex == nil {
+                self.selectedTokenIndex = self.tokens.count - 1
+                processed = true
+            }
+        }
+        
+        if !processed && (self.text == nil || self.text!.isEmpty) {
             self.didDeleteBackwardWhileEmpty?()
         }
         super.deleteBackward()
@@ -624,8 +711,8 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             guard let strongSelf = self else {
                 return
             }
-            if strongSelf.tokens.count > 1 {
-                strongSelf.tokens.removeLast()
+            if let index = strongSelf.textField.selectedTokenIndex {
+                strongSelf.tokens.remove(at: index)
                 strongSelf.tokensUpdated?(strongSelf.tokens)
             } else {
                 strongSelf.clearPressed()
@@ -637,7 +724,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         
         self.updateThemeAndStrings(theme: theme, strings: strings)
     }
-    
+        
     public func updateThemeAndStrings(theme: SearchBarNodeTheme, strings: PresentationStrings) {
         if self.theme != theme || self.strings !== strings {
             self.cancelButton.setAttributedTitle(NSAttributedString(string: self.cancelText ?? strings.Common_Cancel, font: self.cancelText != nil ? Font.semibold(17.0) : Font.regular(17.0), textColor: theme.accent), for: [])
@@ -864,9 +951,16 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     
     @objc private func textFieldDidChange(_ textField: UITextField) {
         self.updateIsEmpty()
+        if let _ = self.textField.selectedTokenIndex {
+            self.textField.selectedTokenIndex = nil
+        }
         if let textUpdated = self.textUpdated {
             textUpdated(textField.text ?? "", textField.textInputMode?.primaryLanguage)
         }
+    }
+    
+    public func textFieldDidEndEditing(_ textField: UITextField) {
+        self.textField.selectedTokenIndex = nil
     }
     
     public func selectAll() {

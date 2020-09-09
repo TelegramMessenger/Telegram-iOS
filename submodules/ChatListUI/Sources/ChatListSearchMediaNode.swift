@@ -15,6 +15,7 @@ import ListMessageItem
 import ListSectionHeaderNode
 import ChatMessageInteractiveMediaBadge
 import ShimmerEffect
+import GridMessageSelectionNode
 
 private let mediaBadgeBackgroundColor = UIColor(white: 0.0, alpha: 0.6)
 private let mediaBadgeTextColor = UIColor.white
@@ -50,6 +51,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
     private var statusNode: RadialStatusNode
     private let mediaBadgeNode: ChatMessageInteractiveMediaBadge
     private var placeholderNode: ShimmerEffectNode?
+    private var selectionNode: GridMessageSelectionNode?
     
     private let fetchStatusDisposable = MetaDisposable()
     private let fetchDisposable = MetaDisposable()
@@ -298,6 +300,8 @@ private final class VisualMediaItemNode: ASDisplayNode {
             
             self.mediaBadgeNode.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 18.0 - 3.0), size: CGSize(width: 50.0, height: 50.0))
             
+            self.selectionNode?.frame = CGRect(origin: CGPoint(), size: size)
+            
             self.updateHiddenMedia()
             
             if let placeholderNode = self.placeholderNode {
@@ -350,8 +354,46 @@ private final class VisualMediaItemNode: ASDisplayNode {
     }
     
     func updateSelectionState(animated: Bool) {
-        if let (item, _, _, _) = self.item, let theme = self.theme {
+        if let (item, _, _, _) = self.item, let theme = self.theme, let message = item.message {
             self.containerNode.isGestureEnabled = self.interaction.selectedMessageIds == nil
+            
+            if let selectedIds = self.interaction.selectedMessageIds {
+                let selected = selectedIds.contains(message.id)
+                
+                if let selectionNode = self.selectionNode {
+                    selectionNode.updateSelected(selected, animated: animated)
+                    selectionNode.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
+                } else {
+                    let selectionNode = GridMessageSelectionNode(theme: theme, toggle: { [weak self] value in
+                        if let strongSelf = self, let messageId = strongSelf.item?.0.message?.id {
+                            var toggledValue = true
+                            if let selectedMessageIds = strongSelf.interaction.selectedMessageIds, selectedMessageIds.contains(messageId) {
+                                toggledValue = false
+                            }
+                            strongSelf.interaction.toggleSelection(messageId, toggledValue)
+                        }
+                    })
+                    
+                    selectionNode.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
+                    self.containerNode.addSubnode(selectionNode)
+                    self.selectionNode = selectionNode
+                    selectionNode.updateSelected(selected, animated: false)
+                    if animated {
+                        selectionNode.animateIn()
+                    }
+                }
+            } else {
+                if let selectionNode = self.selectionNode {
+                    self.selectionNode = nil
+                    if animated {
+                        selectionNode.animateOut { [weak selectionNode] in
+                            selectionNode?.removeFromSupernode()
+                        }
+                    } else {
+                        selectionNode.removeFromSupernode()
+                    }
+                }
+            }
         }
     }
     
@@ -637,7 +679,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
     public var beganInteractiveDragging: (() -> Void)?
     public var loadMore: (() -> Void)?
     
-    init(context: AccountContext, contentType: ContentType, openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Void, messageContextAction: @escaping (Message, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void) {
+    init(context: AccountContext, contentType: ContentType, openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Void, messageContextAction: @escaping (Message, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void, toggleMessageSelection: @escaping (MessageId, Bool) -> Void) {
         self.context = context
         self.contentType = contentType
         
@@ -650,17 +692,16 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
         super.init()
         
         self._itemInteraction = VisualMediaItemInteraction(
-            openMessage: { [weak self] message in
+            openMessage: { message in
                 let _ = openMessage(message, .default)
             },
-            openMessageContextActions: { [weak self] message, sourceNode, sourceRect, gesture in
+            openMessageContextActions: { message, sourceNode, sourceRect, gesture in
                 messageContextAction(message, sourceNode, sourceRect, gesture)
             },
-            toggleSelection: { [weak self] id, value in
-//                self?.chatControllerInteraction.toggleMessagesSelection([id], value)
+            toggleSelection: { id, value in
+                toggleMessageSelection(id, value)
             }
         )
-//        self.itemInteraction.selectedMessageIds = chatControllerInteraction.selectionState.flatMap { $0.selectedIds }
         
         self.scrollNode.view.delaysContentTouches = false
         self.scrollNode.view.canCancelContentTouches = true
@@ -672,7 +713,6 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.view.delegate = self
         
         self.addSubnode(self.scrollNode)
-        self.addSubnode(self.headerNode)
         self.addSubnode(self.floatingHeaderNode)
         
         self.hiddenMediaDisposable = context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
@@ -709,7 +749,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
             if let entries = entries {
                 loading = false
                 for entry in entries {
-                    if case let .message(message, _, _, _, _) = entry {
+                    if case let .message(message, _, _, _, _, _, _) = entry {
                         self.mediaItems.append(VisualMediaItem(message: message))
                     }
                 }
@@ -787,8 +827,13 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.view.addSubview(view)
     }
     
+    var selectedMessageIds: Set<MessageId>? {
+        didSet {
+            self.itemInteraction.selectedMessageIds = self.selectedMessageIds
+        }
+    }
+    
     func updateSelectedMessages(animated: Bool) {
-//        self.itemInteraction.selectedMessageIds = self.chatControllerInteraction.selectionState.flatMap { $0.selectedIds }
         for (_, itemNode) in self.visibleMediaItems {
             itemNode.updateSelectionState(animated: animated)
         }
@@ -797,9 +842,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         self.currentParams = (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
         
-        let headerSize = CGSize(width: size.width, height: 28.0)
-        self.headerNode.frame = CGRect(origin: CGPoint(), size: headerSize)
-        self.headerNode.updateLayout(size: headerSize, leftInset: sideInset, rightInset: sideInset)
+        let headerSize = CGSize(width: size.width, height: 0.0)
         
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: headerSize.height), size: CGSize(width: size.width, height: size.height - headerSize.height)))
         
@@ -926,7 +969,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
         if let headerItem = headerItem {
             let (year, month) = listMessageDateHeaderInfo(timestamp: headerItem.timestamp)
             let headerSize = self.floatingHeaderNode.update(constrainedWidth: size.width, year: year, month: month, theme: theme, strings: strings)
-            self.floatingHeaderNode.frame = CGRect(origin: CGPoint(x: floor((size.width - headerSize.width) / 2.0), y: 7.0 + 28.0), size: headerSize)
+            self.floatingHeaderNode.frame = CGRect(origin: CGPoint(x: floor((size.width - headerSize.width) / 2.0), y: 7.0), size: headerSize)
             self.floatingHeaderNode.isHidden = false
         } else {
             self.floatingHeaderNode.isHidden = true

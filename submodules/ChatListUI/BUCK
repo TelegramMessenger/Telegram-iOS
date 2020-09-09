@@ -54,6 +54,7 @@ static_library(
 	"//submodules/InstantPageUI:InstantPageUI",
 	"//submodules/ListSectionHeaderNode:ListSectionHeaderNode",
 	"//submodules/ChatInterfaceState:ChatInterfaceState",
+        "//submodules/GridMessageSelectionNode:GridMessageSelectionNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

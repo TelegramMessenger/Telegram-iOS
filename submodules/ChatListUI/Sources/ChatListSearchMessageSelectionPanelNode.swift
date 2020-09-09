@@ -96,6 +96,7 @@ final class ChatListSearchMessageSelectionPanelNode: ASDisplayNode {
     
         super.init()
         
+        self.addSubnode(self.backgroundNode)
         self.addSubnode(self.deleteButton)
         self.addSubnode(self.forwardButton)
         self.addSubnode(self.shareButton)
@@ -159,7 +160,7 @@ final class ChatListSearchMessageSelectionPanelNode: ASDisplayNode {
         self.forwardButton.frame = CGRect(origin: CGPoint(x: width - rightInset - 57.0, y: 0.0), size: CGSize(width: 57.0, height: panelHeight))
         self.shareButton.frame = CGRect(origin: CGPoint(x: floor((width - rightInset - 57.0) / 2.0), y: 0.0), size: CGSize(width: 57.0, height: panelHeight))
         
-        let panelHeightWithInset = panelHeight + layout.intrinsicInsets.bottom
+        let panelHeightWithInset = panelHeight + layout.intrinsicInsets.bottom - 49.0
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: panelHeightWithInset)))
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: UIScreenPixel), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
@@ -172,10 +173,10 @@ final class ChatListSearchMessageSelectionPanelNode: ASDisplayNode {
     }
     
     @objc func forwardButtonPressed() {
-        self.shareMessages()
+        self.forwardMessages()
     }
     
     @objc func shareButtonPressed() {
-        self.forwardMessages()
+        self.shareMessages()
     }
 }

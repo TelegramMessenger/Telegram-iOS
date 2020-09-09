@@ -46,7 +46,7 @@ public final class HashtagSearchController: TelegramBaseController {
         let search = searchMessages(account: context.account, location: location, query: query, state: nil)
         let foundMessages: Signal<[ChatListSearchEntry], NoError> = search
         |> map { result, _ in
-            return result.messages.map({ .message($0, RenderedPeer(message: $0), result.readStates[$0.id.peerId], chatListPresentationData, result.totalCount) })
+            return result.messages.map({ .message($0, RenderedPeer(message: $0), result.readStates[$0.id.peerId], chatListPresentationData, result.totalCount, nil, false) })
         }
         let interaction = ChatListNodeInteraction(activateSearch: {
         }, peerSelected: { _, _ in

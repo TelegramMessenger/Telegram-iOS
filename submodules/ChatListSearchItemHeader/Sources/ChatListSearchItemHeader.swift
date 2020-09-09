@@ -22,6 +22,7 @@ public enum ChatListSearchItemHeaderType {
     case chatTypes
     case faq
     case messages(Int32)
+    case photos(Int32)
     case links(Int32)
     case files(Int32)
     case music(Int32)
@@ -62,6 +63,8 @@ public enum ChatListSearchItemHeaderType {
                 return strings.Settings_FrequentlyAskedQuestions
             case let .messages(count):
                 return strings.ChatList_Search_Messages(count)
+            case let .photos(count):
+                return strings.ChatList_Search_Photos(count)
             case let .links(count):
                 return strings.ChatList_Search_Links(count)
             case let .files(count):
@@ -107,6 +110,8 @@ public enum ChatListSearchItemHeaderType {
                 return .faq
             case .messages:
                 return .messages
+            case .photos:
+                return .photos
             case .links:
                 return .links
             case .files:
@@ -135,6 +140,7 @@ private enum ChatListSearchItemHeaderId: Int32 {
     case chatTypes
     case faq
     case messages
+    case photos
     case links
     case files
     case music

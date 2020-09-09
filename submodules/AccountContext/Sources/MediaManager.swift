@@ -11,7 +11,7 @@ import UniversalMediaPlayer
 public enum PeerMessagesMediaPlaylistId: Equatable, SharedMediaPlaylistId {
     case peer(PeerId)
     case recentActions(PeerId)
-    case searchResults
+    case custom
     
     public func isEqual(to: SharedMediaPlaylistId) -> Bool {
         if let to = to as? PeerMessagesMediaPlaylistId {
@@ -25,7 +25,7 @@ public enum PeerMessagesPlaylistLocation: Equatable, SharedMediaPlaylistLocation
     case messages(peerId: PeerId, tagMask: MessageTags, at: MessageId)
     case singleMessage(MessageId)
     case recentActions(Message)
-    case searchResults(query: String?, peerId: PeerId?, messages: [Message], at: MessageId)
+    case custom(messages: Signal<([Message], Int32, Bool), NoError>, at: MessageId, loadMore: (() -> Void)?)
 
     public var playlistId: PeerMessagesMediaPlaylistId {
         switch self {
@@ -35,14 +35,14 @@ public enum PeerMessagesPlaylistLocation: Equatable, SharedMediaPlaylistLocation
                 return .peer(id.peerId)
             case let .recentActions(message):
                 return .recentActions(message.id.peerId)
-            case let .searchResults(query, peerId, messages, _):
-                return .searchResults
+            case .custom:
+                return .custom
         }
     }
     
     public var messageId: MessageId? {
         switch self {
-            case let .messages(_, _, messageId), let .singleMessage(messageId):
+            case let .messages(_, _, messageId), let .singleMessage(messageId), let .custom(_, messageId, _):
                 return messageId
             default:
                 return nil
@@ -77,8 +77,8 @@ public enum PeerMessagesPlaylistLocation: Equatable, SharedMediaPlaylistLocation
                 } else {
                     return false
                 }
-            case let .searchResults(lhsQuery, lhsPeerId, lhsMessages, lhsAt):
-                if case let .searchResults(rhsQuery, rhsPeerId, rhsMessages, rhsAt) = rhs, lhsQuery == rhsQuery, lhsPeerId == rhsPeerId, lhsAt == rhsAt {
+            case let .custom(_, lhsAt, _):
+                if case let .custom(_, rhsAt, _) = rhs, lhsAt == rhsAt {
                     return true
                 } else {
                     return false
@@ -114,7 +114,7 @@ public func peerMessageMediaPlayerType(_ message: Message) -> MediaManagerPlayer
     
 public func peerMessagesMediaPlaylistAndItemId(_ message: Message, isRecentActions: Bool, isGlobalSearch: Bool) -> (SharedMediaPlaylistId, SharedMediaPlaylistItemId)? {
     if isGlobalSearch {
-        return (PeerMessagesMediaPlaylistId.searchResults, PeerMessagesMediaPlaylistItemId(messageId: message.id))
+        return (PeerMessagesMediaPlaylistId.custom, PeerMessagesMediaPlaylistItemId(messageId: message.id))
     } else if isRecentActions {
         return (PeerMessagesMediaPlaylistId.recentActions(message.id.peerId), PeerMessagesMediaPlaylistItemId(messageId: message.id))
     } else {

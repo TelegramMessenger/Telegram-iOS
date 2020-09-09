@@ -1683,10 +1683,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 }
                                 
                 if let searchContentNode = strongSelf.searchContentNode {
-                    var updatedSearchOptionsImpl: ((ChatListSearchOptions?) -> Void)?
+                    var updatedSearchOptionsImpl: ((ChatListSearchOptions?, Bool) -> Void)?
                     
-                    if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, navigationController: strongSelf.navigationController as? NavigationController, updatedSearchOptions: { options in
-                        updatedSearchOptionsImpl?(options)
+                    if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, navigationController: strongSelf.navigationController as? NavigationController, updatedSearchOptions: { options, hasDate in
+                        updatedSearchOptionsImpl?(options, hasDate)
                     }) {
                         let (filterContainerNode, activate) = filterContainerNodeAndActivate
                         strongSelf.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: true)
@@ -1695,12 +1695,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         }
                         activate()
                         
-                        updatedSearchOptionsImpl = { [weak self, weak filterContainerNode] options in
+                        updatedSearchOptionsImpl = { [weak self, weak filterContainerNode] options, hasDate in
                             guard let strongSelf = self, let strongFilterContainerNode = filterContainerNode else {
                                 return
                             }
                             var node: ASDisplayNode?
-                            if let options = options, options.messageTags != nil {
+                            if let options = options, options.messageTags != nil && !hasDate {
                             } else {
                                 node = strongFilterContainerNode
                             }

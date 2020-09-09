@@ -582,11 +582,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         let fixedCombinedReadStates = Atomic<MessageHistoryViewReadState?>(value: nil)
         
-        var scheduled = false
+        var isScheduledMessages = false
         if let subject = subject, case .scheduledMessages = subject {
-            scheduled = true
+            isScheduledMessages = true
         }
-        var isAuxiliaryChat = scheduled
+        var isAuxiliaryChat = isScheduledMessages
         if case .replyThread = chatLocation {
             isAuxiliaryChat = true
         }
@@ -616,7 +616,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let historyViewUpdate = self.chatHistoryLocationPromise.get()
         |> distinctUntilChanged
         |> mapToSignal { location in
-            return chatHistoryViewForLocation(location, context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, scheduled: scheduled, fixedCombinedReadStates: fixedCombinedReadStates.with { $0 }, tagMask: tagMask, additionalData: additionalData)
+            return chatHistoryViewForLocation(location, context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, scheduled: isScheduledMessages, fixedCombinedReadStates: fixedCombinedReadStates.with { $0 }, tagMask: tagMask, additionalData: additionalData)
             |> beforeNext { viewUpdate in
                 switch viewUpdate {
                     case let .HistoryView(view, _, _, _, _, _, _):

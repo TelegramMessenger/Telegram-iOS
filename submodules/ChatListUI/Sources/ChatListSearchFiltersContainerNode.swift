@@ -7,11 +7,27 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 
-enum ChatListSearchFilter: Int32, Hashable, CaseIterable {
+enum ChatListSearchFilter: Equatable {
     case media
     case links
     case files
     case music
+    case date(Int32, String)
+    
+    var id: Int32 {
+        switch self {
+            case .media:
+                return 0
+            case .links:
+                return 1
+            case .files:
+                return 2
+            case .music:
+                return 3
+            case let .date(date, _):
+                return date
+        }
+    }
 }
 
 private final class ItemNode: ASDisplayNode {
@@ -91,6 +107,9 @@ private final class ItemNode: ASDisplayNode {
             case .music:
                 title = presentationData.strings.ChatList_Search_FilterMusic
                 icon = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/Music"), color: color)
+            case let .date(_, dateTitle):
+                title = dateTitle
+                icon = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/Calendar"), color: color)
         }
         
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(14.0), textColor: color)
@@ -131,7 +150,7 @@ enum ChatListSearchFilterEntry: Equatable {
     var id: ChatListSearchFilterEntryId {
         switch self {
         case let .filter(filter):
-            return .filter(filter.rawValue)
+            return .filter(filter.id)
         }
     }
 }
@@ -245,7 +264,7 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
         }
         longTitlesWidth += resolvedSideInset
         
-        if longTitlesWidth < size.width {
+        if longTitlesWidth < size.width && tabSizes.count > 3 {
             spacing = (size.width - titlesWidth - resolvedSideInset * 2.0) / CGFloat(tabSizes.count - 1)
         }
         
