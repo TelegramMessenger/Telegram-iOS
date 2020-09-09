@@ -101,6 +101,10 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             }
         }
         
+        self.keyboardNode.allPresentationAnimationsCompleted = { [weak self] in
+            self?.allPresentationAnimationsCompleted?()
+        }
+        
         self.cancelButtonNode.setTitle(strings.Common_Cancel, with: buttonFont, with: .white, for: .normal)
         self.deleteButtonNode.setTitle(strings.Common_Delete, with: buttonFont, with: .white, for: .normal)
     
@@ -301,9 +305,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             self.deleteButtonNode.isHidden = false
             self.biometricButtonNode.isHidden = false
             
-            self.subtitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { [weak self] _ in
-                self?.allPresentationAnimationsCompleted?()
-            })
+            self.subtitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
             
             self.inputFieldNode.animateIn()
             self.keyboardNode.animateIn()

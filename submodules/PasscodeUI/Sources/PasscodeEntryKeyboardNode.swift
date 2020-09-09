@@ -205,6 +205,8 @@ final class PasscodeEntryKeyboardNode: ASDisplayNode {
     
     var charactedEntered: ((String) -> Void)?
     
+    var allPresentationAnimationsCompleted: (() -> Void)?
+    
     private func updateButtons() {
         guard let background = self.background else {
             return
@@ -231,8 +233,10 @@ final class PasscodeEntryKeyboardNode: ASDisplayNode {
     }
     
     func animateIn() {
+        var didInjectCompletion = false
         if let subnodes = self.subnodes {
             for i in 0 ..< subnodes.count {
+                var completion: ((Bool) -> Void)?
                 let subnode = subnodes[i]
                 var delay: Double = 0.001
                 if i / 3 == 1 {
@@ -243,8 +247,15 @@ final class PasscodeEntryKeyboardNode: ASDisplayNode {
                 }
                 else if i / 3 == 3 {
                     delay = 0.15
+                    if !didInjectCompletion {
+                        didInjectCompletion = true
+                        completion = { [weak self] _ in
+                            self?.allPresentationAnimationsCompleted?()
+                        }
+                    }
                 }
-                subnode.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, delay: delay, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+                
+                subnode.layer.animateScale(from: 0.0001, to: 1.0, duration: 0.25, delay: delay, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, completion: completion)
             }
         }
     }
