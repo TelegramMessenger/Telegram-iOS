@@ -2426,6 +2426,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let imageOverride: AvatarNodeImageOverride?
                             if strongSelf.context.account.peerId == peer.id {
                                 imageOverride = .savedMessagesIcon
+                            } else if peer.id.isReplies {
+                                imageOverride = .repliesIcon
                             } else if peer.isDeleted {
                                 imageOverride = .deletedIcon
                             } else {
@@ -2489,7 +2491,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         var peerGeoLocation: PeerGeoLocation?
                         if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData {
                             if case .broadcast = peer.info {
-                                peerDiscussionId = cachedData.linkedDiscussionPeerId
+                                if case let .known(value) = cachedData.linkedDiscussionPeerId {
+                                    peerDiscussionId = value
+                                }
                             } else {
                                 peerGeoLocation = cachedData.peerGeoLocation
                             }
@@ -2692,7 +2696,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         var peerGeoLocation: PeerGeoLocation?
                         if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData {
                             if case .broadcast = peer.info {
-                                peerDiscussionId = cachedData.linkedDiscussionPeerId
+                                if case let .known(value) = cachedData.linkedDiscussionPeerId {
+                                    peerDiscussionId = value
+                                }
                             } else {
                                 peerGeoLocation = cachedData.peerGeoLocation
                             }
@@ -3218,7 +3224,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self, let combinedInitialData = combinedInitialData else {
                 return
             }
-            if let interfaceState = combinedInitialData.initialData?.chatInterfaceState as? ChatInterfaceState {
+            if var interfaceState = combinedInitialData.initialData?.chatInterfaceState as? ChatInterfaceState {
+                switch strongSelf.chatLocation {
+                case .peer:
+                    break
+                default:
+                    interfaceState = ChatInterfaceState()
+                }
+                
                 var pinnedMessageId: MessageId?
                 var peerIsBlocked: Bool = false
                 var callsAvailable: Bool = true

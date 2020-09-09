@@ -556,6 +556,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     if let user = peer as? TelegramUser {
                         if peer.id == item.context.account.peerId, case .generalSearch = item.peerMode {
                             titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleBoldFont, textColor: textColor)
+                        } else if peer.id.isReplies {
+                            titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Replies, font: titleBoldFont, textColor: textColor)
                         } else if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
                             let string = NSMutableAttributedString()
                             switch item.displayOrder {
@@ -747,6 +749,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                         var overrideImage: AvatarNodeImageOverride?
                                         if peer.id == item.context.account.peerId, case .generalSearch = item.peerMode {
                                             overrideImage = .savedMessagesIcon
+                                        } else if peer.id.isReplies, case .generalSearch = item.peerMode {
+                                            overrideImage = .repliesIcon
                                         } else if peer.isDeleted {
                                             overrideImage = .deletedIcon
                                         }

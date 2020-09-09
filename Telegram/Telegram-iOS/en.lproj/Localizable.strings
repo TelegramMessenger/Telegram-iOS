@@ -5790,3 +5790,5 @@ Any member of this group will be able to see messages in the channel.";
 "ChatList.Search.Music_any" = "%@ audio files";
 
 "Conversation.InputTextAnonymousPlaceholder" = "Send anonymously";
+
+"DialogList.Replies" = "Replies";

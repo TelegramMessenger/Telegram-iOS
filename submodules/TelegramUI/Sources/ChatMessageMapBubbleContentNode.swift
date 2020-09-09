@@ -157,7 +157,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                 if activeLiveBroadcastingTimeout != nil || selectedMedia?.venue != nil {
                     var relativePosition = position
                     if case let .linear(top, _) = position {
-                        relativePosition = .linear(top: top, bottom: .Neighbour(false))
+                        relativePosition = .linear(top: top, bottom: .Neighbour(false, .freeform))
                     }
                     imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: relativePosition, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius, layoutConstants: layoutConstants, chatPresentationData: item.presentationData)
                     

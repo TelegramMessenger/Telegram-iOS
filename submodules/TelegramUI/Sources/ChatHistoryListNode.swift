@@ -343,6 +343,7 @@ private final class ChatHistoryTransactionOpaqueState {
 private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, animatedEmojiStickers: [String: [StickerPackItem]], isScheduledMessages: Bool) -> ChatMessageItemAssociatedData {
     var automaticMediaDownloadPeerType: MediaAutoDownloadPeerType = .channel
     var contactsPeerIds: Set<PeerId> = Set()
+    var channelDiscussionGroup: ChatMessageItemAssociatedData.ChannelDiscussionGroupStatus = .unknown
     if case let .peer(peerId) = chatLocation {
         if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat {
             var isContact = false
@@ -367,7 +368,15 @@ private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHist
                     if let channel = value as? TelegramChannel, case .group = channel.info {
                         automaticMediaDownloadPeerType = .group
                     }
-                    break
+                } else if case let .cachedPeerData(dataPeerId, cachedData) = entry, dataPeerId == peerId {
+                    if let cachedData = cachedData as? CachedChannelData {
+                        switch cachedData.linkedDiscussionPeerId {
+                        case let .known(value):
+                            channelDiscussionGroup = .known(value)
+                        case .unknown:
+                            channelDiscussionGroup = .unknown
+                        }
+                    }
                 }
             }
             if automaticMediaDownloadPeerType == .group {
@@ -379,7 +388,7 @@ private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHist
             }
         }
     }
-    let associatedData = ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, isScheduledMessages: isScheduledMessages, contactsPeerIds: contactsPeerIds, animatedEmojiStickers: animatedEmojiStickers)
+    let associatedData = ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, isScheduledMessages: isScheduledMessages, contactsPeerIds: contactsPeerIds, channelDiscussionGroup: channelDiscussionGroup, animatedEmojiStickers: animatedEmojiStickers)
     return associatedData
 }
 
@@ -1051,6 +1060,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 if message.id.namespace == Namespaces.Message.Cloud {
                                     messageIdsWithViewCount.append(message.id)
                                 }
+                            } else if attribute is ReplyThreadMessageAttribute {
+                                if message.id.namespace == Namespaces.Message.Cloud {
+                                    messageIdsWithViewCount.append(message.id)
+                                }
                             } else if let attribute = attribute as? ConsumableContentMessageAttribute, !attribute.consumed {
                                 hasUnconsumedContent = true
                             } else if let _ = attribute as? ContentRequiresValidationMessageAttribute {
@@ -1092,6 +1105,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             }
                             for attribute in message.attributes {
                                 if attribute is ViewCountMessageAttribute {
+                                    if message.id.namespace == Namespaces.Message.Cloud {
+                                        messageIdsWithViewCount.append(message.id)
+                                    }
+                                } else if attribute is ReplyThreadMessageAttribute {
                                     if message.id.namespace == Namespaces.Message.Cloud {
                                         messageIdsWithViewCount.append(message.id)
                                     }

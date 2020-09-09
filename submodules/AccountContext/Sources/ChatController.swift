@@ -11,20 +11,27 @@ import TelegramPresentationData
 import TelegramUIPreferences
 
 public final class ChatMessageItemAssociatedData: Equatable {
+    public enum ChannelDiscussionGroupStatus: Equatable {
+        case unknown
+        case known(PeerId?)
+    }
+    
     public let automaticDownloadPeerType: MediaAutoDownloadPeerType
     public let automaticDownloadNetworkType: MediaAutoDownloadNetworkType
     public let isRecentActions: Bool
     public let isScheduledMessages: Bool
     public let contactsPeerIds: Set<PeerId>
+    public let channelDiscussionGroup: ChannelDiscussionGroupStatus
     public let animatedEmojiStickers: [String: [StickerPackItem]]
     public let forcedResourceStatus: FileMediaResourceStatus?
     
-    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, isScheduledMessages: Bool = false, contactsPeerIds: Set<PeerId> = Set(), animatedEmojiStickers: [String: [StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil) {
+    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, isScheduledMessages: Bool = false, contactsPeerIds: Set<PeerId> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions
         self.isScheduledMessages = isScheduledMessages
         self.contactsPeerIds = contactsPeerIds
+        self.channelDiscussionGroup = channelDiscussionGroup
         self.animatedEmojiStickers = animatedEmojiStickers
         self.forcedResourceStatus = forcedResourceStatus
     }
@@ -43,6 +50,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.contactsPeerIds != rhs.contactsPeerIds {
+            return false
+        }
+        if lhs.channelDiscussionGroup != rhs.channelDiscussionGroup {
             return false
         }
         if lhs.animatedEmojiStickers != rhs.animatedEmojiStickers {

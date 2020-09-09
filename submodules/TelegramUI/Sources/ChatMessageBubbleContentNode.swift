@@ -41,9 +41,14 @@ enum ChatMessageBubbleMergeStatus {
 }
 
 enum ChatMessageBubbleRelativePosition {
+    enum NeighbourType {
+        case media
+        case freeform
+    }
+    
     case None(ChatMessageBubbleMergeStatus)
     case BubbleNeighbour
-    case Neighbour(Bool)
+    case Neighbour(Bool, NeighbourType)
 }
 
 enum ChatMessageBubbleContentMosaicNeighbor {
