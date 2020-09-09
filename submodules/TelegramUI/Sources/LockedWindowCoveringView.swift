@@ -24,9 +24,7 @@ final class LockedWindowCoveringView: WindowCoveringView {
     }
     
     func updateSnapshot(_ image: UIImage?) {
-        if image != nil {
-            self.contentView.image = image   
-        }
+        self.contentView.image = image
     }
     
     override func updateLayout(_ size: CGSize) {

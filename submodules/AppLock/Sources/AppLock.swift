@@ -153,6 +153,7 @@ public final class AppLockContextImpl: AppLockContext {
     
     private var snapshot: UIImage?
     private var requiresSnapshotUpdate = true
+    private var justLaunched = true
     
     public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
         assert(Queue.mainQueue().isCurrent())
@@ -199,6 +200,11 @@ public final class AppLockContextImpl: AppLockContext {
         
         self.requiresSnapshotUpdateDisposable = (requiresSnapshotUpdateSignal |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {
+                return
+            }
+
+            if strongSelf.justLaunched {
+                strongSelf.justLaunched = false
                 return
             }
             
@@ -316,8 +322,10 @@ public final class AppLockContextImpl: AppLockContext {
                         passcodeController.allPresentationAnimationsCompleted = { [weak self] in
                             guard let strongSelf = self else { return }
                             
-                            strongSelf.lockingAnimationInProgress = false
-                            strongSelf.updateSnapshot(force: false)
+                            Queue.mainQueue().after(0.05) {
+                                strongSelf.lockingAnimationInProgress = false
+                                strongSelf.updateSnapshot(force: false)
+                            }
                         }
                         
                         passcodeController.presentedOverCoveringView = true
@@ -344,6 +352,7 @@ public final class AppLockContextImpl: AppLockContext {
             if shouldDisplayCoveringView {
                 if strongSelf.coveringView == nil, let window = strongSelf.window {
                     let coveringView = LockedWindowCoveringView(theme: presentationData.theme)
+                    coveringView.updateSnapshot(nil)
                     coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
                     strongSelf.coveringView = coveringView
                     window.coveringView = coveringView
@@ -396,10 +405,9 @@ public final class AppLockContextImpl: AppLockContext {
     public func updateSnapshot(force: Bool) {
         guard !self.lockingAnimationInProgress, (self.requiresSnapshotUpdate || force), let window = self.window, window.coveringView == nil, self.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId == nil else { return }
         
-        if let snapshot = getCoveringViewSnapshotForPublicAccount(window: window) {
-            self.snapshot = snapshot
-            self.requiresSnapshotUpdate = false
-        }
+        self.coveringView?.updateSnapshot(nil)
+        self.requiresSnapshotUpdate = false
+        self.snapshot = getCoveringViewSnapshotForPublicAccount(window: window)
     }
     
     private func updateTimestampRenewTimer(shouldRun: Bool) {
