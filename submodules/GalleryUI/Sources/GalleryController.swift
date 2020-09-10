@@ -1225,6 +1225,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
             self.adjustedForInitialPreviewingLayout = true
             self.galleryNode.setControlsHidden(true, animated: false)
             if let centralItemNode = self.galleryNode.pager.centralItemNode(), let itemSize = centralItemNode.contentSize() {
+                centralItemNode.adjustForPreviewing()
                 self.preferredContentSize = itemSize.aspectFitted(layout.size)
                 self.containerLayoutUpdated(ContainerViewLayout(size: self.preferredContentSize, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
             }

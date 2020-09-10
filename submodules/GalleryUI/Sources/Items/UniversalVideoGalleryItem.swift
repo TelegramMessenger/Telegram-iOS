@@ -1537,6 +1537,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
     }
     
+    override func adjustForPreviewing() {
+        super.adjustForPreviewing()
+        
+        self.scrubberView.isHidden = true
+    }
+    
     override func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {
         return .single((self.footerContentNode, nil))
     }
