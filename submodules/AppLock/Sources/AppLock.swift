@@ -137,7 +137,6 @@ public final class AppLockContextImpl: AppLockContext {
     
     private var snapshot: UIImage?
     private var requiresSnapshotUpdate = true
-    private var justLaunched = true
     
     public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
         assert(Queue.mainQueue().isCurrent())
@@ -184,11 +183,6 @@ public final class AppLockContextImpl: AppLockContext {
         
         self.requiresSnapshotUpdateDisposable = (requiresSnapshotUpdateSignal |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {
-                return
-            }
-
-            if strongSelf.justLaunched {
-                strongSelf.justLaunched = false
                 return
             }
             
