@@ -1689,7 +1689,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         updatedSearchOptionsImpl?(options, hasDate)
                     }) {
                         let (filterContainerNode, activate) = filterContainerNodeAndActivate
-                        strongSelf.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: true)
+                        strongSelf.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: false)
                         if let parentController = strongSelf.parent as? TabBarController {
                             parentController.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: true)
                         }
@@ -1705,7 +1705,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                                 node = strongFilterContainerNode
                             }
                             
-                            strongSelf.navigationBar?.setSecondaryContentNode(node, animated: true)
+                            strongSelf.navigationBar?.setSecondaryContentNode(node, animated: false)
                             if let parentController = strongSelf.parent as? TabBarController {
                                 parentController.navigationBar?.setSecondaryContentNode(node, animated: true)
                             }
@@ -1739,8 +1739,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             } else {
                 filtersIsEmpty = true
             }
-
-            self.navigationBar?.setSecondaryContentNode(filtersIsEmpty ? nil : self.tabContainerNode, animated: animated)
+            
+            self.navigationBar?.setSecondaryContentNode(filtersIsEmpty ? nil : self.tabContainerNode, animated: false)
             if let parentController = self.parent as? TabBarController {
                 parentController.navigationBar?.setSecondaryContentNode(filtersIsEmpty ? nil : self.tabContainerNode, animated: animated)
             }
