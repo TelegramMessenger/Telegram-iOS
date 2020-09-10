@@ -1,6 +1,7 @@
 
 
 #import <Foundation/Foundation.h>
+#import <MtProtoKit/MTDatacenterAuthInfo.h>
 
 @class MTProto;
 @class MTIncomingMessage;
@@ -15,10 +16,10 @@
 - (void)mtProtoDidAddService:(MTProto *)mtProto;
 - (void)mtProtoDidRemoveService:(MTProto *)mtProto;
 - (void)mtProtoPublicKeysUpdated:(MTProto *)mtProto datacenterId:(NSInteger)datacenterId publicKeys:(NSArray<NSDictionary *> *)publicKeys;
-- (MTMessageTransaction *)mtProtoMessageTransaction:(MTProto *)mtProto;
+- (MTMessageTransaction *)mtProtoMessageTransaction:(MTProto *)mtProto authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector;
 - (void)mtProtoDidChangeSession:(MTProto *)mtProto;
 - (void)mtProtoServerDidChangeSession:(MTProto *)mtProto firstValidMessageId:(int64_t)firstValidMessageId otherValidMessageIds:(NSArray *)otherValidMessageIds;
-- (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message;
+- (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector;
 - (void)mtProto:(MTProto *)mtProto receivedQuickAck:(int32_t)quickAckId;
 - (void)mtProto:(MTProto *)mtProto transactionsMayHaveFailed:(NSArray *)transactionIds;
 - (void)mtProtoAllTransactionsMayHaveFailed:(MTProto *)mtProto;

@@ -249,7 +249,7 @@
         MTMetaDisposable *disposable = [[MTMetaDisposable alloc] init];
         
         [[MTContext contextQueue] dispatchOnQueue:^{
-            MTDatacenterAuthAction *action = [[MTDatacenterAuthAction alloc] initWithTempAuth:true tempAuthKeyType:MTDatacenterAuthTempKeyTypeMain bindKey:authKey];
+            MTDatacenterAuthAction *action = [[MTDatacenterAuthAction alloc] initWithTempAuth:true authKeyInfoSelector:MTDatacenterAuthInfoSelectorEphemeralMain bindKey:authKey];
             action.completedWithResult = ^(bool success) {
                 [subscriber putNext:@(!success)];
                 [subscriber putCompletion];

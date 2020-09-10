@@ -103,8 +103,8 @@ public class UnauthorizedAccount {
                 datacenterIds.append(contentsOf: [4])
             }
             for id in datacenterIds {
-                if network.context.authInfoForDatacenter(withId: id) == nil {
-                    network.context.authInfoForDatacenter(withIdRequired: id, isCdn: false)
+                if network.context.authInfoForDatacenter(withId: id, selector: .persistent) == nil {
+                    network.context.authInfoForDatacenter(withIdRequired: id, isCdn: false, selector: .persistent)
                 }
             }
             network.context.beginExplicitBackupAddressDiscovery()
@@ -243,7 +243,7 @@ public func accountWithId(accountManager: AccountManager, networkArguments: Netw
                             let backupState = AuthorizedAccountState(isTestingEnvironment: beginWithTestingEnvironment, masterDatacenterId: backupData.masterDatacenterId, peerId: PeerId(backupData.peerId), state: nil)
                             state = backupState
                             let dict = NSMutableDictionary()
-                            dict.setObject(MTDatacenterAuthInfo(authKey: backupData.masterDatacenterKey, authKeyId: backupData.masterDatacenterKeyId, saltSet: [], authKeyAttributes: [:], mainTempAuthKey: nil, mediaTempAuthKey: nil), forKey: backupData.masterDatacenterId as NSNumber)
+                            dict.setObject(MTDatacenterAuthInfo(authKey: backupData.masterDatacenterKey, authKeyId: backupData.masterDatacenterKeyId, saltSet: [], authKeyAttributes: [:]), forKey: backupData.masterDatacenterId as NSNumber)
                             let data = NSKeyedArchiver.archivedData(withRootObject: dict)
                             transaction.setState(backupState)
                             transaction.setKeychainEntry(data, forKey: "persistent:datacenterAuthInfoById")

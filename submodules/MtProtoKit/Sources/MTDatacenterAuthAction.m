@@ -17,7 +17,7 @@
 @interface MTDatacenterAuthAction () <MTDatacenterAuthMessageServiceDelegate>
 {
     bool _isCdn;
-    MTDatacenterAuthTempKeyType _tempAuthKeyType;
+    MTDatacenterAuthInfoSelector _authKeyInfoSelector;
     MTDatacenterAuthKey *_bindKey;
     
     NSInteger _datacenterId;
@@ -34,11 +34,11 @@
 
 @implementation MTDatacenterAuthAction
 
-- (instancetype)initWithTempAuth:(bool)tempAuth tempAuthKeyType:(MTDatacenterAuthTempKeyType)tempAuthKeyType bindKey:(MTDatacenterAuthKey *)bindKey {
+- (instancetype)initWithTempAuth:(bool)tempAuth authKeyInfoSelector:(MTDatacenterAuthInfoSelector)authKeyInfoSelector bindKey:(MTDatacenterAuthKey *)bindKey {
     self = [super init];
     if (self != nil) {
         _tempAuth = tempAuth;
-        _tempAuthKeyType = tempAuthKeyType;
+        _authKeyInfoSelector = authKeyInfoSelector;
         _bindKey = bindKey;
         _verifyDisposable = [[MTMetaDisposable alloc] init];
     }
@@ -59,15 +59,10 @@
     if (_datacenterId != 0 && context != nil)
     {
         bool alreadyCompleted = false;
-        MTDatacenterAuthInfo *currentAuthInfo = [context authInfoForDatacenterWithId:_datacenterId];
+        
+        MTDatacenterAuthInfo *currentAuthInfo = [context authInfoForDatacenterWithId:_datacenterId selector:_authKeyInfoSelector];
         if (currentAuthInfo != nil && _bindKey == nil) {
-            if (_tempAuth) {
-                if ([currentAuthInfo tempAuthKeyWithType:_tempAuthKeyType] != nil) {
-                    alreadyCompleted = true;
-                }
-            } else {
-                alreadyCompleted = true;
-            }
+            alreadyCompleted = true;
         }
         
         if (alreadyCompleted) {
@@ -77,11 +72,11 @@
             _authMtProto.cdn = isCdn;
             _authMtProto.useUnauthorizedMode = true;
             if (_tempAuth) {
-                switch (_tempAuthKeyType) {
-                    case MTDatacenterAuthTempKeyTypeMain:
+                switch (_authKeyInfoSelector) {
+                    case MTDatacenterAuthInfoSelectorEphemeralMain:
                         _authMtProto.media = false;
                         break;
-                    case MTDatacenterAuthTempKeyTypeMedia:
+                    case MTDatacenterAuthInfoSelectorEphemeralMedia:
                         _authMtProto.media = true;
                         _authMtProto.enforceMedia = true;
                         break;
@@ -128,20 +123,19 @@
             } else {
                 MTContext *context = _context;
                 [context performBatchUpdates:^{
-                    MTDatacenterAuthInfo *authInfo = [context authInfoForDatacenterWithId:_datacenterId];
+                    MTDatacenterAuthInfo *authInfo = [context authInfoForDatacenterWithId:_datacenterId selector:_authKeyInfoSelector];
                     if (authInfo != nil) {
-                        authInfo = [authInfo withUpdatedTempAuthKeyWithType:_tempAuthKeyType key:authKey];
-                        [context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:authInfo];
+                        [context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:authInfo selector:_authKeyInfoSelector];
                     }
                 }];
                 [self complete];
             }
         }
     } else {
-        MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:0 firstValidMessageId:timestamp lastValidMessageId:timestamp + (29.0 * 60.0) * 4294967296]] authKeyAttributes:nil mainTempAuthKey:nil mediaTempAuthKey:nil];
+        MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:0 firstValidMessageId:timestamp lastValidMessageId:timestamp + (29.0 * 60.0) * 4294967296]] authKeyAttributes:nil];
         
         MTContext *context = _context;
-        [context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:authInfo];
+        [context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:authInfo selector:_authKeyInfoSelector];
         [self complete];
     }
 }

@@ -88,7 +88,7 @@
         [self fail];
     else
     {
-        if ([context authInfoForDatacenterWithId:_targetDatacenterId] != nil)
+        if ([context authInfoForDatacenterWithId:_targetDatacenterId selector:MTDatacenterAuthInfoSelectorPersistent] != nil)
         {
             _mtProto = [[MTProto alloc] initWithContext:context datacenterId:_targetDatacenterId usageCalculationInfo:nil requiredAuthToken:nil authTokenMasterDatacenterId:0];
             _mtProto.useTempAuthKeys = useTempAuthKeys;
@@ -118,11 +118,11 @@
             [_requestService addRequest:request];
         }
         else
-            [context authInfoForDatacenterWithIdRequired:_targetDatacenterId isCdn:false];
+            [context authInfoForDatacenterWithIdRequired:_targetDatacenterId isCdn:false selector:MTDatacenterAuthInfoSelectorPersistent];
     }
 }
 
-- (void)contextDatacenterAuthInfoUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId authInfo:(MTDatacenterAuthInfo *)__unused authInfo
+- (void)contextDatacenterAuthInfoUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId authInfo:(MTDatacenterAuthInfo *)__unused authInfo selector:(MTDatacenterAuthInfoSelector)selector
 {
     if (_context != context || !_awaitingAddresSetUpdate)
         return;

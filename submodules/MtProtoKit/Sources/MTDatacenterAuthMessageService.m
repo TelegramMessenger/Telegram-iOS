@@ -222,7 +222,7 @@ typedef enum {
     }
 }
 
-- (MTMessageTransaction *)mtProtoMessageTransaction:(MTProto *)mtProto
+- (MTMessageTransaction *)mtProtoMessageTransaction:(MTProto *)mtProto authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector
 {
     if (_currentStageTransactionId == nil)
     {
@@ -308,7 +308,7 @@ typedef enum {
     return nil;
 }
 
-- (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message
+- (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector
 {
     if (_stage == MTDatacenterAuthStagePQ && [message.body isKindOfClass:[MTResPqMessage class]])
     {
