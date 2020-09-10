@@ -345,10 +345,6 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
         self.network = network
         self.messagesLocation = location
         
-        if case .custom = location {
-            self.order = .reversed
-        }
-        
         switch self.messagesLocation {
             case let .messages(_, _, messageId), let .singleMessage(messageId), let .custom(_, messageId, _):
                 self.loadItem(anchor: .messageId(messageId), navigation: .later)
@@ -679,12 +675,13 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                 inputIndex = .single(index)
                             case .random:
                                 var playbackStack = self.playbackStack
-                                inputIndex = self.postbox.transaction { transaction -> MessageIndex in
+                                inputIndex = messages
+                                |> map { messages, _, _ -> MessageIndex in
                                     if case let .random(previous) = navigation, previous {
                                         let _ = playbackStack.pop()
                                         while true {
                                             if let id = playbackStack.pop() {
-                                                if let message = transaction.getMessage(id) {
+                                                if let message = messages.first(where: { $0.id == id }) {
                                                     return message.index
                                                 }
                                             } else {
@@ -692,9 +689,8 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                             }
                                         }
                                     }
-                                    return index
-//                                    return transaction.findRandomMessage(peerId: peerId, namespace: Namespaces.Message.Cloud, tag: tagMask, ignoreIds: (playbackStack.ids, playbackStack.set)) ?? index
-                            }
+                                    return messages.randomElement()?.index ?? index
+                                }
                         }
                         let historySignal = inputIndex
                         |> mapToSignal { inputIndex -> Signal<(Message, [Message])?, NoError> in

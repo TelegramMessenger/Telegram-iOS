@@ -312,6 +312,21 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                     }
                 }
                 
+                for media in item.message.media {
+                    if let image = media as? TelegramMediaImage {
+                        if let representation = imageRepresentationLargerThan(image.representations, size: PixelDimensions(width: 80, height: 80)) {
+                            iconImageReferenceAndRepresentation = (.message(message: MessageReference(item.message), media: image), representation)
+                        }
+                        break
+                    }
+                    if let file = media as? TelegramMediaFile {
+                        if let representation = smallestImageRepresentation(file.previewRepresentations) {
+                            iconImageReferenceAndRepresentation = (.message(message: MessageReference(item.message), media: file), representation)
+                        }
+                        break
+                    }
+                }
+                
                 var entities: [MessageTextEntity]?
                 
                 entities = messageEntities
@@ -680,9 +695,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                     }
                 }
             } else {
-                if !item.interaction.openMessage(item.message, .default) {
-                    item.interaction.openUrl(currentPrimaryUrl, false, false, nil)
-                }
+                item.interaction.openUrl(currentPrimaryUrl, false, false, nil)
             }
         }
     }

@@ -12,7 +12,6 @@ import RadialStatusNode
 import TelegramStringFormatting
 import UniversalMediaPlayer
 import ListMessageItem
-import ListSectionHeaderNode
 import ChatMessageInteractiveMediaBadge
 import ShimmerEffect
 import GridMessageSelectionNode
@@ -645,7 +644,6 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
     private let contentType: ContentType
     
     private let scrollNode: ASScrollNode
-    private var headerNode: ListSectionHeaderNode
     private let floatingHeaderNode: FloatingHeaderNode
     private var flashHeaderDelayTimer: Foundation.Timer?
     private var isDeceleratingAfterTracking = false
@@ -686,9 +684,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode = ASScrollNode()
         self.floatingHeaderNode = FloatingHeaderNode()
         self.floatingHeaderNode.alpha = 0.0
-        
-        self.headerNode = ListSectionHeaderNode(theme: context.sharedContext.currentPresentationData.with { $0 }.theme)
-        
+                
         super.init()
         
         self._itemInteraction = VisualMediaItemInteraction(
@@ -765,14 +761,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
             self.initialized = true
             
             if let (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = self.currentParams {
-                if loading {
-                    self.headerNode.title = ""
-                } else if totalCount > 0 {
-                    self.headerNode.title = presentationData.strings.ChatList_Search_Photos(totalCount).uppercased()
-                }
-                
                 self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: true, transition: .immediate)
-                self.headerNode.alpha = self.mediaItems.isEmpty && !loading ? 0.0 : 1.0
                 if !self.didSetReady {
                     self.didSetReady = true
                     self.ready.set(.single(true))
@@ -841,10 +830,8 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
     
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
         self.currentParams = (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
-        
-        let headerSize = CGSize(width: size.width, height: 0.0)
-        
-        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: headerSize.height), size: CGSize(width: size.width, height: size.height - headerSize.height)))
+                
+        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
         
         let availableWidth = size.width - sideInset * 2.0
         

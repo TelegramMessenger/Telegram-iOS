@@ -22,10 +22,6 @@ public enum ChatListSearchItemHeaderType {
     case chatTypes
     case faq
     case messages(Int32)
-    case photos(Int32)
-    case links(Int32)
-    case files(Int32)
-    case music(Int32)
     
     fileprivate func title(strings: PresentationStrings) -> String {
         switch self {
@@ -63,14 +59,6 @@ public enum ChatListSearchItemHeaderType {
                 return strings.Settings_FrequentlyAskedQuestions
             case let .messages(count):
                 return strings.ChatList_Search_Messages(count)
-            case let .photos(count):
-                return strings.ChatList_Search_Photos(count)
-            case let .links(count):
-                return strings.ChatList_Search_Links(count)
-            case let .files(count):
-                return strings.ChatList_Search_Files(count)
-            case let .music(count):
-                return strings.ChatList_Search_Music(count)
         }
     }
     
@@ -110,14 +98,6 @@ public enum ChatListSearchItemHeaderType {
                 return .faq
             case .messages:
                 return .messages
-            case .photos:
-                return .photos
-            case .links:
-                return .links
-            case .files:
-                return .files
-            case .music:
-                return .music
         }
     }
 }

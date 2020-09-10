@@ -13,6 +13,7 @@ enum ChatListSearchFilter: Equatable {
     case files
     case music
     case voice
+    case peer(PeerId, String)
     case date(Int32, String)
     
     var id: Int32 {
@@ -27,6 +28,8 @@ enum ChatListSearchFilter: Equatable {
                 return 3
             case .voice:
                 return 4
+            case .peer:
+                return 5
             case let .date(date, _):
                 return date
         }
@@ -113,8 +116,11 @@ private final class ItemNode: ASDisplayNode {
             case .voice:
                 title = presentationData.strings.ChatList_Search_FilterVoice
                 icon = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/Voice"), color: color)
-            case let .date(_, dateTitle):
-                title = dateTitle
+            case let .peer(_, displayTitle):
+                title = displayTitle
+                icon = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/User"), color: color)
+            case let .date(_, displayTitle):
+                title = displayTitle
                 icon = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/Calendar"), color: color)
         }
         
@@ -252,7 +258,7 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
             totalRawTabSize += paneNodeSize.width
         }
         
-        let minSpacing: CGFloat = 26.0
+        let minSpacing: CGFloat = 24.0
         var spacing = minSpacing
         
         let resolvedSideInset: CGFloat = 16.0 + sideInset
@@ -269,10 +275,6 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
             }
         }
         longTitlesWidth += resolvedSideInset
-        
-        if longTitlesWidth < size.width && tabSizes.count > 3 {
-            spacing = (size.width - titlesWidth - resolvedSideInset * 2.0) / CGFloat(tabSizes.count - 1)
-        }
         
         let verticalOffset: CGFloat = -3.0
         for i in 0 ..< tabSizes.count {

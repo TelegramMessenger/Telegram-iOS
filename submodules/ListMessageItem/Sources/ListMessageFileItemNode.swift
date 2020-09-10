@@ -458,11 +458,26 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         }
                         titleText = NSAttributedString(string: authorName, font: audioTitleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
                         let dateString = stringForFullDate(timestamp: item.message.timestamp, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat)
-                        let descriptionString: String
+                        var descriptionString: String = ""
                         if let duration = file.duration {
-                            descriptionString = "\(stringForDuration(Int32(duration))) • \(dateString)"
+                            if item.isGlobalSearchResult {
+                                descriptionString = stringForDuration(Int32(duration))
+                            } else {
+                                descriptionString = "\(stringForDuration(Int32(duration))) • \(dateString)"
+                            }
                         } else {
-                            descriptionString = dateString
+                            if !item.isGlobalSearchResult {
+                                descriptionString = dateString
+                            }
+                        }
+                        
+                        if item.isGlobalSearchResult {
+                            let authorString = fullAuthorString(for: item)
+                            if descriptionString.isEmpty {
+                                descriptionString = authorString
+                            } else {
+                                descriptionString = "\(descriptionString) • \(authorString)"
+                            }
                         }
                         
                         descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)

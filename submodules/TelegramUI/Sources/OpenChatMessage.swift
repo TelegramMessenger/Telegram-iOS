@@ -133,7 +133,9 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     control = .seek(time)
                 }
                 if (file.isVoice || file.isInstantVideo) && params.message.tags.contains(.voiceOrInstantVideo) {
-                    if params.standalone {
+                    if let playlistLocation = params.playlistLocation {
+                        location = playlistLocation
+                    } else if params.standalone {
                         location = .recentActions(params.message)
                     } else {
                         location = .messages(peerId: params.message.id.peerId, tagMask: .voiceOrInstantVideo, at: params.message.id)

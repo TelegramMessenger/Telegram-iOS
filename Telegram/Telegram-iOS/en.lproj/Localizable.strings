@@ -5744,15 +5744,21 @@ Any member of this group will be able to see messages in the channel.";
 "Call.AccountIsLoggedOnCurrentDevice" = "Sorry, you can't call %@ because that account is logged in to Telegram on the device you're using for the call.";
 
 "ChatList.Search.FilterMedia" = "Media";
-"ChatList.Search.FilterPhotos" = "Photos";
-"ChatList.Search.FilterVideos" = "Video";
 "ChatList.Search.FilterLinks" = "Links";
 "ChatList.Search.FilterFiles" = "Files";
 "ChatList.Search.FilterMusic" = "Music";
+"ChatList.Search.FilterVoice" = "Voice";
 
 "ChatList.Search.NoResults" = "No Results";
 "ChatList.Search.NoResultsQueryDescription" = "There were no results for \"%@\".\nTry a new search.";
 "ChatList.Search.NoResultsDescription" = "There were no results.\nTry a new search.";
+
+"ChatList.Search.NoResultsFilter" = "Nothing Yet";
+"ChatList.Search.NoResultsFitlerMedia" = "Photos and videos from all your chats will be shown here.";
+"ChatList.Search.NoResultsFitlerLinks" = "Links from all your chats will be shown here.";
+"ChatList.Search.NoResultsFitlerFiles" = "Files from all your chats will be shown here.";
+"ChatList.Search.NoResultsFitlerMusic" = "Music from all your chats will be shown here.";
+"ChatList.Search.NoResultsFitlerVoice" = "Voice and video messages from all your chats will be shown here.";
 
 "ChatList.Search.Messages_0" = "%@ messages";
 "ChatList.Search.Messages_1" = "%@ message";
@@ -5760,34 +5766,6 @@ Any member of this group will be able to see messages in the channel.";
 "ChatList.Search.Messages_3_10" = "%@ messages";
 "ChatList.Search.Messages_many" = "%@ messages";
 "ChatList.Search.Messages_any" = "%@ messages";
-
-"ChatList.Search.Photos_0" = "%@ photos";
-"ChatList.Search.Photos_1" = "%@ photo";
-"ChatList.Search.Photos_2" = "%@ photos";
-"ChatList.Search.Photos_3_10" = "%@ photos";
-"ChatList.Search.Photos_many" = "%@ photos";
-"ChatList.Search.Photos_any" = "%@ photos";
-
-"ChatList.Search.Links_0" = "%@ links";
-"ChatList.Search.Links_1" = "%@ link";
-"ChatList.Search.Links_2" = "%@ links";
-"ChatList.Search.Links_3_10" = "%@ links";
-"ChatList.Search.Links_many" = "%@ links";
-"ChatList.Search.Links_any" = "%@ links";
-
-"ChatList.Search.Files_0" = "%@ files";
-"ChatList.Search.Files_1" = "%@ file";
-"ChatList.Search.Files_2" = "%@ files";
-"ChatList.Search.Files_3_10" = "%@ files";
-"ChatList.Search.Files_many" = "%@ files";
-"ChatList.Search.Files_any" = "%@ files";
-
-"ChatList.Search.Music_0" = "%@ audio files";
-"ChatList.Search.Music_1" = "%@ audio file";
-"ChatList.Search.Music_2" = "%@ audio files";
-"ChatList.Search.Music_3_10" = "%@ audio files";
-"ChatList.Search.Music_many" = "%@ audio files";
-"ChatList.Search.Music_any" = "%@ audio files";
 
 "Conversation.InputTextAnonymousPlaceholder" = "Send anonymously";
 
