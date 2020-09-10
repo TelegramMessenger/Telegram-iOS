@@ -68,28 +68,13 @@ private func getCoveringViewSnapshotForPublicAccount(window: Window1) -> UIImage
     return generateImage(CGSize(width: floor(unscaledSize.width * scale), height: floor(unscaledSize.height * scale)), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.scaleBy(x: scale, y: scale)
-        let snapshot = window.hostView.containerView.snapshotView(afterScreenUpdates: false)
-        if let snapshot = snapshot {
-            window.hostView.containerView.superview?.addSubview(snapshot)
-        }
+        let view = window.hostView.containerView.subviews.first
+        
         UIGraphicsPushContext(context)
         
-        window.forEachViewController({ controller in
-            if let controller = controller as? PasscodeEntryController {
-                controller.displayNode.alpha = 0.0
-            }
-            return true
-        })
-        window.hostView.containerView.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: true)
-        window.forEachViewController({ controller in
-            if let controller = controller as? PasscodeEntryController {
-                controller.displayNode.alpha = 1.0
-            }
-            return true
-        })
-        
+        view?.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: false)
+
         UIGraphicsPopContext()
-        snapshot?.removeFromSuperview()
     }).flatMap(applyScreenshotEffectToImage)
 }
 
