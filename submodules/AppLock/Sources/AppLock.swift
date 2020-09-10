@@ -384,9 +384,6 @@ public final class AppLockContextImpl: AppLockContext {
                     coveringView.updateSnapshot(strongSelf.snapshot)
                 }
                 
-                if strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId != nil {
-                    UIApplication.shared.isStatusBarHidden = false
-                }
                 strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
         })
         
