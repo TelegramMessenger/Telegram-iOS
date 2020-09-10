@@ -828,42 +828,60 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 }
 
 - (MTDatacenterAuthKey *)getAuthKeyForCurrentScheme:(MTTransportScheme *)scheme createIfNeeded:(bool)createIfNeeded authInfoSelector:(MTDatacenterAuthInfoSelector *)authInfoSelector {
-    MTDatacenterAuthInfoSelector selector = MTDatacenterAuthInfoSelectorPersistent;
-    
-    if (_cdn) {
-        selector = MTDatacenterAuthInfoSelectorPersistent;
-    } else {
-        if (_useTempAuthKeys) {
-            if (scheme.address.preferForMedia) {
-                selector = MTDatacenterAuthInfoSelectorEphemeralMedia;
-            } else {
-                selector = MTDatacenterAuthInfoSelectorEphemeralMain;
-            }
-        } else {
-            selector = MTDatacenterAuthInfoSelectorPersistent;
+    if (_useExplicitAuthKey) {
+        MTDatacenterAuthInfoSelector selector = MTDatacenterAuthInfoSelectorEphemeralMain;
+        if (authInfoSelector != nil) {
+            *authInfoSelector = selector;
         }
-    }
-    
-    if (authInfoSelector != nil) {
-        *authInfoSelector = selector;
-    }
-    
-    if (_validAuthInfo != nil && _validAuthInfo.selector == selector) {
+        
+        if (_validAuthInfo != nil && _validAuthInfo.selector == selector) {
+            return [[MTDatacenterAuthKey alloc] initWithAuthKey:_validAuthInfo.authInfo.authKey authKeyId:_validAuthInfo.authInfo.authKeyId notBound:false];
+        }
+        
+        MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:_useExplicitAuthKey.authKey authKeyId:_useExplicitAuthKey.authKeyId saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:0 firstValidMessageId:0 lastValidMessageId:0]] authKeyAttributes:nil];
+        
+        _validAuthInfo = [[MTProtoValidAuthInfo alloc] initWithAuthInfo:authInfo selector:selector];
         return [[MTDatacenterAuthKey alloc] initWithAuthKey:_validAuthInfo.authInfo.authKey authKeyId:_validAuthInfo.authInfo.authKeyId notBound:false];
     } else {
-        MTDatacenterAuthInfo *authInfo = [_context authInfoForDatacenterWithId:_datacenterId selector:selector];
-        if (authInfo != nil) {
-            _validAuthInfo = [[MTProtoValidAuthInfo alloc] initWithAuthInfo:authInfo selector:selector];
+        MTDatacenterAuthInfoSelector selector = MTDatacenterAuthInfoSelectorPersistent;
+        
+        if (_cdn) {
+            selector = MTDatacenterAuthInfoSelectorPersistent;
+        } else {
+            if (_useTempAuthKeys) {
+                if (scheme.address.preferForMedia) {
+                    selector = MTDatacenterAuthInfoSelectorEphemeralMedia;
+                } else {
+                    selector = MTDatacenterAuthInfoSelectorEphemeralMain;
+                }
+            } else {
+                selector = MTDatacenterAuthInfoSelectorPersistent;
+            }
+        }
+        
+        if (authInfoSelector != nil) {
+            *authInfoSelector = selector;
+        }
+        
+        if (_validAuthInfo != nil && _validAuthInfo.selector == selector) {
             return [[MTDatacenterAuthKey alloc] initWithAuthKey:_validAuthInfo.authInfo.authKey authKeyId:_validAuthInfo.authInfo.authKeyId notBound:false];
         } else {
-            [_context performBatchUpdates:^{
-                [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:nil selector:selector];
-                [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:_cdn selector:selector];
-            }];
-            _mtState |= MTProtoStateAwaitingDatacenterAuthorization;
-            _awaitingAuthInfoForSelector = @(selector);
-            
-            return nil;
+            MTDatacenterAuthInfo *authInfo = [_context authInfoForDatacenterWithId:_datacenterId selector:selector];
+            if (authInfo != nil) {
+                _validAuthInfo = [[MTProtoValidAuthInfo alloc] initWithAuthInfo:authInfo selector:selector];
+                return [[MTDatacenterAuthKey alloc] initWithAuthKey:_validAuthInfo.authInfo.authKey authKeyId:_validAuthInfo.authInfo.authKeyId notBound:false];
+            } else {
+                if (createIfNeeded) {
+                    [_context performBatchUpdates:^{
+                        [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:nil selector:selector];
+                        [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:_cdn selector:selector];
+                    }];
+                    _mtState |= MTProtoStateAwaitingDatacenterAuthorization;
+                    _awaitingAuthInfoForSelector = @(selector);
+                }
+                
+                return nil;
+            }
         }
     }
 }
@@ -924,9 +942,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             NSMutableArray *messageServiceTransactions = [[NSMutableArray alloc] init];
             for (id<MTMessageService> messageService in _messageServices)
             {
-                if ([messageService respondsToSelector:@selector(mtProtoMessageTransaction:authInfoSelector:)])
+                if ([messageService respondsToSelector:@selector(mtProtoMessageTransaction:authInfoSelector:sessionInfo:)])
                 {
-                    MTMessageTransaction *messageTransaction = [messageService mtProtoMessageTransaction:self authInfoSelector:authInfoSelector];
+                    MTMessageTransaction *messageTransaction = [messageService mtProtoMessageTransaction:self authInfoSelector:authInfoSelector sessionInfo:transactionSessionInfo];
                     if (messageTransaction != nil)
                     {
                         for (MTOutgoingMessage *message in messageTransaction.messagePayload)
@@ -1496,7 +1514,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     return messageData;
 }
 
-- (NSData *)paddedDataV1:(NSData *)data {
++ (NSData *)paddedDataV1:(NSData *)data {
     NSMutableData *padded = [[NSMutableData alloc] initWithData:data];
     uint8_t randomBytes[128];
     arc4random_buf(randomBytes, 128);
@@ -1543,7 +1561,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     return padded;
 }
 
-- (NSData *)_manuallyEncryptedMessage:(NSData *)preparedData messageId:(int64_t)messageId authKey:(MTDatacenterAuthKey *)authKey {
++ (NSData *)_manuallyEncryptedMessage:(NSData *)preparedData messageId:(int64_t)messageId authKey:(MTDatacenterAuthKey *)authKey {
     MTOutputStream *decryptedOs = [[MTOutputStream alloc] init];
     
     int64_t random1 = 0;
@@ -1559,7 +1577,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     [decryptedOs writeInt32:(int32_t)preparedData.length];
     [decryptedOs writeData:preparedData];
     
-    NSData *decryptedData = [self paddedDataV1:[decryptedOs currentBytes]];
+    NSData *decryptedData = [MTProto paddedDataV1:[decryptedOs currentBytes]];
     
     NSData *messageKeyFull = MTSubdataSha1(decryptedData, 0, 32 + preparedData.length);
     NSData *messageKey = [[NSData alloc] initWithBytes:(((int8_t *)messageKeyFull.bytes) + messageKeyFull.length - 16) length:16];
@@ -2013,6 +2031,10 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     MTDatacenterAuthInfoSelector authInfoSelector;
     [self getAuthKeyForCurrentScheme:scheme createIfNeeded:false authInfoSelector:&authInfoSelector];
     
+    if (MTLogEnabled()) {
+        MTLog(@"[MTProto#%p@%p missing key %lld selector]", self, _context, _validAuthInfo.authInfo.authKeyId, authInfoSelector);
+    }
+    
     if (_useExplicitAuthKey != nil) {
     } else if (_cdn) {
         _validAuthInfo = nil;
@@ -2047,7 +2069,23 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
             _mtState |= MTProtoStateAwaitingDatacenterAuthorization;
             _awaitingAuthInfoForSelector = @(authInfoSelector);
         } else {
-            [_context checkIfLoggedOut:_datacenterId];
+            switch (authInfoSelector) {
+                case MTDatacenterAuthInfoSelectorEphemeralMain:
+                case MTDatacenterAuthInfoSelectorEphemeralMedia: {
+                    _validAuthInfo = nil;
+                    
+                    [_context performBatchUpdates:^{
+                        [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:nil selector:authInfoSelector];
+                        [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:false selector:authInfoSelector];
+                    }];
+                    _mtState |= MTProtoStateAwaitingDatacenterAuthorization;
+                    _awaitingAuthInfoForSelector = @(authInfoSelector);
+                    break;
+                }
+                default:
+                    [_context checkIfLoggedOut:_datacenterId];
+                    break;
+            }
         }
     }
 }
@@ -2497,6 +2535,8 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
             } else if (_awaitingAuthInfoForSelector != nil) {
                 if ([_awaitingAuthInfoForSelector intValue] != selector) {
                     return;
+                } else if (authInfo != nil) {
+                    _awaitingAuthInfoForSelector = nil;
                 }
             } else {
                 return;
@@ -2566,13 +2606,20 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     
     if (saltList != nil)
     {
-        MTDatacenterAuthInfo *authInfo = [_context authInfoForDatacenterWithId:_datacenterId selector:authInfoSelector];
-        if (authInfo != nil)
-        {
-            MTDatacenterAuthInfo *updatedAuthInfo = [authInfo mergeSaltSet:saltList forTimestamp:[_context globalTime]];
-            [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:updatedAuthInfo selector:authInfoSelector];
+        if (_useExplicitAuthKey) {
             if (_validAuthInfo != nil && _validAuthInfo.selector == authInfoSelector) {
+                MTDatacenterAuthInfo *updatedAuthInfo = [_validAuthInfo.authInfo mergeSaltSet:saltList forTimestamp:[_context globalTime]];
                 _validAuthInfo = [[MTProtoValidAuthInfo alloc] initWithAuthInfo:updatedAuthInfo selector:authInfoSelector];
+            }
+        } else {
+            MTDatacenterAuthInfo *authInfo = [_context authInfoForDatacenterWithId:_datacenterId selector:authInfoSelector];
+            if (authInfo != nil)
+            {
+                MTDatacenterAuthInfo *updatedAuthInfo = [authInfo mergeSaltSet:saltList forTimestamp:[_context globalTime]];
+                [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:updatedAuthInfo selector:authInfoSelector];
+                if (_validAuthInfo != nil && _validAuthInfo.selector == authInfoSelector) {
+                    _validAuthInfo = [[MTProtoValidAuthInfo alloc] initWithAuthInfo:updatedAuthInfo selector:authInfoSelector];
+                }
             }
         }
     }

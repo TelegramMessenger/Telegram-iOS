@@ -49,6 +49,7 @@
 @property (nonatomic, strong, readonly) MTApiEnvironment *apiEnvironment;
 @property (nonatomic, readonly) bool isTestingEnvironment;
 @property (nonatomic, readonly) bool useTempAuthKeys;
+@property (nonatomic, readonly) int32_t tempKeyExpiration;
 
 + (int32_t)fixedTimeDifference;
 + (void)setFixedTimeDifference:(int32_t)fixedTimeDifference;

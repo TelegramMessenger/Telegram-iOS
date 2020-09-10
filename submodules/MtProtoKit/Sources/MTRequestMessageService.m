@@ -391,7 +391,7 @@
     return currentData;
 }
 
-- (MTMessageTransaction *)mtProtoMessageTransaction:(MTProto *)mtProto authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector
+- (MTMessageTransaction *)mtProtoMessageTransaction:(MTProto *)mtProto authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector sessionInfo:(MTSessionInfo *)sessionInfo
 {
     NSMutableArray *messages = nil;
     NSMutableDictionary *requestInternalIdToMessageInternalId = nil;
