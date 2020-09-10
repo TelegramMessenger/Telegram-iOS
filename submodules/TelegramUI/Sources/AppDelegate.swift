@@ -1459,6 +1459,8 @@ final class SharedApplicationContext {
     func applicationDidEnterBackground(_ application: UIApplication) {
         doubleBottomFlow?.blockInterfaceInNeeded()
         
+        self.contextValue?.context.sharedContext.appLockContext.didEnterBackground()
+        
         let _ = (self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedApplicationContext in

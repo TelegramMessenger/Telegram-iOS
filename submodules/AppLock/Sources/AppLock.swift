@@ -111,7 +111,6 @@ public final class AppLockContextImpl: AppLockContext {
     private var hiddenAccountsAccessChallengeDataDisposable: Disposable?
     public private(set) var hiddenAccountsAccessChallengeData = [AccountRecordId:PostboxAccessChallengeData]()
 
-    private var applicationInForegroundDisposable: Disposable?
     private var requiresSnapshotUpdateDisposable: Disposable?
     
     public var lockingIsCompletePromise = Promise<Bool>()
@@ -351,21 +350,6 @@ public final class AppLockContextImpl: AppLockContext {
         
         self.currentState.set(.single(self.currentStateValue))
         
-        self.applicationInForegroundDisposable = (applicationBindings.applicationInForeground
-            |> distinctUntilChanged(isEqual: ==)
-            |> filter { !$0 }
-            |> deliverOnMainQueue).start(next: { [weak self] _ in
-                guard let strongSelf = self, strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId != nil else { return }
-                
-                UIApplication.shared.isStatusBarHidden = false
-                
-                if let coveringView = strongSelf.coveringView, let snapshot = strongSelf.snapshot {
-                    coveringView.updateSnapshot(strongSelf.snapshot)
-                }
-                
-                strongSelf.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
-        })
-        
         let _ = (self.autolockTimeout.get()
         |> deliverOnMainQueue).start(next: { [weak self] autolockTimeout in
             self?.updateLockState { state in
@@ -381,7 +365,21 @@ public final class AppLockContextImpl: AppLockContext {
         
         self.coveringView?.updateSnapshot(nil)
         self.requiresSnapshotUpdate = false
-        self.snapshot = getCoveringViewSnapshotForPublicAccount(window: window)
+        Queue.mainQueue().after(0.9) {
+            self.snapshot = getCoveringViewSnapshotForPublicAccount(window: window)
+        }
+    }
+    
+    public func didEnterBackground() {
+        guard self.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId != nil else { return }
+        
+        UIApplication.shared.isStatusBarHidden = false
+        
+        if let coveringView = self.coveringView, let snapshot = self.snapshot {
+            coveringView.updateSnapshot(snapshot)
+        }
+        
+        self.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.set(nil)
     }
     
     private func updateTimestampRenewTimer(shouldRun: Bool) {
@@ -498,7 +496,6 @@ public final class AppLockContextImpl: AppLockContext {
     
     deinit {
         self.hiddenAccountsAccessChallengeDataDisposable?.dispose()
-        self.applicationInForegroundDisposable?.dispose()
         self.requiresSnapshotUpdateDisposable?.dispose()
     }
 }
