@@ -8355,6 +8355,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.loadingMessage.set(false)
                         }
                     }))
+                } else {
+                    if let navigationController = self.effectiveNavigationController {
+                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(messageLocation.peerId), subject: messageLocation.messageId.flatMap { .message($0) }))
+                    }
+                    completion?()
                 }
             }
         } else {

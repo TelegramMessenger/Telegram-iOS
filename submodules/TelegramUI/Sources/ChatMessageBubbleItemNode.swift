@@ -29,8 +29,13 @@ enum InternalBubbleTapAction {
     case openContextMenu(tapMessage: Message, selectAll: Bool, subFrame: CGRect)
 }
 
-private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass, ChatMessageEntryAttributes, Bool)] {
-    var result: [(Message, AnyClass, ChatMessageEntryAttributes, Bool)] = []
+private struct BubbleItemAttributes {
+    var isAttachment: Bool
+    var neighborType: ChatMessageBubbleRelativePosition.NeighbourType
+}
+
+private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)] {
+    var result: [(Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)] = []
     var skipText = false
     var messageWithCaptionToAdd: (Message, ChatMessageEntryAttributes)?
     var isUnsupportedMedia = false
@@ -39,46 +44,46 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
     outer: for (message, itemAttributes) in item.content {
         for attribute in message.attributes {
             if let attribute = attribute as? RestrictedContentMessageAttribute, attribute.platformText(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) != nil {
-                result.append((message, ChatMessageRestrictedBubbleContentNode.self, itemAttributes, false))
+                result.append((message, ChatMessageRestrictedBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform)))
                 break outer
             }
         }
         
         inner: for media in message.media {
             if let _ = media as? TelegramMediaImage {
-                result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, true))
+                result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media)))
             } else if let file = media as? TelegramMediaFile {
                 let isVideo = file.isVideo || (file.isAnimated && file.dimensions != nil)
                 if isVideo {
-                    result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, true))
+                    result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media)))
                 } else {
-                    result.append((message, ChatMessageFileBubbleContentNode.self, itemAttributes, false))
+                    result.append((message, ChatMessageFileBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform)))
                 }
             } else if let action = media as? TelegramMediaAction {
                 isAction = true
                 if case .phoneCall = action.action {
-                    result.append((message, ChatMessageCallBubbleContentNode.self, itemAttributes, false))
+                    result.append((message, ChatMessageCallBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform)))
                 } else {
-                    result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, false))
+                    result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform)))
                 }
             } else if let _ = media as? TelegramMediaMap {
-                result.append((message, ChatMessageMapBubbleContentNode.self, itemAttributes, true))
+                result.append((message, ChatMessageMapBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media)))
             } else if let _ = media as? TelegramMediaGame {
                 skipText = true
-                result.append((message, ChatMessageGameBubbleContentNode.self, itemAttributes, false))
+                result.append((message, ChatMessageGameBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform)))
                 break inner
             } else if let _ = media as? TelegramMediaInvoice {
                 skipText = true
-                result.append((message, ChatMessageInvoiceBubbleContentNode.self, itemAttributes, false))
+                result.append((message, ChatMessageInvoiceBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform)))
                 break inner
             } else if let _ = media as? TelegramMediaContact {
-                result.append((message, ChatMessageContactBubbleContentNode.self, itemAttributes, false))
+                result.append((message, ChatMessageContactBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform)))
             } else if let _ = media as? TelegramMediaExpiredContent {
                 result.removeAll()
-                result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, false))
+                result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform)))
                 return result
             } else if let _ = media as? TelegramMediaPoll {
-                result.append((message, ChatMessagePollBubbleContentNode.self, itemAttributes, false))
+                result.append((message, ChatMessagePollBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform)))
             } else if let _ = media as? TelegramMediaUnsupported {
                 isUnsupportedMedia = true
             }
@@ -95,7 +100,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
                     messageWithCaptionToAdd = (message, itemAttributes)
                     skipText = true
                 } else {
-                    result.append((message, ChatMessageTextBubbleContentNode.self, itemAttributes, false))
+                    result.append((message, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform)))
                 }
             } else {
                 if case .group = item.content {
@@ -107,34 +112,34 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
         inner: for media in message.media {
             if let webpage = media as? TelegramMediaWebpage {
                 if case .Loaded = webpage.content {
-                    result.append((message, ChatMessageWebpageBubbleContentNode.self, itemAttributes, false))
+                    result.append((message, ChatMessageWebpageBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform)))
                 }
                 break inner
             }
         }
         
         if isUnsupportedMedia {
-            result.append((message, ChatMessageUnsupportedBubbleContentNode.self, itemAttributes, false))
+            result.append((message, ChatMessageUnsupportedBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform)))
         }
     }
     
     if let (messageWithCaptionToAdd, itemAttributes) = messageWithCaptionToAdd {
-        result.append((messageWithCaptionToAdd, ChatMessageTextBubbleContentNode.self, itemAttributes, false))
+        result.append((messageWithCaptionToAdd, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform)))
     }
     
     if let additionalContent = item.additionalContent {
         switch additionalContent {
             case let .eventLogPreviousMessage(previousMessage):
-                result.append((previousMessage, ChatMessageEventLogPreviousMessageContentNode.self, ChatMessageEntryAttributes(), false))
+                result.append((previousMessage, ChatMessageEventLogPreviousMessageContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: false, neighborType: .freeform)))
             case let .eventLogPreviousDescription(previousMessage):
-                result.append((previousMessage, ChatMessageEventLogPreviousDescriptionContentNode.self, ChatMessageEntryAttributes(), false))
+                result.append((previousMessage, ChatMessageEventLogPreviousDescriptionContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: false, neighborType: .freeform)))
             case let .eventLogPreviousLink(previousMessage):
-                result.append((previousMessage, ChatMessageEventLogPreviousLinkContentNode.self, ChatMessageEntryAttributes(), false))
+                result.append((previousMessage, ChatMessageEventLogPreviousLinkContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: false, neighborType: .freeform)))
         }
     }
     
     let firstMessage = item.content.firstMessage
-    if !isAction {
+    if !isAction && !Namespaces.Message.allScheduled.contains(firstMessage.id.namespace) {
         var hasDiscussion = false
         if let channel = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
             hasDiscussion = true
@@ -159,10 +164,10 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
             }
             
             if canComment {
-                result.append((firstMessage, ChatMessageCommentFooterContentNode.self, ChatMessageEntryAttributes(), false))
+                result.append((firstMessage, ChatMessageCommentFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform)))
             }
         } else if firstMessage.id.peerId.isReplies {
-            result.append((firstMessage, ChatMessageCommentFooterContentNode.self, ChatMessageEntryAttributes(), false))
+            result.append((firstMessage, ChatMessageCommentFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform)))
         }
     }
     
@@ -981,22 +986,22 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         let maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset)
         
-        var contentPropertiesAndPrepareLayouts: [(Message, Bool, ChatMessageEntryAttributes, Bool, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))))] = []
+        var contentPropertiesAndPrepareLayouts: [(Message, Bool, ChatMessageEntryAttributes, BubbleItemAttributes, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))))] = []
         var addedContentNodes: [(Message, ChatMessageBubbleContentNode)]?
         
         let contentNodeMessagesAndClasses = contentNodeMessagesAndClassesForItem(item)
-        for (contentNodeMessage, contentNodeClass, attributes, isAttachment) in contentNodeMessagesAndClasses {
+        for (contentNodeMessage, contentNodeClass, attributes, bubbleAttributes) in contentNodeMessagesAndClasses {
             var found = false
             for (currentMessage, currentClass, supportsMosaic, currentLayout) in currentContentClassesPropertiesAndLayouts {
                 if currentClass == contentNodeClass && currentMessage.stableId == contentNodeMessage.stableId {
-                    contentPropertiesAndPrepareLayouts.append((contentNodeMessage, supportsMosaic, attributes, isAttachment, currentLayout))
+                    contentPropertiesAndPrepareLayouts.append((contentNodeMessage, supportsMosaic, attributes, bubbleAttributes, currentLayout))
                     found = true
                     break
                 }
             }
             if !found {
                 let contentNode = (contentNodeClass as! ChatMessageBubbleContentNode.Type).init()
-                contentPropertiesAndPrepareLayouts.append((contentNodeMessage, contentNode.supportsMosaic, attributes, isAttachment, contentNode.asyncLayoutContent()))
+                contentPropertiesAndPrepareLayouts.append((contentNodeMessage, contentNode.supportsMosaic, attributes, bubbleAttributes, contentNode.asyncLayoutContent()))
                 if addedContentNodes == nil {
                     addedContentNodes = []
                 }
@@ -1052,7 +1057,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             inlineBotNameString = nil
         }
         
-        var contentPropertiesAndLayouts: [(CGSize?, ChatMessageBubbleContentProperties, ChatMessageBubblePreparePosition, Bool, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void)))] = []
+        var contentPropertiesAndLayouts: [(CGSize?, ChatMessageBubbleContentProperties, ChatMessageBubblePreparePosition, BubbleItemAttributes, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void)))] = []
         
         let topNodeMergeStatus: ChatMessageBubbleMergeStatus = mergedTop.merged ? (incoming ? .Left : .Right) : .None(incoming ? .Incoming : .Outgoing)
         let bottomNodeMergeStatus: ChatMessageBubbleMergeStatus = mergedBottom.merged ? (incoming ? .Left : .Right) : .None(incoming ? .Incoming : .Outgoing)
@@ -1100,16 +1105,21 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         }
         
         var index = 0
-        for (message, _, attributes, isAttachment, prepareLayout) in contentPropertiesAndPrepareLayouts {
+        for (message, _, attributes, bubbleAttributes, prepareLayout) in contentPropertiesAndPrepareLayouts {
             let topPosition: ChatMessageBubbleRelativePosition
             let bottomPosition: ChatMessageBubbleRelativePosition
             
-            if index != 0 && contentPropertiesAndPrepareLayouts[index - 1].3 {
-                topPosition = .Neighbour(true, .freeform)
-            } else {
-                topPosition = .Neighbour(false, .freeform)
+            var topBubbleAttributes = BubbleItemAttributes(isAttachment: false, neighborType: .freeform)
+            var bottomBubbleAttributes = BubbleItemAttributes(isAttachment: false, neighborType: .freeform)
+            if index != 0 {
+                topBubbleAttributes = contentPropertiesAndPrepareLayouts[index - 1].3
             }
-            bottomPosition = .Neighbour(false, .freeform)
+            if index != contentPropertiesAndPrepareLayouts.count - 1 {
+                bottomBubbleAttributes = contentPropertiesAndPrepareLayouts[index + 1].3
+            }
+            
+            topPosition = .Neighbour(topBubbleAttributes.isAttachment, topBubbleAttributes.neighborType)
+            bottomPosition = .Neighbour(bottomBubbleAttributes.isAttachment, bottomBubbleAttributes.neighborType)
             
             let prepareContentPosition: ChatMessageBubblePreparePosition
             if let mosaicRange = mosaicRange, mosaicRange.contains(index) {
@@ -1118,7 +1128,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 let refinedBottomPosition: ChatMessageBubbleRelativePosition
                 if index == contentPropertiesAndPrepareLayouts.count - 1 {
                     refinedBottomPosition = .None(.Left)
-                } else if index == contentPropertiesAndPrepareLayouts.count - 2 && contentPropertiesAndPrepareLayouts[contentPropertiesAndPrepareLayouts.count - 1].3 {
+                } else if index == contentPropertiesAndPrepareLayouts.count - 2 && contentPropertiesAndPrepareLayouts[contentPropertiesAndPrepareLayouts.count - 1].3.isAttachment {
                     refinedBottomPosition = .None(.Left)
                 } else {
                     refinedBottomPosition = bottomPosition
@@ -1151,7 +1161,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             let (properties, unboundSize, maxNodeWidth, nodeLayout) = prepareLayout(contentItem, layoutConstants, prepareContentPosition, itemSelection, CGSize(width: maximumContentWidth, height: CGFloat.greatestFiniteMagnitude))
             maximumNodeWidth = min(maximumNodeWidth, maxNodeWidth)
             
-            contentPropertiesAndLayouts.append((unboundSize, properties, prepareContentPosition, isAttachment, nodeLayout))
+            contentPropertiesAndLayouts.append((unboundSize, properties, prepareContentPosition, bubbleAttributes, nodeLayout))
             
             switch properties.hidesBackground {
                 case .never:
@@ -1266,7 +1276,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             
             maximumNodeWidth = size.width
             
-            if mosaicRange.upperBound == contentPropertiesAndLayouts.count {
+            if mosaicRange.upperBound == contentPropertiesAndLayouts.count || contentPropertiesAndLayouts[contentPropertiesAndLayouts.count - 1].3.isAttachment {
                 let message = item.content.firstMessage
                 
                 var edited = false
@@ -1601,19 +1611,26 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     case .linear:
                         let topPosition: ChatMessageBubbleRelativePosition
                         let bottomPosition: ChatMessageBubbleRelativePosition
+                        
+                        var topBubbleAttributes = BubbleItemAttributes(isAttachment: false, neighborType: .freeform)
+                        var bottomBubbleAttributes = BubbleItemAttributes(isAttachment: false, neighborType: .freeform)
+                        if i != 0 {
+                            topBubbleAttributes = contentPropertiesAndLayouts[i - 1].3
+                        }
+                        if i != contentPropertiesAndLayouts.count - 1 {
+                            bottomBubbleAttributes = contentPropertiesAndLayouts[i + 1].3
+                        }
 
                         if i == 0 {
                             topPosition = firstNodeTopPosition
-                        } else if i == contentNodeCount - 1 && i != 0 && contentPropertiesAndLayouts[i - 1].3 {
-                            topPosition = .Neighbour(true, .freeform)
                         } else {
-                            topPosition = .Neighbour(false, .freeform)
+                            topPosition = .Neighbour(topBubbleAttributes.isAttachment, topBubbleAttributes.neighborType)
                         }
                         
                         if i == contentNodeCount - 1 {
                             bottomPosition = lastNodeTopPosition
                         } else {
-                            bottomPosition = .Neighbour(false, .freeform)
+                            bottomPosition = .Neighbour(bottomBubbleAttributes.isAttachment, bottomBubbleAttributes.neighborType)
                         }
                     
                         contentPosition = .linear(top: topPosition, bottom: bottomPosition)
@@ -1832,7 +1849,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         replyInfoOriginY: CGFloat,
         removedContentNodeIndices: [Int]?,
         addedContentNodes: [(Message, ChatMessageBubbleContentNode)]?,
-        contentNodeMessagesAndClasses: [(Message, AnyClass, ChatMessageEntryAttributes, Bool)],
+        contentNodeMessagesAndClasses: [(Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)],
         contentNodeFramesPropertiesAndApply: [(CGRect, ChatMessageBubbleContentProperties, (ListViewItemUpdateAnimation, Bool) -> Void)],
         mosaicStatusOrigin: CGPoint?,
         mosaicStatusSizeAndApply: (CGSize, (Bool) -> ChatMessageDateAndStatusNode)?,
@@ -2475,8 +2492,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             
                             if item.content.firstMessage.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                                 navigate = .chat(textInputState: nil, subject: nil, peekData: nil)
-                            } else {
+                            } else if openPeerId.namespace == Namespaces.Peer.CloudUser {
                                 navigate = .info
+                            } else {
+                                navigate = .chat(textInputState: nil, subject: nil, peekData: nil)
                             }
                             
                             for attribute in item.content.firstMessage.attributes {

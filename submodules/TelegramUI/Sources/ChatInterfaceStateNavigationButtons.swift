@@ -27,6 +27,9 @@ struct ChatNavigationButton: Equatable {
 
 func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: ChatPresentationInterfaceState, subject: ChatControllerSubject?, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?) -> ChatNavigationButton? {
     if let _ = presentationInterfaceState.interfaceState.selectionState {
+        if case .replyThread = presentationInterfaceState.chatLocation {
+            return nil
+        }
         if let currentButton = currentButton, currentButton.action == .clearHistory {
             return currentButton
         } else if let peer = presentationInterfaceState.renderedPeer?.peer {
@@ -64,6 +67,14 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
 }
 
 func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: ChatPresentationInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?, chatInfoNavigationButton: ChatNavigationButton?) -> ChatNavigationButton? {
+    if let _ = presentationInterfaceState.interfaceState.selectionState {
+        if let currentButton = currentButton, currentButton.action == .cancelMessageSelection {
+            return currentButton
+        } else {
+            return ChatNavigationButton(action: .cancelMessageSelection, buttonItem: UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: target, action: selector))
+        }
+    }
+    
     if case .replyThread = presentationInterfaceState.chatLocation {
         if case .search = currentButton?.action {
             return currentButton
@@ -82,13 +93,6 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
                 buttonItem.accessibilityLabel = strings.Conversation_Search
                 return ChatNavigationButton(action: .search, buttonItem: buttonItem)
             }
-        }
-    }
-    if let _ = presentationInterfaceState.interfaceState.selectionState {
-        if let currentButton = currentButton, currentButton.action == .cancelMessageSelection {
-            return currentButton
-        } else {
-            return ChatNavigationButton(action: .cancelMessageSelection, buttonItem: UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: target, action: selector))
         }
     }
     

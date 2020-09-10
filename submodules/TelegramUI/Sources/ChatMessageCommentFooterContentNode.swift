@@ -100,10 +100,13 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             
             let displaySeparator: Bool
-            if case let .linear(top, _) = preparePosition, case .Neighbour(true, _) = top {
+            let topOffset: CGFloat
+            if case let .linear(top, _) = preparePosition, case .Neighbour(_, .media) = top {
                 displaySeparator = false
+                topOffset = 2.0
             } else {
                 displaySeparator = true
+                topOffset = 0.0
             }
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
@@ -163,7 +166,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                 
                 let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets, lineColor: messageTheme.accentControlColor))
                 
-                var textFrame = CGRect(origin: CGPoint(x: -textInsets.left + textLeftInset, y: -textInsets.top + 5.0), size: textLayout.size)
+                var textFrame = CGRect(origin: CGPoint(x: -textInsets.left + textLeftInset, y: -textInsets.top + 5.0 + topOffset), size: textLayout.size)
                 var textFrameWithoutInsets = CGRect(origin: CGPoint(x: textFrame.origin.x + textInsets.left, y: textFrame.origin.y + textInsets.top), size: CGSize(width: textFrame.width - textInsets.left - textInsets.right, height: textFrame.height - textInsets.top - textInsets.bottom))
                 
                 textFrame = textFrame.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top - 5.0 + UIScreenPixel)
@@ -189,7 +192,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                     
                     boundingSize = textFrameWithoutInsets.size
                     boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
-                    boundingSize.height = 40.0
+                    boundingSize.height = 40.0 + topOffset
                     
                     return (boundingSize, { [weak self] animation, synchronousLoad in
                         if let strongSelf = self {
@@ -225,17 +228,17 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                             
                             if let iconImage = iconImage {
                                 strongSelf.iconNode.image = iconImage
-                                strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: 15.0 + iconOffset.x, y: 6.0 + iconOffset.y), size: iconImage.size)
+                                strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: 15.0 + iconOffset.x, y: 6.0 + iconOffset.y + topOffset), size: iconImage.size)
                             }
 
                             if let arrowImage = arrowImage {
                                 strongSelf.arrowNode.image = arrowImage
-                                strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: boundingWidth - 33.0, y: 6.0), size: arrowImage.size)
+                                strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: boundingWidth - 33.0, y: 6.0 + topOffset), size: arrowImage.size)
                             }
 
                             strongSelf.iconNode.isHidden = !replyPeers.isEmpty
                             
-                            let avatarsFrame = CGRect(origin: CGPoint(x: 13.0, y: 3.0), size: CGSize(width: imageSize * 3.0, height: imageSize))
+                            let avatarsFrame = CGRect(origin: CGPoint(x: 13.0, y: 3.0 + topOffset), size: CGSize(width: imageSize * 3.0, height: imageSize))
                             strongSelf.avatarsNode.frame = avatarsFrame
                             strongSelf.avatarsNode.updateLayout(size: avatarsFrame.size)
                             strongSelf.avatarsNode.update(context: item.context, peers: replyPeers, synchronousLoad: synchronousLoad, imageSize: imageSize, imageSpacing: imageSpacing, borderWidth: 2.0 - UIScreenPixel)
@@ -245,6 +248,8 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                             strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: layoutConstants.bubble.strokeInsets.left, y: -3.0), size: CGSize(width: boundingWidth - layoutConstants.bubble.strokeInsets.left - layoutConstants.bubble.strokeInsets.right, height: UIScreenPixel))
                             
                             strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: boundingWidth, height: boundingSize.height))
+                            
+                            strongSelf.buttonNode.isUserInteractionEnabled = item.message.id.namespace == Namespaces.Message.Cloud
                         }
                     })
                 })
@@ -276,7 +281,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if self.buttonNode.frame.contains(point) {
+        if self.buttonNode.isUserInteractionEnabled && self.buttonNode.frame.contains(point) {
             return self.buttonNode.view
         }
         return nil
