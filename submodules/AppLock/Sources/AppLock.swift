@@ -299,10 +299,8 @@ public final class AppLockContextImpl: AppLockContext {
                         passcodeController.allPresentationAnimationsCompleted = { [weak self] in
                             guard let strongSelf = self else { return }
                             
-                            Queue.mainQueue().after(0.05) {
-                                strongSelf.lockingAnimationInProgress = false
-                                strongSelf.updateSnapshot(force: false)
-                            }
+                            strongSelf.lockingAnimationInProgress = false
+                            strongSelf.updateSnapshot(force: false)
                         }
                         
                         passcodeController.presentedOverCoveringView = true
@@ -365,7 +363,7 @@ public final class AppLockContextImpl: AppLockContext {
         
         self.coveringView?.updateSnapshot(nil)
         self.requiresSnapshotUpdate = false
-        Queue.mainQueue().after(0.9) {
+        Queue.mainQueue().after(0.5) {
             self.snapshot = getCoveringViewSnapshotForPublicAccount(window: window)
         }
     }
