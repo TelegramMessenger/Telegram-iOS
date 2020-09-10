@@ -119,7 +119,6 @@ public final class AppLockContextImpl: AppLockContext {
         return self.isCurrentlyLockedPromise.get()
         |> distinctUntilChanged
     }
-    private var isCurrentlyLockedValue: Bool = false
     
     private var lastActiveTimestamp: Double?
     private var lastActiveValue: Bool = false
@@ -347,7 +346,6 @@ public final class AppLockContextImpl: AppLockContext {
             
             strongSelf.updateTimestampRenewTimer(shouldRun: appInForeground && !isCurrentlyLocked)
             strongSelf.isCurrentlyLockedPromise.set(.single(!appInForeground || isCurrentlyLocked))
-            strongSelf.isCurrentlyLockedValue = !appInForeground || isCurrentlyLocked
             
             if shouldDisplayCoveringView {
                 if strongSelf.coveringView == nil, let window = strongSelf.window {
