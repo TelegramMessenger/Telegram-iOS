@@ -78,7 +78,7 @@ public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, 
                         previousGroupId = current.linkedDiscussionPeerId
                         return current.withUpdatedLinkedDiscussionPeerId(.known(groupId))
                     })
-                    if case let .known(maybeValue) = previousGroupId, let value = maybeValue, value != groupId {
+                    if case let .known(maybeValue)? = previousGroupId, let value = maybeValue, value != groupId {
                         transaction.updatePeerCachedData(peerIds: Set([value]), update: { (_, current) -> CachedPeerData? in
                             let cachedData = (current as? CachedChannelData ?? CachedChannelData())
                             return cachedData.withUpdatedLinkedDiscussionPeerId(.known(nil))
@@ -92,7 +92,7 @@ public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, 
                         previousChannelId = current.linkedDiscussionPeerId
                         return current.withUpdatedLinkedDiscussionPeerId(.known(channelId))
                     })
-                    if case let .known(maybeValue) = previousChannelId, let value = maybeValue, value != channelId {
+                    if case let .known(maybeValue)? = previousChannelId, let value = maybeValue, value != channelId {
                         transaction.updatePeerCachedData(peerIds: Set([value]), update: { (_, current) -> CachedPeerData? in
                             let cachedData = (current as? CachedChannelData ?? CachedChannelData())
                             return cachedData.withUpdatedLinkedDiscussionPeerId(.known(nil))
