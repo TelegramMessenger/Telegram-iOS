@@ -2672,16 +2672,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 )
                 |> deliverOnMainQueue).start(next: { [weak self] peerView, message, onlineMemberCount in
                     if let strongSelf = self {
-                        
-                        var replyCount = 0
-                        if let message = message {
-                            for attribute in message.attributes {
-                                if let attribute = attribute as? ReplyThreadMessageAttribute {
-                                    replyCount = Int(attribute.count)
-                                }
-                            }
-                        }
-                        strongSelf.chatTitleView?.titleContent = .replyThread(type: replyThreadType, count: replyCount)
+                        strongSelf.chatTitleView?.titleContent = .replyThread(type: replyThreadType, text: message?.text ?? "")
                         
                         let firstTime = strongSelf.peerView == nil
                         strongSelf.peerView = peerView
@@ -3257,12 +3248,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 } else if let _ = combinedInitialData.cachedData as? CachedSecretChatData {
                 }
                 
-                if case let .replyThread(messageId, isChannelPost, _) = strongSelf.chatLocation {
-                    if isChannelPost {
-                        pinnedMessageId = messageId
-                    } else {
-                        pinnedMessageId = nil
-                    }
+                if case .replyThread = strongSelf.chatLocation {
+                    pinnedMessageId = nil
                 }
                 
                 var pinnedMessage: Message?
@@ -3404,12 +3391,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 } else if let _ = cachedData as? CachedSecretChatData {
                 }
                 
-                if case let .replyThread(messageId, isChannelPost, _) = strongSelf.chatLocation {
-                    if isChannelPost {
-                        pinnedMessageId = messageId
-                    } else {
-                        pinnedMessageId = nil
-                    }
+                if case .replyThread = strongSelf.chatLocation {
+                    pinnedMessageId = nil
                 }
                 
                 var pinnedMessage: Message?
@@ -6118,6 +6101,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private func navigationButtonAction(_ action: ChatNavigationButtonAction) {
         switch action {
+        case .spacer:
+            break
         case .cancelMessageSelection:
             self.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
         case .clearHistory:

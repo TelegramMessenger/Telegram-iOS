@@ -464,7 +464,12 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             }
         }
         
-        if data.canReply {
+        var isReplyThreadHead = false
+        if case let .replyThread(messageId, _, _) = chatPresentationInterfaceState.chatLocation {
+            isReplyThreadHead = messages[0].id == messageId
+        }
+        
+        if !isReplyThreadHead, data.canReply {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuReply, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reply"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
@@ -741,7 +746,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             }
         }
         
-        if let message = messages.first, message.id.namespace == Namespaces.Message.Cloud, let channel = message.peers[message.id.peerId] as? TelegramChannel, !(message.media.first is TelegramMediaAction) {
+        if let message = messages.first, message.id.namespace == Namespaces.Message.Cloud, let channel = message.peers[message.id.peerId] as? TelegramChannel, !(message.media.first is TelegramMediaAction), !isReplyThreadHead {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopyLink, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
@@ -806,7 +811,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 }
             }
         }
-        if !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty && isAction {
+        if !isReplyThreadHead, !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty && isAction {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
             }, action: { controller, f in
@@ -844,7 +849,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         if let _ = message.peers[message.id.peerId] as? TelegramChannel {
             clearCacheAsDelete = true
         }
-        if (!data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty || clearCacheAsDelete) && !isAction {
+        if !isReplyThreadHead, (!data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty || clearCacheAsDelete) && !isAction {
             let title: String
             var isSending = false
             var isEditing = false

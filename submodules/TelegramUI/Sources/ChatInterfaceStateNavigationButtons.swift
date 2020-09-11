@@ -14,6 +14,7 @@ enum ChatNavigationButtonAction: Equatable {
     case search
     case dismiss
     case toggleInfoPanel
+    case spacer
 }
 
 struct ChatNavigationButton: Equatable {
@@ -92,7 +93,11 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
                 return ChatNavigationButton(action: .search, buttonItem: buttonItem)
             }
         } else {
-            return nil
+            if case .spacer = currentButton?.action {
+                return currentButton
+            } else {
+                return ChatNavigationButton(action: .spacer, buttonItem: UIBarButtonItem(title: "", style: .plain, target: target, action: selector))
+            }
         }
     }
     if case let .peer(peerId) = presentationInterfaceState.chatLocation {
@@ -106,7 +111,11 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
                     return ChatNavigationButton(action: .search, buttonItem: buttonItem)
                 }
             } else {
-                return nil
+                if case .spacer = currentButton?.action {
+                    return currentButton
+                } else {
+                    return ChatNavigationButton(action: .spacer, buttonItem: UIBarButtonItem(title: "", style: .plain, target: target, action: selector))
+                }
             }
         }
     }

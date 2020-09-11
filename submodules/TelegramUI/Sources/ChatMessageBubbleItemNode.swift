@@ -1044,7 +1044,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     inlineBotNameString = attribute.title
                 }
             } else if let attribute = attribute as? ReplyMessageAttribute {
-                if case let .replyThread(replyThreadMessageId, isChannelPost, _) = item.chatLocation, isChannelPost, replyThreadMessageId == attribute.messageId {
+                if case let .replyThread(replyThreadMessageId, _, _) = item.chatLocation, replyThreadMessageId == attribute.messageId {
                 } else {
                     replyMessage = firstMessage.associatedMessages[attribute.messageId]
                 }

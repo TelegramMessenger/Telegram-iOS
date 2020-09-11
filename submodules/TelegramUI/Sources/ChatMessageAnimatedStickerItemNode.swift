@@ -742,7 +742,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-                    if case let .replyThread(replyThreadMessageId, isChannelPost, _) = item.chatLocation, isChannelPost, replyThreadMessageId == replyAttribute.messageId {
+                    if case let .replyThread(replyThreadMessageId, _, _) = item.chatLocation, replyThreadMessageId == replyAttribute.messageId {
                     } else {
                         replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableContentWidth, height: CGFloat.greatestFiniteMagnitude))
                     }
