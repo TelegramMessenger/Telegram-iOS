@@ -617,6 +617,13 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             additionalData.append(.totalUnreadState)
         }
         if case let .replyThread(messageId, _, _) = chatLocation {
+            additionalData.append(.cachedPeerData(messageId.peerId))
+            additionalData.append(.peerNotificationSettings(messageId.peerId))
+            if messageId.peerId.namespace == Namespaces.Peer.CloudChannel {
+                additionalData.append(.cacheEntry(cachedChannelAdminRanksEntryId(peerId: messageId.peerId)))
+                additionalData.append(.peer(messageId.peerId))
+            }
+            
             additionalData.append(.message(messageId))
         }
 

@@ -1070,6 +1070,9 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                         } else if limitsConfiguration.canRemoveIncomingMessagesInPrivateChats {
                             canDeleteGlobally = true
                         }
+                        if user.botInfo != nil {
+                            canDeleteGlobally = false
+                        }
                         
                         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
                         if isDice && Int64(message.timestamp) + 60 * 60 * 24 > Int64(timestamp) {

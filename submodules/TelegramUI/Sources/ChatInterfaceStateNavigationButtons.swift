@@ -75,23 +75,38 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
         }
     }
     
-    if case .replyThread = presentationInterfaceState.chatLocation {
-        if case .search = currentButton?.action {
-            return currentButton
-        } else {
-            let buttonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)
-            buttonItem.accessibilityLabel = strings.Conversation_Search
-            return ChatNavigationButton(action: .search, buttonItem: buttonItem)
+    var hasMessages = false
+    if let chatHistoryState = presentationInterfaceState.chatHistoryState {
+        if case .loaded(false) = chatHistoryState {
+            hasMessages = true
         }
     }
-    if case let .peer(peerId) = presentationInterfaceState.chatLocation {
-        if peerId.isReplies {
+    
+    if case .replyThread = presentationInterfaceState.chatLocation {
+        if hasMessages {
             if case .search = currentButton?.action {
                 return currentButton
             } else {
                 let buttonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)
                 buttonItem.accessibilityLabel = strings.Conversation_Search
                 return ChatNavigationButton(action: .search, buttonItem: buttonItem)
+            }
+        } else {
+            return nil
+        }
+    }
+    if case let .peer(peerId) = presentationInterfaceState.chatLocation {
+        if peerId.isReplies {
+            if hasMessages {
+                if case .search = currentButton?.action {
+                    return currentButton
+                } else {
+                    let buttonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)
+                    buttonItem.accessibilityLabel = strings.Conversation_Search
+                    return ChatNavigationButton(action: .search, buttonItem: buttonItem)
+                }
+            } else {
+                return nil
             }
         }
     }
