@@ -2913,37 +2913,38 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
             Logger.shared.log("State", "not adding hole for peer \(messageId.peerId), \(upperId) >= \(messageId.id) = false")
         }
     }
+//TODO Please do not forget fix holes space.
     
     // could be the reason for unbounded slowdown, needs investigation
-    for (peerIdAndNamespace, pts) in clearHolesFromPreviousStateForChannelMessagesWithPts {
-        var upperMessageId: Int32?
-        var lowerMessageId: Int32?
-        transaction.scanMessageAttributes(peerId: peerIdAndNamespace.peerId, namespace: peerIdAndNamespace.namespace, limit: 200, { id, attributes in
-            for attribute in attributes {
-                if let attribute = attribute as? ChannelMessageStateVersionAttribute {
-                    if attribute.pts >= pts {
-                        if upperMessageId == nil {
-                            upperMessageId = id.id
-                        }
-                        if let lowerMessageIdValue = lowerMessageId {
-                            lowerMessageId = min(id.id, lowerMessageIdValue)
-                        } else {
-                            lowerMessageId = id.id
-                        }
-                        return true
-                    } else {
-                        return false
-                    }
-                }
-            }
-            return false
-        })
-        if let upperMessageId = upperMessageId, let lowerMessageId = lowerMessageId {
-            if upperMessageId != lowerMessageId {
-                transaction.removeHole(peerId: peerIdAndNamespace.peerId, namespace: peerIdAndNamespace.namespace, space: .everywhere, range: lowerMessageId ... upperMessageId)
-            }
-        }
-    }
+//    for (peerIdAndNamespace, pts) in clearHolesFromPreviousStateForChannelMessagesWithPts {
+//        var upperMessageId: Int32?
+//        var lowerMessageId: Int32?
+//        transaction.scanMessageAttributes(peerId: peerIdAndNamespace.peerId, namespace: peerIdAndNamespace.namespace, limit: 200, { id, attributes in
+//            for attribute in attributes {
+//                if let attribute = attribute as? ChannelMessageStateVersionAttribute {
+//                    if attribute.pts >= pts {
+//                        if upperMessageId == nil {
+//                            upperMessageId = id.id
+//                        }
+//                        if let lowerMessageIdValue = lowerMessageId {
+//                            lowerMessageId = min(id.id, lowerMessageIdValue)
+//                        } else {
+//                            lowerMessageId = id.id
+//                        }
+//                        return true
+//                    } else {
+//                        return false
+//                    }
+//                }
+//            }
+//            return false
+//        })
+//        if let upperMessageId = upperMessageId, let lowerMessageId = lowerMessageId {
+//            if upperMessageId != lowerMessageId {
+//                transaction.removeHole(peerId: peerIdAndNamespace.peerId, namespace: peerIdAndNamespace.namespace, space: .everywhere, range: lowerMessageId ... upperMessageId)
+//            }
+//        }
+//    }
     
     for (threadMessageId, difference) in messageThreadStatsDifferences {
         updateMessageThreadStats(transaction: transaction, threadMessageId: threadMessageId, difference: difference.count, addedMessagePeers: difference.peers)
