@@ -34,7 +34,7 @@ class UpdateMessageService: NSObject, MTMessageService {
         self.pipe.putNext(groups)
     }
     
-    func mtProto(_ mtProto: MTProto!, receivedMessage message: MTIncomingMessage!) {
+    func mtProto(_ mtProto: MTProto!, receivedMessage message: MTIncomingMessage!, authInfoSelector: MTDatacenterAuthInfoSelector) {
         if let updates = (message.body as? BoxedMessage)?.body as? Api.Updates {
             self.addUpdates(updates)
         }

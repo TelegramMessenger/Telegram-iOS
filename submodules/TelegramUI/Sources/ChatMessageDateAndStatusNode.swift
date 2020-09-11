@@ -739,12 +739,24 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         if currentRepliesIcon.supernode == nil {
                             strongSelf.repliesIcon = currentRepliesIcon
                             strongSelf.addSubnode(currentRepliesIcon)
+                            if animated {
+                                currentRepliesIcon.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                            }
                         }
                         currentRepliesIcon.frame = CGRect(origin: CGPoint(x: reactionOffset - 2.0, y: backgroundInsets.top + offset + floor((date.size.height - repliesIconSize.height) / 2.0)), size: repliesIconSize)
                         reactionOffset += 9.0
                     } else if let repliesIcon = strongSelf.repliesIcon {
-                        repliesIcon.removeFromSupernode()
                         strongSelf.repliesIcon = nil
+                        if animated {
+                            if let previousLayoutSize = previousLayoutSize {
+                                repliesIcon.frame = repliesIcon.frame.offsetBy(dx: layoutSize.width - previousLayoutSize.width, dy: 0.0)
+                            }
+                            repliesIcon.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak repliesIcon] _ in
+                                repliesIcon?.removeFromSupernode()
+                            })
+                        } else {
+                            repliesIcon.removeFromSupernode()
+                        }
                     }
                     
                     if let (layout, apply) = replyCountLayoutAndApply {

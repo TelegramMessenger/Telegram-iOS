@@ -78,7 +78,7 @@ class ChatMessageShareButton: HighlightableButtonNode {
             if isReplies {
                 updatedShareButtonBackground = PresentationResourcesChat.chatFreeCommentButtonBackground(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                 updatedIconImage = PresentationResourcesChat.chatFreeCommentButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
-            } else if message.id.peerId == account.peerId {
+            } else if message.id.peerId.isRepliesOrSavedMessages(accountPeerId: account.peerId) {
                 updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
             } else {
                 updatedShareButtonBackground = graphics.chatBubbleShareButtonImage
@@ -114,7 +114,7 @@ class ChatMessageShareButton: HighlightableButtonNode {
             textNode.attributedText = NSAttributedString(string: countString, font: Font.regular(11.0), textColor: textColor)
             let textSize = textNode.updateLayout(CGSize(width: 100.0, height: 100.0))
             size.height += textSize.height - 1.0
-            textNode.frame = CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: size.height - textSize.height - 4.0), size: textSize)
+            textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: size.height - textSize.height - 4.0), size: textSize)
         } else if let textNode = self.textNode {
             self.textNode = nil
             textNode.removeFromSupernode()
@@ -751,7 +751,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            if item.message.id.peerId != item.context.account.peerId {
+            if item.message.id.peerId != item.context.account.peerId && !item.message.id.peerId.isReplies {
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? SourceReferenceMessageAttribute {
                         if let sourcePeer = item.message.peers[attribute.messageId.peerId] {
@@ -1130,7 +1130,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
                             item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
                         } else {
-                            if let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
+                            if !item.message.id.peerId.isReplies, let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
                                 if case .member = channel.participationStatus {
                                 } else {
                                     item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, self, avatarNode.frame)
@@ -1255,7 +1255,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            if item.content.firstMessage.id.peerId == item.context.account.peerId {
+            if item.content.firstMessage.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                 for attribute in item.content.firstMessage.attributes {
                     if let attribute = attribute as? SourceReferenceMessageAttribute {
                         item.controllerInteraction.navigateToMessage(item.content.firstMessage.id, attribute.messageId)

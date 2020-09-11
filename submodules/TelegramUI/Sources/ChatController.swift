@@ -289,6 +289,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private var checkedPeerChatServiceActions = false
     
+    private var didAppear = false
+    private var scheduledActivateInput = false
+    
     private var raiseToListen: RaiseToListenManager?
     private var voicePlaylistDidEndTimestamp: Double = 0.0
 
@@ -2196,7 +2199,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 if let result = result {
                     if let navigationController = strongSelf.navigationController as? NavigationController {
-                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(threadMessageId: result.messageId, isChannelPost: true, maxReadMessageId: result.maxReadMessageId), keepStack: .always))
+                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(threadMessageId: result.messageId, isChannelPost: true, maxReadMessageId: result.maxReadMessageId), activateInput: true, keepStack: .always))
                     }
                 }
             })
@@ -3425,7 +3428,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let callsDataUpdated = strongSelf.presentationInterfaceState.callsAvailable != callsAvailable || strongSelf.presentationInterfaceState.callsPrivate != callsPrivate
                 
-                if strongSelf.presentationInterfaceState.pinnedMessageId != pinnedMessageId || strongSelf.presentationInterfaceState.pinnedMessage?.stableVersion != pinnedMessage?.stableVersion || strongSelf.presentationInterfaceState.peerIsBlocked != peerIsBlocked || pinnedMessageUpdated || callsDataUpdated || strongSelf.presentationInterfaceState.slowmodeState != slowmodeState  {
+                if strongSelf.presentationInterfaceState.pinnedMessageId != pinnedMessageId || strongSelf.presentationInterfaceState.pinnedMessage?.stableVersion != pinnedMessage?.stableVersion || strongSelf.presentationInterfaceState.peerIsBlocked != peerIsBlocked || pinnedMessageUpdated || callsDataUpdated || strongSelf.presentationInterfaceState.slowmodeState != slowmodeState {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                         return state
                         .updatedPinnedMessageId(pinnedMessageId)
@@ -5322,10 +5325,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        
+        if self.scheduledActivateInput {
+            self.scheduledActivateInput = false
+            
+            self.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                return state.updatedInputMode({ _ in .text })
+            })
+        }
     }
     
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        
+        self.didAppear = true
         
         self.chatDisplayNode.historyNode.preloadPages = true
         self.chatDisplayNode.historyNode.experimentalSnapScrollToItem = false
@@ -5586,6 +5599,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     dismissOnOutsideTap: false
                 ), in: .window(.root))
             }))
+        }
+        
+        if self.scheduledActivateInput {
+            self.scheduledActivateInput = false
+            
+            self.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                return state.updatedInputMode({ _ in .text })
+            })
         }
     }
     
@@ -9705,9 +9726,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func activateInput() {
-        self.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-            return state.updatedInputMode({ _ in .text })
-        })
+        if self.didAppear {
+            self.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                return state.updatedInputMode({ _ in .text })
+            })
+        } else {
+            self.scheduledActivateInput = true
+        }
     }
     
     private func clearInputText() {

@@ -3,10 +3,10 @@ load("//Config:buck_rule_macros.bzl", "static_library", "framework", "glob_map",
 framework(
     name = "MtProtoKit",
     srcs = glob([
-        "Sources/*.m",
+        "Sources/**/*.m",
     ]),
     headers = glob([
-        "Sources/*.h",
+        "Sources/**/*.h",
     ]),
     exported_headers = glob([
         "PublicHeaders/**/*.h",
