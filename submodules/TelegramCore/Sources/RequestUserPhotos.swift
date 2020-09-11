@@ -121,7 +121,7 @@ public func requestPeerPhotos(postbox: Postbox, network: Network, peerId: PeerId
                                 switch media.action {
                                     case let .photoUpdated(image):
                                         if let image = image {
-                                            photos.append(TelegramPeerPhoto(image: image, reference: nil, date: message.timestamp, index: index, totalCount: messages.count, messageId: message.id))
+                                            photos.append(TelegramPeerPhoto(image: image, reference: image.reference, date: message.timestamp, index: index, totalCount: messages.count, messageId: message.id))
                                         }
                                     default:
                                         break
