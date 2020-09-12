@@ -275,6 +275,8 @@ private func mappedInsertEntries(context: AccountContext, chatLocation: ChatLoca
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case let .UnreadEntry(_, presentationData):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index, presentationData: presentationData, context: context), directionHint: entry.directionHint)
+            case let .ReplyCountEntry(_, isComments, count, presentationData):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatReplyCountItem(index: entry.entry.index, isComments: isComments, count: count, presentationData: presentationData, context: context), directionHint: entry.directionHint)
             case let .ChatInfoEntry(text, presentationData):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(text: text, controllerInteraction: controllerInteraction, presentationData: presentationData), directionHint: entry.directionHint)
             case let .SearchEntry(theme, strings):
@@ -318,6 +320,8 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case let .UnreadEntry(_, presentationData):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index, presentationData: presentationData, context: context), directionHint: entry.directionHint)
+            case let .ReplyCountEntry(_, isComments, count, presentationData):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatReplyCountItem(index: entry.entry.index, isComments: isComments, count: count, presentationData: presentationData, context: context), directionHint: entry.directionHint)
             case let .ChatInfoEntry(text, presentationData):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(text: text, controllerInteraction: controllerInteraction, presentationData: presentationData), directionHint: entry.directionHint)
             case let .SearchEntry(theme, strings):
@@ -617,6 +621,13 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             additionalData.append(.totalUnreadState)
         }
         if case let .replyThread(messageId, _, _) = chatLocation {
+            additionalData.append(.cachedPeerData(messageId.peerId))
+            additionalData.append(.peerNotificationSettings(messageId.peerId))
+            if messageId.peerId.namespace == Namespaces.Peer.CloudChannel {
+                additionalData.append(.cacheEntry(cachedChannelAdminRanksEntryId(peerId: messageId.peerId)))
+                additionalData.append(.peer(messageId.peerId))
+            }
+            
             additionalData.append(.message(messageId))
         }
 
@@ -1552,6 +1563,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
                             itemNode.layer.animateScale(from: 0.94, to: 1.0, duration: 0.4, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
                         } else if let itemNode = itemNode as? ChatUnreadItemNode {
+                            itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
+                        } else if let itemNode = itemNode as? ChatReplyCountItemNode {
                             itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
                         }
                     }

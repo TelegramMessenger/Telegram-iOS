@@ -180,6 +180,8 @@ func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -
         lhsHeader = nil
     } else if let lhs = lhs as? ChatUnreadItem {
         lhsHeader = lhs.header
+    } else if let lhs = lhs as? ChatReplyCountItem {
+        lhsHeader = lhs.header
     } else {
         lhsHeader = nil
     }
@@ -190,6 +192,8 @@ func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -
             //rhsHeader = rhs.header
             rhsHeader = nil
         } else if let rhs = rhs as? ChatUnreadItem {
+            rhsHeader = rhs.header
+        } else if let rhs = rhs as? ChatReplyCountItem {
             rhsHeader = rhs.header
         } else {
             rhsHeader = nil
@@ -440,6 +444,10 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                 mergedTop = messagesShouldBeMerged(accountPeerId: self.context.account.peerId, bottom.message, message)
             }
         } else if let bottom = bottom as? ChatUnreadItem {
+            if bottom.header.id != self.header.id {
+                dateAtBottom = true
+            }
+        } else if let bottom = bottom as? ChatReplyCountItem {
             if bottom.header.id != self.header.id {
                 dateAtBottom = true
             }

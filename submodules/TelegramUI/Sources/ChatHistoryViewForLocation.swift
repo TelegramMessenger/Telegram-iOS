@@ -256,7 +256,7 @@ private func extractAdditionalData(view: MessageHistoryView, chatLocation: ChatL
             case let .peerNotificationSettings(value):
                 notificationSettings = value
             case let .cachedPeerData(peerIdValue, value):
-                if case .peer(peerIdValue) = chatLocation {
+                if chatLocation.peerId == peerIdValue {
                     cachedData = value
                 }
             case let .cachedPeerDataMessages(peerIdValue, value):

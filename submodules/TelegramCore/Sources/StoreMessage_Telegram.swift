@@ -530,9 +530,8 @@ extension StoreMessage {
                 
                 if let replies = replies {
                     let recentRepliersPeerIds: [PeerId]?
-                    //messageReplies flags:# comments:flags.0?true replies:int replies_pts:int recent_repliers:flags.1?Vector<int> channel_id:flags.0?int top_msg_id:flags.2?int = MessageReplies;
                     switch replies {
-                    case let .messageReplies(_, repliesCount, _, recentRepliers, channelId):
+                    case let .messageReplies(_, repliesCount, _, recentRepliers, channelId, _, _):
                         if let recentRepliers = recentRepliers {
                             recentRepliersPeerIds = recentRepliers.map { $0.peerId }
                         } else {

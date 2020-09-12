@@ -113,7 +113,8 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
         }
     }
     
-    if case let .replyThread(messageId, isChannelPost, _) = location, !isChannelPost {
+    var addedThreadHead = false
+    if case let .replyThread(messageId, isChannelPost, _) = location, view.earlierId == nil, !view.isLoading {
         loop: for entry in view.additionalData {
             switch entry {
             case let .message(id, message) where id == messageId:
@@ -139,8 +140,18 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                         }
                     }
                     
+                    var replyCount = 0
+                    for attribute in message.attributes {
+                        if let attribute = attribute as? ReplyThreadMessageAttribute {
+                            replyCount = Int(attribute.count)
+                        }
+                    }
                     
+                    addedThreadHead = true
                     entries.insert(.MessageEntry(message, presentationData, false, nil, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: false, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id])), at: 0)
+                    if view.entries.count > 0 {
+                        entries.insert(.ReplyCountEntry(message.index, isChannelPost, replyCount,  presentationData), at: 1)
+                    }
                 }
                 break loop
             default:
@@ -188,6 +199,9 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                         }
                     }
                 } else {
+                    isEmpty = false
+                }
+                if addedThreadHead {
                     isEmpty = false
                 }
                 if isEmpty {

@@ -24,7 +24,7 @@ enum ChatTitleContent {
     }
     
     case peer(peerView: PeerView, onlineMemberCount: Int32?, isScheduledMessages: Bool)
-    case replyThread(type: ReplyThreadType, count: Int)
+    case replyThread(type: ReplyThreadType, text: String)
     case group([Peer])
     case custom(String)
 }
@@ -141,27 +141,20 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                 }
                             }
                         }
-                    case let .replyThread(type, count):
+                    case let .replyThread(type, text):
                         //TODO:localize
                         let typeText: String
-                        switch type {
-                        case .comments:
-                            if count == 0 {
+                        if !text.isEmpty {
+                            typeText = text
+                        } else {
+                            switch type {
+                            case .comments:
                                 typeText = "Comments"
-                            } else if count == 1 {
-                                typeText = "1 Comment"
-                            } else {
-                                typeText = "\(count) Comments"
-                            }
-                        case .replies:
-                            if count == 0 {
+                            case .replies:
                                 typeText = "Replies"
-                            } else if count == 1 {
-                                typeText = "1 Reply"
-                            } else {
-                                typeText = "\(count) Replies"
                             }
                         }
+                        
                         string = NSAttributedString(string: typeText, font: Font.medium(17.0), textColor: titleTheme.rootController.navigationBar.primaryTextColor)
                         isEnabled = false
                     case .group:

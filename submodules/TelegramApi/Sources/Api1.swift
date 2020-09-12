@@ -15196,13 +15196,13 @@ public extension Api {
     
     }
     public enum MessageReplies: TypeConstructorDescription {
-        case messageReplies(flags: Int32, replies: Int32, repliesPts: Int32, recentRepliers: [Api.Peer]?, channelId: Int32?)
+        case messageReplies(flags: Int32, replies: Int32, repliesPts: Int32, recentRepliers: [Api.Peer]?, channelId: Int32?, maxId: Int32?, readMaxId: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .messageReplies(let flags, let replies, let repliesPts, let recentRepliers, let channelId):
+                case .messageReplies(let flags, let replies, let repliesPts, let recentRepliers, let channelId, let maxId, let readMaxId):
                     if boxed {
-                        buffer.appendInt32(1081274310)
+                        buffer.appendInt32(1093204652)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(replies, buffer: buffer, boxed: false)
@@ -15213,14 +15213,16 @@ public extension Api {
                         item.serialize(buffer, true)
                     }}
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(channelId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(maxId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(readMaxId!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .messageReplies(let flags, let replies, let repliesPts, let recentRepliers, let channelId):
-                return ("messageReplies", [("flags", flags), ("replies", replies), ("repliesPts", repliesPts), ("recentRepliers", recentRepliers), ("channelId", channelId)])
+                case .messageReplies(let flags, let replies, let repliesPts, let recentRepliers, let channelId, let maxId, let readMaxId):
+                return ("messageReplies", [("flags", flags), ("replies", replies), ("repliesPts", repliesPts), ("recentRepliers", recentRepliers), ("channelId", channelId), ("maxId", maxId), ("readMaxId", readMaxId)])
     }
     }
     
@@ -15237,13 +15239,19 @@ public extension Api {
             } }
             var _5: Int32?
             if Int(_1!) & Int(1 << 0) != 0 {_5 = reader.readInt32() }
+            var _6: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_6 = reader.readInt32() }
+            var _7: Int32?
+            if Int(_1!) & Int(1 << 3) != 0 {_7 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.MessageReplies.messageReplies(flags: _1!, replies: _2!, repliesPts: _3!, recentRepliers: _4, channelId: _5)
+            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 3) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.MessageReplies.messageReplies(flags: _1!, replies: _2!, repliesPts: _3!, recentRepliers: _4, channelId: _5, maxId: _6, readMaxId: _7)
             }
             else {
                 return nil

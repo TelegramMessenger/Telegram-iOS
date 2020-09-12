@@ -337,7 +337,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 }
                 
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-                    if case let .replyThread(replyThreadMessageId, isChannelPost, _) = item.chatLocation, isChannelPost, replyThreadMessageId == replyAttribute.messageId {
+                    if case let .replyThread(replyThreadMessageId, _, _) = item.chatLocation, replyThreadMessageId == replyAttribute.messageId {
                     } else {
                         replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                     }
@@ -674,7 +674,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
                             item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
                         } else {
-                            if let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
+                            if !item.message.id.peerId.isReplies, let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
                                 if case .member = channel.participationStatus {
                                 } else {
                                     item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, self, avatarNode.frame)
@@ -703,7 +703,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 if let item = self.item, let forwardInfo = item.message.forwardInfo {
                     let performAction: () -> Void = {
                         if let sourceMessageId = forwardInfo.sourceMessageId {
-                            if let channel = forwardInfo.author as? TelegramChannel, channel.username == nil {
+                            if !item.message.id.peerId.isReplies, let channel = forwardInfo.author as? TelegramChannel, channel.username == nil {
                                 if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
                                 } else if case .member = channel.participationStatus {
                                 } else {
@@ -748,7 +748,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 }
             }
             
-            if item.content.firstMessage.id.peerId == item.context.account.peerId {
+            if item.content.firstMessage.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                 for attribute in item.content.firstMessage.attributes {
                     if let attribute = attribute as? SourceReferenceMessageAttribute {
                         item.controllerInteraction.navigateToMessage(item.content.firstMessage.id, attribute.messageId)

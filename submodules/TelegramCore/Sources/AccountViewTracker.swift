@@ -618,7 +618,7 @@ public final class AccountViewTracker {
                                                             var repliesCount: Int32?
                                                             if let replies = replies {
                                                                 switch replies {
-                                                                case let .messageReplies(_, repliesCountValue, _, recentRepliers, channelId):
+                                                                case let .messageReplies(_, repliesCountValue, _, recentRepliers, channelId, _, _):
                                                                     if let channelId = channelId {
                                                                         commentsChannelId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                                                                     }

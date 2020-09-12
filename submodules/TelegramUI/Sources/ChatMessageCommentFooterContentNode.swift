@@ -43,12 +43,12 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
         
         super.init()
         
-        self.addSubnode(self.separatorNode)
-        self.addSubnode(self.textNode)
-        self.addSubnode(self.iconNode)
-        self.addSubnode(self.arrowNode)
+        self.buttonNode.addSubnode(self.separatorNode)
+        self.buttonNode.addSubnode(self.textNode)
+        self.buttonNode.addSubnode(self.iconNode)
+        self.buttonNode.addSubnode(self.arrowNode)
+        self.buttonNode.addSubnode(self.avatarsNode)
         self.addSubnode(self.buttonNode)
-        self.addSubnode(self.avatarsNode)
         
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -183,7 +183,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                     iconOffset = CGPoint(x: -4.0, y: -4.0)
                 } else {
                     iconImage = PresentationResourcesChat.chatMessageCommentsIcon(item.presentationData.theme.theme, incoming: incoming)
-                    iconOffset = CGPoint()
+                    iconOffset = CGPoint(x: 0.0, y: -1.0)
                 }
                 let arrowImage = PresentationResourcesChat.chatMessageCommentsArrowIcon(item.presentationData.theme.theme, incoming: incoming)
                 
@@ -250,6 +250,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                             strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: boundingWidth, height: boundingSize.height))
                             
                             strongSelf.buttonNode.isUserInteractionEnabled = item.message.id.namespace == Namespaces.Message.Cloud
+                            strongSelf.buttonNode.alpha = item.message.id.namespace == Namespaces.Message.Cloud ? 1.0 : 0.5
                         }
                     })
                 })
