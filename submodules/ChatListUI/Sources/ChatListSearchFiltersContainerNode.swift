@@ -28,8 +28,8 @@ enum ChatListSearchFilter: Equatable {
                 return 3
             case .voice:
                 return 4
-            case .peer:
-                return 5
+            case let .peer(peerId, _):
+                return peerId.id
             case let .date(date, _):
                 return date
         }
@@ -279,17 +279,15 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
         let verticalOffset: CGFloat = -3.0
         for i in 0 ..< tabSizes.count {
             let (_, paneNodeSize, paneNode, wasAdded) = tabSizes[i]
-            var itemNodeTransition = transition
-            if wasAdded {
-                itemNodeTransition = .immediate
-            }
-                        
+            let itemNodeTransition = transition
+            
             let paneFrame = CGRect(origin: CGPoint(x: leftOffset, y: floor((size.height - paneNodeSize.height) / 2.0) + verticalOffset), size: paneNodeSize)
-            itemNodeTransition.updateSublayerTransformScale(node: paneNode, scale: 1.0)
-            itemNodeTransition.updateAlpha(node: paneNode, alpha: 1.0)
+            
             if wasAdded {
                 paneNode.frame = paneFrame
                 paneNode.alpha = 0.0
+                paneNode.subnodeTransform = CATransform3DMakeScale(0.1, 0.1, 1.0)
+                itemNodeTransition.updateSublayerTransformScale(node: paneNode, scale: 1.0)
                 itemNodeTransition.updateAlpha(node: paneNode, alpha: 1.0)
             } else {
                 itemNodeTransition.updateFrameAdditive(node: paneNode, frame: paneFrame)

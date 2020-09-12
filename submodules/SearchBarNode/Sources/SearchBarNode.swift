@@ -107,6 +107,22 @@ private final class TokenNode: ASDisplayNode {
         self.tapped?()
     }
     
+    func animateIn() {
+        let targetFrame = self.frame
+        self.layer.animateFrame(from: CGRect(origin: targetFrame.origin, size: CGSize(width: 1.0, height: targetFrame.height)), to: targetFrame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        self.iconNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        self.iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        self.titleNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+    }
+    
+    func animateOut() {
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { [weak self] _ in
+            self?.removeFromSupernode()
+        })
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+    }
+    
     func update(theme: SearchBarNodeTheme, token: SearchBarToken, isSelected: Bool, isCollapsed: Bool) {
         let wasSelected = self.isSelected
         self.isSelected = isSelected
@@ -211,7 +227,7 @@ private class SearchBarTextField: UITextField {
     
     var theme: SearchBarNodeTheme
     
-    private func layoutTokens(transition: ContainedViewLayoutTransition = .immediate) {
+    fileprivate func layoutTokens(transition: ContainedViewLayoutTransition = .immediate) {
         for i in 0 ..< self.tokens.count {
             let token = self.tokens[i]
 
@@ -227,7 +243,7 @@ private class SearchBarTextField: UITextField {
                 self?.becomeFirstResponder()
             }
             let isSelected = i == self.selectedTokenIndex
-            let isCollapsed = !isSelected && i < self.tokens.count - 1
+            let isCollapsed = !isSelected && (i < self.tokens.count - 1 || !(self.text?.isEmpty ?? true))
             tokenNode.update(theme: self.theme, token: token, isSelected: isSelected, isCollapsed: isCollapsed)
         }
         var removeKeys: [AnyHashable] = []
@@ -238,10 +254,11 @@ private class SearchBarTextField: UITextField {
         }
         for id in removeKeys {
             if let itemNode = self.tokenNodes.removeValue(forKey: id) {
-                transition.updateAlpha(node: itemNode, alpha: 0.0, completion: { [weak itemNode] _ in
-                    itemNode?.removeFromSupernode()
-                })
-                transition.updateTransformScale(node: itemNode, scale: 0.1)
+                if transition.isAnimated {
+                    itemNode.animateOut()
+                } else {
+                    itemNode.removeFromSupernode()
+                }
             }
         }
         
@@ -297,11 +314,7 @@ private class SearchBarTextField: UITextField {
                 } else {
                     tokenNode.frame = nodeFrame
                 }
-                tokenNode.alpha = 0.0
-                tokenNodeTransition.updateAlpha(node: tokenNode, alpha: 1.0)
-                
-                tokenNode.subnodeTransform = CATransform3DMakeScale(0.1, 0.1, 1.0)
-                tokenNodeTransition.updateSublayerTransformScale(node: tokenNode, scale: 1.0)
+                tokenNode.animateIn()
             } else {
                 if nodeFrame.width < tokenNode.frame.width {
                     horizontalOffset += tokenNode.frame.width - nodeFrame.width
@@ -403,6 +416,11 @@ private class SearchBarTextField: UITextField {
     
     override func editingRect(forBounds bounds: CGRect) -> CGRect {
         return self.textRect(forBounds: bounds)
+    }
+    
+    override func drawText(in rect: CGRect) {
+        super.drawText(in: rect)
+        print(rect.debugDescription)
     }
     
     override func layoutSubviews() {
@@ -582,9 +600,8 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         get {
             return self.textField.tokens
         } set {
-            let oldValue = self.textField.tokens
             self.textField.tokens = newValue
-            self.updateIsEmpty(animated: newValue.isEmpty && !oldValue.isEmpty)
+            self.updateIsEmpty(animated: true)
         }
     }
     
@@ -687,7 +704,6 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.clearButton.imageNode.displaysAsynchronously = false
         self.clearButton.imageNode.displayWithoutProcessing = true
         self.clearButton.displaysAsynchronously = false
-        self.clearButton.isHidden = true
         
         self.cancelButton = HighlightableButtonNode(pointerStyle: .default)
         self.cancelButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
@@ -723,6 +739,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.clearButton.addTarget(self, action: #selector(self.clearPressed), forControlEvents: .touchUpInside)
         
         self.updateThemeAndStrings(theme: theme, strings: strings)
+        self.updateIsEmpty(animated: false)
     }
         
     public func updateThemeAndStrings(theme: SearchBarNodeTheme, strings: PresentationStrings) {
@@ -780,7 +797,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         
         if let activityIndicator = self.activityIndicator {
             let indicatorSize = activityIndicator.measure(CGSize(width: 32.0, height: 32.0))
-            transition.updateFrame(node: activityIndicator, frame: CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 9.0 + UIScreenPixel, y: textBackgroundFrame.minY + floor((textBackgroundFrame.size.height - indicatorSize.height) / 2.0) - 1.0), size: indicatorSize))
+            transition.updateFrame(node: activityIndicator, frame: CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 9.0 + UIScreenPixel, y: textBackgroundFrame.minY + floor((textBackgroundFrame.size.height - indicatorSize.height) / 2.0)), size: indicatorSize))
         }
         
         let clearSize = self.clearButton.measure(CGSize(width: 100.0, height: 100.0))
@@ -956,6 +973,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         }
         if let textUpdated = self.textUpdated {
             textUpdated(textField.text ?? "", textField.textInputMode?.primaryLanguage)
+            self.textField.layoutTokens(transition: .animated(duration: 0.2, curve: .easeInOut))
         }
     }
     
@@ -968,13 +986,24 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textField.selectAll(nil)
     }
     
+    public func selectLastToken() {
+        if !self.textField.tokens.isEmpty {
+            self.textField.selectedTokenIndex = self.textField.tokens.count - 1
+            self.textField.becomeFirstResponder()
+        }
+    }
+    
     private func updateIsEmpty(animated: Bool = false) {
         let isEmpty = (self.textField.text?.isEmpty ?? true) && self.tokens.isEmpty
         
-        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .linear) : .immediate
-        transition.updateAlpha(node: self.textField.placeholderLabel, alpha: isEmpty ? 1.0 : 0.0)
+        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .spring) : .immediate
+        let placeholderTransition = !isEmpty ? .immediate : transition
+        placeholderTransition.updateAlpha(node: self.textField.placeholderLabel, alpha: isEmpty ? 1.0 : 0.0)
     
-        self.clearButton.isHidden = isEmpty && self.prefixString == nil
+        let clearIsHidden = isEmpty && self.prefixString == nil
+        transition.updateAlpha(node: self.clearButton, alpha: clearIsHidden ? 0.0 : 1.0)
+        transition.updateTransformScale(node: self.clearButton, scale: clearIsHidden ? 0.2 : 1.0)
+        self.clearButton.isUserInteractionEnabled = !clearIsHidden
     }
     
     @objc private func cancelPressed() {

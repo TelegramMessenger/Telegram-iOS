@@ -438,12 +438,12 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     }
                     
                     if isInstantVideo || isVoice {
-                        let authorName: String
+                        var authorName: String
                         if let author = message.forwardInfo?.author {
                             if author.id == item.context.account.peerId {
                                 authorName = item.presentationData.strings.DialogList_You
                             } else {
-                                authorName = author.displayTitle(strings: item.presentationData.strings, displayOrder: .firstLast)
+                                authorName = author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                             }
                         } else if let signature = message.forwardInfo?.authorSignature {
                             authorName = signature
@@ -451,11 +451,16 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             if author.id == item.context.account.peerId {
                                 authorName = item.presentationData.strings.DialogList_You
                             } else {
-                                authorName = author.displayTitle(strings: item.presentationData.strings, displayOrder: .firstLast)
+                                authorName = author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                             }
                         } else {
                             authorName = " "
                         }
+                        
+                        if item.isGlobalSearchResult {
+                            authorName = fullAuthorString(for: item)
+                        }
+                        
                         titleText = NSAttributedString(string: authorName, font: audioTitleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
                         let dateString = stringForFullDate(timestamp: item.message.timestamp, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat)
                         var descriptionString: String = ""
@@ -468,15 +473,6 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         } else {
                             if !item.isGlobalSearchResult {
                                 descriptionString = dateString
-                            }
-                        }
-                        
-                        if item.isGlobalSearchResult {
-                            let authorString = fullAuthorString(for: item)
-                            if descriptionString.isEmpty {
-                                descriptionString = authorString
-                            } else {
-                                descriptionString = "\(descriptionString) • \(authorString)"
                             }
                         }
                         
@@ -587,7 +583,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
             
             let (dateNodeLayout, dateNodeApply) = dateNodeMakeLayout(TextNodeLayoutArguments(attributedString: dateAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 12.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (titleNodeLayout, titleNodeApply) = titleNodeMakeLayout(TextNodeLayoutArguments(attributedString: titleText, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .middle, constrainedSize: CGSize(width: params.width - leftInset - rightInset - dateNodeLayout.size.width - 4.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleNodeLayout, titleNodeApply) = titleNodeMakeLayout(TextNodeLayoutArguments(attributedString: titleText, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .middle, constrainedSize: CGSize(width: params.width - leftInset - leftOffset - rightInset - dateNodeLayout.size.width - 4.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(TextNodeLayoutArguments(attributedString: descriptionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 30.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             

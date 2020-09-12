@@ -1218,10 +1218,11 @@ open class NavigationBar: ASDisplayNode {
     public func setSecondaryContentNode(_ secondaryContentNode: ASDisplayNode?, animated: Bool = false) {
         if self.secondaryContentNode !== secondaryContentNode {
             if let previous = self.secondaryContentNode {
-                if animated {
+                if animated && previous.supernode === self.clippingNode {
                     previous.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak previous] finished in
                         if finished {
                             previous?.removeFromSupernode()
+                            previous?.layer.removeAllAnimations()
                         }
                     })
                 } else {

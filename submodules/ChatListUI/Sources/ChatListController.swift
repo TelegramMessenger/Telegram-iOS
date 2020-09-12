@@ -1695,25 +1695,30 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         }
                         activate()
                         
-                        updatedSearchOptionsImpl = { [weak self, weak filterContainerNode] options, hasDate in
+                        var currentHasSuggestions = true
+                        updatedSearchOptionsImpl = { [weak self, weak filterContainerNode] options, hasSuggestions in
                             guard let strongSelf = self, let strongFilterContainerNode = filterContainerNode else {
                                 return
                             }
-                            var node: ASDisplayNode?
-                            if let options = options, options.messageTags != nil && !hasDate {
-                            } else {
-                                node = strongFilterContainerNode
-                            }
+                            if currentHasSuggestions != hasSuggestions {
+                                currentHasSuggestions = hasSuggestions
                             
-                            strongSelf.navigationBar?.setSecondaryContentNode(node, animated: false)
-                            if let parentController = strongSelf.parent as? TabBarController {
-                                parentController.navigationBar?.setSecondaryContentNode(node, animated: true)
-                            }
-                            
-                            let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
-                            if let layout = strongSelf.validLayout {
-                                strongSelf.containerLayoutUpdated(layout, transition: transition)
-                                (strongSelf.parent as? TabBarController)?.updateLayout(transition: transition)
+                                var node: ASDisplayNode?
+                                if let options = options, options.messageTags != nil && !hasSuggestions {
+                                } else {
+                                    node = strongFilterContainerNode
+                                }
+                                
+                                strongSelf.navigationBar?.setSecondaryContentNode(node, animated: false)
+                                if let parentController = strongSelf.parent as? TabBarController {
+                                    parentController.navigationBar?.setSecondaryContentNode(node, animated: true)
+                                }
+                                
+                                let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
+                                if let layout = strongSelf.validLayout {
+                                    strongSelf.containerLayoutUpdated(layout, transition: transition)
+                                    (strongSelf.parent as? TabBarController)?.updateLayout(transition: transition)
+                                }
                             }
                         }
                     }
