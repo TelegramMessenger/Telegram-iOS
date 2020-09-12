@@ -658,20 +658,20 @@ public enum ChatListSearchContextActionSource {
 
 public struct ChatListSearchOptions {
     let peer: (PeerId, String)?
-    let minDate: Int32?
-    let maxDate: Int32?
+    let minDate: (Int32, String)?
+    let maxDate: (Int32, String)?
     let messageTags: MessageTags?
     
     func withUpdatedPeer(_ peerIdAndName: (PeerId, String)?) -> ChatListSearchOptions {
         return ChatListSearchOptions(peer: peerIdAndName, minDate: self.minDate, maxDate: self.maxDate, messageTags: self.messageTags)
     }
     
-    func withUpdatedMinDate(_ minDate: Int32?) -> ChatListSearchOptions {
-        return ChatListSearchOptions(peer: self.peer, minDate: minDate, maxDate: self.maxDate, messageTags: self.messageTags)
+    func withUpdatedMinDate(_ minDateAndTitle: (Int32, String)?) -> ChatListSearchOptions {
+        return ChatListSearchOptions(peer: self.peer, minDate: minDateAndTitle, maxDate: self.maxDate, messageTags: self.messageTags)
     }
 
-    func withUpdatedMaxDate(_ maxDate: Int32?) -> ChatListSearchOptions {
-        return ChatListSearchOptions(peer: self.peer, minDate: self.minDate, maxDate: maxDate, messageTags: self.messageTags)
+    func withUpdatedMaxDate(_ maxDateAndTitle: (Int32, String)?) -> ChatListSearchOptions {
+        return ChatListSearchOptions(peer: self.peer, minDate: self.minDate, maxDate: maxDateAndTitle, messageTags: self.messageTags)
     }
     
     func withUpdatedMessageTags(_ messageTags: MessageTags?) -> ChatListSearchOptions {
@@ -911,10 +911,10 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             let location: SearchMessagesLocation
             if let options = options {
                 if let (peerId, _) = options.peer {
-                    location = .peer(peerId: peerId, fromId: nil, tags: options.messageTags, topMsgId: nil, minDate: options.minDate, maxDate: options.maxDate)
+                    location = .peer(peerId: peerId, fromId: nil, tags: options.messageTags, topMsgId: nil, minDate: options.minDate?.0, maxDate: options.maxDate?.0)
                 } else {
                     
-                    location = .general(tags: options.messageTags, minDate: options.minDate, maxDate: options.maxDate)
+                    location = .general(tags: options.messageTags, minDate: options.minDate?.0, maxDate: options.maxDate?.0)
                 }
             } else {
                 location = .general(tags: nil, minDate: nil, maxDate: nil)
@@ -1621,8 +1621,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             guard let strongSelf = self else {
                 return
             }
-            var messageTags: MessageTags? = strongSelf.currentSearchOptions.messageTags
-            var maxDate: Int32? = strongSelf.currentSearchOptions.maxDate
+            var messageTags = strongSelf.currentSearchOptions.messageTags
+            var maxDate = strongSelf.currentSearchOptions.maxDate
             var peer = strongSelf.currentSearchOptions.peer
             var clearQuery: Bool = false
             switch filter {
@@ -1636,8 +1636,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     messageTags = .music
                 case .voice:
                     messageTags = .voiceOrInstantVideo
-                case let .date(date, _):
-                    maxDate = date
+                case let .date(date, title):
+                    maxDate = (date, title)
                     clearQuery = true
                 case let .peer(id, name):
                     peer = (id, name)
@@ -1768,12 +1768,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             tokens.append(SearchBarToken(id: ChatListTokenId.peer.rawValue, icon: UIImage(bundleImageName: "Chat List/Search/User"), title: peerName))
         }
         
-        if let maxDate = options?.maxDate {
-            let formatter = DateFormatter()
-            formatter.timeStyle = .none
-            formatter.dateStyle = .medium
-            let title = formatter.string(from: Date(timeIntervalSince1970: Double(maxDate)))
-            tokens.append(SearchBarToken(id: ChatListTokenId.date.rawValue, icon: UIImage(bundleImageName: "Chat List/Search/Calendar"), title: title))
+        if let (_, dateTitle) = options?.maxDate {
+            tokens.append(SearchBarToken(id: ChatListTokenId.date.rawValue, icon: UIImage(bundleImageName: "Chat List/Search/Calendar"), title: dateTitle))
             
             self.possibleDates = []
         }

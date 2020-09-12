@@ -418,11 +418,6 @@ private class SearchBarTextField: UITextField {
         return self.textRect(forBounds: bounds)
     }
     
-    override func drawText(in rect: CGRect) {
-        super.drawText(in: rect)
-        print(rect.debugDescription)
-    }
-    
     override func layoutSubviews() {
         super.layoutSubviews()
         
