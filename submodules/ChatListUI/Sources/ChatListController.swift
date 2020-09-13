@@ -1683,10 +1683,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 }
                                 
                 if let searchContentNode = strongSelf.searchContentNode {
-                    var updatedSearchOptionsImpl: ((ChatListSearchOptions?, Bool) -> Void)?
+                    var updatedDisplayFiltersPanelImpl: ((Bool) -> Void)?
                     
-                    if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, navigationController: strongSelf.navigationController as? NavigationController, updatedSearchOptions: { options, hasDate in
-                        updatedSearchOptionsImpl?(options, hasDate)
+                    if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, navigationController: strongSelf.navigationController as? NavigationController, updatedDisplayFiltersPanel: { display in
+                        updatedDisplayFiltersPanelImpl?(display)
                     }) {
                         let (filterContainerNode, activate) = filterContainerNodeAndActivate
                         strongSelf.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: false)
@@ -1695,20 +1695,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         }
                         activate()
                         
-                        var currentHasSuggestions = true
-                        updatedSearchOptionsImpl = { [weak self, weak filterContainerNode] options, hasSuggestions in
+                        var currentDisplay = true
+                        updatedDisplayFiltersPanelImpl = { [weak self, weak filterContainerNode] display in
                             guard let strongSelf = self, let strongFilterContainerNode = filterContainerNode else {
                                 return
                             }
-                            if currentHasSuggestions != hasSuggestions {
-                                currentHasSuggestions = hasSuggestions
+                            if currentDisplay != display {
+                                currentDisplay = display
                             
-                                var node: ASDisplayNode?
-                                if let options = options, options.messageTags != nil && !hasSuggestions {
-                                } else {
-                                    node = strongFilterContainerNode
-                                }
-                                
+                                let node = display ? strongFilterContainerNode : nil                                
                                 strongSelf.navigationBar?.setSecondaryContentNode(node, animated: false)
                                 if let parentController = strongSelf.parent as? TabBarController {
                                     parentController.navigationBar?.setSecondaryContentNode(node, animated: true)

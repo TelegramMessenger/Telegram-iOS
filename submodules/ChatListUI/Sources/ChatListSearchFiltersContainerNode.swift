@@ -13,7 +13,7 @@ enum ChatListSearchFilter: Equatable {
     case files
     case music
     case voice
-    case peer(PeerId, String)
+    case peer(PeerId, Bool, String, String)
     case date(Int32, String)
     
     var id: Int32 {
@@ -28,7 +28,7 @@ enum ChatListSearchFilter: Equatable {
                 return 3
             case .voice:
                 return 4
-            case let .peer(peerId, _):
+            case let .peer(peerId, _, _, _):
                 return peerId.id
             case let .date(date, _):
                 return date
@@ -116,9 +116,17 @@ private final class ItemNode: ASDisplayNode {
             case .voice:
                 title = presentationData.strings.ChatList_Search_FilterVoice
                 icon = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/Voice"), color: color)
-            case let .peer(_, displayTitle):
+            case let .peer(peerId, isGroup, displayTitle, _):
                 title = displayTitle
-                icon = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/User"), color: color)
+                let image: UIImage?
+                if isGroup {
+                    image = UIImage(bundleImageName: "Chat List/Search/Group")
+                } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                    image = UIImage(bundleImageName: "Chat List/Search/Channel")
+                } else {
+                    image = UIImage(bundleImageName: "Chat List/Search/User")
+                }
+                icon = generateTintedImage(image: image, color: color)
             case let .date(_, displayTitle):
                 title = displayTitle
                 icon = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/Calendar"), color: color)

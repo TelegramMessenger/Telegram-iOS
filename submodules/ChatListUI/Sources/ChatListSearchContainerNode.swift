@@ -657,13 +657,17 @@ public enum ChatListSearchContextActionSource {
 }
 
 public struct ChatListSearchOptions {
-    let peer: (PeerId, String)?
+    let peer: (PeerId, Bool, String)?
     let minDate: (Int32, String)?
     let maxDate: (Int32, String)?
     let messageTags: MessageTags?
     
-    func withUpdatedPeer(_ peerIdAndName: (PeerId, String)?) -> ChatListSearchOptions {
-        return ChatListSearchOptions(peer: peerIdAndName, minDate: self.minDate, maxDate: self.maxDate, messageTags: self.messageTags)
+    var isEmpty: Bool {
+        return self.peer == nil && self.minDate == nil && self.maxDate == nil && self.messageTags == nil
+    }
+    
+    func withUpdatedPeer(_ peerIdIsGroupAndName: (PeerId, Bool, String)?) -> ChatListSearchOptions {
+        return ChatListSearchOptions(peer: peerIdIsGroupAndName, minDate: self.minDate, maxDate: self.maxDate, messageTags: self.messageTags)
     }
     
     func withUpdatedMinDate(_ minDateAndTitle: (Int32, String)?) -> ChatListSearchOptions {
@@ -734,19 +738,19 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private var mediaAccessoryPanel: (MediaNavigationAccessoryPanel, MediaManagerPlayerType)?
     private var dismissingPanel: ASDisplayNode?
     
-    private let updatedSearchOptions: ((ChatListSearchOptions?, Bool) -> Void)?
+    private let updatedDisplayFiltersPanel: ((Bool) -> Void)?
     
     private let emptyResultsTitleNode: ImmediateTextNode
     private let emptyResultsTextNode: ImmediateTextNode
     private let emptyResultsAnimationNode: AnimatedStickerNode
     private var animationSize: CGSize = CGSize()
     
-    public init(context: AccountContext, filter: ChatListNodePeersFilter, groupId: PeerGroupId, openPeer originalOpenPeer: @escaping (Peer, Bool) -> Void, openDisabledPeer: @escaping (Peer) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage originalOpenMessage: @escaping (Peer, MessageId) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, navigationController: NavigationController?, updatedSearchOptions: ((ChatListSearchOptions?, Bool) -> Void)? = nil) {
+    public init(context: AccountContext, filter: ChatListNodePeersFilter, groupId: PeerGroupId, openPeer originalOpenPeer: @escaping (Peer, Bool) -> Void, openDisabledPeer: @escaping (Peer) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage originalOpenMessage: @escaping (Peer, MessageId) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, navigationController: NavigationController?, updatedDisplayFiltersPanel: ((Bool) -> Void)? = nil) {
         self.context = context
         self.peersFilter = filter
         self.dimNode = ASDisplayNode()
         self.navigationController = navigationController
-        self.updatedSearchOptions = updatedSearchOptions
+        self.updatedDisplayFiltersPanel = updatedDisplayFiltersPanel
         
         self.present = present
         self.presentInGlobalOverlay = presentInGlobalOverlay
@@ -910,7 +914,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }
             let location: SearchMessagesLocation
             if let options = options {
-                if let (peerId, _) = options.peer {
+                if let (peerId, _, _) = options.peer {
                     location = .peer(peerId: peerId, fromId: nil, tags: options.messageTags, topMsgId: nil, minDate: options.minDate?.0, maxDate: options.maxDate?.0)
                 } else {
                     
@@ -1555,7 +1559,15 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.updateSearchOptions(strongSelf.currentSearchOptions.withUpdatedPeer((peer.id, peer.compactDisplayTitle)), clearQuery: true)
+                    let isGroup: Bool
+                    if let channel = peer as? TelegramChannel, case .group = channel.info {
+                        isGroup = true
+                    } else if peer.id.namespace == Namespaces.Peer.CloudGroup {
+                        isGroup = true
+                    } else {
+                        isGroup = false
+                    }
+                    strongSelf.updateSearchOptions(strongSelf.currentSearchOptions.withUpdatedPeer((peer.id, isGroup, peer.compactDisplayTitle)), clearQuery: true)
                     strongSelf.dismissInput?()
                 }, searchResults: newEntries.compactMap { entry -> Message? in
                     if case let .message(message, _, _, _, _, _, _) = entry {
@@ -1574,7 +1586,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 let previousPossiblePeers = strongSelf.possiblePeers
                 strongSelf.possiblePeers = Array(peers.prefix(10))
                 
-                strongSelf.updatedSearchOptions?(strongSelf.searchOptionsValue, strongSelf.hasSuggestions)
+                strongSelf.updatedDisplayFiltersPanel?(strongSelf.searchOptionsValue?.messageTags == nil || strongSelf.hasSuggestions)
                 if let (layout, navigationBarHeight) = strongSelf.validLayout {
                     strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                 }
@@ -1639,8 +1651,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 case let .date(date, title):
                     maxDate = (date, title)
                     clearQuery = true
-                case let .peer(id, name):
-                    peer = (id, name)
+                case let .peer(id, isGroup, _, compactDisplayTitle):
+                    peer = (id, isGroup, compactDisplayTitle)
                     clearQuery = true
             }
             strongSelf.updateSearchOptions(strongSelf.currentSearchOptions.withUpdatedMessageTags(messageTags).withUpdatedMaxDate(maxDate).withUpdatedPeer(peer), clearQuery: clearQuery)
@@ -1735,6 +1747,10 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     }
     
     private func updateSearchOptions(_ options: ChatListSearchOptions?, clearQuery: Bool = false) {
+        var options = options
+        if options?.isEmpty ?? true {
+            options = nil
+        }
         self.searchOptionsValue = options
         self.searchOptions.set(.single(options))
         
@@ -1764,8 +1780,16 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }
         }
         
-        if let (_, peerName) = options?.peer {
-            tokens.append(SearchBarToken(id: ChatListTokenId.peer.rawValue, icon: UIImage(bundleImageName: "Chat List/Search/User"), title: peerName))
+        if let (peerId, isGroup, peerName) = options?.peer {
+            let image: UIImage?
+            if isGroup {
+                image = UIImage(bundleImageName: "Chat List/Search/Group")
+            } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                image = UIImage(bundleImageName: "Chat List/Search/Channel")
+            } else {
+                image = UIImage(bundleImageName: "Chat List/Search/User")
+            }
+            tokens.append(SearchBarToken(id: ChatListTokenId.peer.rawValue, icon:image, title: peerName))
         }
         
         if let (_, dateTitle) = options?.maxDate {
@@ -1780,7 +1804,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             self.setQuery?(nil, tokens, self.searchQueryValue ?? "")
         }
         
-        self.updatedSearchOptions?(options, self.hasSuggestions)
+        self.updatedDisplayFiltersPanel?(options?.messageTags == nil || self.hasSuggestions)
     }
     
     private func updateTheme(theme: PresentationTheme) {
@@ -1832,7 +1856,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.possibleDates = suggestDates(for: text, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat)
        
         if previousPossibleDate.isEmpty != self.possibleDates.isEmpty {
-            self.updatedSearchOptions?(self.searchOptionsValue, self.hasSuggestions)
+            self.updatedDisplayFiltersPanel?(self.searchOptionsValue?.messageTags == nil || self.hasSuggestions)
             if let (layout, navigationBarHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
             }
@@ -2202,7 +2226,15 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         }
         if !self.possiblePeers.isEmpty && self.searchOptionsValue?.peer == nil {
             for peer in self.possiblePeers {
-                customFilters.append(.peer(peer.id, peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)))
+                let isGroup: Bool
+                if let channel = peer as? TelegramChannel, case .group = channel.info {
+                    isGroup = true
+                } else if peer.id.namespace == Namespaces.Peer.CloudGroup {
+                    isGroup = true
+                } else {
+                    isGroup = false
+                }
+                customFilters.append(.peer(peer.id, isGroup, peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), peer.compactDisplayTitle))
             }
         }
         
