@@ -168,7 +168,7 @@ private final class TokenNode: ASDisplayNode {
 }
 
 private class SearchBarTextField: UITextField {
-    public var didDeleteBackwardWhileEmpty: (() -> Void)?
+    public var didDeleteBackward: (() -> Bool)?
     
     let placeholderLabel: ImmediateTextNode
     var placeholderString: NSAttributedString? {
@@ -228,6 +228,7 @@ private class SearchBarTextField: UITextField {
     var theme: SearchBarNodeTheme
     
     fileprivate func layoutTokens(transition: ContainedViewLayoutTransition = .immediate) {
+        var hasSelected = false
         for i in 0 ..< self.tokens.count {
             let token = self.tokens[i]
 
@@ -243,7 +244,10 @@ private class SearchBarTextField: UITextField {
                 self?.becomeFirstResponder()
             }
             let isSelected = i == self.selectedTokenIndex
-            let isCollapsed = !isSelected && (i < self.tokens.count - 1 || !(self.text?.isEmpty ?? true))
+            if i < self.tokens.count - 1 && isSelected {
+                hasSelected = true
+            }
+            let isCollapsed = !isSelected && (i < self.tokens.count - 1 || hasSelected)
             tokenNode.update(theme: self.theme, token: token, isSelected: isSelected, isCollapsed: isCollapsed)
         }
         var removeKeys: [AnyHashable] = []
@@ -450,10 +454,12 @@ private class SearchBarTextField: UITextField {
             }
         }
         
-        if !processed && (self.text == nil || self.text!.isEmpty) {
-            self.didDeleteBackwardWhileEmpty?()
+        if !processed {
+            processed = self.didDeleteBackward?() ?? false
         }
-        super.deleteBackward()
+        if !processed {
+            super.deleteBackward()
+        }
     }
 }
 
@@ -718,16 +724,19 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textField.delegate = self
         self.textField.addTarget(self, action: #selector(self.textFieldDidChange(_:)), for: .editingChanged)
         
-        self.textField.didDeleteBackwardWhileEmpty = { [weak self] in
+        self.textField.didDeleteBackward = { [weak self] in
             guard let strongSelf = self else {
-                return
+                return false
             }
             if let index = strongSelf.textField.selectedTokenIndex {
                 strongSelf.tokens.remove(at: index)
                 strongSelf.tokensUpdated?(strongSelf.tokens)
-            } else {
+                return true
+            } else if strongSelf.text.isEmpty {
                 strongSelf.clearPressed()
+                return true
             }
+            return false
         }
         
         self.cancelButton.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
