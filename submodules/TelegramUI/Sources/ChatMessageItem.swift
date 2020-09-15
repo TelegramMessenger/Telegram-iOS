@@ -280,7 +280,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         switch chatLocation {
         case let .peer(peerId):
             messagePeerId = peerId
-        case let .replyThread(messageId, _, _):
+        case let .replyThread(messageId, _, _, _):
             messagePeerId = messageId.peerId
         }
         
@@ -333,6 +333,8 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                 if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
                     isBroadcastChannel = true
                 }
+            } else if case let .replyThread(messageId, isChannelPost, _, _) = chatLocation, isChannelPost, messageId == message.id {
+                isBroadcastChannel = true
             }
             if !hasActionMedia && !isBroadcastChannel {
                 if let effectiveAuthor = effectiveAuthor {

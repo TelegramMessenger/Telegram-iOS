@@ -655,35 +655,45 @@ final class MutableMessageHistoryView {
                 }
             case .cachedPeerDataMessages:
                 break
-            case let .message(id, _):
+            case let .message(id, currentMessages):
+                let currentGroupingKey = currentMessages.first?.groupingKey
+                var currentIds = [id]
+                for message in currentMessages {
+                    if message.id != id {
+                        currentIds.append(message.id)
+                    }
+                }
+                
                 if let operations = transaction.currentOperationsByPeerId[id.peerId] {
                     var updateMessage = false
                     findOperation: for operation in operations {
                         switch operation {
                         case let .InsertMessage(message):
-                            if message.id == id {
+                            if message.id == id || (currentGroupingKey != nil && message.groupingKey == currentGroupingKey) {
                                 updateMessage = true
                                 break findOperation
                             }
                         case let .Remove(indices):
                             for (index, _) in indices {
-                                if index.id == id {
+                                if currentIds.contains(index.id) {
                                     updateMessage = true
                                     break findOperation
                                 }
                             }
                         case let .UpdateEmbeddedMedia(index, _):
-                            if index.id == id {
+                            if currentIds.contains(index.id) {
                                 updateMessage = true
                                 break findOperation
                             }
                         case let .UpdateGroupInfos(dict):
-                            if dict[id] != nil {
-                                updateMessage = true
-                                break findOperation
+                            for id in currentIds {
+                                if dict[id] != nil {
+                                    updateMessage = true
+                                    break findOperation
+                                }
                             }
                         case let .UpdateTimestamp(index, _):
-                            if index.id == id {
+                            if currentIds.contains(index.id) {
                                 updateMessage = true
                                 break findOperation
                             }
@@ -692,10 +702,8 @@ final class MutableMessageHistoryView {
                         }
                     }
                     if updateMessage {
-                        let message = postbox.messageHistoryIndexTable.getIndex(id).flatMap(postbox.messageHistoryTable.getMessage).flatMap { message in
-                            postbox.messageHistoryTable.renderMessage(message, peerTable: postbox.peerTable)
-                        }
-                        self.additionalDatas[i] = .message(id, message)
+                        let messages = postbox.getMessageGroup(at: id) ?? []
+                        self.additionalDatas[i] = .message(id, messages)
                         hasChanges = true
                     }
                 }

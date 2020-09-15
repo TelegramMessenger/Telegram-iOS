@@ -23,5 +23,5 @@ public enum AdditionalMessageHistoryViewDataEntry {
     case preferencesEntry(ValueBoxKey, PreferencesEntry?)
     case peerIsContact(PeerId, Bool)
     case peer(PeerId, Peer?)
-    case message(MessageId, Message?)
+    case message(MessageId, [Message])
 }

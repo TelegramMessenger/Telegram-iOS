@@ -1,6 +1,6 @@
 import Foundation
 
-public struct MessageId: Hashable, Comparable, CustomStringConvertible {
+public struct MessageId: Hashable, Comparable, CustomStringConvertible, PostboxCoding {
     public typealias Namespace = Int32
     public typealias Id = Int32
     
@@ -35,6 +35,18 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible {
         self.id = idValue
         
         buffer.offset += 16
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
+        self.namespace = decoder.decodeInt32ForKey("n", orElse: 0)
+        self.id = decoder.decodeInt32ForKey("i", orElse: 0)
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt64(self.peerId.toInt64(), forKey: "p")
+        encoder.encodeInt32(self.namespace, forKey: "n")
+        encoder.encodeInt32(self.id, forKey: "i")
     }
     
     public func encodeToBuffer(_ buffer: WriteBuffer) {

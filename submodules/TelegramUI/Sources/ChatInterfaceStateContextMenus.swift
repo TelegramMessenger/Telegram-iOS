@@ -465,7 +465,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         var isReplyThreadHead = false
-        if case let .replyThread(messageId, _, _) = chatPresentationInterfaceState.chatLocation {
+        if case let .replyThread(messageId, _, _, _) = chatPresentationInterfaceState.chatLocation {
             isReplyThreadHead = messages[0].id == messageId
         }
         
@@ -601,16 +601,11 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         
         if let threadId = threadId {
             let replyThreadId = makeThreadIdMessageId(peerId: messages[0].id.peerId, threadId: threadId)
-            //TODO:localize
             let text: String
             if threadMessageCount != 0 {
-                if threadMessageCount == 1 {
-                    text = "View 1 reply"
-                } else {
-                    text = "View \(threadMessageCount) replies"
-                }
+                text = chatPresentationInterfaceState.strings.Conversation_ContextViewReplies(Int32(threadMessageCount))
             } else {
-                text = "View Thread"
+                text = chatPresentationInterfaceState.strings.Conversation_ContextViewThread
             }
             actions.append(.action(ContextMenuActionItem(text: text, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replies"), color: theme.actionSheet.primaryTextColor)
@@ -622,7 +617,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 c.dismiss(completion: {
                     if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
                         if case .group = channel.info {
-                            interfaceInteraction.viewReplies(messages[0].id, ChatReplyThreadMessage(messageId: replyThreadId, maxReadMessageId: nil))
+                            interfaceInteraction.viewReplies(messages[0].id, ChatReplyThreadMessage(messageId: replyThreadId, maxMessage: .unknown, maxReadMessageId: nil))
                         } else {
                             var cancelImpl: (() -> Void)?
                             let statusController = OverlayStatusController(theme: chatPresentationInterfaceState.theme, type: .loading(cancelled: {
@@ -751,7 +746,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
                 var threadMessageId: MessageId?
-                if case let .replyThread(replyThread, _, _) = chatPresentationInterfaceState.chatLocation {
+                if case let .replyThread(replyThread, _, _, _) = chatPresentationInterfaceState.chatLocation {
                     threadMessageId = replyThread
                 }
                 let _ = (exportMessageLink(account: context.account, peerId: message.id.peerId, messageId: message.id, threadMessageId: threadMessageId)
@@ -875,7 +870,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             })))
         }
         
-        if data.canSelect {
+        if !isReplyThreadHead, data.canSelect {
             if !actions.isEmpty {
                 actions.append(.separator)
             }

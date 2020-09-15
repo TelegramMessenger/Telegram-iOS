@@ -238,7 +238,22 @@ private final class FeaturedStickerPacksContext {
         self.disposable.dispose()
     }
 }
+
+private struct ViewCountContextState {
+    var timestamp: Int32
+    var clientId: Int32
     
+    func isStillValidFor(_ other: ViewCountContextState) -> Bool {
+        if other.timestamp > self.timestamp + 30 {
+            return false
+        }
+        if other.clientId > self.clientId {
+            return false
+        }
+        return true
+    }
+}
+
 public final class AccountViewTracker {
     weak var account: Account?
     private let queue = Queue()
@@ -255,7 +270,7 @@ public final class AccountViewTracker {
     private var visibleCallListHoleIds: [MessageIndex: Int] = [:]
     private var visibleCallListHoleDisposables: [MessageIndex: Disposable] = [:]
     
-    private var updatedViewCountMessageIdsAndTimestamps: [MessageId: Int32] = [:]
+    private var updatedViewCountMessageIdsAndTimestamps: [MessageId: ViewCountContextState] = [:]
     private var nextUpdatedViewCountDisposableId: Int32 = 0
     private var updatedViewCountDisposables = DisposableDict<Int32>()
     
@@ -576,14 +591,14 @@ public final class AccountViewTracker {
         }
     }
     
-    public func updateViewCountForMessageIds(messageIds: Set<MessageId>) {
+    public func updateViewCountForMessageIds(messageIds: Set<MessageId>, clientId: Int32) {
         self.queue.async {
             var addedMessageIds: [MessageId] = []
-            let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+            let updatedState = ViewCountContextState(timestamp: Int32(CFAbsoluteTimeGetCurrent()), clientId: clientId)
             for messageId in messageIds {
                 let messageTimestamp = self.updatedViewCountMessageIdsAndTimestamps[messageId]
-                if messageTimestamp == nil || messageTimestamp! < timestamp - 5 * 60 {
-                    self.updatedViewCountMessageIdsAndTimestamps[messageId] = timestamp
+                if messageTimestamp == nil || !messageTimestamp!.isStillValidFor(updatedState) {
+                    self.updatedViewCountMessageIdsAndTimestamps[messageId] = updatedState
                     addedMessageIds.append(messageId)
                 }
             }
@@ -601,11 +616,28 @@ public final class AccountViewTracker {
                                         return .single(nil)
                                     }
                                     |> mapToSignal { result -> Signal<Void, NoError> in
-                                        guard case let .messageViews(viewCounts, _)? = result else {
+                                        guard case let .messageViews(viewCounts, users)? = result else {
                                             return .complete()
                                         }
                                         
                                         return account.postbox.transaction { transaction -> Void in
+                                            var peers: [Peer] = []
+                                            var peerPresences: [PeerId: PeerPresence] = [:]
+                                            
+                                            for user in users {
+                                                let telegramUser = TelegramUser(user: user)
+                                                peers.append(telegramUser)
+                                                if let presence = TelegramUserPresence(apiUser: user) {
+                                                    peerPresences[telegramUser.id] = presence
+                                                }
+                                            }
+                                            
+                                            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                                                return updated
+                                            })
+                                            
+                                            updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                                            
                                             for i in 0 ..< messageIds.count {
                                                 if i < viewCounts.count {
                                                     if case let .messageViews(_, views, forwards, replies) = viewCounts[i] {
@@ -616,9 +648,11 @@ public final class AccountViewTracker {
                                                             var commentsChannelId: PeerId?
                                                             var recentRepliersPeerIds: [PeerId]?
                                                             var repliesCount: Int32?
+                                                            var repliesMaxId: Int32?
+                                                            var repliesReadMaxId: Int32?
                                                             if let replies = replies {
                                                                 switch replies {
-                                                                case let .messageReplies(_, repliesCountValue, _, recentRepliers, channelId, _, _):
+                                                                case let .messageReplies(_, repliesCountValue, _, recentRepliers, channelId, maxId, readMaxId):
                                                                     if let channelId = channelId {
                                                                         commentsChannelId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                                                                     }
@@ -628,6 +662,8 @@ public final class AccountViewTracker {
                                                                     } else {
                                                                         recentRepliersPeerIds = nil
                                                                     }
+                                                                    repliesMaxId = maxId
+                                                                    repliesReadMaxId = readMaxId
                                                                 }
                                                             }
                                                             loop: for j in 0 ..< attributes.count {
@@ -642,12 +678,12 @@ public final class AccountViewTracker {
                                                                 } else if let _ = attributes[j] as? ReplyThreadMessageAttribute {
                                                                     foundReplies = true
                                                                     if let repliesCount = repliesCount {
-                                                                        attributes[j] = ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsChannelId)
+                                                                        attributes[j] = ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsChannelId, maxMessageId: repliesMaxId, maxReadMessageId: repliesReadMaxId)
                                                                     }
                                                                 }
                                                             }
                                                             if !foundReplies, let repliesCount = repliesCount {
-                                                                attributes.append(ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsChannelId))
+                                                                attributes.append(ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsChannelId, maxMessageId: repliesMaxId, maxReadMessageId: repliesReadMaxId))
                                                             }
                                                             return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                                                         })

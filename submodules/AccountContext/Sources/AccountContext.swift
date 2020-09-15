@@ -170,7 +170,7 @@ public enum ResolvedUrl {
     case botStart(peerId: PeerId, payload: String)
     case groupBotStart(peerId: PeerId, payload: String)
     case channelMessage(peerId: PeerId, messageId: MessageId)
-    case replyThreadMessage(replyThreadMessageId: MessageId, isChannelPost: Bool, maxReadMessageId: MessageId?, messageId: MessageId)
+    case replyThreadMessage(replyThreadMessageId: MessageId, isChannelPost: Bool, maxMessage: ChatReplyThreadMessage.MaxMessage, maxReadMessageId: MessageId?, messageId: MessageId)
     case stickerPack(name: String)
     case instantView(TelegramMediaWebpage, String?)
     case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
@@ -253,7 +253,7 @@ public enum ChatSearchDomain: Equatable {
 
 public enum ChatLocation: Equatable {
     case peer(PeerId)
-    case replyThread(threadMessageId: MessageId, isChannelPost: Bool, maxReadMessageId: MessageId?)
+    case replyThread(threadMessageId: MessageId, isChannelPost: Bool, maxMessage: ChatReplyThreadMessage.MaxMessage, maxReadMessageId: MessageId?)
 }
 
 public final class NavigateToChatControllerParams {
@@ -261,6 +261,7 @@ public final class NavigateToChatControllerParams {
     public let chatController: ChatController?
     public let context: AccountContext
     public let chatLocation: ChatLocation
+    public let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
     public let subject: ChatControllerSubject?
     public let botStart: ChatControllerInitialBotStart?
     public let updateTextInputState: ChatTextInputState?
@@ -277,9 +278,10 @@ public final class NavigateToChatControllerParams {
     public let parentGroupId: PeerGroupId?
     public let completion: (ChatController) -> Void
     
-    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping (ChatController) -> Void = { _ in }) {
+    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping (ChatController) -> Void = { _ in }) {
         self.navigationController = navigationController
         self.chatController = chatController
+        self.chatLocationContextHolder = chatLocationContextHolder
         self.context = context
         self.chatLocation = chatLocation
         self.subject = subject

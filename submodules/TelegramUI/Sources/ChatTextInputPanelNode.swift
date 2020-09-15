@@ -792,12 +792,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     }
                 } else if let channel = peer as? TelegramChannel, case .group = channel.info, channel.hasPermission(.canBeAnonymous) {
                     placeholder = interfaceState.strings.Conversation_InputTextAnonymousPlaceholder
-                } else if case let .replyThread(_, isChannelPost, _) = interfaceState.chatLocation {
-                    //TODO:localize
+                } else if case let .replyThread(_, isChannelPost, _, _) = interfaceState.chatLocation {
                     if isChannelPost {
-                        placeholder = "Comment"
+                        placeholder = interfaceState.strings.Conversation_InputTextPlaceholderComment
                     } else {
-                        placeholder = "Reply"
+                        placeholder = interfaceState.strings.Conversation_InputTextPlaceholderReply
                     }
                 } else {
                     placeholder = interfaceState.strings.Conversation_InputTextPlaceholder

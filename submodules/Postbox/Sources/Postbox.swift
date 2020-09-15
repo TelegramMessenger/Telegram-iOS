@@ -68,6 +68,21 @@ public final class Transaction {
         return self.postbox?.messageHistoryHoleIndexTable.containing(id: id) ?? [:]
     }
     
+    public func addThreadIndexHole(peerId: PeerId, threadId: Int64, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>) {
+        assert(!self.disposed)
+        self.postbox?.addThreadIndexHole(peerId: peerId, threadId: threadId, namespace: namespace, space: space, range: range)
+    }
+    
+    public func removeThreadIndexHole(peerId: PeerId, threadId: Int64, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>) {
+        assert(!self.disposed)
+        self.postbox?.removeThreadIndexHole(peerId: peerId, threadId: threadId, namespace: namespace, space: space, range: range)
+    }
+    
+    public func getThreadIndexHoles(peerId: PeerId, threadId: Int64, namespace: MessageId.Namespace) -> IndexSet {
+        assert(!self.disposed)
+        return self.postbox!.messageHistoryThreadHoleIndexTable.closest(peerId: peerId, threadId: threadId, namespace: namespace, space: .everywhere, range: 1 ... (Int32.max - 1))
+    }
+    
     public func doesChatListGroupContainHoles(groupId: PeerGroupId) -> Bool {
         assert(!self.disposed)
         return self.postbox?.chatListTable.doesGroupContainHoles(groupId: groupId) ?? false
@@ -1237,6 +1252,7 @@ public final class Postbox {
     let messageHistoryFailedTable: MessageHistoryFailedTable
     let messageHistoryTagsTable: MessageHistoryTagsTable
     let messageHistoryThreadsTable: MessageHistoryThreadsTable
+    let messageHistoryThreadHoleIndexTable: MessageHistoryThreadHoleIndexTable
     let globalMessageHistoryTagsTable: GlobalMessageHistoryTagsTable
     let localMessageHistoryTagsTable: LocalMessageHistoryTagsTable
     let peerChatStateTable: PeerChatStateTable
@@ -1320,6 +1336,7 @@ public final class Postbox {
         self.pendingMessageActionsTable = PendingMessageActionsTable(valueBox: self.valueBox, table: PendingMessageActionsTable.tableSpec(46), metadataTable: self.pendingMessageActionsMetadataTable)
         self.messageHistoryTagsTable = MessageHistoryTagsTable(valueBox: self.valueBox, table: MessageHistoryTagsTable.tableSpec(12), seedConfiguration: self.seedConfiguration, summaryTable: self.messageHistoryTagsSummaryTable)
         self.messageHistoryThreadsTable = MessageHistoryThreadsTable(valueBox: self.valueBox, table: MessageHistoryThreadsTable.tableSpec(62))
+        self.messageHistoryThreadHoleIndexTable = MessageHistoryThreadHoleIndexTable(valueBox: self.valueBox, table: MessageHistoryThreadHoleIndexTable.tableSpec(63), metadataTable: self.messageHistoryMetadataTable, seedConfiguration: self.seedConfiguration)
         self.globalMessageHistoryTagsTable = GlobalMessageHistoryTagsTable(valueBox: self.valueBox, table: GlobalMessageHistoryTagsTable.tableSpec(39))
         self.localMessageHistoryTagsTable = LocalMessageHistoryTagsTable(valueBox: self.valueBox, table: GlobalMessageHistoryTagsTable.tableSpec(52))
         self.messageHistoryIndexTable = MessageHistoryIndexTable(valueBox: self.valueBox, table: MessageHistoryIndexTable.tableSpec(4), messageHistoryHoleIndexTable: self.messageHistoryHoleIndexTable, globalMessageIdsTable: self.globalMessageIdsTable, metadataTable: self.messageHistoryMetadataTable, seedConfiguration: self.seedConfiguration)
@@ -1374,6 +1391,7 @@ public final class Postbox {
         tables.append(self.messageHistoryFailedTable)
         tables.append(self.messageHistoryTagsTable)
         tables.append(self.messageHistoryThreadsTable)
+        tables.append(self.messageHistoryThreadHoleIndexTable)
         tables.append(self.globalMessageHistoryTagsTable)
         tables.append(self.localMessageHistoryTagsTable)
         tables.append(self.messageHistoryIndexTable)
@@ -1621,6 +1639,14 @@ public final class Postbox {
     
     fileprivate func removeHole(peerId: PeerId, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>) {
         self.messageHistoryHoleIndexTable.remove(peerId: peerId, namespace: namespace, space: space, range: range, operations: &self.currentPeerHoleOperations)
+    }
+    
+    fileprivate func addThreadIndexHole(peerId: PeerId, threadId: Int64, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>) {
+        self.messageHistoryThreadHoleIndexTable.add(peerId: peerId, threadId: threadId, namespace: namespace, space: space, range: range, operations: &self.currentPeerHoleOperations)
+    }
+    
+    fileprivate func removeThreadIndexHole(peerId: PeerId, threadId: Int64, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>) {
+        self.messageHistoryThreadHoleIndexTable.remove(peerId: peerId, threadId: threadId, namespace: namespace, space: space, range: range, operations: &self.currentPeerHoleOperations)
     }
     
     fileprivate func recalculateChatListGroupStats(groupId: PeerGroupId) {
@@ -2357,12 +2383,14 @@ public final class Postbox {
         case let .peer(peerId):
             return .single((.peer(peerId), false))
         case let .external(_, input):
-            var isHoleFill = false
-            return input
-            |> map { value -> (ResolvedChatLocationInput, Bool) in
-                let wasHoleFill = isHoleFill
-                isHoleFill = true
-                return (.external(value), wasHoleFill)
+            return Signal { subscriber in
+                var isHoleFill = false
+                return (input
+                |> map { value -> (ResolvedChatLocationInput, Bool) in
+                    let wasHoleFill = isHoleFill
+                    isHoleFill = true
+                    return (.external(value), wasHoleFill)
+                }).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
             }
         }
     }
@@ -2539,8 +2567,8 @@ public final class Postbox {
                     }
                     additionalDataEntries.append(.cachedPeerDataMessages(peerId, messages))
                 case let .message(id):
-                    let message = self.getMessage(id)
-                    additionalDataEntries.append(.message(id, message))
+                    let messages = self.getMessageGroup(at: id)
+                    additionalDataEntries.append(.message(id, messages ?? []))
                 case let .peerChatState(peerId):
                     additionalDataEntries.append(.peerChatState(peerId, self.peerChatStateTable.get(peerId) as? PeerChatState))
                 case .totalUnreadState:
@@ -3307,7 +3335,7 @@ public final class Postbox {
         return nil
     }
     
-    fileprivate func getMessageGroup(at id: MessageId) -> [Message]? {
+    func getMessageGroup(at id: MessageId) -> [Message]? {
         guard let index = self.messageHistoryIndexTable.getIndex(id) else {
             return nil
         }

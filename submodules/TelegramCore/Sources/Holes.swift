@@ -502,7 +502,9 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             }
                         }
                         
-                        if threadId == nil {
+                        if let threadId = threadId {
+                            transaction.removeThreadIndexHole(peerId: peerId, threadId: makeMessageThreadId(threadId), namespace: namespace, space: .everywhere, range: filledRange)
+                        } else {
                             transaction.removeHole(peerId: peerId, namespace: namespace, space: space, range: filledRange)
                         }
                         

@@ -249,11 +249,15 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     } else if incoming {
                         hasAvatar = true
                     }
-                case let .replyThread(messageId, _, _):
+                case let .replyThread(messageId, isChannelPost, _, _):
                     if messageId.peerId != item.context.account.peerId {
                         if messageId.peerId.isGroupOrChannel && item.message.author != nil {
                             var isBroadcastChannel = false
                             if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                                isBroadcastChannel = true
+                            }
+                            
+                            if isChannelPost, messageId == item.message.id {
                                 isBroadcastChannel = true
                             }
                             
@@ -411,7 +415,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                 }
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-                    if case let .replyThread(replyThreadMessageId, _, _) = item.chatLocation, replyThreadMessageId == replyAttribute.messageId {
+                    if case let .replyThread(replyThreadMessageId, _, _, _) = item.chatLocation, replyThreadMessageId == replyAttribute.messageId {
                     } else {
                         replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                     }
@@ -775,7 +779,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
                 for attribute in item.message.attributes {
                     if let _ = attribute as? ReplyThreadMessageAttribute {
-                        item.controllerInteraction.openMessageReplies(item.message.id)
+                        item.controllerInteraction.openMessageReplies(item.message.id, true)
                         return
                     }
                 }

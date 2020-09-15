@@ -60,25 +60,22 @@ class ChatReplyCountItem: ListViewItem {
 
 class ChatReplyCountItemNode: ListViewItemNode {
     var item: ChatReplyCountItem?
-    let backgroundNode: ASImageNode
     let labelNode: TextNode
+    let filledBackgroundNode: LinkHighlightingNode
     
     private var theme: ChatPresentationThemeData?
     
     private let layoutConstants = ChatMessageItemLayoutConstants.default
     
     init() {
-        self.backgroundNode = ASImageNode()
-        self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.displayWithoutProcessing = true
-        
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
         
+        self.filledBackgroundNode = LinkHighlightingNode(color: .clear)
+        
         super.init(layerBacked: false, dynamicBounce: true, rotated: true)
         
-        self.addSubnode(self.backgroundNode)
-        
+        self.addSubnode(self.filledBackgroundNode)
         self.addSubnode(self.labelNode)
         
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
@@ -108,53 +105,62 @@ class ChatReplyCountItemNode: ListViewItemNode {
     }
     
     func asyncLayout() -> (_ item: ChatReplyCountItem, _ params: ListViewItemLayoutParams, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, () -> Void) {
-        let labelLayout = TextNode.asyncLayout(self.labelNode)
+        let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
+        let backgroundLayout = self.filledBackgroundNode.asyncLayout()
+        
         let layoutConstants = self.layoutConstants
-        let currentTheme = self.theme
         
         return { item, params, dateAtBottom in
-            var updatedBackgroundImage: UIImage?
-            if currentTheme != item.presentationData.theme {
-                updatedBackgroundImage = PresentationResourcesChat.chatUnreadBarBackgroundImage(item.presentationData.theme.theme)
-            }
-            
             let text: String
-            //TODO:localize
-            if item.isComments {
-                if item.count == 0 {
-                    text = "Comments"
-                } else if item.count == 1 {
-                    text = "1 Comment"
-                } else {
-                    text = "\(item.count) Comments"
-                }
+            if item.count == 0 {
+                text = item.presentationData.strings.Conversation_DiscussionNotStarted
             } else {
-                if item.count == 0 {
-                    text = "Replies"
-                } else if item.count == 1 {
-                    text = "1 Reply"
-                } else {
-                    text = "\(item.count) Replies"
-                }
+                text = item.presentationData.strings.Conversation_DiscussionStarted
             }
             
-            let (size, apply) = labelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: titleFont, textColor: item.presentationData.theme.theme.chat.serviceMessage.unreadBarTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let textColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
             
-            let backgroundSize = CGSize(width: params.width, height: 25.0)
+            let attributedString = NSAttributedString(string: text, font: Font.regular(13.0), textColor: textColor)
             
-            return (ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 25.0), insets: UIEdgeInsets(top: 6.0 + (dateAtBottom ? layoutConstants.timestampHeaderHeight : 0.0), left: 0.0, bottom: 5.0, right: 0.0)), { [weak self] in
+            let (labelLayout, apply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            
+            var labelRects = labelLayout.linesRects()
+            if labelRects.count > 1 {
+                let sortedIndices = (0 ..< labelRects.count).sorted(by: { labelRects[$0].width > labelRects[$1].width })
+                for i in 0 ..< sortedIndices.count {
+                    let index = sortedIndices[i]
+                    for j in -1 ... 1 {
+                        if j != 0 && index + j >= 0 && index + j < sortedIndices.count {
+                            if abs(labelRects[index + j].width - labelRects[index].width) < 40.0 {
+                                labelRects[index + j].size.width = max(labelRects[index + j].width, labelRects[index].width)
+                                labelRects[index].size.width = labelRects[index + j].size.width
+                            }
+                        }
+                    }
+                }
+            }
+            for i in 0 ..< labelRects.count {
+                labelRects[i] = labelRects[i].insetBy(dx: -6.0, dy: floor((labelRects[i].height - 20.0) / 2.0))
+                labelRects[i].size.height = 20.0
+                labelRects[i].origin.x = floor((labelLayout.size.width - labelRects[i].width) / 2.0)
+            }
+            
+            let serviceColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+            let backgroundApply = backgroundLayout(serviceColor.fill, labelRects, 10.0, 10.0, 0.0)
+            
+            let backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
+            
+            return (ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: backgroundSize.height), insets: UIEdgeInsets(top: 6.0 + (dateAtBottom ? layoutConstants.timestampHeaderHeight : 0.0), left: 0.0, bottom: 5.0, right: 0.0)), { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.theme = item.presentationData.theme
                     
-                    if let updatedBackgroundImage = updatedBackgroundImage {
-                        strongSelf.backgroundNode.image = updatedBackgroundImage
-                    }
-                    
                     let _ = apply()
+                    let _ = backgroundApply()
                     
-                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: backgroundSize)
-                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - size.size.width) / 2.0), y: floorToScreenPixels((backgroundSize.height - size.size.height) / 2.0)), size: size.size)
+                    let labelFrame = CGRect(origin: CGPoint(x: floor((params.width - backgroundSize.width) / 2.0) + 8.0, y: floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
+                    strongSelf.labelNode.frame = labelFrame
+                    strongSelf.filledBackgroundNode.frame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
                 }
             })
         }

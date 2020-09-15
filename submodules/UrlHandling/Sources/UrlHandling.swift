@@ -305,7 +305,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                                     guard let result = result else {
                                         return .channelMessage(peerId: peer.id, messageId: replyThreadMessageId)
                                     }
-                                    return .replyThreadMessage(replyThreadMessageId: result.messageId, isChannelPost: true, maxReadMessageId: result.maxReadMessageId, messageId: MessageId(peerId: result.messageId.peerId, namespace: Namespaces.Message.Cloud, id: replyId))
+                                    return .replyThreadMessage(replyThreadMessageId: result.messageId, isChannelPost: true, maxMessage: result.maxMessage, maxReadMessageId: result.maxReadMessageId, messageId: MessageId(peerId: result.messageId.peerId, namespace: Namespaces.Message.Cloud, id: replyId))
                                 }
                         }
                     } else {

@@ -5770,3 +5770,23 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.InputTextAnonymousPlaceholder" = "Send anonymously";
 
 "DialogList.Replies" = "Replies";
+
+"Conversation.ContextViewReplies_1" = "View %@ Reply";
+"Conversation.ContextViewReplies_any" = "View %@ Replies";
+"Conversation.ContextViewThread" = "View Thread";
+
+"Conversation.ViewReply" = "View Reply";
+"Conversation.MessageViewComments_1" = "%@ Comment";
+"Conversation.MessageViewComments_any" = "%@ Comments";
+"Conversation.MessageLeaveComment" = "Leave a Comment";
+"Conversation.MessageLeaveCommentShort" = "Comment";
+
+"Conversation.DiscussionNotStarted" = "No comments here yet...";
+"Conversation.DiscussionStarted" = "Discussion started";
+
+"Conversation.InputTextPlaceholderReply" = "Reply";
+"Conversation.InputTextPlaceholderComment" = "Comment";
+
+"Conversation.TitleComments_1" = "%@ Comment";
+"Conversation.TitleComments_any" = "%@ Comments";
+"Conversation.TitleNoComments" = "Comments";

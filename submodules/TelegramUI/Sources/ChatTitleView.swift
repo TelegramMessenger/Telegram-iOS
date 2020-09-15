@@ -108,8 +108,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 switch titleContent {
                     case let .peer(peerView, _, isScheduledMessages):
                         if peerView.peerId.isReplies {
-                            //TODO:localize
-                            let typeText: String = "Replies"
+                            let typeText: String = self.strings.DialogList_Replies
                             string = NSAttributedString(string: typeText, font: Font.medium(17.0), textColor: titleTheme.rootController.navigationBar.primaryTextColor)
                             isEnabled = false
                         } else if isScheduledMessages {
@@ -142,17 +141,11 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             }
                         }
                     case let .replyThread(type, text):
-                        //TODO:localize
                         let typeText: String
                         if !text.isEmpty {
                             typeText = text
                         } else {
-                            switch type {
-                            case .comments:
-                                typeText = "Comments"
-                            case .replies:
-                                typeText = "Replies"
-                            }
+                            typeText = " "
                         }
                         
                         string = NSAttributedString(string: typeText, font: Font.medium(17.0), textColor: titleTheme.rootController.navigationBar.primaryTextColor)

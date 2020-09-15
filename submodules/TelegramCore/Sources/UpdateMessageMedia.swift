@@ -77,7 +77,7 @@ private func updateMessageThreadStatsInternal(transaction: Transaction, threadMe
         loop: for j in 0 ..< attributes.count {
             if let attribute = attributes[j] as? ReplyThreadMessageAttribute {
                 let count = max(0, attribute.count + countDifference)
-                attributes[j] = ReplyThreadMessageAttribute(count: count, latestUsers: mergeLatestUsers(current: attribute.latestUsers, added: addedMessagePeers, isGroup: isGroup, isEmpty: count == 0), commentsPeerId: attribute.commentsPeerId)
+                attributes[j] = ReplyThreadMessageAttribute(count: count, latestUsers: mergeLatestUsers(current: attribute.latestUsers, added: addedMessagePeers, isGroup: isGroup, isEmpty: count == 0), commentsPeerId: attribute.commentsPeerId, maxMessageId: attribute.maxMessageId, maxReadMessageId: attribute.maxReadMessageId)
             } else if let attribute = attributes[j] as? SourceReferenceMessageAttribute {
                 channelThreadMessageId = attribute.messageId
             }
