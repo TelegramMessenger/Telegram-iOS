@@ -31,6 +31,7 @@ final class ChatListSearchMessageSelectionPanelNode: ASDisplayNode {
     
     private var validLayout: ContainerViewLayout?
     
+    var chatAvailableMessageActions: ((Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError>)?
     var selectedMessages = Set<MessageId>() {
         didSet {
             if oldValue != self.selectedMessages {
@@ -44,15 +45,17 @@ final class ChatListSearchMessageSelectionPanelNode: ASDisplayNode {
                     }
                     self.canDeleteMessagesDisposable.set(nil)
                 } else {
-                    self.canDeleteMessagesDisposable.set((self.context.sharedContext.chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: self.selectedMessages)
-                    |> deliverOnMainQueue).start(next: { [weak self] actions in
-                        if let strongSelf = self {
-                            strongSelf.actions = actions
-                            if let layout = strongSelf.validLayout {
-                                let _ = strongSelf.update(layout: layout, presentationData: presentationData, transition: .immediate)
+                    if let chatAvailableMessageActions = self.chatAvailableMessageActions {
+                        self.canDeleteMessagesDisposable.set((chatAvailableMessageActions(self.selectedMessages)
+                        |> deliverOnMainQueue).start(next: { [weak self] actions in
+                            if let strongSelf = self {
+                                strongSelf.actions = actions
+                                if let layout = strongSelf.validLayout {
+                                    let _ = strongSelf.update(layout: layout, presentationData: presentationData, transition: .immediate)
+                                }
                             }
-                        }
-                    }))
+                        }))
+                    }
                 }
             }
         }

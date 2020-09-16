@@ -2734,7 +2734,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
 
                     var forwardingToSameChat = false
-                    if case let .peer(id) = self.chatPresentationInterfaceState.chatLocation, id.namespace == Namespaces.Peer.CloudUser, id != self.context.account.peerId, let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
+                    if case let .peer(id) = self.chatPresentationInterfaceState.chatLocation, id.namespace == Namespaces.Peer.CloudUser, id != self.context.account.peerId, let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds, forwardMessageIds.count == 1 {
                         for messageId in forwardMessageIds {
                             if messageId.peerId == id {
                                 forwardingToSameChat = true

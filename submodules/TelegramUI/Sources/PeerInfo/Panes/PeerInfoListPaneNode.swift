@@ -15,19 +15,6 @@ import TelegramBaseController
 import OverlayStatusController
 import ListMessageItem
 
-private final class PassthroughContainerNode: ASDisplayNode {
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if let subnodes = self.subnodes {
-            for subnode in subnodes {
-                if let result = subnode.view.hitTest(self.view.convert(point, to: subnode.view), with: event) {
-                    return result
-                }
-            }
-        }
-        return nil
-    }
-}
-
 final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private let context: AccountContext
     private let peerId: PeerId

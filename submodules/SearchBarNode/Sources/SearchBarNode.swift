@@ -133,7 +133,10 @@ private final class TokenNode: ASDisplayNode {
             let strokeColor = isSelected ? backgroundColor : (token.style?.strokeColor ?? backgroundColor)
             self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 8.0, color: backgroundColor, strokeColor: strokeColor, strokeWidth: UIScreenPixel, backgroundColor: nil)
             
-            let foregroundColor = isSelected ? .white : (token.style?.foregroundColor ?? .white)
+            var foregroundColor = isSelected ? .white : (token.style?.foregroundColor ?? .white)
+            if foregroundColor.distance(to: backgroundColor) < 1 {
+                foregroundColor = .black
+            }
             
             if let image = token.icon {
                 self.iconNode.image = generateTintedImage(image: image, color: foregroundColor)
@@ -167,7 +170,7 @@ private final class TokenNode: ASDisplayNode {
     }
 }
 
-private class SearchBarTextField: UITextField {
+private class SearchBarTextField: UITextField, UIScrollViewDelegate {
     public var didDeleteBackward: (() -> Bool)?
     
     let placeholderLabel: ImmediateTextNode
@@ -178,6 +181,8 @@ private class SearchBarTextField: UITextField {
         }
     }
     
+    var clippingNode: PassthroughContainerNode
+    var tokenContainerNode: PassthroughContainerNode
     var tokenNodes: [AnyHashable: TokenNode] = [:]
     var tokens: [SearchBarToken] = [] {
         didSet {
@@ -242,6 +247,10 @@ private class SearchBarTextField: UITextField {
             tokenNode.tapped = { [weak self] in
                 self?.selectedTokenIndex = i
                 self?.becomeFirstResponder()
+                if let strongSelf = self {
+                    let newPosition = strongSelf.beginningOfDocument
+                    strongSelf.selectedTextRange = strongSelf.textRange(from: newPosition, to: newPosition)
+                }
             }
             let isSelected = i == self.selectedTokenIndex
             if i < self.tokens.count - 1 && isSelected {
@@ -277,17 +286,18 @@ private class SearchBarTextField: UITextField {
             var tokenNodeTransition = transition
             if wasAdded {
                 tokenNodeTransition = .immediate
-                self.addSubnode(tokenNode)
+                self.tokenContainerNode.addSubnode(tokenNode)
             }
             
-            let nodeSize = tokenNode.updateLayout(constrainedSize: self.bounds.size, transition: tokenNodeTransition)
+            let constrainedSize = CGSize(width: self.bounds.size.width - 60.0, height: self.bounds.size.height)
+            let nodeSize = tokenNode.updateLayout(constrainedSize: constrainedSize, transition: tokenNodeTransition)
             tokenSizes.append((token.id, nodeSize, tokenNode, wasAdded))
             totalRawTabSize += nodeSize.width
         }
         
         let minSpacing: CGFloat = 6.0
         
-        let resolvedSideInset: CGFloat = 10.0
+        let resolvedSideInset: CGFloat = 0.0
         var leftOffset: CGFloat = 0.0
         if !tokenSizes.isEmpty {
             leftOffset += resolvedSideInset
@@ -332,10 +342,22 @@ private class SearchBarTextField: UITextField {
         }
         
         if !tokenSizes.isEmpty {
-            leftOffset -= 6.0
+            leftOffset += 4.0
         }
         
+        let previousTokensWidth = self.tokensWidth
         self.tokensWidth = leftOffset
+        self.tokenContainerNode.frame = CGRect(origin: self.tokenContainerNode.frame.origin, size: CGSize(width: self.tokensWidth, height: self.bounds.height))
+        
+        if let scrollView = self.scrollView {
+            scrollView.contentInset = UIEdgeInsets(top: 0.0, left: leftOffset, bottom: 0.0, right: 0.0)
+            if leftOffset.isZero {
+                scrollView.contentOffset = CGPoint()
+            } else if self.tokensWidth != previousTokensWidth {
+                scrollView.contentOffset = CGPoint(x: -leftOffset, y: 0.0)
+            }
+            self.updateTokenContainerPosition(transition: transition)
+        }
     }
     
     private var tokensWidth: CGFloat = 0.0
@@ -352,7 +374,7 @@ private class SearchBarTextField: UITextField {
     
     init(theme: SearchBarNodeTheme) {
         self.theme = theme
-        
+                
         self.placeholderLabel = ImmediateTextNode()
         self.placeholderLabel.isUserInteractionEnabled = false
         self.placeholderLabel.displaysAsynchronously = false
@@ -371,16 +393,51 @@ private class SearchBarTextField: UITextField {
         self.prefixLabel.maximumNumberOfLines = 1
         self.prefixLabel.truncationMode = .byTruncatingTail
         
+        self.clippingNode = PassthroughContainerNode()
+        self.clippingNode.clipsToBounds = true
+        
+        self.tokenContainerNode = PassthroughContainerNode()
+        
         super.init(frame: CGRect())
         
         self.addSubnode(self.placeholderLabel)
         self.addSubnode(self.prefixLabel)
+        self.addSubnode(self.clippingNode)
+        self.clippingNode.addSubnode(self.tokenContainerNode)
     }
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
+    override func addSubview(_ view: UIView) {
+        super.addSubview(view)
+        
+        if let scrollView = view as? UIScrollView {
+            scrollView.delegate = self
+            self.bringSubviewToFront(self.clippingNode.view)
+        }
+    }
+    
+    var scrollView: UIScrollView? {
+        for view in self.subviews {
+            if let scrollView = view as? UIScrollView {
+                return scrollView
+            }
+        }
+        return nil
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        self.updateTokenContainerPosition()
+    }
+    
+    private func updateTokenContainerPosition(transition: ContainedViewLayoutTransition = .immediate) {
+        if let scrollView = self.scrollView {
+            transition.updateFrame(node: self.tokenContainerNode, frame: CGRect(origin: CGPoint(x: -scrollView.contentOffset.x - scrollView.contentInset.left, y: 0.0), size: self.tokenContainerNode.frame.size))
+        }
+    }
+        
     override var keyboardAppearance: UIKeyboardAppearance {
         get {
             return super.keyboardAppearance
@@ -410,10 +467,6 @@ private class SearchBarTextField: UITextField {
             rect.origin.x += prefixOffset
             rect.size.width -= prefixOffset
         }
-        if !self.tokensWidth.isZero {
-            rect.origin.x += self.tokensWidth
-            rect.size.width -= self.tokensWidth
-        }
         rect.size.width = max(rect.size.width, 10.0)
         return rect
     }
@@ -426,6 +479,8 @@ private class SearchBarTextField: UITextField {
         super.layoutSubviews()
         
         let bounds = self.bounds
+        self.clippingNode.frame = CGRect(x: 10.0, y: 0.0, width: bounds.width - 20.0, height: bounds.height)
+        
         if bounds.size.width.isZero {
             return
         }
@@ -448,7 +503,7 @@ private class SearchBarTextField: UITextField {
         var processed = false
         if let selectedRange = self.selectedTextRange {
             let cursorPosition = self.offset(from: self.beginningOfDocument, to: selectedRange.start)
-            if cursorPosition == 0 && !self.tokens.isEmpty && self.selectedTokenIndex == nil {
+            if cursorPosition == 0 && selectedRange.isEmpty && !self.tokens.isEmpty && self.selectedTokenIndex == nil {
                 self.selectedTokenIndex = self.tokens.count - 1
                 processed = true
             }
@@ -459,6 +514,36 @@ private class SearchBarTextField: UITextField {
         }
         if !processed {
             super.deleteBackward()
+            
+            if let scrollView = self.scrollView {
+                if scrollView.contentSize.width <= scrollView.frame.width && scrollView.contentOffset.x > -scrollView.contentInset.left {
+                    scrollView.contentOffset = CGPoint(x: max(scrollView.contentOffset.x - 5.0, -scrollView.contentInset.left), y: 0.0)
+                    self.updateTokenContainerPosition()
+                }
+            }
+        }
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if let _ = self.selectedTokenIndex {
+            self.selectedTokenIndex = nil
+            if let touch = touches.first, let gestureRecognizers = touch.gestureRecognizers {
+                let point = touch.location(in: self.tokenContainerNode.view)
+                for (_, tokenNode) in self.tokenNodes {
+                    if tokenNode.frame.contains(point) {
+                        super.touchesBegan(touches, with: event)
+                        return
+                    }
+                }
+                for gesture in gestureRecognizers {
+                    if gesture is UITapGestureRecognizer, gesture.isEnabled {
+                        gesture.isEnabled = false
+                        gesture.isEnabled = true
+                    }
+                }
+            }
+        } else {
+            super.touchesBegan(touches, with: event)
         }
     }
 }
@@ -956,6 +1041,12 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        if let _ = self.textField.selectedTokenIndex {
+            self.textField.selectedTokenIndex = nil
+            if string.range(of: " ") != nil {
+                return false
+            }
+        }
         if string.range(of: "\n") != nil {
             return false
         }
@@ -972,12 +1063,8 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     
     @objc private func textFieldDidChange(_ textField: UITextField) {
         self.updateIsEmpty()
-        if let _ = self.textField.selectedTokenIndex {
-            self.textField.selectedTokenIndex = nil
-        }
         if let textUpdated = self.textUpdated {
             textUpdated(textField.text ?? "", textField.textInputMode?.primaryLanguage)
-            self.textField.layoutTokens(transition: .animated(duration: 0.2, curve: .easeInOut))
         }
     }
     

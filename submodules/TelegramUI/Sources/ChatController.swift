@@ -3630,23 +3630,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     transformedMessages = strongSelf.transformEnqueueMessages(messages)
                 }
                 
-                for message in transformedMessages {
-                    let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: [message])
-                    |> deliverOnMainQueue).start(next: { messageIds in
- 
-                    })
-                    
-                }
-                
-//                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: transformedMessages)
-//                |> deliverOnMainQueue).start(next: { messageIds in
-//                    if let strongSelf = self {
-//                        if strongSelf.presentationInterfaceState.isScheduledMessages {
-//                        } else {
-//                            strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
-//                        }
-//                    }
-//                })
+                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: transformedMessages)
+                |> deliverOnMainQueue).start(next: { messageIds in
+                    if let strongSelf = self {
+                        if strongSelf.presentationInterfaceState.isScheduledMessages {
+                        } else {
+                            strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                        }
+                    }
+                })
                 
                 donateSendMessageIntent(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, intentContext: .chat, peerIds: [peerId])
             }

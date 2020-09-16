@@ -933,19 +933,40 @@ private func canPerformDeleteActions(limits: LimitsConfiguration, accountPeerId:
     return false
 }
 
-func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError> {
+func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>, messages: [MessageId: Message] = [:], peers: [PeerId: Peer] = [:]) -> Signal<ChatAvailableMessageActions, NoError> {
     return postbox.transaction { transaction -> ChatAvailableMessageActions in
         let limitsConfiguration: LimitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
         var optionsMap: [MessageId: ChatAvailableMessageActionOptions] = [:]
         var banPeer: Peer?
         var hadPersonalIncoming = false
         var hadBanPeerId = false
+        
+        func getPeer(_ peerId: PeerId) -> Peer? {
+            if let peer = transaction.getPeer(peerId) {
+                return peer
+            } else if let peer = peers[peerId] {
+                return peer
+            } else {
+                return nil
+            }
+        }
+        
+        func getMessage(_ messageId: MessageId) -> Message? {
+            if let message = transaction.getMessage(messageId) {
+                return message
+            } else if let message = messages[messageId] {
+                return message
+            } else {
+                return nil
+            }
+        }
+        
         for id in messageIds {
             let isScheduled = id.namespace == Namespaces.Message.ScheduledCloud
             if optionsMap[id] == nil {
                 optionsMap[id] = []
             }
-            if let message = transaction.getMessage(id) {
+            if let message = getMessage(id) {
                 for media in message.media {
                     if let file = media as? TelegramMediaFile, file.isSticker {
                         for case let .Sticker(sticker) in file.attributes {
@@ -963,7 +984,7 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                     if canEditMessage(accountPeerId: accountPeerId, limitsConfiguration: limitsConfiguration, message: message, reschedule: true) {
                         optionsMap[id]!.insert(.editScheduledTime)
                     }
-                    if let peer = transaction.getPeer(id.peerId), let channel = peer as? TelegramChannel {
+                    if let peer = getPeer(id.peerId), let channel = peer as? TelegramChannel {
                         if !message.flags.contains(.Incoming) {
                             optionsMap[id]!.insert(.deleteLocally)
                         } else {
@@ -979,7 +1000,7 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                         optionsMap[id]!.insert(.forward)
                     }
                     optionsMap[id]!.insert(.deleteLocally)
-                } else if let peer = transaction.getPeer(id.peerId) {
+                } else if let peer = getPeer(id.peerId) {
                     var isAction = false
                     var isDice = false
                     for media in message.media {

@@ -293,7 +293,7 @@ class PaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         
         if let iconImage = self.iconNode.image {
             let iconSize = iconImage.size
-            transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 11.0, y: textBackgroundFrame.minY + floor((textBackgroundFrame.size.height - iconSize.height) / 2.0)), size: iconSize))
+            transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 5.0, y: textBackgroundFrame.minY + floor((textBackgroundFrame.size.height - iconSize.height) / 2.0)), size: iconSize))
         }
         
         if let activityIndicator = self.activityIndicator {
