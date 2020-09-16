@@ -866,6 +866,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if (_validAuthInfo != nil && _validAuthInfo.selector == selector) {
             return [[MTDatacenterAuthKey alloc] initWithAuthKey:_validAuthInfo.authInfo.authKey authKeyId:_validAuthInfo.authInfo.authKeyId notBound:false];
         } else {
+            _validAuthInfo = nil;
             if (createIfNeeded) {
                 MTDatacenterAuthInfo *authInfo = [_context authInfoForDatacenterWithId:_datacenterId selector:selector];
                 if (authInfo != nil) {
@@ -2537,18 +2538,24 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     {
         if (!_useUnauthorizedMode && context == _context && datacenterId == _datacenterId)
         {
-            if (_validAuthInfo != nil) {
-                if (_validAuthInfo.selector != selector) {
-                    return;
-                }
-            } else if (_awaitingAuthInfoForSelector != nil) {
+            if (_awaitingAuthInfoForSelector != nil) {
                 if ([_awaitingAuthInfoForSelector intValue] != selector) {
                     return;
                 } else if (authInfo != nil) {
                     _awaitingAuthInfoForSelector = nil;
                 }
+            } else if (_validAuthInfo != nil) {
+                if (_validAuthInfo.selector != selector) {
+                    return;
+                }
             } else {
                 return;
+            }
+            
+            if (authInfo == nil) {
+                _validAuthInfo = nil;
+                _mtState |= MTProtoStateAwaitingDatacenterAuthorization;
+                _awaitingAuthInfoForSelector = @(selector);
             }
             
             bool wasSuspended = _mtState & (MTProtoStateAwaitingDatacenterAuthorization);
@@ -2557,9 +2564,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                 if (_mtState & MTProtoStateAwaitingDatacenterAuthorization) {
                     [self setMtState:_mtState & (~MTProtoStateAwaitingDatacenterAuthorization)];
                 }
-            }
-            
-            if (authInfo != nil) {
+
                 if ((_mtState & (MTProtoStateAwaitingDatacenterAuthorization)) == 0) {
                     if (wasSuspended) {
                         [self resetTransport];
