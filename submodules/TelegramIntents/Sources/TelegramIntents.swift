@@ -12,7 +12,7 @@ import AvatarNode
 import AccountContext
 
 private let savedMessagesAvatar: UIImage = {
-    return generateImage(CGSize(width: 60.0, height: 60.0)) { size, context in
+    return generateImage(CGSize(width: 60.0, height: 60.0), contextGenerator: { size, context in
         var locations: [CGFloat] = [1.0, 0.0]
                
         let colorSpace = CGColorSpaceCreateDeviceRGB()
@@ -28,7 +28,7 @@ private let savedMessagesAvatar: UIImage = {
         if let savedMessagesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/SavedMessagesIcon"), color: .white) {
             context.draw(savedMessagesIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - savedMessagesIcon.size.width) / 2.0), y: floor((size.height - savedMessagesIcon.size.height) / 2.0)), size: savedMessagesIcon.size))
         }
-    }!
+    })!
 }()
 
 public enum SendMessageIntentContext {

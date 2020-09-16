@@ -67,7 +67,7 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 })
             }
         } else {
-            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, subject: params.subject, botStart: params.botStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData)
+            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, chatLocationContextHolder: params.chatLocationContextHolder, subject: params.subject, botStart: params.botStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData)
         }
         controller.purposefulAction = params.purposefulAction
         if let search = params.activateMessageSearch {
@@ -125,7 +125,7 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                                 if message.id.peerId == peerId {
                                     return true
                                 }
-                            case let .replyThread(messageId, _, _):
+                            case let .replyThread(messageId, _, _, _):
                                 if message.id.peerId == messageId.peerId {
                                     return true
                                 }

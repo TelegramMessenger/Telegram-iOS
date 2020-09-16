@@ -69,7 +69,7 @@ private class LocationMapView: MKMapView, UIGestureRecognizerDelegate {
 }
 
 private func generateHeadingArrowImage() -> UIImage? {
-    return generateImage(CGSize(width: 28.0, height: 28.0)) { size, context in
+    return generateImage(CGSize(width: 28.0, height: 28.0), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
         
@@ -83,7 +83,7 @@ private func generateHeadingArrowImage() -> UIImage? {
         
         context.setBlendMode(.clear)
         context.fillEllipse(in: bounds.insetBy(dx: 5.0, dy: 5.0))
-    }
+    })
 }
 
 final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {

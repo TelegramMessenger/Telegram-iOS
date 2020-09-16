@@ -841,7 +841,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         switch item.chatLocation {
         case let .peer(peerId):
             chatLocationPeerId = peerId
-        case let .replyThread(messageId, _, _):
+        case let .replyThread(messageId, _, _, _):
             chatLocationPeerId = messageId.peerId
         }
         
@@ -883,6 +883,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     if let peer = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
                         isBroadcastChannel = true
                         allowFullWidth = true
+                    }
+                    
+                    if case let .replyThread(messageId, isChannelPost, _, _) = item.chatLocation, isChannelPost, messageId == firstMessage.id {
+                        isBroadcastChannel = true
                     }
                     
                     if !isBroadcastChannel {
@@ -1044,7 +1048,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     inlineBotNameString = attribute.title
                 }
             } else if let attribute = attribute as? ReplyMessageAttribute {
-                if case let .replyThread(replyThreadMessageId, _, _) = item.chatLocation, replyThreadMessageId == attribute.messageId {
+                if case let .replyThread(replyThreadMessageId, _, _, _) = item.chatLocation, replyThreadMessageId == attribute.messageId {
                 } else {
                     replyMessage = firstMessage.associatedMessages[attribute.messageId]
                 }
@@ -2570,8 +2574,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                                     }
                                 }
                                 item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
-                            } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
-                                item.controllerInteraction.openPeer(id, .info, nil)
+                            } else if let peer = forwardInfo.source ?? forwardInfo.author {
+                                item.controllerInteraction.openPeer(peer.id, peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil)
                             } else if let _ = forwardInfo.authorSignature {
                                 item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
                             }

@@ -4154,22 +4154,6 @@ public extension Api {
                     })
                 }
             
-                public static func exportMessageLink(channel: Api.InputChannel, id: Int32, grouped: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ExportedMessageLink>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-826838685)
-                    channel.serialize(buffer, true)
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    grouped.serialize(buffer, true)
-                    return (FunctionDescription(name: "channels.exportMessageLink", parameters: [("channel", channel), ("id", id), ("grouped", grouped)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.ExportedMessageLink? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.ExportedMessageLink?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.ExportedMessageLink
-                        }
-                        return result
-                    })
-                }
-            
                 public static func getMessages(channel: Api.InputChannel, id: [Api.InputMessage]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1383294429)
@@ -4353,6 +4337,22 @@ public extension Api {
                         var result: Api.messages.InactiveChats?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.messages.InactiveChats
+                        }
+                        return result
+                    })
+                }
+            
+                public static func exportMessageLink(flags: Int32, channel: Api.InputChannel, id: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ExportedMessageLink>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-432034325)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    channel.serialize(buffer, true)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "channels.exportMessageLink", parameters: [("flags", flags), ("channel", channel), ("id", id)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.ExportedMessageLink? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.ExportedMessageLink?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.ExportedMessageLink
                         }
                         return result
                     })

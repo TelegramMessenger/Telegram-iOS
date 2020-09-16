@@ -27,7 +27,10 @@ public func exportMessageLink(account: Account, peerId: PeerId, messageId: Messa
             return .single(nil)
         }
         if let input = apiInputChannel(peer) {
-            return account.network.request(Api.functions.channels.exportMessageLink(channel: input, id: sourceMessageId.id, grouped: .boolTrue)) |> mapError { _ in return }
+            //channels.exportMessageLink flags:# grouped:flags.0?true thread:flags.1?true channel:InputChannel id:int = ExportedMessageLink;
+            var flags: Int32 = 0
+            flags |= 1 << 0
+            return account.network.request(Api.functions.channels.exportMessageLink(flags: flags, channel: input, id: sourceMessageId.id)) |> mapError { _ in return }
             |> map { res in
                 switch res {
                     case let .exportedMessageLink(link, _):

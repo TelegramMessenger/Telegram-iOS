@@ -112,7 +112,7 @@ public final class ChatControllerInteraction {
     let animateDiceSuccess: () -> Void
     let greetingStickerNode: () -> (ASDisplayNode, ASDisplayNode, ASDisplayNode, () -> Void)?
     let openPeerContextMenu: (Peer, ASDisplayNode, CGRect, ContextGesture?) -> Void
-    let openMessageReplies: (MessageId) -> Void
+    let openMessageReplies: (MessageId, Bool) -> Void
     
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
@@ -195,7 +195,7 @@ public final class ChatControllerInteraction {
         animateDiceSuccess: @escaping () -> Void,
         greetingStickerNode: @escaping () -> (ASDisplayNode, ASDisplayNode, ASDisplayNode, () -> Void)?,
         openPeerContextMenu: @escaping (Peer, ASDisplayNode, CGRect, ContextGesture?) -> Void,
-        openMessageReplies: @escaping (MessageId) -> Void,
+        openMessageReplies: @escaping (MessageId, Bool) -> Void,
         requestMessageUpdate: @escaping (MessageId) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
@@ -315,7 +315,7 @@ public final class ChatControllerInteraction {
         }, greetingStickerNode: {
             return nil
         }, openPeerContextMenu: { _, _, _, _ in
-        }, openMessageReplies: { _ in
+        }, openMessageReplies: { _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

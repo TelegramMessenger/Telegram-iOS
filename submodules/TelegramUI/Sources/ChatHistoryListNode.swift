@@ -429,6 +429,8 @@ private struct ChatHistoryAnimatedEmojiConfiguration {
     }
 }
 
+private var nextClientId: Int32 = 1
+
 public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let context: AccountContext
     private let chatLocation: ChatLocation
@@ -543,6 +545,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private var loadedMessagesFromCachedDataDisposable: Disposable?
     
+    let isTopReplyThreadMessageShown = ValuePromise<Bool>(false, ignoreRepeated: true)
+    
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles) {
         self.context = context
         self.chatLocation = chatLocation
@@ -566,8 +570,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         //self.debugInfo = true
         
+        let clientId = nextClientId
+        nextClientId += 1
+        
         self.messageProcessingManager.process = { [weak context] messageIds in
-            context?.account.viewTracker.updateViewCountForMessageIds(messageIds: messageIds)
+            context?.account.viewTracker.updateViewCountForMessageIds(messageIds: messageIds, clientId: clientId)
         }
         self.messageReactionsProcessingManager.process = { [weak context] messageIds in
             context?.account.viewTracker.updateReactionsForMessageIds(messageIds: messageIds)
@@ -620,7 +627,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         if !isAuxiliaryChat {
             additionalData.append(.totalUnreadState)
         }
-        if case let .replyThread(messageId, _, _) = chatLocation {
+        if case let .replyThread(messageId, _, _, _) = chatLocation {
             additionalData.append(.cachedPeerData(messageId.peerId))
             additionalData.append(.peerNotificationSettings(messageId.peerId))
             if messageId.peerId.namespace == Namespaces.Peer.CloudChannel {
@@ -1052,6 +1059,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             var messagesWithPreloadableMediaToEarlier: [(Message, Media)] = []
             var messagesWithPreloadableMediaToLater: [(Message, Media)] = []
             
+            var isTopReplyThreadMessageShownValue = false
+            
             if indexRange.0 <= indexRange.1 {
                 for i in (indexRange.0 ... indexRange.1) {
                     switch historyView.filteredEntries[i] {
@@ -1103,6 +1112,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         if hasUnconsumedMention && !hasUnconsumedContent {
                             messageIdsWithUnseenPersonalMention.append(message.id)
                         }
+                        if case .replyThread(message.id, _, _, _) = self.chatLocation {
+                            isTopReplyThreadMessageShownValue = true
+                        }
                     case let .MessageGroupEntry(_, messages, _):
                         for (message, _, _, _) in messages {
                             var hasUnconsumedMention = false
@@ -1129,6 +1141,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             }
                             if hasUnconsumedMention && !hasUnconsumedContent {
                                 messageIdsWithUnseenPersonalMention.append(message.id)
+                            }
+                            if case .replyThread(message.id, _, _, _) = self.chatLocation {
+                                isTopReplyThreadMessageShownValue = true
                             }
                         }
                     default:
@@ -1227,8 +1242,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             if readIndexRange.0 <= readIndexRange.1 {
                 let (maxIncomingIndex, maxOverallIndex) = maxMessageIndexForEntries(historyView, indexRange: readIndexRange)
                 
-                if let maxIncomingIndex = maxIncomingIndex {
-                    self.updateMaxVisibleReadIncomingMessageIndex(maxIncomingIndex)
+                let messageIndex: MessageIndex?
+                switch self.chatLocation {
+                case .peer:
+                    messageIndex = maxIncomingIndex
+                case .replyThread:
+                    messageIndex = maxOverallIndex
+                }
+                
+                if let messageIndex = messageIndex {
+                    self.updateMaxVisibleReadIncomingMessageIndex(messageIndex)
                 }
                 
                 if let maxOverallIndex = maxOverallIndex, maxOverallIndex != self.maxVisibleMessageIndexReported {
@@ -1236,18 +1259,23 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     self.maxVisibleMessageIndexUpdated?(maxOverallIndex)
                 }
             }
+            
+            self.isTopReplyThreadMessageShown.set(isTopReplyThreadMessageShownValue)
         }
         
         if let loaded = displayedRange.loadedRange, let firstEntry = historyView.filteredEntries.first, let lastEntry = historyView.filteredEntries.last {
             if loaded.firstIndex < 5 && historyView.originalView.laterId != nil {
-                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: historyMessageCount), id: self.takeNextHistoryLocationId())
+                let locationInput: ChatHistoryLocation = .Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: historyMessageCount)
+                if self.chatHistoryLocationValue?.content != locationInput {
+                    self.chatHistoryLocationValue = ChatHistoryLocationInput(content: locationInput, id: self.takeNextHistoryLocationId())
+                }
             } else if loaded.firstIndex < 5, historyView.originalView.laterId == nil, !historyView.originalView.holeLater, let chatHistoryLocationValue = self.chatHistoryLocationValue, !chatHistoryLocationValue.isAtUpperBound, historyView.originalView.anchorIndex != .upperBound {
-                //TODO:localize
-                #if !DEBUG
                 self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .upperBound, anchorIndex: .upperBound, count: historyMessageCount), id: self.takeNextHistoryLocationId())
-                #endif
             } else if loaded.lastIndex >= historyView.filteredEntries.count - 5 && historyView.originalView.earlierId != nil {
-                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(firstEntry.index), anchorIndex: .message(firstEntry.index), count: historyMessageCount), id: self.takeNextHistoryLocationId())
+                let locationInput: ChatHistoryLocation = .Navigation(index: .message(firstEntry.index), anchorIndex: .message(firstEntry.index), count: historyMessageCount)
+                if self.chatHistoryLocationValue?.content != locationInput {
+                    self.chatHistoryLocationValue = ChatHistoryLocationInput(content: locationInput, id: self.takeNextHistoryLocationId())
+                }
             }
         }
         
@@ -1518,11 +1546,17 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 if let _ = visibleRange.loadedRange {
                     if let visible = visibleRange.visibleRange {
                         let visibleFirstIndex = visible.firstIndex
-                        /*if !visible.firstIndexFullyVisible {
-                            visibleFirstIndex += 1
-                        }*/
                         if visibleFirstIndex <= visible.lastIndex {
-                            let (messageIndex, _) =  maxMessageIndexForEntries(transition.historyView, indexRange: (transition.historyView.filteredEntries.count - 1 - visible.lastIndex, transition.historyView.filteredEntries.count - 1 - visibleFirstIndex))
+                            let (incomingIndex, overallIndex) =  maxMessageIndexForEntries(transition.historyView, indexRange: (transition.historyView.filteredEntries.count - 1 - visible.lastIndex, transition.historyView.filteredEntries.count - 1 - visibleFirstIndex))
+                            
+                            let messageIndex: MessageIndex?
+                            switch strongSelf.chatLocation {
+                            case .peer:
+                                messageIndex = incomingIndex
+                            case .replyThread:
+                                messageIndex = overallIndex
+                            }
+                            
                             if let messageIndex = messageIndex {
                                 strongSelf.updateMaxVisibleReadIncomingMessageIndex(messageIndex)
                             }
