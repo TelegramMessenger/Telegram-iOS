@@ -616,7 +616,7 @@ public final class AccountViewTracker {
                                         return .single(nil)
                                     }
                                     |> mapToSignal { result -> Signal<Void, NoError> in
-                                        guard case let .messageViews(viewCounts, users)? = result else {
+                                        guard case let .messageViews(viewCounts, chats, users)? = result else {
                                             return .complete()
                                         }
                                         
@@ -629,6 +629,11 @@ public final class AccountViewTracker {
                                                 peers.append(telegramUser)
                                                 if let presence = TelegramUserPresence(apiUser: user) {
                                                     peerPresences[telegramUser.id] = presence
+                                                }
+                                            }
+                                            for chat in chats {
+                                                if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                                                    peers.append(groupOrChannel)
                                                 }
                                             }
                                             

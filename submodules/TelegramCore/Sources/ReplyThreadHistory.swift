@@ -274,7 +274,7 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
             }
             var maxId: Int32?
             switch result {
-            case let .messageViews(views, _):
+            case let .messageViews(views, _, _):
                 for view in views {
                     switch view {
                     case let .messageViews(_, _, _, replies):

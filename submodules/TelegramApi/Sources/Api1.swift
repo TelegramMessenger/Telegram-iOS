@@ -1283,17 +1283,22 @@ public struct messages {
     
     }
     public enum MessageViews: TypeConstructorDescription {
-        case messageViews(views: [Api.MessageViews], users: [Api.User])
+        case messageViews(views: [Api.MessageViews], chats: [Api.Chat], users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .messageViews(let views, let users):
+                case .messageViews(let views, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(742337250)
+                        buffer.appendInt32(-1228606141)
                     }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(views.count))
                     for item in views {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
                         item.serialize(buffer, true)
                     }
                     buffer.appendInt32(481674261)
@@ -1307,8 +1312,8 @@ public struct messages {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .messageViews(let views, let users):
-                return ("messageViews", [("views", views), ("users", users)])
+                case .messageViews(let views, let chats, let users):
+                return ("messageViews", [("views", views), ("chats", chats), ("users", users)])
     }
     }
     
@@ -1317,14 +1322,19 @@ public struct messages {
             if let _ = reader.readInt32() {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageViews.self)
             }
-            var _2: [Api.User]?
+            var _2: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _3: [Api.User]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.messages.MessageViews.messageViews(views: _1!, users: _2!)
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.messages.MessageViews.messageViews(views: _1!, chats: _2!, users: _3!)
             }
             else {
                 return nil

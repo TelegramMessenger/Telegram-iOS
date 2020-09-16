@@ -64,6 +64,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case reimport(PresentationTheme)
     case resetData(PresentationTheme)
     case resetDatabase(PresentationTheme)
+    case resetDatabaseAndCache(PresentationTheme)
     case resetHoles(PresentationTheme)
     case reindexUnread(PresentationTheme)
     case resetBiometricsData(PresentationTheme)
@@ -89,7 +90,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .alternativeFolderTabs, .playerEmbedding, .playlistPlayback:
+        case .clearTips, .reimport, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .alternativeFolderTabs, .playerEmbedding, .playlistPlayback:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -134,12 +135,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 14
         case .resetDatabase:
             return 15
-        case .resetHoles:
+        case .resetDatabaseAndCache:
             return 16
-        case .reindexUnread:
+        case .resetHoles:
             return 17
-        case .resetBiometricsData:
+        case .reindexUnread:
             return 18
+        case .resetBiometricsData:
+            return 19
         case .optimizeDatabase:
             return 20
         case .photoPreview:
@@ -478,6 +481,29 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     ])])
                 arguments.presentController(actionSheet, nil)
             })
+        case let .resetDatabaseAndCache(theme):
+            return ItemListActionItem(presentationData: presentationData, title: "Clear Database and Cache", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                guard let context = arguments.context else {
+                    return
+                }
+                let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                    ActionSheetTextItem(title: "All secret chats will be lost."),
+                    ActionSheetButtonItem(title: "Clear Database", color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        let databasePath = context.account.basePath + "/postbox"
+                        let _ = try? FileManager.default.removeItem(atPath: databasePath)
+                        exit(0)
+                        preconditionFailure()
+                    }),
+                    ]), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                arguments.presentController(actionSheet, nil)
+            })
         case let .resetHoles(theme):
             return ItemListActionItem(presentationData: presentationData, title: "Reset Holes", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
@@ -647,6 +673,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     }
     entries.append(.resetData(presentationData.theme))
     entries.append(.resetDatabase(presentationData.theme))
+    entries.append(.resetDatabaseAndCache(presentationData.theme))
     entries.append(.resetHoles(presentationData.theme))
     entries.append(.reindexUnread(presentationData.theme))
     entries.append(.optimizeDatabase(presentationData.theme))
