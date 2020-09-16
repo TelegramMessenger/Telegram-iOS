@@ -80,29 +80,30 @@ func suggestDates(for string: String, strings: PresentationStrings, dateTimeForm
             if date > telegramReleaseDate {
                 result.append((date, "\(value)"))
             }
-        } else if !dateSeparator.isEmpty && string.contains(dateSeparator) {
-            let stringComponents = string.components(separatedBy: dateSeparator)
-            if stringComponents.count > 1 {
-                let locale = Locale(identifier: strings.baseLanguageCode)
-                do {
-                    let dd = try NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue)
-                    if let match = dd.firstMatch(in: string, options: [], range: NSMakeRange(0, string.utf16.count)), let date = match.date, date > telegramReleaseDate {
-                        var resultDate = date
-                        if resultDate > now {
-                            if let date = calendar.date(byAdding: .year, value: -1, to: resultDate) {
-                                resultDate = date
-                            }
+        } else {
+            do {
+                let dd = try NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue)
+                if let match = dd.firstMatch(in: string, options: [], range: NSMakeRange(0, string.utf16.count)), let date = match.date, date > telegramReleaseDate {
+                    var resultDate = date
+                    if resultDate > now && !calendar.isDate(resultDate, equalTo: now, toGranularity: .year) {
+                        if let date = calendar.date(byAdding: .year, value: -1, to: resultDate) {
+                            resultDate = date
                         }
-                        
+                    }
+                    
+                    let stringComponents = string.components(separatedBy: dateSeparator)
+                    if stringComponents.count < 3 {
                         for i in 0..<5 {
                             if let date = calendar.date(byAdding: .year, value: -i, to: resultDate) {
                                 result.append((date, nil))
                             }
                         }
+                    } else if resultDate < now {
+                        result.append((resultDate, nil))
                     }
-                } catch {
-                
                 }
+            } catch {
+                
             }
         }
     } else {

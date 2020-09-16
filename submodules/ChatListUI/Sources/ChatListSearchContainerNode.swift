@@ -30,19 +30,6 @@ import InstantPageUI
 import ChatInterfaceState
 import ShareController
 
-private final class PassthroughContainerNode: ASDisplayNode {
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if let subnodes = self.subnodes {
-            for subnode in subnodes {
-                if let result = subnode.view.hitTest(self.view.convert(point, to: subnode.view), with: event) {
-                    return result
-                }
-            }
-        }
-        return nil
-    }
-}
-
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers
     case peerId(PeerId)
@@ -724,6 +711,23 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private var searchStateValue = ChatListSearchContainerNodeSearchState()
     private let searchStatePromise: ValuePromise<ChatListSearchContainerNodeSearchState>
     private let searchContextValue = Atomic<ChatListSearchMessagesContext?>(value: nil)
+    private var searchCurrentMessages: [Message]?
+    
+    private let suggestedDates = Promise<[(Date, String?)]>([])
+    private var suggestedDatesValue: [(Date, String?)] = [] {
+        didSet {
+            self.suggestedDates.set(.single(self.suggestedDatesValue))
+        }
+    }
+    private let suggestedPeers = Promise<[Peer]>([])
+    private var suggestedPeersValue: [Peer] = [] {
+        didSet {
+            self.suggestedPeers.set(.single(self.suggestedPeersValue))
+        }
+    }
+    
+    private var suggestedFilters: [ChatListSearchFilter]?
+    private let suggestedFiltersDisposable = MetaDisposable()
     
     private let _isSearching = ValuePromise<Bool>(false, ignoreRepeated: true)
     override public var isSearching: Signal<Bool, NoError> {
@@ -827,7 +831,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.addSubnode(self.emptyResultsAnimationNode)
         self.addSubnode(self.emptyResultsTitleNode)
         self.addSubnode(self.emptyResultsTextNode)
-        
+                
         let searchContext = Promise<ChatListSearchMessagesContext?>(nil)
         let searchContextValue = self.searchContextValue
         let updateSearchContext: ((ChatListSearchMessagesContext?) -> (ChatListSearchMessagesContext?, Bool)) -> Void = { f in
@@ -1583,13 +1587,15 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 })
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
                 
-                let previousPossiblePeers = strongSelf.possiblePeers
-                strongSelf.possiblePeers = Array(peers.prefix(10))
-                
-                strongSelf.updatedDisplayFiltersPanel?(strongSelf.searchOptionsValue?.messageTags == nil || strongSelf.hasSuggestions)
-                if let (layout, navigationBarHeight) = strongSelf.validLayout {
-                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                var messages: [Message] = []
+                for entry in newEntries {
+                    if case let .message(message, _, _, _, _, _, _) = entry {
+                        messages.append(message)
+                    }
                 }
+                strongSelf.searchCurrentMessages = messages
+                
+                strongSelf.suggestedPeersValue = Array(peers.prefix(8))
             }
         }))
         
@@ -1658,6 +1664,64 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             strongSelf.updateSearchOptions(strongSelf.currentSearchOptions.withUpdatedMessageTags(messageTags).withUpdatedMaxDate(maxDate).withUpdatedPeer(peer), clearQuery: clearQuery)
         }
         
+        self.suggestedFiltersDisposable.set((combineLatest(self.suggestedPeers.get(), self.suggestedDates.get())
+        |> mapToSignal { peers, dates -> Signal<([Peer], [(Date, String?)]), NoError> in
+            if peers.isEmpty && dates.isEmpty {
+                return .single((peers, dates))
+            } else {
+                return (.complete() |> delay(0.2, queue: Queue.mainQueue()))
+                |> then(.single((peers, dates)))
+            }
+        } |> map { peers, dates -> [ChatListSearchFilter] in
+            var suggestedFilters: [ChatListSearchFilter] = []
+            if !dates.isEmpty {
+                let formatter = DateFormatter()
+                formatter.timeStyle = .none
+                formatter.dateStyle = .medium
+                
+                for (date, string) in dates {
+                    let title = string ?? formatter.string(from: date)
+                    suggestedFilters.append(.date(Int32(date.timeIntervalSince1970), title))
+                }
+            }
+            if !peers.isEmpty {
+                for peer in peers {
+                    let isGroup: Bool
+                    if let channel = peer as? TelegramChannel, case .group = channel.info {
+                        isGroup = true
+                    } else if peer.id.namespace == Namespaces.Peer.CloudGroup {
+                        isGroup = true
+                    } else {
+                        isGroup = false
+                    }
+                    suggestedFilters.append(.peer(peer.id, isGroup, peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), peer.compactDisplayTitle))
+                }
+            }
+            return suggestedFilters
+        } |> deliverOnMainQueue).start(next: { [weak self] filters in
+            guard let strongSelf = self else {
+                return
+            }
+            var filteredFilters: [ChatListSearchFilter] = []
+            for filter in filters {
+                if case .date = filter, strongSelf.searchOptionsValue?.maxDate == nil {
+                    filteredFilters.append(filter)
+                }
+                if case .peer = filter, strongSelf.searchOptionsValue?.peer == nil {
+                    filteredFilters.append(filter)
+                }
+            }
+            let previousFilters = strongSelf.suggestedFilters ?? []
+            strongSelf.suggestedFilters = filteredFilters
+            
+            if previousFilters.isEmpty != filteredFilters.isEmpty {
+                strongSelf.updatedDisplayFiltersPanel?(strongSelf.searchOptionsValue?.messageTags == nil || strongSelf.hasSuggestions)
+                if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                }
+            }
+        }))
+        
         self.mediaStatusDisposable = (combineLatest(context.sharedContext.mediaManager.globalMediaPlayerState, self.searchOptions.get())
         |> mapToSignal { playlistStateAndType, searchOptions -> Signal<(Account, SharedMediaPlayerItemPlaybackState, MediaManagerPlayerType)?, NoError> in
             if let (account, state, type) = playlistStateAndType {
@@ -1711,16 +1775,25 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.presentationDataDisposable?.dispose()
         self.mediaStatusDisposable?.dispose()
         self.playlistPreloadDisposable?.dispose()
+        self.suggestedFiltersDisposable.dispose()
     }
     
     override public func didLoad() {
         super.didLoad()
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
+        
+        self.emptyResultsAnimationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.animationTapGesture(_:))))
     }
     
     @objc private func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.cancel?()
+        }
+    }
+    
+    @objc private func animationTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state, !self.emptyResultsAnimationNode.isPlaying {
+            let _ = self.emptyResultsAnimationNode.playIfNeeded()
         }
     }
 
@@ -1795,7 +1868,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         if let (_, dateTitle) = options?.maxDate {
             tokens.append(SearchBarToken(id: ChatListTokenId.date.rawValue, icon: UIImage(bundleImageName: "Chat List/Search/Calendar"), title: dateTitle))
             
-            self.possibleDates = []
+            self.suggestedDatesValue = []
         }
         
         if clearQuery {
@@ -1816,6 +1889,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.listNode.forEachItemHeaderNode({ itemHeaderNode in
             if let itemHeaderNode = itemHeaderNode as? ChatListSearchItemHeaderNode {
                 itemHeaderNode.updateTheme(theme: theme)
+            } else if let itemHeaderNode = itemHeaderNode as? ListMessageDateHeaderNode {
+                itemHeaderNode.updateThemeAndStrings(theme: theme, strings: self.presentationData.strings)
             }
         })
         self.recentListNode.forEachItemHeaderNode({ itemHeaderNode in
@@ -1844,30 +1919,18 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.selectionPanelNode?.selectedMessages = self.searchStateValue.selectedMessageIds ?? []
     }
     
-    var possibleDates: [(Date, String?)] = []
-    var possiblePeers: [Peer] = []
     override public func searchTextUpdated(text: String) {
         let searchQuery: String? = !text.isEmpty ? text : nil
         self.interaction?.searchTextHighightState = searchQuery
         self.searchQuery.set(.single(searchQuery))
         self.searchQueryValue = searchQuery
         
-        let previousPossibleDate = self.possibleDates
-        self.possibleDates = suggestDates(for: text, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat)
-       
-        if previousPossibleDate.isEmpty != self.possibleDates.isEmpty {
-            self.updatedDisplayFiltersPanel?(self.searchOptionsValue?.messageTags == nil || self.hasSuggestions)
-            if let (layout, navigationBarHeight) = self.validLayout {
-                self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-            }
-        }
+        self.suggestedDatesValue = suggestDates(for: text, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat)
     }
     
     private var hasSuggestions: Bool {
-        if !self.possibleDates.isEmpty && self.searchOptionsValue?.maxDate == nil {
-            return true
-        } else if !self.possiblePeers.isEmpty && self.searchOptionsValue?.peer == nil {
-            return true
+        if let suggestedFilters = self.suggestedFilters {
+            return !suggestedFilters.isEmpty
         } else {
             return false
         }
@@ -1910,7 +1973,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     }
     
     private func dequeueTransition() {
-        if let (transition, firstTime) = self.enqueuedTransitions.first {
+        if let (transition, _) = self.enqueuedTransitions.first {
             self.enqueuedTransitions.remove(at: 0)
             
             var options = ListViewDeleteAndInsertOptions()
@@ -2213,39 +2276,13 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.loadingNode.frame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: layout.size.width, height: 422.0))
         
         let filters: [ChatListSearchFilter]
-        var customFilters: [ChatListSearchFilter] = []
-        if !self.possibleDates.isEmpty && self.searchOptionsValue?.maxDate == nil {
-            let formatter = DateFormatter()
-            formatter.timeStyle = .none
-            formatter.dateStyle = .medium
-            
-            for (date, string) in self.possibleDates {
-                let title = string ?? formatter.string(from: date)
-                customFilters.append(.date(Int32(date.timeIntervalSince1970), title))
-            }
-        }
-        if !self.possiblePeers.isEmpty && self.searchOptionsValue?.peer == nil {
-            for peer in self.possiblePeers {
-                let isGroup: Bool
-                if let channel = peer as? TelegramChannel, case .group = channel.info {
-                    isGroup = true
-                } else if peer.id.namespace == Namespaces.Peer.CloudGroup {
-                    isGroup = true
-                } else {
-                    isGroup = false
-                }
-                customFilters.append(.peer(peer.id, isGroup, peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), peer.compactDisplayTitle))
-            }
-        }
-        
-        if !customFilters.isEmpty {
-            filters = customFilters
+        if let suggestedFilters = self.suggestedFilters, !suggestedFilters.isEmpty {
+            filters = suggestedFilters
         } else {
             filters = [.media, .links, .files, .music, .voice]
         }
         
         self.filterContainerNode.update(size: CGSize(width: layout.size.width, height: 37.0), sideInset: layout.safeInsets.left, filters: filters.map { .filter($0) }, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
-        
         
         if let selectedMessageIds = self.searchStateValue.selectedMessageIds {
             var wasAdded = false
@@ -2287,6 +2324,24 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     }
                     strongSelf.forwardMessages(messageIds: nil)
                 })
+                selectionPanelNode.chatAvailableMessageActions = { [weak self] messageIds -> Signal<ChatAvailableMessageActions, NoError> in
+                    guard let strongSelf = self else {
+                        return .complete()
+                    }
+                    
+                    var peers: [PeerId: Peer] = [:]
+                    var messages: [MessageId: Message] = [:]
+                    if let currentMessages = strongSelf.searchCurrentMessages {
+                        for message in currentMessages {
+                            messages[message.id] = message
+                            for (_, peer) in message.peers {
+                                peers[peer.id] = peer
+                            }
+                        }
+                    }
+                    
+                    return strongSelf.context.sharedContext.chatAvailableMessageActions(postbox: strongSelf.context.account.postbox, accountPeerId: strongSelf.context.account.peerId, messageIds: messageIds, messages: messages, peers: peers)
+                }
                 self.selectionPanelNode = selectionPanelNode
                 self.addSubnode(selectionPanelNode)
             }

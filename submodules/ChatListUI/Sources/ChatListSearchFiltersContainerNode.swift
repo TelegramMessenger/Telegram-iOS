@@ -232,10 +232,14 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
                 itemNode.update(type: type, presentationData: presentationData, transition: itemNodeTransition)
             }
         }
+        
+        var updated = false
+        
         var removeKeys: [ChatListSearchFilterEntryId] = []
         for (id, _) in self.itemNodes {
             if !filters.contains(where: { $0.id == id }) {
                 removeKeys.append(id)
+                updated = true
             }
         }
         for id in removeKeys {
@@ -267,7 +271,7 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
         }
         
         let minSpacing: CGFloat = 24.0
-        var spacing = minSpacing
+        let spacing = minSpacing
         
         let resolvedSideInset: CGFloat = 16.0 + sideInset
         var leftOffset: CGFloat = resolvedSideInset
@@ -310,5 +314,9 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
         leftOffset += resolvedSideInset
         
         self.scrollNode.view.contentSize = CGSize(width: leftOffset, height: size.height)
+        
+        if updated && self.scrollNode.view.contentOffset.x > 0.0 {
+            self.scrollNode.view.contentOffset = CGPoint()
+        }
     }
 }
