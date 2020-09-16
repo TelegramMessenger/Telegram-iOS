@@ -866,20 +866,22 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if (_validAuthInfo != nil && _validAuthInfo.selector == selector) {
             return [[MTDatacenterAuthKey alloc] initWithAuthKey:_validAuthInfo.authInfo.authKey authKeyId:_validAuthInfo.authInfo.authKeyId notBound:false];
         } else {
-            MTDatacenterAuthInfo *authInfo = [_context authInfoForDatacenterWithId:_datacenterId selector:selector];
-            if (authInfo != nil) {
-                _validAuthInfo = [[MTProtoValidAuthInfo alloc] initWithAuthInfo:authInfo selector:selector];
-                return [[MTDatacenterAuthKey alloc] initWithAuthKey:_validAuthInfo.authInfo.authKey authKeyId:_validAuthInfo.authInfo.authKeyId notBound:false];
-            } else {
-                if (createIfNeeded) {
+            if (createIfNeeded) {
+                MTDatacenterAuthInfo *authInfo = [_context authInfoForDatacenterWithId:_datacenterId selector:selector];
+                if (authInfo != nil) {
+                    _validAuthInfo = [[MTProtoValidAuthInfo alloc] initWithAuthInfo:authInfo selector:selector];
+                    return [[MTDatacenterAuthKey alloc] initWithAuthKey:_validAuthInfo.authInfo.authKey authKeyId:_validAuthInfo.authInfo.authKeyId notBound:false];
+                } else {
                     [_context performBatchUpdates:^{
                         [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:nil selector:selector];
                         [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:_cdn selector:selector];
                     }];
                     _mtState |= MTProtoStateAwaitingDatacenterAuthorization;
                     _awaitingAuthInfoForSelector = @(selector);
+                    
+                    return nil;
                 }
-                
+            } else {
                 return nil;
             }
         }
@@ -894,6 +896,13 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         {
             if (transactionReady)
                 transactionReady(nil);
+            return;
+        }
+        
+        if (!([self canAskForServiceTransactions] || [self canAskForTransactions])) {
+            if (transactionReady) {
+                transactionReady(nil);
+            }
             return;
         }
         
