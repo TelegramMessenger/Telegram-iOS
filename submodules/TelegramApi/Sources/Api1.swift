@@ -825,16 +825,22 @@ public struct messages {
     
     }
     public enum DiscussionMessage: TypeConstructorDescription {
-        case discussionMessage(message: Api.Message, readMaxId: Int32, chats: [Api.Chat], users: [Api.User])
+        case discussionMessage(flags: Int32, messages: [Api.Message], maxId: Int32?, readMaxId: Int32?, chats: [Api.Chat], users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .discussionMessage(let message, let readMaxId, let chats, let users):
+                case .discussionMessage(let flags, let messages, let maxId, let readMaxId, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(-765481584)
+                        buffer.appendInt32(1835297038)
                     }
-                    message.serialize(buffer, true)
-                    serializeInt32(readMaxId, buffer: buffer, boxed: false)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(messages.count))
+                    for item in messages {
+                        item.serialize(buffer, true)
+                    }
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(maxId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(readMaxId!, buffer: buffer, boxed: false)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(chats.count))
                     for item in chats {
@@ -851,32 +857,38 @@ public struct messages {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .discussionMessage(let message, let readMaxId, let chats, let users):
-                return ("discussionMessage", [("message", message), ("readMaxId", readMaxId), ("chats", chats), ("users", users)])
+                case .discussionMessage(let flags, let messages, let maxId, let readMaxId, let chats, let users):
+                return ("discussionMessage", [("flags", flags), ("messages", messages), ("maxId", maxId), ("readMaxId", readMaxId), ("chats", chats), ("users", users)])
     }
     }
     
         public static func parse_discussionMessage(_ reader: BufferReader) -> DiscussionMessage? {
-            var _1: Api.Message?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.Message
-            }
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: [Api.Chat]?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.Message]?
             if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
             }
-            var _4: [Api.User]?
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt32() }
+            var _4: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_4 = reader.readInt32() }
+            var _5: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _6: [Api.User]?
+            if let _ = reader.readInt32() {
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.messages.DiscussionMessage.discussionMessage(message: _1!, readMaxId: _2!, chats: _3!, users: _4!)
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.messages.DiscussionMessage.discussionMessage(flags: _1!, messages: _2!, maxId: _3, readMaxId: _4, chats: _5!, users: _6!)
             }
             else {
                 return nil

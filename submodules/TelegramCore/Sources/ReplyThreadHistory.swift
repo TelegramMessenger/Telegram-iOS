@@ -297,8 +297,13 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
             }
             return account.postbox.transaction { transaction -> ChatReplyThreadMessage? in
                 switch discussionMessage {
-                case let .discussionMessage(message, readMaxId, chats, users):
-                    guard let parsedMessage = StoreMessage(apiMessage: message), let parsedIndex = parsedMessage.index else {
+                    //messages.discussionMessage flags:# messages:Vector<Message> max_id:flags.0?int read_max_id:flags.1?int chats:Vector<Chat> users:Vector<User> = messages.DiscussionMessage;
+                case let .discussionMessage(_, messages, maxId, readMaxId, chats, users):
+                    let parsedMessages = messages.compactMap { message -> StoreMessage? in
+                        StoreMessage(apiMessage: message)
+                    }
+                    
+                    guard let topMessage = parsedMessages.last, let parsedIndex = topMessage.index else {
                         return nil
                     }
                     
@@ -318,7 +323,7 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
                         }
                     }
                     
-                    let _ = transaction.addMessages([parsedMessage], location: .Random)
+                    let _ = transaction.addMessages(parsedMessages, location: .Random)
                     
                     updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                         return updated
@@ -340,7 +345,9 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
                     return ChatReplyThreadMessage(
                         messageId: parsedIndex.id,
                         maxMessage: resolvedMaxMessage,
-                        maxReadMessageId: MessageId(peerId: parsedIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: readMaxId)
+                        maxReadMessageId: readMaxId.flatMap { readMaxId in
+                            MessageId(peerId: parsedIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: readMaxId)
+                        }
                     )
                 }
             }
