@@ -1129,8 +1129,8 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                     }
                     return previous.withUpdatedPinnedMessageId(id == 0 ? nil : MessageId(peerId: groupPeerId, namespace: Namespaces.Message.Cloud, id: id))
                 })
-            case let .updateUserBlocked(userId, blocked):
-                let userPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+            case let .updatePeerBlocked(peerId, blocked):
+                let userPeerId = peerId.peerId
                 updatedState.updateCachedPeerData(userPeerId, { current in
                     let previous: CachedUserData
                     if let current = current as? CachedUserData {
