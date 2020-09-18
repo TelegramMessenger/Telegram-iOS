@@ -136,7 +136,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
     }
     
     var addedThreadHead = false
-    if case let .replyThread(messageId, isChannelPost, _, _, _) = location, view.earlierId == nil, !view.isLoading {
+    if case let .replyThread(messageId, isChannelPost, _, _, _) = location, view.earlierId == nil, !view.holeEarlier, !view.isLoading {
         loop: for entry in view.additionalData {
             switch entry {
             case let .message(id, messages) where id == messageId:
