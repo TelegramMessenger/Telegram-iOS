@@ -108,15 +108,16 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                     var peers: [Peer] = []
                     var peerPresences: [PeerId: PeerPresence] = [:]
                     for chat in chats {
-                        if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                        if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
                             peers.append(groupOrChannel)
                         }
                     }
-                    for user in users {
-                        let telegramUser = TelegramUser(user: user)
-                        peers.append(telegramUser)
-                        if let presence = TelegramUserPresence(apiUser: user) {
-                            peerPresences[telegramUser.id] = presence
+                    for apiUser in users {
+                        if let user = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) {
+                            peers.append(user)
+                            if let presence = TelegramUserPresence(apiUser: apiUser) {
+                                peerPresences[user.id] = presence
+                            }
                         }
                     }
                     
@@ -624,15 +625,16 @@ public final class AccountViewTracker {
                                             var peers: [Peer] = []
                                             var peerPresences: [PeerId: PeerPresence] = [:]
                                             
-                                            for user in users {
-                                                let telegramUser = TelegramUser(user: user)
-                                                peers.append(telegramUser)
-                                                if let presence = TelegramUserPresence(apiUser: user) {
-                                                    peerPresences[telegramUser.id] = presence
+                                            for apiUser in users {
+                                                if let user = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) {
+                                                    peers.append(user)
+                                                    if let presence = TelegramUserPresence(apiUser: apiUser) {
+                                                        peerPresences[user.id] = presence
+                                                    }
                                                 }
                                             }
                                             for chat in chats {
-                                                if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                                                if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
                                                     peers.append(groupOrChannel)
                                                 }
                                             }
@@ -917,15 +919,16 @@ public final class AccountViewTracker {
                                     var peerPresences: [PeerId: PeerPresence] = [:]
                                     
                                     for chat in chats {
-                                        if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                                        if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
                                             peers.append(groupOrChannel)
                                         }
                                     }
-                                    for user in users {
-                                        let telegramUser = TelegramUser(user: user)
-                                        peers.append(telegramUser)
-                                        if let presence = TelegramUserPresence(apiUser: user) {
-                                            peerPresences[telegramUser.id] = presence
+                                    for apiUser in users {
+                                        if let user = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) {
+                                            peers.append(user)
+                                            if let presence = TelegramUserPresence(apiUser: apiUser) {
+                                                peerPresences[user.id] = presence
+                                            }
                                         }
                                     }
                                     
