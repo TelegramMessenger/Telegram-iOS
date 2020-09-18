@@ -1187,7 +1187,14 @@ public final class AccountViewTracker {
             }
         })
         
-        if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
+        let peerId: PeerId
+        switch chatLocation {
+        case let .peer(peerIdValue):
+            peerId = peerIdValue
+        case let .external(peerIdValue, _):
+            peerId = peerIdValue
+        }
+        if peerId.namespace == Namespaces.Peer.CloudChannel {
             return Signal { subscriber in
                 let combinedDisposable = MetaDisposable()
                 self.queue.async {
@@ -1203,7 +1210,7 @@ public final class AccountViewTracker {
                         let _ = self.account?.postbox.transaction({ transaction -> Void in
                             if transaction.getPeerChatListIndex(peerId) == nil {
                                 if let message = transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud) {
-                                    transaction.addHole(peerId: peerId, namespace: Namespaces.Message.Cloud, space: .everywhere, range: message.id + 1 ... (Int32.max - 1))
+                                    //transaction.addHole(peerId: peerId, namespace: Namespaces.Message.Cloud, space: .everywhere, range: message.id + 1 ... (Int32.max - 1))
                                 }
                             }
                         }).start()

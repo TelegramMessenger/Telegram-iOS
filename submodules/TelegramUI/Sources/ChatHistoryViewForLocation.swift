@@ -308,11 +308,7 @@ func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThrea
     case let .channelPost(messageId):
         message = fetchChannelReplyThreadMessage(account: context.account, messageId: messageId)
     case let .groupMessage(messageId):
-        message = .single(ChatReplyThreadMessage(
-            messageId: messageId,
-            maxMessage: .unknown,
-            maxReadMessageId: nil
-        ))
+        message = fetchChannelReplyThreadMessage(account: context.account, messageId: messageId)
     }
     
     return message
@@ -341,7 +337,8 @@ func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThrea
                 threadMessageId: message.messageId,
                 isChannelPost: isChannelPost,
                 maxMessage: message.maxMessage,
-                maxReadMessageId: message.maxReadMessageId
+                maxReadIncomingMessageId: message.maxReadIncomingMessageId,
+                maxReadOutgoingMessageId: message.maxReadOutgoingMessageId
             ),
             chatLocationContextHolder: chatLocationContextHolder,
             fixedCombinedReadStates: nil,

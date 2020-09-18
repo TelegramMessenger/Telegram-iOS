@@ -113,6 +113,7 @@ public final class ChatControllerInteraction {
     let greetingStickerNode: () -> (ASDisplayNode, ASDisplayNode, ASDisplayNode, () -> Void)?
     let openPeerContextMenu: (Peer, ASDisplayNode, CGRect, ContextGesture?) -> Void
     let openMessageReplies: (MessageId, Bool) -> Void
+    let openReplyThreadOriginalMessage: (Message) -> Void
     
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
@@ -196,6 +197,7 @@ public final class ChatControllerInteraction {
         greetingStickerNode: @escaping () -> (ASDisplayNode, ASDisplayNode, ASDisplayNode, () -> Void)?,
         openPeerContextMenu: @escaping (Peer, ASDisplayNode, CGRect, ContextGesture?) -> Void,
         openMessageReplies: @escaping (MessageId, Bool) -> Void,
+        openReplyThreadOriginalMessage: @escaping (Message) -> Void,
         requestMessageUpdate: @escaping (MessageId) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
@@ -267,6 +269,7 @@ public final class ChatControllerInteraction {
         self.greetingStickerNode = greetingStickerNode
         self.openPeerContextMenu = openPeerContextMenu
         self.openMessageReplies = openMessageReplies
+        self.openReplyThreadOriginalMessage = openReplyThreadOriginalMessage
         
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
@@ -316,6 +319,7 @@ public final class ChatControllerInteraction {
             return nil
         }, openPeerContextMenu: { _, _, _, _ in
         }, openMessageReplies: { _, _ in
+        }, openReplyThreadOriginalMessage: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

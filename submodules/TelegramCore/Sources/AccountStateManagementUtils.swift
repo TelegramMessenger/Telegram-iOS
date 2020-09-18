@@ -1206,16 +1206,21 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.readSecretOutbox(peerId: PeerId(namespace: Namespaces.Peer.SecretChat, id: chatId), timestamp: maxDate, actionTimestamp: date)
             case let .updateUserTyping(userId, type):
                 if let date = updatesDate, date + 60 > serverTime {
-                    updatedState.addPeerInputActivity(chatPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), activity: PeerInputActivity(apiType: type))
+                    updatedState.addPeerInputActivity(chatPeerId: PeerActivitySpace(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), threadId: nil), peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), activity: PeerInputActivity(apiType: type))
                 }
             case let .updateChatUserTyping(chatId, userId, type):
                 if let date = updatesDate, date + 60 > serverTime {
-                    updatedState.addPeerInputActivity(chatPeerId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId), peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), activity: PeerInputActivity(apiType: type))
-                    updatedState.addPeerInputActivity(chatPeerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: chatId), peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), activity: PeerInputActivity(apiType: type))
+                    updatedState.addPeerInputActivity(chatPeerId: PeerActivitySpace(peerId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId), threadId: nil), peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), activity: PeerInputActivity(apiType: type))
+                }
+            case let .updateChannelUserTyping(_, channelId, topMsgId, userId, type):
+                if let date = updatesDate, date + 60 > serverTime {
+                    let channelPeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                    let threadId = topMsgId.flatMap { makeMessageThreadId(MessageId(peerId: channelPeerId, namespace: Namespaces.Message.Cloud, id: $0)) }
+                    updatedState.addPeerInputActivity(chatPeerId: PeerActivitySpace(peerId: channelPeerId, threadId: threadId), peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), activity: PeerInputActivity(apiType: type))
                 }
             case let .updateEncryptedChatTyping(chatId):
                 if let date = updatesDate, date + 60 > serverTime {
-                    updatedState.addPeerInputActivity(chatPeerId: PeerId(namespace: Namespaces.Peer.SecretChat, id: chatId), peerId: nil, activity: .typingText)
+                    updatedState.addPeerInputActivity(chatPeerId: PeerActivitySpace(peerId: PeerId(namespace: Namespaces.Peer.SecretChat, id: chatId), threadId: nil), peerId: nil, activity: .typingText)
                 }
             case let .updateDialogPinned(flags, folderId, peer):
                 let groupId: PeerGroupId = folderId.flatMap(PeerGroupId.init(rawValue:)) ?? .root
@@ -2094,7 +2099,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddScheduledMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll/*, .UpdateMessageReactions*/, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll/*, .UpdateMessageReactions*/, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -2174,7 +2179,9 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     
     var peerIdsWithAddedSecretMessages = Set<PeerId>()
     
-    var updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]] = [:]
+    var updatedTypingActivities: [PeerActivitySpace: [PeerId: PeerInputActivity?]] = [:]
+    var updatedIncomingThreadReadStates: [MessageId: MessageId.Id] = [:]
+    var updatedOutgoingThreadReadStates: [MessageId: MessageId.Id] = [:]
     var updatedSecretChatTypingActivities = Set<PeerId>()
     var updatedWebpages: [MediaId: TelegramMediaWebpage] = [:]
     var updatedCalls: [Api.PhoneCall] = []
@@ -2318,10 +2325,10 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                         let chatPeerId = message.id.peerId
                         if let authorId = message.authorId {
                             let activityValue: PeerInputActivity? = nil
-                            if updatedTypingActivities[chatPeerId] == nil {
-                                updatedTypingActivities[chatPeerId] = [authorId: activityValue]
+                            if updatedTypingActivities[PeerActivitySpace(peerId: chatPeerId, threadId: nil)] == nil {
+                                updatedTypingActivities[PeerActivitySpace(peerId: chatPeerId, threadId: nil)] = [authorId: activityValue]
                             } else {
-                                updatedTypingActivities[chatPeerId]![authorId] = activityValue
+                                updatedTypingActivities[PeerActivitySpace(peerId: chatPeerId, threadId: nil)]![authorId] = activityValue
                             }
                         }
                         
@@ -2528,6 +2535,24 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
             case let .ReadGroupFeedInbox(groupId, index):
                 break
                 //transaction.applyGroupFeedReadMaxIndex(groupId: groupId, index: index)
+            case let .UpdateReadThread(threadMessageId, readMaxId, isIncoming):
+                if isIncoming {
+                    if let currentId = updatedIncomingThreadReadStates[threadMessageId] {
+                        if currentId < readMaxId {
+                            updatedIncomingThreadReadStates[threadMessageId] = readMaxId
+                        }
+                    } else {
+                        updatedIncomingThreadReadStates[threadMessageId] = readMaxId
+                    }
+                } else {
+                    if let currentId = updatedOutgoingThreadReadStates[threadMessageId] {
+                        if currentId < readMaxId {
+                            updatedOutgoingThreadReadStates[threadMessageId] = readMaxId
+                        }
+                    } else {
+                        updatedOutgoingThreadReadStates[threadMessageId] = readMaxId
+                    }
+                }
             case let .ResetReadState(peerId, namespace, maxIncomingReadId, maxOutgoingReadId, maxKnownId, count, markedUnread):
                 var markedUnreadValue: Bool = false
                 if let markedUnread = markedUnread {
@@ -2750,8 +2775,8 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                     } else {
                         updatedTypingActivities[chatPeerId]![peerId] = activity
                     }
-                } else if chatPeerId.namespace == Namespaces.Peer.SecretChat {
-                    updatedSecretChatTypingActivities.insert(chatPeerId)
+                } else if chatPeerId.peerId.namespace == Namespaces.Peer.SecretChat {
+                    updatedSecretChatTypingActivities.insert(chatPeerId.peerId)
                 }
             case let .UpdatePinnedItemIds(groupId, pinnedOperation):
                 switch pinnedOperation {
@@ -3132,10 +3157,10 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
         if let peer = transaction.getPeer(chatPeerId) as? TelegramSecretChat {
             let authorId = peer.regularPeerId
             let activityValue: PeerInputActivity? = .typingText
-            if updatedTypingActivities[chatPeerId] == nil {
-                updatedTypingActivities[chatPeerId] = [authorId: activityValue]
+            if updatedTypingActivities[PeerActivitySpace(peerId: chatPeerId, threadId: nil)] == nil {
+                updatedTypingActivities[PeerActivitySpace(peerId: chatPeerId, threadId: nil)] = [authorId: activityValue]
             } else {
-                updatedTypingActivities[chatPeerId]![authorId] = activityValue
+                updatedTypingActivities[PeerActivitySpace(peerId: chatPeerId, threadId: nil)]![authorId] = activityValue
             }
         }
     }
@@ -3180,10 +3205,10 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     
     for (chatPeerId, authorId) in addedSecretMessageAuthorIds {
         let activityValue: PeerInputActivity? = nil
-        if updatedTypingActivities[chatPeerId] == nil {
-            updatedTypingActivities[chatPeerId] = [authorId: activityValue]
+        if updatedTypingActivities[PeerActivitySpace(peerId: chatPeerId, threadId: nil)] == nil {
+            updatedTypingActivities[PeerActivitySpace(peerId: chatPeerId, threadId: nil)] = [authorId: activityValue]
         } else {
-            updatedTypingActivities[chatPeerId]![authorId] = activityValue
+            updatedTypingActivities[PeerActivitySpace(peerId: chatPeerId, threadId: nil)]![authorId] = activityValue
         }
     }
     
@@ -3260,5 +3285,5 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
         requestChatListFiltersSync(transaction: transaction)
     }
     
-    return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, wasScheduledMessageIds: wasScheduledMessageIds, addedSecretMessageIds: addedSecretMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, addedCallSignalingData: addedCallSignalingData, updatedPeersNearby: updatedPeersNearby, isContactUpdates: isContactUpdates, delayNotificatonsUntil: delayNotificatonsUntil)
+    return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, wasScheduledMessageIds: wasScheduledMessageIds, addedSecretMessageIds: addedSecretMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, addedCallSignalingData: addedCallSignalingData, updatedPeersNearby: updatedPeersNearby, isContactUpdates: isContactUpdates, delayNotificatonsUntil: delayNotificatonsUntil, updatedIncomingThreadReadStates: updatedIncomingThreadReadStates, updatedOutgoingThreadReadStates: updatedOutgoingThreadReadStates)
 }

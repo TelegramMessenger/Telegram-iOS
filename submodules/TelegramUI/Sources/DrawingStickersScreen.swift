@@ -145,6 +145,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
             return nil
         }, openPeerContextMenu: { _, _, _, _ in
         }, openMessageReplies: { _, _ in
+        }, openReplyThreadOriginalMessage: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

@@ -99,12 +99,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
             return
         }
         if item.message.id.peerId.isReplies {
-            for attribute in item.message.attributes {
-                if let attribute = attribute as? SourceReferenceMessageAttribute {
-                    item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
-                    break
-                }
-            }
+            item.controllerInteraction.openReplyThreadOriginalMessage(item.message)
         } else {
             item.controllerInteraction.openMessageReplies(item.message.id, true)
         }
@@ -145,8 +140,6 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                         }
                         if let maxMessageId = attribute.maxMessageId, let maxReadMessageId = attribute.maxReadMessageId {
                             hasUnseenReplies = maxMessageId > maxReadMessageId
-                        } else if attribute.maxMessageId != nil {
-                            hasUnseenReplies = true
                         }
                     }
                 }
