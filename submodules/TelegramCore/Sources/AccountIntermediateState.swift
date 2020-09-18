@@ -108,7 +108,7 @@ enum AccountStateMutationOperation {
     case SyncChatListFilters
     case UpdateChatListFilterOrder(order: [Int32])
     case UpdateChatListFilter(id: Int32, filter: Api.DialogFilter?)
-    case UpdateReadThread(threadMessageId: MessageId, readMaxId: Int32, isIncoming: Bool)
+    case UpdateReadThread(threadMessageId: MessageId, readMaxId: Int32, isIncoming: Bool, mainChannelMessage: MessageId?)
 }
 
 struct HoleFromPreviousState {
@@ -271,8 +271,8 @@ struct AccountMutableState {
         self.addOperation(.ReadOutbox(messageId, timestamp))
     }
     
-    mutating func readThread(threadMessageId: MessageId, readMaxId: Int32, isIncoming: Bool) {
-        self.addOperation(.UpdateReadThread(threadMessageId: threadMessageId, readMaxId: readMaxId, isIncoming: isIncoming))
+    mutating func readThread(threadMessageId: MessageId, readMaxId: Int32, isIncoming: Bool, mainChannelMessage: MessageId?) {
+        self.addOperation(.UpdateReadThread(threadMessageId: threadMessageId, readMaxId: readMaxId, isIncoming: isIncoming, mainChannelMessage: mainChannelMessage))
     }
     
     mutating func readGroupFeedInbox(groupId: PeerGroupId, index: MessageIndex) {

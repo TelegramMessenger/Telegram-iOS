@@ -159,9 +159,13 @@ static void setBoolField(CustomBlurEffect *object, NSString *name, BOOL value) {
     [inv invoke];
 }
 
-UIBlurEffect *makeCustomZoomBlurEffectImpl() {
+UIBlurEffect *makeCustomZoomBlurEffectImpl(bool isLight) {
     if (@available(iOS 13.0, *)) {
-        return [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemUltraThinMaterialLight];
+        if (isLight) {
+            return [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemUltraThinMaterialLight];
+        } else {
+            return [UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemUltraThinMaterialDark];
+        }
     } else if (@available(iOS 11.0, *)) {
         NSString *string = [@[@"_", @"UI", @"Custom", @"BlurEffect"] componentsJoinedByString:@""];
         CustomBlurEffect *result = (CustomBlurEffect *)[NSClassFromString(string) effectWithStyle:0];

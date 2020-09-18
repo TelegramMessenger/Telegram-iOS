@@ -13,6 +13,7 @@ import TelegramUIPreferences
 import ItemListPeerItem
 import ItemListPeerActionItem
 import AvatarNode
+import ChatListFilterSettingsHeaderItem
 
 private enum FilterSection: Int32, Hashable {
     case include

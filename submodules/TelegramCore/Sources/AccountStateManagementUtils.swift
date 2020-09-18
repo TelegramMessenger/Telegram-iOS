@@ -989,6 +989,14 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.resetIncomingReadState(groupId: PeerGroupId(rawValue: folderId ?? 0), peerId: peer.peerId, namespace: Namespaces.Message.Cloud, maxIncomingReadId: maxId, count: stillUnreadCount, pts: pts)
             case let .updateReadHistoryOutbox(peer, maxId, _, _):
                 updatedState.readOutbox(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: maxId), timestamp: updatesDate)
+            case let .updateReadChannelDiscussionInbox(_, channelId, topMsgId, readMaxId, mainChannelId, mainChannelPost):
+                var mainChannelMessage: MessageId?
+                if let mainChannelId = mainChannelId, let mainChannelPost = mainChannelPost {
+                    mainChannelMessage = MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: mainChannelId), namespace: Namespaces.Message.Cloud, id: mainChannelPost)
+                }
+                updatedState.readThread(threadMessageId: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: topMsgId), readMaxId: readMaxId, isIncoming: true, mainChannelMessage: mainChannelMessage)
+            case let .updateReadChannelDiscussionOutbox(channelId, topMsgId, readMaxId):
+                updatedState.readThread(threadMessageId: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: topMsgId), readMaxId: readMaxId, isIncoming: false, mainChannelMessage: nil)
             case let .updateDialogUnreadMark(flags, peer):
                 switch peer {
                     case let .dialogPeer(peer):
@@ -2535,7 +2543,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
             case let .ReadGroupFeedInbox(groupId, index):
                 break
                 //transaction.applyGroupFeedReadMaxIndex(groupId: groupId, index: index)
-            case let .UpdateReadThread(threadMessageId, readMaxId, isIncoming):
+            case let .UpdateReadThread(threadMessageId, readMaxId, isIncoming, mainChannelMessage):
                 if isIncoming {
                     if let currentId = updatedIncomingThreadReadStates[threadMessageId] {
                         if currentId < readMaxId {
@@ -2543,6 +2551,22 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                         }
                     } else {
                         updatedIncomingThreadReadStates[threadMessageId] = readMaxId
+                    }
+                    if let mainChannelMessage = mainChannelMessage {
+                        transaction.updateMessage(mainChannelMessage, update: { currentMessage in
+                            let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+                            var attributes = currentMessage.attributes
+                            loop: for j in 0 ..< attributes.count {
+                                if let attribute = attributes[j] as? ReplyThreadMessageAttribute {
+                                    if let maxReadMessageId = attribute.maxReadMessageId, maxReadMessageId > readMaxId {
+                                        return .skip
+                                    }
+                                    attributes[j] = ReplyThreadMessageAttribute(count: attribute.count, latestUsers: attribute.latestUsers, commentsPeerId: attribute.commentsPeerId, maxMessageId: attribute.maxMessageId, maxReadMessageId: readMaxId)
+                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                }
+                            }
+                            return .skip
+                        })
                     }
                 } else {
                     if let currentId = updatedOutgoingThreadReadStates[threadMessageId] {

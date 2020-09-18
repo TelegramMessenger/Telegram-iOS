@@ -33,7 +33,7 @@ private class ReplyThreadHistoryContextImpl {
     private var maxReadOutgoingMessageIdValue: MessageId? {
         didSet {
             if self.maxReadOutgoingMessageIdValue != oldValue {
-                self.maxReadOutgoingMessageId.set(.single(nil))
+                self.maxReadOutgoingMessageId.set(.single(self.maxReadOutgoingMessageIdValue))
             }
         }
     }

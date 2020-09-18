@@ -6236,7 +6236,7 @@ public extension Api {
         case updatePhoneCallSignalingData(phoneCallId: Int64, data: Buffer)
         case updateChannelParticipant(flags: Int32, channelId: Int32, date: Int32, userId: Int32, prevParticipant: Api.ChannelParticipant?, newParticipant: Api.ChannelParticipant?, qts: Int32)
         case updateChannelMessageForwards(channelId: Int32, id: Int32, forwards: Int32)
-        case updateReadChannelDiscussionInbox(channelId: Int32, topMsgId: Int32, readMaxId: Int32)
+        case updateReadChannelDiscussionInbox(flags: Int32, channelId: Int32, topMsgId: Int32, readMaxId: Int32, broadcastId: Int32?, broadcastPost: Int32?)
         case updateReadChannelDiscussionOutbox(channelId: Int32, topMsgId: Int32, readMaxId: Int32)
         case updatePeerBlocked(peerId: Api.Peer, blocked: Api.Bool)
         case updateChannelUserTyping(flags: Int32, channelId: Int32, topMsgId: Int32?, userId: Int32, action: Api.SendMessageAction)
@@ -6934,13 +6934,16 @@ public extension Api {
                     serializeInt32(id, buffer: buffer, boxed: false)
                     serializeInt32(forwards, buffer: buffer, boxed: false)
                     break
-                case .updateReadChannelDiscussionInbox(let channelId, let topMsgId, let readMaxId):
+                case .updateReadChannelDiscussionInbox(let flags, let channelId, let topMsgId, let readMaxId, let broadcastId, let broadcastPost):
                     if boxed {
-                        buffer.appendInt32(-966672061)
+                        buffer.appendInt32(482860628)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(channelId, buffer: buffer, boxed: false)
                     serializeInt32(topMsgId, buffer: buffer, boxed: false)
                     serializeInt32(readMaxId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(broadcastId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(broadcastPost!, buffer: buffer, boxed: false)}
                     break
                 case .updateReadChannelDiscussionOutbox(let channelId, let topMsgId, let readMaxId):
                     if boxed {
@@ -7144,8 +7147,8 @@ public extension Api {
                 return ("updateChannelParticipant", [("flags", flags), ("channelId", channelId), ("date", date), ("userId", userId), ("prevParticipant", prevParticipant), ("newParticipant", newParticipant), ("qts", qts)])
                 case .updateChannelMessageForwards(let channelId, let id, let forwards):
                 return ("updateChannelMessageForwards", [("channelId", channelId), ("id", id), ("forwards", forwards)])
-                case .updateReadChannelDiscussionInbox(let channelId, let topMsgId, let readMaxId):
-                return ("updateReadChannelDiscussionInbox", [("channelId", channelId), ("topMsgId", topMsgId), ("readMaxId", readMaxId)])
+                case .updateReadChannelDiscussionInbox(let flags, let channelId, let topMsgId, let readMaxId, let broadcastId, let broadcastPost):
+                return ("updateReadChannelDiscussionInbox", [("flags", flags), ("channelId", channelId), ("topMsgId", topMsgId), ("readMaxId", readMaxId), ("broadcastId", broadcastId), ("broadcastPost", broadcastPost)])
                 case .updateReadChannelDiscussionOutbox(let channelId, let topMsgId, let readMaxId):
                 return ("updateReadChannelDiscussionOutbox", [("channelId", channelId), ("topMsgId", topMsgId), ("readMaxId", readMaxId)])
                 case .updatePeerBlocked(let peerId, let blocked):
@@ -8540,11 +8543,20 @@ public extension Api {
             _2 = reader.readInt32()
             var _3: Int32?
             _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_5 = reader.readInt32() }
+            var _6: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_6 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.Update.updateReadChannelDiscussionInbox(channelId: _1!, topMsgId: _2!, readMaxId: _3!)
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.Update.updateReadChannelDiscussionInbox(flags: _1!, channelId: _2!, topMsgId: _3!, readMaxId: _4!, broadcastId: _5, broadcastPost: _6)
             }
             else {
                 return nil
