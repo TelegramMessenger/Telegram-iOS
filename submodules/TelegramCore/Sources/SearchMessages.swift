@@ -238,7 +238,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 } else {
                     let lowerBound = state?.main.messages.last.flatMap({ $0.index })
                     let signal: Signal<Api.messages.Messages, MTRpcError>
-                    if peer.id.namespace == Namespaces.Peer.CloudChannel && tags == nil && minDate == nil && maxDate == nil {
+                    if peer.id.namespace == Namespaces.Peer.CloudChannel && tags == nil && minDate == nil && maxDate == nil && query.isEmpty {
                         signal = account.network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: lowerBound?.id.id ?? 0, offsetDate: 0, addOffset: 0, limit: limit, maxId: Int32.max - 1, minId: 0, hash: 0))
                     } else {
                         signal = account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, topMsgId: topMsgId?.id, filter: filter, minDate: minDate ?? 0, maxDate: maxDate ?? (Int32.max - 1), offsetId: lowerBound?.id.id ?? 0, addOffset: 0, limit: limit, maxId: Int32.max - 1, minId: 0, hash: 0))
