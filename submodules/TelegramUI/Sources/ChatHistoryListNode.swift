@@ -14,9 +14,6 @@ import TemporaryCachedPeerDataManager
 import ChatListSearchItemNode
 import Emoji
 import AppBundle
-import ListMessageItem
-import AccountContext
-import ChatInterfaceState
 
 private class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {
     private let selectionGestureActivationThreshold: CGFloat = 5.0
@@ -77,7 +74,7 @@ public enum ChatHistoryListDisplayHeaders {
 
 public enum ChatHistoryListMode: Equatable {
     case bubbles
-    case list(search: Bool, reversed: Bool, displayHeaders: ChatHistoryListDisplayHeaders, hintLinks: Bool, isGlobalSearch: Bool)
+    case list(search: Bool, reversed: Bool, displayHeaders: ChatHistoryListDisplayHeaders)
 }
 
 enum ChatHistoryViewScrollPosition {
@@ -222,26 +219,6 @@ private func maxMessageIndexForEntries(_ view: ChatHistoryView, indexRange: (Int
     return (incoming, overall)
 }
 
-extension ListMessageItemInteraction {
-    convenience init(controllerInteraction: ChatControllerInteraction) {
-        self.init(openMessage: { message, mode -> Bool in
-            return controllerInteraction.openMessage(message, mode)
-        }, openMessageContextMenu: { message, bool, node, rect, gesture in
-            controllerInteraction.openMessageContextMenu(message, bool, node, rect, gesture)
-        }, toggleMessagesSelection: { messageId, selected in
-            controllerInteraction.toggleMessagesSelection(messageId, selected)
-        }, openUrl: { url, param1, param2, message in
-            controllerInteraction.openUrl(url, param1, param2, message)
-        }, openInstantPage: { message, data in
-            controllerInteraction.openInstantPage(message, data)
-        }, longTap: { action, message in
-            controllerInteraction.longTap(action, message)
-        }, getHiddenMedia: {
-            return controllerInteraction.hiddenMedia
-        })
-    }
-}
-
 private func mappedInsertEntries(context: AccountContext, chatLocation: ChatLocation, associatedData: ChatMessageItemAssociatedData, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode, lastHeaderId: Int64, entries: [ChatHistoryViewTransitionInsertEntry]) -> [ListViewInsertItem] {
     return entries.map { entry -> ListViewInsertItem in
         switch entry.entry {
@@ -250,7 +227,7 @@ private func mappedInsertEntries(context: AccountContext, chatLocation: ChatLoca
                 switch mode {
                     case .bubbles:
                         item = ChatMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes))
-                    case let .list(_, _, displayHeaders, hintLinks, isGlobalSearch):
+                    case let .list(_, _, displayHeaders):
                         let displayHeader: Bool
                         switch displayHeaders {
                         case .none:
@@ -260,7 +237,8 @@ private func mappedInsertEntries(context: AccountContext, chatLocation: ChatLoca
                         case .allButLast:
                             displayHeader = listMessageDateHeaderId(timestamp: message.timestamp) != lastHeaderId
                         }
-                        item = ListMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: controllerInteraction), message: message, selection: selection, displayHeader: displayHeader, hintIsLink: hintLinks, isGlobalSearchResult: isGlobalSearch)
+                        
+                        item = ListMessageItem(theme: presentationData.theme.theme, strings: presentationData.strings, fontSize: presentationData.fontSize, dateTimeFormat: presentationData.dateTimeFormat, context: context, chatLocation: chatLocation, controllerInteraction: controllerInteraction, message: message, selection: selection, displayHeader: displayHeader)
                 }
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case let .MessageGroupEntry(_, messages, presentationData):
@@ -268,15 +246,13 @@ private func mappedInsertEntries(context: AccountContext, chatLocation: ChatLoca
                 switch mode {
                     case .bubbles:
                         item = ChatMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .group(messages: messages))
-                    case let .list(_, _, _, _, _):
+                    case let .list(_, _, _):
                         assertionFailure()
-                        item = ListMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: controllerInteraction), message: messages[0].0, selection: .none, displayHeader: false)
+                        item = ListMessageItem(theme: presentationData.theme.theme, strings: presentationData.strings, fontSize: presentationData.fontSize, dateTimeFormat: presentationData.dateTimeFormat, context: context, chatLocation: chatLocation, controllerInteraction: controllerInteraction, message: messages[0].0, selection: .none, displayHeader: false)
                 }
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case let .UnreadEntry(_, presentationData):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index, presentationData: presentationData, context: context), directionHint: entry.directionHint)
-            case let .ReplyCountEntry(_, isComments, count, presentationData):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatReplyCountItem(index: entry.entry.index, isComments: isComments, count: count, presentationData: presentationData, context: context), directionHint: entry.directionHint)
             case let .ChatInfoEntry(text, presentationData):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(text: text, controllerInteraction: controllerInteraction, presentationData: presentationData), directionHint: entry.directionHint)
             case let .SearchEntry(theme, strings):
@@ -295,7 +271,7 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
                 switch mode {
                     case .bubbles:
                         item = ChatMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes))
-                    case let .list(_, _, displayHeaders, hintLinks, isGlobalSearch):
+                    case let .list(_, _, displayHeaders):
                         let displayHeader: Bool
                         switch displayHeaders {
                         case .none:
@@ -305,7 +281,7 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
                         case .allButLast:
                             displayHeader = listMessageDateHeaderId(timestamp: message.timestamp) != lastHeaderId
                         }
-                        item = ListMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: controllerInteraction), message: message, selection: selection, displayHeader: displayHeader, hintIsLink: hintLinks, isGlobalSearchResult: isGlobalSearch)
+                        item = ListMessageItem(theme: presentationData.theme.theme, strings: presentationData.strings, fontSize: presentationData.fontSize, dateTimeFormat: presentationData.dateTimeFormat, context: context, chatLocation: chatLocation, controllerInteraction: controllerInteraction, message: message, selection: selection, displayHeader: displayHeader)
                 }
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case let .MessageGroupEntry(_, messages, presentationData):
@@ -313,15 +289,13 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
                 switch mode {
                     case .bubbles:
                         item = ChatMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .group(messages: messages))
-                    case let .list(_, _, _, _, _):
+                    case let .list(_, _, _):
                         assertionFailure()
-                        item = ListMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: controllerInteraction), message: messages[0].0, selection: .none, displayHeader: false)
+                        item = ListMessageItem(theme: presentationData.theme.theme, strings: presentationData.strings, fontSize: presentationData.fontSize, dateTimeFormat: presentationData.dateTimeFormat, context: context, chatLocation: chatLocation, controllerInteraction: controllerInteraction, message: messages[0].0, selection: .none, displayHeader: false)
                 }
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case let .UnreadEntry(_, presentationData):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index, presentationData: presentationData, context: context), directionHint: entry.directionHint)
-            case let .ReplyCountEntry(_, isComments, count, presentationData):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatReplyCountItem(index: entry.entry.index, isComments: isComments, count: count, presentationData: presentationData, context: context), directionHint: entry.directionHint)
             case let .ChatInfoEntry(text, presentationData):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(text: text, controllerInteraction: controllerInteraction, presentationData: presentationData), directionHint: entry.directionHint)
             case let .SearchEntry(theme, strings):
@@ -347,7 +321,6 @@ private final class ChatHistoryTransactionOpaqueState {
 private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, animatedEmojiStickers: [String: [StickerPackItem]], isScheduledMessages: Bool) -> ChatMessageItemAssociatedData {
     var automaticMediaDownloadPeerType: MediaAutoDownloadPeerType = .channel
     var contactsPeerIds: Set<PeerId> = Set()
-    var channelDiscussionGroup: ChatMessageItemAssociatedData.ChannelDiscussionGroupStatus = .unknown
     if case let .peer(peerId) = chatLocation {
         if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat {
             var isContact = false
@@ -372,15 +345,7 @@ private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHist
                     if let channel = value as? TelegramChannel, case .group = channel.info {
                         automaticMediaDownloadPeerType = .group
                     }
-                } else if case let .cachedPeerData(dataPeerId, cachedData) = entry, dataPeerId == peerId {
-                    if let cachedData = cachedData as? CachedChannelData {
-                        switch cachedData.linkedDiscussionPeerId {
-                        case let .known(value):
-                            channelDiscussionGroup = .known(value)
-                        case .unknown:
-                            channelDiscussionGroup = .unknown
-                        }
-                    }
+                    break
                 }
             }
             if automaticMediaDownloadPeerType == .group {
@@ -392,7 +357,7 @@ private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHist
             }
         }
     }
-    let associatedData = ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, isScheduledMessages: isScheduledMessages, contactsPeerIds: contactsPeerIds, channelDiscussionGroup: channelDiscussionGroup, animatedEmojiStickers: animatedEmojiStickers)
+    let associatedData = ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, isScheduledMessages: isScheduledMessages, contactsPeerIds: contactsPeerIds, animatedEmojiStickers: animatedEmojiStickers)
     return associatedData
 }
 
@@ -432,7 +397,6 @@ private struct ChatHistoryAnimatedEmojiConfiguration {
 public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let context: AccountContext
     private let chatLocation: ChatLocation
-    private let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
     private let subject: ChatControllerSubject?
     private let tagMask: MessageTags?
     private let controllerInteraction: ChatControllerInteraction
@@ -543,10 +507,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private var loadedMessagesFromCachedDataDisposable: Disposable?
     
-    public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles) {
+    public init(context: AccountContext, chatLocation: ChatLocation, tagMask: MessageTags?, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles) {
         self.context = context
         self.chatLocation = chatLocation
-        self.chatLocationContextHolder = chatLocationContextHolder
         self.subject = subject
         self.tagMask = tagMask
         self.controllerInteraction = controllerInteraction
@@ -595,13 +558,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         let fixedCombinedReadStates = Atomic<MessageHistoryViewReadState?>(value: nil)
         
-        var isScheduledMessages = false
+        var scheduled = false
         if let subject = subject, case .scheduledMessages = subject {
-            isScheduledMessages = true
-        }
-        var isAuxiliaryChat = isScheduledMessages
-        if case .replyThread = chatLocation {
-            isAuxiliaryChat = true
+            scheduled = true
         }
         
         var additionalData: [AdditionalMessageHistoryViewData] = []
@@ -617,18 +576,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 additionalData.append(.peerIsContact(peerId))
             }
         }
-        if !isAuxiliaryChat {
+        if !scheduled {
             additionalData.append(.totalUnreadState)
-        }
-        if case let .replyThread(messageId, _, _) = chatLocation {
-            additionalData.append(.cachedPeerData(messageId.peerId))
-            additionalData.append(.peerNotificationSettings(messageId.peerId))
-            if messageId.peerId.namespace == Namespaces.Peer.CloudChannel {
-                additionalData.append(.cacheEntry(cachedChannelAdminRanksEntryId(peerId: messageId.peerId)))
-                additionalData.append(.peer(messageId.peerId))
-            }
-            
-            additionalData.append(.message(messageId))
         }
 
         let currentViewVersion = Atomic<Int?>(value: nil)
@@ -636,7 +585,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let historyViewUpdate = self.chatHistoryLocationPromise.get()
         |> distinctUntilChanged
         |> mapToSignal { location in
-            return chatHistoryViewForLocation(location, context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, scheduled: isScheduledMessages, fixedCombinedReadStates: fixedCombinedReadStates.with { $0 }, tagMask: tagMask, additionalData: additionalData)
+            return chatHistoryViewForLocation(location, account: context.account, chatLocation: chatLocation, scheduled: scheduled, fixedCombinedReadStates: fixedCombinedReadStates.with { $0 }, tagMask: tagMask, additionalData: additionalData)
             |> beforeNext { viewUpdate in
                 switch viewUpdate {
                     case let .HistoryView(view, _, _, _, _, _, _):
@@ -728,9 +677,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         } else {
                             if let subject = subject, case let .message(messageId) = subject {
                                 strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
-                            } else if var chatHistoryLocation = strongSelf.chatHistoryLocationValue {
-                                chatHistoryLocation.id += 1
-                                strongSelf.chatHistoryLocationValue = chatHistoryLocation
                             } else {
                                 strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Initial(count: 60), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             }
@@ -757,10 +703,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             strongSelf._initialData.set(.single(combinedInitialData))
                         }
                         
-                        let cachedData = initialData?.cachedData
-                        let cachedDataMessages = initialData?.cachedDataMessages
-                        
-                        strongSelf._cachedPeerDataAndMessages.set(.single((cachedData, cachedDataMessages)))
+                        strongSelf._cachedPeerDataAndMessages.set(.single((nil, nil)))
                         
                         let loadState: ChatHistoryNodeLoadState = .loading
                         if strongSelf.loadState != loadState {
@@ -787,7 +730,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 
                 var reverse = false
                 var includeSearchEntry = false
-                if case let .list(search, reverseValue, _, _, _) = mode {
+                if case let .list(search, reverseValue, _) = mode {
                     includeSearchEntry = search
                     reverse = reverseValue
                 }
@@ -881,9 +824,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
                 if apply {
                     switch chatLocation {
-                    case .peer, .replyThread:
-                        if !context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
-                            context.applyMaxReadIndex(for: chatLocation, contextHolder: chatLocationContextHolder, messageIndex: messageIndex)
+                        case .peer:
+                            if !context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                                let _ = applyMaxReadIndexInteractively(postbox: context.account.postbox, stateManager: context.account.stateManager, index: messageIndex).start()
                         }
                     }
                 }
@@ -1071,10 +1014,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 if message.id.namespace == Namespaces.Message.Cloud {
                                     messageIdsWithViewCount.append(message.id)
                                 }
-                            } else if attribute is ReplyThreadMessageAttribute {
-                                if message.id.namespace == Namespaces.Message.Cloud {
-                                    messageIdsWithViewCount.append(message.id)
-                                }
                             } else if let attribute = attribute as? ConsumableContentMessageAttribute, !attribute.consumed {
                                 hasUnconsumedContent = true
                             } else if let _ = attribute as? ContentRequiresValidationMessageAttribute {
@@ -1116,10 +1055,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             }
                             for attribute in message.attributes {
                                 if attribute is ViewCountMessageAttribute {
-                                    if message.id.namespace == Namespaces.Message.Cloud {
-                                        messageIdsWithViewCount.append(message.id)
-                                    }
-                                } else if attribute is ReplyThreadMessageAttribute {
                                     if message.id.namespace == Namespaces.Message.Cloud {
                                         messageIdsWithViewCount.append(message.id)
                                     }
@@ -1242,10 +1177,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             if loaded.firstIndex < 5 && historyView.originalView.laterId != nil {
                 self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(lastEntry.index), anchorIndex: .message(lastEntry.index), count: historyMessageCount), id: self.takeNextHistoryLocationId())
             } else if loaded.firstIndex < 5, historyView.originalView.laterId == nil, !historyView.originalView.holeLater, let chatHistoryLocationValue = self.chatHistoryLocationValue, !chatHistoryLocationValue.isAtUpperBound, historyView.originalView.anchorIndex != .upperBound {
-                //TODO:localize
-                #if !DEBUG
                 self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .upperBound, anchorIndex: .upperBound, count: historyMessageCount), id: self.takeNextHistoryLocationId())
-                #endif
             } else if loaded.lastIndex >= historyView.filteredEntries.count - 5 && historyView.originalView.earlierId != nil {
                 self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Navigation(index: .message(firstEntry.index), anchorIndex: .message(firstEntry.index), count: historyMessageCount), id: self.takeNextHistoryLocationId())
             }
@@ -1319,8 +1251,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             case .known(0.0):
                 break
             default:
-                let locationInput = ChatHistoryLocationInput(content: .Scroll(index: .upperBound, anchorIndex: .upperBound, sourceIndex: .lowerBound, scrollPosition: .top(0.0), animated: true), id: self.takeNextHistoryLocationId())
-                self.chatHistoryLocationValue = locationInput
+                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Scroll(index: .upperBound, anchorIndex: .upperBound, sourceIndex: .lowerBound, scrollPosition: .top(0.0), animated: true), id: self.takeNextHistoryLocationId())
         }
     }
     
@@ -1512,12 +1443,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         }
                     }
                     strongSelf.loadState = loadState
-                    strongSelf.loadStateUpdated?(loadState, animated || transition.animateIn || animateIn)
+                    strongSelf.loadStateUpdated?(loadState, animated)
                 }
                 
-                if let _ = visibleRange.loadedRange {
+                if let range = visibleRange.loadedRange {
                     if let visible = visibleRange.visibleRange {
-                        let visibleFirstIndex = visible.firstIndex
+                        var visibleFirstIndex = visible.firstIndex
                         /*if !visible.firstIndexFullyVisible {
                             visibleFirstIndex += 1
                         }*/
@@ -1556,16 +1487,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 if transition.animateIn || animateIn {
                     let heightNorm = strongSelf.bounds.height - strongSelf.insets.top
                     strongSelf.forEachVisibleItemNode { itemNode in
-                        let delayFactor = itemNode.frame.minY / heightNorm
-                        let delay = Double(delayFactor * 0.1)
-                        
                         if let itemNode = itemNode as? ChatMessageItemView {
+                            let delayFactor = itemNode.frame.minY / heightNorm
+                            let delay = Double(delayFactor * 0.1)
+                            
                             itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
-                            itemNode.layer.animateScale(from: 0.94, to: 1.0, duration: 0.4, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
-                        } else if let itemNode = itemNode as? ChatUnreadItemNode {
-                            itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
-                        } else if let itemNode = itemNode as? ChatReplyCountItemNode {
-                            itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
+                            itemNode.layer.animateScale(from: 0.9, to: 1.0, duration: 0.4, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
                         }
                     }
                     strongSelf.forEachItemHeaderNode { itemNode in
@@ -1573,7 +1500,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         let delay = Double(delayFactor * 0.2)
                         
                         itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
-                        itemNode.layer.animateScale(from: 0.94, to: 1.0, duration: 0.4, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
+                        itemNode.layer.animateScale(from: 0.9, to: 1.0, duration: 0.4, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
                     }
                 }
                 
@@ -1776,7 +1703,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 switch self.mode {
                                     case .bubbles:
                                         item = ChatMessageItem(presentationData: presentationData, context: self.context, chatLocation: self.chatLocation, associatedData: associatedData, controllerInteraction: self.controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes))
-                                    case let .list(_, _, displayHeaders, hintLinks, isGlobalSearch):
+                                    case let .list(_, _, displayHeaders):
                                         let displayHeader: Bool
                                         switch displayHeaders {
                                         case .none:
@@ -1786,7 +1713,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                         case .allButLast:
                                             displayHeader = listMessageDateHeaderId(timestamp: message.timestamp) != historyView.lastHeaderId
                                         }
-                                        item = ListMessageItem(presentationData: presentationData, context: self.context, chatLocation: self.chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: self.controllerInteraction), message: message, selection: selection, displayHeader: displayHeader, hintIsLink: hintLinks, isGlobalSearchResult: isGlobalSearch)
+                                        item = ListMessageItem(theme: presentationData.theme.theme, strings: presentationData.strings, fontSize: presentationData.fontSize, dateTimeFormat: presentationData.dateTimeFormat, context: self.context, chatLocation: self.chatLocation, controllerInteraction: self.controllerInteraction, message: message, selection: selection, displayHeader: displayHeader)
                                 }
                                 let updateItem = ListViewUpdateItem(index: index, previousIndex: index, item: item, directionHint: nil)
                                 self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [updateItem], options: [.AnimateInsertion], scrollToItem: nil, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })

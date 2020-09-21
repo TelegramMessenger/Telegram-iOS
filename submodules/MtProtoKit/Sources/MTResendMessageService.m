@@ -41,7 +41,7 @@
     [mtProto requestTransportTransaction];
 }
 
-- (MTMessageTransaction *)mtProtoMessageTransaction:(MTProto *)mtProto authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector sessionInfo:(MTSessionInfo *)sessionInfo
+- (MTMessageTransaction *)mtProtoMessageTransaction:(MTProto *)mtProto
 {
     if (_currentRequestMessageId == 0 || _currentRequestTransactionId == nil)
     {
@@ -121,7 +121,7 @@
     }
 }
 
-- (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector
+- (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message
 {
     if (message.messageId == _messageId)
     {

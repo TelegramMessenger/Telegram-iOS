@@ -6,7 +6,6 @@ import SyncCore
 import SwiftSignalKit
 import Display
 import AsyncDisplayKit
-import UniversalMediaPlayer
 
 public enum ChatControllerInteractionOpenMessageMode {
     case `default`
@@ -19,8 +18,6 @@ public enum ChatControllerInteractionOpenMessageMode {
 
 public final class OpenChatMessageParams {
     public let context: AccountContext
-    public let chatLocation: ChatLocation?
-    public let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>?
     public let message: Message
     public let standalone: Bool
     public let reverseMessageGalleryOrder: Bool
@@ -39,13 +36,9 @@ public final class OpenChatMessageParams {
     public let setupTemporaryHiddenMedia: (Signal<Any?, NoError>, Int, Media) -> Void
     public let chatAvatarHiddenMedia: (Signal<MessageId?, NoError>, Media) -> Void
     public let actionInteraction: GalleryControllerActionInteraction?
-    public let playlistLocation: PeerMessagesPlaylistLocation?
-    public let gallerySource: GalleryControllerItemSource?
     
     public init(
         context: AccountContext,
-        chatLocation: ChatLocation?,
-        chatLocationContextHolder: Atomic<ChatLocationContextHolder?>?,
         message: Message,
         standalone: Bool,
         reverseMessageGalleryOrder: Bool,
@@ -63,13 +56,9 @@ public final class OpenChatMessageParams {
         sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?,
         setupTemporaryHiddenMedia: @escaping (Signal<Any?, NoError>, Int, Media) -> Void,
         chatAvatarHiddenMedia: @escaping (Signal<MessageId?, NoError>, Media) -> Void,
-        actionInteraction: GalleryControllerActionInteraction? = nil,
-        playlistLocation: PeerMessagesPlaylistLocation? = nil,
-        gallerySource: GalleryControllerItemSource? = nil
+        actionInteraction: GalleryControllerActionInteraction? = nil
     ) {
         self.context = context
-        self.chatLocation = chatLocation
-        self.chatLocationContextHolder = chatLocationContextHolder
         self.message = message
         self.standalone = standalone
         self.reverseMessageGalleryOrder = reverseMessageGalleryOrder
@@ -88,7 +77,5 @@ public final class OpenChatMessageParams {
         self.setupTemporaryHiddenMedia = setupTemporaryHiddenMedia
         self.chatAvatarHiddenMedia = chatAvatarHiddenMedia
         self.actionInteraction = actionInteraction
-        self.playlistLocation = playlistLocation
-        self.gallerySource = gallerySource
     }
 }

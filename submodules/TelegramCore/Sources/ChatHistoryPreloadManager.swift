@@ -102,8 +102,7 @@ private final class HistoryPreloadEntry: Comparable {
                 |> mapToSignal { download -> Signal<Never, NoError> in
                     switch hole.hole {
                     case let .peer(peerHole):
-                        return fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .download(download), postbox: postbox, peerId: peerHole.peerId, namespace: peerHole.namespace, direction: hole.direction, space: .everywhere, threadId: nil, count: 60)
-                        |> ignoreValues
+                        return fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .download(download), postbox: postbox, peerId: peerHole.peerId, namespace: peerHole.namespace, direction: hole.direction, space: .everywhere, count: 60)
                     }
                 }
             )

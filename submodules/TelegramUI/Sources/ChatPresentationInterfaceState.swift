@@ -6,7 +6,6 @@ import SyncCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
-import ChatInterfaceState
 
 enum ChatPresentationInputQueryKind: Int32 {
     case emoji

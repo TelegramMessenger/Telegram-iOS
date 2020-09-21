@@ -340,9 +340,9 @@ open class TabBarController: ViewController {
         }
     }
     
-    public func updateLayout(transition: ContainedViewLayoutTransition = .immediate) {
+    public func updateLayout() {
         if let layout = self.validLayout {
-            self.containerLayoutUpdated(layout, transition: transition)
+            self.containerLayoutUpdated(layout, transition: .immediate)
         }
     }
     

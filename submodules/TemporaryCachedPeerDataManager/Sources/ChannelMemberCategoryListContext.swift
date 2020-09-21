@@ -93,7 +93,7 @@ private func isParticipantMember(_ participant: ChannelParticipant, infoIsMember
 private extension CachedChannelAdminRank {
     init(participant: ChannelParticipant) {
         switch participant {
-            case let .creator(_, _, rank):
+            case let .creator(_, rank):
                 if let rank = rank {
                     self = .custom(rank)
                 } else {

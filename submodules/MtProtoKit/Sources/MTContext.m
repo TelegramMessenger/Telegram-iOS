@@ -114,34 +114,7 @@
 
 @end
 
-typedef int64_t MTDatacenterAuthInfoMapKey;
-
-typedef struct {
-    int32_t datacenterId;
-    MTDatacenterAuthInfoSelector selector;
-} MTDatacenterAuthInfoMapKeyStruct;
-
-static MTDatacenterAuthInfoMapKey authInfoMapKey(int32_t datacenterId, MTDatacenterAuthInfoSelector selector) {
-    int64_t result = (((int64_t)(selector)) << 32) | ((int64_t)(datacenterId));
-    return result;
-}
-
-static NSNumber *authInfoMapIntegerKey(int32_t datacenterId, MTDatacenterAuthInfoSelector selector) {
-    return [NSNumber numberWithLongLong:authInfoMapKey(datacenterId, selector)];
-}
-
-static MTDatacenterAuthInfoMapKeyStruct parseAuthInfoMapKey(int64_t key) {
-    MTDatacenterAuthInfoMapKeyStruct result;
-    result.datacenterId = (int32_t)(key & 0x7fffffff);
-    result.selector = (int32_t)(((key >> 32) & 0x7fffffff));
-    return result;
-}
-
-static MTDatacenterAuthInfoMapKeyStruct parseAuthInfoMapKeyInteger(NSNumber *key) {
-    return parseAuthInfoMapKey([key longLongValue]);
-}
-
-@interface MTContext () <MTDiscoverDatacenterAddressActionDelegate, MTDatacenterTransferAuthActionDelegate>
+@interface MTContext () <MTDiscoverDatacenterAddressActionDelegate, MTDatacenterAuthActionDelegate, MTDatacenterTransferAuthActionDelegate>
 {
     int64_t _uniqueId;
     
@@ -154,7 +127,7 @@ static MTDatacenterAuthInfoMapKeyStruct parseAuthInfoMapKeyInteger(NSNumber *key
     NSMutableDictionary<NSNumber *, NSMutableDictionary<MTDatacenterAddress *, MTTransportSchemeStats *> *> *_transportSchemeStats;
     MTTimer *_schemeStatsSyncTimer;
     
-    NSMutableDictionary<NSNumber *, MTDatacenterAuthInfo *> *_datacenterAuthInfoById;
+    NSMutableDictionary *_datacenterAuthInfoById;
     
     NSMutableDictionary *_datacenterPublicKeysById;
     
@@ -165,7 +138,8 @@ static MTDatacenterAuthInfoMapKeyStruct parseAuthInfoMapKeyInteger(NSNumber *key
     MTSignal *_discoverBackupAddressListSignal;
     
     NSMutableDictionary *_discoverDatacenterAddressActions;
-    NSMutableDictionary<NSNumber *, MTDatacenterAuthAction *> *_datacenterAuthActions;
+    NSMutableDictionary *_datacenterAuthActions;
+    NSMutableDictionary *_datacenterTempAuthActions;
     NSMutableDictionary *_datacenterTransferAuthActions;
     
     NSMutableDictionary<NSNumber *, NSNumber *> *_datacenterCheckKeyRemovedActionTimestamps;
@@ -227,11 +201,6 @@ static int32_t fixedTimeDifferenceValue = 0;
         _apiEnvironment = apiEnvironment;
         _isTestingEnvironment = isTestingEnvironment;
         _useTempAuthKeys = useTempAuthKeys;
-#if DEBUG
-        _tempKeyExpiration = 1 * 60 * 60;
-#else
-        _tempKeyExpiration = 1 * 60 * 60;
-#endif
         
         _datacenterSeedAddressSetById = [[NSMutableDictionary alloc] init];
         
@@ -249,6 +218,7 @@ static int32_t fixedTimeDifferenceValue = 0;
         
         _discoverDatacenterAddressActions = [[NSMutableDictionary alloc] init];
         _datacenterAuthActions = [[NSMutableDictionary alloc] init];
+        _datacenterTempAuthActions = [[NSMutableDictionary alloc] init];
         _datacenterTransferAuthActions = [[NSMutableDictionary alloc] init];
         _datacenterCheckKeyRemovedActionTimestamps = [[NSMutableDictionary alloc] init];
         _datacenterCheckKeyRemovedActions = [[NSMutableDictionary alloc] init];
@@ -288,6 +258,9 @@ static int32_t fixedTimeDifferenceValue = 0;
     NSDictionary *datacenterAuthActions = _datacenterAuthActions;
     _datacenterAuthActions = nil;
     
+    NSDictionary *datacenterTempAuthActions = _datacenterTempAuthActions;
+    _datacenterTempAuthActions = nil;
+    
     NSDictionary *discoverDatacenterAddressActions = _discoverDatacenterAddressActions;
     _discoverDatacenterAddressActions = nil;
     
@@ -311,9 +284,17 @@ static int32_t fixedTimeDifferenceValue = 0;
             [action cancel];
         }
 
-        for (NSNumber *key in datacenterAuthActions)
+        for (NSNumber *nDatacenterId in datacenterAuthActions)
         {
-            MTDatacenterAuthAction *action = datacenterAuthActions[key];
+            MTDatacenterAuthAction *action = datacenterAuthActions[nDatacenterId];
+            action.delegate = nil;
+            [action cancel];
+        }
+        
+        for (NSNumber *nDatacenterId in datacenterTempAuthActions)
+        {
+            MTDatacenterAuthAction *action = datacenterTempAuthActions[nDatacenterId];
+            action.delegate = nil;
             [action cancel];
         }
         
@@ -379,14 +360,6 @@ static int32_t fixedTimeDifferenceValue = 0;
             NSDictionary *datacenterAuthInfoById = [keychain objectForKey:@"datacenterAuthInfoById" group:@"persistent"];
             if (datacenterAuthInfoById != nil) {
                 _datacenterAuthInfoById = [[NSMutableDictionary alloc] initWithDictionary:datacenterAuthInfoById];
-#if DEBUG
-                /*NSArray<NSNumber *> *keys = [_datacenterAuthInfoById allKeys];
-                for (NSNumber *key in keys) {
-                    if (parseAuthInfoMapKeyInteger(key).selector != MTDatacenterAuthInfoSelectorPersistent) {
-                        [_datacenterAuthInfoById removeObjectForKey:key];
-                    }
-                }*/
-#endif
             }
             
             NSDictionary *datacenterPublicKeysById = [keychain objectForKey:@"datacenterPublicKeysById" group:@"ephemeral"];
@@ -609,46 +582,29 @@ static int32_t fixedTimeDifferenceValue = 0;
     }];
 }
 
-- (void)updateAuthInfoForDatacenterWithId:(NSInteger)datacenterId authInfo:(MTDatacenterAuthInfo *)authInfo selector:(MTDatacenterAuthInfoSelector)selector
+- (void)updateAuthInfoForDatacenterWithId:(NSInteger)datacenterId authInfo:(MTDatacenterAuthInfo *)authInfo
 {
     [[MTContext contextQueue] dispatchOnQueue:^
     {
         if (datacenterId != 0)
         {
-            NSNumber *infoKey = authInfoMapIntegerKey((int32_t)datacenterId, selector);
-            
-            bool wasNil = _datacenterAuthInfoById[infoKey] == nil;
+            if (MTLogEnabled()) {
+                MTLog(@"[MTContext#%x: auth info updated for %d to %@]", (int)self, datacenterId, authInfo);
+            }
             
             if (authInfo != nil) {
-                _datacenterAuthInfoById[infoKey] = authInfo;
+                _datacenterAuthInfoById[@(datacenterId)] = authInfo;
             } else {
-                if (_datacenterAuthInfoById[infoKey] == nil) {
-                    return;
-                }
-                [_datacenterAuthInfoById removeObjectForKey:infoKey];
+                [_datacenterAuthInfoById removeObjectForKey:@(datacenterId)];
             }
-            
-            if (MTLogEnabled()) {
-                MTLog(@"[MTContext#%x: auth info updated for %d selector %d to %@]", (int)self, datacenterId, selector, authInfo);
-            }
-            
             [_keychain setObject:_datacenterAuthInfoById forKey:@"datacenterAuthInfoById" group:@"persistent"];
             
             NSArray *currentListeners = [[NSArray alloc] initWithArray:_changeListeners];
             
             for (id<MTContextChangeListener> listener in currentListeners)
             {
-                if ([listener respondsToSelector:@selector(contextDatacenterAuthInfoUpdated:datacenterId:authInfo:selector:)])
-                    [listener contextDatacenterAuthInfoUpdated:self datacenterId:datacenterId authInfo:authInfo selector:selector];
-            }
-            
-            if (wasNil && authInfo != nil && selector == MTDatacenterAuthInfoSelectorPersistent) {
-                for (NSNumber *key in _datacenterAuthActions) {
-                    MTDatacenterAuthInfoMapKeyStruct parsedKey = parseAuthInfoMapKeyInteger(key);
-                    if (parsedKey.datacenterId == datacenterId && parsedKey.selector != MTDatacenterAuthInfoSelectorPersistent) {
-                        [_datacenterAuthActions[key] execute:self datacenterId:datacenterId];
-                    }
-                }
+                if ([listener respondsToSelector:@selector(contextDatacenterAuthInfoUpdated:datacenterId:authInfo:)])
+                    [listener contextDatacenterAuthInfoUpdated:self datacenterId:datacenterId authInfo:authInfo];
             }
         }
     }];
@@ -908,11 +864,10 @@ static int32_t fixedTimeDifferenceValue = 0;
     return results;
 }
 
-- (MTDatacenterAuthInfo *)authInfoForDatacenterWithId:(NSInteger)datacenterId selector:(MTDatacenterAuthInfoSelector)selector {
+- (MTDatacenterAuthInfo *)authInfoForDatacenterWithId:(NSInteger)datacenterId {
     __block MTDatacenterAuthInfo *result = nil;
     [[MTContext contextQueue] dispatchOnQueue:^{
-        NSNumber *infoKey = authInfoMapIntegerKey((int32_t)datacenterId, selector);
-        result = _datacenterAuthInfoById[infoKey];
+        result = _datacenterAuthInfoById[@(datacenterId)];
     } synchronous:true];
     
     return result;
@@ -1296,44 +1251,48 @@ static int32_t fixedTimeDifferenceValue = 0;
     }];
 }
 
-- (void)authInfoForDatacenterWithIdRequired:(NSInteger)datacenterId isCdn:(bool)isCdn selector:(MTDatacenterAuthInfoSelector)selector
+- (void)authInfoForDatacenterWithIdRequired:(NSInteger)datacenterId isCdn:(bool)isCdn
 {
     [[MTContext contextQueue] dispatchOnQueue:^
     {
-        NSNumber *infoKey = authInfoMapIntegerKey((int32_t)datacenterId, selector);
-        
-        if (_datacenterAuthActions[infoKey] == nil)
+        if (_datacenterAuthActions[@(datacenterId)] == nil)
         {
-            __weak MTContext *weakSelf = self;
-            MTDatacenterAuthAction *authAction = [[MTDatacenterAuthAction alloc] initWithAuthKeyInfoSelector:selector isCdn:isCdn completion:^(MTDatacenterAuthAction *action, __unused bool success) {
-                [[MTContext contextQueue] dispatchOnQueue:^{
-                    __strong MTContext *strongSelf = weakSelf;
-                    if (strongSelf == nil) {
-                        return;
-                    }
+            MTDatacenterAuthAction *authAction = [[MTDatacenterAuthAction alloc] initWithTempAuth:false tempAuthKeyType:MTDatacenterAuthTempKeyTypeMain bindKey:nil];
+            authAction.delegate = self;
+            _datacenterAuthActions[@(datacenterId)] = authAction;
+            [authAction execute:self datacenterId:datacenterId isCdn:isCdn];
+        }
+    }];
+}
+
+- (void)tempAuthKeyForDatacenterWithIdRequired:(NSInteger)datacenterId keyType:(MTDatacenterAuthTempKeyType)keyType {
+    [[MTContext contextQueue] dispatchOnQueue:^{
+        if (_datacenterTempAuthActions[@(datacenterId)] == nil) {
+            MTDatacenterAuthAction *authAction = [[MTDatacenterAuthAction alloc] initWithTempAuth:true tempAuthKeyType:keyType bindKey:nil];
+            authAction.delegate = self;
+            _datacenterTempAuthActions[@(datacenterId)] = authAction;
+            [authAction execute:self datacenterId:datacenterId isCdn:false];
+        }
+    }];
+}
+
+- (void)datacenterAuthActionCompleted:(MTDatacenterAuthAction *)action
+{
+    [[MTContext contextQueue] dispatchOnQueue:^
+    {
+        if (action.tempAuth) {
+            for (NSNumber *nDatacenterId in _datacenterTempAuthActions) {
+                if (_datacenterTempAuthActions[nDatacenterId] == action) {
+                    [_datacenterTempAuthActions removeObjectForKey:nDatacenterId];
                     
-                    for (NSNumber *key in _datacenterAuthActions) {
-                        if (_datacenterAuthActions[key] == action) {
-                            [_datacenterAuthActions removeObjectForKey:key];
-                            break;
-                        }
-                    }
-                }];
-            }];
-            _datacenterAuthActions[infoKey] = authAction;
-            
-            switch (selector) {
-                case MTDatacenterAuthInfoSelectorEphemeralMain:
-                case MTDatacenterAuthInfoSelectorEphemeralMedia: {
-                    if ([self authInfoForDatacenterWithId:datacenterId selector:MTDatacenterAuthInfoSelectorPersistent] == nil) {
-                        [self authInfoForDatacenterWithIdRequired:datacenterId isCdn:false selector:MTDatacenterAuthInfoSelectorPersistent];
-                    } else {
-                        [authAction execute:self datacenterId:datacenterId];
-                    }
                     break;
                 }
-                default: {
-                    [authAction execute:self datacenterId:datacenterId];
+            }
+        } else {
+            for (NSNumber *nDatacenterId in _datacenterAuthActions) {
+                if (_datacenterAuthActions[nDatacenterId] == action) {
+                    [_datacenterAuthActions removeObjectForKey:nDatacenterId];
+                    
                     break;
                 }
             }
@@ -1398,11 +1357,21 @@ static int32_t fixedTimeDifferenceValue = 0;
 
 - (void)updatePeriodicTasks
 {
+    [[MTContext contextQueue] dispatchOnQueue:^
+    {
+        int64_t saltsRequiredAtLeastUntilMessageId = (int64_t)(([self globalTime] + 24 * 60.0 * 60.0) * 4294967296);
+        
+        [_datacenterAuthInfoById enumerateKeysAndObjectsUsingBlock:^(NSNumber *nDatacenterId, MTDatacenterAuthInfo *authInfo, __unused BOOL *stop)
+        {
+            if ([authInfo authSaltForMessageId:saltsRequiredAtLeastUntilMessageId == 0]) {
+            }
+        }];
+    }];
 }
 
 - (void)checkIfLoggedOut:(NSInteger)datacenterId {
     [[MTContext contextQueue] dispatchOnQueue:^{
-        MTDatacenterAuthInfo *authInfo = [self authInfoForDatacenterWithId:datacenterId selector:MTDatacenterAuthInfoSelectorPersistent];
+        MTDatacenterAuthInfo *authInfo = [self authInfoForDatacenterWithId:datacenterId];
         if (authInfo == nil || authInfo.authKey == nil) {
             return;
         }
@@ -1413,7 +1382,7 @@ static int32_t fixedTimeDifferenceValue = 0;
             _datacenterCheckKeyRemovedActionTimestamps[@(datacenterId)] = currentTimestamp;
             [_datacenterCheckKeyRemovedActions[@(datacenterId)] dispose];
             __weak MTContext *weakSelf = self;
-            _datacenterCheckKeyRemovedActions[@(datacenterId)] = [[MTDiscoverConnectionSignals checkIfAuthKeyRemovedWithContext:self datacenterId:datacenterId authKey:[[MTDatacenterAuthKey alloc] initWithAuthKey:authInfo.authKey authKeyId:authInfo.authKeyId notBound:false]] startWithNext:^(NSNumber* isRemoved) {
+            _datacenterCheckKeyRemovedActions[@(datacenterId)] = [[MTDiscoverConnectionSignals checkIfAuthKeyRemovedWithContext:self datacenterId:datacenterId authKey:authInfo.authKey] startWithNext:^(NSNumber *isRemoved) {
                 [[MTContext contextQueue] dispatchOnQueue:^{
                     __strong MTContext *strongSelf = weakSelf;
                     if (strongSelf == nil) {

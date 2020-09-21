@@ -6,7 +6,6 @@ import Postbox
 import Display
 import AccountContext
 import Emoji
-import ChatInterfaceState
 
 struct PossibleContextQueryTypes: OptionSet {
     var rawValue: Int32

@@ -72,30 +72,30 @@ public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, 
         if result {
             return postbox.transaction { transaction in
                 if let channelId = channelId {
-                    var previousGroupId: CachedChannelData.LinkedDiscussionPeerId?
+                    var previousGroupId: PeerId?
                     transaction.updatePeerCachedData(peerIds: Set([channelId]), update: { (_, current) -> CachedPeerData? in
                         let current: CachedChannelData = current as? CachedChannelData ?? CachedChannelData()
                         previousGroupId = current.linkedDiscussionPeerId
-                        return current.withUpdatedLinkedDiscussionPeerId(.known(groupId))
+                        return current.withUpdatedLinkedDiscussionPeerId(groupId)
                     })
-                    if case let .known(maybeValue)? = previousGroupId, let value = maybeValue, value != groupId {
-                        transaction.updatePeerCachedData(peerIds: Set([value]), update: { (_, current) -> CachedPeerData? in
+                    if let previousGroupId = previousGroupId, previousGroupId != groupId {
+                        transaction.updatePeerCachedData(peerIds: Set([previousGroupId]), update: { (_, current) -> CachedPeerData? in
                             let cachedData = (current as? CachedChannelData ?? CachedChannelData())
-                            return cachedData.withUpdatedLinkedDiscussionPeerId(.known(nil))
+                            return cachedData.withUpdatedLinkedDiscussionPeerId(nil)
                         })
                     }
                 }
                 if let groupId = groupId {
-                    var previousChannelId: CachedChannelData.LinkedDiscussionPeerId?
+                    var previousChannelId: PeerId?
                     transaction.updatePeerCachedData(peerIds: Set([groupId]), update: { (_, current) -> CachedPeerData? in
                         let current: CachedChannelData = current as? CachedChannelData ?? CachedChannelData()
                         previousChannelId = current.linkedDiscussionPeerId
-                        return current.withUpdatedLinkedDiscussionPeerId(.known(channelId))
+                        return current.withUpdatedLinkedDiscussionPeerId(channelId)
                     })
-                    if case let .known(maybeValue)? = previousChannelId, let value = maybeValue, value != channelId {
-                        transaction.updatePeerCachedData(peerIds: Set([value]), update: { (_, current) -> CachedPeerData? in
+                    if let previousChannelId = previousChannelId, previousChannelId != channelId {
+                        transaction.updatePeerCachedData(peerIds: Set([previousChannelId]), update: { (_, current) -> CachedPeerData? in
                             let cachedData = (current as? CachedChannelData ?? CachedChannelData())
-                            return cachedData.withUpdatedLinkedDiscussionPeerId(.known(nil))
+                            return cachedData.withUpdatedLinkedDiscussionPeerId(nil)
                         })
                     }
                 }

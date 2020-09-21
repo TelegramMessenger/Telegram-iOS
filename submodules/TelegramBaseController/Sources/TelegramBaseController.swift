@@ -28,7 +28,7 @@ public enum LocationBroadcastPanelSource {
 private func presentLiveLocationController(context: AccountContext, peerId: PeerId, controller: ViewController) {
     let presentImpl: (Message?) -> Void = { [weak controller] message in
         if let message = message, let strongController = controller {
-            let _ = context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatLocationContextHolder: nil, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, modal: true, dismissInput: {
+            let _ = context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: strongController.navigationController as? NavigationController, modal: true, dismissInput: {
                 controller?.view.endEditing(true)
             }, present: { c, a in
                 controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
@@ -557,7 +557,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     }
                     if let id = state.id as? PeerMessagesMediaPlaylistItemId {
                         if type == .music {
-                            let signal = strongSelf.context.sharedContext.messageFromPreloadedChatHistoryViewForLocation(id: id.messageId, location: ChatHistoryLocationInput(content: .InitialSearch(location: .id(id.messageId), count: 60), id: 0), context: strongSelf.context, chatLocation: .peer(id.messageId.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), tagMask: MessageTags.music)
+                            let signal = strongSelf.context.sharedContext.messageFromPreloadedChatHistoryViewForLocation(id: id.messageId, location: ChatHistoryLocationInput(content: .InitialSearch(location: .id(id.messageId), count: 60), id: 0), account: account, chatLocation: .peer(id.messageId.peerId), tagMask: MessageTags.music)
                             
                             var cancelImpl: (() -> Void)?
                             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
@@ -594,7 +594,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                                     } else {
                                         controllerContext = strongSelf.context.sharedContext.makeTempAccountContext(account: account)
                                     }
-                                    let controller = strongSelf.context.sharedContext.makeOverlayAudioPlayerController(context: controllerContext, peerId: id.messageId.peerId, type: type, initialMessageId: id.messageId, initialOrder: order, isGlobalSearch: false, parentNavigationController: strongSelf.navigationController as? NavigationController)
+                                    let controller = strongSelf.context.sharedContext.makeOverlayAudioPlayerController(context: controllerContext, peerId: id.messageId.peerId, type: type, initialMessageId: id.messageId, initialOrder: order, parentNavigationController: strongSelf.navigationController as? NavigationController)
                                     strongSelf.displayNode.view.window?.endEditing(true)
                                     strongSelf.present(controller, in: .window(.root))
                                 } else if index.1 {

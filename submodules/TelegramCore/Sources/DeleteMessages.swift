@@ -23,7 +23,7 @@ func addMessageMediaResourceIdsToRemove(message: Message, resourceIds: inout [Wr
     }
 }
 
-public func deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [MessageId], deleteMedia: Bool = true, manualAddMessageThreadStatsDifference: ((MessageId, Int, Int) -> Void)? = nil) {
+public func deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [MessageId], deleteMedia: Bool = true) {
     var resourceIds: [WrappedMediaResourceId] = []
     if deleteMedia {
         for id in ids {
@@ -36,22 +36,6 @@ public func deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [M
     }
     if !resourceIds.isEmpty {
         let _ = mediaBox.removeCachedResources(Set(resourceIds)).start()
-    }
-    for id in ids {
-        if id.peerId.namespace == Namespaces.Peer.CloudChannel && id.namespace == Namespaces.Message.Cloud {
-            if let message = transaction.getMessage(id) {
-                if let threadId = message.threadId {
-                    let messageThreadId = makeThreadIdMessageId(peerId: message.id.peerId, threadId: threadId)
-                    if id.peerId.namespace == Namespaces.Peer.CloudChannel {
-                        if let manualAddMessageThreadStatsDifference = manualAddMessageThreadStatsDifference {
-                            manualAddMessageThreadStatsDifference(messageThreadId, 0, 1)
-                        } else {
-                            updateMessageThreadStats(transaction: transaction, threadMessageId: messageThreadId, difference: -1, addedMessagePeers: [])
-                        }
-                    }
-                }
-            }
-        }
     }
     transaction.deleteMessages(ids, forEachMedia: { _ in
     })

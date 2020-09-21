@@ -13,7 +13,6 @@ import PhotoResources
 import TelegramStringFormatting
 import RadialStatusNode
 import SemanticStatusNode
-import FileMediaResourceStatus
 
 private struct FetchControls {
     let fetch: () -> Void
@@ -260,15 +259,15 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         |> map { resourceStatus, actualFetchStatus -> (FileMediaResourceStatus, MediaResourceStatus?) in
                             return (resourceStatus, actualFetchStatus)
                         }
-                        updatedAudioLevelEventsSignal = messageFileMediaPlaybackAudioLevelEvents(context: context, file: file, message: message, isRecentActions: isRecentActions, isGlobalSearch: false)
+                        updatedAudioLevelEventsSignal = messageFileMediaPlaybackAudioLevelEvents(context: context, file: file, message: message, isRecentActions: isRecentActions)
                     } else {
                         updatedStatusSignal = messageFileMediaResourceStatus(context: context, file: file, message: message, isRecentActions: isRecentActions)
                         |> map { resourceStatus -> (FileMediaResourceStatus, MediaResourceStatus?) in
                             return (resourceStatus, nil)
                         }
-                        updatedAudioLevelEventsSignal = messageFileMediaPlaybackAudioLevelEvents(context: context, file: file, message: message, isRecentActions: isRecentActions, isGlobalSearch: false)
+                        updatedAudioLevelEventsSignal = messageFileMediaPlaybackAudioLevelEvents(context: context, file: file, message: message, isRecentActions: isRecentActions)
                     }
-                    updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: context, file: file, message: message, isRecentActions: isRecentActions, isGlobalSearch: false)
+                    updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: context, file: file, message: message, isRecentActions: isRecentActions)
                 }
                 
                 var statusSize: CGSize?
@@ -294,16 +293,11 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         edited = true
                     }
                     var viewCount: Int?
-                    var dateReplies = 0
                     for attribute in message.attributes {
                         if let attribute = attribute as? EditedMessageAttribute {
                             edited = !attribute.isHidden
                         } else if let attribute = attribute as? ViewCountMessageAttribute {
                             viewCount = attribute.count
-                        } else if let attribute = attribute as? ReplyThreadMessageAttribute {
-                            if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
-                                dateReplies = Int(attribute.count)
-                            }
                         }
                     }
                     
@@ -322,7 +316,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     
                     let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings, reactionCount: dateReactionCount)
                     
-                    let (size, apply) = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, constrainedSize, dateReactions, dateReplies)
+                    let (size, apply) = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, constrainedSize, dateReactions)
                     statusSize = size
                     statusApply = apply
                 }

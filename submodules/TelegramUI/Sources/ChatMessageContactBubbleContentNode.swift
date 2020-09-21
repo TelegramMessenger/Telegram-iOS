@@ -146,16 +146,11 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     edited = true
                 }
                 var viewCount: Int?
-                var dateReplies = 0
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
                         edited = !attribute.isHidden
                     } else if let attribute = attribute as? ViewCountMessageAttribute {
                         viewCount = attribute.count
-                    } else if let attribute = attribute as? ReplyThreadMessageAttribute {
-                        if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
-                            dateReplies = Int(attribute.count)
-                        }
                     }
                 }
                 
@@ -176,7 +171,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let statusType: ChatMessageDateAndStatusType?
                 switch position {
-                    case .linear(_, .None), .linear(_, .Neighbour(true, _)):
+                    case .linear(_, .None):
                         if item.message.effectivelyIncoming(item.context.account.peerId) {
                             statusType = .BubbleIncoming
                         } else {
@@ -196,7 +191,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 var statusApply: ((Bool) -> Void)?
                 
                 if let statusType = statusType {
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: constrainedSize.width, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies)
+                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: constrainedSize.width, height: CGFloat.greatestFiniteMagnitude), dateReactions)
                     statusSize = size
                     statusApply = apply
                 }

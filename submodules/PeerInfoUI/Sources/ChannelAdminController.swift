@@ -487,8 +487,6 @@ private func stringForRight(strings: PresentationStrings, right: TelegramChatAdm
         return strings.Channel_EditAdmin_PermissionPinMessages
     } else if right.contains(.canAddAdmins) {
         return strings.Channel_EditAdmin_PermissionAddAdmins
-    } else if right.contains(.canBeAnonymous) {
-        return strings.Channel_AdminLog_CanBeAnonymous
     } else {
         return ""
     }
@@ -510,8 +508,6 @@ private func rightDependencies(_ right: TelegramChatAdminRightsFlags) -> [Telegr
     } else if right.contains(.canPinMessages) {
         return []
     } else if right.contains(.canAddAdmins) {
-        return []
-    } else if right.contains(.canBeAnonymous) {
         return []
     } else {
         return []
@@ -611,43 +607,11 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                     .canBanUsers,
                     .canInviteUsers,
                     .canPinMessages,
-                    .canBeAnonymous,
                     .canAddAdmins
                 ]
         }
         
         if isCreator {
-            if isGroup {
-                entries.append(.rightsTitle(presentationData.theme, presentationData.strings.Channel_EditAdmin_PermissionsHeader))
-                
-                let accountUserRightsFlags: TelegramChatAdminRightsFlags
-                if channel.flags.contains(.isCreator) {
-                    accountUserRightsFlags = maskRightsFlags
-                } else if let adminRights = channel.adminRights {
-                    accountUserRightsFlags = maskRightsFlags.intersection(adminRights.flags)
-                } else {
-                    accountUserRightsFlags = []
-                }
-                
-                let currentRightsFlags: TelegramChatAdminRightsFlags
-                if let updatedFlags = state.updatedFlags {
-                    currentRightsFlags = updatedFlags
-                } else if let initialParticipant = initialParticipant, case let .member(_, _, maybeAdminRights, _, _) = initialParticipant, let adminRights = maybeAdminRights {
-                    currentRightsFlags = adminRights.rights.flags
-                } else if let initialParticipant = initialParticipant, case let .creator(_, maybeAdminRights, _) = initialParticipant, let adminRights = maybeAdminRights {
-                    currentRightsFlags = adminRights.rights.flags
-                } else {
-                    currentRightsFlags = accountUserRightsFlags.subtracting(.canAddAdmins).subtracting(.canBeAnonymous)
-                }
-                
-                var index = 0
-                for right in rightsOrder {
-                    if accountUserRightsFlags.contains(right) {
-                        entries.append(.rightItem(presentationData.theme, index, stringForRight(strings: presentationData.strings, right: right, isGroup: isGroup, defaultBannedRights: channel.defaultBannedRights), right, currentRightsFlags, currentRightsFlags.contains(right), right == .canBeAnonymous))
-                        index += 1
-                    }
-                }
-            }
         } else {
             entries.append(.rightsTitle(presentationData.theme, presentationData.strings.Channel_EditAdmin_PermissionsHeader))
         
@@ -667,7 +631,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 } else if let initialParticipant = initialParticipant, case let .member(_, _, maybeAdminRights, _, _) = initialParticipant, let adminRights = maybeAdminRights {
                     currentRightsFlags = adminRights.rights.flags
                 } else {
-                    currentRightsFlags = accountUserRightsFlags.subtracting(.canAddAdmins).subtracting(.canBeAnonymous)
+                    currentRightsFlags = accountUserRightsFlags.subtracting(.canAddAdmins)
                 }
                 
                 var index = 0
@@ -767,7 +731,6 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                     .canBanUsers,
                     .canInviteUsers,
                     .canPinMessages,
-                    .canBeAnonymous,
                     .canAddAdmins
                 ]
         

@@ -896,7 +896,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                 } else {
                     if cachedChannelData.flags.contains(.canChangeUsername) {
                         entries.append(GroupInfoEntry.groupTypeSetup(presentationData.theme, presentationData.strings.GroupInfo_GroupType, isPublic ? presentationData.strings.Channel_Setup_TypePublic : presentationData.strings.Channel_Setup_TypePrivate))
-                        if case let .known(maybeLinkedDiscussionPeerId) = cachedChannelData.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = view.peers[linkedDiscussionPeerId] {
+                        if let linkedDiscussionPeerId = cachedChannelData.linkedDiscussionPeerId, let peer = view.peers[linkedDiscussionPeerId] {
                             let peerTitle: String
                             if let addressName = peer.addressName, !addressName.isEmpty {
                                 peerTitle = "@\(addressName)"
@@ -1069,7 +1069,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                 let participant: ChannelParticipant
                 switch sortedParticipants[i] {
                     case .creator:
-                        participant = .creator(id: sortedParticipants[i].peerId, adminInfo: nil, rank: nil)
+                        participant = .creator(id: sortedParticipants[i].peerId, rank: nil)
                         memberStatus = .owner(rank: nil)
                     case .admin:
                         participant = .member(id: sortedParticipants[i].peerId, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: account.peerId, canBeEditedByAccountPeer: true), banInfo: nil, rank: nil)
@@ -1201,7 +1201,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             let participant = participants[i]
             let memberStatus: GroupInfoMemberStatus
             switch participant.participant {
-                case let .creator(_, _, rank):
+                case let .creator(_, rank):
                     memberStatus = .owner(rank: rank)
                 case let .member(_, _, adminInfo, _, rank):
                     if adminInfo != nil {

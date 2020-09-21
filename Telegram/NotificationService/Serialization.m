@@ -3,7 +3,7 @@
 @implementation Serialization
 
 - (NSUInteger)currentLayer {
-    return 119;
+    return 118;
 }
 
 - (id _Nullable)parseMessage:(NSData * _Nullable)data {

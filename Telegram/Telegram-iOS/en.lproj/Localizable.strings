@@ -2607,7 +2607,6 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.CanInviteUsers" = "Add Users";
 "Channel.AdminLog.CanPinMessages" = "Pin Messages";
 "Channel.AdminLog.CanAddAdmins" = "Add New Admins";
-"Channel.AdminLog.CanBeAnonymous" = "Remain Anonymous";
 "Channel.AdminLog.CanEditMessages" = "Edit Messages";
 
 "Channel.AdminLog.MessageToggleInvitesOn" = "%@ enabled group invites";
@@ -5742,31 +5741,3 @@ Any member of this group will be able to see messages in the channel.";
 "AccessDenied.VideoCallCamera" = "Telegram needs access to your camera to make video calls.\n\nPlease go to Settings > Privacy > Camera and set Telegram to ON.";
 
 "Call.AccountIsLoggedOnCurrentDevice" = "Sorry, you can't call %@ because that account is logged in to Telegram on the device you're using for the call.";
-
-"ChatList.Search.FilterMedia" = "Media";
-"ChatList.Search.FilterLinks" = "Links";
-"ChatList.Search.FilterFiles" = "Files";
-"ChatList.Search.FilterMusic" = "Music";
-"ChatList.Search.FilterVoice" = "Voice";
-
-"ChatList.Search.NoResults" = "No Results";
-"ChatList.Search.NoResultsQueryDescription" = "There were no results for \"%@\".\nTry a new search.";
-"ChatList.Search.NoResultsDescription" = "There were no results.\nTry a new search.";
-
-"ChatList.Search.NoResultsFilter" = "Nothing Yet";
-"ChatList.Search.NoResultsFitlerMedia" = "Photos and videos from all your chats will be shown here.";
-"ChatList.Search.NoResultsFitlerLinks" = "Links from all your chats will be shown here.";
-"ChatList.Search.NoResultsFitlerFiles" = "Files from all your chats will be shown here.";
-"ChatList.Search.NoResultsFitlerMusic" = "Music from all your chats will be shown here.";
-"ChatList.Search.NoResultsFitlerVoice" = "Voice and video messages from all your chats will be shown here.";
-
-"ChatList.Search.Messages_0" = "%@ messages";
-"ChatList.Search.Messages_1" = "%@ message";
-"ChatList.Search.Messages_2" = "%@ messages";
-"ChatList.Search.Messages_3_10" = "%@ messages";
-"ChatList.Search.Messages_many" = "%@ messages";
-"ChatList.Search.Messages_any" = "%@ messages";
-
-"Conversation.InputTextAnonymousPlaceholder" = "Send anonymously";
-
-"DialogList.Replies" = "Replies";

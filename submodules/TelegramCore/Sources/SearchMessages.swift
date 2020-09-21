@@ -7,9 +7,9 @@ import MtProtoKit
 import SyncCore
 
 public enum SearchMessagesLocation: Equatable {
-    case general(tags: MessageTags?, minDate: Int32?, maxDate: Int32?)
+    case general(tags: MessageTags?)
     case group(PeerGroupId)
-    case peer(peerId: PeerId, fromId: PeerId?, tags: MessageTags?, topMsgId: MessageId?, minDate: Int32?, maxDate: Int32?)
+    case peer(peerId: PeerId, fromId: PeerId?, tags: MessageTags?)
     case publicForwards(messageId: MessageId, datacenterId: Int?)
 }
 
@@ -47,13 +47,6 @@ public struct SearchMessagesResult {
     public let readStates: [PeerId: CombinedPeerReadState]
     public let totalCount: Int32
     public let completed: Bool
-    
-    public init(messages: [Message], readStates: [PeerId: CombinedPeerReadState], totalCount: Int32, completed: Bool) {
-        self.messages = messages
-        self.readStates = readStates
-        self.totalCount = totalCount
-        self.completed = completed
-    }
 }
 
 public struct SearchMessagesState: Equatable {
@@ -187,7 +180,7 @@ private func mergedResult(_ state: SearchMessagesState) -> SearchMessagesResult 
 public func searchMessages(account: Account, location: SearchMessagesLocation, query: String, state: SearchMessagesState?, limit: Int32 = 100) -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> {
     let remoteSearchResult: Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError>
     switch location {
-        case let .peer(peerId, fromId, tags, topMsgId, minDate, maxDate):
+        case let .peer(peerId, fromId, tags):
             if peerId.namespace == Namespaces.Peer.SecretChat {
                 return account.postbox.transaction { transaction -> (SearchMessagesResult, SearchMessagesState) in
                     var readStates: [PeerId: CombinedPeerReadState] = [:]
@@ -229,15 +222,12 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                         flags |= (1 << 0)
                     }
                 }
-                if let _ = topMsgId {
-                    flags |= (1 << 1)
-                }
                 let peerMessages: Signal<Api.messages.Messages?, NoError>
                 if let completed = state?.main.completed, completed {
                     peerMessages = .single(nil)
                 } else {
                     let lowerBound = state?.main.messages.last.flatMap({ $0.index })
-                    peerMessages =  account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, topMsgId: topMsgId?.id, filter: filter, minDate: minDate ?? 0, maxDate: maxDate ?? (Int32.max - 1), offsetId: lowerBound?.id.id ?? 0, addOffset: 0, limit: limit, maxId: Int32.max - 1, minId: 0, hash: 0))
+                    peerMessages =  account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, filter: filter, minDate: 0, maxDate: Int32.max - 1, offsetId: lowerBound?.id.id ?? 0, addOffset: 0, limit: limit, maxId: Int32.max - 1, minId: 0, hash: 0))
                     |> map(Optional.init)
                     |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
                         return .single(nil)
@@ -251,7 +241,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                         additionalPeerMessages = .single(nil)
                     } else if mainCompleted || !hasAdditional {
                         let lowerBound = state?.additional?.messages.last.flatMap({ $0.index })
-                        additionalPeerMessages = account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, topMsgId: topMsgId?.id, filter: filter, minDate: minDate ?? 0, maxDate: maxDate ?? (Int32.max - 1), offsetId: lowerBound?.id.id ?? 0, addOffset: 0, limit: limit, maxId: Int32.max - 1, minId: 0, hash: 0))
+                        additionalPeerMessages = account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, filter: filter, minDate: 0, maxDate: Int32.max - 1, offsetId: lowerBound?.id.id ?? 0, addOffset: 0, limit: limit, maxId: Int32.max - 1, minId: 0, hash: 0))
                         |> map(Optional.init)
                         |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
                             return .single(nil)
@@ -266,7 +256,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
             }
         case .group:
             remoteSearchResult = .single((nil, nil))
-        case let .general(tags, minDate, maxDate):
+        case let .general(tags):
             let filter: Api.MessagesFilter = tags.flatMap { messageFilterForTagMask($0) } ?? .inputMessagesFilterEmpty
             remoteSearchResult = account.postbox.transaction { transaction -> (Int32, MessageIndex?, Api.InputPeer) in
                 var lowerBound: MessageIndex?
@@ -280,7 +270,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 } 
             }
             |> mapToSignal { (nextRate, lowerBound, inputPeer) in
-                return account.network.request(Api.functions.messages.searchGlobal(flags: 0, folderId: nil, q: query, filter: filter, minDate: minDate ?? 0, maxDate: maxDate ?? (Int32.max - 1), offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit), automaticFloodWait: false)
+                return account.network.request(Api.functions.messages.searchGlobal(flags: 0, folderId: nil, q: query, offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit), automaticFloodWait: false)
                 |> map { result -> (Api.messages.Messages?, Api.messages.Messages?) in
                     return (result, nil)
                 }
@@ -303,12 +293,13 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                     return (inputChannel, 0, lowerBound, .inputPeerEmpty)
                 }
             }
-            |> mapToSignal { (inputChannel, nextRate, lowerBound, inputPeer) in
+            |> mapToSignal { (inputChannel, nextRate, lowerBound, inputPeer) -> Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError> in
                 guard let inputChannel = inputChannel else {
                     return .complete()
                 }
+                return .single((nil, nil))
                 
-                let request = Api.functions.stats.getMessagePublicForwards(channel: inputChannel, msgId: messageId.id, offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit)
+                /*let request = Api.functions.stats.getMessagePublicForwards(channel: inputChannel, msgId: messageId.id, offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit)
                 let signal: Signal<Api.messages.Messages, MTRpcError>
                 if let datacenterId = datacenterId, account.network.datacenterId != datacenterId {
                     signal = account.network.download(datacenterId: datacenterId, isMedia: false, tag: nil)
@@ -325,7 +316,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 }
                 |> `catch` { _ -> Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError> in
                     return .single((nil, nil))
-                }
+                }*/
         }
     }
     
@@ -333,7 +324,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
     |> mapToSignal { result, additionalResult -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> in
         return account.postbox.transaction { transaction -> (SearchMessagesResult, SearchMessagesState) in
             var additional: SearchMessagesPeerState? = mergedState(transaction: transaction, state: state?.additional, result: additionalResult)
-            if state?.additional == nil, case let .general(tags, _, _) = location {
+            if state?.additional == nil, case let .general(tags) = location {
                 let secretMessages = transaction.searchMessages(peerId: nil, query: query, tags: tags)
                 var readStates: [PeerId: CombinedPeerReadState] = [:]
                 for message in secretMessages {

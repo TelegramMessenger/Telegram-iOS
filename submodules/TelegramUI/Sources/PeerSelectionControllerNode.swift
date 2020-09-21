@@ -223,9 +223,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 if let requestOpenMessageFromSearch = self?.requestOpenMessageFromSearch {
                     requestOpenMessageFromSearch(peer, messageId)
                 }
-            }, addContact: nil, peerContextAction: nil, present: { _, _ in
-            }, presentInGlobalOverlay: { _, _ in
-            }, navigationController: nil), cancel: { [weak self] in
+            }, addContact: nil, peerContextAction: nil, present: { _ in
+            }), cancel: { [weak self] in
                 if let requestDeactivateSearch = self?.requestDeactivateSearch {
                     requestDeactivateSearch()
                 }

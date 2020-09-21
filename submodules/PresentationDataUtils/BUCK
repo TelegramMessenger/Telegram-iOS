@@ -14,7 +14,6 @@ static_library(
     	"//submodules/ItemListUI:ItemListUI",
     	"//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/OverlayStatusController:OverlayStatusController",
-        "//submodules/UrlWhitelist:UrlWhitelist",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

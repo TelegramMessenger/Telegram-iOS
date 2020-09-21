@@ -222,7 +222,7 @@ typedef enum {
     }
 }
 
-- (MTMessageTransaction *)mtProtoMessageTransaction:(MTProto *)mtProto authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector sessionInfo:(MTSessionInfo *)sessionInfo
+- (MTMessageTransaction *)mtProtoMessageTransaction:(MTProto *)mtProto
 {
     if (_currentStageTransactionId == nil)
     {
@@ -308,7 +308,7 @@ typedef enum {
     return nil;
 }
 
-- (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector
+- (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message
 {
     if (_stage == MTDatacenterAuthStagePQ && [message.body isKindOfClass:[MTResPqMessage class]])
     {
@@ -389,7 +389,7 @@ typedef enum {
                     [innerDataBuffer appendBytes:_nonce.bytes length:_nonce.length];
                     [innerDataBuffer appendBytes:_serverNonce.bytes length:_serverNonce.length];
                     [innerDataBuffer appendBytes:_newNonce.bytes length:_newNonce.length];
-                    [innerDataBuffer appendInt32:mtProto.context.tempKeyExpiration];
+                    [innerDataBuffer appendInt32:60 * 60 * 32];
                     
                     NSData *innerDataBytes = innerDataBuffer.data;
                     

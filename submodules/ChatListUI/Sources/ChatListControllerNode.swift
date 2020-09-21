@@ -200,7 +200,7 @@ private final class ChatListShimmerNode: ASDisplayNode {
             }, present: { _ in })
             
             let items = (0 ..< 2).map { _ -> ChatListItem in
-                return ChatListItem(presentationData: chatListPresentationData, context: context, peerGroupId: .root, filterData: nil, index: ChatListIndex(pinningIndex: 0, messageIndex: MessageIndex(id: MessageId(peerId: peer1.id, namespace: 0, id: 0), timestamp: timestamp1)), content: .peer(messages: [Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer1.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: timestamp1, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer1, text: "Text", attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])], peer: RenderedPeer(peer: peer1), combinedReadState: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, PeerReadState.idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: 0, markedUnread: false))]), isRemovedFromTotalUnreadCount: false, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, promoInfo: nil, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
+                return ChatListItem(presentationData: chatListPresentationData, context: context, peerGroupId: .root, filterData: nil, index: ChatListIndex(pinningIndex: 0, messageIndex: MessageIndex(id: MessageId(peerId: peer1.id, namespace: 0, id: 0), timestamp: timestamp1)), content: .peer(messages: [Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer1.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: timestamp1, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer1, text: "Text", attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])], peer: RenderedPeer(peer: peer1), combinedReadState: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, PeerReadState.idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: 0, markedUnread: false))]), isRemovedFromTotalUnreadCount: false, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, promoInfo: nil, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
             }
             
             var itemNodes: [ChatListItemNode] = []
@@ -1147,12 +1147,12 @@ final class ChatListControllerNode: ASDisplayNode {
         }
     }
     
-    func activateSearch(placeholderNode: SearchBarPlaceholderNode, navigationController: NavigationController?, updatedSearchOptions: ((ChatListSearchOptions?, Bool) -> Void)?) -> (ASDisplayNode, () -> Void)? {
+    func activateSearch(placeholderNode: SearchBarPlaceholderNode) {
         guard let (containerLayout, _, _, cleanNavigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
-            return nil
+            return
         }
         
-        let contentNode = ChatListSearchContainerNode(context: self.context, filter: [], groupId: self.groupId, openPeer: { [weak self] peer, dismissSearch in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChatListSearchContainerNode(context: self.context, filter: [], groupId: self.groupId, openPeer: { [weak self] peer, dismissSearch in
             self?.requestOpenPeerFromSearch?(peer, dismissSearch)
         }, openDisabledPeer: { _ in
         }, openRecentPeerOptions: { [weak self] peer in
@@ -1165,36 +1165,25 @@ final class ChatListControllerNode: ASDisplayNode {
             if let requestAddContact = self?.requestAddContact {
                 requestAddContact(phoneNumber)
             }
-        }, peerContextAction: self.peerContextAction, present: { [weak self] c, a in
-            self?.controller?.present(c, in: .window(.root), with: a)
-        }, presentInGlobalOverlay: { [weak self] c, a in
-            self?.controller?.presentInGlobalOverlay(c, with: a)
-        }, navigationController: navigationController, updatedSearchOptions: { options, hasDate in
-            updatedSearchOptions?(options, hasDate)
-        })
-        
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: contentNode, cancel: { [weak self] in
+        }, peerContextAction: self.peerContextAction, present: { [weak self] c in
+            self?.controller?.present(c, in: .window(.root))
+        }), cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {
                 requestDeactivateSearch()
             }
         })
         self.containerNode.accessibilityElementsHidden = true
-                
-        return (contentNode.filterContainerNode, { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: cleanNavigationBarHeight, transition: .immediate)
-            strongSelf.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in
-                if let strongSelf = self, let strongPlaceholderNode = placeholderNode {
-                    if isSearchBar {
-                        strongPlaceholderNode.supernode?.insertSubnode(subnode, aboveSubnode: strongPlaceholderNode)
-                    } else {
-                        strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
-                    }
+        
+        self.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: cleanNavigationBarHeight, transition: .immediate)
+        self.searchDisplayController?.activate(insertSubnode: { [weak self, weak placeholderNode] subnode, isSearchBar in
+            if let strongSelf = self, let strongPlaceholderNode = placeholderNode {
+                if isSearchBar {
+                    strongPlaceholderNode.supernode?.insertSubnode(subnode, aboveSubnode: strongPlaceholderNode)
+                } else {
+                    strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
                 }
-            }, placeholder: placeholderNode)
-        })
+            }
+        }, placeholder: placeholderNode)
     }
     
     func deactivateSearch(placeholderNode: SearchBarPlaceholderNode, animated: Bool) {

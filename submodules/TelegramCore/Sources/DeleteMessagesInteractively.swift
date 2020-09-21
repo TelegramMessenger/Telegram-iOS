@@ -114,7 +114,7 @@ public func clearHistoryInteractively(postbox: Postbox, peerId: PeerId, type: In
                 }
                 if let topIndex = topIndex {
                     if peerId.namespace == Namespaces.Peer.CloudUser {
-                        let _ = transaction.addMessages([StoreMessage(id: topIndex.id, globallyUniqueId: nil, groupingKey: nil, threadId: nil, timestamp: topIndex.timestamp, flags: StoreMessageFlags(), tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributes: [], media: [TelegramMediaAction(action: .historyCleared)])], location: .Random)
+                        let _ = transaction.addMessages([StoreMessage(id: topIndex.id, globallyUniqueId: nil, groupingKey: nil, timestamp: topIndex.timestamp, flags: StoreMessageFlags(), tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributes: [], media: [TelegramMediaAction(action: .historyCleared)])], location: .Random)
                     } else {
                         updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: peerId, minTimestamp: topIndex.timestamp, forceRootGroupIfNotExists: false)
                     }

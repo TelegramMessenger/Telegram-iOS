@@ -53,7 +53,6 @@ class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 var viewCount: Int?
                 var rawText = ""
-                var dateReplies = 0
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
                         edited = !attribute.isHidden
@@ -61,10 +60,6 @@ class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNode {
                         viewCount = attribute.count
                     } else if let attribute = attribute as? RestrictedContentMessageAttribute {
                         rawText = attribute.platformText(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) ?? ""
-                    } else if let attribute = attribute as? ReplyThreadMessageAttribute {
-                        if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
-                            dateReplies = Int(attribute.count)
-                        }
                     }
                 }
                 
@@ -85,7 +80,7 @@ class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let statusType: ChatMessageDateAndStatusType?
                 switch position {
-                case .linear(_, .None), .linear(_, .Neighbour(true, _)):
+                case .linear(_, .None):
                     if incoming {
                         statusType = .BubbleIncoming
                     } else {
@@ -105,7 +100,7 @@ class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNode {
                 var statusApply: ((Bool) -> Void)?
                 
                 if let statusType = statusType {
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions, dateReplies)
+                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions)
                     statusSize = size
                     statusApply = apply
                 }

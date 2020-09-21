@@ -468,7 +468,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         actionSheet?.dismissAnimated()
                         let databasePath = context.account.basePath + "/postbox/db"
                         let _ = try? FileManager.default.removeItem(atPath: databasePath)
-                        exit(0)
                         preconditionFailure()
                     }),
                     ]), ActionSheetItemGroup(items: [

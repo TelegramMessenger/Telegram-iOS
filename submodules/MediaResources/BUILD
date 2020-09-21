@@ -11,7 +11,6 @@ swift_library(
         "//submodules/SyncCore:SyncCore",
         "//submodules/Postbox:Postbox",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
-        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
     ],
     visibility = [
         "//visibility:public",

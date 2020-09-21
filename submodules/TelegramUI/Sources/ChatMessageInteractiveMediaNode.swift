@@ -21,7 +21,6 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import LocalMediaResources
 import WallpaperResources
-import ChatMessageInteractiveMediaBadge
 
 private struct FetchControls {
     let fetch: (Bool) -> Void

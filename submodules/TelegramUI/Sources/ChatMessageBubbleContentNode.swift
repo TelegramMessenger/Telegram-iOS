@@ -6,7 +6,6 @@ import Postbox
 import TelegramCore
 import SyncCore
 import TelegramUIPreferences
-import TelegramPresentationData
 import AccountContext
 
 enum ChatMessageBubbleContentBackgroundHiding {
@@ -41,14 +40,9 @@ enum ChatMessageBubbleMergeStatus {
 }
 
 enum ChatMessageBubbleRelativePosition {
-    enum NeighbourType {
-        case media
-        case freeform
-    }
-    
     case None(ChatMessageBubbleMergeStatus)
     case BubbleNeighbour
-    case Neighbour(Bool, NeighbourType)
+    case Neighbour
 }
 
 enum ChatMessageBubbleContentMosaicNeighbor {

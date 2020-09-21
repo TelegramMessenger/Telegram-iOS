@@ -7,7 +7,6 @@ swift_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-        "//submodules/SyncCore:SyncCore",
     ],
     visibility = [
         "//visibility:public",

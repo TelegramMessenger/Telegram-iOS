@@ -638,7 +638,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 }
                 
                 var discussionPeer: Peer?
-                if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
+                if let linkedDiscussionPeerId = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
                 }
                 
@@ -767,7 +767,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 }
                 
                 var discussionPeer: Peer?
-                if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
+                if let linkedDiscussionPeerId = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
                 }
                 

@@ -13,7 +13,6 @@ import AccountContext
 import TelegramNotices
 import ReactionSelectionNode
 import TelegramUniversalVideoContent
-import ChatInterfaceState
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -415,29 +414,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var derivedLayoutState: ChatControllerNodeDerivedLayoutState?
     
-    private var isLoadingValue: Bool = false
-    private func updateIsLoading(isLoading: Bool, animated: Bool) {
-        if isLoading != self.isLoadingValue {
-            self.isLoadingValue = isLoading
-            if isLoading {
-                self.historyNodeContainer.supernode?.insertSubnode(self.loadingNode, aboveSubnode: self.historyNodeContainer)
-                self.loadingNode.layer.removeAllAnimations()
-                self.loadingNode.alpha = 1.0
-                if animated {
-                    self.loadingNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                }
-            } else {
-                self.loadingNode.alpha = 0.0
-                if animated {
-                    self.loadingNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.3, removeOnCompletion: false)
-                    self.loadingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { [weak self] completed in
-                        if let strongSelf = self {
-                            strongSelf.loadingNode.layer.removeAllAnimations()
-                            if completed {
-                                strongSelf.loadingNode.removeFromSupernode()
-                            }
-                        }
-                    })
+    private var isLoading: Bool = false {
+        didSet {
+            if self.isLoading != oldValue {
+                if self.isLoading {
+                    self.historyNodeContainer.supernode?.insertSubnode(self.loadingNode, aboveSubnode: self.historyNodeContainer)
                 } else {
                     self.loadingNode.removeFromSupernode()
                 }
@@ -460,7 +441,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     private var didProcessExperimentalEmbedUrl: String?
     
-    init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: MediaAutoDownloadSettings, navigationBar: NavigationBar?, controller: ChatControllerImpl?) {
+    init(context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: MediaAutoDownloadSettings, navigationBar: NavigationBar?, controller: ChatControllerImpl?) {
         self.context = context
         self.chatLocation = chatLocation
         self.controllerInteraction = controllerInteraction
@@ -477,7 +458,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.inputContextPanelContainer = ChatControllerTitlePanelNodeContainer()
         
-        self.historyNode = ChatHistoryListNode(context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: nil, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get())
+        self.historyNode = ChatHistoryListNode(context: context, chatLocation: chatLocation, tagMask: nil, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get())
         self.historyNode.rotated = true
         self.historyNodeContainer = ASDisplayNode()
         self.historyNodeContainer.addSubnode(self.historyNode)
@@ -540,9 +521,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.historyNode.setLoadStateUpdated { [weak self] loadState, animated in
             if let strongSelf = self {
                 if case .loading = loadState {
-                    strongSelf.updateIsLoading(isLoading: true, animated: animated)
+                    strongSelf.isLoading = true
                 } else {
-                    strongSelf.updateIsLoading(isLoading: false, animated: animated)
+                    strongSelf.isLoading = false
                 }
                 
                 var isEmpty = false
@@ -2156,8 +2137,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func loadInputPanels(theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
         if self.inputMediaNode == nil {
-            let peerId: PeerId? = self.chatPresentationInterfaceState.chatLocation.peerId
-            let inputNode = ChatMediaInputNode(context: self.context, peerId: peerId, chatLocation: self.chatPresentationInterfaceState.chatLocation, controllerInteraction: self.controllerInteraction, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper, theme: theme, strings: strings, fontSize: fontSize, gifPaneIsActiveUpdated: { [weak self] value in
+            var peerId: PeerId?
+            if case let .peer(id) = self.chatPresentationInterfaceState.chatLocation {
+                peerId = id
+            }
+            let inputNode = ChatMediaInputNode(context: self.context, peerId: peerId, controllerInteraction: self.controllerInteraction, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper, theme: theme, strings: strings, fontSize: fontSize, gifPaneIsActiveUpdated: { [weak self] value in
                 if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                     interfaceInteraction.updateInputModeAndDismissedButtonKeyboardMessageId { state in
                         if case let .media(_, expanded) = state.inputMode {
@@ -2710,8 +2694,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 let effectiveInputText = effectivePresentationInterfaceState.interfaceState.composeInputState.inputText
                 let trimmedInputText = effectiveInputText.string.trimmingCharacters(in: .whitespacesAndNewlines)
-                let peerId = effectivePresentationInterfaceState.chatLocation.peerId
-                if peerId.namespace != Namespaces.Peer.SecretChat, let interactiveEmojis = self.interactiveEmojis, interactiveEmojis.emojis.contains(trimmedInputText) {
+                if case let .peer(peerId) = effectivePresentationInterfaceState.chatLocation, peerId.namespace != Namespaces.Peer.SecretChat, let interactiveEmojis = self.interactiveEmojis, interactiveEmojis.emojis.contains(trimmedInputText) {
                     messages.append(.message(text: "", attributes: [], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: trimmedInputText)), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil))
                 } else {
                     let inputText = convertMarkdownToAttributes(effectiveInputText)
@@ -2763,7 +2746,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                     }
                     
-                    self.sendMessages(messages, silentPosting, scheduleTime, messages.count > 1)
+                    if case .peer = self.chatLocation {
+                        self.sendMessages(messages, silentPosting, scheduleTime, messages.count > 1)
+                    }
                 }
             }
         }

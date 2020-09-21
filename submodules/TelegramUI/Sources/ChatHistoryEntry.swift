@@ -4,7 +4,28 @@ import SyncCore
 import TelegramPresentationData
 import MergeLists
 import TemporaryCachedPeerDataManager
-import AccountContext
+
+public enum ChatHistoryMessageSelection: Equatable {
+    case none
+    case selectable(selected: Bool)
+    
+    public static func ==(lhs: ChatHistoryMessageSelection, rhs: ChatHistoryMessageSelection) -> Bool {
+        switch lhs {
+            case .none:
+                if case .none = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .selectable(selected):
+                if case .selectable(selected) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
 
 public enum ChatMessageEntryContentType {
     case generic
@@ -37,7 +58,6 @@ enum ChatHistoryEntry: Identifiable, Comparable {
     case MessageEntry(Message, ChatPresentationData, Bool, MessageHistoryEntryMonthLocation?, ChatHistoryMessageSelection, ChatMessageEntryAttributes)
     case MessageGroupEntry(MessageGroupInfo, [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)], ChatPresentationData)
     case UnreadEntry(MessageIndex, ChatPresentationData)
-    case ReplyCountEntry(MessageIndex, Bool, Int, ChatPresentationData)
     case ChatInfoEntry(String, ChatPresentationData)
     case SearchEntry(PresentationTheme, PresentationStrings)
     
@@ -58,12 +78,10 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                 return UInt64(groupInfo.stableId) | ((UInt64(2) << 40))
             case .UnreadEntry:
                 return UInt64(4) << 40
-            case .ReplyCountEntry:
-                return UInt64(5) << 40
             case .ChatInfoEntry:
-                return UInt64(6) << 40
+                return UInt64(5) << 40
             case .SearchEntry:
-                return UInt64(7) << 40
+                return UInt64(6) << 40
         }
     }
     
@@ -74,8 +92,6 @@ enum ChatHistoryEntry: Identifiable, Comparable {
             case let .MessageGroupEntry(_, messages, _):
                 return messages[messages.count - 1].0.index
             case let .UnreadEntry(index, _):
-                return index
-            case let .ReplyCountEntry(index, _, _, _):
                 return index
             case .ChatInfoEntry:
                 return MessageIndex.absoluteLowerBound()
@@ -183,12 +199,6 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                 }
             case let .UnreadEntry(lhsIndex, lhsPresentationData):
                 if case let .UnreadEntry(rhsIndex, rhsPresentationData) = rhs, lhsIndex == rhsIndex, lhsPresentationData === rhsPresentationData {
-                    return true
-                } else {
-                    return false
-                }
-            case let .ReplyCountEntry(lhsIndex, lhsIsComments, lhsCount, lhsPresentationData):
-                if case let .ReplyCountEntry(rhsIndex, rhsIsComments, rhsCount, rhsPresentationData) = rhs, lhsIndex == rhsIndex, lhsIsComments == rhsIsComments, lhsCount == rhsCount, lhsPresentationData === rhsPresentationData {
                     return true
                 } else {
                     return false

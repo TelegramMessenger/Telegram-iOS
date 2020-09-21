@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 
 private final class AudioWaveformNodeParameters: NSObject {
+    
     let waveform: AudioWaveform?
     let color: UIColor?
     let gravity: AudioWaveformNode.Gravity?
@@ -20,7 +21,9 @@ private final class AudioWaveformNodeParameters: NSObject {
 }
 
 final class AudioWaveformNode: ASDisplayNode {
+    
     enum Gravity {
+        
         case bottom
         case center
     }

@@ -72,7 +72,7 @@ final class ChatPanelInterfaceInteraction {
     let openSearchResults: () -> Void
     let openCalendarSearch: () -> Void
     let toggleMembersSearch: (Bool) -> Void
-    let navigateToMessage: (MessageId, Bool) -> Void
+    let navigateToMessage: (MessageId) -> Void
     let navigateToChat: (PeerId) -> Void
     let navigateToProfile: (PeerId) -> Void
     let openPeerInfo: () -> Void
@@ -120,7 +120,6 @@ final class ChatPanelInterfaceInteraction {
     let displaySearchResultsTooltip: (ASDisplayNode, CGRect) -> Void
     let openPeersNearby: () -> Void
     let unarchivePeer: () -> Void
-    let viewReplies: (MessageId?, ChatReplyThreadMessage) -> Void
     let statuses: ChatPanelInterfaceInteractionStatuses?
     
     init(
@@ -146,7 +145,7 @@ final class ChatPanelInterfaceInteraction {
         navigateMessageSearch: @escaping (ChatPanelSearchNavigationAction) -> Void,
         openCalendarSearch: @escaping () -> Void,
         toggleMembersSearch: @escaping (Bool) -> Void,
-        navigateToMessage: @escaping (MessageId, Bool) -> Void,
+        navigateToMessage: @escaping (MessageId) -> Void,
         navigateToChat: @escaping (PeerId) -> Void,
         navigateToProfile: @escaping (PeerId) -> Void,
         openPeerInfo: @escaping () -> Void,
@@ -194,7 +193,6 @@ final class ChatPanelInterfaceInteraction {
         openPeersNearby: @escaping () -> Void,
         displaySearchResultsTooltip: @escaping (ASDisplayNode, CGRect) -> Void,
         unarchivePeer: @escaping () -> Void,
-        viewReplies: @escaping (MessageId?, ChatReplyThreadMessage) -> Void,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
         self.setupReplyMessage = setupReplyMessage
@@ -267,7 +265,6 @@ final class ChatPanelInterfaceInteraction {
         self.openPeersNearby = openPeersNearby
         self.displaySearchResultsTooltip = displaySearchResultsTooltip
         self.unarchivePeer = unarchivePeer
-        self.viewReplies = viewReplies
         self.statuses = statuses
     }
 }

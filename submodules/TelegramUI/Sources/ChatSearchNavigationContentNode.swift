@@ -9,7 +9,6 @@ import TelegramPresentationData
 import SearchBarNode
 import LocalizedPeerData
 import SwiftSignalKit
-import AccountContext
 
 private let searchBarFont = Font.regular(17.0)
 
@@ -32,8 +31,10 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
         self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: strings, fieldStyle: .modern)
         let placeholderText: String
         switch chatLocation {
-            case .peer, .replyThread:
+            case .peer:
                 placeholderText = strings.Conversation_SearchPlaceholder
+            /*case .group:
+                placeholderText = "Search this feed"*/
         }
         self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
         
@@ -51,10 +52,6 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
         }
         
         self.searchBar.clearPrefix = { [weak self] in
-            self?.interaction.toggleMembersSearch(false)
-        }
-        
-        self.searchBar.clearTokens = { [weak self] in
             self?.interaction.toggleMembersSearch(false)
         }
         
@@ -94,21 +91,23 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
             
             switch search.domain {
                 case .everything:
-                    self.searchBar.tokens = []
                     self.searchBar.prefixString = nil
                     let placeholderText: String
                     switch self.chatLocation {
-                        case .peer, .replyThread:
+                        case .peer:
                             placeholderText = self.strings.Conversation_SearchPlaceholder
+                        /*case .group:
+                            placeholderText = "Search this feed"*/
                     }
                     self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
                 case .members:
-                    self.searchBar.tokens = []
                     self.searchBar.prefixString = NSAttributedString(string: strings.Conversation_SearchByName_Prefix, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputTextColor)
                     self.searchBar.placeholderString = nil
                 case let .member(peer):
-                    self.searchBar.tokens = [SearchBarToken(id: peer.id, icon: UIImage(bundleImageName: "Chat List/Search/User"), title: peer.compactDisplayTitle)]
-                    self.searchBar.prefixString = nil
+                    let prefixString = NSMutableAttributedString()
+                    prefixString.append(NSAttributedString(string: self.strings.Conversation_SearchByName_Prefix, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputTextColor))
+                    prefixString.append(NSAttributedString(string: "\(peer.compactDisplayTitle) ", font: searchBarFont, textColor: theme.rootController.navigationSearchBar.accentColor))
+                    self.searchBar.prefixString = prefixString
                     self.searchBar.placeholderString = nil
             }
             

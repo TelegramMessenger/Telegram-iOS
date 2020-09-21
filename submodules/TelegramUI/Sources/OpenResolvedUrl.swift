@@ -20,7 +20,6 @@ import LanguageLinkPreviewUI
 import SettingsUI
 import UrlHandling
 import ShareController
-import ChatInterfaceState
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -90,10 +89,6 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             navigationController?.pushViewController(controller)
         case let .channelMessage(peerId, messageId):
             openPeer(peerId, .chat(textInputState: nil, subject: .message(messageId), peekData: nil))
-        case let .replyThreadMessage(replyThreadMessageId, isChannelPost, maxReadMessageId, messageId):
-            if let navigationController = navigationController {
-                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .replyThread(threadMessageId: replyThreadMessageId, isChannelPost: isChannelPost, maxReadMessageId: maxReadMessageId), subject: .message(messageId)))
-            }
         case let .stickerPack(name):
             dismissInput()
             if false {

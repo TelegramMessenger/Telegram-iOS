@@ -975,7 +975,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                             updatedState.authorizationListUpdated = true
                         }
                         
-                        let message = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, groupingKey: nil, threadId: nil, timestamp: date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: messageText, attributes: attributes, media: medias)
+                        let message = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, groupingKey: nil, timestamp: date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: messageText, attributes: attributes, media: medias)
                         updatedState.addMessages([message], location: .UpperHistoryBlock)
                     }
                 }
@@ -2274,44 +2274,9 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     
     var topUpperHistoryBlockMessages: [PeerIdAndMessageNamespace: MessageId.Id] = [:]
     
-    final class MessageThreadStatsRecord {
-        var count: Int = 0
-        var peers: [PeerId] = []
-    }
-    var messageThreadStatsDifferences: [MessageId: MessageThreadStatsRecord] = [:]
-    func addMessageThreadStatsDifference(threadMessageId: MessageId, add: Int, remove: Int, addedMessagePeer: PeerId?) {
-        if let value = messageThreadStatsDifferences[threadMessageId] {
-            value.count += add - remove
-            if let addedMessagePeer = addedMessagePeer {
-                value.peers.append(addedMessagePeer)
-            }
-        } else {
-            let value = MessageThreadStatsRecord()
-            messageThreadStatsDifferences[threadMessageId] = value
-            value.count = add - remove
-            if let addedMessagePeer = addedMessagePeer {
-                value.peers.append(addedMessagePeer)
-            }
-        }
-    }
-    
     for operation in optimizedOperations(finalState.state.operations) {
         switch operation {
             case let .AddMessages(messages, location):
-                if case .UpperHistoryBlock = location {
-                    for message in messages {
-                        if case let .Id(id) = message.id {
-                            if let threadId = message.threadId {
-                                let messageThreadId = makeThreadIdMessageId(peerId: message.id.peerId, threadId: threadId)
-                                if id.peerId.namespace == Namespaces.Peer.CloudChannel {
-                                    if !transaction.messageExists(id: id) {
-                                        addMessageThreadStatsDifference(threadMessageId: messageThreadId, add: 1, remove: 0, addedMessagePeer: message.authorId)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
                 let _ = transaction.addMessages(messages, location: location)
                 if case .UpperHistoryBlock = location {
                     for message in messages {
@@ -2419,9 +2384,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                     let _ = mediaBox.removeCachedResources(Set(resourceIds)).start()
                 }
             case let .DeleteMessages(ids):
-                deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids, manualAddMessageThreadStatsDifference: { id, add, remove in
-                    addMessageThreadStatsDifference(threadMessageId: id, add: add, remove: remove, addedMessagePeer: nil)
-                })
+                deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids)
             case let .UpdateMinAvailableMessage(id):
                 if let message = transaction.getMessage(id) {
                     updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: id.peerId, minTimestamp: message.timestamp, forceRootGroupIfNotExists: false)
@@ -2812,7 +2775,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                             break loop
                         }
                     }
-                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                 })
             case let .UpdateMessageForwardsCount(id, count):
                 transaction.updateMessage(id, update: { currentMessage in
@@ -2827,7 +2790,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                             break loop
                         }
                     }
-                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                 })
             case let .UpdateInstalledStickerPacks(operation):
                 stickerPackOperations.append(operation)
@@ -2913,41 +2876,36 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
             Logger.shared.log("State", "not adding hole for peer \(messageId.peerId), \(upperId) >= \(messageId.id) = false")
         }
     }
-//TODO Please do not forget fix holes space.
     
     // could be the reason for unbounded slowdown, needs investigation
-//    for (peerIdAndNamespace, pts) in clearHolesFromPreviousStateForChannelMessagesWithPts {
-//        var upperMessageId: Int32?
-//        var lowerMessageId: Int32?
-//        transaction.scanMessageAttributes(peerId: peerIdAndNamespace.peerId, namespace: peerIdAndNamespace.namespace, limit: 200, { id, attributes in
-//            for attribute in attributes {
-//                if let attribute = attribute as? ChannelMessageStateVersionAttribute {
-//                    if attribute.pts >= pts {
-//                        if upperMessageId == nil {
-//                            upperMessageId = id.id
-//                        }
-//                        if let lowerMessageIdValue = lowerMessageId {
-//                            lowerMessageId = min(id.id, lowerMessageIdValue)
-//                        } else {
-//                            lowerMessageId = id.id
-//                        }
-//                        return true
-//                    } else {
-//                        return false
-//                    }
-//                }
-//            }
-//            return false
-//        })
-//        if let upperMessageId = upperMessageId, let lowerMessageId = lowerMessageId {
-//            if upperMessageId != lowerMessageId {
-//                transaction.removeHole(peerId: peerIdAndNamespace.peerId, namespace: peerIdAndNamespace.namespace, space: .everywhere, range: lowerMessageId ... upperMessageId)
-//            }
-//        }
-//    }
-    
-    for (threadMessageId, difference) in messageThreadStatsDifferences {
-        updateMessageThreadStats(transaction: transaction, threadMessageId: threadMessageId, difference: difference.count, addedMessagePeers: difference.peers)
+    for (peerIdAndNamespace, pts) in clearHolesFromPreviousStateForChannelMessagesWithPts {
+        var upperMessageId: Int32?
+        var lowerMessageId: Int32?
+        transaction.scanMessageAttributes(peerId: peerIdAndNamespace.peerId, namespace: peerIdAndNamespace.namespace, limit: 200, { id, attributes in
+            for attribute in attributes {
+                if let attribute = attribute as? ChannelMessageStateVersionAttribute {
+                    if attribute.pts >= pts {
+                        if upperMessageId == nil {
+                            upperMessageId = id.id
+                        }
+                        if let lowerMessageIdValue = lowerMessageId {
+                            lowerMessageId = min(id.id, lowerMessageIdValue)
+                        } else {
+                            lowerMessageId = id.id
+                        }
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+            }
+            return false
+        })
+        if let upperMessageId = upperMessageId, let lowerMessageId = lowerMessageId {
+            if upperMessageId != lowerMessageId {
+                transaction.removeHole(peerId: peerIdAndNamespace.peerId, namespace: peerIdAndNamespace.namespace, space: .everywhere, range: lowerMessageId ... upperMessageId)
+            }
+        }
     }
     
     if !peerActivityTimestamps.isEmpty {

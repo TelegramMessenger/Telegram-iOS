@@ -15,7 +15,6 @@ final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayer
     let type: MediaManagerPlayerType
     let initialMessageId: MessageId
     let initialOrder: MusicPlaybackSettingsOrder
-    let isGlobalSearch: Bool
     
     private weak var parentNavigationController: NavigationController?
     
@@ -27,13 +26,12 @@ final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayer
     
     private var accountInUseDisposable: Disposable?
     
-    init(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, isGlobalSearch: Bool = false, parentNavigationController: NavigationController?) {
+    init(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, parentNavigationController: NavigationController?) {
         self.context = context
         self.peerId = peerId
         self.type = type
         self.initialMessageId = initialMessageId
         self.initialOrder = initialOrder
-        self.isGlobalSearch = isGlobalSearch
         self.parentNavigationController = parentNavigationController
         
         super.init(navigationBarPresentationData: nil)
@@ -54,7 +52,7 @@ final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayer
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = OverlayAudioPlayerControllerNode(context: self.context, peerId: self.peerId, type: self.type, initialMessageId: self.initialMessageId, initialOrder: self.initialOrder, isGlobalSearch: self.isGlobalSearch, requestDismiss: { [weak self] in
+        self.displayNode = OverlayAudioPlayerControllerNode(context: self.context, peerId: self.peerId, type: self.type, initialMessageId: self.initialMessageId, initialOrder: self.initialOrder, requestDismiss: { [weak self] in
             self?.dismiss()
         }, requestShare: { [weak self] messageId in
             if let strongSelf = self {

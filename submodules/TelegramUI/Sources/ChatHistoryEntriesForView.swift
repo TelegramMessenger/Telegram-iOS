@@ -4,9 +4,6 @@ import TelegramCore
 import SyncCore
 import TemporaryCachedPeerDataManager
 import Emoji
-import AccountContext
-import TelegramPresentationData
-
 
 func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView, includeUnreadEntry: Bool, includeEmptyEntry: Bool, includeChatInfoEntry: Bool, includeSearchEntry: Bool, reverse: Bool, groupMessages: Bool, selectedMessages: Set<MessageId>?, presentationData: ChatPresentationData, historyAppearsCleared: Bool, associatedData: ChatMessageItemAssociatedData, updatingMedia: [MessageId: ChatUpdatingMessageMedia]) -> [ChatHistoryEntry] {
     if historyAppearsCleared {
@@ -113,53 +110,6 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
         }
     }
     
-    var addedThreadHead = false
-    if case let .replyThread(messageId, isChannelPost, _) = location, view.earlierId == nil, !view.isLoading {
-        loop: for entry in view.additionalData {
-            switch entry {
-            case let .message(id, message) where id == messageId:
-                if let message = message {
-                    let selection: ChatHistoryMessageSelection
-                    if let selectedMessages = selectedMessages {
-                        selection = .selectable(selected: selectedMessages.contains(message.id))
-                    } else {
-                        selection = .none
-                    }
-                    
-                    var adminRank: CachedChannelAdminRank?
-                    if let author = message.author {
-                        adminRank = adminRanks[author.id]
-                    }
-                    
-                    var contentTypeHint: ChatMessageEntryContentType = .generic
-                    if presentationData.largeEmoji, message.media.isEmpty {
-                        if stickersEnabled && message.text.count == 1, let _ = associatedData.animatedEmojiStickers[message.text.basicEmoji.0] {
-                            contentTypeHint = .animatedEmoji
-                        } else if message.text.count < 10 && messageIsElligibleForLargeEmoji(message) {
-                            contentTypeHint = .largeEmoji
-                        }
-                    }
-                    
-                    var replyCount = 0
-                    for attribute in message.attributes {
-                        if let attribute = attribute as? ReplyThreadMessageAttribute {
-                            replyCount = Int(attribute.count)
-                        }
-                    }
-                    
-                    addedThreadHead = true
-                    entries.insert(.MessageEntry(message, presentationData, false, nil, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: false, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id])), at: 0)
-                    if view.entries.count > 0 {
-                        entries.insert(.ReplyCountEntry(message.index, isChannelPost, replyCount,  presentationData), at: 1)
-                    }
-                }
-                break loop
-            default:
-                break
-            }
-        }
-    }
-    
     if includeChatInfoEntry {
         if view.earlierId == nil {
             var cachedPeerData: CachedPeerData?
@@ -199,9 +149,6 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                         }
                     }
                 } else {
-                    isEmpty = false
-                }
-                if addedThreadHead {
                     isEmpty = false
                 }
                 if isEmpty {

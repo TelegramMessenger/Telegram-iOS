@@ -498,7 +498,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                     .withUpdatedStickerPack(stickerPack)
                                                     .withUpdatedMinAvailableMessageId(minAvailableMessageId)
                                                     .withUpdatedMigrationReference(migrationReference)
-                                                    .withUpdatedLinkedDiscussionPeerId(.known(linkedDiscussionPeerId))
+                                                    .withUpdatedLinkedDiscussionPeerId(linkedDiscussionPeerId)
                                                     .withUpdatedPeerGeoLocation(peerGeoLocation)
                                                     .withUpdatedSlowModeTimeout(slowmodeSeconds)
                                                     .withUpdatedSlowModeValidUntilTimestamp(slowmodeNextSendDate)

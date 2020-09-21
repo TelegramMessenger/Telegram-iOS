@@ -14,7 +14,6 @@ public enum SearchDisplayControllerMode {
 public final class SearchDisplayController {
     private let searchBar: SearchBarNode
     private let mode: SearchDisplayControllerMode
-    private let backgroundNode: ASDisplayNode
     public let contentNode: SearchDisplayControllerContentNode
     private var hasSeparator: Bool
     
@@ -26,18 +25,12 @@ public final class SearchDisplayController {
     
     public init(presentationData: PresentationData, mode: SearchDisplayControllerMode = .navigation, placeholder: String? = nil, hasSeparator: Bool = false, contentNode: SearchDisplayControllerContentNode, cancel: @escaping () -> Void) {
         self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: hasSeparator), strings: presentationData.strings, fieldStyle: .modern, forceSeparator: hasSeparator)
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.backgroundColor = presentationData.theme.chatList.backgroundColor
-        
         self.mode = mode
         self.contentNode = contentNode
         self.hasSeparator = hasSeparator
         
         self.searchBar.textUpdated = { [weak contentNode] text, _ in
             contentNode?.searchTextUpdated(text: text)
-        }
-        self.searchBar.tokensUpdated = { [weak contentNode] tokens in
-            contentNode?.searchTokensUpdated(tokens: tokens)
         }
         self.searchBar.cancel = { [weak self] in
             self?.isDeactivating = true
@@ -46,9 +39,6 @@ public final class SearchDisplayController {
         self.searchBar.clearPrefix = { [weak contentNode] in
             contentNode?.searchTextClearPrefix()
         }
-        self.searchBar.clearTokens = { [weak contentNode] in
-            contentNode?.searchTextClearTokens()
-        }
         self.contentNode.cancel = { [weak self] in
             self?.isDeactivating = true
             cancel()
@@ -56,16 +46,9 @@ public final class SearchDisplayController {
         self.contentNode.dismissInput = { [weak self] in
             self?.searchBar.deactivate(clear: false)
         }
-        self.contentNode.setQuery = { [weak self] prefix, tokens, query in
-            if let strongSelf = self {
-                strongSelf.searchBar.prefixString = prefix
-                let previousTokens = strongSelf.searchBar.tokens
-                strongSelf.searchBar.tokens = tokens
-                if previousTokens.count < tokens.count {
-                    strongSelf.searchBar.selectLastToken()
-                }
-                strongSelf.searchBar.text = query
-            }
+        self.contentNode.setQuery = { [weak self] prefix, query in
+            self?.searchBar.prefixString = prefix
+            self?.searchBar.text = query
         }
         if let placeholder = placeholder {
             self.searchBar.placeholderString = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: presentationData.theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
@@ -89,8 +72,6 @@ public final class SearchDisplayController {
     public func updatePresentationData(_ presentationData: PresentationData) {
         self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: self.hasSeparator), strings: presentationData.strings)
         self.contentNode.updatePresentationData(presentationData)
-        
-        self.backgroundNode.backgroundColor = presentationData.theme.chatList.backgroundColor
     }
     
     public func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -119,9 +100,8 @@ public final class SearchDisplayController {
         
         self.containerLayout = (layout, navigationBarFrame.maxY)
         
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarHeight, transition: transition)
+        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarFrame.maxY, transition: transition)
     }
     
     public func activate(insertSubnode: (ASDisplayNode, Bool) -> Void, placeholder: SearchBarPlaceholderNode?) {
@@ -129,7 +109,6 @@ public final class SearchDisplayController {
             return
         }
         
-        insertSubnode(self.backgroundNode, false)
         insertSubnode(self.contentNode, false)
         
         self.contentNode.frame = CGRect(origin: CGPoint(), size: layout.size)
@@ -146,10 +125,8 @@ public final class SearchDisplayController {
             
             let contentNodePosition = self.contentNode.layer.position
             
-//            self.contentNode.layer.animatePosition(from: CGPoint(x: contentNodePosition.x, y: contentNodePosition.y + (initialTextBackgroundFrame.maxY + 8.0 - contentNavigationBarHeight)), to: contentNodePosition, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-            self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+            self.contentNode.layer.animatePosition(from: CGPoint(x: contentNodePosition.x, y: contentNodePosition.y + (initialTextBackgroundFrame.maxY + 8.0 - contentNavigationBarHeight)), to: contentNodePosition, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
             self.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
-            self.contentNode.layer.animateScale(from: 0.85, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
             self.searchBar.placeholderString = placeholder.placeholderString
         }
         
@@ -201,7 +178,6 @@ public final class SearchDisplayController {
             })
         }
         
-        let backgroundNode = self.backgroundNode
         let contentNode = self.contentNode
         if animated {
             if let placeholder = placeholder, let (layout, navigationBarHeight) = self.containerLayout {
@@ -218,11 +194,7 @@ public final class SearchDisplayController {
             contentNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak contentNode] _ in
                 contentNode?.removeFromSupernode()
             })
-            backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak backgroundNode] _ in
-                backgroundNode?.removeFromSupernode()
-            })
         } else {
-            backgroundNode.removeFromSupernode()
             contentNode.removeFromSupernode()
         }
     }

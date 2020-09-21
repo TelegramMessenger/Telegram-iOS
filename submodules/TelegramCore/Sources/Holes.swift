@@ -42,8 +42,8 @@ enum FetchMessageHistoryHoleSource {
     }
 }
 
-func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, peers: [PeerId: Peer], storeMessages: [StoreMessage], _ f: @escaping (Transaction, [Peer], [StoreMessage]) -> T) -> Signal<T, NoError> {
-    return postbox.transaction { transaction -> Signal<T, NoError> in
+func withResolvedAssociatedMessages(postbox: Postbox, source: FetchMessageHistoryHoleSource, peers: [PeerId: Peer], storeMessages: [StoreMessage], _ f: @escaping (Transaction, [Peer], [StoreMessage]) -> Void) -> Signal<Never, NoError> {
+    return postbox.transaction { transaction -> Signal<Never, NoError> in
         var storedIds = Set<MessageId>()
         var referencedIds = Set<MessageId>()
         for message in storeMessages {
@@ -59,7 +59,8 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
         referencedIds.subtract(transaction.filterStoredMessageIds(referencedIds))
         
         if referencedIds.isEmpty {
-            return .single(f(transaction, [], []))
+            f(transaction, [], [])
+            return .complete()
         } else {
             var signals: [Signal<([Api.Message], [Api.Chat], [Api.User]), NoError>] = []
             for (peerId, messageIds) in messagesIdsGroupedByPeerId(referencedIds) {
@@ -96,7 +97,7 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
             let fetchMessages = combineLatest(signals)
             
             return fetchMessages
-            |> mapToSignal { results -> Signal<T, NoError> in
+            |> mapToSignal { results -> Signal<Never, NoError> in
                 var additionalPeers: [Peer] = []
                 var additionalMessages: [StoreMessage] = []
                 for (messages, chats, users) in results {
@@ -116,16 +117,17 @@ func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHis
                         additionalPeers.append(TelegramUser(user: user))
                     }
                 }
-                return postbox.transaction { transaction -> T in
-                    return f(transaction, additionalPeers, additionalMessages)
+                return postbox.transaction { transaction -> Void in
+                    f(transaction, additionalPeers, additionalMessages)
                 }
+                |> ignoreValues
             }
         }
     }
     |> switchToLatest
 }
 
-func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, peerId: PeerId, namespace: MessageId.Namespace, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleSpace, threadId: MessageId?, count rawCount: Int) -> Signal<IndexSet, NoError> {
+func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, peerId: PeerId, namespace: MessageId.Namespace, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleSpace, count rawCount: Int) -> Signal<Never, NoError> {
     let count = min(100, rawCount)
     
     return postbox.stateView()
@@ -137,50 +139,10 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
         }
     }
     |> take(1)
-    |> mapToSignal { _ -> Signal<IndexSet, NoError> in
-        return postbox.transaction { transaction -> (Peer?, Int32) in
-            var hash: Int32 = 0
-            switch space {
-            case .everywhere:
-                if let threadId = threadId {
-                    let offsetId: Int32
-                    let addOffset: Int32
-                    let selectedLimit = count
-                    let maxId: Int32
-                    let minId: Int32
-                    
-                    switch direction {
-                        case let .range(start, end):
-                            if start.id <= end.id {
-                                offsetId = start.id <= 1 ? 1 : (start.id - 1)
-                                addOffset = Int32(-selectedLimit)
-                                maxId = end.id
-                                minId = start.id - 1
-                            } else {
-                                offsetId = start.id == Int32.max ? start.id : (start.id + 1)
-                                addOffset = 0
-                                maxId = start.id == Int32.max ? start.id : (start.id + 1)
-                                minId = end.id
-                            }
-                        case let .aroundId(id):
-                            offsetId = id.id
-                            addOffset = Int32(-selectedLimit / 2)
-                            maxId = Int32.max
-                            minId = 1
-                    }
-                    
-                    //request = source.request(Api.functions.messages.getReplies(peer: inputPeer, msgId: threadId.id, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: 0))
-                }
-            default:
-                break
-            }
-            
-            return (transaction.getPeer(peerId), hash)
-        }
-        |> mapToSignal { (peer, hash) -> Signal<IndexSet, NoError> in
-            guard let peer = peer else {
-                return .single(IndexSet())
-            }
+    |> mapToSignal { _ -> Signal<Never, NoError> in
+        return postbox.loadedPeerWithId(peerId)
+        |> take(1)
+        |> mapToSignal { peer in
             if let inputPeer = forceApiInputPeer(peer) {
                 print("fetchMessageHistoryHole for \(peer.id) \(peer.debugDisplayTitle) \(direction) space \(space)")
                 Logger.shared.log("fetchMessageHistoryHole", "fetch for \(peer.id) \(peer.debugDisplayTitle) \(direction) space \(space)")
@@ -190,102 +152,52 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                 
                 switch space {
                     case .everywhere:
-                        if let threadId = threadId {
-                            let offsetId: Int32
-                            let addOffset: Int32
-                            let selectedLimit = count
-                            let maxId: Int32
-                            let minId: Int32
-                            
-                            switch direction {
-                                case let .range(start, end):
-                                    if start.id <= end.id {
-                                        offsetId = start.id <= 1 ? 1 : (start.id - 1)
-                                        addOffset = Int32(-selectedLimit)
-                                        maxId = end.id
-                                        minId = start.id - 1
-                                        
-                                        let rangeStartId = start.id
-                                        let rangeEndId = min(end.id, Int32.max - 1)
-                                        if rangeStartId <= rangeEndId {
-                                            minMaxRange = rangeStartId ... rangeEndId
-                                        } else {
-                                            minMaxRange = rangeStartId ... rangeStartId
-                                            assertionFailure()
-                                        }
+                        let offsetId: Int32
+                        let addOffset: Int32
+                        let selectedLimit = count
+                        let maxId: Int32
+                        let minId: Int32
+                        
+                        switch direction {
+                            case let .range(start, end):
+                                if start.id <= end.id {
+                                    offsetId = start.id <= 1 ? 1 : (start.id - 1)
+                                    addOffset = Int32(-selectedLimit)
+                                    maxId = end.id
+                                    minId = start.id - 1
+                                    
+                                    let rangeStartId = start.id
+                                    let rangeEndId = min(end.id, Int32.max - 1)
+                                    if rangeStartId <= rangeEndId {
+                                        minMaxRange = rangeStartId ... rangeEndId
                                     } else {
-                                        offsetId = start.id == Int32.max ? start.id : (start.id + 1)
-                                        addOffset = 0
-                                        maxId = start.id == Int32.max ? start.id : (start.id + 1)
-                                        minId = end.id
-                                        
-                                        let rangeStartId = end.id
-                                        let rangeEndId = min(start.id, Int32.max - 1)
-                                        if rangeStartId <= rangeEndId {
-                                            minMaxRange = rangeStartId ... rangeEndId
-                                        } else {
-                                            minMaxRange = rangeStartId ... rangeStartId
-                                            assertionFailure()
-                                        }
+                                        minMaxRange = rangeStartId ... rangeStartId
+                                        assertionFailure()
                                     }
-                                case let .aroundId(id):
-                                    offsetId = id.id
-                                    addOffset = Int32(-selectedLimit / 2)
-                                    maxId = Int32.max
-                                    minId = 1
-                                
-                                    minMaxRange = 1 ... (Int32.max - 1)
-                            }
-                            
-                            request = source.request(Api.functions.messages.getReplies(peer: inputPeer, msgId: threadId.id, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: hash))
-                        } else {
-                            let offsetId: Int32
-                            let addOffset: Int32
-                            let selectedLimit = count
-                            let maxId: Int32
-                            let minId: Int32
-                            
-                            switch direction {
-                                case let .range(start, end):
-                                    if start.id <= end.id {
-                                        offsetId = start.id <= 1 ? 1 : (start.id - 1)
-                                        addOffset = Int32(-selectedLimit)
-                                        maxId = end.id
-                                        minId = start.id - 1
-                                        
-                                        let rangeStartId = start.id
-                                        let rangeEndId = min(end.id, Int32.max - 1)
-                                        if rangeStartId <= rangeEndId {
-                                            minMaxRange = rangeStartId ... rangeEndId
-                                        } else {
-                                            minMaxRange = rangeStartId ... rangeStartId
-                                            assertionFailure()
-                                        }
+                                } else {
+                                    offsetId = start.id == Int32.max ? start.id : (start.id + 1)
+                                    addOffset = 0
+                                    maxId = start.id == Int32.max ? start.id : (start.id + 1)
+                                    minId = end.id
+                                    
+                                    let rangeStartId = end.id
+                                    let rangeEndId = min(start.id, Int32.max - 1)
+                                    if rangeStartId <= rangeEndId {
+                                        minMaxRange = rangeStartId ... rangeEndId
                                     } else {
-                                        offsetId = start.id == Int32.max ? start.id : (start.id + 1)
-                                        addOffset = 0
-                                        maxId = start.id == Int32.max ? start.id : (start.id + 1)
-                                        minId = end.id
-                                        
-                                        let rangeStartId = end.id
-                                        let rangeEndId = min(start.id, Int32.max - 1)
-                                        if rangeStartId <= rangeEndId {
-                                            minMaxRange = rangeStartId ... rangeEndId
-                                        } else {
-                                            minMaxRange = rangeStartId ... rangeStartId
-                                            assertionFailure()
-                                        }
+                                        minMaxRange = rangeStartId ... rangeStartId
+                                        assertionFailure()
                                     }
-                                case let .aroundId(id):
-                                    offsetId = id.id
-                                    addOffset = Int32(-selectedLimit / 2)
-                                    maxId = Int32.max
-                                    minId = 1
-                                    minMaxRange = 1 ... Int32.max - 1
-                            }
-                            
-                            request = source.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: offsetId, offsetDate: 0, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: 0))
+                                }
+                            case let .aroundId(id):
+                                offsetId = id.id
+                                addOffset = Int32(-selectedLimit / 2)
+                                maxId = Int32.max
+                                minId = 1
+                                minMaxRange = 1 ... Int32.max - 1
                         }
+                        
+                        request = source.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: offsetId, offsetDate: 0, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: 0))
                     case let .tag(tag):
                         assert(tag.containsSingleElement)
                         if tag == .unseenPersonalMessage {
@@ -392,17 +304,17 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                                     minMaxRange = 1 ... (Int32.max - 1)
                             }
                             
-                            request = source.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, topMsgId: nil, filter: filter, minDate: 0, maxDate: 0, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: 0))
+                            request = source.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, filter: filter, minDate: 0, maxDate: 0, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: 0))
                         } else {
                             assertionFailure()
                             minMaxRange = 1 ... 1
                             request = .never()
-                        }
+                    }
                 }
                 
                 return request
                 |> retryRequest
-                |> mapToSignal { result -> Signal<IndexSet, NoError> in
+                |> mapToSignal { result -> Signal<Never, NoError> in
                     let messages: [Api.Message]
                     let chats: [Api.Chat]
                     let users: [Api.User]
@@ -456,10 +368,10 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         }
                     }
                     
-                    return withResolvedAssociatedMessages(postbox: postbox, source: source, peers: Dictionary(peers.map({ ($0.id, $0) }), uniquingKeysWith: { lhs, _ in lhs }), storeMessages: storeMessages, { transaction, additionalPeers, additionalMessages -> IndexSet in
+                    return withResolvedAssociatedMessages(postbox: postbox, source: source, peers: Dictionary(peers.map({ ($0.id, $0) }), uniquingKeysWith: { lhs, _ in lhs }), storeMessages: storeMessages, { transaction, additionalPeers, additionalMessages in
                         let _ = transaction.addMessages(storeMessages, location: .Random)
                         let _ = transaction.addMessages(additionalMessages, location: .Random)
-                        var filledRange: ClosedRange<MessageId.Id>
+                        let filledRange: ClosedRange<MessageId.Id>
                         let ids = storeMessages.compactMap { message -> MessageId.Id? in
                             switch message.id {
                             case let .Id(id):
@@ -484,11 +396,6 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             switch direction {
                                 case let .aroundId(aroundId):
                                     filledRange = min(aroundId.id, messageRange.lowerBound) ... max(aroundId.id, messageRange.upperBound)
-                                    if threadId != nil {
-                                        if ids.count <= count / 2 - 1 {
-                                            filledRange = minMaxRange
-                                        }
-                                    }
                                 case let .range(start, end):
                                     if start.id <= end.id {
                                         let minBound = start.id
@@ -501,19 +408,16 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                                     }
                             }
                         }
-                        
-                        if threadId == nil {
-                            transaction.removeHole(peerId: peerId, namespace: namespace, space: space, range: filledRange)
-                        }
+                        transaction.removeHole(peerId: peerId, namespace: namespace, space: space, range: filledRange)
                         
                         updatePeers(transaction: transaction, peers: peers + additionalPeers, update: { _, updated -> Peer in
                             return updated
                         })
                         updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                         
-                        print("fetchMessageHistoryHole for \(peer.id) \(peer.debugDisplayTitle) space \(space) threadId: \(String(describing: threadId)) done")
+                        print("fetchMessageHistoryHole for \(peer.id) \(peer.debugDisplayTitle) space \(space) done")
                         
-                        return IndexSet(integersIn: Int(filledRange.lowerBound) ... Int(filledRange.upperBound))
+                        return
                     })
                 }
             } else {
@@ -600,10 +504,7 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
             for (groupId, summary) in fetchedChats.folderSummaries {
                 transaction.resetPeerGroupSummary(groupId: groupId, namespace: Namespaces.Message.Cloud, summary: summary)
             }
-            
-            return
         })
-        |> ignoreValues
     }
 }
 
@@ -612,7 +513,7 @@ func fetchCallListHole(network: Network, postbox: Postbox, accountPeerId: PeerId
     offset = single((holeIndex.timestamp, min(holeIndex.id.id, Int32.max - 1) + 1, Api.InputPeer.inputPeerEmpty), NoError.self)
     return offset
     |> mapToSignal { (timestamp, id, peer) -> Signal<Void, NoError> in
-        let searchResult = network.request(Api.functions.messages.search(flags: 0, peer: .inputPeerEmpty, q: "", fromId: nil, topMsgId: nil, filter: .inputMessagesFilterPhoneCalls(flags: 0), minDate: 0, maxDate: holeIndex.timestamp, offsetId: 0, addOffset: 0, limit: limit, maxId: holeIndex.id.id, minId: 0, hash: 0))
+        let searchResult = network.request(Api.functions.messages.search(flags: 0, peer: .inputPeerEmpty, q: "", fromId: nil, filter: .inputMessagesFilterPhoneCalls(flags: 0), minDate: 0, maxDate: holeIndex.timestamp, offsetId: 0, addOffset: 0, limit: limit, maxId: holeIndex.id.id, minId: 0, hash: 0))
         |> retryRequest
         |> mapToSignal { result -> Signal<Void, NoError> in
             let messages: [Api.Message]

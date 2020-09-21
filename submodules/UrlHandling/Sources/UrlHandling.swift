@@ -13,13 +13,11 @@ import WalletUrl
 #endif
 
 private let baseTelegramMePaths = ["telegram.me", "t.me", "telegram.dog"]
-private let baseTelegraPhPaths = ["telegra.ph/", "te.legra.ph/", "graph.org/", "t.me/iv?"]
 
 public enum ParsedInternalPeerUrlParameter {
     case botStart(String)
     case groupBotStart(String)
     case channelMessage(Int32)
-    case replyThread(Int32, Int32)
 }
 
 public enum ParsedInternalUrl {
@@ -245,24 +243,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         return nil
                     }
                 } else if let value = Int(pathComponents[1]) {
-                    var commentId: Int32?
-                    if let queryItems = components.queryItems {
-                        for queryItem in queryItems {
-                            if let value = queryItem.value {
-                                if queryItem.name == "comment" {
-                                    if let intValue = Int32(value) {
-                                        commentId = intValue
-                                        break
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if let commentId = commentId {
-                        return .peerName(peerName, .replyThread(Int32(value), commentId))
-                    } else {
-                        return .peerName(peerName, .channelMessage(Int32(value)))
-                    }
+                    return .peerName(peerName, .channelMessage(Int32(value)))
                 } else {
                     return nil
                 }
@@ -288,35 +269,26 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                     }
                 }
             }
-            |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
+            |> map { peer -> ResolvedUrl? in
                 if let peer = peer {
                     if let parameter = parameter {
                         switch parameter {
                             case let .botStart(payload):
-                                return .single(.botStart(peerId: peer.id, payload: payload))
+                                return .botStart(peerId: peer.id, payload: payload)
                             case let .groupBotStart(payload):
-                                return .single(.groupBotStart(peerId: peer.id, payload: payload))
+                                return .groupBotStart(peerId: peer.id, payload: payload)
                             case let .channelMessage(id):
-                                return .single(.channelMessage(peerId: peer.id, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id)))
-                            case let .replyThread(id, replyId):
-                                let replyThreadMessageId = MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id)
-                                return fetchChannelReplyThreadMessage(account: account, messageId: replyThreadMessageId)
-                                |> map { result -> ResolvedUrl? in
-                                    guard let result = result else {
-                                        return .channelMessage(peerId: peer.id, messageId: replyThreadMessageId)
-                                    }
-                                    return .replyThreadMessage(replyThreadMessageId: result.messageId, isChannelPost: true, maxReadMessageId: result.maxReadMessageId, messageId: MessageId(peerId: result.messageId.peerId, namespace: Namespaces.Message.Cloud, id: replyId))
-                                }
+                                return .channelMessage(peerId: peer.id, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id))
                         }
                     } else {
                         if let peer = peer as? TelegramUser, peer.botInfo == nil {
-                            return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
+                            return .peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil))
                         } else {
-                            return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
+                            return .peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil))
                         }
                     }
                 } else {
-                    return .single(.peer(nil, .info))
+                    return .peer(nil, .info)
                 }
             }
         case let .peerId(peerId):
@@ -476,6 +448,7 @@ public func resolveUrlImpl(account: Account, url: String) -> Signal<ResolvedUrl,
             }
         }
     }
+    let baseTelegraPhPaths = ["telegra.ph/", "te.legra.ph/", "graph.org/", "t.me/iv?"]
     for basePath in baseTelegraPhPaths {
         for scheme in schemes {
             let basePrefix = scheme + basePath

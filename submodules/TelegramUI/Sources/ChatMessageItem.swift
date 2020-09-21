@@ -119,27 +119,23 @@ private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs
         }
     }
     
-    if lhs.id.peerId.isRepliesOrSavedMessages(accountPeerId: accountPeerId) {
+    if lhs.id.peerId == accountPeerId {
         if let forwardInfo = lhs.forwardInfo {
             lhsEffectiveAuthor = forwardInfo.author
         }
     }
-    if rhs.id.peerId.isRepliesOrSavedMessages(accountPeerId: accountPeerId) {
+    if rhs.id.peerId == accountPeerId {
         if let forwardInfo = rhs.forwardInfo {
             rhsEffectiveAuthor = forwardInfo.author
         }
     }
     
     var sameAuthor = false
-    if lhsEffectiveAuthor?.id == rhsEffectiveAuthor?.id && lhs.effectivelyIncoming(accountPeerId) == rhs.effectivelyIncoming(accountPeerId) {
+    if lhsEffectiveAuthor?.id == rhsEffectiveAuthor?.id {
         sameAuthor = true
     }
     
     if abs(lhs.timestamp - rhs.timestamp) < Int32(10 * 60) && sameAuthor {
-        if let channel = lhs.peers[lhs.id.peerId] as? TelegramChannel, case .group = channel.info, lhsEffectiveAuthor?.id == channel.id, !lhs.effectivelyIncoming(accountPeerId) {
-            return .none
-        }
-        
         var upperStyle: Int32 = ChatMessageMerge.fullyMerged.rawValue
         var lowerStyle: Int32 = ChatMessageMerge.fullyMerged.rawValue
         for media in lhs.media {
@@ -180,8 +176,6 @@ func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -
         lhsHeader = nil
     } else if let lhs = lhs as? ChatUnreadItem {
         lhsHeader = lhs.header
-    } else if let lhs = lhs as? ChatReplyCountItem {
-        lhsHeader = lhs.header
     } else {
         lhsHeader = nil
     }
@@ -192,8 +186,6 @@ func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -
             //rhsHeader = rhs.header
             rhsHeader = nil
         } else if let rhs = rhs as? ChatUnreadItem {
-            rhsHeader = rhs.header
-        } else if let rhs = rhs as? ChatReplyCountItem {
             rhsHeader = rhs.header
         } else {
             rhsHeader = nil
@@ -225,6 +217,51 @@ enum ChatMessageMerge: Int32 {
         } else {
             return true
         }
+    }
+}
+
+public final class ChatMessageItemAssociatedData: Equatable {
+    let automaticDownloadPeerType: MediaAutoDownloadPeerType
+    let automaticDownloadNetworkType: MediaAutoDownloadNetworkType
+    let isRecentActions: Bool
+    let isScheduledMessages: Bool
+    let contactsPeerIds: Set<PeerId>
+    let animatedEmojiStickers: [String: [StickerPackItem]]
+    let forcedResourceStatus: FileMediaResourceStatus?
+    
+    init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, isScheduledMessages: Bool = false, contactsPeerIds: Set<PeerId> = Set(), animatedEmojiStickers: [String: [StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil) {
+        self.automaticDownloadPeerType = automaticDownloadPeerType
+        self.automaticDownloadNetworkType = automaticDownloadNetworkType
+        self.isRecentActions = isRecentActions
+        self.isScheduledMessages = isScheduledMessages
+        self.contactsPeerIds = contactsPeerIds
+        self.animatedEmojiStickers = animatedEmojiStickers
+        self.forcedResourceStatus = forcedResourceStatus
+    }
+    
+    public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
+        if lhs.automaticDownloadPeerType != rhs.automaticDownloadPeerType {
+            return false
+        }
+        if lhs.automaticDownloadNetworkType != rhs.automaticDownloadNetworkType {
+            return false
+        }
+        if lhs.isRecentActions != rhs.isRecentActions {
+            return false
+        }
+        if lhs.isScheduledMessages != rhs.isScheduledMessages {
+            return false
+        }
+        if lhs.contactsPeerIds != rhs.contactsPeerIds {
+            return false
+        }
+        if lhs.animatedEmojiStickers != rhs.animatedEmojiStickers {
+            return false
+        }
+        if lhs.forcedResourceStatus != rhs.forcedResourceStatus {
+            return false
+        }
+        return true
     }
 }
 
@@ -276,34 +313,29 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         var effectiveAuthor: Peer?
         let displayAuthorInfo: Bool
         
-        let messagePeerId: PeerId
         switch chatLocation {
-        case let .peer(peerId):
-            messagePeerId = peerId
-        case let .replyThread(messageId, _, _):
-            messagePeerId = messageId.peerId
-        }
-        
-        do {
-            let peerId = messagePeerId
-            if peerId.isRepliesOrSavedMessages(accountPeerId: context.account.peerId) {
-                if let forwardInfo = content.firstMessage.forwardInfo {
-                    effectiveAuthor = forwardInfo.author
-                    if effectiveAuthor == nil, let authorSignature = forwardInfo.authorSignature  {
-                        effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: Int32(clamping: authorSignature.persistentHashValue)), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: UserInfoFlags())
+            case let .peer(peerId):
+                if peerId == context.account.peerId {
+                    if let forwardInfo = content.firstMessage.forwardInfo {
+                        effectiveAuthor = forwardInfo.author
+                        if effectiveAuthor == nil, let authorSignature = forwardInfo.authorSignature  {
+                            effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: Int32(clamping: authorSignature.persistentHashValue)), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: UserInfoFlags())
+                        }
                     }
+                    displayAuthorInfo = incoming && effectiveAuthor != nil
+                } else {
+                    effectiveAuthor = content.firstMessage.author
+                    for attribute in content.firstMessage.attributes {
+                        if let attribute = attribute as? SourceReferenceMessageAttribute {
+                            effectiveAuthor = content.firstMessage.peers[attribute.messageId.peerId]
+                            break
+                        }
+                    }
+                    displayAuthorInfo = incoming && peerId.isGroupOrChannel && effectiveAuthor != nil
                 }
-                displayAuthorInfo = incoming && effectiveAuthor != nil
-            } else {
+            /*case .group:
                 effectiveAuthor = content.firstMessage.author
-                for attribute in content.firstMessage.attributes {
-                    if let attribute = attribute as? SourceReferenceMessageAttribute {
-                        effectiveAuthor = content.firstMessage.peers[attribute.messageId.peerId]
-                        break
-                    }
-                }
-                displayAuthorInfo = incoming && peerId.isGroupOrChannel && effectiveAuthor != nil
-            }
+                displayAuthorInfo = incoming && effectiveAuthor != nil*/
         }
         
         self.effectiveAuthorId = effectiveAuthor?.id
@@ -444,10 +476,6 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                 mergedTop = messagesShouldBeMerged(accountPeerId: self.context.account.peerId, bottom.message, message)
             }
         } else if let bottom = bottom as? ChatUnreadItem {
-            if bottom.header.id != self.header.id {
-                dateAtBottom = true
-            }
-        } else if let bottom = bottom as? ChatReplyCountItem {
             if bottom.header.id != self.header.id {
                 dateAtBottom = true
             }
