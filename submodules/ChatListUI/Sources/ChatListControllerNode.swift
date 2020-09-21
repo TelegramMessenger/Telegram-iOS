@@ -1147,7 +1147,7 @@ final class ChatListControllerNode: ASDisplayNode {
         }
     }
     
-    func activateSearch(placeholderNode: SearchBarPlaceholderNode, navigationController: NavigationController?, updatedDisplayFiltersPanel: ((Bool) -> Void)?) -> (ASDisplayNode, () -> Void)? {
+    func activateSearch(placeholderNode: SearchBarPlaceholderNode, navigationController: NavigationController?) -> (ASDisplayNode, () -> Void)? {
         guard let (containerLayout, _, _, cleanNavigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
             return nil
         }
@@ -1169,9 +1169,7 @@ final class ChatListControllerNode: ASDisplayNode {
             self?.controller?.present(c, in: .window(.root), with: a)
         }, presentInGlobalOverlay: { [weak self] c, a in
             self?.controller?.presentInGlobalOverlay(c, with: a)
-        }, navigationController: navigationController, updatedDisplayFiltersPanel: { display in
-            updatedDisplayFiltersPanel?(display)
-        })
+        }, navigationController: navigationController)
         
         self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: contentNode, cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {

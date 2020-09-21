@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 
 enum ChatListSearchFilter: Equatable {
+    case chats
     case media
     case links
     case files
@@ -18,16 +19,18 @@ enum ChatListSearchFilter: Equatable {
     
     var id: Int32 {
         switch self {
-            case .media:
+            case .chats:
                 return 0
-            case .links:
+            case .media:
                 return 1
-            case .files:
+            case .links:
                 return 2
-            case .music:
+            case .files:
                 return 3
-            case .voice:
+            case .music:
                 return 4
+            case .voice:
+                return 5
             case let .peer(peerId, _, _, _):
                 return peerId.id
             case let .date(date, _):
@@ -41,12 +44,10 @@ private final class ItemNode: ASDisplayNode {
     
     private let iconNode: ASImageNode
     private let titleNode: ImmediateTextNode
+    private let titleActiveNode: ImmediateTextNode
     private let buttonNode: HighlightTrackingButtonNode
     
     private var selectionFraction: CGFloat = 0.0
-    private(set) var unreadCount: Int = 0
-    
-    private var isReordering: Bool = false
     
     private var theme: PresentationTheme?
     
@@ -63,11 +64,17 @@ private final class ItemNode: ASDisplayNode {
         self.titleNode.displaysAsynchronously = false
         self.titleNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
         
+        self.titleActiveNode = ImmediateTextNode()
+        self.titleActiveNode.displaysAsynchronously = false
+        self.titleActiveNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
+        self.titleActiveNode.alpha = 0.0
+        
         self.buttonNode = HighlightTrackingButtonNode()
         
         super.init()
         
         self.addSubnode(self.titleNode)
+        self.addSubnode(self.titleActiveNode)
         self.addSubnode(self.iconNode)
         self.addSubnode(self.buttonNode)
         
@@ -95,27 +102,32 @@ private final class ItemNode: ASDisplayNode {
         self.pressed()
     }
     
-    func update(type: ChatListSearchFilter, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
+    func update(type: ChatListSearchFilter, presentationData: PresentationData, selectionFraction: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.selectionFraction = selectionFraction
+        
         let title: String
         let icon: UIImage?
         
         let color = presentationData.theme.list.itemSecondaryTextColor
         switch type {
+            case .chats:
+                title = presentationData.strings.ChatList_Search_FilterChats
+                icon = nil
             case .media:
                 title = presentationData.strings.ChatList_Search_FilterMedia
-                icon = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/Media"), color: color)
+                icon = nil
             case .links:
                 title = presentationData.strings.ChatList_Search_FilterLinks
-                icon = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/Links"), color: color)
+                icon = nil
             case .files:
                 title = presentationData.strings.ChatList_Search_FilterFiles
-                icon = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/Files"), color: color)
+                icon = nil
             case .music:
                 title = presentationData.strings.ChatList_Search_FilterMusic
-                icon = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/Music"), color: color)
+                icon = nil
             case .voice:
                 title = presentationData.strings.ChatList_Search_FilterVoice
-                icon = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/Voice"), color: color)
+                icon = nil
             case let .peer(peerId, isGroup, displayTitle, _):
                 title = displayTitle
                 let image: UIImage?
@@ -133,6 +145,12 @@ private final class ItemNode: ASDisplayNode {
         }
         
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(14.0), textColor: color)
+        self.titleActiveNode.attributedText = NSAttributedString(string: title, font: Font.medium(14.0), textColor: presentationData.theme.list.itemAccentColor)
+        
+        let selectionAlpha: CGFloat = selectionFraction * selectionFraction
+        let deselectionAlpha: CGFloat = 1.0// - selectionFraction
+        transition.updateAlpha(node: self.titleNode, alpha: deselectionAlpha)
+        transition.updateAlpha(node: self.titleActiveNode, alpha: selectionAlpha)
         
         if self.theme !== presentationData.theme {
             self.theme = presentationData.theme
@@ -141,14 +159,17 @@ private final class ItemNode: ASDisplayNode {
     }
     
     func updateLayout(height: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
-        let iconInset: CGFloat = 22.0
+        var iconInset: CGFloat = 0.0
         if let image = self.iconNode.image {
+            iconInset = 22.0
             self.iconNode.frame = CGRect(x: 0.0, y: floorToScreenPixels((height - image.size.height) / 2.0), width: image.size.width, height: image.size.height)
         }
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: 160.0, height: .greatestFiniteMagnitude))
+        let _ = self.titleActiveNode.updateLayout(CGSize(width: 160.0, height: .greatestFiniteMagnitude))
         let titleFrame = CGRect(origin: CGPoint(x: -self.titleNode.insets.left + iconInset, y: floor((height - titleSize.height) / 2.0)), size: titleSize)
         self.titleNode.frame = titleFrame
+        self.titleActiveNode.frame = titleFrame
                 
         return titleSize.width - self.titleNode.insets.left - self.titleNode.insets.right + iconInset
     }
@@ -177,15 +198,23 @@ enum ChatListSearchFilterEntry: Equatable {
 
 final class ChatListSearchFiltersContainerNode: ASDisplayNode {
     private let scrollNode: ASScrollNode
+    private let selectedLineNode: ASImageNode
     private var itemNodes: [ChatListSearchFilterEntryId: ItemNode] = [:]
     
     var filterPressed: ((ChatListSearchFilter) -> Void)?
 
-    private var currentParams: (size: CGSize, sideInset: CGFloat, filters: [ChatListSearchFilterEntry], presentationData: PresentationData)?
+    private var currentParams: (size: CGSize, sideInset: CGFloat, filters: [ChatListSearchFilterEntry], selectedFilter: ChatListSearchFilterEntryId?, transitionFraction: CGFloat, presentationData: PresentationData)?
         
+    private var previousSelectedAbsFrame: CGRect?
+    private var previousSelectedFrame: CGRect?
+    
     override init() {
         self.scrollNode = ASScrollNode()
     
+        self.selectedLineNode = ASImageNode()
+        self.selectedLineNode.displaysAsynchronously = false
+        self.selectedLineNode.displayWithoutProcessing = true
+        
         super.init()
                 
         self.scrollNode.view.showsHorizontalScrollIndicator = false
@@ -197,21 +226,31 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
         }
         
         self.addSubnode(self.scrollNode)
+        self.addSubnode(self.selectedLineNode)
     }
         
     func cancelAnimations() {
         self.scrollNode.layer.removeAllAnimations()
     }
     
-    func update(size: CGSize, sideInset: CGFloat, filters: [ChatListSearchFilterEntry], presentationData: PresentationData, transition proposedTransition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, sideInset: CGFloat, filters: [ChatListSearchFilterEntry], selectedFilter: ChatListSearchFilterEntryId?, transitionFraction: CGFloat, presentationData: PresentationData, transition proposedTransition: ContainedViewLayoutTransition) {
         let isFirstTime = self.currentParams == nil
         let transition: ContainedViewLayoutTransition = isFirstTime ? .immediate : proposedTransition
         
+        var focusOnSelectedFilter = self.currentParams?.selectedFilter != selectedFilter
+        let previousScrollBounds = self.scrollNode.bounds
+        let previousContentWidth = self.scrollNode.view.contentSize.width
+        
         if self.currentParams?.presentationData.theme !== presentationData.theme {
             self.backgroundColor = presentationData.theme.rootController.navigationBar.backgroundColor
+            self.selectedLineNode.image = generateImage(CGSize(width: 8.0, height: 4.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(presentationData.theme.list.itemAccentColor.cgColor)
+                context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.width)))
+            })?.stretchableImage(withLeftCapWidth: 4, topCapHeight: 1)
         }
         
-        self.currentParams = (size: size, sideInset: sideInset, filters: filters, presentationData: presentationData)
+        self.currentParams = (size: size, sideInset: sideInset, filters: filters, selectedFilter: selectedFilter, transitionFraction: transitionFraction, presentationData: presentationData)
         
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: size))
              
@@ -229,7 +268,19 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
                     })
                     self.itemNodes[filter.id] = itemNode
                 }
-                itemNode.update(type: type, presentationData: presentationData, transition: itemNodeTransition)
+                
+                let selectionFraction: CGFloat
+                if selectedFilter == filter.id {
+                    selectionFraction = 1.0 - abs(transitionFraction)
+                } else if i != 0 && selectedFilter == filters[i - 1].id {
+                    selectionFraction = max(0.0, -transitionFraction)
+                } else if i != filters.count - 1 && selectedFilter == filters[i + 1].id {
+                    selectionFraction = max(0.0, transitionFraction)
+                } else {
+                    selectionFraction = 0.0
+                }
+                
+                itemNode.update(type: type, presentationData: presentationData, selectionFraction: selectionFraction, transition: itemNodeTransition)
             }
         }
         
@@ -253,6 +304,7 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
         
         var tabSizes: [(ChatListSearchFilterEntryId, CGSize, ItemNode, Bool)] = []
         var totalRawTabSize: CGFloat = 0.0
+        var selectionFrames: [CGRect] = []
         
         for filter in filters {
             guard let itemNode = self.itemNodes[filter.id] else {
@@ -308,12 +360,74 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
             paneNode.updateArea(size: paneFrame.size, sideInset: spacing / 2.0, transition: itemNodeTransition)
             paneNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: -spacing / 2.0, bottom: 0.0, right: -spacing / 2.0)
                         
+            selectionFrames.append(paneFrame)
+            
             leftOffset += paneNodeSize.width + spacing
         }
         leftOffset -= spacing
         leftOffset += resolvedSideInset
         
         self.scrollNode.view.contentSize = CGSize(width: leftOffset, height: size.height)
+        
+        var selectedFrame: CGRect?
+        if let selectedFilter = selectedFilter, let currentIndex = filters.firstIndex(where: { $0.id == selectedFilter }) {
+            func interpolateFrame(from fromValue: CGRect, to toValue: CGRect, t: CGFloat) -> CGRect {
+                return CGRect(x: floorToScreenPixels(toValue.origin.x * t + fromValue.origin.x * (1.0 - t)), y: floorToScreenPixels(toValue.origin.y * t + fromValue.origin.y * (1.0 - t)), width: floorToScreenPixels(toValue.size.width * t + fromValue.size.width * (1.0 - t)), height: floorToScreenPixels(toValue.size.height * t + fromValue.size.height * (1.0 - t)))
+            }
+            
+            if currentIndex != 0 && transitionFraction > 0.0 {
+                let currentFrame = selectionFrames[currentIndex]
+                let previousFrame = selectionFrames[currentIndex - 1]
+                selectedFrame = interpolateFrame(from: currentFrame, to: previousFrame, t: abs(transitionFraction))
+            } else if currentIndex != filters.count - 1 && transitionFraction < 0.0 {
+                let currentFrame = selectionFrames[currentIndex]
+                let previousFrame = selectionFrames[currentIndex + 1]
+                selectedFrame = interpolateFrame(from: currentFrame, to: previousFrame, t: abs(transitionFraction))
+            } else {
+                selectedFrame = selectionFrames[currentIndex]
+            }
+        }
+        
+        if let selectedFrame = selectedFrame {
+            let wasAdded = self.selectedLineNode.isHidden
+            self.selectedLineNode.isHidden = false
+            let lineFrame = CGRect(origin: CGPoint(x: selectedFrame.minX, y: size.height - 4.0), size: CGSize(width: selectedFrame.width, height: 4.0))
+            if wasAdded {
+                self.selectedLineNode.frame = lineFrame
+                self.selectedLineNode.alpha = 0.0
+            } else {
+                transition.updateFrame(node: self.selectedLineNode, frame: lineFrame)
+            }
+            transition.updateAlpha(node: self.selectedLineNode, alpha: 1.0)
+            
+            if let previousSelectedFrame = self.previousSelectedFrame {
+                let previousContentOffsetX = max(0.0, min(previousContentWidth - previousScrollBounds.width, floor(previousSelectedFrame.midX - previousScrollBounds.width / 2.0)))
+                if abs(previousContentOffsetX - previousScrollBounds.minX) < 1.0 {
+                    focusOnSelectedFilter = true
+                }
+            }
+            
+            if focusOnSelectedFilter {
+                let updatedBounds: CGRect
+                if transitionFraction.isZero && selectedFilter == filters.first?.id {
+                    updatedBounds = CGRect(origin: CGPoint(), size: self.scrollNode.bounds.size)
+                } else if transitionFraction.isZero && selectedFilter == filters.last?.id {
+                    updatedBounds = CGRect(origin: CGPoint(x: max(0.0, self.scrollNode.view.contentSize.width - self.scrollNode.bounds.width), y: 0.0), size: self.scrollNode.bounds.size)
+                } else {
+                    let contentOffsetX = max(0.0, min(self.scrollNode.view.contentSize.width - self.scrollNode.bounds.width, floor(selectedFrame.midX - self.scrollNode.bounds.width / 2.0)))
+                    updatedBounds = CGRect(origin: CGPoint(x: contentOffsetX, y: 0.0), size: self.scrollNode.bounds.size)
+                }
+                self.scrollNode.bounds = updatedBounds
+            }
+            transition.animateHorizontalOffsetAdditive(node: self.scrollNode, offset: previousScrollBounds.minX - self.scrollNode.bounds.minX)
+            
+            self.previousSelectedAbsFrame = selectedFrame.offsetBy(dx: -self.scrollNode.bounds.minX, dy: 0.0)
+            self.previousSelectedFrame = selectedFrame
+        } else {
+            self.selectedLineNode.isHidden = true
+            self.previousSelectedAbsFrame = nil
+            self.previousSelectedFrame = nil
+        }
         
         if updated && self.scrollNode.view.contentOffset.x > 0.0 {
             self.scrollNode.view.contentOffset = CGPoint()

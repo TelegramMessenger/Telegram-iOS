@@ -837,8 +837,6 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
         
         self.scrollNode.view.contentSize = CGSize(width: leftOffset, height: size.height)
         
-        var previousFrame: CGRect?
-        var nextFrame: CGRect?
         var selectedFrame: CGRect?
         if let selectedFilter = selectedFilter, let currentIndex = reorderedFilters.firstIndex(where: { $0.id == selectedFilter }) {
             func interpolateFrame(from fromValue: CGRect, to toValue: CGRect, t: CGFloat) -> CGRect {

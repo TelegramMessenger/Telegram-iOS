@@ -134,7 +134,7 @@ public final class SearchDisplayController {
         insertSubnode(self.backgroundNode, false)
         self.backgroundNode.addSubnode(self.contentNode)
         
-        self.contentNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+        self.contentNode.frame = CGRect(origin: CGPoint(x: 20.0, y: 20.0), size: layout.size)
         
         self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: layout.safeInsets, statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), navigationBarHeight: navigationBarHeight, transition: .immediate)
         
@@ -149,7 +149,7 @@ public final class SearchDisplayController {
             let contentNodePosition = self.contentNode.layer.position
             
 //            self.contentNode.layer.animatePosition(from: CGPoint(x: contentNodePosition.x, y: contentNodePosition.y + (initialTextBackgroundFrame.maxY + 8.0 - contentNavigationBarHeight)), to: contentNodePosition, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-            self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+            self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
             self.backgroundNode.layer.animateScale(from: 0.85, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
             self.searchBar.placeholderString = placeholder.placeholderString
         }
