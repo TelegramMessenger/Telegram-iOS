@@ -87,6 +87,7 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
         _textView.autocorrectionType = UITextAutocorrectionTypeNo;
         _textView.spellCheckingType = UITextSpellCheckingTypeNo;
         _textView.font = [UIFont boldSystemFontOfSize:_baseFontSize];
+        _textView.typingAttributes = @{NSFontAttributeName: _textView.font};
 //        _textView.frameWidthInset = floor(_baseFontSize * 0.03);
         
         [self setSwatch:entity.swatch];
@@ -175,6 +176,7 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
 {
     _font = font;
     _textView.font = [UIFont boldSystemFontOfSize:_baseFontSize];
+    _textView.typingAttributes = @{NSFontAttributeName: _textView.font};
 //    _textView.frameWidthInset = floor(_baseFontSize * 0.03);
     
     [self sizeToFit];
@@ -480,6 +482,9 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
 
 
 @implementation TGPhotoTextView
+{
+    UIFont *_font;
+}
 
 - (instancetype)initWithFrame:(CGRect)frame
 {
@@ -554,8 +559,27 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
 
 - (void)setFont:(UIFont *)font {
     [super setFont:font];
+    _font = font;
     
     self.layoutManager.textContainers.firstObject.lineFragmentPadding = floor(font.pointSize * 0.3);
+}
+
+- (void)insertText:(NSString *)text {
+    [self fixTypingAttributes];
+    [super insertText:text];
+    [self fixTypingAttributes];
+}
+
+- (void)paste:(id)sender {
+    [self fixTypingAttributes];
+    [super paste:sender];
+    [self fixTypingAttributes];
+}
+
+- (void)fixTypingAttributes {
+    if (_font != nil) {
+        self.typingAttributes = @{NSFontAttributeName: _font};
+    }
 }
 
 @end
@@ -801,8 +825,6 @@ const CGFloat TGPhotoTextSelectionViewHandleSide = 30.0f;
 {
     return [_impl attributesAtIndex:location effectiveRange:range];
 }
-
-
 
 - (void)replaceCharactersInRange:(NSRange)range withString:(NSString *)str {
     [self beginEditing];

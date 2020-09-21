@@ -10,7 +10,7 @@ private let panelSize = CGSize(width: 46.0, height: 90.0)
 
 private func generateBackgroundImage(theme: PresentationTheme) -> UIImage? {
     let cornerRadius: CGFloat = 9.0
-    return generateImage(CGSize(width: (cornerRadius + panelInset) * 2.0, height: (cornerRadius + panelInset) * 2.0)) { size, context in
+    return generateImage(CGSize(width: (cornerRadius + panelInset) * 2.0, height: (cornerRadius + panelInset) * 2.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
         context.setShadow(offset: CGSize(), blur: 10.0, color: UIColor(rgb: 0x000000, alpha: 0.2).cgColor)
@@ -18,11 +18,11 @@ private func generateBackgroundImage(theme: PresentationTheme) -> UIImage? {
         let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: panelInset, y: panelInset), size: CGSize(width: cornerRadius * 2.0, height: cornerRadius * 2.0)), cornerRadius: cornerRadius)
         context.addPath(path.cgPath)
         context.fillPath()
-    }?.stretchableImage(withLeftCapWidth: Int(cornerRadius + panelInset), topCapHeight: Int(cornerRadius + panelInset))
+    })?.stretchableImage(withLeftCapWidth: Int(cornerRadius + panelInset), topCapHeight: Int(cornerRadius + panelInset))
 }
 
 private func generateShadowImage(theme: PresentationTheme, highlighted: Bool) -> UIImage? {
-    return generateImage(CGSize(width: 26.0, height: 14.0)) { size, context in
+    return generateImage(CGSize(width: 26.0, height: 14.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
         context.setShadow(offset: CGSize(), blur: 10.0, color: UIColor(rgb: 0x000000, alpha: 0.2).cgColor)
@@ -30,7 +30,7 @@ private func generateShadowImage(theme: PresentationTheme, highlighted: Bool) ->
         let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: 0.0, y: 4.0), size: CGSize(width: 26.0, height: 20.0)), cornerRadius: 9.0)
         context.addPath(path.cgPath)
         context.fillPath()
-    }?.stretchableImage(withLeftCapWidth: 13, topCapHeight: 0)
+    })?.stretchableImage(withLeftCapWidth: 13, topCapHeight: 0)
 }
 
 final class LocationMapHeaderNode: ASDisplayNode {
