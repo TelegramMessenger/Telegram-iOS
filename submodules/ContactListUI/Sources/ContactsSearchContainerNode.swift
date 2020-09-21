@@ -159,6 +159,10 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
     private var containerViewLayout: (ContainerViewLayout, CGFloat)?
     private var enqueuedTransitions: [ContactListSearchContainerTransition] = []
     
+    public override var hasDim: Bool {
+        return true
+    }
+    
     public init(context: AccountContext, onlyWriteable: Bool, categories: ContactsSearchCategories, filters: [ContactListFilter] = [.excludeSelf], openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?) {
         self.context = context
         self.openPeer = openPeer

@@ -555,7 +555,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 let propertyAnimator = propertyAnimator as? UIViewPropertyAnimator
                 propertyAnimator?.stopAnimation(true)
             }
-            self.effectView.effect = makeCustomZoomBlurEffect()
+            self.effectView.effect = makeCustomZoomBlurEffect(isLight: !self.presentationData.theme.overallDarkAppearance)
             self.effectView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor)
             self.propertyAnimator = UIViewPropertyAnimator(duration: 0.2 * animationDurationFactor * UIView.animationDurationFactor(), curve: .easeInOut, animations: {
             })
@@ -573,7 +573,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             }
         } else {
             UIView.animate(withDuration: 0.2 * animationDurationFactor, animations: {
-                self.effectView.effect = makeCustomZoomBlurEffect()
+                self.effectView.effect = makeCustomZoomBlurEffect(isLight: !self.presentationData.theme.overallDarkAppearance)
             }, completion: { [weak self] _ in
                 self?.didCompleteAnimationIn = true
                 self?.actionsContainerNode.animateIn()
@@ -1082,7 +1082,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         propertyAnimator?.stopAnimation(true)
                     }
                 }
-                self.effectView.effect = makeCustomZoomBlurEffect()
+                self.effectView.effect = makeCustomZoomBlurEffect(isLight: !self.presentationData.theme.overallDarkAppearance)
                 self.dimNode.alpha = 1.0
             }
             self.dimNode.isHidden = false

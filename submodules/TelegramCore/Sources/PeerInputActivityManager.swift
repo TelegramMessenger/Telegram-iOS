@@ -178,9 +178,9 @@ private final class PeerInputActivityContext {
 }
 
 private final class PeerGlobalInputActivityContext {
-    private let subscribers = Bag<([PeerId: [PeerId: PeerInputActivityRecord]]) -> Void>()
+    private let subscribers = Bag<([PeerActivitySpace: [PeerId: PeerInputActivityRecord]]) -> Void>()
     
-    func addSubscriber(_ subscriber: @escaping ([PeerId: [PeerId: PeerInputActivityRecord]]) -> Void) -> Int {
+    func addSubscriber(_ subscriber: @escaping ([PeerActivitySpace: [PeerId: PeerInputActivityRecord]]) -> Void) -> Int {
         return self.subscribers.add(subscriber)
     }
     
@@ -192,7 +192,7 @@ private final class PeerGlobalInputActivityContext {
         return self.subscribers.isEmpty
     }
     
-    func notify(_ activities: [PeerId: [PeerId: PeerInputActivityRecord]]) {
+    func notify(_ activities: [PeerActivitySpace: [PeerId: PeerInputActivityRecord]]) {
         for subscriber in self.subscribers.copyItems() {
             subscriber(activities)
         }
@@ -204,10 +204,10 @@ final class PeerInputActivityManager {
     
     private var nextEpisodeId: Int32 = 0
     private var nextUpdateId: Int32 = 0
-    private var contexts: [PeerId: PeerInputActivityContext] = [:]
+    private var contexts: [PeerActivitySpace: PeerInputActivityContext] = [:]
     private var globalContext: PeerGlobalInputActivityContext?
     
-    func activities(peerId: PeerId) -> Signal<[(PeerId, PeerInputActivityRecord)], NoError> {
+    func activities(peerId: PeerActivitySpace) -> Signal<[(PeerId, PeerInputActivityRecord)], NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
@@ -256,10 +256,10 @@ final class PeerInputActivityManager {
         }
     }
     
-    private func collectActivities() -> [PeerId: [PeerId: PeerInputActivityRecord]] {
+    private func collectActivities() -> [PeerActivitySpace: [PeerId: PeerInputActivityRecord]] {
         assert(self.queue.isCurrent())
         
-        var dict: [PeerId: [PeerId: PeerInputActivityRecord]] = [:]
+        var dict: [PeerActivitySpace: [PeerId: PeerInputActivityRecord]] = [:]
         for (chatPeerId, context) in self.contexts {
             var chatDict: [PeerId: PeerInputActivityRecord] = [:]
             for (peerId, activity) in context.topActivities() {
@@ -270,7 +270,7 @@ final class PeerInputActivityManager {
         return dict
     }
     
-    func allActivities() -> Signal<[PeerId: [PeerId: PeerInputActivityRecord]], NoError> {
+    func allActivities() -> Signal<[PeerActivitySpace: [PeerId: PeerInputActivityRecord]], NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
@@ -306,7 +306,7 @@ final class PeerInputActivityManager {
         }
     }
     
-    func addActivity(chatPeerId: PeerId, peerId: PeerId, activity: PeerInputActivity, episodeId: Int32? = nil) {
+    func addActivity(chatPeerId: PeerActivitySpace, peerId: PeerId, activity: PeerInputActivity, episodeId: Int32? = nil) {
         self.queue.async {
             let context: PeerInputActivityContext
             if let currentContext = self.contexts[chatPeerId] {
@@ -338,7 +338,7 @@ final class PeerInputActivityManager {
         }
     }
     
-    func removeActivity(chatPeerId: PeerId, peerId: PeerId, activity: PeerInputActivity, episodeId: Int32? = nil) {
+    func removeActivity(chatPeerId: PeerActivitySpace, peerId: PeerId, activity: PeerInputActivity, episodeId: Int32? = nil) {
         self.queue.async {
             if let context = self.contexts[chatPeerId] {
                 context.removeActivity(peerId: peerId, activity: activity, episodeId: episodeId)
@@ -351,7 +351,7 @@ final class PeerInputActivityManager {
         }
     }
     
-    func removeAllActivities(chatPeerId: PeerId, peerId: PeerId) {
+    func removeAllActivities(chatPeerId: PeerActivitySpace, peerId: PeerId) {
         self.queue.async {
             if let currentContext = self.contexts[chatPeerId] {
                 currentContext.removeAllActivities(peerId: peerId)
@@ -370,7 +370,7 @@ final class PeerInputActivityManager {
         }
     }
     
-    func acquireActivity(chatPeerId: PeerId, peerId: PeerId, activity: PeerInputActivity) -> Disposable {
+    func acquireActivity(chatPeerId: PeerActivitySpace, peerId: PeerId, activity: PeerInputActivity) -> Disposable {
         let disposable = MetaDisposable()
         let queue = self.queue
         queue.async {

@@ -122,6 +122,11 @@ public final class Transaction {
         self.postbox?.removeAllMessagesWithAuthor(peerId, authorId: authorId, namespace: namespace, forEachMedia: forEachMedia)
     }
     
+    public func removeAllMessagesWithForwardAuthor(_ peerId: PeerId, forwardAuthorId: PeerId, namespace: MessageId.Namespace, forEachMedia: (Media) -> Void) {
+        assert(!self.disposed)
+        self.postbox?.removeAllMessagesWithForwardAuthor(peerId, forwardAuthorId: forwardAuthorId, namespace: namespace, forEachMedia: forEachMedia)
+    }
+    
     public func messageIdsForGlobalIds(_ ids: [Int32]) -> [MessageId] {
         assert(!self.disposed)
         if let postbox = self.postbox {
@@ -1690,6 +1695,10 @@ public final class Postbox {
         self.messageHistoryTable.removeAllMessagesWithAuthor(peerId: peerId, authorId: authorId, namespace: namespace, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, forEachMedia: forEachMedia)
     }
     
+    fileprivate func removeAllMessagesWithForwardAuthor(_ peerId: PeerId, forwardAuthorId: PeerId, namespace: MessageId.Namespace, forEachMedia: (Media) -> Void) {
+        self.messageHistoryTable.removeAllMessagesWithForwardAuthor(peerId: peerId, forwardAuthorId: forwardAuthorId, namespace: namespace, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, forEachMedia: forEachMedia)
+    }
+    
     fileprivate func resetIncomingReadStates(_ states: [PeerId: [MessageId.Namespace: PeerReadState]]) {
         self.messageHistoryTable.resetIncomingReadStates(states, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
     }
@@ -2459,7 +2468,7 @@ public final class Postbox {
                         }
                     }
                 case let .external(input):
-                    if let maxReadMessageId = input.maxReadMessageId {
+                    if let maxReadMessageId = input.maxReadIncomingMessageId {
                         anchor = .message(maxReadMessageId)
                     } else {
                         anchor = .upperBound

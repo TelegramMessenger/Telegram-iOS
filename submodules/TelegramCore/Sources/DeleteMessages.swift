@@ -67,6 +67,16 @@ public func deleteAllMessagesWithAuthor(transaction: Transaction, mediaBox: Medi
     }
 }
 
+public func deleteAllMessagesWithForwardAuthor(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, forwardAuthorId: PeerId, namespace: MessageId.Namespace) {
+    var resourceIds: [WrappedMediaResourceId] = []
+    transaction.removeAllMessagesWithForwardAuthor(peerId, forwardAuthorId: forwardAuthorId, namespace: namespace, forEachMedia: { media in
+        addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
+    })
+    if !resourceIds.isEmpty {
+        let _ = mediaBox.removeCachedResources(Set(resourceIds)).start()
+    }
+}
+
 public func clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, namespaces: MessageIdNamespaces) {
     if peerId.namespace == Namespaces.Peer.SecretChat {
         var resourceIds: [WrappedMediaResourceId] = []

@@ -361,6 +361,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, reportSelectedMessages: {
             reportMessages()
         }, reportMessages: { _, _ in
+        }, blockMessageAuthor: { _, _ in
         }, deleteMessages: { _, _, f in
             f(.default)
         }, forwardSelectedMessages: {
@@ -1957,6 +1958,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             return nil
         }, openPeerContextMenu: { _, _, _, _ in
         }, openMessageReplies: { _, _ in
+        }, openReplyThreadOriginalMessage: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

@@ -134,6 +134,9 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
     guard !chatPresentationInterfaceState.isScheduledMessages else {
         return false
     }
+    guard !peer.id.isReplies else {
+        return false
+    }
     switch chatPresentationInterfaceState.mode {
     case .inline:
         return false
@@ -465,7 +468,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         var isReplyThreadHead = false
-        if case let .replyThread(messageId, _, _, _) = chatPresentationInterfaceState.chatLocation {
+        if case let .replyThread(messageId, _, _, _, _) = chatPresentationInterfaceState.chatLocation {
             isReplyThreadHead = messages[0].id == messageId
         }
         
@@ -616,29 +619,25 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 }
                 c.dismiss(completion: {
                     if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
-                        if case .group = channel.info {
-                            interfaceInteraction.viewReplies(messages[0].id, ChatReplyThreadMessage(messageId: replyThreadId, maxMessage: .unknown, maxReadMessageId: nil))
-                        } else {
-                            var cancelImpl: (() -> Void)?
-                            let statusController = OverlayStatusController(theme: chatPresentationInterfaceState.theme, type: .loading(cancelled: {
-                                cancelImpl?()
-                            }))
-                            controllerInteraction.presentController(statusController, nil)
+                        var cancelImpl: (() -> Void)?
+                        let statusController = OverlayStatusController(theme: chatPresentationInterfaceState.theme, type: .loading(cancelled: {
+                            cancelImpl?()
+                        }))
+                        controllerInteraction.presentController(statusController, nil)
+                        
+                        let disposable = (foundIndex.get()
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { [weak statusController] result in
+                            statusController?.dismiss()
                             
-                            let disposable = (foundIndex.get()
-                            |> take(1)
-                            |> deliverOnMainQueue).start(next: { [weak statusController] result in
-                                statusController?.dismiss()
-                                
-                                if let result = result {
-                                    interfaceInteraction.viewReplies(nil, result)
-                                }
-                            })
-                            
-                            cancelImpl = { [weak statusController] in
-                                disposable.dispose()
-                                statusController?.dismiss()
+                            if let result = result {
+                                interfaceInteraction.viewReplies(nil, result)
                             }
+                        })
+                        
+                        cancelImpl = { [weak statusController] in
+                            disposable.dispose()
+                            statusController?.dismiss()
                         }
                     }
                 })
@@ -746,10 +745,10 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
                 var threadMessageId: MessageId?
-                if case let .replyThread(replyThread, _, _, _) = chatPresentationInterfaceState.chatLocation {
+                if case let .replyThread(replyThread, _, _, _, _) = chatPresentationInterfaceState.chatLocation {
                     threadMessageId = replyThread
                 }
-                let _ = (exportMessageLink(account: context.account, peerId: message.id.peerId, messageId: message.id, threadMessageId: threadMessageId)
+                let _ = (exportMessageLink(account: context.account, peerId: message.id.peerId, messageId: message.id, isThread: threadMessageId != nil)
                 |> map { result -> String? in
                     return result
                 }
@@ -837,6 +836,12 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.actionSheet.primaryTextColor)
             }, action: { controller, f in
                 interfaceInteraction.reportMessages(selectAll ? messages : [message], controller)
+            })))
+        } else if message.id.peerId.isReplies {
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuBlock, textColor: .destructive, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Block"), color: theme.actionSheet.destructiveActionTextColor)
+            }, action: { controller, f in
+                interfaceInteraction.blockMessageAuthor(message, controller)
             })))
         }
         

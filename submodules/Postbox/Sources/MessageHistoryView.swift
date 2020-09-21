@@ -251,18 +251,21 @@ public struct MessageHistoryViewOrderStatistics: OptionSet {
 public final class MessageHistoryViewExternalInput: Equatable {
     public let peerId: PeerId
     public let threadId: Int64
-    public let maxReadMessageId: MessageId?
+    public let maxReadIncomingMessageId: MessageId?
+    public let maxReadOutgoingMessageId: MessageId?
     public let holes: [MessageId.Namespace: IndexSet]
     
     public init(
         peerId: PeerId,
         threadId: Int64,
-        maxReadMessageId: MessageId?,
+        maxReadIncomingMessageId: MessageId?,
+        maxReadOutgoingMessageId: MessageId?,
         holes: [MessageId.Namespace: IndexSet]
     ) {
         self.peerId = peerId
         self.threadId = threadId
-        self.maxReadMessageId = maxReadMessageId
+        self.maxReadIncomingMessageId = maxReadIncomingMessageId
+        self.maxReadOutgoingMessageId = maxReadOutgoingMessageId
         self.holes = holes
     }
     
@@ -277,6 +280,12 @@ public final class MessageHistoryViewExternalInput: Equatable {
             return false
         }
         if lhs.holes != rhs.holes {
+            return false
+        }
+        if lhs.maxReadIncomingMessageId != rhs.maxReadIncomingMessageId {
+            return false
+        }
+        if lhs.maxReadOutgoingMessageId != rhs.maxReadOutgoingMessageId {
             return false
         }
         return true
@@ -1032,7 +1041,7 @@ public final class MessageHistoryView {
                 self.maxReadIndex = nil
             }
         case let .external(input):
-            if let maxReadMesageId = input.maxReadMessageId {
+            if let maxReadMesageId = input.maxReadIncomingMessageId {
                 var maxIndex: MessageIndex?
                 
                 let hasUnread = true

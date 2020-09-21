@@ -182,7 +182,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             switch item.chatLocation {
             case let .peer(peerId):
                 messagePeerId = peerId
-            case let .replyThread(messageId, _, _, _):
+            case let .replyThread(messageId, _, _, _, _):
                 messagePeerId = messageId.peerId
             }
             
@@ -194,7 +194,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                             isBroadcastChannel = true
                         }
                         
-                        if case let .replyThread(messageId, isChannelPost, _, _) = item.chatLocation, isChannelPost, messageId == item.message.id {
+                        if case let .replyThread(messageId, isChannelPost, _, _, _) = item.chatLocation, isChannelPost, messageId == item.message.id {
                             isBroadcastChannel = true
                         }
                         
@@ -341,7 +341,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 }
                 
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-                    if case let .replyThread(replyThreadMessageId, _, _, _) = item.chatLocation, replyThreadMessageId == replyAttribute.messageId {
+                    if case let .replyThread(replyThreadMessageId, _, _, _, _) = item.chatLocation, replyThreadMessageId == replyAttribute.messageId {
                     } else {
                         replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                     }

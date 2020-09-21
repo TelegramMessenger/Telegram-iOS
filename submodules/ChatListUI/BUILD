@@ -55,6 +55,7 @@ swift_library(
         "//submodules/ChatInterfaceState:ChatInterfaceState",
         "//submodules/ShareController:ShareController",
         "//submodules/GridMessageSelectionNode:GridMessageSelectionNode",
+        "//submodules/ChatListFilterSettingsHeaderItem:ChatListFilterSettingsHeaderItem",
     ],
     visibility = [
         "//visibility:public",

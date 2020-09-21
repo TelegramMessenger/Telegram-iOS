@@ -237,7 +237,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                                     minMaxRange = 1 ... (Int32.max - 1)
                             }
                             
-                            request = source.request(Api.functions.messages.getReplies(peer: inputPeer, msgId: threadId.id, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: hash))
+                            request = source.request(Api.functions.messages.getReplies(peer: inputPeer, msgId: threadId.id, offsetId: offsetId, offsetDate: 0, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId, hash: hash))
                         } else {
                             let offsetId: Int32
                             let addOffset: Int32

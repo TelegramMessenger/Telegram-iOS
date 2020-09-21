@@ -67,7 +67,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
                     result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform)))
                 }
             } else if let _ = media as? TelegramMediaMap {
-                result.append((message, ChatMessageMapBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media)))
+                result.append((message, ChatMessageMapBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform)))
             } else if let _ = media as? TelegramMediaGame {
                 skipText = true
                 result.append((message, ChatMessageGameBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform)))
@@ -841,7 +841,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         switch item.chatLocation {
         case let .peer(peerId):
             chatLocationPeerId = peerId
-        case let .replyThread(messageId, _, _, _):
+        case let .replyThread(messageId, _, _, _, _):
             chatLocationPeerId = messageId.peerId
         }
         
@@ -885,7 +885,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                         allowFullWidth = true
                     }
                     
-                    if case let .replyThread(messageId, isChannelPost, _, _) = item.chatLocation, isChannelPost, messageId == firstMessage.id {
+                    if case let .replyThread(messageId, isChannelPost, _, _, _) = item.chatLocation, isChannelPost, messageId == firstMessage.id {
                         isBroadcastChannel = true
                     }
                     
@@ -1048,7 +1048,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     inlineBotNameString = attribute.title
                 }
             } else if let attribute = attribute as? ReplyMessageAttribute {
-                if case let .replyThread(replyThreadMessageId, _, _, _) = item.chatLocation, replyThreadMessageId == attribute.messageId {
+                if case let .replyThread(replyThreadMessageId, _, _, _, _) = item.chatLocation, replyThreadMessageId == attribute.messageId {
                 } else {
                     replyMessage = firstMessage.associatedMessages[attribute.messageId]
                 }

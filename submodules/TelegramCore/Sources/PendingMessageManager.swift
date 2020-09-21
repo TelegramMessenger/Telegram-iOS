@@ -41,6 +41,7 @@ private final class PendingMessageContext {
     var state: PendingMessageState = .none
     let uploadDisposable = MetaDisposable()
     let sendDisposable = MetaDisposable()
+    var threadId: Int64?
     var activityType: PeerInputActivity? = nil
     var contentType: PendingMessageUploadedContentType? = nil
     let activityDisposable = MetaDisposable()
@@ -371,6 +372,7 @@ public final class PendingMessageManager {
                     }
                     
                     messageContext.activityType = uploadActivityTypeForMessage(message)
+                    messageContext.threadId = message.threadId
                     strongSelf.collectUploadingInfo(messageContext: messageContext, message: message)
                 }
                 
@@ -425,7 +427,7 @@ public final class PendingMessageManager {
                 
                 for (messageContext, message, type, contentUploadSignal) in messagesToUpload {
                     if strongSelf.canBeginUploadingMessage(id: message.id, type: type) {
-                        strongSelf.beginUploadingMessage(messageContext: messageContext, id: message.id, groupId: message.groupingKey, uploadSignal: contentUploadSignal)
+                        strongSelf.beginUploadingMessage(messageContext: messageContext, id: message.id, threadId: message.threadId, groupId: message.groupingKey, uploadSignal: contentUploadSignal)
                     } else {
                         messageContext.state = .waitingForUploadToStart(groupId: message.groupingKey, upload: contentUploadSignal)
                     }
@@ -544,7 +546,7 @@ public final class PendingMessageManager {
         messageContext.state = .collectingInfo(message: message)
     }
     
-    private func beginUploadingMessage(messageContext: PendingMessageContext, id: MessageId, groupId: Int64?, uploadSignal: Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>) {
+    private func beginUploadingMessage(messageContext: PendingMessageContext, id: MessageId, threadId: Int64?, groupId: Int64?, uploadSignal: Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>) {
         messageContext.state = .uploading(groupId: groupId)
         
         let status = PendingMessageStatus(isRunning: true, progress: 0.0)
@@ -552,7 +554,7 @@ public final class PendingMessageManager {
         for subscriber in messageContext.statusSubscribers.copyItems() {
             subscriber(messageContext.status, messageContext.error)
         }
-        self.addContextActivityIfNeeded(messageContext, peerId: id.peerId)
+        self.addContextActivityIfNeeded(messageContext, peerId: PeerActivitySpace(peerId: id.peerId, threadId: threadId))
         
         let queue = self.queue
         
@@ -602,7 +604,7 @@ public final class PendingMessageManager {
         }))
     }
     
-    private func addContextActivityIfNeeded(_ context: PendingMessageContext, peerId: PeerId) {
+    private func addContextActivityIfNeeded(_ context: PendingMessageContext, peerId: PeerActivitySpace) {
         if let activityType = context.activityType {
             context.activityDisposable.set(self.localInputActivityManager.acquireActivity(chatPeerId: peerId, peerId: self.accountPeerId, activity: activityType))
         }
@@ -622,7 +624,7 @@ public final class PendingMessageManager {
                     for subscriber in context.statusSubscribers.copyItems() {
                         subscriber(context.status, context.error)
                     }
-                    self.addContextActivityIfNeeded(context, peerId: peerId)
+                    self.addContextActivityIfNeeded(context, peerId: PeerActivitySpace(peerId: peerId, threadId: context.threadId))
                     context.uploadDisposable.set((uploadSignal
                     |> deliverOn(self.queue)).start(next: { [weak self] next in
                         if let strongSelf = self {

@@ -627,7 +627,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         if !isAuxiliaryChat {
             additionalData.append(.totalUnreadState)
         }
-        if case let .replyThread(messageId, _, _, _) = chatLocation {
+        if case let .replyThread(messageId, _, _, _, _) = chatLocation {
             additionalData.append(.cachedPeerData(messageId.peerId))
             additionalData.append(.peerNotificationSettings(messageId.peerId))
             if messageId.peerId.namespace == Namespaces.Peer.CloudChannel {
@@ -714,6 +714,65 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         |> distinctUntilChanged
         
+        let customChannelDiscussionReadState: Signal<MessageId?, NoError>
+        if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
+            let cachedDataKey = PostboxViewKey.cachedPeerData(peerId: chatLocation.peerId)
+            let peerKey = PostboxViewKey.basicPeer(peerId)
+            customChannelDiscussionReadState = context.account.postbox.combinedView(keys: [cachedDataKey, peerKey])
+            |> mapToSignal { views -> Signal<PeerId?, NoError> in
+                guard let view = views.views[cachedDataKey] as? CachedPeerDataView else {
+                    return .single(nil)
+                }
+                guard let peer = (views.views[peerKey] as? BasicPeerView)?.peer as? TelegramChannel, case .broadcast = peer.info else {
+                    return .single(nil)
+                }
+                guard let cachedData = view.cachedPeerData as? CachedChannelData else {
+                    return .single(nil)
+                }
+                guard case let .known(value) = cachedData.linkedDiscussionPeerId else {
+                    return .single(nil)
+                }
+                return .single(value)
+            }
+            |> distinctUntilChanged
+            |> mapToSignal { discussionPeerId -> Signal<MessageId?, NoError> in
+                guard let discussionPeerId = discussionPeerId else {
+                    return .single(nil)
+                }
+                let key = PostboxViewKey.combinedReadState(peerId: discussionPeerId)
+                return context.account.postbox.combinedView(keys: [key])
+                |> map { views -> MessageId? in
+                    guard let view = views.views[key] as? CombinedReadStateView else {
+                        return nil
+                    }
+                    guard let state = view.state else {
+                        return nil
+                    }
+                    for (namespace, namespaceState) in state.states {
+                        if namespace == Namespaces.Message.Cloud {
+                            switch namespaceState {
+                            case let .idBased(maxIncomingReadId, _, _, _, _):
+                                return MessageId(peerId: discussionPeerId, namespace: Namespaces.Message.Cloud, id: maxIncomingReadId)
+                            default:
+                                break
+                            }
+                        }
+                    }
+                    return nil
+                }
+                |> distinctUntilChanged
+            }
+        } else {
+            customChannelDiscussionReadState = .single(nil)
+        }
+        
+        let customThreadOutgoingReadState: Signal<MessageId?, NoError>
+        if case .replyThread = chatLocation {
+            customThreadOutgoingReadState = context.chatLocationOutgoingReadState(for: chatLocation, contextHolder: chatLocationContextHolder)
+        } else {
+            customThreadOutgoingReadState = .single(nil)
+        }
+        
         let historyViewTransitionDisposable = combineLatest(queue: messageViewQueue,
             historyViewUpdate,
             self.chatPresentationDataPromise.get(),
@@ -721,8 +780,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             updatingMedia,
             automaticDownloadNetworkType,
             self.historyAppearsClearedPromise.get(),
-            animatedEmojiStickers
-        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, historyAppearsCleared, animatedEmojiStickers in
+            animatedEmojiStickers,
+            customChannelDiscussionReadState,
+            customThreadOutgoingReadState
+        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, historyAppearsCleared, animatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState in
             func applyHole() {
                 Queue.mainQueue().async {
                     if let strongSelf = self {
@@ -806,7 +867,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 
                 let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, isScheduledMessages: isScheduledMessages)
                 
-                let filteredEntries = chatHistoryEntriesForView(location: chatLocation, view: view, includeUnreadEntry: mode == .bubbles, includeEmptyEntry: mode == .bubbles && tagMask == nil, includeChatInfoEntry: mode == .bubbles, includeSearchEntry: includeSearchEntry && tagMask != nil, reverse: reverse, groupMessages: mode == .bubbles, selectedMessages: selectedMessages, presentationData: chatPresentationData, historyAppearsCleared: historyAppearsCleared, associatedData: associatedData, updatingMedia: updatingMedia)
+                let filteredEntries = chatHistoryEntriesForView(location: chatLocation, view: view, includeUnreadEntry: mode == .bubbles, includeEmptyEntry: mode == .bubbles && tagMask == nil, includeChatInfoEntry: mode == .bubbles, includeSearchEntry: includeSearchEntry && tagMask != nil, reverse: reverse, groupMessages: mode == .bubbles, selectedMessages: selectedMessages, presentationData: chatPresentationData, historyAppearsCleared: historyAppearsCleared, associatedData: associatedData, updatingMedia: updatingMedia, customChannelDiscussionReadState: customChannelDiscussionReadState, customThreadOutgoingReadState: customThreadOutgoingReadState)
                 let lastHeaderId = filteredEntries.last.flatMap { listMessageDateHeaderId(timestamp: $0.index.timestamp) } ?? 0
                 let processedView = ChatHistoryView(originalView: view, filteredEntries: filteredEntries, associatedData: associatedData, lastHeaderId: lastHeaderId, id: id)
                 let previousValueAndVersion = previousView.swap((processedView, update.1, selectedMessages))
@@ -1112,7 +1173,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         if hasUnconsumedMention && !hasUnconsumedContent {
                             messageIdsWithUnseenPersonalMention.append(message.id)
                         }
-                        if case .replyThread(message.id, _, _, _) = self.chatLocation {
+                        if case .replyThread(message.id, _, _, _, _) = self.chatLocation {
                             isTopReplyThreadMessageShownValue = true
                         }
                     case let .MessageGroupEntry(_, messages, _):
@@ -1142,7 +1203,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             if hasUnconsumedMention && !hasUnconsumedContent {
                                 messageIdsWithUnseenPersonalMention.append(message.id)
                             }
-                            if case .replyThread(message.id, _, _, _) = self.chatLocation {
+                            if case .replyThread(message.id, _, _, _, _) = self.chatLocation {
                                 isTopReplyThreadMessageShownValue = true
                             }
                         }

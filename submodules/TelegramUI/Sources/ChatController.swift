@@ -69,7 +69,7 @@ extension ChatLocation {
         switch self {
         case let .peer(peerId):
             return peerId
-        case let .replyThread(messageId, _, _, _):
+        case let .replyThread(messageId, _, _, _, _):
             return messageId.peerId
         }
     }
@@ -371,7 +371,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case let .peer(peerId):
                 locationBroadcastPanelSource = .peer(peerId)
                 self.chatLocationInfoData = .peer(Promise())
-            case let .replyThread(messageId, _, _, _):
+            case let .replyThread(messageId, _, _, _, _):
                 locationBroadcastPanelSource = .none
                 let promise = Promise<Message?>()
                 let key = PostboxViewKey.messages([messageId])
@@ -480,7 +480,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: strongSelf.chatLocation, chatLocationContextHolder: strongSelf.chatLocationContextHolder, message: message, standalone: false, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.effectiveNavigationController, dismissInput: {
+            var openChatLocation = strongSelf.chatLocation
+            if case let .replyThread(messageId, _, _, _, _) = openChatLocation {
+                if message.threadId != makeMessageThreadId(messageId) {
+                    openChatLocation = .peer(message.id.peerId)
+                }
+            }
+            
+            return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: openChatLocation, chatLocationContextHolder: strongSelf.chatLocationContextHolder, message: message, standalone: false, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.effectiveNavigationController, dismissInput: {
                 self?.chatDisplayNode.dismissInput()
             }, present: { c, a in
                 self?.present(c, in: .window(.root), with: a, blockInteraction: true)
@@ -1594,6 +1601,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             if let strongSelf = self {
+                if case .replyThread(message.id, _, _, _, _) = strongSelf.chatLocation {
+                    return .none
+                }
+                
                 if canReplyInChat(strongSelf.presentationInterfaceState) {
                     return .reply
                 } else if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
@@ -1629,7 +1640,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             switch strongSelf.chatLocation {
                 case let .peer(peerId):
                     strongSelf.navigateToMessage(from: nil, to: .index(MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: timestamp - Int32(NSTimeZone.local.secondsFromGMT()))), scrollPosition: .bottom(0.0), rememberInStack: false, animated: true, completion: nil)
-                case let .replyThread(messageId, _, _, _):
+                case let .replyThread(messageId, _, _, _, _):
                     let peerId = messageId.peerId
                     strongSelf.navigateToMessage(from: nil, to: .index(MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: timestamp - Int32(NSTimeZone.local.secondsFromGMT()))), scrollPosition: .bottom(0.0), rememberInStack: false, animated: true, completion: nil)
             }
@@ -2180,36 +2191,35 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            let foundIndex = Promise<ReplyThreadInfo?>()
-            foundIndex.set(fetchAndPreloadReplyThreadInfo(context: strongSelf.context, subject: isChannelPost ? .channelPost(messageId) : .groupMessage(messageId)))
-                
-            var cancelImpl: (() -> Void)?
-            let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: {
-                cancelImpl?()
-            }))
-            strongSelf.present(statusController, in: .window(.root))
-            
-            let disposable = (foundIndex.get()
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak statusController] result in
-                statusController?.dismiss()
-                
-                guard let strongSelf = self else {
-                    return
+            if let navigationController = strongSelf.navigationController as? NavigationController {
+                ChatControllerImpl.openMessageReplies(context: strongSelf.context, navigationController: navigationController, present: { c, a in
+                    self?.present(c, in: .window(.root), with: a)
+                }, messageId: messageId, isChannelPost: isChannelPost, atMessage: nil)
+            }
+        }, openReplyThreadOriginalMessage: { [weak self] message in
+            guard let strongSelf = self else {
+                return
+            }
+            var threadMessageId: MessageId?
+            for attribute in message.attributes {
+                if let attribute = attribute as? ReplyMessageAttribute {
+                    threadMessageId = attribute.threadMessageId
+                    break
                 }
-                
-                if let result = result {
-                    if let navigationController = strongSelf.navigationController as? NavigationController {
-                        let chatLocation: ChatLocation = .replyThread(threadMessageId: result.message.messageId, isChannelPost: result.isChannelPost, maxMessage: result.message.maxMessage, maxReadMessageId: result.message.maxReadMessageId)
-                        
-                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: chatLocation, chatLocationContextHolder: result.contextHolder, activateInput: result.isEmpty, keepStack: .always))
+            }
+            for attribute in message.attributes {
+                if let attribute = attribute as? SourceReferenceMessageAttribute {
+                    if let threadMessageId = threadMessageId {
+                        if let navigationController = strongSelf.navigationController as? NavigationController {
+                            ChatControllerImpl.openMessageReplies(context: strongSelf.context, navigationController: navigationController, present: { c, a in
+                                self?.present(c, in: .window(.root), with: a)
+                            }, messageId: threadMessageId, isChannelPost: true, atMessage: attribute.messageId)
+                        }
+                    } else {
+                        strongSelf.navigateToMessage(from: nil, to: .id(attribute.messageId))
                     }
+                    break
                 }
-            })
-            
-            cancelImpl = { [weak statusController] in
-                disposable.dispose()
-                statusController?.dismiss()
             }
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
@@ -2641,7 +2651,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 switch chatLocation {
                 case .peer:
                     replyThreadType = .replies
-                case let .replyThread(_, isChannelPost, _, _):
+                case let .replyThread(_, isChannelPost, _, _, _):
                     isReplyThread = true
                     if isChannelPost {
                         replyThreadType = .comments
@@ -2983,22 +2993,30 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.startBot(botStart.payload)
         }
         
+        let activitySpace: PeerActivitySpace
+        switch self.chatLocation {
+        case let .peer(peerId):
+            activitySpace = PeerActivitySpace(peerId: peerId, threadId: nil)
+        case let .replyThread(threadMessageId, _, _, _, _):
+            activitySpace = PeerActivitySpace(peerId: threadMessageId.peerId, threadId: makeMessageThreadId(threadMessageId))
+        }
+        
         self.inputActivityDisposable = (self.typingActivityPromise.get()
         |> deliverOnMainQueue).start(next: { [weak self] value in
-            if let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation {
-                strongSelf.context.account.updateLocalInputActivity(peerId: peerId, activity: .typingText, isPresent: value)
+            if let strongSelf = self {
+                strongSelf.context.account.updateLocalInputActivity(peerId: activitySpace, activity: .typingText, isPresent: value)
             }
         })
         
         self.recordingActivityDisposable = (self.recordingActivityPromise.get()
         |> deliverOnMainQueue).start(next: { [weak self] value in
-            if let strongSelf = self, case let .peer(peerId) = strongSelf.chatLocation {
+            if let strongSelf = self {
                 strongSelf.acquiredRecordingActivityDisposable?.dispose()
                 switch value {
                     case .voice:
-                        strongSelf.acquiredRecordingActivityDisposable = strongSelf.context.account.acquireLocalInputActivity(peerId: peerId, activity: .recordingVoice)
+                        strongSelf.acquiredRecordingActivityDisposable = strongSelf.context.account.acquireLocalInputActivity(peerId: activitySpace, activity: .recordingVoice)
                     case .instantVideo:
-                        strongSelf.acquiredRecordingActivityDisposable = strongSelf.context.account.acquireLocalInputActivity(peerId: peerId, activity: .recordingInstantVideo)
+                        strongSelf.acquiredRecordingActivityDisposable = strongSelf.context.account.acquireLocalInputActivity(peerId: activitySpace, activity: .recordingInstantVideo)
                     case .none:
                         strongSelf.acquiredRecordingActivityDisposable = nil
                 }
@@ -3398,7 +3416,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 } else if let _ = cachedData as? CachedSecretChatData {
                 }
                 
-                if case let .replyThread(messageId, _, _, _) = strongSelf.chatLocation {
+                if case let .replyThread(messageId, _, _, _, _) = strongSelf.chatLocation {
                     if isTopReplyThreadMessageShown {
                         pinnedMessageId = nil
                     } else {
@@ -3905,6 +3923,58 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self, !messages.isEmpty {
                 presentPeerReportOptions(context: strongSelf.context, parent: strongSelf, contextController: contextController, subject: .messages(messages.map({ $0.id }).sorted()), completion: { _ in })
             }
+        }, blockMessageAuthor: { [weak self] message, contextController in
+            contextController?.dismiss(completion: {
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                let author = message.forwardInfo?.author
+                
+                guard let peer = author else {
+                    return
+                }
+                
+                let presentationData = strongSelf.presentationData
+                let controller = ActionSheetController(presentationData: presentationData)
+                let dismissAction: () -> Void = { [weak controller] in
+                    controller?.dismissAnimated()
+                }
+                var reportSpam = true
+                var items: [ActionSheetItem] = []
+                items.append(ActionSheetTextItem(title: presentationData.strings.UserInfo_BlockConfirmationTitle(peer.compactDisplayTitle).0))
+                items.append(contentsOf: [
+                    ActionSheetCheckboxItem(title: presentationData.strings.Conversation_Moderate_Report, label: "", value: reportSpam, action: { [weak controller] checkValue in
+                        reportSpam = checkValue
+                        controller?.updateItem(groupIndex: 0, itemIndex: 1, { item in
+                            if let item = item as? ActionSheetCheckboxItem {
+                                return ActionSheetCheckboxItem(title: item.title, label: item.label, value: !item.value, action: item.action)
+                            }
+                            return item
+                        })
+                    }),
+                    ActionSheetButtonItem(title: presentationData.strings.Replies_BlockAndDeleteRepliesActionTitle, color: .destructive, action: {
+                        dismissAction()
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let _ = requestUpdatePeerIsBlocked(account: strongSelf.context.account, peerId: peer.id, isBlocked: true).start()
+                        let account = strongSelf.context.account
+                        let _ = (strongSelf.context.account.postbox.transaction { transasction -> Void in
+                            deleteAllMessagesWithForwardAuthor(transaction: transasction, mediaBox: account.postbox.mediaBox, peerId: message.id.peerId, forwardAuthorId: peer.id, namespace: Namespaces.Message.Cloud)
+                        }).start()
+                        if reportSpam {
+                            let _ = TelegramCore.reportPeer(account: strongSelf.context.account, peerId: peer.id, reason: .spam).start()
+                        }
+                    })
+                ] as [ActionSheetItem])
+                
+                controller.setItemGroups([
+                    ActionSheetItemGroup(items: items),
+                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                ])
+                strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            })
         }, deleteMessages: { [weak self] messages, contextController, completion in
             if let strongSelf = self, !messages.isEmpty {
                 let messageIds = Set(messages.map { $0.id })
@@ -5035,68 +5105,73 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             if let navigationController = strongSelf.effectiveNavigationController {
                 let subject: ChatControllerSubject? = sourceMessageId.flatMap(ChatControllerSubject.message)
-                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(threadMessageId: replyThreadResult.messageId, isChannelPost: false, maxMessage: replyThreadResult.maxMessage, maxReadMessageId: replyThreadResult.maxReadMessageId), subject: subject, keepStack: .always))
+                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(threadMessageId: replyThreadResult.messageId, isChannelPost: false, maxMessage: replyThreadResult.maxMessage, maxReadIncomingMessageId: replyThreadResult.maxReadIncomingMessageId, maxReadOutgoingMessageId: replyThreadResult.maxReadOutgoingMessageId), subject: subject, keepStack: .always))
             }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()))
         
         do {
             let peerId = self.chatLocation.peerId
             if let subject = self.subject, case .scheduledMessages = subject {
-            } else if case .replyThread = self.chatLocation {
             } else {
-                let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.peer(peerId), .total(nil)])
-                let notificationSettingsKey: PostboxViewKey = .peerNotificationSettings(peerIds: Set([peerId]))
-                self.chatUnreadCountDisposable = (self.context.account.postbox.combinedView(keys: [unreadCountsKey, notificationSettingsKey])
-                |> deliverOnMainQueue).start(next: { [weak self] views in
-                    if let strongSelf = self {
-                        var unreadCount: Int32 = 0
-                        var totalChatCount: Int32 = 0
-                        
-                        let inAppSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
-                        if let view = views.views[unreadCountsKey] as? UnreadMessageCountsView {
-                            if let count = view.count(for: .peer(peerId)) {
-                                unreadCount = count
-                            }
-                            if let (_, state) = view.total() {
-                                let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: state)
-                                totalChatCount = count
-                            }
-                        }
-                        
-                        strongSelf.chatDisplayNode.navigateButtons.unreadCount = unreadCount
-                        
-                        if let view = views.views[notificationSettingsKey] as? PeerNotificationSettingsView, let notificationSettings = view.notificationSettings[peerId] {
-                            var globalRemainingUnreadChatCount = totalChatCount
-                            if !notificationSettings.isRemovedFromTotalUnreadCount(default: false) && unreadCount > 0 {
-                                if case .messages = inAppSettings.totalUnreadCountDisplayCategory {
-                                    globalRemainingUnreadChatCount -= unreadCount
-                                } else {
-                                    globalRemainingUnreadChatCount -= 1
+                if case .peer = self.chatLocation {
+                    let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.peer(peerId), .total(nil)])
+                    let notificationSettingsKey: PostboxViewKey = .peerNotificationSettings(peerIds: Set([peerId]))
+                    self.chatUnreadCountDisposable = (self.context.account.postbox.combinedView(keys: [unreadCountsKey, notificationSettingsKey])
+                    |> deliverOnMainQueue).start(next: { [weak self] views in
+                        if let strongSelf = self {
+                            var unreadCount: Int32 = 0
+                            var totalChatCount: Int32 = 0
+                            
+                            let inAppSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
+                            if let view = views.views[unreadCountsKey] as? UnreadMessageCountsView {
+                                if let count = view.count(for: .peer(peerId)) {
+                                    unreadCount = count
+                                }
+                                if let (_, state) = view.total() {
+                                    let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: state)
+                                    totalChatCount = count
                                 }
                             }
                             
-                            if globalRemainingUnreadChatCount > 0 {
-                                strongSelf.navigationItem.badge = "\(globalRemainingUnreadChatCount)"
-                            } else {
-                                strongSelf.navigationItem.badge = ""
+                            strongSelf.chatDisplayNode.navigateButtons.unreadCount = unreadCount
+                            
+                            if let view = views.views[notificationSettingsKey] as? PeerNotificationSettingsView, let notificationSettings = view.notificationSettings[peerId] {
+                                var globalRemainingUnreadChatCount = totalChatCount
+                                if !notificationSettings.isRemovedFromTotalUnreadCount(default: false) && unreadCount > 0 {
+                                    if case .messages = inAppSettings.totalUnreadCountDisplayCategory {
+                                        globalRemainingUnreadChatCount -= unreadCount
+                                    } else {
+                                        globalRemainingUnreadChatCount -= 1
+                                    }
+                                }
+                                
+                                if globalRemainingUnreadChatCount > 0 {
+                                    strongSelf.navigationItem.badge = "\(globalRemainingUnreadChatCount)"
+                                } else {
+                                    strongSelf.navigationItem.badge = ""
+                                }
                             }
                         }
-                    }
-                })
-            
-                self.chatUnreadMentionCountDisposable = (self.context.account.viewTracker.unseenPersonalMessagesCount(peerId: peerId) |> deliverOnMainQueue).start(next: { [weak self] count in
-                    if let strongSelf = self {
-                        if case let .standard(previewing) = strongSelf.presentationInterfaceState.mode, previewing {
-                            strongSelf.chatDisplayNode.navigateButtons.mentionCount = 0
-                        } else {
-                            strongSelf.chatDisplayNode.navigateButtons.mentionCount = count
+                    })
+                
+                    self.chatUnreadMentionCountDisposable = (self.context.account.viewTracker.unseenPersonalMessagesCount(peerId: peerId) |> deliverOnMainQueue).start(next: { [weak self] count in
+                        if let strongSelf = self {
+                            if case let .standard(previewing) = strongSelf.presentationInterfaceState.mode, previewing {
+                                strongSelf.chatDisplayNode.navigateButtons.mentionCount = 0
+                            } else {
+                                strongSelf.chatDisplayNode.navigateButtons.mentionCount = count
+                            }
                         }
-                    }
-                })
+                    })
+                }
                 
                 let postbox = self.context.account.postbox
                 let previousPeerCache = Atomic<[PeerId: Peer]>(value: [:])
-                self.peerInputActivitiesDisposable = (self.context.account.peerInputActivities(peerId: peerId)
+                var activityThreadId: Int64?
+                if case let .replyThread(messageId, _, _, _, _) = self.chatLocation {
+                    activityThreadId = makeMessageThreadId(messageId)
+                }
+                self.peerInputActivitiesDisposable = (self.context.account.peerInputActivities(peerId: PeerActivitySpace(peerId: peerId, threadId: activityThreadId))
                 |> mapToSignal { activities -> Signal<[(Peer, PeerInputActivity)], NoError> in
                     var foundAllPeers = true
                     var cachedResult: [(Peer, PeerInputActivity)] = []
@@ -7491,7 +7566,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         switch self.chatLocation {
         case .peer:
             break
-        case let .replyThread(messageId, _, _, _):
+        case let .replyThread(messageId, _, _, _, _):
             defaultReplyMessageId = messageId
         }
         
@@ -7538,7 +7613,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         switch self.chatLocation {
         case let .peer(peerIdValue):
             peerId = peerIdValue
-        case let .replyThread(messageId, _, _, _):
+        case let .replyThread(messageId, _, _, _, _):
             peerId = messageId.peerId
         }
         
@@ -7960,7 +8035,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             switch self.chatLocation {
             case .peer:
                 break
-            case let .replyThread(messageId, _, _, _):
+            case let .replyThread(messageId, _, _, _, _):
                 searchTopMsgId = messageId
             }
             switch search.domain {
@@ -8174,6 +8249,43 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 state.withUpdatedComposeInputState(textInputState)
             })
         })
+    }
+    
+    static func openMessageReplies(context: AccountContext, navigationController: NavigationController, present: @escaping (ViewController, Any?) -> Void, messageId: MessageId, isChannelPost: Bool, atMessage atMessageId: MessageId?) {
+        let foundIndex = Promise<ReplyThreadInfo?>()
+        foundIndex.set(fetchAndPreloadReplyThreadInfo(context: context, subject: isChannelPost ? .channelPost(messageId) : .groupMessage(messageId)))
+        
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            
+        var cancelImpl: (() -> Void)?
+        let statusController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+            cancelImpl?()
+        }))
+        present(statusController, nil)
+        
+        let disposable = (foundIndex.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak statusController] result in
+            statusController?.dismiss()
+            
+            if let result = result {
+                let chatLocation: ChatLocation = .replyThread(threadMessageId: result.message.messageId, isChannelPost: result.isChannelPost, maxMessage: result.message.maxMessage, maxReadIncomingMessageId: result.message.maxReadIncomingMessageId, maxReadOutgoingMessageId: result.message.maxReadOutgoingMessageId)
+                
+                let subject: ChatControllerSubject?
+                if let atMessageId = atMessageId {
+                    subject = .message(atMessageId)
+                } else {
+                    subject = nil
+                }
+                
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: chatLocation, chatLocationContextHolder: result.contextHolder, subject: subject, activateInput: result.isEmpty, keepStack: .always))
+            }
+        })
+        
+        cancelImpl = { [weak statusController] in
+            disposable.dispose()
+            statusController?.dismiss()
+        }
     }
     
     public func navigateToMessage(messageLocation: NavigateToMessageLocation, animated: Bool, forceInCurrentChat: Bool = false, dropStack: Bool = false, completion: (() -> Void)? = nil, customPresentProgress: ((ViewController, Any?) -> Void)? = nil) {

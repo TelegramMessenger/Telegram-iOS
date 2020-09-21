@@ -125,6 +125,8 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
     let isReady = Promise<Bool>()
     var didSetIsReady = false
     
+    var isAdjacentLoadingEnabled = false
+    
     private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData)?
     
     private(set) var currentPaneKey: ChatListSearchPaneKey?
@@ -177,6 +179,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
             }
             return
         }
+        self.isAdjacentLoadingEnabled = true
         if self.currentPanes[key] != nil {
             self.currentPaneKey = key
 
@@ -243,6 +246,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
             cancelContextGestures(view: self.view)
         case .changed:
             if let (size, sideInset, bottomInset, visibleHeight, presentationData) = self.currentParams, let currentPaneKey = self.currentPaneKey, let currentIndex = availablePanes.firstIndex(of: currentPaneKey) {
+                self.isAdjacentLoadingEnabled = true
                 let translation = recognizer.translation(in: self.view)
                 var transitionFraction = translation.x / size.width
                 if currentIndex <= 0 {
@@ -365,11 +369,11 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
         var visiblePaneIndices: [Int] = []
         var requiredPendingKeys: [ChatListSearchPaneKey] = []
         if let currentIndex = currentIndex {
-            if currentIndex != 0 {
+            if currentIndex != 0 && self.isAdjacentLoadingEnabled {
                 visiblePaneIndices.append(currentIndex - 1)
             }
             visiblePaneIndices.append(currentIndex)
-            if currentIndex != availablePanes.count - 1 {
+            if currentIndex != availablePanes.count - 1 && self.isAdjacentLoadingEnabled {
                 visiblePaneIndices.append(currentIndex + 1)
             }
         

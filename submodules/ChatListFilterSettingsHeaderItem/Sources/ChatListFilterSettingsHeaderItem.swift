@@ -9,25 +9,26 @@ import PresentationDataUtils
 import AnimatedStickerNode
 import AppBundle
 
-enum ChatListFilterSettingsHeaderAnimation {
+public enum ChatListFilterSettingsHeaderAnimation {
     case folders
     case newFolder
+    case discussionGroupSetup
 }
 
-class ChatListFilterSettingsHeaderItem: ListViewItem, ItemListItem {
+public class ChatListFilterSettingsHeaderItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let text: String
     let animation: ChatListFilterSettingsHeaderAnimation
-    let sectionId: ItemListSectionId
+    public let sectionId: ItemListSectionId
     
-    init(theme: PresentationTheme, text: String, animation: ChatListFilterSettingsHeaderAnimation, sectionId: ItemListSectionId) {
+    public init(theme: PresentationTheme, text: String, animation: ChatListFilterSettingsHeaderAnimation, sectionId: ItemListSectionId) {
         self.theme = theme
         self.text = text
         self.animation = animation
         self.sectionId = sectionId
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ChatListFilterSettingsHeaderItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -43,7 +44,7 @@ class ChatListFilterSettingsHeaderItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             guard let nodeValue = node() as? ChatListFilterSettingsHeaderItemNode else {
                 assertionFailure()
@@ -124,6 +125,8 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
                             animationName = "ChatListFolders"
                         case .newFolder:
                             animationName = "ChatListNewFolder"
+                        case .discussionGroupSetup:
+                            animationName = "DiscussionGroupSetup"
                         }
                         if let path = getAppBundle().path(forResource: animationName, ofType: "tgs") {
                             strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 192, height: 192, playbackMode: .once, mode: .direct(cachePathPrefix: nil))

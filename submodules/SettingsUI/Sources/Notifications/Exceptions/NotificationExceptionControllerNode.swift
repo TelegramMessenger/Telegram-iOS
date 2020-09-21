@@ -1157,6 +1157,10 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
     private let updateNotificationsDisposable = MetaDisposable()
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
+    public override var hasDim: Bool {
+        return true
+    }
+    
     init(context: AccountContext, mode: NotificationExceptionMode, arguments: NotificationExceptionArguments) {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

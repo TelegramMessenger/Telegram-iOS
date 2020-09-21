@@ -5791,3 +5791,7 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.TitleComments_1" = "%@ Comment";
 "Conversation.TitleComments_any" = "%@ Comments";
 "Conversation.TitleNoComments" = "Comments";
+
+"Conversation.ContextMenuBlock" = "Block User";
+
+"Replies.BlockAndDeleteRepliesActionTitle" = "Block and Delete Replies";

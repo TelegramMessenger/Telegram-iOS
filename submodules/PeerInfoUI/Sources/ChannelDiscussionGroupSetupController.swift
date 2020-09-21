@@ -15,6 +15,7 @@ import AlertUI
 import PresentationDataUtils
 import ItemListPeerItem
 import ItemListPeerActionItem
+import ChatListFilterSettingsHeaderItem
 
 private final class ChannelDiscussionGroupSetupControllerArguments {
     let context: AccountContext
@@ -131,8 +132,18 @@ private enum ChannelDiscussionGroupSetupControllerEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChannelDiscussionGroupSetupControllerArguments
         switch self {
-            case let .header(theme, strings, title, isGroup, label):
-                return ChannelDiscussionGroupSetupHeaderItem(theme: theme, strings: strings, title: title, isGroup: isGroup, label: label, sectionId: self.section)
+            case let .header(_, _, title, isGroup, _):
+                let text: String
+                if let title = title {
+                    if isGroup {
+                        text = presentationData.strings.Channel_DiscussionGroup_HeaderGroupSet(title).0
+                    } else {
+                        text = presentationData.strings.Channel_DiscussionGroup_HeaderSet(title).0
+                    }
+                } else {
+                    text = ""
+                }
+                return ChatListFilterSettingsHeaderItem(theme: presentationData.theme, text: text, animation: .discussionGroupSetup, sectionId: self.section)
             case let .create(theme, text):
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, sectionId: self.section, editing: false, action: {
                     arguments.createGroup()

@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import ItemListUI
 import AccountContext
 import ItemListPeerActionItem
+import ChatListFilterSettingsHeaderItem
 
 private final class ChatListFilterPresetListControllerArguments {
     let context: AccountContext

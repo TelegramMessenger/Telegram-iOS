@@ -138,6 +138,11 @@ public final class AccountStateManager {
         return self.authorizationListUpdatesPipe.signal()
     }
     
+    private let threadReadStateUpdatesPipe = ValuePipe<(incoming: [MessageId: MessageId.Id], outgoing: [MessageId: MessageId.Id])>()
+    var threadReadStateUpdates: Signal<(incoming: [MessageId: MessageId.Id], outgoing: [MessageId: MessageId.Id]), NoError> {
+        return self.threadReadStateUpdatesPipe.signal()
+    }
+    
     private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
     private var updatedPeersNearbyContext = UpdatedPeersNearbySubscriberContext()
     
@@ -657,6 +662,9 @@ public final class AccountStateManager {
                                 for (id, data) in events.addedCallSignalingData {
                                     strongSelf.callSessionManager.addCallSignalingData(id: id, data: data)
                                 }
+                            }
+                            if !events.updatedIncomingThreadReadStates.isEmpty || !events.updatedOutgoingThreadReadStates.isEmpty {
+                                strongSelf.threadReadStateUpdatesPipe.putNext((events.updatedIncomingThreadReadStates, events.updatedOutgoingThreadReadStates))
                             }
                             if !events.isContactUpdates.isEmpty {
                                 strongSelf.addIsContactUpdates(events.isContactUpdates)

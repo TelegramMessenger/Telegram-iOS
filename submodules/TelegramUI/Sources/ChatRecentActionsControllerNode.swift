@@ -452,6 +452,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             return nil
         }, openPeerContextMenu: { _, _, _, _ in
         }, openMessageReplies: { _, _ in
+        }, openReplyThreadOriginalMessage: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
@@ -816,9 +817,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         if let navigationController = strongSelf.getNavigationController() {
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: .message(messageId)))
                         }
-                   case let .replyThreadMessage(replyThreadMessageId, isChannelPost, maxMessage, maxReadMessageId, messageId):
+                   case let .replyThreadMessage(replyThreadMessageId, isChannelPost, maxMessage, maxReadIncomingMessageId, maxReadOutgoingMessageId, messageId):
                         if let navigationController = strongSelf.getNavigationController() {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(threadMessageId: replyThreadMessageId, isChannelPost: isChannelPost, maxMessage: maxMessage, maxReadMessageId: maxReadMessageId), subject: .message(messageId)))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(threadMessageId: replyThreadMessageId, isChannelPost: isChannelPost, maxMessage: maxMessage, maxReadIncomingMessageId: maxReadIncomingMessageId, maxReadOutgoingMessageId: maxReadOutgoingMessageId), subject: .message(messageId)))
                         }
                     case let .stickerPack(name):
                         let packReference: StickerPackReference = .name(name)

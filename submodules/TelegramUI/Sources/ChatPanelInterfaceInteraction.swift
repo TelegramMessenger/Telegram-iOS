@@ -56,6 +56,7 @@ final class ChatPanelInterfaceInteraction {
     let deleteSelectedMessages: () -> Void
     let reportSelectedMessages: () -> Void
     let reportMessages: ([Message], ContextController?) -> Void
+    let blockMessageAuthor: (Message, ContextController?) -> Void
     let deleteMessages: ([Message], ContextController?, @escaping (ContextMenuActionResult) -> Void) -> Void
     let forwardSelectedMessages: () -> Void
     let forwardCurrentForwardMessages: () -> Void
@@ -130,6 +131,7 @@ final class ChatPanelInterfaceInteraction {
         deleteSelectedMessages: @escaping () -> Void,
         reportSelectedMessages: @escaping () -> Void,
         reportMessages: @escaping ([Message], ContextController?) -> Void,
+        blockMessageAuthor: @escaping (Message, ContextController?) -> Void,
         deleteMessages: @escaping ([Message], ContextController?, @escaping (ContextMenuActionResult) -> Void) -> Void,
         forwardSelectedMessages: @escaping () -> Void,
         forwardCurrentForwardMessages: @escaping () -> Void,
@@ -203,6 +205,7 @@ final class ChatPanelInterfaceInteraction {
         self.deleteSelectedMessages = deleteSelectedMessages
         self.reportSelectedMessages = reportSelectedMessages
         self.reportMessages = reportMessages
+        self.blockMessageAuthor = blockMessageAuthor
         self.deleteMessages = deleteMessages
         self.forwardSelectedMessages = forwardSelectedMessages
         self.forwardCurrentForwardMessages = forwardCurrentForwardMessages
