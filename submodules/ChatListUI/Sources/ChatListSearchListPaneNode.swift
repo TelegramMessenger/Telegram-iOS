@@ -1254,14 +1254,14 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         let previousSelectedMessages = Atomic<Set<MessageId>?>(value: nil)
         
         let _ = (searchQuery
-        |> deliverOnMainQueue).start { [weak self] query in
+        |> deliverOnMainQueue).start(next: { [weak self] query in
             self?.searchQueryValue = query
-        }
+        })
         
         let _ = (searchOptions
-        |> deliverOnMainQueue).start { [weak self] options in
+        |> deliverOnMainQueue).start(next: { [weak self] options in
             self?.searchOptionsValue = options
-        }
+        })
 
         self.searchDisposable.set((foundItems
         |> deliverOnMainQueue).start(next: { [weak self] entriesAndFlags in
