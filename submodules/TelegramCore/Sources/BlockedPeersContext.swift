@@ -219,15 +219,17 @@ public final class BlockedPeersContext {
             }
             |> mapToSignal { value in
                 return postbox.transaction { transaction -> Peer? in
-                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                        let previous: CachedUserData
-                        if let current = current as? CachedUserData {
-                            previous = current
-                        } else {
-                            previous = CachedUserData()
-                        }
-                        return previous.withUpdatedIsBlocked(false)
-                    })
+                    if peerId.namespace == Namespaces.Peer.CloudUser {
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                            let previous: CachedUserData
+                            if let current = current as? CachedUserData {
+                                previous = current
+                            } else {
+                                previous = CachedUserData()
+                            }
+                            return previous.withUpdatedIsBlocked(false)
+                        })
+                    }
                     return transaction.getPeer(peerId)
                 }
                 |> castError(BlockedPeersContextRemoveError.self)
