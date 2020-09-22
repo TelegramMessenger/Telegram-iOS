@@ -68,6 +68,11 @@ public final class Transaction {
         return self.postbox?.messageHistoryHoleIndexTable.containing(id: id) ?? [:]
     }
     
+    public func getHoles(peerId: PeerId, namespace: MessageId.Namespace) -> IndexSet {
+        assert(!self.disposed)
+        return self.postbox?.messageHistoryHoleIndexTable.closest(peerId: peerId, namespace: namespace, space: .everywhere, range: 1 ... (Int32.max - 1)) ?? IndexSet()
+    }
+    
     public func addThreadIndexHole(peerId: PeerId, threadId: Int64, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>) {
         assert(!self.disposed)
         self.postbox?.addThreadIndexHole(peerId: peerId, threadId: threadId, namespace: namespace, space: space, range: range)
@@ -983,6 +988,26 @@ public final class Transaction {
     
     public func scanMessageAttributes(peerId: PeerId, namespace: MessageId.Namespace, limit: Int, _ f: (MessageId, [MessageAttribute]) -> Bool) {
         self.postbox?.scanMessageAttributes(peerId: peerId, namespace: namespace, limit: limit, f)
+    }
+    
+    public func getMessagesHistoryViewState(input: MessageHistoryViewInput, count: Int, clipHoles: Bool, anchor: HistoryViewInputAnchor, namespaces: MessageIdNamespaces) -> MessageHistoryView {
+        precondition(!self.disposed)
+        guard let postbox = self.postbox else {
+            preconditionFailure()
+        }
+        
+        precondition(postbox.queue.isCurrent())
+        
+        var view: MessageHistoryView?
+        
+        let subscriber: Subscriber<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> = Subscriber(next: { next in
+            view = next.0
+        }, error: { _ in }, completed: {})
+        
+        let disposable = postbox.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: input, count: count, clipHoles: clipHoles, anchor: anchor, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tagMask: nil, namespaces: namespaces, orderStatistics: MessageHistoryViewOrderStatistics(), additionalData: [])
+        disposable.dispose()
+        
+        return view!
     }
     
     public func invalidateMessageHistoryTagsSummary(peerId: PeerId, namespace: MessageId.Namespace, tagMask: MessageTags) {
@@ -2530,7 +2555,7 @@ public final class Postbox {
         }
     }
     
-    private func syncAroundMessageHistoryViewForPeerId(subscriber: Subscriber<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>, peerIds: MessageHistoryViewInput, count: Int, clipHoles: Bool, anchor: HistoryViewInputAnchor, fixedCombinedReadStates: MessageHistoryViewReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData]) -> Disposable {
+    fileprivate func syncAroundMessageHistoryViewForPeerId(subscriber: Subscriber<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>, peerIds: MessageHistoryViewInput, count: Int, clipHoles: Bool, anchor: HistoryViewInputAnchor, fixedCombinedReadStates: MessageHistoryViewReadState?, topTaggedMessageIdNamespaces: Set<MessageId.Namespace>, tagMask: MessageTags?, namespaces: MessageIdNamespaces, orderStatistics: MessageHistoryViewOrderStatistics, additionalData: [AdditionalMessageHistoryViewData]) -> Disposable {
         var topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?] = [:]
         var mainPeerIdForTopTaggedMessages: PeerId?
         switch peerIds {

@@ -627,15 +627,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         if !isAuxiliaryChat {
             additionalData.append(.totalUnreadState)
         }
-        if case let .replyThread(messageId, _, _, _, _) = chatLocation {
-            additionalData.append(.cachedPeerData(messageId.peerId))
-            additionalData.append(.peerNotificationSettings(messageId.peerId))
-            if messageId.peerId.namespace == Namespaces.Peer.CloudChannel {
-                additionalData.append(.cacheEntry(cachedChannelAdminRanksEntryId(peerId: messageId.peerId)))
-                additionalData.append(.peer(messageId.peerId))
+        if case let .replyThread(replyThreadMessage) = chatLocation {
+            additionalData.append(.cachedPeerData(replyThreadMessage.messageId.peerId))
+            additionalData.append(.peerNotificationSettings(replyThreadMessage.messageId.peerId))
+            if replyThreadMessage.messageId.peerId.namespace == Namespaces.Peer.CloudChannel {
+                additionalData.append(.cacheEntry(cachedChannelAdminRanksEntryId(peerId: replyThreadMessage.messageId.peerId)))
+                additionalData.append(.peer(replyThreadMessage.messageId.peerId))
             }
             
-            additionalData.append(.message(messageId))
+            additionalData.append(.message(replyThreadMessage.messageId))
         }
 
         let currentViewVersion = Atomic<Int?>(value: nil)
@@ -1173,7 +1173,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         if hasUnconsumedMention && !hasUnconsumedContent {
                             messageIdsWithUnseenPersonalMention.append(message.id)
                         }
-                        if case .replyThread(message.id, _, _, _, _) = self.chatLocation {
+                        if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.messageId == message.id {
                             isTopReplyThreadMessageShownValue = true
                         }
                     case let .MessageGroupEntry(_, messages, _):
@@ -1203,7 +1203,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             if hasUnconsumedMention && !hasUnconsumedContent {
                                 messageIdsWithUnseenPersonalMention.append(message.id)
                             }
-                            if case .replyThread(message.id, _, _, _, _) = self.chatLocation {
+                            if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.messageId == message.id {
                                 isTopReplyThreadMessageShownValue = true
                             }
                         }

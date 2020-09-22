@@ -322,11 +322,15 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                             case let .replyThread(id, replyId):
                                 let replyThreadMessageId = MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id)
                                 return fetchChannelReplyThreadMessage(account: account, messageId: replyThreadMessageId)
+                                |> map(Optional.init)
+                                |> `catch` { _ -> Signal<ChatReplyThreadMessage?, NoError> in
+                                    return .single(nil)
+                                }
                                 |> map { result -> ResolvedUrl? in
                                     guard let result = result else {
                                         return .channelMessage(peerId: peer.id, messageId: replyThreadMessageId)
                                     }
-                                    return .replyThreadMessage(replyThreadMessageId: result.messageId, isChannelPost: true, maxMessage: result.maxMessage, maxReadIncomingMessageId: result.maxReadIncomingMessageId, maxReadOutgoingMessageId: result.maxReadIncomingMessageId, messageId: MessageId(peerId: result.messageId.peerId, namespace: Namespaces.Message.Cloud, id: replyId))
+                                    return .replyThreadMessage(replyThreadMessage: result, messageId: MessageId(peerId: result.messageId.peerId, namespace: Namespaces.Message.Cloud, id: replyId))
                                 }
                         }
                     } else {
@@ -368,11 +372,15 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                         if let threadId = threadId {
                             let replyThreadMessageId = MessageId(peerId: foundPeer.id, namespace: Namespaces.Message.Cloud, id: threadId)
                             return fetchChannelReplyThreadMessage(account: account, messageId: replyThreadMessageId)
+                            |> map(Optional.init)
+                            |> `catch` { _ -> Signal<ChatReplyThreadMessage?, NoError> in
+                                return .single(nil)
+                            }
                             |> map { result -> ResolvedUrl? in
                                 guard let result = result else {
                                     return .channelMessage(peerId: foundPeer.id, messageId: replyThreadMessageId)
                                 }
-                                return .replyThreadMessage(replyThreadMessageId: result.messageId, isChannelPost: true, maxMessage: result.maxMessage, maxReadIncomingMessageId: result.maxReadIncomingMessageId, maxReadOutgoingMessageId: result.maxReadIncomingMessageId, messageId: messageId)
+                                return .replyThreadMessage(replyThreadMessage: result, messageId: messageId)
                             }
                         } else {
                             return .single(.peer(foundPeer.id, .chat(textInputState: nil, subject: .message(messageId), peekData: nil)))

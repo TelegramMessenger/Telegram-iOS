@@ -149,9 +149,45 @@ func mergeGroupOrChannel(lhs: Peer?, rhs: Api.Chat) -> Peer? {
                     let infoFlags = TelegramChannelGroupFlags()
                     info = .group(TelegramChannelGroupInfo(flags: infoFlags))
                 }
+                
                 return TelegramChannel(id: lhs.id, accessHash: lhs.accessHash, title: title, username: username, photo: imageRepresentationsForApiChatPhoto(photo), creationDate: lhs.creationDate, version: lhs.version, participationStatus: lhs.participationStatus, info: info, flags: channelFlags, restrictionInfo: lhs.restrictionInfo, adminRights: lhs.adminRights, bannedRights: lhs.bannedRights, defaultBannedRights: defaultBannedRights.flatMap(TelegramChatBannedRights.init))
             } else {
                 return nil
             }
     }
 }
+
+func mergeChannel(lhs: TelegramChannel?, rhs: TelegramChannel) -> TelegramChannel {
+    guard let lhs = lhs else {
+        return rhs
+    }
+    
+    if case .personal = rhs.accessHash {
+        return rhs
+    }
+    
+    var channelFlags = lhs.flags
+    if rhs.flags.contains(.isVerified) {
+        channelFlags.insert(.isVerified)
+    } else {
+        let _ = channelFlags.remove(.isVerified)
+    }
+    var info = lhs.info
+    switch info {
+    case .broadcast:
+        break
+    case .group:
+        let infoFlags = TelegramChannelGroupFlags()
+        info = .group(TelegramChannelGroupInfo(flags: infoFlags))
+    }
+    
+    let accessHash: TelegramPeerAccessHash?
+    if let rhsAccessHashValue = lhs.accessHash, case .personal = rhsAccessHashValue {
+        accessHash = rhsAccessHashValue
+    } else {
+        accessHash = lhs.accessHash ?? rhs.accessHash
+    }
+    
+    return TelegramChannel(id: lhs.id, accessHash: accessHash, title: rhs.title, username: rhs.username, photo: rhs.photo, creationDate: lhs.creationDate, version: lhs.version, participationStatus: lhs.participationStatus, info: info, flags: channelFlags, restrictionInfo: lhs.restrictionInfo, adminRights: lhs.adminRights, bannedRights: lhs.bannedRights, defaultBannedRights: rhs.defaultBannedRights)
+}
+

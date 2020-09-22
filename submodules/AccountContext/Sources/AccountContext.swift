@@ -170,7 +170,7 @@ public enum ResolvedUrl {
     case botStart(peerId: PeerId, payload: String)
     case groupBotStart(peerId: PeerId, payload: String)
     case channelMessage(peerId: PeerId, messageId: MessageId)
-    case replyThreadMessage(replyThreadMessageId: MessageId, isChannelPost: Bool, maxMessage: ChatReplyThreadMessage.MaxMessage, maxReadIncomingMessageId: MessageId?, maxReadOutgoingMessageId: MessageId?, messageId: MessageId)
+    case replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage, messageId: MessageId)
     case stickerPack(name: String)
     case instantView(TelegramMediaWebpage, String?)
     case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
@@ -253,7 +253,7 @@ public enum ChatSearchDomain: Equatable {
 
 public enum ChatLocation: Equatable {
     case peer(PeerId)
-    case replyThread(threadMessageId: MessageId, isChannelPost: Bool, maxMessage: ChatReplyThreadMessage.MaxMessage, maxReadIncomingMessageId: MessageId?, maxReadOutgoingMessageId: MessageId?)
+    case replyThread(ChatReplyThreadMessage)
 }
 
 public final class NavigateToChatControllerParams {

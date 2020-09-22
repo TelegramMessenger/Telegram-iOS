@@ -182,8 +182,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             switch item.chatLocation {
             case let .peer(peerId):
                 messagePeerId = peerId
-            case let .replyThread(messageId, _, _, _, _):
-                messagePeerId = messageId.peerId
+            case let .replyThread(replyThreadMessage):
+                messagePeerId = replyThreadMessage.messageId.peerId
             }
             
             do {
@@ -194,7 +194,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                             isBroadcastChannel = true
                         }
                         
-                        if case let .replyThread(messageId, isChannelPost, _, _, _) = item.chatLocation, isChannelPost, messageId == item.message.id {
+                        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.messageId == item.message.id {
                             isBroadcastChannel = true
                         }
                         
@@ -341,7 +341,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 }
                 
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-                    if case let .replyThread(replyThreadMessageId, _, _, _, _) = item.chatLocation, replyThreadMessageId == replyAttribute.messageId {
+                    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyAttribute.messageId {
                     } else {
                         replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                     }
@@ -851,6 +851,10 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     
     override func updateSelectionState(animated: Bool) {
         guard let item = self.item else {
+            return
+        }
+        
+        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == item.message.id {
             return
         }
         
