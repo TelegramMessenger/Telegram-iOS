@@ -431,7 +431,9 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, openScheduledMessages: {
         }, openPeersNearby: {
         }, displaySearchResultsTooltip: { _, _ in
-        }, unarchivePeer: {}, viewReplies: { _, _ in }, statuses: nil)
+        }, unarchivePeer: {
+        }, scrollToTop: {
+        }, viewReplies: { _, _ in }, statuses: nil)
         
         self.selectionPanel.interfaceInteraction = interfaceInteraction
         

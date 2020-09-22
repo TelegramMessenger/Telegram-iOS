@@ -182,8 +182,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             switch item.chatLocation {
             case let .peer(peerId):
                 messagePeerId = peerId
-            case let .replyThread(messageId, _, _, _, _):
-                messagePeerId = messageId.peerId
+            case let .replyThread(replyThreadMessage):
+                messagePeerId = replyThreadMessage.messageId.peerId
             }
             
             do {
@@ -194,7 +194,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                             isBroadcastChannel = true
                         }
                         
-                        if case let .replyThread(messageId, isChannelPost, _, _, _) = item.chatLocation, isChannelPost, messageId == item.message.id {
+                        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.messageId == item.message.id {
                             isBroadcastChannel = true
                         }
                         
@@ -276,7 +276,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 }
             }
             
-            let (videoLayout, videoApply) = makeVideoLayout(ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: item.message, read: item.read, presentationData: item.presentationData, associatedData: item.associatedData, attributes: item.content.firstMessageAttributes), params.width - params.leftInset - params.rightInset - avatarInset, displaySize, .free, automaticDownload)
+            let (videoLayout, videoApply) = makeVideoLayout(ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: item.message, read: item.read, chatLocation: item.chatLocation, presentationData: item.presentationData, associatedData: item.associatedData, attributes: item.content.firstMessageAttributes), params.width - params.leftInset - params.rightInset - avatarInset, displaySize, .free, automaticDownload)
             
             let videoFrame = CGRect(origin: CGPoint(x: (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - videoLayout.contentSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: videoLayout.contentSize)
             
@@ -341,7 +341,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 }
                 
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-                    if case let .replyThread(replyThreadMessageId, _, _, _, _) = item.chatLocation, replyThreadMessageId == replyAttribute.messageId {
+                    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyAttribute.messageId {
                     } else {
                         replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                     }
@@ -851,6 +851,10 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     
     override func updateSelectionState(animated: Bool) {
         guard let item = self.item else {
+            return
+        }
+        
+        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == item.message.id {
             return
         }
         

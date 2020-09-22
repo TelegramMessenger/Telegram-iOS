@@ -61,7 +61,7 @@ class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNode {
                         viewCount = attribute.count
                     } else if let attribute = attribute as? RestrictedContentMessageAttribute {
                         rawText = attribute.platformText(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) ?? ""
-                    } else if let attribute = attribute as? ReplyThreadMessageAttribute {
+                    } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = item.chatLocation {
                         if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
                             dateReplies = Int(attribute.count)
                         }

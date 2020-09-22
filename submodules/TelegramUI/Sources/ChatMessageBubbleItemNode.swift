@@ -837,13 +837,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         var hasAvatar = false
         
         var allowFullWidth = false
-        let chatLocationPeerId: PeerId
-        switch item.chatLocation {
-        case let .peer(peerId):
-            chatLocationPeerId = peerId
-        case let .replyThread(messageId, _, _, _, _):
-            chatLocationPeerId = messageId.peerId
-        }
+        let chatLocationPeerId: PeerId = item.chatLocation.peerId
         
         do {
             let peerId = chatLocationPeerId
@@ -885,7 +879,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                         allowFullWidth = true
                     }
                     
-                    if case let .replyThread(messageId, isChannelPost, _, _, _) = item.chatLocation, isChannelPost, messageId == firstMessage.id {
+                    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.messageId == firstMessage.id {
                         isBroadcastChannel = true
                     }
                     
@@ -912,7 +906,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
         
         var needShareButton = false
-        if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
+        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == item.message.id {
+            needShareButton = false
+            allowFullWidth = true
+        } else if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
             needShareButton = false
         } else if item.message.id.peerId == item.context.account.peerId {
             if let _ = sourceReference {
@@ -1048,7 +1045,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     inlineBotNameString = attribute.title
                 }
             } else if let attribute = attribute as? ReplyMessageAttribute {
-                if case let .replyThread(replyThreadMessageId, _, _, _, _) = item.chatLocation, replyThreadMessageId == attribute.messageId {
+                if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == attribute.messageId {
                 } else {
                     replyMessage = firstMessage.associatedMessages[attribute.messageId]
                 }
@@ -1140,7 +1137,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 prepareContentPosition = .linear(top: topPosition, bottom: refinedBottomPosition)
             }
             
-            let contentItem = ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: message, read: read, presentationData: item.presentationData, associatedData: item.associatedData, attributes: attributes)
+            let contentItem = ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: message, read: read, chatLocation: item.chatLocation, presentationData: item.presentationData, associatedData: item.associatedData, attributes: attributes)
             
             var itemSelection: Bool?
             if case .mosaic = prepareContentPosition {
@@ -1294,7 +1291,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                         edited = !attribute.isHidden
                     } else if let attribute = attribute as? ViewCountMessageAttribute {
                         viewCount = attribute.count
-                    } else if let attribute = attribute as? ReplyThreadMessageAttribute {
+                    } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = item.chatLocation {
                         if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
                             dateReplies = Int(attribute.count)
                         }
@@ -2952,6 +2949,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 }
             default:
                 break
+        }
+        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == item.message.id {
+            canHaveSelection = false
         }
         
         if let selectionState = item.controllerInteraction.selectionState, canHaveSelection {

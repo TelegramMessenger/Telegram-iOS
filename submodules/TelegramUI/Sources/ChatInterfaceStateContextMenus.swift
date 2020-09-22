@@ -468,8 +468,8 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         var isReplyThreadHead = false
-        if case let .replyThread(messageId, _, _, _, _) = chatPresentationInterfaceState.chatLocation {
-            isReplyThreadHead = messages[0].id == messageId
+        if case let .replyThread(replyThreadMessage) = chatPresentationInterfaceState.chatLocation {
+            isReplyThreadHead = messages[0].id == replyThreadMessage.messageId
         }
         
         if !isReplyThreadHead, data.canReply {
@@ -614,8 +614,12 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replies"), color: theme.actionSheet.primaryTextColor)
             }, action: { c, _ in
                 let foundIndex = Promise<ChatReplyThreadMessage?>()
-                if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel, case .broadcast = channel.info {
-                    foundIndex.set(fetchChannelReplyThreadMessage(account: context.account, messageId: messages[0].id))
+                if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
+                    foundIndex.set(fetchChannelReplyThreadMessage(account: context.account, messageId: messages[0].id, atMessageId: nil)
+                    |> map(Optional.init)
+                    |> `catch` { _ -> Signal<ChatReplyThreadMessage?, NoError> in
+                        return .single(nil)
+                    })
                 }
                 c.dismiss(completion: {
                     if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
@@ -745,8 +749,8 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
                 var threadMessageId: MessageId?
-                if case let .replyThread(replyThread, _, _, _, _) = chatPresentationInterfaceState.chatLocation {
-                    threadMessageId = replyThread
+                if case let .replyThread(replyThreadMessage) = chatPresentationInterfaceState.chatLocation {
+                    threadMessageId = replyThreadMessage.messageId
                 }
                 let _ = (exportMessageLink(account: context.account, peerId: message.id.peerId, messageId: message.id, isThread: threadMessageId != nil)
                 |> map { result -> String? in

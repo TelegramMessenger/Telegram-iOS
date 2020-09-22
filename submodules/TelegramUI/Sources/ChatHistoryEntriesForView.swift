@@ -136,10 +136,10 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
     }
     
     var addedThreadHead = false
-    if case let .replyThread(messageId, isChannelPost, _, _, _) = location, view.earlierId == nil, !view.holeEarlier, !view.isLoading {
+    if case let .replyThread(replyThreadMessage) = location, view.earlierId == nil, !view.holeEarlier, !view.isLoading {
         loop: for entry in view.additionalData {
             switch entry {
-            case let .message(id, messages) where id == messageId:
+            case let .message(id, messages) where id == replyThreadMessage.messageId:
                 if !messages.isEmpty {
                     let selection: ChatHistoryMessageSelection = .none
                     
@@ -172,7 +172,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                     
                     let replyCount = view.entries.isEmpty ? 0 : 1
                     
-                    entries.insert(.ReplyCountEntry(messages[0].index, isChannelPost, replyCount, presentationData), at: 1)
+                    entries.insert(.ReplyCountEntry(messages[0].index, replyThreadMessage.isChannelPost, replyCount, presentationData), at: 1)
                 }
                 break loop
             default:

@@ -561,15 +561,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 } else if incoming {
                     hasAvatar = true
                 }
-            case let .replyThread(messageId, isChannelPost, _, _, _):
-                if messageId.peerId != item.context.account.peerId {
-                    if messageId.peerId.isGroupOrChannel && item.message.author != nil {
+            case let .replyThread(replyThreadMessage):
+                if replyThreadMessage.messageId.peerId != item.context.account.peerId {
+                    if replyThreadMessage.messageId.peerId.isGroupOrChannel && item.message.author != nil {
                         var isBroadcastChannel = false
                         if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
                             isBroadcastChannel = true
                         }
                         
-                        if isChannelPost, messageId == item.message.id {
+                        if replyThreadMessage.isChannelPost, replyThreadMessage.messageId == item.message.id {
                             isBroadcastChannel = true
                         }
                         
@@ -676,7 +676,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     edited = true
                 } else if let attribute = attribute as? ViewCountMessageAttribute {
                     viewCount = attribute.count
-                } else if let attribute = attribute as? ReplyThreadMessageAttribute {
+                } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = item.chatLocation {
                     if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
                         dateReplies = Int(attribute.count)
                     }
@@ -746,7 +746,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-                    if case let .replyThread(replyThreadMessageId, _, _, _, _) = item.chatLocation, replyThreadMessageId == replyAttribute.messageId {
+                    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyAttribute.messageId {
                     } else {
                         replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableContentWidth, height: CGFloat.greatestFiniteMagnitude))
                     }
@@ -1356,6 +1356,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     override func updateSelectionState(animated: Bool) {
         guard let item = self.item else {
+            return
+        }
+        
+        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == item.message.id {
             return
         }
         

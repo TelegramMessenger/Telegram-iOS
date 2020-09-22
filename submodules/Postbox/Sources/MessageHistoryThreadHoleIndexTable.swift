@@ -80,7 +80,7 @@ final class MessageHistoryThreadHoleIndexTable: Table {
         let key = ValueBoxKey(length: 8 + 8 + 4 + 4)
         key.setInt64(0, value: peerId.toInt64())
         key.setInt64(8, value: threadId)
-        key.setInt32(8 + 4, value: namespace)
+        key.setInt32(8 + 8, value: namespace)
         let tagValue: UInt32
         switch space {
             case .everywhere:
