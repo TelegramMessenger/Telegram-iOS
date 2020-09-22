@@ -85,14 +85,14 @@ private func updateMessageThreadStatsInternal(transaction: Transaction, threadMe
                 let count = max(0, attribute.count + countDifference)
                 var maxMessageId = attribute.maxMessageId
                 var maxReadMessageId = attribute.maxReadMessageId
-                if let maxAddedId = addedMessagePeers.map(\.messageId.id).max() {
+                if let maxAddedId = addedMessagePeers.map({ $0.messageId.id }).max() {
                     if let currentMaxMessageId = maxMessageId {
                         maxMessageId = max(currentMaxMessageId, maxAddedId)
                     } else {
                         maxMessageId = maxAddedId
                     }
                 }
-                if let maxAddedReadId = addedMessagePeers.filter(\.isOutgoing).map(\.messageId.id).max() {
+                if let maxAddedReadId = addedMessagePeers.filter({ $0.isOutgoing }).map({ $0.messageId.id }).max() {
                     if let currentMaxMessageId = maxReadMessageId {
                         maxReadMessageId = max(currentMaxMessageId, maxAddedReadId)
                     } else {
@@ -100,7 +100,7 @@ private func updateMessageThreadStatsInternal(transaction: Transaction, threadMe
                     }
                 }
                 
-                attributes[j] = ReplyThreadMessageAttribute(count: count, latestUsers: mergeLatestUsers(current: attribute.latestUsers, added: addedMessagePeers.map(\.id), isGroup: isGroup, isEmpty: count == 0), commentsPeerId: attribute.commentsPeerId, maxMessageId: maxMessageId, maxReadMessageId: maxReadMessageId)
+                attributes[j] = ReplyThreadMessageAttribute(count: count, latestUsers: mergeLatestUsers(current: attribute.latestUsers, added: addedMessagePeers.map({ $0.id }), isGroup: isGroup, isEmpty: count == 0), commentsPeerId: attribute.commentsPeerId, maxMessageId: maxMessageId, maxReadMessageId: maxReadMessageId)
             } else if let attribute = attributes[j] as? SourceReferenceMessageAttribute {
                 channelThreadMessageId = attribute.messageId
             }
