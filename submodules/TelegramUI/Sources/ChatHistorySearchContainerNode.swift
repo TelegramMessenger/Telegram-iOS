@@ -143,6 +143,10 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
     
     private var enqueuedTransitions: [(ChatHistorySearchContainerTransition, Bool)] = []
     
+    public override var hasDim: Bool {
+        return true
+    }
+    
     init(context: AccountContext, peerId: PeerId, tagMask: MessageTags, interfaceInteraction: ChatControllerInteraction) {
         self.context = context
         

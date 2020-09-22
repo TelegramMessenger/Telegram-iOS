@@ -87,15 +87,17 @@ class ChatImageGalleryItem: GalleryItem {
     let presentationData: PresentationData
     let message: Message
     let location: MessageHistoryEntryLocation?
+    let displayInfoOnTop: Bool
     let performAction: (GalleryControllerInteractionTapAction) -> Void
     let openActionOptions: (GalleryControllerInteractionTapAction) -> Void
     let present: (ViewController, Any?) -> Void
     
-    init(context: AccountContext, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, message: Message, location: MessageHistoryEntryLocation?, displayInfoOnTop: Bool, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.message = message
         self.location = location
+        self.displayInfoOnTop = displayInfoOnTop
         self.performAction = performAction
         self.openActionOptions = openActionOptions
         self.present = present
@@ -125,8 +127,11 @@ class ChatImageGalleryItem: GalleryItem {
         if let location = self.location {
             node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").0))
         }
-        
-        node.setMessage(self.message)
+                
+        if self.displayInfoOnTop {
+            node.titleContentView?.setMessage(self.message, presentationData: self.presentationData, accountPeerId: self.context.account.peerId)
+        }
+        node.setMessage(self.message, displayInfo: !self.displayInfoOnTop)
         
         return node
     }
@@ -134,8 +139,11 @@ class ChatImageGalleryItem: GalleryItem {
     func updateNode(node: GalleryItemNode, synchronous: Bool) {
         if let node = node as? ChatImageGalleryItemNode, let location = self.location {
             node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").0))
-            
-            node.setMessage(self.message)
+        
+            if self.displayInfoOnTop {
+                node.titleContentView?.setMessage(self.message, presentationData: self.presentationData, accountPeerId: self.context.account.peerId)
+            }
+            node.setMessage(self.message, displayInfo: !self.displayInfoOnTop)
         }
     }
     
@@ -167,10 +175,12 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     private var tilingNode: TilingNode?
     fileprivate let _ready = Promise<Void>()
     fileprivate let _title = Promise<String>()
+    fileprivate let _titleView = Promise<UIView?>()
     fileprivate let _rightBarButtonItems = Promise<[UIBarButtonItem]?>(nil)
     private let statusNodeContainer: HighlightableButtonNode
     private let statusNode: RadialStatusNode
     private let footerContentNode: ChatItemGalleryFooterContentNode
+    fileprivate var titleContentView: GalleryTitleView?
     
     private var contextAndMedia: (AccountContext, AnyMediaReference)?
     
@@ -207,6 +217,9 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.statusNodeContainer.addTarget(self, action: #selector(self.statusPressed), forControlEvents: .touchUpInside)
         
         self.statusNodeContainer.isUserInteractionEnabled = false
+        
+        self.titleContentView = GalleryTitleView(frame: CGRect())
+        self._titleView.set(.single(self.titleContentView))
     }
     
     deinit {
@@ -227,8 +240,8 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(), size: statusSize))
     }
     
-    fileprivate func setMessage(_ message: Message) {
-        self.footerContentNode.setMessage(message)
+    fileprivate func setMessage(_ message: Message, displayInfo: Bool) {
+        self.footerContentNode.setMessage(message, displayInfo: displayInfo)
     }
     
     fileprivate func setImage(imageReference: ImageMediaReference) {
@@ -577,6 +590,10 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func title() -> Signal<String, NoError> {
         return self._title.get()
+    }
+    
+    override func titleView() -> Signal<UIView?, NoError> {
+        return self._titleView.get()
     }
     
     override func rightBarButtonItems() -> Signal<[UIBarButtonItem]?, NoError> {

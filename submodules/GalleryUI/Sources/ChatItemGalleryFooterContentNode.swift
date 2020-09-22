@@ -20,7 +20,7 @@ import LocalizedPeerData
 import TextSelectionNode
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
-private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: .white)
+private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: .white)
 
 private let backwardImage = generateTintedImage(image:  UIImage(bundleImageName: "Media Gallery/BackwardButton"), color: .white)
 private let forwardImage = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/ForwardButton"), color: .white)
@@ -439,7 +439,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
     }
     
-    func setMessage(_ message: Message) {
+    func setMessage(_ message: Message, displayInfo: Bool = true) {
         self.currentMessage = message
         
         let canDelete: Bool
@@ -464,14 +464,18 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
         
         var authorNameText: String?
-        
         if let author = message.effectiveAuthor {
             authorNameText = author.displayTitle(strings: self.strings, displayOrder: self.nameOrder)
         } else if let peer = message.peers[message.id.peerId] {
             authorNameText = peer.displayTitle(strings: self.strings, displayOrder: self.nameOrder)
         }
         
-        let dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: message.timestamp)
+        var dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: message.timestamp)
+        
+        if !displayInfo {
+            authorNameText = ""
+            dateText = ""
+        }
         
         var messageText = NSAttributedString(string: "")
         var hasCaption = false
@@ -494,7 +498,6 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
         
         self.actionButton.isHidden = message.containsSecretMedia || Namespaces.Message.allScheduled.contains(message.id.namespace)
-        
         
         if self.currentMessageText != messageText || canDelete != !self.deleteButton.isHidden || canShare != !self.actionButton.isHidden || self.currentAuthorNameText != authorNameText || self.currentDateText != dateText {
             self.currentMessageText = messageText

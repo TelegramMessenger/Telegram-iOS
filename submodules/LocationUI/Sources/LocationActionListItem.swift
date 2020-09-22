@@ -48,7 +48,7 @@ public enum LocationActionListItemIcon: Equatable {
 }
 
 private func generateLocationIcon(theme: PresentationTheme) -> UIImage {
-    return generateImage(CGSize(width: 40.0, height: 40.0), contextGenerator: { size, context in
+    return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(theme.chat.inputPanel.actionControlFillColor.cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
@@ -64,7 +64,7 @@ private func generateLocationIcon(theme: PresentationTheme) -> UIImage {
 }
 
 private func generateLiveLocationIcon(theme: PresentationTheme) -> UIImage {
-    return generateImage(CGSize(width: 40.0, height: 40.0), contextGenerator: { size, context in
+    return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(UIColor(rgb: 0x6cc139).cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))

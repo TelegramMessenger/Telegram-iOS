@@ -89,36 +89,6 @@ private func extensionImage(fileExtension: String?) -> UIImage? {
 }
 private let extensionFont = Font.with(size: 15.0, design: .round, traits: [.bold])
 
-func fullAuthorString(for item: ListMessageItem) -> String {
-    var authorString = ""
-    if let author = item.message.author, [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(item.message.id.peerId.namespace) {
-        var authorName = ""
-        if author.id == item.context.account.peerId {
-            authorName = item.presentationData.strings.DialogList_You
-        } else {
-            authorName = author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-        }
-        if let peer = item.message.peers[item.message.id.peerId], author.id != peer.id {
-            authorString = "\(authorName) → \(peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder))"
-        } else {
-            authorString = authorName
-        }
-    } else if let peer = item.message.peers[item.message.id.peerId] {
-        if item.message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
-            authorString = peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-        } else {
-            if item.message.id.peerId == item.context.account.peerId {
-                authorString = item.presentationData.strings.DialogList_SavedMessages
-            } else if item.message.flags.contains(.Incoming) {
-                authorString = peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-            } else {
-                authorString = "\(item.presentationData.strings.DialogList_You) → \(peer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder))"
-            }
-        }
-    }
-    return authorString
-}
-
 private struct FetchControls {
     let fetch: () -> Void
     let cancel: () -> Void
@@ -418,7 +388,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             }
                             
                             if item.isGlobalSearchResult {
-                                let authorString = fullAuthorString(for: item)
+                                let authorString = stringForFullAuthorName(message: item.message, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
                                 if descriptionString.isEmpty {
                                     descriptionString = authorString
                                 } else {
@@ -458,7 +428,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         }
                         
                         if item.isGlobalSearchResult {
-                            authorName = fullAuthorString(for: item)
+                            authorName = stringForFullAuthorName(message: item.message, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
                         }
                         
                         titleText = NSAttributedString(string: authorName, font: audioTitleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
@@ -511,7 +481,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         }
                         
                         if item.isGlobalSearchResult {
-                            let authorString = fullAuthorString(for: item)
+                            let authorString = stringForFullAuthorName(message: item.message, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
                             if descriptionString.isEmpty {
                                 descriptionString = authorString
                             } else {

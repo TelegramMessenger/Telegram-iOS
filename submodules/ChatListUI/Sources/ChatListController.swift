@@ -1682,40 +1682,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     scrollToTop()
                 }
                                 
-                if let searchContentNode = strongSelf.searchContentNode {
-                    var updatedDisplayFiltersPanelImpl: ((Bool) -> Void)?
-                    
-                    if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, navigationController: strongSelf.navigationController as? NavigationController, updatedDisplayFiltersPanel: { display in
-                        updatedDisplayFiltersPanelImpl?(display)
-                    }) {
+                if let searchContentNode = strongSelf.searchContentNode {                    
+                    if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, navigationController: strongSelf.navigationController as? NavigationController) {
                         let (filterContainerNode, activate) = filterContainerNodeAndActivate
                         strongSelf.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: false)
                         if let parentController = strongSelf.parent as? TabBarController {
                             parentController.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: true)
                         }
                         activate()
-                        
-                        var currentDisplay = true
-                        updatedDisplayFiltersPanelImpl = { [weak self, weak filterContainerNode] display in
-                            guard let strongSelf = self, let strongFilterContainerNode = filterContainerNode else {
-                                return
-                            }
-                            if currentDisplay != display {
-                                currentDisplay = display
-                            
-                                let node = display ? strongFilterContainerNode : nil                                
-                                strongSelf.navigationBar?.setSecondaryContentNode(node, animated: false)
-                                if let parentController = strongSelf.parent as? TabBarController {
-                                    parentController.navigationBar?.setSecondaryContentNode(node, animated: true)
-                                }
-                                
-                                let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
-                                if let layout = strongSelf.validLayout {
-                                    strongSelf.containerLayoutUpdated(layout, transition: transition)
-                                    (strongSelf.parent as? TabBarController)?.updateLayout(transition: transition)
-                                }
-                            }
-                        }
                     }
                 }
                 

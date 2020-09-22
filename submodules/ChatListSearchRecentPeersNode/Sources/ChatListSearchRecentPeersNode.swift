@@ -109,7 +109,6 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
     private var strings: PresentationStrings
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     private let mode: HorizontalPeerItemMode
-    private let sectionHeaderNode: ListSectionHeaderNode
     private let listView: ListView
     private let share: Bool
     
@@ -133,15 +132,11 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
         self.peerContextAction = peerContextAction
         self.isPeerSelected = isPeerSelected
         
-        self.sectionHeaderNode = ListSectionHeaderNode(theme: theme)
-        self.sectionHeaderNode.title = strings.DialogList_RecentTitlePeople.uppercased()
-        
         self.listView = ListView()
         self.listView.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         
         super.init()
         
-        self.addSubnode(self.sectionHeaderNode)
         self.addSubnode(self.listView)
         
         let peersDisposable = DisposableSet()
@@ -249,20 +244,14 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
             self.theme = theme
             self.strings = strings
             self.themeAndStringsPromise.set(.single((self.theme, self.strings)))
-            
-            self.sectionHeaderNode.title = strings.DialogList_RecentTitlePeople.uppercased()
-            self.sectionHeaderNode.updateTheme(theme: theme)
         }
     }
     
     override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: constrainedSize.width, height: 114.0)
+        return CGSize(width: constrainedSize.width, height: 86.0)
     }
     
-    public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
-        self.sectionHeaderNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 28.0))
-        self.sectionHeaderNode.updateLayout(size: CGSize(width: size.width, height: 28.0), leftInset: leftInset, rightInset: rightInset)
-        
+    public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {        
         var insets = UIEdgeInsets()
         insets.top += leftInset
         insets.bottom += rightInset
@@ -277,7 +266,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
         
         
         self.listView.bounds = CGRect(x: 0.0, y: 0.0, width: 92.0, height: size.width)
-        self.listView.position = CGPoint(x: size.width / 2.0, y: 92.0 / 2.0 + 28.0)
+        self.listView.position = CGPoint(x: size.width / 2.0, y: 92.0 / 2.0)
         self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: 92.0, height: size.width), insets: insets, duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         self.itemCustomWidthValuePromise.set(itemCustomWidth)
     }
