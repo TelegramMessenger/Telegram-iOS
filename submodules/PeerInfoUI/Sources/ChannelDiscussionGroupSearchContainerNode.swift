@@ -117,6 +117,10 @@ final class ChannelDiscussionGroupSearchContainerNode: SearchDisplayControllerCo
     
     private let presentationDataPromise: Promise<PresentationData>
     
+    public override var hasDim: Bool {
+        return true
+    }
+    
     init(context: AccountContext, peers: [Peer], openPeer: @escaping (Peer) -> Void) {
         self.context = context
         self.openPeer = openPeer

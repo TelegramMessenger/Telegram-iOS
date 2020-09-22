@@ -117,6 +117,7 @@ final class ChatListSearchMessageSelectionPanelNode: ASDisplayNode {
     }
     
     func update(layout: ContainerViewLayout, presentationData: PresentationData, transition: ContainedViewLayoutTransition) -> CGFloat {
+        self.validLayout = layout
         if presentationData.theme !== self.theme {
             self.theme = presentationData.theme
             

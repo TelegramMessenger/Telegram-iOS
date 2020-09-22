@@ -44,7 +44,10 @@ public struct PresentationResourcesRootController {
     }
     
     public static func navigationShareIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.navigationShareIcon.rawValue, generateShareButtonImage)
+        return theme.image(PresentationResourceKey.navigationShareIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: theme.rootController.navigationBar.accentTextColor)
+        })
+//        return theme.image(PresentationResourceKey.navigationShareIcon.rawValue, generateShareButtonImage)
     }
     
     public static func navigationCallIcon(_ theme: PresentationTheme) -> UIImage? {

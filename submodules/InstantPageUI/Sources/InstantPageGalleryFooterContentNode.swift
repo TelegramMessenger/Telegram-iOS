@@ -14,7 +14,7 @@ import ShareController
 import GalleryUI
 import AppBundle
 
-private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: .white)
+private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: .white)
 
 private let textFont = Font.regular(16.0)
 
