@@ -226,7 +226,7 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
         }
         
         self.addSubnode(self.scrollNode)
-        self.addSubnode(self.selectedLineNode)
+        self.scrollNode.addSubnode(self.selectedLineNode)
     }
         
     func cancelAnimations() {
@@ -254,6 +254,7 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
         
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: size))
              
+        var hasSelection = false
         for i in 0 ..< filters.count {
             let filter = filters[i]
             if case let .filter(type) = filter {
@@ -272,6 +273,7 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
                 let selectionFraction: CGFloat
                 if selectedFilter == filter.id {
                     selectionFraction = 1.0 - abs(transitionFraction)
+                    hasSelection = true
                 } else if i != 0 && selectedFilter == filters[i - 1].id {
                     selectionFraction = max(0.0, -transitionFraction)
                 } else if i != filters.count - 1 && selectedFilter == filters[i + 1].id {
@@ -323,7 +325,7 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
         }
         
         let minSpacing: CGFloat = 24.0
-        let spacing = minSpacing
+        var spacing = minSpacing
         
         let resolvedSideInset: CGFloat = 16.0 + sideInset
         var leftOffset: CGFloat = resolvedSideInset
@@ -339,6 +341,10 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
             }
         }
         longTitlesWidth += resolvedSideInset
+        
+        if longTitlesWidth < size.width && hasSelection {
+            spacing = (size.width - titlesWidth - resolvedSideInset * 2.0) / CGFloat(tabSizes.count - 1)
+        }
         
         let verticalOffset: CGFloat = -3.0
         for i in 0 ..< tabSizes.count {

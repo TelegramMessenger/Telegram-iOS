@@ -101,6 +101,9 @@ private final class PeerBanTimeoutActionSheetItemNode: ActionSheetItemNode {
         self.pickerView.locale = localeWithStrings(strings)
         self.pickerView.minimumDate = Date()
         self.pickerView.maximumDate = Date(timeIntervalSince1970: Double(Int32.max - 1))
+        if #available(iOS 13.4, *) {
+            self.pickerView.preferredDatePickerStyle = .wheels
+        }
         
         super.init(theme: theme)
         
