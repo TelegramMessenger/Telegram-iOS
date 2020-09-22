@@ -299,11 +299,12 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     @objc func tapped() {
         if let interfaceInteraction = self.interfaceInteraction, let message = self.currentMessage {
             if self.isReplyThread {
-                if let sourceReference = message.sourceReference {
+                interfaceInteraction.scrollToTop()
+                /*if let sourceReference = message.sourceReference {
                     interfaceInteraction.navigateToMessage(sourceReference.messageId, true)
                 } else {
                     interfaceInteraction.navigateToMessage(message.id, false)
-                }
+                }*/
             } else {
                 interfaceInteraction.navigateToMessage(message.id, false)
             }

@@ -121,6 +121,7 @@ final class ChatPanelInterfaceInteraction {
     let displaySearchResultsTooltip: (ASDisplayNode, CGRect) -> Void
     let openPeersNearby: () -> Void
     let unarchivePeer: () -> Void
+    let scrollToTop: () -> Void
     let viewReplies: (MessageId?, ChatReplyThreadMessage) -> Void
     let statuses: ChatPanelInterfaceInteractionStatuses?
     
@@ -196,6 +197,7 @@ final class ChatPanelInterfaceInteraction {
         openPeersNearby: @escaping () -> Void,
         displaySearchResultsTooltip: @escaping (ASDisplayNode, CGRect) -> Void,
         unarchivePeer: @escaping () -> Void,
+        scrollToTop: @escaping () -> Void,
         viewReplies: @escaping (MessageId?, ChatReplyThreadMessage) -> Void,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
@@ -270,6 +272,7 @@ final class ChatPanelInterfaceInteraction {
         self.openPeersNearby = openPeersNearby
         self.displaySearchResultsTooltip = displaySearchResultsTooltip
         self.unarchivePeer = unarchivePeer
+        self.scrollToTop = scrollToTop
         self.viewReplies = viewReplies
         self.statuses = statuses
     }

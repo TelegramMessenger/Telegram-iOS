@@ -615,7 +615,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             }, action: { c, _ in
                 let foundIndex = Promise<ChatReplyThreadMessage?>()
                 if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
-                    foundIndex.set(fetchChannelReplyThreadMessage(account: context.account, messageId: messages[0].id)
+                    foundIndex.set(fetchChannelReplyThreadMessage(account: context.account, messageId: messages[0].id, atMessageId: nil)
                     |> map(Optional.init)
                     |> `catch` { _ -> Signal<ChatReplyThreadMessage?, NoError> in
                         return .single(nil)

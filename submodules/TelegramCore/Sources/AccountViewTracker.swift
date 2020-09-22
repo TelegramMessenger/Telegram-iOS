@@ -606,6 +606,16 @@ public final class AccountViewTracker {
         var maxMessageId: MessageId?
     }
     
+    func applyMaxReadIncomingMessageIdForReplyInfo(id: MessageId, maxReadIncomingMessageId: MessageId) {
+        self.queue.async {
+            if var state = self.updatedViewCountMessageIdsAndTimestamps[id], var result = state.result {
+                result.maxReadIncomingMessageId = maxReadIncomingMessageId
+                state.result = result
+                self.updatedViewCountMessageIdsAndTimestamps[id] = state
+            }
+        }
+    }
+    
     public func replyInfoForMessageId(_ id: MessageId) -> Signal<UpdatedMessageReplyInfo?, NoError> {
         return Signal { [weak self] subscriber in
             let state = self?.updatedViewCountMessageIdsAndTimestamps[id]
@@ -1167,7 +1177,7 @@ public final class AccountViewTracker {
         }
     }
     
-    func polledChannel(peerId: PeerId) -> Signal<Void, NoError> {
+    public func polledChannel(peerId: PeerId) -> Signal<Void, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.queue.async {

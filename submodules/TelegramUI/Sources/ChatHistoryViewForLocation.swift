@@ -302,24 +302,34 @@ enum ReplyThreadSubject {
     case groupMessage(MessageId)
 }
 
-func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThreadSubject) -> Signal<ReplyThreadInfo, FetchChannelReplyThreadMessageError> {
+func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThreadSubject, atMessageId: MessageId?) -> Signal<ReplyThreadInfo, FetchChannelReplyThreadMessageError> {
     let message: Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError>
     switch subject {
     case let .channelPost(messageId):
-        message = fetchChannelReplyThreadMessage(account: context.account, messageId: messageId)
+        message = fetchChannelReplyThreadMessage(account: context.account, messageId: messageId, atMessageId: atMessageId)
     case let .groupMessage(messageId):
-        message = fetchChannelReplyThreadMessage(account: context.account, messageId: messageId)
+        message = fetchChannelReplyThreadMessage(account: context.account, messageId: messageId, atMessageId: atMessageId)
     }
     
     return message
     |> mapToSignal { replyThreadMessage -> Signal<ReplyThreadInfo, FetchChannelReplyThreadMessageError> in
         let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
         
-        let preloadSignal = preloadedChatHistoryViewForLocation(
-            ChatHistoryLocationInput(
-                content: .Initial(count: 60),
+        let input: ChatHistoryLocationInput
+        if let atMessageId = atMessageId {
+            input = ChatHistoryLocationInput(
+                content: .InitialSearch(location: .id(atMessageId), count: 30),
                 id: 0
-            ),
+            )
+        } else {
+            input = ChatHistoryLocationInput(
+                content: .Initial(count: 30),
+                id: 0
+            )
+        }
+        
+        let preloadSignal = preloadedChatHistoryViewForLocation(
+            input,
             context: context,
             chatLocation: .replyThread(replyThreadMessage),
             chatLocationContextHolder: chatLocationContextHolder,
