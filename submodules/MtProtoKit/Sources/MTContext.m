@@ -230,7 +230,7 @@ static int32_t fixedTimeDifferenceValue = 0;
 #if DEBUG
         _tempKeyExpiration = 1 * 60 * 60;
 #else
-        _tempKeyExpiration = 1 * 60 * 60;
+        _tempKeyExpiration = 24 * 60 * 60;
 #endif
         
         _datacenterSeedAddressSetById = [[NSMutableDictionary alloc] init];

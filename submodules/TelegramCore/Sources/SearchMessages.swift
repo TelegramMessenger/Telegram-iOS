@@ -626,18 +626,25 @@ public func updatedRemotePeer(postbox: Postbox, network: Network, peer: PeerRefe
             return .generic
         }
         |> mapToSignal { result -> Signal<Peer, UpdatedRemotePeerError> in
-            if let updatedPeer = result.first.flatMap(TelegramUser.init(user:)), updatedPeer.id == peer.id {
-                return postbox.transaction { transaction -> Peer in
-                    updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
-                        return updated
-                    })
-                    return updatedPeer
-                }
-                |> mapError { _ -> UpdatedRemotePeerError in
-                    return .generic
-                }
-            } else {
+            guard let apiUser = result.first else {
                 return .fail(.generic)
+            }
+            return postbox.transaction { transaction -> Peer? in
+                guard let peer = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) else {
+                    return nil
+                }
+                updatePeers(transaction: transaction, peers: [peer], update: { _, updated in
+                    return updated
+                })
+                return peer
+            }
+            |> castError(UpdatedRemotePeerError.self)
+            |> mapToSignal { peer -> Signal<Peer, UpdatedRemotePeerError> in
+                if let peer = peer {
+                    return .single(peer)
+                } else {
+                    return .fail(.generic)
+                }
             }
         }
     } else if case let .group(id) = peer {

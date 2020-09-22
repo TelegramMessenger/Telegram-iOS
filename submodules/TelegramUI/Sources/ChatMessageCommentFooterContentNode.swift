@@ -7,6 +7,7 @@ import SwiftSignalKit
 import TelegramCore
 import SyncCore
 import TelegramPresentationData
+import RadialStatusNode
 
 final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
     private let separatorNode: ASDisplayNode
@@ -17,6 +18,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
     private let buttonNode: HighlightTrackingButtonNode
     private let avatarsNode: MergedAvatarsNode
     private let unreadIconNode: ASImageNode
+    private var statusNode: RadialStatusNode?
     
     required init() {
         self.separatorNode = ASDisplayNode()
@@ -256,6 +258,32 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                             strongSelf.unreadIconNode.isHidden = !hasUnseenReplies
 
                             strongSelf.iconNode.isHidden = !replyPeers.isEmpty
+                            
+                            let hasActivity = item.controllerInteraction.currentMessageWithLoadingReplyThread == item.message.id
+                            
+                            if hasActivity {
+                                strongSelf.arrowNode.isHidden = true
+                                let statusNode: RadialStatusNode
+                                if let current = strongSelf.statusNode {
+                                    statusNode = current
+                                } else {
+                                    statusNode = RadialStatusNode(backgroundNodeColor: .clear)
+                                    strongSelf.statusNode = statusNode
+                                    strongSelf.buttonNode.addSubnode(statusNode)
+                                }
+                                let statusSize = CGSize(width: 20.0, height: 20.0)
+                                statusNode.frame = CGRect(origin: CGPoint(x: boundingWidth - statusSize.width - 11.0, y: 8.0 + topOffset), size: statusSize)
+                                statusNode.transitionToState(.progress(color: messageTheme.accentTextColor, lineWidth: 1.5, value: nil, cancelEnabled: false), animated: false, synchronous: false, completion: {})
+                            } else {
+                                strongSelf.arrowNode.isHidden = false
+                                if let statusNode = strongSelf.statusNode {
+                                    strongSelf.statusNode = nil
+                                    statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak statusNode] _ in
+                                        statusNode?.removeFromSupernode()
+                                    })
+                                    strongSelf.arrowNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                }
+                            }
                             
                             let avatarsFrame = CGRect(origin: CGPoint(x: 13.0, y: 3.0 + topOffset), size: CGSize(width: imageSize * 3.0, height: imageSize))
                             strongSelf.avatarsNode.frame = avatarsFrame

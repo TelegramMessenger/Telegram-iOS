@@ -6,7 +6,7 @@ public enum ChatLocationInput {
     case external(PeerId, Signal<MessageHistoryViewExternalInput, NoError>)
 }
 
-enum ResolvedChatLocationInput {
+public enum ResolvedChatLocationInput {
     case peer(PeerId)
     case external(MessageHistoryViewExternalInput)
 }

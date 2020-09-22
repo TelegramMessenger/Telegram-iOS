@@ -130,6 +130,7 @@ public final class ChatControllerInteraction {
     var stickerSettings: ChatInterfaceStickerSettings
     var searchTextHighightState: (String, [MessageIndex])?
     var seenOneTimeAnimatedMedia = Set<MessageId>()
+    var currentMessageWithLoadingReplyThread: MessageId?
     
     init(
         openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool,

@@ -837,13 +837,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         var hasAvatar = false
         
         var allowFullWidth = false
-        let chatLocationPeerId: PeerId
-        switch item.chatLocation {
-        case let .peer(peerId):
-            chatLocationPeerId = peerId
-        case let .replyThread(messageId, _, _, _, _):
-            chatLocationPeerId = messageId.peerId
-        }
+        let chatLocationPeerId: PeerId = item.chatLocation.peerId
         
         do {
             let peerId = chatLocationPeerId
@@ -885,7 +879,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                         allowFullWidth = true
                     }
                     
-                    if case let .replyThread(messageId, isChannelPost, _, _, _) = item.chatLocation, isChannelPost, messageId == firstMessage.id {
+                    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.messageId == firstMessage.id {
                         isBroadcastChannel = true
                     }
                     
@@ -1048,7 +1042,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     inlineBotNameString = attribute.title
                 }
             } else if let attribute = attribute as? ReplyMessageAttribute {
-                if case let .replyThread(replyThreadMessageId, _, _, _, _) = item.chatLocation, replyThreadMessageId == attribute.messageId {
+                if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == attribute.messageId {
                 } else {
                     replyMessage = firstMessage.associatedMessages[attribute.messageId]
                 }
@@ -2952,6 +2946,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 }
             default:
                 break
+        }
+        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == item.message.id {
+            canHaveSelection = false
         }
         
         if let selectionState = item.controllerInteraction.selectionState, canHaveSelection {

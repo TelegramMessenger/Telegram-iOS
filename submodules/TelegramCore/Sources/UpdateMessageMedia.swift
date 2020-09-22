@@ -29,11 +29,17 @@ func updateMessageMedia(transaction: Transaction, id: MediaId, media: Media?) {
     }
 }
 
-func updateMessageThreadStats(transaction: Transaction, threadMessageId: MessageId, difference: Int, addedMessagePeers: [PeerId]) {
+struct ReplyThreadUserMessage {
+    var id: PeerId
+    var messageId: MessageId
+    var isOutgoing: Bool
+}
+
+func updateMessageThreadStats(transaction: Transaction, threadMessageId: MessageId, difference: Int, addedMessagePeers: [ReplyThreadUserMessage]) {
     updateMessageThreadStatsInternal(transaction: transaction, threadMessageId: threadMessageId, difference: difference, addedMessagePeers: addedMessagePeers, allowChannel: false)
 }
     
-private func updateMessageThreadStatsInternal(transaction: Transaction, threadMessageId: MessageId, difference: Int, addedMessagePeers: [PeerId], allowChannel: Bool) {
+private func updateMessageThreadStatsInternal(transaction: Transaction, threadMessageId: MessageId, difference: Int, addedMessagePeers: [ReplyThreadUserMessage], allowChannel: Bool) {
     guard let channel = transaction.getPeer(threadMessageId.peerId) as? TelegramChannel else {
         return
     }
@@ -77,7 +83,24 @@ private func updateMessageThreadStatsInternal(transaction: Transaction, threadMe
         loop: for j in 0 ..< attributes.count {
             if let attribute = attributes[j] as? ReplyThreadMessageAttribute {
                 let count = max(0, attribute.count + countDifference)
-                attributes[j] = ReplyThreadMessageAttribute(count: count, latestUsers: mergeLatestUsers(current: attribute.latestUsers, added: addedMessagePeers, isGroup: isGroup, isEmpty: count == 0), commentsPeerId: attribute.commentsPeerId, maxMessageId: attribute.maxMessageId, maxReadMessageId: attribute.maxReadMessageId)
+                var maxMessageId = attribute.maxMessageId
+                var maxReadMessageId = attribute.maxReadMessageId
+                if let maxAddedId = addedMessagePeers.map(\.messageId.id).max() {
+                    if let currentMaxMessageId = maxMessageId {
+                        maxMessageId = max(currentMaxMessageId, maxAddedId)
+                    } else {
+                        maxMessageId = maxAddedId
+                    }
+                }
+                if let maxAddedReadId = addedMessagePeers.filter(\.isOutgoing).map(\.messageId.id).max() {
+                    if let currentMaxMessageId = maxReadMessageId {
+                        maxReadMessageId = max(currentMaxMessageId, maxAddedReadId)
+                    } else {
+                        maxReadMessageId = maxAddedReadId
+                    }
+                }
+                
+                attributes[j] = ReplyThreadMessageAttribute(count: count, latestUsers: mergeLatestUsers(current: attribute.latestUsers, added: addedMessagePeers.map(\.id), isGroup: isGroup, isEmpty: count == 0), commentsPeerId: attribute.commentsPeerId, maxMessageId: maxMessageId, maxReadMessageId: maxReadMessageId)
             } else if let attribute = attributes[j] as? SourceReferenceMessageAttribute {
                 channelThreadMessageId = attribute.messageId
             }
