@@ -321,7 +321,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                                 return .single(.channelMessage(peerId: peer.id, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id)))
                             case let .replyThread(id, replyId):
                                 let replyThreadMessageId = MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id)
-                                return fetchChannelReplyThreadMessage(account: account, messageId: replyThreadMessageId)
+                                return fetchChannelReplyThreadMessage(account: account, messageId: replyThreadMessageId, atMessageId: nil)
                                 |> map(Optional.init)
                                 |> `catch` { _ -> Signal<ChatReplyThreadMessage?, NoError> in
                                     return .single(nil)
@@ -371,7 +371,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                     if let foundPeer = foundPeer {
                         if let threadId = threadId {
                             let replyThreadMessageId = MessageId(peerId: foundPeer.id, namespace: Namespaces.Message.Cloud, id: threadId)
-                            return fetchChannelReplyThreadMessage(account: account, messageId: replyThreadMessageId)
+                            return fetchChannelReplyThreadMessage(account: account, messageId: replyThreadMessageId, atMessageId: nil)
                             |> map(Optional.init)
                             |> `catch` { _ -> Signal<ChatReplyThreadMessage?, NoError> in
                                 return .single(nil)

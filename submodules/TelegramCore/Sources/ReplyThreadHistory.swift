@@ -4,6 +4,14 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
+private struct DiscussionMessage {
+    public var messageId: MessageId
+    public var isChannelPost: Bool
+    public var maxMessage: MessageId?
+    public var maxReadIncomingMessageId: MessageId?
+    public var maxReadOutgoingMessageId: MessageId?
+}
+
 private class ReplyThreadHistoryContextImpl {
     private let queue: Queue
     private let account: Account
@@ -41,6 +49,7 @@ private class ReplyThreadHistoryContextImpl {
     private var initialStateDisposable: Disposable?
     private var holesDisposable: Disposable?
     private var readStateDisposable: Disposable?
+    private var updateInitialStateDisposable: Disposable?
     private let readDisposable = MetaDisposable()
     
     init(queue: Queue, account: Account, data: ChatReplyThreadMessage) {
@@ -108,12 +117,107 @@ private class ReplyThreadHistoryContextImpl {
                 strongSelf.maxReadOutgoingMessageIdValue = MessageId(peerId: data.messageId.peerId, namespace: Namespaces.Message.Cloud, id: value)
             }
         })
+        
+        let updateInitialState: Signal<DiscussionMessage, FetchChannelReplyThreadMessageError> = account.postbox.transaction { transaction -> Api.InputPeer? in
+            return transaction.getPeer(data.messageId.peerId).flatMap(apiInputPeer)
+        }
+        |> castError(FetchChannelReplyThreadMessageError.self)
+        |> mapToSignal { inputPeer -> Signal<DiscussionMessage, FetchChannelReplyThreadMessageError> in
+            guard let inputPeer = inputPeer else {
+                return .fail(.generic)
+            }
+            
+            return account.network.request(Api.functions.messages.getDiscussionMessage(peer: inputPeer, msgId: data.messageId.id))
+            |> mapError { _ -> FetchChannelReplyThreadMessageError in
+                return .generic
+            }
+            |> mapToSignal { discussionMessage -> Signal<DiscussionMessage, FetchChannelReplyThreadMessageError> in
+                return account.postbox.transaction { transaction -> Signal<DiscussionMessage, FetchChannelReplyThreadMessageError> in
+                    switch discussionMessage {
+                    case let .discussionMessage(_, messages, maxId, readInboxMaxId, readOutboxMaxId, chats, users):
+                        let parsedMessages = messages.compactMap { message -> StoreMessage? in
+                            StoreMessage(apiMessage: message)
+                        }
+                        
+                        guard let topMessage = parsedMessages.last, let parsedIndex = topMessage.index else {
+                            return .fail(.generic)
+                        }
+                        
+                        var peers: [Peer] = []
+                        var peerPresences: [PeerId: PeerPresence] = [:]
+                        
+                        for chat in chats {
+                            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                                peers.append(groupOrChannel)
+                            }
+                        }
+                        for user in users {
+                            let telegramUser = TelegramUser(user: user)
+                            peers.append(telegramUser)
+                            if let presence = TelegramUserPresence(apiUser: user) {
+                                peerPresences[telegramUser.id] = presence
+                            }
+                        }
+                        
+                        let _ = transaction.addMessages(parsedMessages, location: .Random)
+                        
+                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                            return updated
+                        })
+                        
+                        updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                        
+                        let resolvedMaxMessage: MessageId?
+                        if let maxId = maxId {
+                            resolvedMaxMessage = MessageId(
+                                peerId: parsedIndex.id.peerId,
+                                namespace: Namespaces.Message.Cloud,
+                                id: maxId
+                            )
+                        } else {
+                            resolvedMaxMessage = nil
+                        }
+                        
+                        return .single(DiscussionMessage(
+                            messageId: parsedIndex.id,
+                            isChannelPost: true,
+                            maxMessage: resolvedMaxMessage,
+                            maxReadIncomingMessageId: readInboxMaxId.flatMap { readMaxId in
+                                MessageId(peerId: parsedIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: readMaxId)
+                            },
+                            maxReadOutgoingMessageId: readOutboxMaxId.flatMap { readMaxId in
+                                MessageId(peerId: parsedIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: readMaxId)
+                            }
+                        ))
+                    }
+                }
+                |> castError(FetchChannelReplyThreadMessageError.self)
+                |> switchToLatest
+            }
+        }
+        
+        self.updateInitialStateDisposable = (updateInitialState
+        |> deliverOnMainQueue).start(next: { [weak self] updatedData in
+            guard let strongSelf = self else {
+                return
+            }
+            if let maxReadOutgoingMessageId = updatedData.maxReadOutgoingMessageId {
+                if let current = strongSelf.maxReadOutgoingMessageIdValue {
+                    if maxReadOutgoingMessageId > current {
+                        strongSelf.maxReadOutgoingMessageIdValue = maxReadOutgoingMessageId
+                    }
+                } else {
+                    strongSelf.maxReadOutgoingMessageIdValue = maxReadOutgoingMessageId
+                }
+            }
+        })
     }
     
     deinit {
         self.initialStateDisposable?.dispose()
         self.holesDisposable?.dispose()
         self.readDisposable.dispose()
+        self.updateInitialStateDisposable?.dispose()
     }
     
     func setCurrentHole(entry: MessageHistoryHolesViewEntry?) {
@@ -156,6 +260,8 @@ private class ReplyThreadHistoryContextImpl {
                 for attribute in message.attributes {
                     if let attribute = attribute as? SourceReferenceMessageAttribute {
                         if let sourceMessage = transaction.getMessage(attribute.messageId) {
+                            account.viewTracker.applyMaxReadIncomingMessageIdForReplyInfo(id: attribute.messageId, maxReadIncomingMessageId: messageIndex.id)
+                            
                             var updatedAttribute: ReplyThreadMessageAttribute?
                             for i in 0 ..< sourceMessage.attributes.count {
                                 if let attribute = sourceMessage.attributes[i] as? ReplyThreadMessageAttribute {
@@ -289,7 +395,7 @@ public enum FetchChannelReplyThreadMessageError {
     case generic
 }
 
-public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageId) -> Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError> {
+public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageId, atMessageId: MessageId?) -> Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
     }
@@ -301,14 +407,6 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
         
         let replyInfo = Promise<AccountViewTracker.UpdatedMessageReplyInfo?>()
         replyInfo.set(account.viewTracker.replyInfoForMessageId(messageId))
-        
-        struct DiscussionMessage {
-            public var messageId: MessageId
-            public var isChannelPost: Bool
-            public var maxMessage: MessageId?
-            public var maxReadIncomingMessageId: MessageId?
-            public var maxReadOutgoingMessageId: MessageId?
-        }
         
         let remoteDiscussionMessageSignal: Signal<DiscussionMessage?, NoError> = account.network.request(Api.functions.messages.getDiscussionMessage(peer: inputPeer, msgId: messageId.id))
         |> map(Optional.init)
@@ -380,16 +478,12 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
             }
         }
         let discussionMessageSignal = (replyInfo.get()
+        |> take(1)
         |> mapToSignal { replyInfo -> Signal<DiscussionMessage?, NoError> in
             guard let replyInfo = replyInfo else {
                 return .single(nil)
             }
             return account.postbox.transaction { transaction -> DiscussionMessage? in
-                let isParticipant = transaction.getPeerChatListIndex(replyInfo.commentsPeerId) != nil
-                
-                guard isParticipant else {
-                    return nil
-                }
                 var foundDiscussionMessageId: MessageId?
                 transaction.scanMessageAttributes(peerId: replyInfo.commentsPeerId, namespace: Namespaces.Message.Cloud, limit: 1000, { id, attributes in
                     for attribute in attributes {
@@ -428,7 +522,8 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
         discussionMessage.set(discussionMessageSignal)
         
         let preloadedHistoryPosition: Signal<(FetchMessageHistoryHoleThreadInput, PeerId, MessageId?, MessageId?, MessageId?), FetchChannelReplyThreadMessageError> = replyInfo.get()
-            |> castError(FetchChannelReplyThreadMessageError.self)
+        |> take(1)
+        |> castError(FetchChannelReplyThreadMessageError.self)
         |> mapToSignal { replyInfo -> Signal<(FetchMessageHistoryHoleThreadInput, PeerId, MessageId?, MessageId?, MessageId?), FetchChannelReplyThreadMessageError> in
             if let replyInfo = replyInfo {
                 return account.postbox.transaction { transaction -> (FetchMessageHistoryHoleThreadInput, PeerId, MessageId?, MessageId?, MessageId?) in
@@ -446,11 +541,12 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
                         }
                         return true
                     })
-                    return (threadInput, replyInfo.commentsPeerId, threadMessageId, replyInfo.maxReadIncomingMessageId, replyInfo.maxMessageId)
+                    return (threadInput, replyInfo.commentsPeerId, threadMessageId, atMessageId ?? replyInfo.maxReadIncomingMessageId, replyInfo.maxMessageId)
                 }
                 |> castError(FetchChannelReplyThreadMessageError.self)
             } else {
                 return discussionMessage.get()
+                |> take(1)
                 |> castError(FetchChannelReplyThreadMessageError.self)
                 |> mapToSignal { discussionMessage -> Signal<(FetchMessageHistoryHoleThreadInput, PeerId, MessageId?, MessageId?, MessageId?), FetchChannelReplyThreadMessageError> in
                     guard let discussionMessage = discussionMessage else {
@@ -459,7 +555,7 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
                     
                     let topMessageId = discussionMessage.messageId
                     let commentsPeerId = topMessageId.peerId
-                    return .single((.direct(peerId: commentsPeerId, threadId: makeMessageThreadId(topMessageId)), commentsPeerId, discussionMessage.messageId, discussionMessage.maxReadIncomingMessageId, discussionMessage.maxMessage))
+                    return .single((.direct(peerId: commentsPeerId, threadId: makeMessageThreadId(topMessageId)), commentsPeerId, discussionMessage.messageId, atMessageId ?? discussionMessage.maxReadIncomingMessageId, discussionMessage.maxMessage))
                 }
             }
         }
@@ -522,6 +618,7 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
         
         return combineLatest(
             discussionMessage.get()
+            |> take(1)
             |> castError(FetchChannelReplyThreadMessageError.self),
             preloadedHistory
         )
