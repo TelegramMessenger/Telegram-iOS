@@ -44,8 +44,8 @@ final class GalleryTitleView: UIView, NavigationBarTitleView {
         let leftInset: CGFloat = 0.0
         let rightInset: CGFloat = 0.0
         
-        let authorNameSize = self.authorNameNode.measure(CGSize(width: size.width - 44.0 * 2.0 - 8.0 * 2.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude))
-        let dateSize = self.dateNode.measure(CGSize(width: size.width - 44.0 * 2.0 - 8.0 * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        let authorNameSize = self.authorNameNode.measure(CGSize(width: size.width - 8.0 * 2.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude))
+        let dateSize = self.dateNode.measure(CGSize(width: size.width - 8.0 * 2.0, height: CGFloat.greatestFiniteMagnitude))
         
         if authorNameSize.height.isZero {
             self.dateNode.frame = CGRect(origin: CGPoint(x: floor((size.width - dateSize.width) / 2.0), y: floor((size.height - dateSize.height) / 2.0)), size: dateSize)
