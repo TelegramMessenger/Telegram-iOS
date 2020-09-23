@@ -353,14 +353,25 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
             
             let paneFrame = CGRect(origin: CGPoint(x: leftOffset, y: floor((size.height - paneNodeSize.height) / 2.0) + verticalOffset), size: paneNodeSize)
             
-            if wasAdded {
+            var effectiveWasAdded = wasAdded
+            if !effectiveWasAdded && !self.bounds.intersects(self.scrollNode.convert(paneNode.frame, to: self)) && self.bounds.intersects(self.scrollNode.convert(paneFrame, to: self)) {
+                effectiveWasAdded = true
+            }
+            
+            if effectiveWasAdded {
                 paneNode.frame = paneFrame
                 paneNode.alpha = 0.0
                 paneNode.subnodeTransform = CATransform3DMakeScale(0.1, 0.1, 1.0)
                 itemNodeTransition.updateSublayerTransformScale(node: paneNode, scale: 1.0)
                 itemNodeTransition.updateAlpha(node: paneNode, alpha: 1.0)
             } else {
-                itemNodeTransition.updateFrameAdditive(node: paneNode, frame: paneFrame)
+                if self.bounds.intersects(self.scrollNode.convert(paneFrame, to: self)) {
+                    itemNodeTransition.updateFrameAdditive(node: paneNode, frame: paneFrame)
+                } else {
+                    paneNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.4) { [weak paneNode] _ in
+                        paneNode?.frame = paneFrame
+                    }
+                }
             }
             
             paneNode.updateArea(size: paneFrame.size, sideInset: spacing / 2.0, transition: itemNodeTransition)
