@@ -110,6 +110,7 @@ final class MessageHistoryThreadHoleIndexTable: Table {
     
     private func ensureInitialized(peerId: PeerId, threadId: Int64) {
         if !self.metadataTable.isThreadHoleIndexInitialized(peerId: peerId, threadId: threadId) {
+            postboxLog("MessageHistoryThreadHoleIndexTable: Initializing \(peerId) \(threadId)")
             self.metadataTable.setIsThreadHoleIndexInitialized(peerId: peerId, threadId: threadId)
             
             if let messageNamespaces = self.seedConfiguration.messageThreadHoles[peerId.namespace] {
