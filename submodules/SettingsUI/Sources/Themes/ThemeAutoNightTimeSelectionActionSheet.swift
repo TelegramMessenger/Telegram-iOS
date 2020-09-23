@@ -105,6 +105,9 @@ private final class ThemeAutoNightTimeSelectionActionSheetItemNode: ActionSheetI
         self.pickerView.timeZone = TimeZone(secondsFromGMT: 0)
         self.pickerView.date = Date(timeIntervalSince1970: Double(currentValue))
         self.pickerView.locale = Locale.current
+        if #available(iOS 13.4, *) {
+            self.pickerView.preferredDatePickerStyle = .wheels
+        }
         
         super.init(theme: theme)
         

@@ -49,10 +49,10 @@ final class ChatListSearchInteraction {
     let peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?
     let present: (ViewController, Any?) -> Void
     let dismissInput: () -> Void
-    let updateSuggestedPeers: ([Peer]) -> Void
+    let updateSuggestedPeers: ([Peer], ChatListSearchPaneKey) -> Void
     let getSelectedMessageIds: () -> Set<MessageId>?
     
-    init(openPeer: @escaping (Peer, Bool) -> Void, openDisabledPeer: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId) -> Void, openUrl: @escaping (String) -> Void, clearRecentSearch: @escaping () -> Void, addContact: @escaping (String) -> Void, toggleMessageSelection: @escaping (MessageId, Bool) -> Void, messageContextAction: @escaping ((Message, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), mediaMessageContextAction: @escaping ((Message, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, updateSuggestedPeers: @escaping ([Peer]) -> Void, getSelectedMessageIds: @escaping () -> Set<MessageId>?) {
+    init(openPeer: @escaping (Peer, Bool) -> Void, openDisabledPeer: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId) -> Void, openUrl: @escaping (String) -> Void, clearRecentSearch: @escaping () -> Void, addContact: @escaping (String) -> Void, toggleMessageSelection: @escaping (MessageId, Bool) -> Void, messageContextAction: @escaping ((Message, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), mediaMessageContextAction: @escaping ((Message, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, updateSuggestedPeers: @escaping ([Peer], ChatListSearchPaneKey) -> Void, getSelectedMessageIds: @escaping () -> Set<MessageId>?) {
         self.openPeer = openPeer
         self.openDisabledPeer = openDisabledPeer
         self.openMessage = openMessage
@@ -215,8 +215,10 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             present(c, a)
         }, dismissInput: { [weak self] in
             self?.dismissInput()
-        }, updateSuggestedPeers: { [weak self] peers in
-            self?.suggestedPeers.set(.single(peers))
+        }, updateSuggestedPeers: { [weak self] peers, key in
+            if let strongSelf = self, strongSelf.paneContainerNode.currentPaneKey == key {
+                strongSelf.suggestedPeers.set(.single(peers))
+            }
         }, getSelectedMessageIds: { [weak self] () -> Set<MessageId>? in
             if let strongSelf = self {
                 return strongSelf.stateValue.selectedMessageIds
@@ -297,7 +299,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         self.suggestedFiltersDisposable.set((combineLatest(self.suggestedPeers.get(), self.suggestedDates.get())
         |> mapToSignal { peers, dates -> Signal<([Peer], [(Date, String?)]), NoError> in
-            if peers.isEmpty && dates.isEmpty {
+            if (peers.isEmpty && dates.isEmpty) || peers.isEmpty {
                 return .single((peers, dates))
             } else {
                 return (.complete() |> delay(0.2, queue: Queue.mainQueue()))

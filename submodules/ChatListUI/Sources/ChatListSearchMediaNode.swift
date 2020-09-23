@@ -117,7 +117,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
         if case .ended = recognizer.state {
             if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
                 if case .tap = gesture {
-                    if let (item, _, _, _) = self.item {
+                    if let _ = self.item {
                         var media: Media?
                         for value in message.media {
                             if let image = value as? TelegramMediaImage {
@@ -225,7 +225,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 
                 self.fetchStatusDisposable.set((messageMediaFileStatus(context: context, messageId: message.id, file: file)
                 |> deliverOnMainQueue).start(next: { [weak self] status in
-                    if let strongSelf = self, let (item, _, _, _) = strongSelf.item {
+                    if let strongSelf = self, let _ = strongSelf.item {
                         strongSelf.resourceStatus = status
                         
                         let isStreamable = isMediaStreamable(message: message, media: file)

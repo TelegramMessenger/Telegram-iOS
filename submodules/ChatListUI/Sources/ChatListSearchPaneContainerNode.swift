@@ -81,21 +81,7 @@ private final class ChatListSearchPendingPane {
         key: ChatListSearchPaneKey,
         hasBecomeReady: @escaping (ChatListSearchPaneKey) -> Void
     ) {
-        let paneNode: ChatListSearchPaneNode
-        switch key {
-        case .chats:
-            paneNode = ChatListSearchListPaneNode(context: context, interaction: interaction, tagMask: nil, peersFilter: peersFilter, searchQuery: searchQuery, searchOptions: searchOptions, navigationController: navigationController)
-        case .media:
-            paneNode = ChatListSearchListPaneNode(context: context, interaction: interaction, tagMask: .photoOrVideo, peersFilter: [], searchQuery: searchQuery, searchOptions: searchOptions, navigationController: navigationController)
-        case .files:
-            paneNode = ChatListSearchListPaneNode(context: context, interaction: interaction, tagMask: .file, peersFilter: [], searchQuery: searchQuery, searchOptions: searchOptions, navigationController: navigationController)
-        case .links:
-            paneNode = ChatListSearchListPaneNode(context: context, interaction: interaction, tagMask: .webPage, peersFilter: [], searchQuery: searchQuery, searchOptions: searchOptions, navigationController: navigationController)
-        case .voice:
-            paneNode = ChatListSearchListPaneNode(context: context, interaction: interaction, tagMask: .voiceOrInstantVideo, peersFilter: [], searchQuery: searchQuery, searchOptions: searchOptions, navigationController: navigationController)
-        case .music:
-            paneNode = ChatListSearchListPaneNode(context: context, interaction: interaction, tagMask: .music, peersFilter: [], searchQuery: searchQuery, searchOptions: searchOptions, navigationController: navigationController)
-        }
+        let paneNode = ChatListSearchListPaneNode(context: context, interaction: interaction, key: key, peersFilter: key == .chats ? peersFilter : [], searchQuery: searchQuery, searchOptions: searchOptions, navigationController: navigationController)
         
         self.pane = ChatListSearchPaneWrapper(key: key, node: paneNode)
         self.disposable = (paneNode.isReady
@@ -493,7 +479,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
                     transition.animateFrame(node: pane.node, from: paneFrame, to: paneFrame.offsetBy(dx: -paneSwitchAnimationOffset, dy: 0.0), completion: isAnimatingOut ? nil : { _ in
                         paneCompletion()
                     })
-                } else if let previousPaneKey = previousPaneKey, key == self.currentPaneKey {
+                } else if let _ = previousPaneKey, key == self.currentPaneKey {
                     pane.node.frame = adjustedFrame
                     let isAnimatingOut = pane.isAnimatingOut
                     pane.isAnimatingOut = true

@@ -56,6 +56,7 @@ public struct SearchBarToken {
 private final class TokenNode: ASDisplayNode {
     var theme: SearchBarNodeTheme
     let token: SearchBarToken
+    let containerNode: ASDisplayNode
     let iconNode: ASImageNode
     let titleNode: ASTextNode
     let backgroundNode: ASImageNode
@@ -68,6 +69,7 @@ private final class TokenNode: ASDisplayNode {
     init(theme: SearchBarNodeTheme, token: SearchBarToken) {
         self.theme = theme
         self.token = token
+        self.containerNode = ASDisplayNode()
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
@@ -82,8 +84,8 @@ private final class TokenNode: ASDisplayNode {
         super.init()
         
         self.clipsToBounds = true
-        
-        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.containerNode)
+        self.containerNode.addSubnode(self.backgroundNode)
         
         let backgroundColor = token.style?.backgroundColor ?? theme.inputIcon
         let strokeColor = token.style?.strokeColor ?? backgroundColor
@@ -91,10 +93,10 @@ private final class TokenNode: ASDisplayNode {
         
         let foregroundColor = token.style?.foregroundColor ?? .white
         self.iconNode.image = generateTintedImage(image: token.icon, color: foregroundColor)
-        self.addSubnode(self.iconNode)
+        self.containerNode.addSubnode(self.iconNode)
         
         self.titleNode.attributedText = NSAttributedString(string: token.title, font: Font.regular(17.0), textColor: foregroundColor)
-        self.addSubnode(self.titleNode)
+        self.containerNode.addSubnode(self.titleNode)
     }
     
     override func didLoad() {
@@ -108,8 +110,8 @@ private final class TokenNode: ASDisplayNode {
     }
     
     func animateIn() {
-        let targetFrame = self.frame
-        self.layer.animateFrame(from: CGRect(origin: targetFrame.origin, size: CGSize(width: 1.0, height: targetFrame.height)), to: targetFrame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        let targetFrame = self.containerNode.frame
+        self.containerNode.layer.animateFrame(from: CGRect(origin: targetFrame.origin, size: CGSize(width: 1.0, height: targetFrame.height)), to: targetFrame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
         self.iconNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
         self.iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
         self.titleNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
@@ -163,6 +165,7 @@ private final class TokenNode: ASDisplayNode {
         }
         
         let size = CGSize(width: self.isCollapsed ? height : width, height: height)
+        transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: floor((height - titleSize.height) / 2.0)), size: titleSize))
                     
@@ -1046,7 +1049,9 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     
     public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         if let _ = self.textField.selectedTokenIndex {
-            self.textField.selectedTokenIndex = nil
+            if !string.isEmpty {
+                self.textField.selectedTokenIndex = nil
+            }
             if string.range(of: " ") != nil {
                 return false
             }

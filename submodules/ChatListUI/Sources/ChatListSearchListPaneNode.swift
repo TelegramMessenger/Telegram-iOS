@@ -634,6 +634,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     private let interaction: ChatListSearchInteraction
     private let peersFilter: ChatListNodePeersFilter
     private var presentationData: PresentationData
+    private let key: ChatListSearchPaneKey
     private let tagMask: MessageTags?
     private let navigationController: NavigationController?
     
@@ -695,12 +696,29 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     
     private var hiddenMediaDisposable: Disposable?
   
-    init(context: AccountContext, interaction: ChatListSearchInteraction, tagMask: MessageTags?, peersFilter: ChatListNodePeersFilter, searchQuery: Signal<String?, NoError>, searchOptions: Signal<ChatListSearchOptions?, NoError>, navigationController: NavigationController?) {
+    init(context: AccountContext, interaction: ChatListSearchInteraction, key: ChatListSearchPaneKey, peersFilter: ChatListNodePeersFilter, searchQuery: Signal<String?, NoError>, searchOptions: Signal<ChatListSearchOptions?, NoError>, navigationController: NavigationController?) {
         self.context = context
         self.interaction = interaction
+        self.key = key
         self.peersFilter = peersFilter
-        self.tagMask = tagMask
         self.navigationController = navigationController
+        
+        let tagMask: MessageTags?
+        switch key {
+            case .chats:
+                tagMask = nil
+            case .media:
+                tagMask = .photoOrVideo
+            case .links:
+                tagMask = .webPage
+            case .files:
+                tagMask = .file
+            case .music:
+                tagMask = .music
+            case .voice:
+                tagMask = .voiceOrInstantVideo
+        }
+        self.tagMask = tagMask
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationDataPromise.set(.single(ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)))
@@ -1190,8 +1208,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 return
             }
             switch item.content {
-            case let .peer(peer):
-                if let peer = peer.peer.peer {
+            case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _):
+                if let peer = peer.peer {
                     peerContextAction(peer, .search, node, gesture)
                 }
             case .groupReference:
@@ -1353,7 +1371,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     strongSelf.ready.set(.single(true))
                     strongSelf.didSetReady = true
                 } else if tagMask != nil {
-                    interaction.updateSuggestedPeers(Array(peers.prefix(8)))
+                    interaction.updateSuggestedPeers(Array(peers.prefix(8)), strongSelf.key)
                 }
             }
         }))
