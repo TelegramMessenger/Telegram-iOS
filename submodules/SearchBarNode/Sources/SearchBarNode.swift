@@ -56,6 +56,7 @@ public struct SearchBarToken {
 private final class TokenNode: ASDisplayNode {
     var theme: SearchBarNodeTheme
     let token: SearchBarToken
+    let containerNode: ASDisplayNode
     let iconNode: ASImageNode
     let titleNode: ASTextNode
     let backgroundNode: ASImageNode
@@ -68,6 +69,8 @@ private final class TokenNode: ASDisplayNode {
     init(theme: SearchBarNodeTheme, token: SearchBarToken) {
         self.theme = theme
         self.token = token
+        self.containerNode = ASDisplayNode()
+        self.containerNode.clipsToBounds = true
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
@@ -82,8 +85,8 @@ private final class TokenNode: ASDisplayNode {
         super.init()
         
         self.clipsToBounds = true
-        
-        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.containerNode)
+        self.containerNode.addSubnode(self.backgroundNode)
         
         let backgroundColor = token.style?.backgroundColor ?? theme.inputIcon
         let strokeColor = token.style?.strokeColor ?? backgroundColor
@@ -91,10 +94,10 @@ private final class TokenNode: ASDisplayNode {
         
         let foregroundColor = token.style?.foregroundColor ?? .white
         self.iconNode.image = generateTintedImage(image: token.icon, color: foregroundColor)
-        self.addSubnode(self.iconNode)
+        self.containerNode.addSubnode(self.iconNode)
         
         self.titleNode.attributedText = NSAttributedString(string: token.title, font: Font.regular(17.0), textColor: foregroundColor)
-        self.addSubnode(self.titleNode)
+        self.containerNode.addSubnode(self.titleNode)
     }
     
     override func didLoad() {
@@ -108,8 +111,10 @@ private final class TokenNode: ASDisplayNode {
     }
     
     func animateIn() {
-        let targetFrame = self.frame
-        self.layer.animateFrame(from: CGRect(origin: targetFrame.origin, size: CGSize(width: 1.0, height: targetFrame.height)), to: targetFrame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        let targetFrame = self.containerNode.frame
+        self.containerNode.layer.animateFrame(from: CGRect(origin: targetFrame.origin, size: CGSize(width: 1.0, height: targetFrame.height)), to: targetFrame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        self.backgroundNode.layer.animateFrame(from: CGRect(origin: targetFrame.origin, size: CGSize(width: 1.0, height: targetFrame.height)), to: targetFrame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        
         self.iconNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
         self.iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
         self.titleNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
@@ -163,6 +168,7 @@ private final class TokenNode: ASDisplayNode {
         }
         
         let size = CGSize(width: self.isCollapsed ? height : width, height: height)
+        transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: floor((height - titleSize.height) / 2.0)), size: titleSize))
                     
@@ -419,9 +425,14 @@ private class SearchBarTextField: UITextField, UIScrollViewDelegate {
         }
     }
     
+    private weak var _scrollView: UIScrollView?
     var scrollView: UIScrollView? {
+        if let scrollView = self._scrollView {
+            return scrollView
+        }
         for view in self.subviews {
             if let scrollView = view as? UIScrollView {
+                _scrollView = scrollView
                 return scrollView
             }
         }
@@ -459,8 +470,10 @@ private class SearchBarTextField: UITextField, UIScrollViewDelegate {
             return CGRect(origin: CGPoint(), size: CGSize())
         }
         var rect = bounds.insetBy(dx: 7.0, dy: 4.0)
-        rect.origin.y += 1.0
-        
+        if #available(iOS 14.0, *) {
+        } else {
+            rect.origin.y += 1.0
+        }
         let prefixSize = self.measurePrefixLabel.updateLayout(CGSize(width: floor(bounds.size.width * 0.7), height: bounds.size.height))
         if !prefixSize.width.isZero {
             let prefixOffset = prefixSize.width + 3.0
@@ -494,13 +507,19 @@ private class SearchBarTextField: UITextField, UIScrollViewDelegate {
             textOffset += 2.0
         }
         
+        var placeholderOffset: CGFloat = 0.0
+        if #available(iOS 14.0, *) {
+            placeholderOffset = 1.0
+        } else {
+        }
+        
         let textRect = self.textRect(forBounds: bounds)
         let labelSize = self.placeholderLabel.updateLayout(textRect.size)
-        self.placeholderLabel.frame = CGRect(origin: CGPoint(x: textRect.minX, y: textRect.minY + textOffset), size: labelSize)
+        self.placeholderLabel.frame = CGRect(origin: CGPoint(x: textRect.minX, y: textRect.minY + textOffset + placeholderOffset), size: labelSize)
         
         let prefixSize = self.prefixLabel.updateLayout(CGSize(width: floor(bounds.size.width * 0.7), height: bounds.size.height))
         let prefixBounds = bounds.insetBy(dx: 4.0, dy: 4.0)
-        self.prefixLabel.frame = CGRect(origin: CGPoint(x: prefixBounds.minX, y: prefixBounds.minY + textOffset), size: prefixSize)
+        self.prefixLabel.frame = CGRect(origin: CGPoint(x: prefixBounds.minX, y: prefixBounds.minY + textOffset + placeholderOffset), size: prefixSize)
     }
     
     override func deleteBackward() {
@@ -1046,7 +1065,9 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     
     public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         if let _ = self.textField.selectedTokenIndex {
-            self.textField.selectedTokenIndex = nil
+            if !string.isEmpty {
+                self.textField.selectedTokenIndex = nil
+            }
             if string.range(of: " ") != nil {
                 return false
             }
@@ -1090,21 +1111,19 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     
     private func updateIsEmpty(animated: Bool = false) {
         let isEmpty = (self.textField.text?.isEmpty ?? true) && self.tokens.isEmpty
-        
+
         let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .spring) : .immediate
         let placeholderTransition = !isEmpty ? .immediate : transition
         placeholderTransition.updateAlpha(node: self.textField.placeholderLabel, alpha: isEmpty ? 1.0 : 0.0)
-    
+
         let clearIsHidden = isEmpty && self.prefixString == nil
-        transition.updateAlpha(node: self.clearButton, alpha: clearIsHidden ? 0.0 : 1.0)
+        transition.updateAlpha(node: self.clearButton.imageNode, alpha: clearIsHidden ? 0.0 : 1.0)
         transition.updateTransformScale(node: self.clearButton, scale: clearIsHidden ? 0.2 : 1.0)
         self.clearButton.isUserInteractionEnabled = !clearIsHidden
     }
     
     @objc private func cancelPressed() {
-        if let cancel = self.cancel {
-            cancel()
-        }
+        self.cancel?()
     }
     
     @objc private func clearPressed() {
