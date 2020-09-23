@@ -479,7 +479,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
                 let key = SharedContextStore.Key(accountId: accountId)
                 
                 let context: MTContext
-                if let current = store.contexts[key] {
+                if false, let current = store.contexts[key] {
                     context = current
                     context.updateApiEnvironment({ _ in return apiEnvironment})
                 } else {
