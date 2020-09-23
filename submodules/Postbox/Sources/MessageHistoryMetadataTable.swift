@@ -81,6 +81,7 @@ final class MessageHistoryMetadataTable: Table {
     private func peerThreadHoleIndexInitializedKey(peerId: PeerId, threadId: Int64) -> ValueBoxKey {
         self.sharedPeerThreadHoleIndexInitializedKey.setInt64(0, value: peerId.toInt64())
         self.sharedPeerThreadHoleIndexInitializedKey.setInt8(8, value: MetadataPrefix.PeerHistoryThreadHoleIndexInitialized.rawValue)
+        self.sharedPeerThreadHoleIndexInitializedKey.setInt64(0, value: threadId)
         return self.sharedPeerThreadHoleIndexInitializedKey
     }
     
