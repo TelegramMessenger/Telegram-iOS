@@ -276,6 +276,8 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     let effectiveAuthorId: PeerId?
     let additionalContent: ChatMessageItemAdditionalContent?
     
+    let wantTrButton: [(Bool, [String])]
+    
     public let accessoryItem: ListViewAccessoryItem?
     let header: ChatMessageDateHeader
     
@@ -297,7 +299,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         }
     }
     
-    public init(presentationData: ChatPresentationData, context: AccountContext, chatLocation: ChatLocation, associatedData: ChatMessageItemAssociatedData, controllerInteraction: ChatControllerInteraction, content: ChatMessageItemContent, disableDate: Bool = false, additionalContent: ChatMessageItemAdditionalContent? = nil) {
+    public init(presentationData: ChatPresentationData, context: AccountContext, chatLocation: ChatLocation, associatedData: ChatMessageItemAssociatedData, controllerInteraction: ChatControllerInteraction, content: ChatMessageItemContent, disableDate: Bool = false, additionalContent: ChatMessageItemAdditionalContent? = nil, wantTrButton: [(Bool, [String])] = [(false, [])]) {
         self.presentationData = presentationData
         self.context = context
         self.chatLocation = chatLocation
@@ -306,6 +308,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         self.content = content
         self.disableDate = disableDate
         self.additionalContent = additionalContent
+        self.wantTrButton = wantTrButton
         
         var accessoryItem: ListViewAccessoryItem?
         let incoming = content.effectivelyIncoming(self.context.account.peerId)
@@ -430,6 +433,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         
         let configure = {
             let node = (viewClassName as! ChatMessageItemView.Type).init()
+            node.wantTrButton = self.wantTrButton
             node.setupItem(self)
             
             let nodeLayout = node.asyncLayout()

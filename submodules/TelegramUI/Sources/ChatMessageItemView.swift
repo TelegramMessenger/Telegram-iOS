@@ -649,6 +649,8 @@ public class ChatMessageItemView: ListViewItemNode {
     
     var awaitingAppliedReaction: (String?, () -> Void)?
     
+    public var wantTrButton: [(Bool, [String])] = [(false, [])]
+    
     public required convenience init() {
         self.init(layerBacked: false)
     }

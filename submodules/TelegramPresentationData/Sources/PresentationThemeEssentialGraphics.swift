@@ -75,6 +75,43 @@ private func chatBubbleActionButtonImage(fillColor: UIColor, strokeColor: UIColo
     })
 }
 
+private func chatBubbleActionButtonTrImage(fillColor: UIColor, strokeColor: UIColor, foregroundColor: UIColor, image: UIImage?, iconOffset: CGPoint = CGPoint()) -> UIImage? {
+    return generateImage(CGSize(width: 29.0, height: 29.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setFillColor(fillColor.cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        let lineWidth: CGFloat = 1.0
+        let halfLineWidth = lineWidth / 2.0
+        var strokeAlpha: CGFloat = 0.0
+        strokeColor.getRed(nil, green: nil, blue: nil, alpha: &strokeAlpha)
+        if !strokeAlpha.isZero {
+            context.setStrokeColor(strokeColor.cgColor)
+            context.setLineWidth(lineWidth)
+            context.strokeEllipse(in: CGRect(origin: CGPoint(x: halfLineWidth, y: halfLineWidth), size: CGSize(width: size.width - lineWidth, height: size.width - lineWidth)))
+        }
+        
+        if let image = image {
+            let K: CGFloat = 1.33 // make it smaller coefficient
+            
+            var customSize = image.size
+            customSize.width = customSize.width / K
+            customSize.height = customSize.height / K
+            
+            var imageRect = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0) + iconOffset.x, y: floor((size.height - image.size.height) / 2.0) + iconOffset.y), size: customSize)
+            
+            imageRect.origin.x = imageRect.origin.x + 29.0 / 8.0
+            imageRect.origin.y = imageRect.origin.y + 29.0 / 8.0
+            
+            context.translateBy(x: imageRect.midX, y: imageRect.midY)
+            context.scaleBy(x: 1.0, y: -1.0)
+            context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+            context.clip(to: imageRect, mask: image.cgImage!)
+            context.setFillColor(foregroundColor.cgColor)
+            context.fill(imageRect)
+        }
+    })
+}
+
 public final class PrincipalThemeEssentialGraphics {
     public let chatMessageBackgroundIncomingMaskImage: UIImage
     public let chatMessageBackgroundIncomingImage: UIImage
@@ -436,6 +473,7 @@ public final class PrincipalThemeAdditionalGraphics {
     public let chatEmptyItemBackgroundImage: UIImage
     public let chatLoadingIndicatorBackgroundImage: UIImage
     
+    public let chatBubbleTrButtonImage: UIImage
     public let chatBubbleShareButtonImage: UIImage
     public let chatBubbleNavigateButtonImage: UIImage
     public let chatBubbleActionButtonIncomingMiddleImage: UIImage
@@ -482,6 +520,7 @@ public final class PrincipalThemeAdditionalGraphics {
         self.chatLoadingIndicatorBackgroundImage = generateStretchableFilledCircleImage(diameter: 30.0, color: serviceColor.fill)!
         
         self.chatBubbleShareButtonImage = chatBubbleActionButtonImage(fillColor: bubbleVariableColor(variableColor: theme.message.shareButtonFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.shareButtonStrokeColor, wallpaper: wallpaper), foregroundColor: bubbleVariableColor(variableColor: theme.message.shareButtonForegroundColor, wallpaper: wallpaper), image: UIImage(bundleImageName: "Chat/Message/ShareIcon"))!
+        self.chatBubbleTrButtonImage = chatBubbleActionButtonTrImage(fillColor: bubbleVariableColor(variableColor: theme.message.shareButtonFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.shareButtonStrokeColor, wallpaper: wallpaper), foregroundColor: bubbleVariableColor(variableColor: theme.message.shareButtonForegroundColor, wallpaper: wallpaper), image: UIImage(bundleImageName: "NGTranslateIcon"))!
         self.chatBubbleNavigateButtonImage = chatBubbleActionButtonImage(fillColor: bubbleVariableColor(variableColor: theme.message.shareButtonFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.shareButtonStrokeColor, wallpaper: wallpaper), foregroundColor: bubbleVariableColor(variableColor: theme.message.shareButtonForegroundColor, wallpaper: wallpaper), image: UIImage(bundleImageName: "Chat/Message/NavigateToMessageIcon"), iconOffset: CGPoint(x: 0.0, y: 1.0))!
         self.chatBubbleActionButtonIncomingMiddleImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsStrokeColor, wallpaper: wallpaper), position: .middle, bubbleCorners: bubbleCorners)
         self.chatBubbleActionButtonIncomingBottomLeftImage = messageBubbleActionButtonImage(color: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsFillColor, wallpaper: wallpaper), strokeColor: bubbleVariableColor(variableColor: theme.message.incoming.actionButtonsStrokeColor, wallpaper: wallpaper), position: .bottomLeft, bubbleCorners: bubbleCorners)
