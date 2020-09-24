@@ -60,6 +60,7 @@ import UrlWhitelist
 import TelegramIntents
 import TooltipUI
 import StatisticsUI
+import NGWebUtils
 
 
 // MARK: Nicegram Imports
@@ -2362,7 +2363,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     imageOverride = nil
                                 }
                                 (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(context: strongSelf.context, theme: strongSelf.presentationData.theme, peer: peer, overrideImage: imageOverride)
-                                (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.contextActionIsEnabled =  peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil
+                                (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.contextActionIsEnabled =  peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil || isAllowedChat(peer: peer, contentSettings: strongSelf.context.currentContentSettings.with { $0 })
                             }
                                                     
                             if strongSelf.peerView === peerView && strongSelf.reportIrrelvantGeoNotice == peerReportNotice && strongSelf.hasScheduledMessages == hasScheduledMessages {
@@ -4714,7 +4715,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.slowmodeTooltipController = nil
                 slowmodeTooltipController.dismiss()
             }
-            let slowmodeTooltipController = ChatSlowmodeHintController(presentationData: strongSelf.presentationData, slowmodeState: 
+            let slowmodeTooltipController = ChatSlowmodeHintController(presentationData: strongSelf.presentationData, slowmodeState:
                 slowmodeState)
             slowmodeTooltipController.presentationArguments = TooltipControllerPresentationArguments(sourceNodeAndRect: {
                 if let strongSelf = self {
@@ -5972,7 +5973,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self.navigationActionDisposable.set((peerView.get()
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] peerView in
-                    if let strongSelf = self, let peer = peerView.peers[peerView.peerId], peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil && !strongSelf.presentationInterfaceState.isNotAccessible {
+                    if let strongSelf = self, let peer = peerView.peers[peerView.peerId], (peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil || isAllowedChat(peer: peer, contentSettings: strongSelf.context.currentContentSettings.with { $0 })) && !strongSelf.presentationInterfaceState.isNotAccessible {
                         if peer.id == strongSelf.context.account.peerId {
                             if let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer, let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: true) {
                                 strongSelf.effectiveNavigationController?.pushViewController(infoController)
@@ -8725,7 +8726,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.navigationActionDisposable.set((strongSelf.context.account.postbox.loadedPeerWithId(peerId)
                         |> take(1)
                         |> deliverOnMainQueue).start(next: { [weak self] peer in
-                            if let strongSelf = self, peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil {
+                            if isNGForceBlocked(peer) {
+                                return
+                            } else if let strongSelf = self, peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil {
+                                if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                                    strongSelf.effectiveNavigationController?.pushViewController(infoController)
+                                }
+                            } else if let strongSelf = self, isAllowedChat(peer: peer, contentSettings: strongSelf.context.currentContentSettings.with { $0 }) {
                                 if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
                                     strongSelf.effectiveNavigationController?.pushViewController(infoController)
                                 }

@@ -4,10 +4,18 @@ import AsyncDisplayKit
 import TelegramCore
 import SyncCore
 import AccountContext
+import NGWebUtils
 
 func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatInputPanelNode?, currentSecondaryPanel: ChatInputPanelNode?, textInputPanelNode: ChatTextInputPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> (primary: ChatInputPanelNode?, secondary: ChatInputPanelNode?) {
     if let renderedPeer = chatPresentationInterfaceState.renderedPeer, renderedPeer.peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) != nil {
-        return (nil, nil)
+        if isAllowedChat(peer: renderedPeer.peer, contentSettings: context.currentContentSettings.with { $0 }) {
+        } else {
+            return (nil, nil)
+        }
+    } else {
+        if isNGForceBlocked(chatPresentationInterfaceState.renderedPeer?.peer) {
+            return (nil, nil)
+        }
     }
     if chatPresentationInterfaceState.isNotAccessible {
         return (nil, nil)

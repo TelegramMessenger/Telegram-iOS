@@ -3,13 +3,21 @@ import UIKit
 import TelegramCore
 import SyncCore
 import AccountContext
+import NGWebUtils
 
 func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatTitleAccessoryPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatTitleAccessoryPanelNode? {
     if case .overlay = chatPresentationInterfaceState.mode {
         return nil
     }
     if chatPresentationInterfaceState.renderedPeer?.peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) != nil {
-        return nil
+        if isAllowedChat(peer: chatPresentationInterfaceState.renderedPeer?.peer, contentSettings: context.currentContentSettings.with { $0 }) {
+        } else {
+            return nil
+        }
+    } else {
+        if isNGForceBlocked(chatPresentationInterfaceState.renderedPeer?.peer) {
+            return nil
+        }
     }
     if chatPresentationInterfaceState.search != nil {
         return nil
