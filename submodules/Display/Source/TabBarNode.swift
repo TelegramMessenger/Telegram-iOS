@@ -328,6 +328,7 @@ class TabBarNode: ASDisplayNode {
     private var theme: TabBarControllerTheme
     private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
     private var horizontal: Bool = false
+    public var showTabNames: Bool
     private var centered: Bool = false
     
     private var badgeImage: UIImage
@@ -337,11 +338,12 @@ class TabBarNode: ASDisplayNode {
     
     private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
     
-    init(theme: TabBarControllerTheme, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingNode, ContextGesture) -> Void, swipeAction: @escaping (Int, TabBarItemSwipeDirection) -> Void) {
+    init(theme: TabBarControllerTheme, itemSelected: @escaping (Int, Bool, [ASDisplayNode]) -> Void, contextAction: @escaping (Int, ContextExtractedContentContainingNode, ContextGesture) -> Void, swipeAction: @escaping (Int, TabBarItemSwipeDirection) -> Void, showTabNames: Bool = true) {
         self.itemSelected = itemSelected
         self.contextAction = contextAction
         self.swipeAction = swipeAction
         self.theme = theme
+        self.showTabNames = showTabNames
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.backgroundColor = theme.tabBarSeparatorColor
@@ -575,6 +577,13 @@ class TabBarNode: ASDisplayNode {
                 node.textImageNode.frame = CGRect(origin: CGPoint(), size: nodeFrame.size)
                 node.contextImageNode.frame = CGRect(origin: CGPoint(), size: nodeFrame.size)
                 node.contextTextImageNode.frame = CGRect(origin: CGPoint(), size: nodeFrame.size)
+                if self.showTabNames {
+                    node.imageNode.frame = CGRect(origin: CGPoint(), size: nodeFrame.size)
+                    node.textImageNode.frame = CGRect(origin: CGPoint(), size: nodeFrame.size)
+                } else {
+                    node.imageNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 6.0), size: nodeFrame.size)
+                    node.textImageNode.frame = CGRect(origin: CGPoint(), size: CGSize())
+                }
                 
                 if container.badgeValue != container.appliedBadgeValue {
                     container.appliedBadgeValue = container.badgeValue
