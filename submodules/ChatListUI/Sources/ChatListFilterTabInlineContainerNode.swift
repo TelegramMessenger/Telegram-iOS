@@ -36,9 +36,9 @@ private final class ItemNodeDeleteButtonNode: HighlightableButtonNode {
             self.theme = theme
             self.contentImageNode.image = generateImage(size, rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(UIColor(rgb: 0xbbbbbb).cgColor)
+                context.setFillColor(theme.rootController.navigationBar.clearButtonBackgroundColor.cgColor)
                 context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-                context.setStrokeColor(UIColor(rgb: 0xffffff).cgColor)
+                context.setStrokeColor(theme.rootController.navigationBar.clearButtonForegroundColor.cgColor)
                 context.setLineWidth(1.5)
                 context.setLineCap(.round)
                 context.move(to: CGPoint(x: 6.38, y: 6.38))
@@ -148,7 +148,7 @@ private final class ItemNode: ASDisplayNode {
             }
             
             if isExtracted, let theme = strongSelf.theme {
-                strongSelf.extractedBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 32.0, color: strongSelf.isSelected ? UIColor(rgb: 0xbbbbbb) : UIColor(rgb: 0xf1f1f1))
+                strongSelf.extractedBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 32.0, color: strongSelf.isSelected ? theme.chatList.unreadBadgeInactiveBackgroundColor : theme.contextMenu.backgroundColor)
             }
             transition.updateAlpha(node: strongSelf.extractedBackgroundNode, alpha: isExtracted ? 1.0 : 0.0, completion: { _ in
                 if !isExtracted {
@@ -582,9 +582,15 @@ final class ChatListFilterTabInlineContainerNode: ASDisplayNode {
                 self.itemsBackgroundView.effect = UIBlurEffect(style: .light)
             }
             
-            self.itemsBackgroundTintNode.image = generateStretchableFilledCircleImage(diameter: 40.0, color: UIColor(rgb: 0xf1f1f1))
+            self.itemsBackgroundTintNode.image = generateStretchableFilledCircleImage(diameter: 40.0, color: presentationData.theme.rootController.tabBar.backgroundColor)
             
-            self.selectedBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 32.0, color: UIColor(rgb: 0xbbbbbb))
+            let selectedFilterColor: UIColor
+            if presentationData.theme.rootController.keyboardColor == .dark {
+                selectedFilterColor = presentationData.theme.list.itemAccentColor
+            } else {
+                selectedFilterColor = presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor
+            }
+            self.selectedBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 32.0, color: selectedFilterColor)
         }
         
         if isReordering {
