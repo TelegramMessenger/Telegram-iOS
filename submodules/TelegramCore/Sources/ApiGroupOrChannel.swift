@@ -162,7 +162,7 @@ func mergeChannel(lhs: TelegramChannel?, rhs: TelegramChannel) -> TelegramChanne
         return rhs
     }
     
-    if case .personal = rhs.accessHash {
+    if case .personal? = rhs.accessHash {
         return rhs
     }
     
@@ -185,9 +185,9 @@ func mergeChannel(lhs: TelegramChannel?, rhs: TelegramChannel) -> TelegramChanne
     if let rhsAccessHashValue = lhs.accessHash, case .personal = rhsAccessHashValue {
         accessHash = rhsAccessHashValue
     } else {
-        accessHash = lhs.accessHash ?? rhs.accessHash
+        accessHash = rhs.accessHash ?? lhs.accessHash
     }
     
-    return TelegramChannel(id: lhs.id, accessHash: accessHash, title: rhs.title, username: rhs.username, photo: rhs.photo, creationDate: lhs.creationDate, version: lhs.version, participationStatus: lhs.participationStatus, info: info, flags: channelFlags, restrictionInfo: lhs.restrictionInfo, adminRights: lhs.adminRights, bannedRights: lhs.bannedRights, defaultBannedRights: rhs.defaultBannedRights)
+    return TelegramChannel(id: lhs.id, accessHash: accessHash, title: rhs.title, username: rhs.username, photo: rhs.photo, creationDate: rhs.creationDate, version: rhs.version, participationStatus: rhs.participationStatus, info: info, flags: channelFlags, restrictionInfo: rhs.restrictionInfo, adminRights: rhs.adminRights, bannedRights: rhs.bannedRights, defaultBannedRights: rhs.defaultBannedRights)
 }
 

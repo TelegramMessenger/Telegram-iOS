@@ -143,7 +143,7 @@ extension TelegramUser {
         guard let lhs = lhs else {
             return rhs
         }
-        if case .personal = rhs.accessHash {
+        if case .personal? = rhs.accessHash {
             return rhs
         } else {
             var userFlags: UserInfoFlags = []
