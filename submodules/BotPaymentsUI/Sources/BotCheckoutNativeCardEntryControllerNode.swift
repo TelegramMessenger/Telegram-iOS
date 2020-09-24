@@ -236,7 +236,7 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
         let configuration = STPPaymentConfiguration.shared().copy() as! STPPaymentConfiguration
         configuration.smsAutofillDisabled = true
         configuration.publishableKey = self.publishableKey
-        configuration.appleMerchantIdentifier = "merchant.ph.telegra.Telegraph"
+        configuration.appleMerchantIdentifier = "merchant.com.nicegram.Telegram-iOS"
         
         let apiClient = STPAPIClient(configuration: configuration)
         
