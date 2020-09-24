@@ -14,6 +14,28 @@ genrule(
 """
     set -x
     echo "SRCDIR=$SRCDIR"
+    
+    BUILD_ARCH=x64
+
+    BUILD_DIR_x64="$SRCDIR/$BUILD_ARCH"
+
+    BUILD_DIR="$BUILD_DIR_x64"
+    rm -rf "$BUILD_DIR"
+    mkdir -p "$BUILD_DIR"
+
+    mkdir -p "$BUILD_DIR/webrtc-ios"
+    cp -R "$SRCDIR/webrtc-ios/src" "$BUILD_DIR/webrtc-ios/src"
+
+    DEPOT_TOOLS_PATH="$(location //third-party:depot_tools_sources)"
+
+    rm -rf "$BUILD_DIR/depot_tools"
+    cp -R "$DEPOT_TOOLS_PATH" "$BUILD_DIR/"
+
+    rm -rf "$BUILD_DIR/openssl"
+    cp -R "$(location //submodules/openssl:openssl_build_merged)" "$BUILD_DIR/openssl/"
+    cp -R "$(location //submodules/openssl:openssl_libssl_merged)" "$BUILD_DIR/libssl/"
+
+    sh $SRCDIR/build-webrtc-buck.sh "$BUILD_DIR" $BUILD_ARCH
 
     BUILD_ARCH=arm64
 
@@ -61,7 +83,7 @@ genrule(
     sh $SRCDIR/build-webrtc-buck.sh "$BUILD_DIR" $BUILD_ARCH
 
     mkdir -p "$OUT"
-    lipo -create "$BUILD_DIR_ARMV7/webrtc-ios/src/out/ios/obj/sdk/libframework_objc_static.a" "$BUILD_DIR_ARM64/webrtc-ios/src/out/ios_64/obj/sdk/libframework_objc_static.a" -output "$OUT/libframework_objc_static.a"
+    lipo -create "$BUILD_DIR_ARMV7/webrtc-ios/src/out/ios/obj/sdk/libframework_objc_static.a" "$BUILD_DIR_ARM64/webrtc-ios/src/out/ios_64/obj/sdk/libframework_objc_static.a" "$BUILD_DIR_x64/webrtc-ios/src/out/ios_sim/obj/sdk/libframework_objc_static.a" -output "$OUT/libframework_objc_static.a"
 """,
     out = "libwebrtc",
     visibility = ["PUBLIC"]
