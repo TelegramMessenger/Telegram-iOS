@@ -1465,6 +1465,27 @@ final class SharedApplicationContext {
         self.isActivePromise.set(true)
         
         self.maybeCheckForUpdates()
+        
+        
+        // MARK: Nicegram fetch
+        Queue().async {
+        	self.fetchGlobalNGSettings()
+		self.fetchPremium()
+        }
+        
+        let _ = (self.context.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { context in
+            if let context = context {
+                Queue().async {
+                	let presentationData = context.context.sharedContext.currentPresentationData.with({ $0 })
+                	self.fetchNGUserSettings(context.context.account.peerId.toInt64())
+                	self.fetchLocale(lang: presentationData.strings.baseLanguageCode)
+		 }
+            }
+        })
+        //
+        
     }
     
     func applicationWillTerminate(_ application: UIApplication) {
@@ -2220,6 +2241,26 @@ final class SharedApplicationContext {
     
     private var lastCheckForUpdatesTimestamp: Double?
     private let currentCheckForUpdatesDisposable = MetaDisposable()
+    
+    private func fetchNGUserSettings(_ userId: Int64) {
+        updateNGInfo(userId: userId)
+    }
+    
+    private func fetchGlobalNGSettings() {
+        updateGlobalNGSettings()
+    }
+    
+    private func fetchLocale(lang: String) {
+        #if !targetEnvironment(simulator)
+        downloadLocale(lang)
+        #endif
+    }
+    
+    private func fetchPremium() {
+        if (isPremium()) {
+            validatePremium(true)
+        }
+    }
     
     private func maybeCheckForUpdates() {
         #if targetEnvironment(simulator)
