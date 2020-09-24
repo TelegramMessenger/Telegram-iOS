@@ -4695,6 +4695,10 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         self.controller?.push(logoutOptionsController(context: self.context, navigationController: navigationController, canAddAccounts: accounts.count + 1 < maximumNumberOfAccounts, phoneNumber: phoneNumber))
                     }
                 }
+        case .nicegram:
+            self.controller?.push(nicegramSettingsController(context: self.context))
+        case .premium:
+            self.processPremiumControllerOpen()
         }
     }
     
