@@ -6,7 +6,7 @@ import SyncCore
 import TelegramUIPreferences
 import AccountContext
 
-public let maximumNumberOfAccounts = 3
+public let maximumNumberOfAccounts = 10
 
 public func activeAccountsAndPeers(context: AccountContext, includePrimary: Bool = false) -> Signal<((Account, Peer)?, [(Account, Peer, Int32)]), NoError> {
     let sharedContext = context.sharedContext
