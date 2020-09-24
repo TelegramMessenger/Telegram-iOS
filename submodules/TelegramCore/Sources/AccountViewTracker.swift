@@ -726,7 +726,6 @@ public final class AccountViewTracker {
                                                             maxMessageId = MessageId(peerId: commentsChannelId, namespace: Namespaces.Message.Cloud, id: repliesMaxId)
                                                         }
                                                     }
-                                                    resultStates[messageIds[i]] = ViewCountContextState(timestamp: Int32(CFAbsoluteTimeGetCurrent()), clientId: clientId, result: ViewCountContextState.ReplyInfo(commentsPeerId: commentsChannelId, maxReadIncomingMessageId: maxReadIncomingMessageId, maxMessageId: maxMessageId))
                                                     loop: for j in 0 ..< attributes.count {
                                                         if let attribute = attributes[j] as? ViewCountMessageAttribute {
                                                             if let views = views {
@@ -736,13 +735,24 @@ public final class AccountViewTracker {
                                                             if let forwards = forwards {
                                                                 attributes[j] = ForwardCountMessageAttribute(count: Int(forwards))
                                                             }
-                                                        } else if let _ = attributes[j] as? ReplyThreadMessageAttribute {
+                                                        } else if let attribute = attributes[j] as? ReplyThreadMessageAttribute {
                                                             foundReplies = true
                                                             if let repliesCount = repliesCount {
-                                                                attributes[j] = ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsChannelId, maxMessageId: repliesMaxId, maxReadMessageId: repliesReadMaxId)
+                                                                var resolvedMaxReadMessageId: MessageId.Id?
+                                                                if previousMaxReadMessageId = attribute.maxReadMessageId, let repliesReadMaxId = repliesReadMaxId {
+                                                                    resolvedMaxReadMessageId = max(previousMaxReadMessageId, repliesReadMaxId)
+                                                                    maxReadIncomingMessageId = resolvedMaxReadMessageId
+                                                                } else if let repliesReadMaxId = repliesReadMaxId {
+                                                                    resolvedMaxReadMessageId = repliesReadMaxId
+                                                                    maxReadIncomingMessageId = resolvedMaxReadMessageId
+                                                                } else {
+                                                                    resolvedMaxReadMessageId = attribute.maxReadMessageId
+                                                                }
+                                                                attributes[j] = ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsChannelId, maxMessageId: repliesMaxId, maxReadMessageId: resolvedMaxReadMessageId)
                                                             }
                                                         }
                                                     }
+                                                    resultStates[messageIds[i]] = ViewCountContextState(timestamp: Int32(CFAbsoluteTimeGetCurrent()), clientId: clientId, result: ViewCountContextState.ReplyInfo(commentsPeerId: commentsChannelId, maxReadIncomingMessageId: maxReadIncomingMessageId, maxMessageId: maxMessageId))
                                                     if !foundReplies, let repliesCount = repliesCount {
                                                         attributes.append(ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsChannelId, maxMessageId: repliesMaxId, maxReadMessageId: repliesReadMaxId))
                                                     }

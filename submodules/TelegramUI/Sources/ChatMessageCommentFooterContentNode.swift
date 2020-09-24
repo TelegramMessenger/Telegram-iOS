@@ -278,10 +278,10 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.arrowNode.isHidden = false
                                 if let statusNode = strongSelf.statusNode {
                                     strongSelf.statusNode = nil
-                                    statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak statusNode] _ in
+                                    statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.3, removeOnCompletion: false, completion: { [weak statusNode] _ in
                                         statusNode?.removeFromSupernode()
                                     })
-                                    strongSelf.arrowNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                    strongSelf.arrowNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.3)
                                 }
                             }
                             

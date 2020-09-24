@@ -31,6 +31,9 @@ public extension Peer {
     func displayTitle(strings: PresentationStrings, displayOrder: PresentationPersonNameOrder) -> String {
         switch self {
         case let user as TelegramUser:
+            if user.id.isReplies {
+                return strings.DialogList_Replies
+            }
             if let firstName = user.firstName, !firstName.isEmpty {
                 if let lastName = user.lastName, !lastName.isEmpty {
                     switch displayOrder {

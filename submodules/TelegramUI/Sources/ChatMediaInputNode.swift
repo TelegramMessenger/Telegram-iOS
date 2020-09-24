@@ -753,7 +753,7 @@ final class ChatMediaInputNode: ChatInputNode {
         
         let inputNodeInteraction = self.inputNodeInteraction!
         let peerSpecificPack: Signal<(PeerSpecificPackData?, CanInstallPeerSpecificPack), NoError>
-        if let peerId = peerId, case .peer = chatLocation {
+        if let peerId = peerId {
             self.dismissedPeerSpecificStickerPack.set(context.account.postbox.transaction { transaction -> Bool in
                 guard let state = transaction.getPeerChatInterfaceState(peerId) as? ChatInterfaceState else {
                     return false

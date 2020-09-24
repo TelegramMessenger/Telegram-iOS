@@ -273,7 +273,6 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     var loadCopyMediaResource: MediaResource?
     var isAction = false
     var diceEmoji: String?
-    var canDiscuss = false
     if messages.count == 1 {
         for media in messages[0].media {
             if let file = media as? TelegramMediaFile {
@@ -309,17 +308,6 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
                     if !isAction {
                         canPin = channel.hasPermission(.pinMessages)
-                        
-                        if messages[0].id.namespace == Namespaces.Message.Cloud {
-                            switch channel.info {
-                            case let .broadcast(info):
-                                if info.flags.contains(.hasDiscussionGroup) {
-                                    canDiscuss = true
-                                }
-                            case .group:
-                                break
-                            }
-                        }
                     }
                 } else if let group = messages[0].peers[messages[0].id.peerId] as? TelegramGroup {
                     if !isAction {
@@ -602,8 +590,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             }
         }
         
-        if let threadId = threadId {
-            let replyThreadId = makeThreadIdMessageId(peerId: messages[0].id.peerId, threadId: threadId)
+        if let _ = threadId {
             let text: String
             if threadMessageCount != 0 {
                 text = chatPresentationInterfaceState.strings.Conversation_ContextViewReplies(Int32(threadMessageCount))
@@ -613,37 +600,8 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             actions.append(.action(ContextMenuActionItem(text: text, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replies"), color: theme.actionSheet.primaryTextColor)
             }, action: { c, _ in
-                let foundIndex = Promise<ChatReplyThreadMessage?>()
-                if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
-                    foundIndex.set(fetchChannelReplyThreadMessage(account: context.account, messageId: messages[0].id, atMessageId: nil)
-                    |> map(Optional.init)
-                    |> `catch` { _ -> Signal<ChatReplyThreadMessage?, NoError> in
-                        return .single(nil)
-                    })
-                }
                 c.dismiss(completion: {
-                    if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
-                        var cancelImpl: (() -> Void)?
-                        let statusController = OverlayStatusController(theme: chatPresentationInterfaceState.theme, type: .loading(cancelled: {
-                            cancelImpl?()
-                        }))
-                        controllerInteraction.presentController(statusController, nil)
-                        
-                        let disposable = (foundIndex.get()
-                        |> take(1)
-                        |> deliverOnMainQueue).start(next: { [weak statusController] result in
-                            statusController?.dismiss()
-                            
-                            if let result = result {
-                                interfaceInteraction.viewReplies(nil, result)
-                            }
-                        })
-                        
-                        cancelImpl = { [weak statusController] in
-                            disposable.dispose()
-                            statusController?.dismiss()
-                        }
-                    }
+                    controllerInteraction.openMessageReplies(messages[0].id, true)
                 })
             })))
         }

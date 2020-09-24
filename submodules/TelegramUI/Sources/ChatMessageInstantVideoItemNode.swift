@@ -292,7 +292,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             var ignoreSource = false
             
             if let forwardInfo = item.message.forwardInfo {
-                if item.message.id.peerId != item.context.account.peerId {
+                if !item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                     for attribute in item.message.attributes {
                         if let attribute = attribute as? SourceReferenceMessageAttribute {
                             if attribute.messageId.peerId == forwardInfo.author?.id {
@@ -303,6 +303,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                             break
                         }
                     }
+                } else {
+                    ignoreForward = true
                 }
             }
             
@@ -326,7 +328,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     }
                 }
                 
-                if !ignoreSource, item.message.id.peerId != item.context.account.peerId {
+                if !ignoreSource, !item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                     for attribute in item.message.attributes {
                         if let attribute = attribute as? SourceReferenceMessageAttribute {
                             if let sourcePeer = item.message.peers[attribute.messageId.peerId] {
