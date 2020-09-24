@@ -61,6 +61,12 @@ import TelegramIntents
 import TooltipUI
 import StatisticsUI
 
+
+// MARK: Nicegram Imports
+import NGStrings
+import NGUI
+//
+
 public enum ChatControllerPeekActions {
     case standard
     case remove(() -> Void)
@@ -3508,7 +3514,51 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.present(actionSheet, in: .window(.root))
         }
         
-        let interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { [weak self] messageId, completion in
+        let interfaceInteraction = ChatPanelInterfaceInteraction(cloudMessages: { messages in
+                if let messages = messages {
+                    // Multiple
+                    if !messages.isEmpty {
+                        self.commitPurposefulAction()
+                        let forwardMessageIds = messages.map { $0.id }.sorted()
+                        self.forwardMessages(messageIds: forwardMessageIds, cloud: true)
+                    }
+                } else {
+                    // One
+                    self.commitPurposefulAction()
+                    if let forwardMessageIdsSet = self.presentationInterfaceState.interfaceState.selectionState?.selectedIds {
+                        let forwardMessageIds = Array(forwardMessageIdsSet).sorted()
+                        self.forwardMessages(messageIds: forwardMessageIds, cloud: true)
+                    }
+                }
+        }, copyForwardMessages: { messages in
+                if let messages = messages {
+                    // Multiple
+                    if !messages.isEmpty {
+                        self.commitPurposefulAction()
+                        self.copyForwardMessages(messages: messages)
+                    }
+                } else {
+                    // One
+                    if let forwardMessageIdsSet = self.presentationInterfaceState.interfaceState.selectionState?.selectedIds {
+                        let forwardMessageIds = Array(forwardMessageIdsSet).sorted()
+                        var forwardMessages: [Message] = []
+                        for messageId in forwardMessageIds {
+                            var msg: Message? = nil
+                            let semaphore = DispatchSemaphore(value: 0)
+                            let _ = self.context.account.postbox.transaction({ transaction -> Void in
+                                msg = transaction.getMessage(messageId)
+                                semaphore.signal()
+                            }).start()
+                            semaphore.wait()
+                            
+                            if msg != nil {
+                                forwardMessages.append(msg!)
+                            }
+                        }
+                        self.copyForwardMessages(messages: forwardMessages)
+                    }
+                }
+        }, setupReplyMessage: { [weak self] messageId, completion in
             if let strongSelf = self, strongSelf.isNodeLoaded, canSendMessagesToChat(strongSelf.presentationInterfaceState) {
                 if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageId(message.id) }).updatedSearch(nil) }, completion: completion)
@@ -7972,16 +8022,130 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    private func forwardMessages(messageIds: [MessageId], resetCurrent: Bool = false) {
+    private func copyForwardMessages(messages: [Message], resetCurrent: Bool = false) {
+        let messageIds = messages.map { $0.id }.sorted()
+        // MessagesToCopy = convertMessagesForEnqueue(messages)
+        MessagesToCopyDict = MessagesToCopyDict.merging(convertMessagesForEnqueueDict(messages)) { $1 }
+        let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled, .includeSavedMessages], title: l("Chat.ForwardAsCopy", self.presentationData.strings.baseLanguageCode)))
+        controller.peerSelected = { [weak self, weak controller] peerId in
+            guard let strongSelf = self, let strongController = controller else {
+                return
+            }
+            
+            if resetCurrent {
+                strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(nil).withUpdatedForwardAsCopy(false) }) })
+            }
+            
+            if case .peer(peerId) = strongSelf.chatLocation, strongSelf.parentController == nil {
+                strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(messageIds).withUpdatedForwardAsCopy(true).withoutSelectionState() }) })
+                strongController.dismiss()
+            } else if peerId == strongSelf.context.account.peerId {
+                
+                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: strongSelf.context.account.peerId, messages: convertMessagesForEnqueue(messages))
+                    |> deliverOnMainQueue).start(next: { messageIds in
+                        if let strongSelf = self {
+                            let signals: [Signal<Bool, NoError>] = messageIds.compactMap({ id -> Signal<Bool, NoError>? in
+                                guard let id = id else {
+                                    return nil
+                                }
+                                return strongSelf.context.account.pendingMessageManager.pendingMessageStatus(id)
+                                    |> mapToSignal { status, _ -> Signal<Bool, NoError> in
+                                        if status != nil {
+                                            return .never()
+                                        } else {
+                                            return .single(true)
+                                        }
+                                    }
+                                    |> take(1)
+                            })
+                            if strongSelf.shareStatusDisposable == nil {
+                                strongSelf.shareStatusDisposable = MetaDisposable()
+                            }
+                            strongSelf.shareStatusDisposable?.set((combineLatest(signals)
+                                |> deliverOnMainQueue).start(completed: {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, type: .success), in: .window(.root))
+                                }))
+                        }
+                    })
+                strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
+                strongController.dismiss()
+            } else {
+                let _ = (strongSelf.context.account.postbox.transaction({ transaction -> Void in
+                    transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
+                        if let currentState = currentState as? ChatInterfaceState {
+                            return currentState.withUpdatedForwardMessageIds(messageIds).withUpdatedForwardAsCopy(true)
+                        } else {
+                            return ChatInterfaceState().withUpdatedForwardMessageIds(messageIds).withUpdatedForwardAsCopy(true)
+                        }
+                    })
+                }) |> deliverOnMainQueue).start(completed: {
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
+                        
+                        let ready = Promise<Bool>()
+                        
+                        strongSelf.controllerNavigationDisposable.set((ready.get() |> take(1) |> deliverOnMainQueue).start(next: { _ in
+                            if let strongController = controller {
+                                strongController.dismiss()
+                            }
+                        }))
+                        
+                        if let parentController = strongSelf.parentController {
+                            (parentController.navigationController as? NavigationController)?.replaceTopController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                        } else {
+                            (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                        }
+                    }
+                })
+            }
+        }
+        self.chatDisplayNode.dismissInput()
+        self.effectiveNavigationController?.pushViewController(controller)
+    }
+    
+    private func forwardMessages(messageIds: [MessageId], resetCurrent: Bool = false, cloud: Bool = false) {
         let _ = (self.context.account.postbox.transaction { transaction -> [Message] in
             return messageIds.compactMap(transaction.getMessage)
         }
         |> deliverOnMainQueue).start(next: { [weak self] messages in
-            self?.forwardMessages(messages: messages, resetCurrent: resetCurrent)
+            self?.forwardMessages(messages: messages, resetCurrent: resetCurrent, cloud: cloud)
         })
     }
     
-    private func forwardMessages(messages: [Message], resetCurrent: Bool) {
+    private func forwardMessages(messages: [Message], resetCurrent: Bool, cloud: Bool = false) {
+        if (cloud) {
+            let _ = (enqueueMessages(account: self.context.account, peerId: self.context.account.peerId, messages: messages.map { message -> EnqueueMessage in
+                return .forward(source: message.id, grouping: .auto, attributes: [])
+            })
+                |> deliverOnMainQueue).start(next: { messageIds in
+                    let signals: [Signal<Bool, NoError>] = messageIds.compactMap({ id -> Signal<Bool, NoError>? in
+                        guard let id = id else {
+                            return nil
+                        }
+                        return self.context.account.pendingMessageManager.pendingMessageStatus(id)
+                            |> mapToSignal { status, _ -> Signal<Bool, NoError> in
+                                if status != nil {
+                                    return .never()
+                                } else {
+                                    return .single(true)
+                                }
+                            }
+                            |> take(1)
+                    })
+                    if self.shareStatusDisposable == nil {
+                        self.shareStatusDisposable = MetaDisposable()
+                    }
+                    self.shareStatusDisposable?.set((combineLatest(signals)
+                        |> deliverOnMainQueue).start(completed: {
+                            self.present(OverlayStatusController(theme: self.presentationData.theme, type: .success), in: .window(.root))
+                        }))
+                })
+            self.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
+            return
+        }
         var filter: ChatListNodePeersFilter = [.onlyWriteable, .includeSavedMessages, .excludeDisabled]
         var hasPublicPolls = false
         var hasPublicQuiz = false

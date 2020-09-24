@@ -16,6 +16,16 @@ import AppBundle
 import SaveToCameraRoll
 import PresentationDataUtils
 
+
+
+
+// MARK: Nicegram Imports
+import NGUI
+import NGStrings
+import NGTranslate
+import PeerInfoUI
+//
+
 private struct MessageContextMenuData {
     let starStatus: Bool?
     let canReply: Bool
@@ -747,6 +757,12 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 interfaceInteraction.forwardMessages(selectAll ? messages : [message])
                 f(.dismissWithoutContent)
             })))
+            actions.append(.action(ContextMenuActionItem(text: l("Chat.SaveToCloud", chatPresentationInterfaceState.strings.baseLanguageCode), icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "SaveToCloud"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                interfaceInteraction.cloudMessages(selectAll ? messages : [message])
+                f(.dismissWithoutContent)
+            })))
         }
         
         if canDiscuss {
@@ -879,6 +895,99 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             if !actions.isEmpty {
                 actions.append(.separator)
             }
+            // MARK: NG Context Menu
+            var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let locale = presentationData.strings.baseLanguageCode
+            actions.append(.action(ContextMenuActionItem(text: l("AppName", locale) + "...", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "NicegramN"), color: theme.actionSheet.primaryTextColor)
+            }, action: { controller, f in
+                var ngContextItems: [ContextMenuItem] = []
+                
+                // Copyforward
+                if data.messageActions.options.contains(.forward) {
+                    ngContextItems.append(.action(ContextMenuActionItem(text: l("Chat.ForwardAsCopy", chatPresentationInterfaceState.strings.baseLanguageCode), icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "CopyForward"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        interfaceInteraction.copyForwardMessages(selectAll ? messages : [message])
+                        f(.dismissWithoutContent)
+                    })))
+                }
+                
+                // Translate
+                if !message.text.isEmpty {
+                    var title = l("Messages.Translate", locale)
+                    var mode = "translate"
+                    if message.text.contains(gTranslateSeparator) {
+                        title = l("Messages.UndoTranslate", locale)
+                        mode = "undo-translate"
+                    }
+                    ngContextItems.append(.action(ContextMenuActionItem(text: title, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "NGTranslateIcon"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        if mode == "undo-translate" {
+                            var newMessageText = message.text
+                            if let dotRange = newMessageText.range(of: "\n\n" + gTranslateSeparator) {
+                                newMessageText.removeSubrange(dotRange.lowerBound..<newMessageText.endIndex)
+                            }
+                            let _ = (context.account.postbox.transaction { transaction -> Void in
+                                transaction.updateMessage(message.id, update: { currentMessage in
+                                    var storeForwardInfo: StoreMessageForwardInfo?
+                                    if let forwardInfo = currentMessage.forwardInfo {
+                                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
+                                    }
+                                    
+                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: newMessageText, attributes: currentMessage.attributes, media: currentMessage.media))
+                                })
+                            }).start()
+                        } else {
+                            let _ = (gtranslate(message.text, presentationData.strings.baseLanguageCode)  |> deliverOnMainQueue).start(next: { translated in
+                                let newMessageText = message.text + "\n\n\(gTranslateSeparator)\n" + translated
+                                let _ = (context.account.postbox.transaction { transaction -> Void in
+                                    transaction.updateMessage(message.id, update: { currentMessage in
+                                        var storeForwardInfo: StoreMessageForwardInfo?
+                                        if let forwardInfo = currentMessage.forwardInfo {
+                                            storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
+                                        }
+
+                                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: newMessageText, attributes: currentMessage.attributes, media: currentMessage.media))
+                                    })
+                                }).start()
+                            }, error: { _ in
+                                let c = getIAPErrorController(context: context, "Messages.TranslateError", presentationData)
+                                controllerInteraction.presentGlobalOverlayController(c, nil)
+                            })
+                        }
+                        f(.default)
+                    })))
+                }
+                
+
+                if let peer = message.peers[message.id.peerId] as? TelegramChannel {
+                    if let user = message.author as? TelegramUser {
+                        if (user.id != context.account.peerId) && peer.hasPermission(.banMembers) {
+                            let banDisposables = DisposableDict<PeerId>()
+                            // TODO: Check is user an admin?
+                            ngContextItems.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuBan, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
+                            }, action: { _, f in
+                                banDisposables.set((fetchChannelParticipant(account: context.account, peerId: peer.id, participantId: user.id)
+                                    |> deliverOnMainQueue).start(next: { participant in
+                                controllerInteraction.presentController(channelBannedMemberController(context: context, peerId: peer.id, memberId: message.author!.id, initialParticipant: participant, updated: { _ in }, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                    }), forKey: user.id)
+                                f(.dismissWithoutContent)
+                            }))
+                            )
+                        }
+                    }
+                }
+
+
+
+                controller.setItems(.single(ngContextItems))
+            })))
+            //
+
+
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuMore, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/More"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in

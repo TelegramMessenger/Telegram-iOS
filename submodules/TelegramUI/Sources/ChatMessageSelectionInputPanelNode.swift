@@ -14,6 +14,8 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     private let deleteButton: HighlightableButtonNode
     private let reportButton: HighlightableButtonNode
     private let forwardButton: HighlightableButtonNode
+    private let cloudButton: HighlightableButtonNode
+    private let copyForwardButton: HighlightableButtonNode
     private let shareButton: HighlightableButtonNode
     private let separatorNode: ASDisplayNode
     
@@ -30,7 +32,8 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         didSet {
             if oldValue != self.selectedMessages {
                 self.forwardButton.isEnabled = self.selectedMessages.count != 0
-                
+                self.cloudButton.isEnabled = self.selectedMessages.count != 0
+
                 if self.selectedMessages.isEmpty {
                     self.actions = nil
                     if let (width, leftInset, rightInset, maxHeight, metrics, isSecondary) = self.validLayout, let interfaceState = self.presentationInterfaceState {
@@ -56,21 +59,30 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.theme = theme
         self.peerMedia = peerMedia
         
-        self.deleteButton = HighlightableButtonNode(pointerStyle: .default)
+        self.deleteButton = HighlightableButtonNode()
         self.deleteButton.isEnabled = false
         self.deleteButton.isAccessibilityElement = true
         self.deleteButton.accessibilityLabel = strings.VoiceOver_MessageContextDelete
         
-        self.reportButton = HighlightableButtonNode(pointerStyle: .default)
+        self.reportButton = HighlightableButtonNode()
         self.reportButton.isEnabled = false
         self.reportButton.isAccessibilityElement = true
         self.reportButton.accessibilityLabel = strings.VoiceOver_MessageContextReport
         
-        self.forwardButton = HighlightableButtonNode(pointerStyle: .default)
+        self.forwardButton = HighlightableButtonNode()
         self.forwardButton.isAccessibilityElement = true
         self.forwardButton.accessibilityLabel = strings.VoiceOver_MessageContextForward
         
-        self.shareButton = HighlightableButtonNode(pointerStyle: .default)
+        self.cloudButton = HighlightableButtonNode()
+        self.cloudButton.isAccessibilityElement = true
+        self.cloudButton.accessibilityLabel = "Save To Favourites"
+        
+        self.copyForwardButton = HighlightableButtonNode()
+        self.copyForwardButton.isEnabled = false
+        self.copyForwardButton.isAccessibilityElement = true
+        self.copyForwardButton.accessibilityLabel = "Forward As Copy"
+        
+        self.shareButton = HighlightableButtonNode()
         self.shareButton.isEnabled = false
         self.shareButton.isAccessibilityElement = true
         self.shareButton.accessibilityLabel = strings.VoiceOver_MessageContextShare
@@ -81,6 +93,10 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.reportButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionReport"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
         self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
         self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
+        self.cloudButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "SaveToCloud"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
+        self.cloudButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "SaveToCloud"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
+        self.copyForwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "CopyForward"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
+        self.copyForwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "CopyForward"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
         self.shareButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
         self.shareButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
         
@@ -90,16 +106,21 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         super.init()
         
         self.addSubnode(self.deleteButton)
-        self.addSubnode(self.reportButton)
+        // self.addSubnode(self.reportButton)
         self.addSubnode(self.forwardButton)
+        self.addSubnode(self.cloudButton)
+        self.addSubnode(self.copyForwardButton)
         self.addSubnode(self.shareButton)
         self.addSubnode(self.separatorNode)
         
         self.forwardButton.isEnabled = false
+        self.cloudButton.isEnabled = false
         
         self.deleteButton.addTarget(self, action: #selector(self.deleteButtonPressed), forControlEvents: .touchUpInside)
         self.reportButton.addTarget(self, action: #selector(self.reportButtonPressed), forControlEvents: .touchUpInside)
         self.forwardButton.addTarget(self, action: #selector(self.forwardButtonPressed), forControlEvents: .touchUpInside)
+        self.cloudButton.addTarget(self, action: #selector(self.cloudButtonPressed), forControlEvents: .touchUpInside)
+        self.copyForwardButton.addTarget(self, action: #selector(self.copyForwardButtonPressed), forControlEvents: .touchUpInside)
         self.shareButton.addTarget(self, action: #selector(self.shareButtonPressed), forControlEvents: .touchUpInside)
     }
     
@@ -117,6 +138,10 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             self.reportButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionReport"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
             self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
             self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
+            self.cloudButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "SaveToCloud"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
+            self.cloudButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "SaveToCloud"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
+            self.copyForwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "CopyForward"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
+            self.copyForwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "CopyForward"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
             
             self.separatorNode.backgroundColor = theme.chat.inputPanel.panelSeparatorColor
         }
@@ -132,6 +157,14 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     
     @objc func forwardButtonPressed() {
         self.interfaceInteraction?.forwardSelectedMessages()
+    }
+    
+    @objc func cloudButtonPressed() {
+        self.interfaceInteraction?.cloudMessages(nil)
+    }
+    
+    @objc func copyForwardButtonPressed() {
+        self.interfaceInteraction?.copyForwardMessages(nil)
     }
     
     @objc func shareButtonPressed() {
@@ -150,7 +183,9 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             self.deleteButton.isEnabled = false
             self.reportButton.isEnabled = false
             self.forwardButton.isEnabled = actions.options.contains(.forward)
+            self.cloudButton.isEnabled = actions.options.contains(.forward)
             self.shareButton.isEnabled = false
+            self.copyForwardButton.isEnabled = self.cloudButton.isEnabled
             
             if self.peerMedia {
                 self.deleteButton.isEnabled = !actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty
@@ -172,7 +207,9 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             self.reportButton.isEnabled = false
             self.reportButton.isHidden = true
             self.forwardButton.isEnabled = false
+            self.cloudButton.isEnabled = false
             self.shareButton.isEnabled = false
+            self.copyForwardButton.isEnabled = self.cloudButton.isEnabled
         }
         
         if self.reportButton.isHidden || (self.peerMedia && self.deleteButton.isHidden && self.reportButton.isHidden) {
@@ -183,36 +220,46 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             }
         }
         
+        var buttons: [HighlightableButtonNode] = []
         if self.reportButton.isHidden {
-            self.deleteButton.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 57.0, height: panelHeight))
-            self.forwardButton.frame = CGRect(origin: CGPoint(x: width - rightInset - 57.0, y: 0.0), size: CGSize(width: 57.0, height: panelHeight))
-            self.shareButton.frame = CGRect(origin: CGPoint(x: floor((width - rightInset - 57.0) / 2.0), y: 0.0), size: CGSize(width: 57.0, height: panelHeight))
-        } else if !self.deleteButton.isHidden {
-            let buttons: [HighlightableButtonNode] = [
+            buttons = [
                 self.deleteButton,
-                self.reportButton,
                 self.shareButton,
+                self.cloudButton,
+                self.copyForwardButton,
                 self.forwardButton
             ]
-            let buttonSize = CGSize(width: 57.0, height: panelHeight)
-            
-            let availableWidth = width - leftInset - rightInset
-            let spacing: CGFloat = floor((availableWidth - buttonSize.width * CGFloat(buttons.count)) / CGFloat(buttons.count - 1))
-            var offset: CGFloat = leftInset
-            for i in 0 ..< buttons.count {
-                let button = buttons[i]
-                if i == buttons.count - 1 {
-                    button.frame = CGRect(origin: CGPoint(x: width - rightInset - buttonSize.width, y: 0.0), size: buttonSize)
-                } else {
-                    button.frame = CGRect(origin: CGPoint(x: offset, y: 0.0), size: buttonSize)
-                }
-                offset += buttonSize.width + spacing
-            }
+        } else if !self.deleteButton.isHidden {
+            buttons = [
+                self.deleteButton,
+                // self.reportButton,
+                self.shareButton,
+                self.cloudButton,
+                self.copyForwardButton,
+                self.forwardButton
+            ]
         } else {
-            self.deleteButton.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 53.0, height: panelHeight))
-            self.forwardButton.frame = CGRect(origin: CGPoint(x: width - rightInset - 57.0, y: 0.0), size: CGSize(width: 57.0, height: panelHeight))
-            self.reportButton.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 53.0, height: 47.0))
-            self.shareButton.frame = CGRect(origin: CGPoint(x: floor((width - rightInset - 57.0) / 2.0), y: 0.0), size: CGSize(width: 57.0, height: panelHeight))
+            buttons = [
+                self.reportButton,
+                self.shareButton,
+                self.cloudButton,
+                self.copyForwardButton,
+                self.forwardButton
+            ]
+        }
+        let buttonSize = CGSize(width: 57.0, height: panelHeight)
+        
+        let availableWidth = width - leftInset - rightInset
+        let spacing: CGFloat = floor((availableWidth - buttonSize.width * CGFloat(buttons.count)) / CGFloat(buttons.count - 1))
+        var offset: CGFloat = leftInset
+        for i in 0 ..< buttons.count {
+            let button = buttons[i]
+            if i == buttons.count - 1 {
+                button.frame = CGRect(origin: CGPoint(x: width - rightInset - buttonSize.width, y: 0.0), size: buttonSize)
+            } else {
+                button.frame = CGRect(origin: CGPoint(x: offset, y: 0.0), size: buttonSize)
+            }
+            offset += buttonSize.width + spacing
         }
         
         transition.updateAlpha(node: self.separatorNode, alpha: isSecondary ? 1.0 : 0.0)

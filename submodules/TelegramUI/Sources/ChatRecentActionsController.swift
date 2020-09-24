@@ -52,7 +52,7 @@ final class ChatRecentActionsController: TelegramBaseController {
             }
         })
         
-        self.panelInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _, _ in
+        self.panelInteraction = ChatPanelInterfaceInteraction(cloudMessages: { _ in }, copyForwardMessages: { _ in }, setupReplyMessage: { _, _ in
         }, setupEditMessage: { _, _ in
         }, beginMessageSelection: { _, _ in
         }, deleteSelectedMessages: {

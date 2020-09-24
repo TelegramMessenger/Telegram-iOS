@@ -443,7 +443,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         
         self.controllerInteraction = controllerInteraction
         
-        self.interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _, _ in
+        self.interfaceInteraction = ChatPanelInterfaceInteraction(cloudMessages: { _ in }, copyForwardMessages: { _ in }, setupReplyMessage: { _, _ in
         }, setupEditMessage: { _, _ in
         }, beginMessageSelection: { _, _ in
         }, deleteSelectedMessages: { [weak self] in

@@ -350,7 +350,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         self.selectionPanel.context = context
         self.selectionPanel.backgroundColor = presentationData.theme.chat.inputPanel.panelBackgroundColor
         
-        let interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _, _ in
+        let interfaceInteraction = ChatPanelInterfaceInteraction(cloudMessages: { _ in }, copyForwardMessages: { _ in }, setupReplyMessage: { _, _ in
         }, setupEditMessage: { _, _ in
         }, beginMessageSelection: { _, _ in
         }, deleteSelectedMessages: {
