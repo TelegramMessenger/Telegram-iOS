@@ -1,5 +1,7 @@
 load("//Config:buck_rule_macros.bzl", "static_library")
 
+NGDEPS = ["//Nicegram/NGData:NGData"]
+
 static_library(
     name = "GalleryUI",
     srcs = glob([
@@ -26,7 +28,7 @@ static_library(
         "//submodules/StickerPackPreviewUI:StickerPackPreviewUI",
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
-    ],
+    ] + NGDEPS,
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
         "$SDKROOT/System/Library/Frameworks/UIKit.framework",
