@@ -1,0 +1,42 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+
+apple_asset_catalog(
+  name = "NGUIAssets",
+  dirs = [
+    "Images.xcassets",
+  ],
+  visibility = ["PUBLIC"],
+)
+
+static_library(
+    name = "NGUI",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/Display:Display#shared",
+        "//submodules/ItemListUI:ItemListUI",
+        "//submodules/Postbox:Postbox#shared",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/SyncCore:SyncCore#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/TelegramNotices:TelegramNotices",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/PeersNearbyIconNode:PeersNearbyIconNode",
+        "//submodules/TelegramPermissionsUI:TelegramPermissionsUI",
+        "//submodules/UndoUI:UndoUI",
+        "//submodules/ContextUI:ContextUI",
+        "//Nicegram/NGData:NGData",
+        "//Nicegram/NGLogging:NGLogging",
+        "//Nicegram/NGStrings:NGStrings",
+        "//Nicegram/NGIAP:NGIAP"
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/StoreKit.framework",
+    ],
+)

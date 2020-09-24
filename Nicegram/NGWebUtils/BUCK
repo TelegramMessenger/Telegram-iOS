@@ -1,0 +1,17 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "NGWebUtils",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//Nicegram/NGData:NGData",
+        "//submodules/Postbox:Postbox#shared",
+        "//submodules/SyncCore:SyncCore#shared",
+        "//submodules/TelegramCore:TelegramCore#shared"
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+    ],
+)

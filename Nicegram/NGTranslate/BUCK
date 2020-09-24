@@ -1,0 +1,16 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "NGTranslate",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        # "//Nicegram/NGLogging:NGLogging"
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)
