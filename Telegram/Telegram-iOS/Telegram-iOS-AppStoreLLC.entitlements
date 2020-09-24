@@ -17,22 +17,23 @@
 	<array>
 		<string>applinks:telegram.me</string>
 		<string>applinks:t.me</string>
+		<string>applinks:nicegram.app</string>
 	</array>
 	<key>com.apple.developer.siri</key>
 	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.ph.telegra.Telegraph</string>
+		<string>group.com.nicegram.Telegram-iOS</string>
 	</array>
 	<key>com.apple.developer.in-app-payments</key>
 	<array>
-		<string>merchant.ph.telegra.Telegraph</string>
-		<string>merchant.yandex.ph.telegra.Telegraph</string>
-		<string>merchant.sberbank.ph.telegra.Telegraph</string>
-		<string>merchant.sberbank.test.ph.telegra.Telegraph</string>
-		<string>merchant.privatbank.test.telergramios</string>
-		<string>merchant.privatbank.prod.telergram</string>
-		<string>merchant.telegram.tranzzo.test</string>
+		<string>merchant.com.nicegram.Telegram-iOS</string>
+		<string>merchant.yandex.com.nicegram.Telegram-iOS</string>
+		<string>merchant.sberbank.com.nicegram.Telegram-iOS</string>
+		<string>merchant.sberbank.test.com.nicegram.Telegram-iOS</string>
+		<string>merchant.privatbank.test.com.nicegram.Telegram-iOS</string>
+		<string>merchant.privatbank.prod.com.nicegram.Telegram-iOS</string>
+		<!-- <string>merchant.nicegram.tranzzo.test</string> -->
 	</array>
 </dict>
 </plist>

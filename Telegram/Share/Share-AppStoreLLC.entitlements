@@ -4,11 +4,11 @@
 <dict>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.ph.telegra.Telegraph</string>
+		<string>group.com.nicegram.Telegram-iOS</string>
 	</array>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)ph.telegra.Telegraph</string>
+		<string>$(AppIdentifierPrefix)com.nicegram.Telegram-iOS</string>
 	</array>
 </dict>
 </plist>
