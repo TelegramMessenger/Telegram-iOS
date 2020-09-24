@@ -13,6 +13,7 @@ import CallListUI
 import ChatListUI
 import SettingsUI
 import AppBundle
+import NGData
 
 public final class TelegramRootController: NavigationController {
     private let context: AccountContext
@@ -80,7 +81,7 @@ public final class TelegramRootController: NavigationController {
     }
     
     public func addRootControllers(showCallsTab: Bool) {
-        let tabBarController = TabBarController(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), theme: TabBarControllerTheme(rootControllerTheme: self.presentationData.theme))
+        let tabBarController = TabBarController(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), theme: TabBarControllerTheme(rootControllerTheme: self.presentationData.theme), showTabNames: NGSettings.showTabNames)
         tabBarController.navigationPresentation = .master
         let chatListController = self.context.sharedContext.makeChatListController(context: self.context, groupId: .root, controlsHistoryPreload: true, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild)
         if let sharedContext = self.context.sharedContext as? SharedAccountContextImpl {
@@ -94,7 +95,9 @@ public final class TelegramRootController: NavigationController {
         contactsController.switchToChatsController = {  [weak self] in
             self?.openChatsController(activateSearch: false)
         }
-        controllers.append(contactsController)
+        if NGSettings.showContactsTab {
+            controllers.append(contactsController)
+        }
         
         if showCallsTab {
             controllers.append(callListController)
@@ -134,7 +137,9 @@ public final class TelegramRootController: NavigationController {
             return
         }
         var controllers: [ViewController] = []
-        controllers.append(self.contactsController!)
+        if NGSettings.showContactsTab {
+            controllers.append(self.contactsController!)
+        }
         if showCallsTab {
             controllers.append(self.callListController!)
         }
