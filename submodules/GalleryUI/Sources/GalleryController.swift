@@ -1,3 +1,9 @@
+// MARK: Nicegram Imports
+import NGData
+//
+
+
+
 import Foundation
 import UIKit
 import Display
@@ -315,6 +321,9 @@ public struct GalleryConfiguration {
     }
     
     static func with(appConfiguration: AppConfiguration) -> GalleryConfiguration {
+        if VarGNGSettings.youtube_pip {
+            return GalleryConfiguration(youtubePictureInPictureEnabled: true)
+        }
         if let data = appConfiguration.data, let value = data["youtube_pip"] as? String {
             return GalleryConfiguration(youtubePictureInPictureEnabled: value != "disabled")
         } else {
