@@ -480,7 +480,7 @@ private class SearchBarTextField: UITextField, UIScrollViewDelegate {
             rect.origin.x += prefixOffset
             rect.size.width -= prefixOffset
         }
-        if !self.tokensWidth.isZero && self.scrollView == nil {
+        if !self.tokensWidth.isZero && self.scrollView?.superview == nil {
              rect.origin.x += self.tokensWidth
              rect.size.width -= self.tokensWidth
          }
