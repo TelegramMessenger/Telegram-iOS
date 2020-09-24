@@ -1,0 +1,81 @@
+"AppName" = "Nicegram";
+
+/*ChatFilter*/
+"ChatFilter.Bots" = "Боти";
+"ChatFilter.Channels" = "Канали";
+"ChatFilter.Private" = "Користувачі";
+"ChatFilter.Groups" = "Групи";
+"ChatFilter.Unread" = "Непрочитане";
+"ChatFilter.Unmuted" = "Нотифiкувати";
+"ChatFilter.Favourites" = "Обране";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "Nicegram";
+"NiceFeatures.Tabs.Header" = "ВКЛАДКИ";
+"NiceFeatures.Tabs.ShowContacts" = "Показувати контакти";
+"NiceFeatures.ChatScreen.Header" = "ВIКНО ЧАТУ";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "Анiмованi стiкери";
+
+/*Save to Cloud*/
+"Chat.SaveToCloud" = "Зберегти До Хмари";
+
+/*Open Pin*/
+"Chat.OpenPin" = "Показати Пiн";
+"ChatFilter.Admin" = "";
+"NiceFeatures.Notifications.Fix" = "Вимкнути небажані оповістки";
+"NiceFeatures.Notifications.FixNotice" = "Допомагає, коли ви отримуєте оповістки від заглушених чатів. Відповіді з оповісток, назви акаунтів і попередній перегляд медіа буде недоступний";
+"NiceFeatures.Filters.Header" = "";
+"NiceFeatures.Filters.Notice" = "";
+
+/*Common*/
+"Common.ExitNow" = "";
+"Common.Later" = "";
+"Common.RestartRequired" = "";
+"NiceFeatures.Tabs.ShowNames" = "";
+"Chat.ForwardAsCopy" = "";
+
+/*Folder*/
+"Folder.DefaultName" = "";
+"Folder.New" = "";
+"Folder.Created" = "";
+"Folder.AddToExisting" = "";
+"Folder.Updated" = "";
+"Folder.Create" = "";
+"Folder.Create.Name" = "";
+"Folder.Create.Placeholder" = "";
+"Folder.LimitExceeded" = "";
+"NiceFeatures.HideNumber" = "";
+
+/*NGWeb*/
+"NGWeb.Blocked" = "";
+
+/*Browser*/
+"NiceFeatures.Browser.Header" = "";
+"NiceFeatures.Browser.UseBrowser" = "";
+"NiceFeatures.Browser.UseBrowserNotice" = "";
+"ChatFilter.Missed" = "";
+
+/*Premium*/
+"Premium.Title" = "";
+"Premium.UnlimitedPins.Header" = "";
+"Premium.SyncPins" = "";
+"Premium.SyncPins.Notice.ON" = "";
+"Premium.SyncPins.Notice.OFF" = "";
+"Premium.Missed.Header" = "";
+"Premium.Missed" = "";
+"Premium.Missed.Notice" = "";
+"Folder.DeleteAsk" = "";
+"Folder.NeedPremium" = "";
+"Common.SupportChatUsername" = "nicegram_ru";
+"Common.FAQUrl" = "https://nicegram.app/ru/faq/";
+"Common.FAQ.Button" = "";
+"Common.FAQ.Intro" = "";
+"IAP.Premium.Title" = "";
+"IAP.Premium.Subtitle" = "";
+"IAP.Premium.Features" = "";
+"IAP.Premium.Activated" = "";
+"IAP.Common.Restore" = "";
+"IAP.Common.CantPay" = "";
+"IAP.Common.ErrorFetch" = "";
+"IAP.Common.Congrats" = "";
+"IAP.Common.ValidateError" = "";

@@ -1,0 +1,140 @@
+"AppName" = "Nicegram";
+
+/*ChatFilter*/
+"ChatFilter.Bots" = "机器人";
+"ChatFilter.Channels" = "频道";
+"ChatFilter.Private" = "用户";
+"ChatFilter.Groups" = "群组";
+"ChatFilter.Unread" = "未读信息";
+"ChatFilter.Unmuted" = "已启用通知";
+"ChatFilter.Favourites" = "收藏夹";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "Nicegram";
+"NiceFeatures.Tabs.Header" = "标签";
+"NiceFeatures.Tabs.ShowContacts" = "显示<联系人>标签";
+"NiceFeatures.ChatScreen.Header" = "对话界面";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "动态贴纸";
+"NiceFeatures.useBackCam" = "使用后置摄像头(圆形视频)";
+
+"NiceFeatures.Folders.Header" = "分组";
+"NiceFeatures.Folders.TgFolders" = "分组显示在底部";
+"NiceFeatures.Folders.TgFolders.Notice" = "iOS 风格分组列表";
+
+"NiceFeatures.RoundVideos.Header" = "圆形视频";
+"NiceFeatures.RoundVideos.UseRearCamera" = "使用后置相机";
+
+/*Save to Cloud*/
+"Chat.SaveToCloud" = "保存到收藏夹";
+
+/*Open Pin*/
+"Chat.OpenPin" = "显示置顶";
+"ChatFilter.Admin" = "管理员";
+"NiceFeatures.Notifications.HideNotifyAccount" = "在通知中隐藏帐户";
+"NiceFeatures.Notifications.HideNotifyAccountNotice" = "当您在设置添加了多个账户时，通知中就不会显示你的账户信息。";
+"NiceFeatures.Notifications.Fix" = "禁用多余通知";
+"NiceFeatures.Notifications.FixNotice" = "如果在已关闭通知群组/频道仍然会收到通知，那开启此功能可以禁用此通知.\n开启此功能，在通知界面回复消息，帐户标签和媒体预览将会被禁用。";
+"NiceFeatures.Filters.Header" = "标签过滤";
+"NiceFeatures.Filters.Notice" = "选择自定义标签的数量。\n长按标签更改标签选项。";
+"NiceFeatures.Filters.ShowBadge" = "标签上显示角标";
+"NiceFeatures.UseClassicInfoUi" = "使用经典对话信息界面";
+
+/*Common*/
+"Common.ExitNow" = "立即退出";
+"Common.Later" = "稍后";
+"Common.RestartRequired" = "需要重启！";
+"NiceFeatures.Tabs.ShowNames" = "显示标签名";
+"Chat.ForwardAsCopy" = "无引用转发";
+
+/*Folder*/
+"Folder.DefaultName" = "分组";
+"Folder.New" = "新建分组";
+"Folder.Created" = "分组已创建";
+"Folder.AddToExisting" = "添加到已有分组";
+"Folder.Updated" = "分组已更新";
+"Folder.Create" = "创建分组...";
+"Folder.Create.Name" = "分组名";
+"Folder.Create.Placeholder" = "分组...";
+"Folder.LimitExceeded" = "抱歉，您最多只能创建3个自定义分组。\n升级至 Premium 可创建更多分组。";
+"NiceFeatures.HideNumber" = "设置中隐藏手机号码";
+
+/*NGWeb*/
+"NGWeb.Blocked" = "依据 App Store 审核指南，在 Nicegram 中不可用";
+
+/*Browser*/
+/*Please, Go to «Data & Storage» to configure default browser*/
+"NiceFeatures.Use.DataStorage" = "请使用 «%1» 配置默认浏览器";
+"NiceFeatures.Browser.Header" = "链接";
+"NiceFeatures.Browser.UseBrowser" = "在浏览器中打开链接";
+"NiceFeatures.Browser.UseBrowserNotice" = "Nicegram 将在外部浏览器打开链接而不是在App内打开，必须安装所选择的浏览器。";
+"ChatFilter.Missed" = "未读提醒";
+
+/*Premium*/
+"Premium.Title" = "Premium";
+"Premium.UnlimitedPins.Header" = "无限置顶对话";
+"Premium.SyncPins" = "同步置顶对话";
+"Premium.SyncPins.Notice.ON" = "如果您更改其他客户端中的置顶对话,则它们在 Nicegram 中也会同步更改。";
+"Premium.SyncPins.Notice.OFF" = "如果您更改其他客户端中的置顶对话，则它们在 Nicegram 中也不会同步更改。";
+"Premium.Missed.Header" = "未读提醒消息";
+"Premium.Missed" = "未读提醒消息通知";
+"Premium.Missed.Notice" = "长时间未使用 Nicegram (比如睡眠/学习等)，下次打开Nicegram会通知您未读的私人和提及消息。";
+"Folder.DeleteAsk" = "删除分组";
+"Folder.NeedPremium" = "此文件夹仅限 Premium 可用。您可以解锁 Premium 来使用，或删除此文件夹。";
+"Common.SupportChatUsername" = "nicegram_cn";
+"Common.FAQUrl" = "https://nicegram.app/cn/faq/";
+"Common.FAQ.Button" = "Nicegram 常见问题";
+"Common.FAQ.Intro" = "请注意：Nicegram 的支持服务由开发者和社区提供。\n\n如用疑问，请前往“Nicegram 常见问题”，那里有常见问题和故障排除指南。";
+"IAP.Premium.Title" = "Premium";
+"IAP.Premium.Subtitle" = "您无法拒绝的独特功能！";
+"IAP.Premium.Features" = "无限分组和置顶对话\n快捷翻译按钮\n未读提醒消息过滤和标签管理\nApp 启动时提醒«新消息»";
+"IAP.Premium.Activated" = "Premium 已激活！";
+"IAP.Common.Restore" = "恢复购买";
+"IAP.Common.CantPay" = "抱歉，由于您的设备或帐户限制，您无法购买。";
+"IAP.Common.ErrorFetch" = "抱歉，无法从 App Store 获取购买信息。";
+"IAP.Common.Congrats" = "恭喜！";
+"IAP.Common.ValidateError" = "抱歉，无法验证您的购买。";
+"Premium.OnetapTranslate" = "快速翻译按钮";
+"Premium.IgnoreTranslate.Title" = "忽略的语言";
+"Premium.IgnoreTranslate.Header" = "应用会尝试检测每一条消息的语言。如果你在下面选择了忽略的语言，快速翻译按钮将不会显示。";
+
+/*Manage Filters*/
+"ManageFilters.Title" = "管理标签";
+"ManageFilters.Header" = "配置可用的过滤器";
+
+"Messages.Translate" = "翻译";
+"Messages.UndoTranslate" = "撤消翻译";
+"Messages.TranslateError" = "抱歉，翻译不可用。";
+
+/*NG Lab Registration Date*/
+"NGLab.RegDate.Btn" = "获取注册日期";
+"NGLab.RegDate.Title" = "注册日期";
+"NGLab.RegDate.Notice" = "这是一个大致日期";
+"NGLab.RegDate.MenuItem" = "已注册";
+"NGLab.RegDate.FetchError" = "对不起，无法获得注册日期。";
+
+/*Backup Settings*/
+"NiceFeatures.BackupIcloud" = "使用 iCloud 同步设置和分组";
+"NiceFeatures.BackupSettings" = "备份设置和分组";
+"NiceFeatures.BackupSettings.Notice" = "创建备份文件。点击备份文件恢复。";
+"NiceFeatures.BackupSettings.Done" = "备份已完成，存放在\"收藏夹\"里。";
+"NiceFeatures.BackupSettings.Error" = "创建备份出错";
+
+"NiceFeatures.RestoreSettings.Confirm" = "您确定要从备份文件中恢复分组和设置吗？\n⚠️ 这将会覆盖当前的数据";
+"NiceFeatures.RestoreSettings.Done" = "分组和设置已恢复成功";
+"NiceFeatures.RestoreSettings.Error" = "恢复设置出错，备份文件可能已损坏。";
+
+/*Preview Mode*/
+"Gmod.Restricted" = "在幽灵模式下，您不能发送消息。";
+"Gmod.Unavailable" = "幽灵模式不可用";
+"Gmod.Disable.Notice" = "您的近期上线状态可见性将会变为«%1»。";
+"Gmod" = "幽灵模式";
+"Gmod.Enable" = "启用幽灵模式？";
+"Gmod.Disable" = "关闭幽灵模式？";
+"Gmod.Notice" = "通过 Telegram 隐私设置，您的在线状态会对所有人隐藏。\n如果您进入私有对话，将会显示警告提示。\n如果您在对话中发送或编辑任何消息，您的在线状态可能会显示出来。";
+
+"SendWithKb" = "按<回车>发送";
+"NiceFeatures.ShowGmodIcon" = "显示幽灵模式图标";
+"Gmod.OpenChatQ" = "打开对话？";
+"Gmod.OpenChatNotice" = "对话将被标记为“已读”，不过您可以长按（Force Touch）预览对话";
+"Gmod.OpenChatBtn" = "是的，打开此对话";
+"Gmod.DisableBtn" = "禁用告警提示";

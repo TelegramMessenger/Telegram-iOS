@@ -9,7 +9,7 @@
 			<string>INSendMessageIntent</string>
 			<key>IntentExamples</key>
 			<array>
-				<string>Stuur een Telegram-bericht naar Maartje met ik ben er over 15 minuten.</string>
+				<string>Stuur een Nicegram-bericht naar Maartje met ik ben er over 15 minuten.</string>
 			</array>
 		</dict>
 	</array>

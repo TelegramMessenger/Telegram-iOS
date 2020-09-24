@@ -9,7 +9,7 @@
 			<string>INSendMessageIntent</string>
 			<key>IntentExamples</key>
 			<array>
-				<string>Enviar uma mensagem no Telegram para a Alice dizendo que eu chegarei lá em 15 minutos</string>
+				<string>Enviar uma mensagem no Nicegram para a Alice dizendo que eu chegarei lá em 15 minutos</string>
 			</array>
 		</dict>
 	</array>

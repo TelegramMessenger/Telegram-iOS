@@ -1,0 +1,140 @@
+"AppName" = "Nicegram";
+
+/*ChatFilter*/
+"ChatFilter.Bots" = "Botlar";
+"ChatFilter.Channels" = "Kanallar";
+"ChatFilter.Private" = "Kullanıcılar";
+"ChatFilter.Groups" = "Gruplar";
+"ChatFilter.Unread" = "Okunmamış";
+"ChatFilter.Unmuted" = "Sessize Alınmış";
+"ChatFilter.Favourites" = "Favoriler";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "Nicegram";
+"NiceFeatures.Tabs.Header" = "SEKMELER";
+"NiceFeatures.Tabs.ShowContacts" = "Kişiler Sekmesini Göster";
+"NiceFeatures.ChatScreen.Header" = "SOHBET EKRANI";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "Animasyonlu Çıkartmalar";
+"NiceFeatures.useBackCam" = "Arka kamerayı kullan (Yuvarlak Videolar)";
+
+"NiceFeatures.Folders.Header" = "KLASÖRLER";
+"NiceFeatures.Folders.TgFolders" = "Alttaki Klasörler";
+"NiceFeatures.Folders.TgFolders.Notice" = "iOS tarzı klasör listesi";
+
+"NiceFeatures.RoundVideos.Header" = "YUVARLAK VİDEOLAR";
+"NiceFeatures.RoundVideos.UseRearCamera" = "Arka kamerayla başlat";
+
+/*Save to Cloud*/
+"Chat.SaveToCloud" = "Buluta Kaydet";
+
+/*Open Pin*/
+"Chat.OpenPin" = "Sabiti Göster";
+"ChatFilter.Admin" = "Yönetici";
+"NiceFeatures.Notifications.HideNotifyAccount" = "Hesabı bildirimde gizle";
+"NiceFeatures.Notifications.HideNotifyAccountNotice" = "«Kullanıcı → Hesap» yerine sadece «Kullanıcı» göreceksiniz. Yalnızca çoklu hesaplar için.";
+"NiceFeatures.Notifications.Fix" = "İstenmeyen Bildirimleri Devre Dışı Bırak";
+"NiceFeatures.Notifications.FixNotice" = "Sessiz sohbetlerden bildirimler alıyorsanız kullanışlıdır.\nBildirimlerden yanıtlama, hesap etiketleri ve medya önizlemeleri kullanılamaz olacak.";
+"NiceFeatures.Filters.Header" = "FİLTRELER (SEKMELER)";
+"NiceFeatures.Filters.Notice" = "Özel sekmelerin sayısını seçin.\nFiltreyi değiştirmek için sekmeye uzun basın.";
+"NiceFeatures.Filters.ShowBadge" = "Rozetleri Göster (Filtreler)";
+"NiceFeatures.UseClassicInfoUi" = "Klasik Sohbet Bilgisi Arayüzünü Kullan";
+
+/*Common*/
+"Common.ExitNow" = "Şimdi Çık";
+"Common.Later" = "Sonra";
+"Common.RestartRequired" = "Yeniden Başlatma Gerekli!";
+"NiceFeatures.Tabs.ShowNames" = "Sekme İsimlerini Göster";
+"Chat.ForwardAsCopy" = "Kopya Olarak İlet";
+
+/*Folder*/
+"Folder.DefaultName" = "Klasör";
+"Folder.New" = "Yeni Klasör";
+"Folder.Created" = "Klasör oluşturuldu";
+"Folder.AddToExisting" = "Var Olan Klasöre Ekle";
+"Folder.Updated" = "Klasör güncellendi";
+"Folder.Create" = "Klasör Oluştur...";
+"Folder.Create.Name" = "Klasör İsmi";
+"Folder.Create.Placeholder" = "Klasör...";
+"Folder.LimitExceeded" = "Üzgünüz, 3’ten fazla özel klasör oluşturamazsınız.\nDaha fazla klasör Premium’da kullanılabilir.";
+"NiceFeatures.HideNumber" = "Ayarlarda numarayı gizle";
+
+/*NGWeb*/
+"NGWeb.Blocked" = "AppStore Kuralları yüzünden Nicegram’da kullanılamıyor";
+
+/*Browser*/
+/*Please, Go to «Data & Storage» to configure default browser*/
+"NiceFeatures.Use.DataStorage" = "Lütfen, varsayılan tarayıcıyı ayarlamak için «%1» kısmını kullanın";
+"NiceFeatures.Browser.Header" = "Bağlantılar";
+"NiceFeatures.Browser.UseBrowser" = "Bağlantıları tarayıcıda aç";
+"NiceFeatures.Browser.UseBrowserNotice" = "Nicegram, bağlantıları uygulama içi yerine harici tarayıcıda açacak. Seçilen tarayıcı yüklü olmalı.";
+"ChatFilter.Missed" = "Kaçırılan";
+
+/*Premium*/
+"Premium.Title" = "Premium";
+"Premium.UnlimitedPins.Header" = "SINIRSIZ SABİTLENMİŞ SOHBET";
+"Premium.SyncPins" = "Senkronize Sabitlenmiş Sohbetler";
+"Premium.SyncPins.Notice.ON" = "Eğer diğer sistemlerinizde sabit sohbetlerinizi değiştirirseniz, Nicegram’da da DEĞİŞECEKTİR.";
+"Premium.SyncPins.Notice.OFF" = "Eğer diğer sistemlerinizde sabit sohbetlerinizi değiştirirseniz, Nicegram’da DEĞİŞMEYECEKTİR.";
+"Premium.Missed.Header" = "Kaçırılan mesajlar";
+"Premium.Missed" = "Kaçırılan mesajlarda bildirim";
+"Premium.Missed.Notice" = "Uzun bir süreden sonra (uyku, çalışma vb.) uygulamayı açtığınızda, Nicegram size okunmamış özel mesajlar ve bahsedilmeler hakkında bildirim gönderecek.";
+"Folder.DeleteAsk" = "Klasörü Sil";
+"Folder.NeedPremium" = "Bu klasör sadece Premium ile kullanılabilir. Premium’u alabilir ya da kaydırarak klasörü silebilirsiniz.";
+"Common.SupportChatUsername" = "nicegram_tr";
+"Common.FAQUrl" = "https://nicegram.app/tr/faq/";
+"Common.FAQ.Button" = "Nicegram SSS";
+"Common.FAQ.Intro" = "Lütfen Nicegram Destek’in sadece geliştirici ve topluluktan ibaret olduğunu unutmayın.\n\nİlk olarak, Nicegram SSS’e göz atın: önemli çözüm ipuçları ve birçok soruya cevaplar var.";
+"IAP.Premium.Title" = "Premium";
+"IAP.Premium.Subtitle" = "Reddedemeyeceğiniz benzersiz özellikler!";
+"IAP.Premium.Features" = "Sınırsız Klasörler & Sabit Sohbetler\nHızlı Mesaj Çevirmeni\nKaçırılan Mesaj Filtresi & Sekme Yönetimi\nUygulama Açılışında Yeni Mesajlar Özeti";
+"IAP.Premium.Activated" = "Premium Aktive Edildi!";
+"IAP.Common.Restore" = "Satın Alımları Geri Yükle";
+"IAP.Common.CantPay" = "Üzgünüz, ama cihaz veya hesap kısıtlamalarınız yüzünden satın alım yapamazsınız.";
+"IAP.Common.ErrorFetch" = "Üzgünüz, App Store satın alımları çekilemiyor.";
+"IAP.Common.Congrats" = "Tebrikler!";
+"IAP.Common.ValidateError" = "Üzgünüz, satın alımınız doğrulanamıyor.";
+"Premium.OnetapTranslate" = "Hızlı Çeviri butonu";
+"Premium.IgnoreTranslate.Title" = "İstenmeyen Diller";
+"Premium.IgnoreTranslate.Header" = "Uygulama her mesajın dilini tanımlamaya çalışacak. Hızlı Çeviri butonu aşağıda seçtiğiniz diller için DEVRE DIŞI olacak.";
+
+/*Manage Filters*/
+"ManageFilters.Title" = "Sekmeleri Yönet";
+"ManageFilters.Header" = "KULLANILAN FİLTRELERİ ÖZELLEŞTİR";
+
+"Messages.Translate" = "Çevir";
+"Messages.UndoTranslate" = "Çeviriyi Geri Al";
+"Messages.TranslateError" = "Üzgünüz, çeviri kullanılamıyor.";
+
+/*NG Lab Registration Date*/
+"NGLab.RegDate.Btn" = "Kayıt Tarihini Göster";
+"NGLab.RegDate.Title" = "Kayıt Tarihi";
+"NGLab.RegDate.Notice" = "Bu yaklaşık bir tarihtir";
+"NGLab.RegDate.MenuItem" = "kayıtlı";
+"NGLab.RegDate.FetchError" = "Üzgünüz, kayıt tarihi gösterilemiyor.";
+
+/*Backup Settings*/
+"NiceFeatures.BackupIcloud" = "Ayarları & Klasörleri iCloud ile Senkronize Et";
+"NiceFeatures.BackupSettings" = "Ayarları & Klasörleri Yedekle";
+"NiceFeatures.BackupSettings.Notice" = "Yedekleme dosyası oluşturur. Geri yüklemek için dosyaya dokunun.";
+"NiceFeatures.BackupSettings.Done" = "Yedekleme, Kayıtlı Mesajlar’a gönderildi";
+"NiceFeatures.BackupSettings.Error" = "Yedekleme oluşturulurken hata";
+
+"NiceFeatures.RestoreSettings.Confirm" = "Klasör & Ayarları dosyadan geri yüklemek istediğinize emin misiniz?\n⚠️ Şu ankinin üzerine yazılacak";
+"NiceFeatures.RestoreSettings.Done" = "Klasör & Ayarlar başarılı bir şekilde geri yüklendi";
+"NiceFeatures.RestoreSettings.Error" = "Ayarlar geri yüklenirken hata. Dosya bozulmuş olabilir";
+
+/*Preview Mode*/
+"Gmod.Restricted" = "Önizleme Modu’nda mesaj gönderemezsiniz.";
+"Gmod.Unavailable" = "Önizleme Modu Kullanılamaz";
+"Gmod.Disable.Notice" = "Son görülme görünürlüğünüz, «%1» olarak ayarlanacak";
+"Gmod" = "Önizleme Modu";
+"Gmod.Enable" = "Önizleme Modu etkinleştirilsin mi?";
+"Gmod.Disable" = "Önizleme Modu devre dışı bırakılsın mı?";
+"Gmod.Notice" = "Çevrimiçi durumunuz, Telegram gizlilik ayarlarına göre herkesten gizlenecek.\nUygulama, siz özel bir sohbete girerken bir uyarı gösterecek.\nHERHANGİ BİR mesaj yazar veya gönderirseniz, çevrimiçi durumunuz görünebilir.";
+
+"SendWithKb" = "«Enter» butonu ile gönder";
+"NiceFeatures.ShowGmodIcon" = "Önizleme Modu simgesini göster";
+"Gmod.OpenChatQ" = "Sohbet açılsın mı?";
+"Gmod.OpenChatNotice" = "Sohbet “okundu” olarak işaretlenecek, ama uzun dokunma ile sohbeti önizleyebilirsiniz (force-touch)";
+"Gmod.OpenChatBtn" = "Evet, sohbeti aç";
+"Gmod.DisableBtn" = "Uyarıları devre dışı bırak";

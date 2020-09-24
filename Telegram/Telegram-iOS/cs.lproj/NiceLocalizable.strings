@@ -1,0 +1,81 @@
+"AppName" = "Nicegram";
+
+/*ChatFilter*/
+"ChatFilter.Bots" = "Bots";
+"ChatFilter.Channels" = "Channels";
+"ChatFilter.Private" = "Users";
+"ChatFilter.Groups" = "Groups";
+"ChatFilter.Unread" = "Unread";
+"ChatFilter.Unmuted" = "Unmuted";
+"ChatFilter.Favourites" = "Favourites";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "Nicegram";
+"NiceFeatures.Tabs.Header" = "TABS";
+"NiceFeatures.Tabs.ShowContacts" = "Show Contacts Tab";
+"NiceFeatures.ChatScreen.Header" = "CHAT SCREEN";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "Animated Stickers";
+
+/*Save to Cloud*/
+"Chat.SaveToCloud" = "Save to Cloud";
+
+/*Open Pin*/
+"Chat.OpenPin" = "Show Pin";
+"ChatFilter.Admin" = "Admin";
+"NiceFeatures.Notifications.Fix" = "Disable Unwanted Notifications";
+"NiceFeatures.Notifications.FixNotice" = "Useful if you get notifications from muted chats.\nReply from notifications, account labels and media previews will be unavailable.";
+"NiceFeatures.Filters.Header" = "FILTERS (TABS)";
+"NiceFeatures.Filters.Notice" = "Select the number of custom tabs.\nLongtap on tab to change filter.";
+
+/*Common*/
+"Common.ExitNow" = "Exit Now";
+"Common.Later" = "Later";
+"Common.RestartRequired" = "Restart Required!";
+"NiceFeatures.Tabs.ShowNames" = "Show Tab Names";
+"Chat.ForwardAsCopy" = "Forward As Copy";
+
+/*Folder*/
+"Folder.DefaultName" = "Folder";
+"Folder.New" = "New Folder";
+"Folder.Created" = "Folder created";
+"Folder.AddToExisting" = "Add to Existing Folder";
+"Folder.Updated" = "Folder updated";
+"Folder.Create" = "Create Folder...";
+"Folder.Create.Name" = "Folder Name";
+"Folder.Create.Placeholder" = "Folder...";
+"Folder.LimitExceeded" = "Sorry, you can create no more then 3 custom folders.\nMore folders are available in Premium.";
+"NiceFeatures.HideNumber" = "Hide phone in settings";
+
+/*NGWeb*/
+"NGWeb.Blocked" = "Unavailable in Nicegram due to AppStore Guidelines";
+
+/*Browser*/
+"NiceFeatures.Browser.Header" = "URLs";
+"NiceFeatures.Browser.UseBrowser" = "Open links in browser";
+"NiceFeatures.Browser.UseBrowserNotice" = "Nicegram will open links in external browser instead of in-app. Selected browser must be installed.";
+"ChatFilter.Missed" = "Missed";
+
+/*Premium*/
+"Premium.Title" = "Premium";
+"Premium.UnlimitedPins.Header" = "UNLIMITED PINNED CHATS";
+"Premium.SyncPins" = "Sync Pinned Chats";
+"Premium.SyncPins.Notice.ON" = "If you change pinned chats in other client, they WILL CHANGE in Nicegram.";
+"Premium.SyncPins.Notice.OFF" = "If you change pinned chats in other client, they WILL NOT CHANGE in Nicegram.";
+"Premium.Missed.Header" = "Missed messages";
+"Premium.Missed" = "Notify on missed messages";
+"Premium.Missed.Notice" = "When you open App after long delay (sleeping, studying, etc.), Nicegram will notify you about unread private messages and mentions.";
+"Folder.DeleteAsk" = "Delete Folder";
+"Folder.NeedPremium" = "This Folder is only available with Premium. You can get Premium or delete Folder with swipe.";
+"Common.SupportChatUsername" = "nicegramchat";
+"Common.FAQUrl" = "https://nicegram.app/faq/";
+"Common.FAQ.Button" = "Nicegram FAQ";
+"Common.FAQ.Intro" = "Please note that Nicegram Support is done by the only one developer and community.\n\nFirstly, take a look at the Nicegram FAQ: it has important troubleshooting tips and answers to most questions.";
+"IAP.Premium.Title" = "Premium";
+"IAP.Premium.Subtitle" = "Unique features you can't refuse!";
+"IAP.Premium.Features" = "Unlimited Folders\nUnlimited Pinned Chats\nMissed messages Filter\n«New Messages» digest on App launch";
+"IAP.Premium.Activated" = "Premium Activated!";
+"IAP.Common.Restore" = "Restore Purchases";
+"IAP.Common.CantPay" = "Sorry, but You can't make purchases because of your device or account restrictions.";
+"IAP.Common.ErrorFetch" = "Sorry, сan't fetch App Store purchases.";
+"IAP.Common.Congrats" = "Congratulations!";
+"IAP.Common.ValidateError" = "Sorry, can't validate your purchase.";

@@ -1,0 +1,140 @@
+"AppName" = "Nicegram";
+
+/*ChatFilter*/
+"ChatFilter.Bots" = "機器人";
+"ChatFilter.Channels" = "頻道";
+"ChatFilter.Private" = "用戶";
+"ChatFilter.Groups" = "群組";
+"ChatFilter.Unread" = "未讀訊息";
+"ChatFilter.Unmuted" = "開啟通知";
+"ChatFilter.Favourites" = "常用";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "Nicegram";
+"NiceFeatures.Tabs.Header" = "標籤";
+"NiceFeatures.Tabs.ShowContacts" = "顯示聯絡人標籤";
+"NiceFeatures.ChatScreen.Header" = "對話介面";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "動態貼圖";
+"NiceFeatures.useBackCam" = "使用後置鏡頭 (圓形影片)";
+
+"NiceFeatures.Folders.Header" = "資料夾";
+"NiceFeatures.Folders.TgFolders" = "底部資料夾";
+"NiceFeatures.Folders.TgFolders.Notice" = "iOS 風格資料夾列表";
+
+"NiceFeatures.RoundVideos.Header" = "圓形影片";
+"NiceFeatures.RoundVideos.UseRearCamera" = "開啟後置鏡頭";
+
+/*Save to Cloud*/
+"Chat.SaveToCloud" = "轉傳到儲存的訊息";
+
+/*Open Pin*/
+"Chat.OpenPin" = "顯示置頂";
+"ChatFilter.Admin" = "管理員";
+"NiceFeatures.Notifications.HideNotifyAccount" = "在通知中隱藏帳號";
+"NiceFeatures.Notifications.HideNotifyAccountNotice" = "而不是「用戶→帳戶」，您將只看到「用戶」。僅適用於多個帳戶。";
+"NiceFeatures.Notifications.Fix" = "停用非必要通知";
+"NiceFeatures.Notifications.FixNotice" = "如果您想將「已關閉通知」的對話完全禁音，這將非常有用。\n來自回覆、@username、媒體預覽的通知將被停用。";
+"NiceFeatures.Filters.Header" = "篩選標籤";
+"NiceFeatures.Filters.Notice" = "選擇篩選標籤的數量。\n長按標籤來更改篩選器。";
+"NiceFeatures.Filters.ShowBadge" = "顯示標記 (小紅點)";
+"NiceFeatures.UseClassicInfoUi" = "使用經典版介面";
+
+/*Common*/
+"Common.ExitNow" = "立即結束";
+"Common.Later" = "稍後";
+"Common.RestartRequired" = "必須重新啟動";
+"NiceFeatures.Tabs.ShowNames" = "顯示篩選標籤名稱";
+"Chat.ForwardAsCopy" = "複製後轉傳";
+
+/*Folder*/
+"Folder.DefaultName" = "資料夾";
+"Folder.New" = "新資料夾";
+"Folder.Created" = "已建立資料夾";
+"Folder.AddToExisting" = "新增至現有資料夾";
+"Folder.Updated" = "資料夾已更新";
+"Folder.Create" = "建立資料夾…";
+"Folder.Create.Name" = "資料夾名稱";
+"Folder.Create.Placeholder" = "資料夾…";
+"Folder.LimitExceeded" = "抱歉，您最多只能建立 3 個自訂資料夾。\n進階版將可建立更多資料夾。";
+"NiceFeatures.HideNumber" = "在設定中隱藏電話號碼";
+
+/*NGWeb*/
+"NGWeb.Blocked" = "由於 App Store 審核指南，在 Nicegram 中不可用";
+
+/*Browser*/
+/*Please, Go to «Data & Storage» to configure default browser*/
+"NiceFeatures.Use.DataStorage" = "請使用 «%1» 設定預設瀏覽器";
+"NiceFeatures.Browser.Header" = "連結";
+"NiceFeatures.Browser.UseBrowser" = "在瀏覽器中開啟連結";
+"NiceFeatures.Browser.UseBrowserNotice" = "Nicegram 將在外部瀏覽器開啟連結而不是在 App 內開啟，必須安裝所選擇的瀏覽器。";
+"ChatFilter.Missed" = "錯過的訊息";
+
+/*Premium*/
+"Premium.Title" = "進階版功能";
+"Premium.UnlimitedPins.Header" = "無限置頂";
+"Premium.SyncPins" = "同步置頂對話";
+"Premium.SyncPins.Notice.ON" = "如果您在其他客戶端中變更置頂對話，它們在 Nicegram 中將會同步。";
+"Premium.SyncPins.Notice.OFF" = "不如果您在其他客戶端中變更置頂對話，它們在 Nicegram 中將不會同步。";
+"Premium.Missed.Header" = "錯過的訊息";
+"Premium.Missed" = "錯過的訊息通知";
+"Premium.Missed.Notice" = "長時間未上線後開啟 App 時，Nicegram 會通知您未讀的對話及 TAG";
+"Folder.DeleteAsk" = "刪除資料夾";
+"Folder.NeedPremium" = "這個資料夾是進階版功能。您可以透過刷卡來升級，或是刪除一些對話夾。";
+"Common.SupportChatUsername" = "nicegram_tw";
+"Common.FAQUrl" = "https://nicegram-tw.gitbook.io/";
+"Common.FAQ.Button" = "Nicegram 常見問題";
+"Common.FAQ.Intro" = "注意：Nicegram 支援僅由開發人員和志願者提供。\n\n請先看一下 Nicegram 常見問題：它有故障排除指示和其他大多數問題的解答。";
+"IAP.Premium.Title" = "進階版功能";
+"IAP.Premium.Subtitle" = "您無法抗拒的獨特功能！";
+"IAP.Premium.Features" = "無限資料夾＆置頂對話\n快速訊息翻譯\n錯過消息篩選及標籤管理\n在進入 App 時提示「新訊息」";
+"IAP.Premium.Activated" = "已升級進階版！";
+"IAP.Common.Restore" = "恢復購買";
+"IAP.Common.CantPay" = "抱歉，由於您的設備或帳戶限制，您無法購買。";
+"IAP.Common.ErrorFetch" = "抱歉，無法取得 App Store 購買的商品。";
+"IAP.Common.Congrats" = "恭喜！";
+"IAP.Common.ValidateError" = "很抱歉，無法驗證您的購買。";
+"Premium.OnetapTranslate" = "快速翻譯按鈕";
+"Premium.IgnoreTranslate.Title" = "忽略的語言";
+"Premium.IgnoreTranslate.Header" = "應用程序將嘗試檢測每則訊息的語言。對於以下選擇的語言，「快速翻譯」按鈕將被停用。";
+
+/*Manage Filters*/
+"ManageFilters.Title" = "管理標籤";
+"ManageFilters.Header" = "設定過濾器";
+
+"Messages.Translate" = "翻譯";
+"Messages.UndoTranslate" = "取消翻譯";
+"Messages.TranslateError" = "抱歉，無法翻譯。";
+
+/*NG Lab Registration Date*/
+"NGLab.RegDate.Btn" = "取得註冊日期";
+"NGLab.RegDate.Title" = "註冊日期";
+"NGLab.RegDate.Notice" = "這是一個大概的日期";
+"NGLab.RegDate.MenuItem" = "已註冊";
+"NGLab.RegDate.FetchError" = "抱歉，無法取得註冊日期。";
+
+/*Backup Settings*/
+"NiceFeatures.BackupIcloud" = "從 iCloud 同步設定與資料夾";
+"NiceFeatures.BackupSettings" = "備份設定與資料夾";
+"NiceFeatures.BackupSettings.Notice" = "建立備份檔，點擊檔案開始還原。";
+"NiceFeatures.BackupSettings.Done" = "備份已儲存";
+"NiceFeatures.BackupSettings.Error" = "建立備份檔時發生錯誤";
+
+"NiceFeatures.RestoreSettings.Confirm" = "您確定要從備份檔還原「文件夾和設定」？\n⚠️它將覆蓋當前數據";
+"NiceFeatures.RestoreSettings.Done" = "已成功還原「文件夾與設定」";
+"NiceFeatures.RestoreSettings.Error" = "恢復設定錯誤，備份檔可能已損壞";
+
+/*Preview Mode*/
+"Gmod.Restricted" = "您無法在預覽模式下傳送訊息";
+"Gmod.Unavailable" = "預覽模式無法使用";
+"Gmod.Disable.Notice" = "您的「線上狀態」設定將變更為 «%1»";
+"Gmod" = "預覽模式";
+"Gmod.Enable" = "啟用預覽模式？";
+"Gmod.Disable" = "停用預覽模式？";
+"Gmod.Notice" = "您的線上狀態會被 Telegram 隱私設定隱藏。\n如果您進入私人對話，App 會顯示警告。\n如果您傳送或輸入任何訊息，你的線上狀態將可能會被顯示。";
+
+"SendWithKb" = "點擊 «Enter» 傳送";
+"NiceFeatures.ShowGmodIcon" = "顯示預覽模式圖示";
+"Gmod.OpenChatQ" = "開啟對話？";
+"Gmod.OpenChatNotice" = "對話將被標記為「已讀」，但您可以長按來預覽聊天。";
+"Gmod.OpenChatBtn" = "是的，打開對話";
+"Gmod.DisableBtn" = "停用警告";

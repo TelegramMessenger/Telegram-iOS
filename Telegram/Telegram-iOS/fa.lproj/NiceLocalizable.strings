@@ -1,0 +1,122 @@
+"AppName" = "Nicegram";
+
+/*ChatFilter*/
+"ChatFilter.Bots" = "ربات ها";
+"ChatFilter.Channels" = "کانال‌ ها";
+"ChatFilter.Private" = "کاربران";
+"ChatFilter.Groups" = "گروه ها";
+"ChatFilter.Unread" = "خوانده نشده";
+"ChatFilter.Unmuted" = "بیصدا نشده";
+"ChatFilter.Favourites" = "علاقه‌ مندی‌ها";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "Nicegram";
+"NiceFeatures.Tabs.Header" = "زبانه ها";
+"NiceFeatures.Tabs.ShowContacts" = "نمایش برگه مخاطبین";
+"NiceFeatures.ChatScreen.Header" = "صفحه چت";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "استیکرهای انیمیشنی";
+"NiceFeatures.useBackCam" = "از دوربین عقب استفاده کنید (فیلم های گرد)";
+
+/*Save to Cloud*/
+"Chat.SaveToCloud" = "ذخیره در فضای ابری";
+
+/*Open Pin*/
+"Chat.OpenPin" = "نشان دادن سنجاق";
+"ChatFilter.Admin" = "مدیر";
+"NiceFeatures.Notifications.HideNotifyAccount" = "پنهان کردن اکانت در اطلاع";
+"NiceFeatures.Notifications.Fix" = "غیرفعال کردن اعلان های ناخواسته";
+"NiceFeatures.Notifications.FixNotice" = "در صورت دریافت اعلان از گپ های بیصدا مفید است.\nپاسخ از اعلان ها، برچسب های حساب و پیش نمایش رسانه ها در دسترس نخواهد بود.";
+"NiceFeatures.Filters.Header" = "فیلترها (برگه ها)";
+"NiceFeatures.Filters.Notice" = "تعداد برگه ها را انتخاب کنید.\nبرای تغییر فیلتر نوار را حرکت دهید.";
+"NiceFeatures.UseClassicInfoUi" = "استفاده از رابط کاربری کلاسیک چت";
+
+/*Common*/
+"Common.ExitNow" = "خروج";
+"Common.Later" = "بعدا";
+"Common.RestartRequired" = "احتیاج به راه اندازی مجدد!";
+"NiceFeatures.Tabs.ShowNames" = "نشان دادن برگه اسم ها";
+"Chat.ForwardAsCopy" = "فروارد بدون نقل قول";
+
+/*Folder*/
+"Folder.DefaultName" = "پوشه";
+"Folder.New" = "پوشه جدید";
+"Folder.Created" = "پوشه ساخته شد";
+"Folder.AddToExisting" = "به پوشه موجود اضافه شود";
+"Folder.Updated" = "بروزرسانی پوشه";
+"Folder.Create" = "ساخت پوشه";
+"Folder.Create.Name" = "نام پوشه";
+"Folder.Create.Placeholder" = "پوشه...";
+"Folder.LimitExceeded" = "متاسفم،شما بیش از ۳ پوشه نمی‌توانید ایجاد کنید.\nپوشه های بیشتر بزودی دردسترس خواهند بود.";
+"NiceFeatures.HideNumber" = "پنهان کردن شماره موبایل در تنظیمات";
+
+/*NGWeb*/
+"NGWeb.Blocked" = "به دلیل دستورالعمل های اپ استور ، انجام عملیات در نایس گرام مقدور نیست";
+
+/*Browser*/
+/*Please, Go to «Data & Storage» to configure default browser*/
+"NiceFeatures.Use.DataStorage" = "لطفاً برای تنظیم مرورگر پیش فرض از «%1» استفاده کنید";
+"NiceFeatures.Browser.Header" = "نشانی های اینترنتی";
+"NiceFeatures.Browser.UseBrowser" = "بازکردن لینک ها در مرورگر";
+"NiceFeatures.Browser.UseBrowserNotice" = "Nicegram بجای خود برنامه، لینک هارا در مرورگر خارجی باز میکند. مرورگر انتخاب شده باید نصب شده باشد.";
+"ChatFilter.Missed" = "از دست رفته";
+
+/*Premium*/
+"Premium.Title" = "ویژه";
+"Premium.UnlimitedPins.Header" = "گفتگو های سنجاق شده نامحدود";
+"Premium.SyncPins" = "همگام سازی گفتگوهای سنجاق شده";
+"Premium.SyncPins.Notice.ON" = "اگر در برنامه دیگری گفتگو های سنجاق شده را تغییر دهید، آن ها در Nicegram نیز تغییر خواهند کرد.";
+"Premium.SyncPins.Notice.OFF" = "اگر در برنامه دیگری گفتگو های سنجاق شده را تغییر دهید، آن ها در Nicegram نیز تغییر نخواهند کرد.";
+"Premium.Missed.Header" = "پیام های از دست رفته";
+"Premium.Missed" = "اطلاع رسانی پیام های از دست رفته";
+"Premium.Missed.Notice" = "هنگامی که برنامه را بعد از تأخیر طولانی (خواب ، مطالعه و غیره) باز می کنید، Nicegram در مورد پیام های خصوصی خوانده نشده و منشن شده به شما اطلاع می دهد.";
+"Folder.DeleteAsk" = "حذف پوشه";
+"Folder.NeedPremium" = "دسترسی به این پوشه فقط با عضویت رسمی حقوقمند مقدور می باشد شما میتوانید برای دریافت این حق عضویت اقدام و یا پوشه را با جاروب نمودن ، پاک نمایید.";
+"Common.SupportChatUsername" = "nicegram_fa";
+"Common.FAQUrl" = "https://nicegram.app/faq";
+"Common.FAQ.Button" = "سوالات رایج تلگرام";
+"Common.FAQ.Intro" = "لطفاً توجه داشته باشید که پشتیبانی Nicegram توسط تنها یک توسعه دهنده و انجمن انجام می شود.\n\nدر مرحله اول، به سؤالات متداول Nicegram نگاهی بیندازید: دارای نکات مهم عیب یابی و پاسخ بیشتر سوالات است.";
+"IAP.Premium.Title" = "ویژه";
+"IAP.Premium.Subtitle" = "ویژگی های منحصر به فردی که شما نمیتوانید رد کنید!";
+"IAP.Premium.Features" = "بینهایت پوشه و چت ها سنجاق شده \nمترجم سریع پیام\nفیلتر پیام های دیده نشده و مدیریت تب ها\nخلاصه پیام های جدید در هنگام بارگزاری اپ";
+"IAP.Premium.Activated" = "نسخه ویژه فعال شد!";
+"IAP.Common.Restore" = "بازیابی خریدها";
+"IAP.Common.CantPay" = "متأسفیم، اما به دلیل محدودیت دستگاه یا حساب خود نمی توانید خرید کنید.";
+"IAP.Common.ErrorFetch" = "متاسفانه خرید از اپ استور مقدور نیست.";
+"IAP.Common.Congrats" = "تبریک میگوییم!";
+"IAP.Common.ValidateError" = "متأسفیم، نمی توانید خرید خود را تأیید کنید.";
+"Premium.OnetapTranslate" = "دکمه ترجمه سریع";
+"Premium.IgnoreTranslate.Title" = "زبان های نادیده گرفته شده ";
+
+/*Manage Filters*/
+"ManageFilters.Title" = "مدیریت زبانه ها";
+"ManageFilters.Header" = "فیلترهای موجود را پیکربندی کنید";
+
+"Messages.Translate" = "ترجمه";
+"Messages.UndoTranslate" = "بازگردانی ترجمه";
+"Messages.TranslateError" = "متأسفیم، ترجمه در دسترس نیست.";
+
+/*NG Lab Registration Date*/
+"NGLab.RegDate.Btn" = "دریافت تاریخ ثبت نام";
+"NGLab.RegDate.Title" = "تاریخ ثبت‌نام";
+"NGLab.RegDate.Notice" = "تاریخ به صورت تقریبی درج می شود";
+"NGLab.RegDate.MenuItem" = "ثبت شد";
+"NGLab.RegDate.FetchError" = "متاسفانه دریافت تاریخ ثبت نام مقدور نیست.";
+"NiceFeatures.BackupSettings" = "تنظیمات پشتیبان گیری و پوشه ها";
+"NiceFeatures.BackupSettings.Done" = "تهیه نسخه پشتیبان از پیام های ذخیره شده کامل شد";
+"NiceFeatures.BackupSettings.Error" = "خطا در ایجاد نسخه پشتیبان";
+
+"NiceFeatures.RestoreSettings.Confirm" = "آیا مطمئن هستید که می خواید فولدر ها و تنظیمات را از فایل بازگردانید؟\n⚠️ اطلاعات فعلی شما جایگزین خواهد شد";
+
+/*Preview Mode*/
+"Gmod.Restricted" = "در حالت پیش نمایش نمی توانید پیام ارسال کنید.";
+"Gmod.Unavailable" = "حالت پیش نمایش در دسترس نیست";
+"Gmod" = "حالت پیش نمایش";
+"Gmod.Enable" = "حالت پیش نمایش فعال شود؟";
+"Gmod.Disable" = "حالت پیش نمایش غیر فعال شود؟";
+
+"SendWithKb" = "با دکمه enter بفرست";
+"NiceFeatures.ShowGmodIcon" = "آیکون پیش نمایش را نشان بده";
+"Gmod.OpenChatQ" = "چت را باز کنم؟";
+"Gmod.OpenChatNotice" = "چت به صورت خوانده شده نشان داده می شود ، ولی شما می توانید پیش نمایش چت را با نگه داشتن  طولانی ببیند(لمس طولانی)";
+"Gmod.OpenChatBtn" = "بله ، چت را باز کن";
+"Gmod.DisableBtn" = "هشدار ها را غیر فعال کن";

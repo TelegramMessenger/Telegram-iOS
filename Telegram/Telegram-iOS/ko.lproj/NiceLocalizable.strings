@@ -1,0 +1,140 @@
+"AppName" = "Nicegram";
+
+/*ChatFilter*/
+"ChatFilter.Bots" = "봇";
+"ChatFilter.Channels" = "채널";
+"ChatFilter.Private" = "사용자";
+"ChatFilter.Groups" = "그룹";
+"ChatFilter.Unread" = "읽지 않음";
+"ChatFilter.Unmuted" = "음소거 해제";
+"ChatFilter.Favourites" = "즐겨찾기";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "Nicegram";
+"NiceFeatures.Tabs.Header" = "탭";
+"NiceFeatures.Tabs.ShowContacts" = "연락처 탭 보이기";
+"NiceFeatures.ChatScreen.Header" = "채팅 화면";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "애니메이션 스티커";
+"NiceFeatures.useBackCam" = "후면 카메라 사용 (라운드 비디오)";
+
+"NiceFeatures.Folders.Header" = "폴더";
+"NiceFeatures.Folders.TgFolders" = "폴더를 하단에 표시";
+"NiceFeatures.Folders.TgFolders.Notice" = "iOS 스타일 폴더 목록";
+
+"NiceFeatures.RoundVideos.Header" = "라운드 비디오";
+"NiceFeatures.RoundVideos.UseRearCamera" = "후면 카메라로 시작";
+
+/*Save to Cloud*/
+"Chat.SaveToCloud" = "클라우드에 저장";
+
+/*Open Pin*/
+"Chat.OpenPin" = "핀 표시";
+"ChatFilter.Admin" = "관리자";
+"NiceFeatures.Notifications.HideNotifyAccount" = "알림에서 계정 숨기기";
+"NiceFeatures.Notifications.HideNotifyAccountNotice" = "«사용자 → 계정»대신«사용자»만 표시됩니다. 멀티계정에만 해당됩니다.";
+"NiceFeatures.Notifications.Fix" = "원치 않는 알림 비활성화";
+"NiceFeatures.Notifications.FixNotice" = "음소거 된 채팅에서 알림을 받는 경우 유용합니다.\n알림, 계정 라벨 및 미디어 미리보기에서는 답장을 보낼 수 없습니다.";
+"NiceFeatures.Filters.Header" = "필터 (탭)";
+"NiceFeatures.Filters.Notice" = "사용자 정의 탭 수를 선택하세요.\n필터를 변경하려면 탭을 길게 탭하세요.";
+"NiceFeatures.Filters.ShowBadge" = "배지 표시 (필터)";
+"NiceFeatures.UseClassicInfoUi" = "기본 채팅 정보 UI 사용";
+
+/*Common*/
+"Common.ExitNow" = "종료하기";
+"Common.Later" = "나중에";
+"Common.RestartRequired" = "다시 시작 필요!";
+"NiceFeatures.Tabs.ShowNames" = "탭 이름 표시";
+"Chat.ForwardAsCopy" = "복사본으로 전달";
+
+/*Folder*/
+"Folder.DefaultName" = "폴더";
+"Folder.New" = "새 폴더";
+"Folder.Created" = "폴더가 추가 되었습니다";
+"Folder.AddToExisting" = "기존 폴더에 추가";
+"Folder.Updated" = "폴더가 업데이트 되었습니다";
+"Folder.Create" = "폴더 만들기";
+"Folder.Create.Name" = "폴더 이름";
+"Folder.Create.Placeholder" = "폴더";
+"Folder.LimitExceeded" = "죄송합니다. 사용자 지정 폴더는 3 개까지만 만들 수 있습니다.\n프리미엄 에서 더 많은 폴더를 사용할 수 있습니다.";
+"NiceFeatures.HideNumber" = "설정에서 전화 숨기기";
+
+/*NGWeb*/
+"NGWeb.Blocked" = "AppStore 지침으로 인해 Nicegram 에서 사용할 수 없음";
+
+/*Browser*/
+/*Please, Go to «Data & Storage» to configure default browser*/
+"NiceFeatures.Use.DataStorage" = "%1 을 사용하여 기본 브라우저를 설정 하세요";
+"NiceFeatures.Browser.Header" = "웹주소";
+"NiceFeatures.Browser.UseBrowser" = "브라우저에서 링크 열기";
+"NiceFeatures.Browser.UseBrowserNotice" = "Nicegram은 인앱 대신 외부 브라우저에서 링크를 엽니 다. 선택한 브라우저는 설치되어 있어야 합니다.";
+"ChatFilter.Missed" = "부재중";
+
+/*Premium*/
+"Premium.Title" = "프리미엄";
+"Premium.UnlimitedPins.Header" = "채팅창 무제한 고정";
+"Premium.SyncPins" = "고정 된 채팅 동기화";
+"Premium.SyncPins.Notice.ON" = "다른 장치에서 고정 된 채팅을 변경하면, Nicegram 에서도 변경됩니다.";
+"Premium.SyncPins.Notice.OFF" = "다른 장치에서 고정 된 채팅을 변경하여도, Nicegram 에서는 변경되지 않습니다.";
+"Premium.Missed.Header" = "부재중 메세지";
+"Premium.Missed" = "부재중 메시지 알림";
+"Premium.Missed.Notice" = "장시간 지연 후 (수면, 공부 등) 앱을 열면, Nicegram 이 읽지 않은 개인 메시지 및 멘션에 대해 알려줍니다.";
+"Folder.DeleteAsk" = "폴더 삭제";
+"Folder.NeedPremium" = "이 폴더는 프리미엄 에서만 사용할 수 있습니다. 옆으로 밀어서 프리미엄을 받거나 폴더를 삭제할 수 있습니다.";
+"Common.SupportChatUsername" = "nicegramchat";
+"Common.FAQUrl" = "https://nicegram.app/faq/";
+"Common.FAQ.Button" = "Nicegram FAQ";
+"Common.FAQ.Intro" = "Nicegram 지원은 유일한 개발자 및 커뮤니티에 의해 수행됩니다.\n\n먼저 Nicegram FAQ 를 살펴보세요. 대부분의 질문에 대한 중요한 문제 해결 팁과 답변이 있습니다.";
+"IAP.Premium.Title" = "프리미엄";
+"IAP.Premium.Subtitle" = "거부 할 수없는 독특한 기능!";
+"IAP.Premium.Features" = "무제한 폴더 및 고정 된 채팅\n빠른 메시지 번역기\n부재중 메시지 필터 및 탭 관리\n앱 시작시 «새 메시지» 요약";
+"IAP.Premium.Activated" = "프리미엄 활성화!";
+"IAP.Common.Restore" = "구입 내역 복원";
+"IAP.Common.CantPay" = "죄송합니다. 기기 또는 계정 제한으로 인해 구매할 수 없습니다.";
+"IAP.Common.ErrorFetch" = "죄송합니다. AppStore 구매를 가져올 수 없습니다.";
+"IAP.Common.Congrats" = "축하합니다!";
+"IAP.Common.ValidateError" = "죄송합니다. 구매를 확인할 수 없습니다.";
+"Premium.OnetapTranslate" = "빠른 번역 버튼";
+"Premium.IgnoreTranslate.Title" = "제외한 언어";
+"Premium.IgnoreTranslate.Header" = "앱은 각 메시지의 언어를 감지하려고 합니다. 아래에서 선택한 언어에 대해서는 빠른 번역 버튼이 비활성화 됩니다.";
+
+/*Manage Filters*/
+"ManageFilters.Title" = "탭 관리";
+"ManageFilters.Header" = "사용 가능한 필터 구성";
+
+"Messages.Translate" = "번역";
+"Messages.UndoTranslate" = "번역 취소";
+"Messages.TranslateError" = "죄송합니다. 번역 할 수 없습니다.";
+
+/*NG Lab Registration Date*/
+"NGLab.RegDate.Btn" = "등록 날짜 확인";
+"NGLab.RegDate.Title" = "등록 날짜";
+"NGLab.RegDate.Notice" = "이것은 대략적인 날짜입니다";
+"NGLab.RegDate.MenuItem" = "등록됨";
+"NGLab.RegDate.FetchError" = "죄송합니다. 등록일을 확인할 수 없습니다.";
+
+/*Backup Settings*/
+"NiceFeatures.BackupIcloud" = "iCloud 에 설정 및 폴더 동기화";
+"NiceFeatures.BackupSettings" = "백업 설정 및 폴더";
+"NiceFeatures.BackupSettings.Notice" = "백업 파일을 생성합니다. 복원 할 파일을 탭하세요.";
+"NiceFeatures.BackupSettings.Done" = "저장된 메시지로 백업 전송";
+"NiceFeatures.BackupSettings.Error" = "백업 생성 오류";
+
+"NiceFeatures.RestoreSettings.Confirm" = "파일에서 폴더 및 설정을 복원 하시겠습니까?\n⚠️ 현재 데이터를 덮어 씌웁니다";
+"NiceFeatures.RestoreSettings.Done" = "폴더 및 설정이 성공적으로 복원되었습니다";
+"NiceFeatures.RestoreSettings.Error" = "설정을 복원하는 중에 오류가 발생했습니다. 파일이 손상되었을 수 있습니다";
+
+/*Preview Mode*/
+"Gmod.Restricted" = "미리보기 모드에서는 메시지를 보낼 수 없습니다.";
+"Gmod.Unavailable" = "미리보기 모드를 사용할 수 없음";
+"Gmod.Disable.Notice" = "마지막 접속 시간이 %1 로 설정 됩니다";
+"Gmod" = "미리보기 모드";
+"Gmod.Enable" = "미리보기 모드를 사용 하시겠습니까?";
+"Gmod.Disable" = "미리보기를 사용 중지 하시겠습니까?";
+"Gmod.Notice" = "텔레그램 개인 정보 설정에 의해 온라인 상태가 모든 사람에게 표시되지 않습니다.\n비공개 채팅에 들어가면 앱에 경고가 표시됩니다.\n메시지를 보내거나 입력하면 온라인 상태가 공개 될 수 있습니다.";
+
+"SendWithKb" = "«입력»버튼으로 보내기";
+"NiceFeatures.ShowGmodIcon" = "미리보기 모드 아이콘 표시";
+"Gmod.OpenChatQ" = "채팅 열기";
+"Gmod.OpenChatNotice" = "채팅은 \"읽음\"으로 표시되지만 길게 탭 (강제 터치)하여 채팅을 미리 볼 수 있습니다.";
+"Gmod.OpenChatBtn" = "예, 채팅을 엽니다.";
+"Gmod.DisableBtn" = "경고 비활성화";

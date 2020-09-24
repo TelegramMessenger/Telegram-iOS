@@ -1,0 +1,140 @@
+"AppName" = "نایسگرام";
+
+/*ChatFilter*/
+"ChatFilter.Bots" = "بۆتەکان";
+"ChatFilter.Channels" = "کەناڵەکان";
+"ChatFilter.Private" = "بەکارهێنەرەکان";
+"ChatFilter.Groups" = "گروپەکان";
+"ChatFilter.Unread" = "نەخوێندراوەکان";
+"ChatFilter.Unmuted" = "بێدەنگنەکراوەکان";
+"ChatFilter.Favourites" = "دڵخوازەکان";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "نایسگرام";
+"NiceFeatures.Tabs.Header" = "تابەکان";
+"NiceFeatures.Tabs.ShowContacts" = "نیشاندانی تابی کۆنتاکتەکان";
+"NiceFeatures.ChatScreen.Header" = "ڕووکاری چات";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "لەزگە جووڵاوەکان";
+"NiceFeatures.useBackCam" = "بەکارهێنانی کامێرای پشتەوە (ڤیدیۆی بازنەیی)";
+
+"NiceFeatures.Folders.Header" = "بوخچەکان";
+"NiceFeatures.Folders.TgFolders" = "بوخچەکان لە خوارەوە";
+"NiceFeatures.Folders.TgFolders.Notice" = "لیستی بوخچەی شێوازی iOS";
+
+"NiceFeatures.RoundVideos.Header" = "ڤیدیۆ بازنەییەکان";
+"NiceFeatures.RoundVideos.UseRearCamera" = "دەستپێکردن بە کامێرای پشتەوە";
+
+/*Save to Cloud*/
+"Chat.SaveToCloud" = "هەڵگرتن لە کڵاود";
+
+/*Open Pin*/
+"Chat.OpenPin" = "نیشاندانی هەڵواسراو";
+"ChatFilter.Admin" = "بەڕێوەبەر";
+"NiceFeatures.Notifications.HideNotifyAccount" = "شاردنەوەی هەژمار لە ئاگادارکردنەوە";
+"NiceFeatures.Notifications.HideNotifyAccountNotice" = "لە جیاتیی «بەکارهێنەر ← هەژمار» تەنها «بەکارهێنەر» دەبینیت. تەنها بۆ چەند هەژمارێک.";
+"NiceFeatures.Notifications.Fix" = "ناچالاککردنی ئاگادارکردنەوە نەویستراوەکان";
+"NiceFeatures.Notifications.FixNotice" = "سوودبەخشە ئەگەر ئاگادارکردنەوەت لە چاتە بێدەنگکراوەکانەوە بۆ بێت. وەڵامدانەوە لە ئاگادارکردنەوەکانەوە، لە باجی هەژمارەکانەوە، و پێشبینییەکانی میدیا بەردەستنابن.";
+"NiceFeatures.Filters.Header" = "پاڵاوتنەکان (تابەکان)";
+"NiceFeatures.Filters.Notice" = "ژمارەیەک تابی ڕاسپێردراو هەڵبژێرە.\nبۆ ماوەیەکی درێژ دەستبنێ بە تابەکە بۆ گۆڕینی پاڵاوتن.";
+"NiceFeatures.Filters.ShowBadge" = "نیشاندانی باجەکان (پاڵاونتەکان)";
+"NiceFeatures.UseClassicInfoUi" = "بەکارهێنانی زانیاریی چاتی کلاسیکی";
+
+/*Common*/
+"Common.ExitNow" = "دەرچوون ئێستا";
+"Common.Later" = "دواتر";
+"Common.RestartRequired" = "دەستپێکردنەوە پێویستە!";
+"NiceFeatures.Tabs.ShowNames" = "نیشاندانی ناوی تابەکان";
+"Chat.ForwardAsCopy" = "گواستنەوە وەک لەبەرگیراوە";
+
+/*Folder*/
+"Folder.DefaultName" = "بوخچە";
+"Folder.New" = "بوخچەی نوێ";
+"Folder.Created" = "بوخچە دروستکرا";
+"Folder.AddToExisting" = "زیادکردن بۆ بوخچەیەکی هەبوو";
+"Folder.Updated" = "بوخچە نوێکرایەوە";
+"Folder.Create" = "دروستکردنی بوخچە...";
+"Folder.Create.Name" = "ناوی بوخچە";
+"Folder.Create.Placeholder" = "بوخچە...";
+"Folder.LimitExceeded" = "بمبوورە، تەنها ٣ بوخچە دەتوانی بە دڵی خۆت دروستبکەیت. بوخچەی زۆرتر بە پارەیە.";
+"NiceFeatures.HideNumber" = "شاردنەوەی تەلەفۆن لە ڕێکخستنەکان";
+
+/*NGWeb*/
+"NGWeb.Blocked" = "بەردەست نییە لە نایسگرام لەبەر یاساکانی ئاپستۆر";
+
+/*Browser*/
+/*Please, Go to «Data & Storage» to configure default browser*/
+"NiceFeatures.Use.DataStorage" = "تکایە «%1» بەکاربێنە بۆ گۆڕینی وێبگەڕی بنەڕەت";
+"NiceFeatures.Browser.Header" = "یواڕێڵەکان";
+"NiceFeatures.Browser.UseBrowser" = "کردنەوەی بەستەرەکان لە وێبگەڕ";
+"NiceFeatures.Browser.UseBrowserNotice" = "نایسگرام لینکەکان لە وێبگەڕی دەرەکییەوە دەکاتەوە لە جیاتیی ناو بەرنامە. وێبگەڕە هەڵبژێردراوەکە دەبێت هەبێت.";
+"ChatFilter.Missed" = "لەدەستچوو";
+
+/*Premium*/
+"Premium.Title" = "پارە";
+"Premium.UnlimitedPins.Header" = "چاتی هەڵواسراوی بێسنوور";
+"Premium.SyncPins" = "هاوکاتکردنی چاتە هەڵواسراوەکان";
+"Premium.SyncPins.Notice.ON" = "ئەگەر پەیامە هەڵواسراوەکان لە شوێنی دیکە بگۆڕیت، لە نایسکرامیش دەگۆڕێن.";
+"Premium.SyncPins.Notice.OFF" = "ئەگەر پەیامە هەڵواسراوەکان لە شوێنی دیکە بگۆڕیت، لە نایسگرام ناگۆڕێن.";
+"Premium.Missed.Header" = "پەیامە لەدەستچووەکان";
+"Premium.Missed" = "ئاگادارکردنەوە لە پەیامە بیرچووەکان";
+"Premium.Missed.Notice" = "کاتێک بەرنامەکە دوای ماوەیەکی زۆر دەکەیتەوە (خەوتن، سەعیکردن، هتد.)، نایسگرام ئاگادارت دەکاتەوە دەربارەی پەیامە تەیبەتییە نەخوێندراوەکان و ئاماژەپێکردنەکان.";
+"Folder.DeleteAsk" = "سڕینەوەی بوخچە";
+"Folder.NeedPremium" = "ئەم بوخچەیە تەنها بە پارە هەیە. دەتوانیت بە پارە بەدەستی بهێنیت یان بە خشاندن بوخچە بسڕیتەوە.";
+"Common.SupportChatUsername" = "nicegramchat";
+"Common.FAQUrl" = "https://nicegram.app/faq";
+"Common.FAQ.Button" = "پرسیارە باوەکانی نایسگرام";
+"Common.FAQ.Intro" = "تکایە تێبینیی ئەوە بکە کە پشتگیریی نایسگرام تەنها لەلایەن پەرەپێدەران و کۆمەڵگاوە دەکرێت.\n\nیەکەمجار، پرسیارە باوەکانی نایسگرام ببینە: شتی گرنگی کێشەشکاندنی هەیە و وەڵامی زۆربەی پرسیارەکان دەداتەوە.";
+"IAP.Premium.Title" = "پارە";
+"IAP.Premium.Subtitle" = "تایبەتمەندیی تایبەت کە ناتوانیت ڕەتی بکەیتەوە!";
+"IAP.Premium.Features" = "بوخچەی بێسنوور و چاتی هەڵواسراو\nوەرگێڕی پەیامی خێرا\nپاڵاوتنی پەیامی لەدەستچوو و بەڕێوەبەردنی تابەکان\nشیکردنەوەی «پەیامە نوێیەکان» لە کاتی کردنەوەی بەرنامەکە";
+"IAP.Premium.Activated" = "پارەدان چالاککرا!";
+"IAP.Common.Restore" = "گەڕاندنەوەی پارەدانەکان";
+"IAP.Common.CantPay" = "ببورە، بەڵام ناتوانیت شت بکڕیت لەبەر ئامێرەکەت یان سنوورەکانی هەژمارت.";
+"IAP.Common.ErrorFetch" = "ببورە، نەتواندرا پارەدانەکانی ئاپستۆر بهێندرێن.";
+"IAP.Common.Congrats" = "پیرۆزە!";
+"IAP.Common.ValidateError" = "ببورە، ناتوانیت پارەدانەکەت بسەلمێنییت.";
+"Premium.OnetapTranslate" = "دوگمەی وەرگێڕانی خێرا";
+"Premium.IgnoreTranslate.Title" = "زمانە پشتگوێخراوەکان";
+"Premium.IgnoreTranslate.Header" = "بەرنامەکە هەوڵ دەدات زمانی هەر پەیامێک دیاریبکات. دوگمەی وەرگێڕانی خێرا ناچالاکدەکرێت بۆ ئەو زمانانەی لە خوارەوە هەڵیدەبژێریت.";
+
+/*Manage Filters*/
+"ManageFilters.Title" = "بەڕێوەبردنی تابەکان";
+"ManageFilters.Header" = "گۆڕینی پاڵاوتنە بەردەستەکان";
+
+"Messages.Translate" = "وەرگێڕان";
+"Messages.UndoTranslate" = "گەڕاندنەوەی وەرگێڕان";
+"Messages.TranslateError" = "ببورە، وەرگێڕان بەردەست نییە.";
+
+/*NG Lab Registration Date*/
+"NGLab.RegDate.Btn" = "دەستکەوتنی بەرواری تۆمارکردن";
+"NGLab.RegDate.Title" = "بەرواری تۆمارکردن";
+"NGLab.RegDate.Notice" = "ئەمە بەروارێکی نزیککراوەیە";
+"NGLab.RegDate.MenuItem" = "تۆمارکراو";
+"NGLab.RegDate.FetchError" = "ببورە، نەتواندرا بەرواری تۆمارکردن دەستبکەوێت.";
+
+/*Backup Settings*/
+"NiceFeatures.BackupIcloud" = "هاوکاتکردنی ڕێکخستن و بوخچەکان لەگەڵ ئایکڵاود";
+"NiceFeatures.BackupSettings" = "باکەپکردنی ڕێکخستنەکان و بوخچەکان";
+"NiceFeatures.BackupSettings.Notice" = "فایلی باکەپ دروستدەکات. دەستبنێ بە فایل بۆ گەڕاندنەوە.";
+"NiceFeatures.BackupSettings.Done" = "باکەپ نێردرا بۆ پەیامە پاشەکەوتکراوەکان";
+"NiceFeatures.BackupSettings.Error" = "هەڵە ڕوویدا لە دروستکردنی باکەپ";
+
+"NiceFeatures.RestoreSettings.Confirm" = "ئایا بێگومانیت لەوەی کە دەتەوێت بوخچە و ڕێکخستنەکان بگەڕێنیتەوە لە فایلەوە؟\n⚠️ بەسەر زانیارییەکانی ئێستادا دێتەوە";
+"NiceFeatures.RestoreSettings.Done" = "بوخچە و ڕێکخستنەکان سەرکەوتووانە گەڕێندرانەوە";
+"NiceFeatures.RestoreSettings.Error" = "هەڵە ڕوویدا لە گەڕاندنەوەی ڕێکخستنەکان. فایلەکە لەوانەیە شێوابێت";
+
+/*Preview Mode*/
+"Gmod.Restricted" = "ناتوانیت پەیام بنێریت لە دۆخی پێشبینین.";
+"Gmod.Unavailable" = "دۆخی پێشبینین بەردەست نییە";
+"Gmod.Disable.Notice" = "کۆتا جار بینینی تۆ کرا بە «%1»";
+"Gmod" = "دۆخی پێشبینین";
+"Gmod.Enable" = "دۆخی پێشبینین چالاکبکرێت؟";
+"Gmod.Disable" = "دۆخی پێشبینین ناچالاکبکرێت؟";
+"Gmod.Notice" = "خەڵک ناتوانێت بزانێت ئەگەر لەسەرهێڵیت بە ڕێکخستنەکانی تایبەتی تێلێگرام.\nبەرنامەکە ئاگادارکردنەوەیەک نیشاندەدات ئەگەر بچیتە چاتێکی تایبەت.\nلەوانەیە دەربکەوێت کە لەسەرهێڵیت ئەگەر هەر پەیامێک بنووسیت یان بنێریت.";
+
+"SendWithKb" = "ناردن بە دوگمەی «Enter»";
+"NiceFeatures.ShowGmodIcon" = "نیشاندانی وینۆچکەی دۆخی پێشبینین";
+"Gmod.OpenChatQ" = "چاتەکە بکرێتەوە؟";
+"Gmod.OpenChatNotice" = "چاتەکە وەک «خوێدراو» دیاری دەکرێت، بەڵام تۆ دەتوانیت چاتە پێشببینیت بە دەستدان لێی بۆ ماوەیەکی درێژ";
+"Gmod.OpenChatBtn" = "بەڵێ، چاتەکە بکەرەوە";
+"Gmod.DisableBtn" = "ناچالاککردنی ئاگادارکردنەوەکان";

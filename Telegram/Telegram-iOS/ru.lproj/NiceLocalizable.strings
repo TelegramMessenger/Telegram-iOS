@@ -1,0 +1,133 @@
+"AppName" = "Найсграм";
+
+/*ChatFilter*/
+"ChatFilter.Bots" = "Боты";
+"ChatFilter.Channels" = "Каналы";
+"ChatFilter.Private" = "Пользователи";
+"ChatFilter.Groups" = "Группы";
+"ChatFilter.Unread" = "Непрочитанные";
+"ChatFilter.Unmuted" = "Со звуком";
+"ChatFilter.Favourites" = "Важные";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "Найсграм";
+"NiceFeatures.Tabs.Header" = "ВКЛАДКИ";
+"NiceFeatures.Tabs.ShowContacts" = "Вкладка «Контакты»";
+"NiceFeatures.ChatScreen.Header" = "ЧАТ";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "Анимированные Стикеры";
+"NiceFeatures.useBackCam" = "Задняя камера (Видеосообщения)";
+
+/*Save to Cloud*/
+"Chat.SaveToCloud" = "Сохранить в Избранное";
+
+/*Open Pin*/
+"Chat.OpenPin" = "Показать Пин";
+"ChatFilter.Admin" = "Админ";
+"NiceFeatures.Notifications.HideNotifyAccount" = "Скрыть аккаунт в уведомлении";
+"NiceFeatures.Notifications.HideNotifyAccountNotice" = "Вместо «Пользователь → Аккаунт» вы будете видеть только «Пользователь». Только для нескольких аккаунтов.";
+"NiceFeatures.Notifications.Fix" = "Отключить нежелательные уведомления";
+"NiceFeatures.Notifications.FixNotice" = "Нужно, если вы получаете уведомления, даже если они отключены в чате. Ответ из уведомления, метки аккаунтов и предпросмотр медиа будут недоступны.";
+"NiceFeatures.Filters.Header" = "ФИЛЬТРЫ (ВКЛАДКИ)";
+"NiceFeatures.Filters.Notice" = "Выберите количество пользовательских вкладок.\nДолгое нажатие по вкладке позволит сменить фильтр.";
+"NiceFeatures.Filters.ShowBadge" = "Показывать бейджи (Фильтры)";
+"NiceFeatures.UseClassicInfoUi" = "Классический интерфейс «о чате»";
+
+/*Common*/
+"Common.ExitNow" = "Выйти Сейчас";
+"Common.Later" = "Позже";
+"Common.RestartRequired" = "Необходим перезапуск!";
+"NiceFeatures.Tabs.ShowNames" = "Показывать Имена Вкладок";
+"Chat.ForwardAsCopy" = "Переслать без Автора";
+
+/*Folder*/
+"Folder.DefaultName" = "Папка";
+"Folder.New" = "Новая Папка";
+"Folder.Created" = "Папка создана";
+"Folder.AddToExisting" = "Добавить в Папку";
+"Folder.Updated" = "Папка обновлена";
+"Folder.Create" = "Создать Папку...";
+"Folder.Create.Name" = "Название Папки";
+"Folder.Create.Placeholder" = "Папка...";
+"Folder.LimitExceeded" = "К сожалению, создать можно не больше 3 папок. Совсем скоро можно будет создать больше.";
+"NiceFeatures.HideNumber" = "Скрыть номер в настройках";
+
+/*NGWeb*/
+"NGWeb.Blocked" = "Недоступно в Nicegram по правилам AppStore";
+
+/*Browser*/
+/*Please, Go to «Data & Storage» to configure default browser*/
+"NiceFeatures.Use.DataStorage" = "Пожалуйста, используйте «%1» для настройки браузера по умолчанию";
+"NiceFeatures.Browser.Header" = "ССЫЛКИ";
+"NiceFeatures.Browser.UseBrowser" = "Открывать во внешнем браузере";
+"NiceFeatures.Browser.UseBrowserNotice" = "Nicegram будет открывать ссылки во внешнем браузере вместо встроенного. Выбранный браузер должен быть установлен.";
+"ChatFilter.Missed" = "Новые";
+
+/*Premium*/
+"Premium.Title" = "Премиум";
+"Premium.UnlimitedPins.Header" = "НЕОГРАНИЧЕННЫЕ ЗАКРЕПЛЁННЫЕ ЧАТЫ";
+"Premium.SyncPins" = "Синхронизировать Чаты";
+"Premium.SyncPins.Notice.ON" = "Если вы измените закрепленные чаты в другом клиенте, они ИЗМЕНЯТСЯ в Nicegram.";
+"Premium.SyncPins.Notice.OFF" = "Если вы измените закрепленные чаты в другом клиенте, они НЕ ИЗМЕНЯТСЯ в Nicegram.";
+"Premium.Missed.Header" = "Новые сообщения";
+"Premium.Missed" = "Уведомлять о пропущенных";
+"Premium.Missed.Notice" = "Когда вы открываете приложение после долгого отсутствия (сон, работа и т.д.), Nicegram откроет вкладку с непрочитанными сообщениями и упоминаниями.";
+"Folder.DeleteAsk" = "Удалить папку";
+"Folder.NeedPremium" = "Эта Папка доступна только с Премиумом. Вы можете получить Премиум или удалить папку свайпом.";
+"Common.SupportChatUsername" = "nicegram_ru";
+"Common.FAQUrl" = "https://nicegram.app/ru/faq/";
+"Common.FAQ.Button" = "Вопросы о Nicegram";
+"Common.FAQ.Intro" = "Пожалуйста, обратите внимание, что поддержка Nicegram осуществляется одним единственным разработчиком и сообществом.\n\nВ первую очередь, ознакомьтесь с часто задаваемыми вопросами о Nicegram: там Вы найдёте ответы на большинство вопросов и важные советы по устранению неполадок.";
+"IAP.Premium.Title" = "Премиум";
+"IAP.Premium.Subtitle" = "Уникальные функции, от которых трудно отказаться!";
+"IAP.Premium.Features" = "Бесконечные папки и закрепы\nБыстрый перевод сообщений\nФильтр пропущенных и Управление вкладками\nОбзор новых сообщений при старте Приложения";
+"IAP.Premium.Activated" = "Премиум Активирован!";
+"IAP.Common.Restore" = "Восстановить Покупки";
+"IAP.Common.CantPay" = "К сожалению, Вы не можете производить покупки ввиду ограничений вашего устройства или аккаунта.";
+"IAP.Common.ErrorFetch" = "Не удалось связаться с AppStore";
+"IAP.Common.Congrats" = "Поздравляем!";
+"IAP.Common.ValidateError" = "К сожалению, подтвердить покупку не удалось.";
+"Premium.OnetapTranslate" = "Кнопка быстрого перевода";
+"Premium.IgnoreTranslate.Title" = "Игнорируемые языки";
+"Premium.IgnoreTranslate.Header" = "Приложение пытается определить язык каждого сообщения. Кнопка быстрого перевода будет ОТКЛЮЧЕНА для выбранных языков ниже.";
+
+/*Manage Filters*/
+"ManageFilters.Title" = "Управление вкладками";
+"ManageFilters.Header" = "РЕДАКТИРОВАНИЕ ДОСТУПНЫХ ФИЛЬТРОВ";
+
+"Messages.Translate" = "Перевод";
+"Messages.UndoTranslate" = "Отменить Перевод";
+"Messages.TranslateError" = "К сожалению, перевод недоступен.";
+
+/*NG Lab Registration Date*/
+"NGLab.RegDate.Btn" = "Узнать дату регистрации";
+"NGLab.RegDate.Title" = "Дата регистрации";
+"NGLab.RegDate.Notice" = "Это примерная дата";
+"NGLab.RegDate.MenuItem" = "регистрация";
+"NGLab.RegDate.FetchError" = "К сожалению, дата регистрации недоступна.";
+
+/*Backup Settings*/
+"NiceFeatures.BackupIcloud" = "Синхронизация Настроек и Папок в iCloud";
+"NiceFeatures.BackupSettings" = "Резервное копирование настроек и папок";
+"NiceFeatures.BackupSettings.Notice" = "Создает бэкап файл. Тапни на файл для восстановления.";
+"NiceFeatures.BackupSettings.Done" = "Резервное копирование выполнено в сохраненные сообщения";
+"NiceFeatures.BackupSettings.Error" = "Ошибка при создании бэкапа";
+
+"NiceFeatures.RestoreSettings.Confirm" = "Восстановить Папки и Настройки из файла?\n⚠️ Текущие данные будут перезаписаны";
+"NiceFeatures.RestoreSettings.Done" = "Папки и настройки успешно восстановлены";
+"NiceFeatures.RestoreSettings.Error" = "Ошибка при восстановлении настроек. Возможно, файл повреждён";
+
+/*Preview Mode*/
+"Gmod.Restricted" = "Вы не можете отправлять сообщения в режиме предпросмотра.";
+"Gmod.Unavailable" = "Режим предпросмотра недоступен";
+"Gmod.Disable.Notice" = "Настройка видимости онлайн статуса будет установлена в «%1»";
+"Gmod" = "Режим предпросмотра";
+"Gmod.Enable" = "Включить режим предпросмотра?";
+"Gmod.Disable" = "Отключить режим предпросмотра?";
+"Gmod.Notice" = "Ваш онлайн статус будет скрыт от всех в настройках конфиденциальности Telegram.\nПриложение предупредит, если вы захотите открыть личный чат.\nВаш онлайн статус может быть виден, если вы отправите или напечатаете ЛЮБОЕ сообщение.";
+
+"SendWithKb" = "Отправка кнопкой «Enter»";
+"NiceFeatures.ShowGmodIcon" = "Иконка режима предпросмотра";
+"Gmod.OpenChatQ" = "Открыть чат?";
+"Gmod.OpenChatNotice" = "Чат будет помечен как \"прочитанный\", но вы можете просмотреть чат, не помечая его, долгим нажатием";
+"Gmod.OpenChatBtn" = "Да, открыть чат";
+"Gmod.DisableBtn" = "Отключить предупреждения";

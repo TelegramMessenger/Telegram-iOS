@@ -1,0 +1,116 @@
+"AppName" = "Nicegram";
+
+/*ChatFilter*/
+"ChatFilter.Bots" = "Boți";
+"ChatFilter.Channels" = "Canale";
+"ChatFilter.Private" = "Utilizatori";
+"ChatFilter.Groups" = "Grupuri";
+"ChatFilter.Unread" = "Necitit";
+"ChatFilter.Unmuted" = "Unmute";
+"ChatFilter.Favourites" = "Favorite";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "Nicegram";
+"NiceFeatures.Tabs.Header" = "FERESTRE";
+"NiceFeatures.Tabs.ShowContacts" = "Vizualizare contacte";
+"NiceFeatures.ChatScreen.Header" = "AFIȘARE CHAT";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "Stickere Animate";
+"NiceFeatures.useBackCam" = "Utilizați camera din spate (videoclipuri rotunde)";
+
+/*Save to Cloud*/
+"Chat.SaveToCloud" = "Salvează în Cloud";
+
+/*Open Pin*/
+"Chat.OpenPin" = "Afișare Pin";
+"ChatFilter.Admin" = "Administratori";
+"NiceFeatures.Notifications.HideNotifyAccount" = "Ascundeți contul în notificare";
+"NiceFeatures.Notifications.HideNotifyAccountNotice" = "În loc de «Utilizator → Cont», veți vedea doar «Utilizator». Numai pentru mai multe conturi.";
+"NiceFeatures.Notifications.Fix" = "Dezactivare notificări standard";
+"NiceFeatures.Notifications.FixNotice" = "Este util dacă primiți notificări de la chat-urile dezactivate.\nRăspunsul de la notificări, etichetele contului și previzualizările media nu vor fi disponibile.";
+"NiceFeatures.Filters.Header" = "FILTRE (FERESTRE)";
+"NiceFeatures.Filters.Notice" = "Selectați numărul de file personalizate.\nApăsați lung pe filă pentru a schimba filtrul.";
+"NiceFeatures.Filters.ShowBadge" = "Afișați Insigne (Filtre)";
+
+/*Common*/
+"Common.ExitNow" = "Ieșiți Acum";
+"Common.Later" = "Mai târziu";
+"Common.RestartRequired" = "Repornire Necesară!";
+"NiceFeatures.Tabs.ShowNames" = "Arată Fereastra cu Numele";
+"Chat.ForwardAsCopy" = "Redirecționeaza ca o Copie";
+
+/*Folder*/
+"Folder.DefaultName" = "Dosar";
+"Folder.New" = "Dosar nou";
+"Folder.Created" = "Dosar creat";
+"Folder.AddToExisting" = "Adaugă la un dosar existent";
+"Folder.Updated" = "Dosar actualizat";
+"Folder.Create" = "Creaţi folderul...";
+"Folder.Create.Name" = "Nume folder";
+"Folder.Create.Placeholder" = "Folder...";
+"Folder.LimitExceeded" = "Ne pare rău, nu puteți crea mai mult de 3 foldere personalizate.\nMai multe foldere sunt disponibile achiziţionând varianta Premium.";
+"NiceFeatures.HideNumber" = "Ascunde telefonul din setări";
+
+/*NGWeb*/
+"NGWeb.Blocked" = "Indisponibil în Nicegram datorită Instrucțiunilor din App Store";
+
+/*Browser*/
+/*Please, Go to «Data & Storage» to configure default browser*/
+"NiceFeatures.Use.DataStorage" = "Pentru a putea folosi, %1 configurațiva browser-ul prestabilit";
+"NiceFeatures.Browser.Header" = "URL-UL";
+"NiceFeatures.Browser.UseBrowser" = "Deschideți în navigator";
+"NiceFeatures.Browser.UseBrowserNotice" = "Nicegram va deschide legături în browser externe în afara aplicație. Browserul selectat trebuie instalat.";
+"ChatFilter.Missed" = "Pierdute";
+
+/*Premium*/
+"Premium.Title" = "Premium";
+"Premium.UnlimitedPins.Header" = "CHAT-URI FIXATE NELIMITATE";
+"Premium.SyncPins" = "Sincronizați chat-urile fixate (Pinned)";
+"Premium.SyncPins.Notice.ON" = "Dacă schimbați chat-urile fixate în alt client, acestea se vor schimba în Nicegram.";
+"Premium.SyncPins.Notice.OFF" = "Dacă schimbați chat-urile fixate în alt client, acestea NU SE VOR SCHIMBA în Nicegram.";
+"Premium.Missed.Header" = "Mesaje ratate";
+"Premium.Missed" = "Notificarea mesajelor pierdute";
+"Premium.Missed.Notice" = "Când deschideți aplicația după o întârziere lungă (dormit, studiat, etc.), Nicegram vă va anunța despre mesaje și mențiuni private necitite.";
+"Folder.DeleteAsk" = "Șterge Dosar";
+"Folder.NeedPremium" = "Acest Dosar este destina doar utilizatorilor Premium. Poți obtine Premium sau șterge Dosarul glisând.";
+"Common.SupportChatUsername" = "nicegramchat";
+"Common.FAQUrl" = "https://nicegram.app/faq/";
+"Common.FAQ.Button" = "Nicegram Întrebări frecvente";
+"Common.FAQ.Intro" = "Vă rugăm să rețineți că asistența Nicegram este realizată de un singur dezvoltator și de comunitate.";
+"IAP.Premium.Title" = "Premium";
+"IAP.Premium.Subtitle" = "Funcții unice pe care nu le poți refuza!";
+"IAP.Premium.Features" = "Dosare și chat-uri nelimitate\nTraducere rapidă de mesaje\nMesaje pierdute Filtrare și Gestionarea Filelor\n„Mesaje noi” la lansarea aplicației";
+"IAP.Premium.Activated" = "Premium Activat!";
+"IAP.Common.Restore" = "Restabiliţi cumpărăturile";
+"IAP.Common.CantPay" = "Ne pare rău, dar nu puteți face achiziții din cauza restricțiilor de pe dispozitiv sau cont.";
+"IAP.Common.ErrorFetch" = "Ne pare rău, nu putem prelua achizițiile din App Store.";
+"IAP.Common.Congrats" = "Felicitări!";
+"IAP.Common.ValidateError" = "Ne pare rău, nu putem valida achiziția.";
+"Premium.OnetapTranslate" = "Butonul Traducere Rapidă";
+"Premium.IgnoreTranslate.Title" = "Limbi Ignorate";
+"Premium.IgnoreTranslate.Header" = "App will try to detect language of each message. Butonul Traducere rapidă va fi DEZACTIVAT pentru toate limbile pe care le alegeți mai jos.";
+
+/*Manage Filters*/
+"ManageFilters.Title" = "Administrează Ferestre";
+"ManageFilters.Header" = "CONFIGURĂ FILTRELE DISPONIBILE";
+
+"Messages.Translate" = "Traduceți";
+"Messages.UndoTranslate" = "Anulează Traducerea";
+"Messages.TranslateError" = "Ne pare rău, traducere indisponibilă.";
+
+/*NG Lab Registration Date*/
+"NGLab.RegDate.Btn" = "Data înregistrării";
+"NGLab.RegDate.Title" = "Data înregistrării";
+"NGLab.RegDate.Notice" = "Aceasta este o dată aproximată";
+"NGLab.RegDate.MenuItem" = "înregistrat";
+"NGLab.RegDate.FetchError" = "Ne pare rău, nu putem obține data înregistrării.";
+
+/*Backup Settings*/
+"NiceFeatures.BackupIcloud" = "Sincronizați Setările și Dosarele cu iCloud";
+"NiceFeatures.BackupSettings" = "Copie de rezerva(Backup) Setări & Dosare";
+"NiceFeatures.BackupSettings.Notice" = "Creează copie de siguranță fișiere. Atingeți fișierul pentru restaurare.";
+"NiceFeatures.BackupSettings.Done" = "Copie de rezervă facută pentru Mesajele Salvate";
+"NiceFeatures.BackupSettings.Error" = "Eroare la crearea copiei de rezervă";
+
+"NiceFeatures.RestoreSettings.Confirm" = "Sigur doriți să restaurați folderele și setările din fișier?\n⚠️ Va anula datele actuale";
+"NiceFeatures.RestoreSettings.Done" = "Dosare & Setarile restaurat cu succes";
+"NiceFeatures.RestoreSettings.Error" = "Eroare restabilire setări. Fișierle pot fi corupte";

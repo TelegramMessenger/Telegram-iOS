@@ -1,0 +1,145 @@
+"AppName" = "Nicegram";
+
+/*ChatFilter*/
+"ChatFilter.Bots" = "Bots";
+"ChatFilter.Channels" = "Channels";
+"ChatFilter.Private" = "Users";
+"ChatFilter.Groups" = "Groups";
+"ChatFilter.Unread" = "Unread";
+"ChatFilter.Unmuted" = "Unmuted";
+"ChatFilter.Favourites" = "Favourites";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "Nicegram";
+"NiceFeatures.Tabs.Header" = "TABS";
+"NiceFeatures.Tabs.ShowContacts" = "Show Contacts Tab";
+"NiceFeatures.ChatScreen.Header" = "CHAT SCREEN";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "Animated Stickers";
+"NiceFeatures.useBackCam" = "Use Rear camera (Round Videos)";
+
+"NiceFeatures.Folders.Header" = "FOLDERS";
+"NiceFeatures.Folders.TgFolders" = "Folders at bottom";
+"NiceFeatures.Folders.TgFolders.Notice" = "iOS-styled folder list";
+
+"NiceFeatures.RoundVideos.Header" = "ROUND VIDEOS";
+"NiceFeatures.RoundVideos.UseRearCamera" = "Start with rear camera";
+
+/*Save to Cloud*/
+"Chat.SaveToCloud" = "Save to Cloud";
+
+/*Open Pin*/
+"Chat.OpenPin" = "Show Pin";
+"ChatFilter.Admin" = "Admin";
+"NiceFeatures.Notifications.HideNotifyAccount" = "Hide account in notification";
+"NiceFeatures.Notifications.HideNotifyAccountNotice" = "Instead of «User → Account» you will see only «User». For multiple accounts only.";
+"NiceFeatures.Notifications.Fix" = "Disable Unwanted Notifications";
+"NiceFeatures.Notifications.FixNotice" = "Useful if you get notifications from muted chats.\nReply from notifications, account labels, and media previews will be unavailable.";
+"NiceFeatures.Filters.Header" = "FILTERS (TABS)";
+"NiceFeatures.Filters.Notice" = "Select the number of custom tabs.\nLong-tap on tab to change filter.";
+"NiceFeatures.Filters.ShowBadge" = "Show Badges (Filters)";
+"NiceFeatures.UseClassicInfoUi" = "Use classic Chat Info UI";
+
+/*Common*/
+"Common.ExitNow" = "Exit Now";
+"Common.Later" = "Later";
+"Common.RestartRequired" = "Restart Required!";
+"NiceFeatures.Tabs.ShowNames" = "Show Tab Names";
+"Chat.ForwardAsCopy" = "Forward As Copy";
+
+/*Folder*/
+"Folder.DefaultName" = "Folder";
+"Folder.New" = "New Folder";
+"Folder.Created" = "Folder created";
+"Folder.AddToExisting" = "Add to Existing Folder";
+"Folder.Updated" = "Folder updated";
+"Folder.Create" = "Create Folder...";
+"Folder.Create.Name" = "Folder Name";
+"Folder.Create.Placeholder" = "Folder...";
+"Folder.LimitExceeded" = "Sorry, you can create no more than 3 custom folders.\nMore folders are available in Premium.";
+"NiceFeatures.HideNumber" = "Hide phone in settings";
+
+/*NGWeb*/
+"NGWeb.Blocked" = "Unavailable in Nicegram due to AppStore Guidelines";
+
+/*Browser*/
+/*Please, Go to «Data & Storage» to configure default browser*/
+"NiceFeatures.Use.DataStorage" = "Please, Use «%1» to configure default browser";
+"NiceFeatures.Browser.Header" = "URLs";
+"NiceFeatures.Browser.UseBrowser" = "Open links in browser";
+"NiceFeatures.Browser.UseBrowserNotice" = "Nicegram will open links in external browser instead of in-app. Selected browser must be installed.";
+"ChatFilter.Missed" = "Missed";
+
+/*Premium*/
+"Premium.Title" = "Premium";
+"Premium.UnlimitedPins.Header" = "UNLIMITED PINNED CHATS";
+"Premium.SyncPins" = "Sync Pinned Chats";
+"Premium.SyncPins.Notice.ON" = "If you change pinned chats in other client, they WILL CHANGE in Nicegram.";
+"Premium.SyncPins.Notice.OFF" = "If you change pinned chats in other client, they WILL NOT CHANGE in Nicegram.";
+"Premium.Missed.Header" = "Missed messages";
+"Premium.Missed" = "Notify on missed messages";
+"Premium.Missed.Notice" = "When you open App after long delay (sleeping, studying, etc.), Nicegram will notify you about unread private messages and mentions.";
+"Folder.DeleteAsk" = "Delete Folder";
+"Folder.NeedPremium" = "This Folder is only available with Premium. You can get Premium or delete Folder with swipe.";
+"Common.SupportChatUsername" = "nicegramchat";
+"Common.FAQUrl" = "https://nicegram.app/faq/";
+"Common.FAQ.Button" = "Nicegram FAQ";
+"Common.FAQ.Intro" = "Please note that Nicegram Support is done by the only developer and community.\n\nFirstly, take a look at the Nicegram FAQ: it has important troubleshooting tips and answers to most questions.";
+"IAP.Premium.Title" = "Premium";
+"IAP.Premium.Subtitle" = "Unique features you can't refuse!";
+"IAP.Premium.Features" = "Messages Translator\n\nMore features coming soon...";
+"IAP.Premium.Activated" = "Premium Activated!";
+"IAP.Common.Restore" = "Restore Purchases";
+"IAP.Common.CantPay" = "Sorry, but you can't make purchases because of your device or account restrictions.";
+"IAP.Common.ErrorFetch" = "Sorry, сan't fetch App Store purchases.";
+"IAP.Common.Congrats" = "Congratulations!";
+"IAP.Common.ValidateError" = "Sorry, can't validate your purchase.";
+"IAP.Common.Connecting" = "Connecting to AppStore...";
+"Premium.OnetapTranslate" = "Quick Translate button";
+"Premium.IgnoreTranslate.Title" = "Ignored Languages";
+"Premium.IgnoreTranslate.Header" = "Quick Translate button will be DISABLED for languages you choose below.";
+
+/*Manage Filters*/
+"ManageFilters.Title" = "Manage Tabs";
+"ManageFilters.Header" = "CONFIGURE AVAILABLE FILTERS";
+
+"Messages.Translate" = "Translate";
+"Messages.UndoTranslate" = "Undo Translate";
+"Messages.TranslateError" = "Sorry, translation unavailable.";
+
+/*NG Lab Registration Date*/
+"NGLab.RegDate.Btn" = "Get Registration Date";
+"NGLab.RegDate.Title" = "Registration Date";
+"NGLab.RegDate.Notice" = "This is an approximate date";
+"NGLab.RegDate.MenuItem" = "registered";
+"NGLab.RegDate.FetchError" = "Sorry, can't get registration date.";
+
+/*Backup Settings*/
+"NiceFeatures.BackupIcloud" = "Sync Settings & Folders with iCloud";
+"NiceFeatures.BackupSettings" = "Backup Settings & Folders";
+"NiceFeatures.BackupSettings.Notice" = "Creates backup file. Tap on file to restore.";
+"NiceFeatures.BackupSettings.Done" = "Backup sent to Saved Messages";
+"NiceFeatures.BackupSettings.Error" = "Error creating backup";
+
+"NiceFeatures.RestoreSettings.Confirm" = "Are you sure you want to restore Folders & Settings from file?\n⚠️ It will override current data";
+"NiceFeatures.RestoreSettings.Done" = "Folders & Settings succesfully restored";
+"NiceFeatures.RestoreSettings.Error" = "Error restoring settings. File may be corrupted";
+
+/*Preview Mode*/
+"Gmod.Restricted" = "You can't send messages in Preview Mode.";
+"Gmod.Unavailable" = "Preview Mode Unavailable";
+"Gmod.Disable.Notice" = "Your last seen visibility will be set to «%1»";
+"Gmod" = "Preview Mode";
+"Gmod.Enable" = "Enable Preview Mode?";
+"Gmod.Disable" = "Disable Preview Mode?";
+"Gmod.Notice" = "Your online status will be hidden from everyone by Telegram privacy settings.\nApp will show a warning if you're entering a private chat.\nYour online status may be revealed if you send or type ANY message.";
+
+"SendWithKb" = "Send with «Enter» button";
+"NiceFeatures.ShowGmodIcon" = "Show Preview Mode icon";
+"Gmod.OpenChatQ" = "Open chat?";
+"Gmod.OpenChatNotice" = "Chat will be marked as \"read\", but you can preview chat with a long-tap (force-touch)";
+"Gmod.OpenChatBtn" = "Yes, open the chat";
+"Gmod.DisableBtn" = "Disable warnings";
+
+"NicegramSettings.Other.hidePhoneInSettingsNotice" = "Your number will be hidden in the UI only. To hide it from others, please use Privacy settings.";
+"Premium.OnetapTranslate.LowPower" = "Recognition on Low Power";
+"Premium.OnetapTranslate.LowPower.Notice" = "App detects language of each message on your device. It's a high-prefomance task which can affect your battery life.";

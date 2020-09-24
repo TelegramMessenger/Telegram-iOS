@@ -9,7 +9,7 @@
 			<string>INSendMessageIntent</string>
 			<key>IntentExamples</key>
 			<array>
-				<string>أرسل رسالة لخالد عبر تيليجرام (Telegram) وأخبره أن هديته وصلت إلى المنزل</string>
+				<string>أرسل رسالة لخالد عبر تيليجرام (Nicegram) وأخبره أن هديته وصلت إلى المنزل</string>
 			</array>
 		</dict>
 	</array>

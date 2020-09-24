@@ -1,0 +1,58 @@
+"AppName" = "Nicegram";
+
+/*ChatFilter*/
+"ChatFilter.Bots" = "Boti";
+"ChatFilter.Channels" = "Kanály";
+"ChatFilter.Private" = "Užívatelia";
+"ChatFilter.Groups" = "Skupiny";
+"ChatFilter.Unread" = "Neprečítané";
+"ChatFilter.Unmuted" = "Nahlas";
+"ChatFilter.Favourites" = "Obľúbené";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "Nicegram";
+"NiceFeatures.Tabs.Header" = "ZÁLOŽKY";
+"NiceFeatures.Tabs.ShowContacts" = "Zobraziť kontakty";
+"NiceFeatures.ChatScreen.Header" = "CHATOVÁ OBRAZOVKA";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "Animované nálepky";
+
+/*Save to Cloud*/
+"Chat.SaveToCloud" = "Uložiť na Cloud";
+
+/*Open Pin*/
+"Chat.OpenPin" = "Zobraziť pripnuté";
+"ChatFilter.Admin" = "Admin";
+"NiceFeatures.Notifications.Fix" = "Vypnúť nechcené notifikácie";
+"NiceFeatures.Notifications.FixNotice" = "Nápomocné, pri dostávaní notifikácií zo stlmených chatov.\nOdpovede z notifikácií, názvy účtov a náhľady médií nebudú dostupné.";
+"NiceFeatures.Filters.Header" = "FILTRE (ZÁLOŽKY)";
+"NiceFeatures.Filters.Notice" = "Zvoľ počet vlastných záložiek.\nPodrž záložku pre zmenenie jej filtra.";
+
+/*Common*/
+"Common.ExitNow" = "Ukončiť";
+"Common.Later" = "Neskôr";
+"Common.RestartRequired" = "Vyžadovaný reštart!";
+"NiceFeatures.Tabs.ShowNames" = "Zobraziť názvy záložiek";
+"Chat.ForwardAsCopy" = "Preposlať ako kópiu";
+
+/*Folder*/
+"Folder.DefaultName" = "Priečinok";
+"Folder.New" = "Nový priečinok";
+"Folder.Created" = "Priečinok bol vytvorený";
+"Folder.AddToExisting" = "Pridať do existujúceho priečinku";
+"Folder.Updated" = "Priečinok aktualizovaný";
+"Folder.Create" = "Vytvoriť priečinok...";
+"Folder.Create.Name" = "Názov priečinku";
+"Folder.Create.Placeholder" = "Priečinok...";
+"NiceFeatures.Browser.UseBrowser" = "Otvoriť linku v prehliadači";
+"Folder.DeleteAsk" = "Odstrániť priečinok";
+"IAP.Premium.Title" = "Prémium";
+"IAP.Premium.Activated" = "Prémium Aktivované!";
+"IAP.Common.Restore" = "Obnoviť nákup";
+"IAP.Common.Congrats" = "Gratulujeme!";
+
+"Messages.Translate" = "Preložiť";
+
+/*NG Lab Registration Date*/
+"NGLab.RegDate.Btn" = "Dátum registrácie";
+"NGLab.RegDate.Title" = "Dátum registrácie";
+"NGLab.RegDate.MenuItem" = "zaregistrovaný";
