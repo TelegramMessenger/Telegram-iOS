@@ -481,6 +481,8 @@ private enum PeerInfoContextSubject {
 }
 
 private enum PeerInfoSettingsSection {
+    case nicegram
+    case premium
     case avatar
     case edit
     case proxy
@@ -617,6 +619,7 @@ private enum SettingsSection: Int, CaseIterable {
     case phone
     case accounts
     case proxy
+    case nicegram
     case shortcuts
     case advanced
     case extra
@@ -708,6 +711,22 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             }))
         }
     }
+    
+    
+    let locale = presentationData.strings.baseLanguageCode
+    var ngId = 0
+
+    let bb = (Bundle.main.infoDictionary?[kCFBundleVersionKey as String] ?? "") as! String
+    if !NicegramProducts.Premium.isEmpty && bb.last == "1" {
+        items[.nicegram]!.append(PeerInfoScreenDisclosureItem(id: ngId, text: l("Premium.Title", locale), icon: PresentationResourcesSettings.premiumIcon, action: {
+                 interaction.openSettings(.premium)
+        }))
+        ngId += 1
+    }
+    
+    items[.nicegram]!.append(PeerInfoScreenDisclosureItem(id: ngId, text: l("AppName", locale), icon: PresentationResourcesSettings.nicegramIcon, action: {
+        interaction.openSettings(.nicegram)
+    }))
     
     items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.Settings_SavedMessages, icon: PresentationResourcesSettings.savedMessages, action: {
         interaction.openSettings(.savedMessages)
