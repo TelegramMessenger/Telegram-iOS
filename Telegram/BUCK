@@ -44,6 +44,8 @@ framework_dependencies = [
     "//submodules/TelegramUI:TelegramUI",
 ]
 
+NGRESOURCES = ["//Nicegram/NGUI:NGUIAssets"]
+
 resource_dependencies = [
     "//submodules/LegacyComponents:LegacyComponentsAssets",
     "//submodules/LegacyComponents:LegacyComponentsResources",
@@ -61,7 +63,7 @@ resource_dependencies = [
     ":Icons",
     ":AdditionalIcons",
     ":LaunchScreen",
-]
+] + NGRESOURCES
 
 build_phase_scripts = [
 ]
