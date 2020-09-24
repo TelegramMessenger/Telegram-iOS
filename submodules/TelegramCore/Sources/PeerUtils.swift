@@ -16,7 +16,7 @@ public extension Peer {
         }
     }
     
-    func restrictionText(platform: String, contentSettings: ContentSettings) -> String? {
+    func restrictionText(platform: String, contentSettings: ContentSettings, extractReason: Bool = false) -> String? {
         var restrictionInfo: PeerAccessRestrictionInfo?
         switch self {
         case let user as TelegramUser:
@@ -31,6 +31,9 @@ public extension Peer {
             for rule in restrictionInfo.rules {
                 if rule.platform == "all" || rule.platform == platform {
                     if !contentSettings.ignoreContentRestrictionReasons.contains(rule.reason) {
+                        if extractReason {
+                            return rule.reason
+                        }
                         return rule.text
                     }
                 }
