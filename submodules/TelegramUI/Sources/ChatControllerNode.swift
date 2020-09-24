@@ -2740,7 +2740,27 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     })
                     completion()
                     
-                    if let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
+                    if let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds, self.chatPresentationInterfaceState.interfaceState.forwardAsCopy {
+                        for id in forwardMessageIds {
+                            if let cachedMessage = MessagesToCopyDict[id] {
+                                messages.append(cachedMessage)
+                            } else {
+                                var msg: Message? = nil
+                                let semaphore = DispatchSemaphore(value: 0)
+                                let _ = self.context.account.postbox.transaction({ transaction -> Void in
+                                    msg = transaction.getMessage(id)
+                                    semaphore.signal()
+                                }).start()
+                                semaphore.wait()
+                                
+                                if let msg = msg {
+                                    messages.append(convertMessagesForEnqueue([msg])[0])
+                                } else {
+                                    messages.append(.forward(source: id, grouping: .auto, attributes: []))
+                                }
+                            }
+                        }
+                    } else if let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
                         for id in forwardMessageIds {
                             messages.append(.forward(source: id, grouping: .auto, attributes: []))
                         }
