@@ -1,5 +1,7 @@
 load("//Config:buck_rule_macros.bzl", "static_library")
 
+NGDEPS = ["//Nicegram/NGWebUtils:NGWebUtils"]
+
 static_library(
     name = "AvatarNode",
     srcs = glob([
@@ -15,7 +17,7 @@ static_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/AccountContext:AccountContext",
         "//submodules/Emoji:Emoji",
-    ],
+    ] + NGDEPS,
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
         "$SDKROOT/System/Library/Frameworks/UIKit.framework",
