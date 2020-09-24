@@ -34,7 +34,5 @@
 		<string>merchant.privatbank.prod.telergram</string>
 		<string>merchant.telegram.tranzzo.test</string>
 	</array>
-	<key>com.apple.developer.pushkit.unrestricted-voip</key>
-	<true/>
 </dict>
 </plist>

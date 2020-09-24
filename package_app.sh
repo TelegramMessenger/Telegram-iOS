@@ -145,7 +145,7 @@ REMOVE_ENTITLEMENT_KEYS=(\
 COPY_ENTITLEMENT_KEYS=(\
 	"com.apple.developer.associated-domains" \
 	"com.apple.developer.icloud-services" \
-	"com.apple.developer.pushkit.unrestricted-voip" \
+	# "com.apple.developer.pushkit.unrestricted-voip" \
 )
 
 REPLACE_TO_PRODUCTION_ENTITLEMENT_KEYS=(\
