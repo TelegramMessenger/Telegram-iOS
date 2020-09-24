@@ -716,12 +716,8 @@ public final class AccountViewTracker {
                                                             repliesReadMaxId = readMaxId
                                                         }
                                                     }
-                                                    var maxReadIncomingMessageId: MessageId?
                                                     var maxMessageId: MessageId?
                                                     if let commentsChannelId = commentsChannelId {
-                                                        if let repliesReadMaxId = repliesReadMaxId {
-                                                            maxReadIncomingMessageId = MessageId(peerId: commentsChannelId, namespace: Namespaces.Message.Cloud, id: repliesReadMaxId)
-                                                        }
                                                         if let repliesMaxId = repliesMaxId {
                                                             maxMessageId = MessageId(peerId: commentsChannelId, namespace: Namespaces.Message.Cloud, id: repliesMaxId)
                                                         }
@@ -739,17 +735,23 @@ public final class AccountViewTracker {
                                                             foundReplies = true
                                                             if let repliesCount = repliesCount {
                                                                 var resolvedMaxReadMessageId: MessageId.Id?
-                                                                if previousMaxReadMessageId = attribute.maxReadMessageId, let repliesReadMaxId = repliesReadMaxId {
-                                                                    resolvedMaxReadMessageId = max(previousMaxReadMessageId, repliesReadMaxId)
-                                                                    maxReadIncomingMessageId = resolvedMaxReadMessageId
-                                                                } else if let repliesReadMaxId = repliesReadMaxId {
-                                                                    resolvedMaxReadMessageId = repliesReadMaxId
-                                                                    maxReadIncomingMessageId = resolvedMaxReadMessageId
+                                                                if let previousMaxReadMessageId = attribute.maxReadMessageId, let repliesReadMaxIdValue = repliesReadMaxId {
+                                                                    resolvedMaxReadMessageId = max(previousMaxReadMessageId, repliesReadMaxIdValue)
+                                                                    repliesReadMaxId = resolvedMaxReadMessageId
+                                                                } else if let repliesReadMaxIdValue = repliesReadMaxId {
+                                                                    resolvedMaxReadMessageId = repliesReadMaxIdValue
+                                                                    repliesReadMaxId = resolvedMaxReadMessageId
                                                                 } else {
                                                                     resolvedMaxReadMessageId = attribute.maxReadMessageId
                                                                 }
                                                                 attributes[j] = ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsChannelId, maxMessageId: repliesMaxId, maxReadMessageId: resolvedMaxReadMessageId)
                                                             }
+                                                        }
+                                                    }
+                                                    var maxReadIncomingMessageId: MessageId?
+                                                    if let commentsChannelId = commentsChannelId {
+                                                        if let repliesReadMaxId = repliesReadMaxId {
+                                                            maxReadIncomingMessageId = MessageId(peerId: commentsChannelId, namespace: Namespaces.Message.Cloud, id: repliesReadMaxId)
                                                         }
                                                     }
                                                     resultStates[messageIds[i]] = ViewCountContextState(timestamp: Int32(CFAbsoluteTimeGetCurrent()), clientId: clientId, result: ViewCountContextState.ReplyInfo(commentsPeerId: commentsChannelId, maxReadIncomingMessageId: maxReadIncomingMessageId, maxMessageId: maxMessageId))
