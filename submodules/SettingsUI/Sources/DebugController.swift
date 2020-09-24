@@ -50,6 +50,7 @@ private enum DebugControllerSection: Int32 {
 private enum DebugControllerEntry: ItemListNodeEntry {
     case sendLogs(PresentationTheme)
     case sendOneLog(PresentationTheme)
+    case sendNGLogs(PresentationTheme)
     case sendNotificationLogs(PresentationTheme)
     case sendCriticalLogs(PresentationTheme)
     case accounts(PresentationTheme)
@@ -81,7 +82,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-        case .sendLogs, .sendOneLog, .sendNotificationLogs, .sendCriticalLogs:
+        case .sendLogs, .sendOneLog, .sendNGLogs, .sendNotificationLogs, .sendCriticalLogs:
             return DebugControllerSection.logs.rawValue
         case .accounts:
             return DebugControllerSection.logs.rawValue
@@ -102,6 +103,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     
     var stableId: Int {
         switch self {
+        case .sendNGLogs:
+            return -1
         case .sendLogs:
             return 0
         case .sendOneLog:
@@ -301,6 +304,31 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         arguments.pushController(controller)
                     })
             })
+        case let .sendNGLogs(theme):
+        return ItemListDisclosureItem(presentationData: presentationData, title: "Send Nicegram Logs", label: "", sectionId: self.section, style: .blocks, action: {
+            let _ = (Logger(basePath: arguments.sharedContext.basePath + "/ngLogs").collectLogs()
+                |> deliverOnMainQueue).start(next: { logs in
+                    guard let context = arguments.context else {
+                        return
+                    }
+                    let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
+                    controller.peerSelected = { [weak controller] peerId in
+                        if let strongController = controller {
+                            strongController.dismiss()
+                            
+                            
+                            let updatedLogs = logs.last.flatMap({ [$0] }) ?? []
+                            let messages = logs.map { (name, path) -> EnqueueMessage in
+                                let id = arc4random64()
+                                let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
+                                return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                            }
+                            let _ = enqueueMessages(account: context.account, peerId: peerId, messages: messages).start()
+                        }
+                    }
+                    arguments.pushController(controller)
+                })
+        })
         case let .sendCriticalLogs(theme):
             return ItemListDisclosureItem(presentationData: presentationData, title: "Send Critical Logs", label: "", sectionId: self.section, style: .blocks, action: {
                 let _ = (Logger.shared.collectShortLogFiles()
@@ -623,7 +651,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
 
 private func debugControllerEntries(presentationData: PresentationData, loggingSettings: LoggingSettings, mediaInputSettings: MediaInputSettings, experimentalSettings: ExperimentalUISettings, networkSettings: NetworkSettings?, hasLegacyAppData: Bool) -> [DebugControllerEntry] {
     var entries: [DebugControllerEntry] = []
-    
+    entries.append(.sendNGLogs(presentationData.theme))
     entries.append(.sendLogs(presentationData.theme))
     entries.append(.sendOneLog(presentationData.theme))
     entries.append(.sendNotificationLogs(presentationData.theme))
@@ -636,9 +664,9 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     
     entries.append(.enableRaiseToSpeak(presentationData.theme, mediaInputSettings.enableRaiseToSpeak))
     entries.append(.keepChatNavigationStack(presentationData.theme, experimentalSettings.keepChatNavigationStack))
-    #if DEBUG
+    //#if DEBUG
     entries.append(.skipReadHistory(presentationData.theme, experimentalSettings.skipReadHistory))
-    #endif
+    //#endif
     entries.append(.crashOnSlowQueries(presentationData.theme, experimentalSettings.crashOnLongQueries))
     entries.append(.clearTips(presentationData.theme))
     if hasLegacyAppData {
