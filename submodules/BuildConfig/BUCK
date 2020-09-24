@@ -7,6 +7,7 @@ static_library(
         "Sources/*.m",
     ]),
     compiler_flags = [
+        '-DNG_ENV="' + appConfig()["ngEnv"] + '"',
         '-DAPP_CONFIG_API_ID=' + appConfig()["apiId"],
         '-DAPP_CONFIG_API_HASH="' + appConfig()["apiHash"] + '"',
         '-DAPP_CONFIG_APP_CENTER_ID="' + appConfig()["appCenterId"] + '"',
