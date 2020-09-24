@@ -1567,7 +1567,7 @@ final class SharedApplicationContext {
             }
         }
     }
-    
+    /*
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType) {
         if #available(iOS 9.0, *) {
             /*guard var encryptedPayload = payload.dictionaryPayload["p"] as? String else {
@@ -1694,7 +1694,7 @@ final class SharedApplicationContext {
                 }
             })
         }
-    }
+    }*/
     
     public func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
         Logger.shared.log("App \(self.episodeId)", "invalidated token for \(type)")
