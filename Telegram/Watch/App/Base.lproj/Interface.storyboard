@@ -1526,7 +1526,7 @@ contacts found.</string>
         <!--Telegram-->
         <scene sceneID="A9d-DL-l8r">
             <objects>
-                <controller identifier="TGNeoChatsController" title="Telegram" hidesWhenLoading="NO" id="umr-Wa-jBL" customClass="TGNeoChatsController">
+                <controller identifier="TGNeoChatsController" title="Nicegram" hidesWhenLoading="NO" id="umr-Wa-jBL" customClass="TGNeoChatsController">
                     <items>
                         <group width="1" alignment="center" verticalAlignment="center" hidden="YES" layout="vertical" spacing="0.0" id="7GZ-1r-Kdn" userLabel="AuthAlertGroup">
                             <items>
