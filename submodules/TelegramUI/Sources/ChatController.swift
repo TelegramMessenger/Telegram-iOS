@@ -5398,7 +5398,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        self.willAppear = true
+        if self.willAppear {
+            self.chatDisplayNode.historyNode.refreshPollActionsForVisibleMessages()
+        } else {
+            self.willAppear = true
+        }
         
         if self.scheduledActivateInput {
             self.scheduledActivateInput = false

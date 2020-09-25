@@ -547,6 +547,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     let isTopReplyThreadMessageShown = ValuePromise<Bool>(false, ignoreRepeated: true)
     
+    private let clientId: Atomic<Int32>
+    
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles) {
         self.context = context
         self.chatLocation = chatLocation
@@ -563,6 +565,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.prefetchManager = InChatPrefetchManager(context: context)
         
+        let clientId = Atomic<Int32>(value: nextClientId)
+        self.clientId = clientId
+        nextClientId += 1
+        
         super.init()
         
         self.dynamicBounceEnabled = !self.currentPresentationData.disableAnimations
@@ -570,11 +576,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         //self.debugInfo = true
         
-        let clientId = nextClientId
-        nextClientId += 1
-        
         self.messageProcessingManager.process = { [weak context] messageIds in
-            context?.account.viewTracker.updateViewCountForMessageIds(messageIds: messageIds, clientId: clientId)
+            context?.account.viewTracker.updateViewCountForMessageIds(messageIds: messageIds, clientId: clientId.with { $0 })
         }
         self.messageReactionsProcessingManager.process = { [weak context] messageIds in
             context?.account.viewTracker.updateReactionsForMessageIds(messageIds: messageIds)
@@ -1096,6 +1099,13 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     public func setLoadStateUpdated(_ f: @escaping (ChatHistoryNodeLoadState, Bool) -> Void) {
         self.loadStateUpdated = f
+    }
+    
+    func refreshPollActionsForVisibleMessages() {
+        let _ = self.clientId.swap(nextClientId)
+        nextClientId += 1
+        
+        self.updateVisibleItemRange(force: true)
     }
     
     private func processDisplayedItemRangeChanged(displayedRange: ListViewDisplayedItemRange, transactionState: ChatHistoryTransactionOpaqueState) {
