@@ -2416,7 +2416,7 @@ public final class Postbox {
         switch chatLocation {
         case let .peer(peerId):
             return .single((.peer(peerId), false))
-        case let .external(_, input):
+        case let .external(_, _, input):
             return Signal { subscriber in
                 var isHoleFill = false
                 return (input

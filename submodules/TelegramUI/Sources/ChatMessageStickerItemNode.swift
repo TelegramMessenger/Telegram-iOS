@@ -235,7 +235,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             switch item.chatLocation {
                 case let .peer(peerId):
-                    if peerId != item.context.account.peerId {
+                    if !peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                         if peerId.isGroupOrChannel && item.message.author != nil {
                             var isBroadcastChannel = false
                             if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
@@ -814,7 +814,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
                 for attribute in item.message.attributes {
                     if let _ = attribute as? ReplyThreadMessageAttribute {
-                        item.controllerInteraction.openMessageReplies(item.message.id, true)
+                        item.controllerInteraction.openMessageReplies(item.message.id, true, false)
                         return
                     }
                 }

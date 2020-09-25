@@ -190,7 +190,7 @@ private func wrappedHistoryViewAdditionalData(chatLocation: ChatLocationInput, a
                     result.append(.peerChatState(peerId))
                 }
             }
-        case let .external(peerId, _):
+        case let .external(peerId, _, _):
             if peerId.namespace == Namespaces.Peer.CloudChannel {
                 if result.firstIndex(where: { if case .peerChatState = $0 { return true } else { return false } }) == nil {
                     result.append(.peerChatState(peerId))
@@ -716,17 +716,12 @@ public final class AccountViewTracker {
                                                             repliesReadMaxId = readMaxId
                                                         }
                                                     }
-                                                    var maxReadIncomingMessageId: MessageId?
                                                     var maxMessageId: MessageId?
                                                     if let commentsChannelId = commentsChannelId {
-                                                        if let repliesReadMaxId = repliesReadMaxId {
-                                                            maxReadIncomingMessageId = MessageId(peerId: commentsChannelId, namespace: Namespaces.Message.Cloud, id: repliesReadMaxId)
-                                                        }
                                                         if let repliesMaxId = repliesMaxId {
                                                             maxMessageId = MessageId(peerId: commentsChannelId, namespace: Namespaces.Message.Cloud, id: repliesMaxId)
                                                         }
                                                     }
-                                                    resultStates[messageIds[i]] = ViewCountContextState(timestamp: Int32(CFAbsoluteTimeGetCurrent()), clientId: clientId, result: ViewCountContextState.ReplyInfo(commentsPeerId: commentsChannelId, maxReadIncomingMessageId: maxReadIncomingMessageId, maxMessageId: maxMessageId))
                                                     loop: for j in 0 ..< attributes.count {
                                                         if let attribute = attributes[j] as? ViewCountMessageAttribute {
                                                             if let views = views {
@@ -736,13 +731,30 @@ public final class AccountViewTracker {
                                                             if let forwards = forwards {
                                                                 attributes[j] = ForwardCountMessageAttribute(count: Int(forwards))
                                                             }
-                                                        } else if let _ = attributes[j] as? ReplyThreadMessageAttribute {
+                                                        } else if let attribute = attributes[j] as? ReplyThreadMessageAttribute {
                                                             foundReplies = true
                                                             if let repliesCount = repliesCount {
-                                                                attributes[j] = ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsChannelId, maxMessageId: repliesMaxId, maxReadMessageId: repliesReadMaxId)
+                                                                var resolvedMaxReadMessageId: MessageId.Id?
+                                                                if let previousMaxReadMessageId = attribute.maxReadMessageId, let repliesReadMaxIdValue = repliesReadMaxId {
+                                                                    resolvedMaxReadMessageId = max(previousMaxReadMessageId, repliesReadMaxIdValue)
+                                                                    repliesReadMaxId = resolvedMaxReadMessageId
+                                                                } else if let repliesReadMaxIdValue = repliesReadMaxId {
+                                                                    resolvedMaxReadMessageId = repliesReadMaxIdValue
+                                                                    repliesReadMaxId = resolvedMaxReadMessageId
+                                                                } else {
+                                                                    resolvedMaxReadMessageId = attribute.maxReadMessageId
+                                                                }
+                                                                attributes[j] = ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsChannelId, maxMessageId: repliesMaxId, maxReadMessageId: resolvedMaxReadMessageId)
                                                             }
                                                         }
                                                     }
+                                                    var maxReadIncomingMessageId: MessageId?
+                                                    if let commentsChannelId = commentsChannelId {
+                                                        if let repliesReadMaxId = repliesReadMaxId {
+                                                            maxReadIncomingMessageId = MessageId(peerId: commentsChannelId, namespace: Namespaces.Message.Cloud, id: repliesReadMaxId)
+                                                        }
+                                                    }
+                                                    resultStates[messageIds[i]] = ViewCountContextState(timestamp: Int32(CFAbsoluteTimeGetCurrent()), clientId: clientId, result: ViewCountContextState.ReplyInfo(commentsPeerId: commentsChannelId, maxReadIncomingMessageId: maxReadIncomingMessageId, maxMessageId: maxMessageId))
                                                     if !foundReplies, let repliesCount = repliesCount {
                                                         attributes.append(ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsChannelId, maxMessageId: repliesMaxId, maxReadMessageId: repliesReadMaxId))
                                                     }
@@ -1229,6 +1241,8 @@ public final class AccountViewTracker {
                     strongSelf.updatePolls(viewId: viewId, messageIds: pollMessageIds, messages: pollMessageDict)
                     if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
                         strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0)
+                    } else if case let .external(peerId, _, _) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
+                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0, location: chatLocation)
                     }
                 }
             }
@@ -1242,9 +1256,9 @@ public final class AccountViewTracker {
                             if peerId.namespace == Namespaces.Peer.CloudChannel {
                                 strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)
                             }
-                        case let .external(peerId, _):
+                        case let .external(peerId, _, _):
                             if peerId.namespace == Namespaces.Peer.CloudChannel {
-                                strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)
+                                strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil, location: chatLocation)
                             }
                     }
                 }
@@ -1255,7 +1269,7 @@ public final class AccountViewTracker {
         switch chatLocation {
         case let .peer(peerIdValue):
             peerId = peerIdValue
-        case let .external(peerIdValue, _):
+        case let .external(peerIdValue, _, _):
             peerId = peerIdValue
         }
         if peerId.namespace == Namespaces.Peer.CloudChannel {

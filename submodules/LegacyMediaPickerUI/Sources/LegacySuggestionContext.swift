@@ -9,13 +9,12 @@ import LegacyUI
 import SearchPeerMembers
 import AccountContext
 
-public func legacySuggestionContext(context: AccountContext, peerId: PeerId) -> TGSuggestionContext {
+public func legacySuggestionContext(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation) -> TGSuggestionContext {
     let suggestionContext = TGSuggestionContext()
     suggestionContext.userListSignal = { query in
         return SSignal { subscriber in
             if let query = query {
-                let normalizedQuery = query.lowercased()
-                let disposable = searchPeerMembers(context: context, peerId: peerId, query: query).start(next: { peers in
+                let disposable = searchPeerMembers(context: context, peerId: peerId, chatLocation: chatLocation, query: query).start(next: { peers in
                     let users = NSMutableArray()
                     for peer in peers {
                         let user = TGUser()

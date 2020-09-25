@@ -264,11 +264,9 @@ final class AuthorizedApplicationContext {
                 if UIApplication.shared.applicationState == .active {
                     var chatIsVisible = false
                     if let topController = strongSelf.rootController.topViewController as? ChatControllerImpl, topController.traceVisibility() {
-                        if case .peer(firstMessage.id.peerId) = topController.chatLocation {
+                        if topController.chatLocation.peerId == firstMessage.id.peerId {
                             chatIsVisible = true
-                        }/* else if case let .group(topGroupId) = topController.chatLocation, topGroupId == groupId {
-                            chatIsVisible = true
-                        }*/
+                        }
                     }
                     
                     if !notify {

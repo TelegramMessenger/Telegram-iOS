@@ -305,7 +305,7 @@ public final class AccountContextImpl: AccountContext {
             return .peer(peerId)
         case let .replyThread(data):
             let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
-            return .external(data.messageId.peerId, context.state)
+            return .external(data.messageId.peerId, makeMessageThreadId(data.messageId), context.state)
         }
     }
     

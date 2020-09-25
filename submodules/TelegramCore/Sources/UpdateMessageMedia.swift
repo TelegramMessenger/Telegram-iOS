@@ -35,11 +35,11 @@ struct ReplyThreadUserMessage {
     var isOutgoing: Bool
 }
 
-func updateMessageThreadStats(transaction: Transaction, threadMessageId: MessageId, difference: Int, addedMessagePeers: [ReplyThreadUserMessage]) {
-    updateMessageThreadStatsInternal(transaction: transaction, threadMessageId: threadMessageId, difference: difference, addedMessagePeers: addedMessagePeers, allowChannel: false)
+func updateMessageThreadStats(transaction: Transaction, threadMessageId: MessageId, removedCount: Int, addedMessagePeers: [ReplyThreadUserMessage]) {
+    updateMessageThreadStatsInternal(transaction: transaction, threadMessageId: threadMessageId, removedCount: removedCount, addedMessagePeers: addedMessagePeers, allowChannel: false)
 }
     
-private func updateMessageThreadStatsInternal(transaction: Transaction, threadMessageId: MessageId, difference: Int, addedMessagePeers: [ReplyThreadUserMessage], allowChannel: Bool) {
+private func updateMessageThreadStatsInternal(transaction: Transaction, threadMessageId: MessageId, removedCount: Int, addedMessagePeers: [ReplyThreadUserMessage], allowChannel: Bool) {
     guard let channel = transaction.getPeer(threadMessageId.peerId) as? TelegramChannel else {
         return
     }
@@ -77,12 +77,21 @@ private func updateMessageThreadStatsInternal(transaction: Transaction, threadMe
     }
     
     transaction.updateMessage(threadMessageId, update: { currentMessage in
-        let countDifference = Int32(difference)
-        
         var attributes = currentMessage.attributes
         loop: for j in 0 ..< attributes.count {
             if let attribute = attributes[j] as? ReplyThreadMessageAttribute {
-                let count = max(0, attribute.count + countDifference)
+                var countDifference = -removedCount
+                for addedMessage in addedMessagePeers {
+                    if let maxMessageId = attribute.maxMessageId {
+                        if addedMessage.messageId.id > maxMessageId {
+                            countDifference += 1
+                        }
+                    } else {
+                        countDifference += 1
+                    }
+                }
+                
+                let count = max(0, attribute.count + Int32(countDifference))
                 var maxMessageId = attribute.maxMessageId
                 var maxReadMessageId = attribute.maxReadMessageId
                 if let maxAddedId = addedMessagePeers.map({ $0.messageId.id }).max() {
@@ -109,6 +118,6 @@ private func updateMessageThreadStatsInternal(transaction: Transaction, threadMe
     })
     
     if let channelThreadMessageId = channelThreadMessageId {
-        updateMessageThreadStatsInternal(transaction: transaction, threadMessageId: channelThreadMessageId, difference: difference, addedMessagePeers: addedMessagePeers, allowChannel: true)
+        updateMessageThreadStatsInternal(transaction: transaction, threadMessageId: channelThreadMessageId, removedCount: removedCount, addedMessagePeers: addedMessagePeers, allowChannel: true)
     }
 }

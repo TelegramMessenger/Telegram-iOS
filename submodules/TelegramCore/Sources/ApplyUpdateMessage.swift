@@ -234,7 +234,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 if let threadId = updatedMessage.threadId {
                     let messageThreadId = makeThreadIdMessageId(peerId: updatedMessage.id.peerId, threadId: threadId)
                     if let authorId = updatedMessage.authorId {
-                        updateMessageThreadStats(transaction: transaction, threadMessageId: messageThreadId, difference: 1, addedMessagePeers: [ReplyThreadUserMessage(id: authorId, messageId: updatedId, isOutgoing: true)])
+                        updateMessageThreadStats(transaction: transaction, threadMessageId: messageThreadId, removedCount: 0, addedMessagePeers: [ReplyThreadUserMessage(id: authorId, messageId: updatedId, isOutgoing: true)])
                     }
                 }
             }

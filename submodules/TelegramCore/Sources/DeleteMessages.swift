@@ -46,7 +46,7 @@ public func deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [M
                         if let manualAddMessageThreadStatsDifference = manualAddMessageThreadStatsDifference {
                             manualAddMessageThreadStatsDifference(messageThreadId, 0, 1)
                         } else {
-                            updateMessageThreadStats(transaction: transaction, threadMessageId: messageThreadId, difference: -1, addedMessagePeers: [])
+                            updateMessageThreadStats(transaction: transaction, threadMessageId: messageThreadId, removedCount: 1, addedMessagePeers: [])
                         }
                     }
                 }

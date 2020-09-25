@@ -43,7 +43,7 @@ func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentation
     for query in inputQueries {
         let previousQuery = currentQueryStates[query.kind]?.0
         if previousQuery != query {
-            let signal = updatedContextQueryResultStateForQuery(context: context, peer: peer, inputQuery: query, previousQuery: previousQuery)
+            let signal = updatedContextQueryResultStateForQuery(context: context, peer: peer, chatLocation: chatPresentationInterfaceState.chatLocation, inputQuery: query, previousQuery: previousQuery)
             updates[query.kind] = .update(query, signal)
         }
     }
@@ -64,7 +64,7 @@ func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentation
     return updates
 }
 
-private func updatedContextQueryResultStateForQuery(context: AccountContext, peer: Peer, inputQuery: ChatPresentationInputQuery, previousQuery: ChatPresentationInputQuery?) -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> {
+private func updatedContextQueryResultStateForQuery(context: AccountContext, peer: Peer, chatLocation: ChatLocation, inputQuery: ChatPresentationInputQuery, previousQuery: ChatPresentationInputQuery?) -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> {
     switch inputQuery {
         case let .emoji(query):
             var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = .complete()
@@ -145,7 +145,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             }
             
             let inlineBots: Signal<[(Peer, Double)], NoError> = types.contains(.contextBots) ? recentlyUsedInlineBots(postbox: context.account.postbox) : .single([])
-            let participants = combineLatest(inlineBots, searchPeerMembers(context: context, peerId: peer.id, query: query))
+            let participants = combineLatest(inlineBots, searchPeerMembers(context: context, peerId: peer.id, chatLocation: chatLocation, query: query))
             |> map { inlineBots, peers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 let filteredInlineBots = inlineBots.sorted(by: { $0.1 > $1.1 }).filter { peer, rating in
                     if rating < 0.14 {
@@ -347,7 +347,7 @@ func searchQuerySuggestionResultStateForChatInterfacePresentationState(_ chatPre
                             }
                         }
                         
-                        let participants = searchPeerMembers(context: context, peerId: peer.id, query: query)
+                        let participants = searchPeerMembers(context: context, peerId: peer.id, chatLocation: chatPresentationInterfaceState.chatLocation, query: query)
                         |> map { peers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                             let filteredPeers = peers
                             var sortedPeers: [Peer] = []
