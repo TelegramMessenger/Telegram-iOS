@@ -367,7 +367,7 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
             } else {
                 if self.bounds.intersects(self.scrollNode.convert(paneFrame, to: self)) {
                     itemNodeTransition.updateFrameAdditive(node: paneNode, frame: paneFrame)
-                } else {
+                } else if paneNode.frame != paneFrame {
                     paneNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.4) { [weak paneNode] _ in
                         paneNode?.frame = paneFrame
                     }

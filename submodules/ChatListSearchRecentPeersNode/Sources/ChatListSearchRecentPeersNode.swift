@@ -226,6 +226,8 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
             
             var options = ListViewDeleteAndInsertOptions()
             if transition.firstTime {
+                options.insert(.PreferSynchronousResourceLoading)
+                options.insert(.PreferSynchronousDrawing)
                 options.insert(.Synchronous)
                 options.insert(.LowLatency)
             } else if transition.animated {

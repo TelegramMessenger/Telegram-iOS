@@ -134,14 +134,14 @@ public final class ListMessageFileItemNode: ListMessageNode {
     private let offsetContainerNode: ASDisplayNode
     
     private let highlightedBackgroundNode: ASDisplayNode
-    private let separatorNode: ASDisplayNode
+    public let separatorNode: ASDisplayNode
     
     private var selectionNode: ItemListSelectableControlNode?
     
-    private let titleNode: TextNode
-    private let descriptionNode: TextNode
+    public let titleNode: TextNode
+    public let descriptionNode: TextNode
     private let descriptionProgressNode: ImmediateTextNode
-    private let dateNode: TextNode
+    public let dateNode: TextNode
     
     private let extensionIconNode: ASImageNode
     private let extensionIconText: TextNode
@@ -149,7 +149,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
     private let iconStatusNode: SemanticStatusNode
     
     private var currentIconImage: FileIconImage?
-    private var currentMedia: Media?
+    public var currentMedia: Media?
     
     private let statusDisposable = MetaDisposable()
     private let fetchControls = Atomic<FetchControls?>(value: nil)

@@ -126,8 +126,16 @@ public final class SearchDisplayController {
         
         let bounds = CGRect(origin: CGPoint(), size: layout.size)
         transition.updateFrame(node: self.backgroundNode, frame: bounds.insetBy(dx: -20.0, dy: -20.0))
-        transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(x: 20.0, y: 20.0), size: layout.size))
-        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarHeight, transition: transition)
+        
+        var size = layout.size
+        size.width += 20.0 * 2.0
+        transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 20.0), size: size))
+                               
+        var safeInsets = layout.safeInsets
+        safeInsets.left += 20.0
+        safeInsets.right += 20.0
+        
+        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: safeInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarHeight, transition: transition)
     }
     
     public func activate(insertSubnode: (ASDisplayNode, Bool) -> Void, placeholder: SearchBarPlaceholderNode?) {
@@ -142,28 +150,35 @@ public final class SearchDisplayController {
             self.backgroundNode.backgroundColor = .clear
         }
         
-        self.contentNode.frame = CGRect(origin: CGPoint(x: 20.0, y: 20.0), size: layout.size)
+        var size = layout.size
+        size.width += 20.0 * 2.0
         
-        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: layout.safeInsets, statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), navigationBarHeight: navigationBarHeight, transition: .immediate)
+        self.contentNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 20.0), size: size)
+        
+        var safeInsets = layout.safeInsets
+        safeInsets.left += 20.0
+        safeInsets.right += 20.0
+        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: safeInsets, statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), navigationBarHeight: navigationBarHeight, transition: .immediate)
         
         var contentNavigationBarHeight = navigationBarHeight
         if layout.statusBarHeight == nil {
             contentNavigationBarHeight += 28.0
         }
-        
-        if let placeholder = placeholder {
-            let initialTextBackgroundFrame = placeholder.convert(placeholder.backgroundNode.frame, to: nil)
+                
+        self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+        if !self.contentNode.hasDim {
+            self.backgroundNode.layer.animateScale(from: 0.85, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
             
-            let contentNodePosition = self.backgroundNode.layer.position
-            
-
-            self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
-            if !self.contentNode.hasDim {
-                self.backgroundNode.layer.animateScale(from: 0.85, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
-            } else {
-                self.backgroundNode.layer.animatePosition(from: CGPoint(x: contentNodePosition.x, y: contentNodePosition.y + (initialTextBackgroundFrame.maxY + 8.0 - contentNavigationBarHeight)), to: contentNodePosition, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+            if let placeholder = placeholder {
+                self.searchBar.placeholderString = placeholder.placeholderString
             }
-            self.searchBar.placeholderString = placeholder.placeholderString
+        } else {
+            if let placeholder = placeholder {
+                let initialTextBackgroundFrame = placeholder.convert(placeholder.backgroundNode.frame, to: nil)
+                let contentNodePosition = self.backgroundNode.layer.position
+                self.backgroundNode.layer.animatePosition(from: CGPoint(x: contentNodePosition.x, y: contentNodePosition.y + (initialTextBackgroundFrame.maxY + 8.0 - contentNavigationBarHeight)), to: contentNodePosition, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+                self.searchBar.placeholderString = placeholder.placeholderString
+            }
         }
         
         let navigationBarFrame: CGRect

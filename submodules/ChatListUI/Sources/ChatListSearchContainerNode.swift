@@ -112,6 +112,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private let statePromise = ValuePromise<ChatListSearchContainerNodeSearchState>()
     
     private var selectedFilterKey: ChatListSearchFilterEntryId? = .filter(ChatListSearchFilter.chats.id)
+    private var selectedFilterKeyPromise = Promise<ChatListSearchFilterEntryId?>(.filter(ChatListSearchFilter.chats.id))
     private var transitionFraction: CGFloat = 0.0
     
     private var didSetReady: Bool = false
@@ -133,7 +134,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.presentInGlobalOverlay = presentInGlobalOverlay
     
         self.filterContainerNode = ChatListSearchFiltersContainerNode()
-        self.paneContainerNode = ChatListSearchPaneContainerNode(context: context, peersFilter: self.peersFilter, searchQuery: self.searchQuery.get(), searchOptions: self.searchOptions.get(), navigationController: navigationController)
+        self.paneContainerNode = ChatListSearchPaneContainerNode(context: context, peersFilter: self.peersFilter, groupId: groupId, searchQuery: self.searchQuery.get(), searchOptions: self.searchOptions.get(), navigationController: navigationController)
         self.paneContainerNode.clipsToBounds = true
         
         super.init()
@@ -216,7 +217,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         }, dismissInput: { [weak self] in
             self?.dismissInput()
         }, updateSuggestedPeers: { [weak self] peers, key in
-            if let strongSelf = self, strongSelf.paneContainerNode.currentPaneKey == key {
+            if let strongSelf = self, key == .chats {
                 strongSelf.suggestedPeers.set(.single(peers))
             }
         }, getSelectedMessageIds: { [weak self] () -> Set<MessageId>? in
@@ -248,6 +249,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     }
                 }
                 strongSelf.selectedFilterKey = filterKey.flatMap { .filter($0.id) }
+                strongSelf.selectedFilterKeyPromise.set(.single(strongSelf.selectedFilterKey))
                 strongSelf.transitionFraction = transitionFraction
                 
                 if let (layout, _) = strongSelf.validLayout {
@@ -257,7 +259,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     } else {
                         filters = [.chats, .media, .links, .files, .music, .voice]
                     }
-                    strongSelf.filterContainerNode.update(size: CGSize(width: layout.size.width, height: 38.0), sideInset: layout.safeInsets.left, filters: filters.map { .filter($0) }, selectedFilter: strongSelf.selectedFilterKey, transitionFraction: strongSelf.transitionFraction, presentationData: strongSelf.presentationData, transition: transition)
+                    strongSelf.filterContainerNode.update(size: CGSize(width: layout.size.width - 40.0, height: 38.0), sideInset: layout.safeInsets.left - 20.0, filters: filters.map { .filter($0) }, selectedFilter: strongSelf.selectedFilterKey, transitionFraction: strongSelf.transitionFraction, presentationData: strongSelf.presentationData, transition: transition)
                 }
             }
         }
@@ -297,15 +299,15 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }
         }
         
-        self.suggestedFiltersDisposable.set((combineLatest(self.suggestedPeers.get(), self.suggestedDates.get())
-        |> mapToSignal { peers, dates -> Signal<([Peer], [(Date, String?)]), NoError> in
+        self.suggestedFiltersDisposable.set((combineLatest(self.suggestedPeers.get(), self.suggestedDates.get(), self.selectedFilterKeyPromise.get())
+        |> mapToSignal { peers, dates, selectedFilter -> Signal<([Peer], [(Date, String?)], ChatListSearchFilterEntryId?), NoError> in
             if (peers.isEmpty && dates.isEmpty) || peers.isEmpty {
-                return .single((peers, dates))
+                return .single((peers, dates, selectedFilter))
             } else {
                 return (.complete() |> delay(0.2, queue: Queue.mainQueue()))
-                |> then(.single((peers, dates)))
+                |> then(.single((peers, dates, selectedFilter)))
             }
-        } |> map { peers, dates -> [ChatListSearchFilter] in
+        } |> map { peers, dates, selectedFilter -> [ChatListSearchFilter] in
             var suggestedFilters: [ChatListSearchFilter] = []
             if !dates.isEmpty {
                 let formatter = DateFormatter()
@@ -317,7 +319,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     suggestedFilters.append(.date(Int32(date.timeIntervalSince1970), title))
                 }
             }
-            if !peers.isEmpty {
+            if !peers.isEmpty && selectedFilter != .filter(ChatListSearchFilter.chats.id) {
                 for peer in peers {
                     let isGroup: Bool
                     if let channel = peer as? TelegramChannel, case .group = channel.info {
@@ -354,6 +356,18 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 }
             }
         }))
+        
+        self.presentationDataDisposable = (context.sharedContext.presentationData
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                let previousTheme = strongSelf.presentationData.theme
+                strongSelf.presentationData = presentationData
+
+                if previousTheme !== presentationData.theme {
+                    strongSelf.updateTheme(theme: presentationData.theme)
+                }
+            }
+        })
         
         self._ready.set(self.paneContainerNode.isReady.get()
         |> map { _ in Void() })
@@ -429,29 +443,16 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         }
     }
     
-//    private func updateTheme(theme: PresentationTheme) {
-//        self.backgroundColor = self.peersFilter.contains(.excludeRecent) ? nil : theme.chatList.backgroundColor
-//        self.dimNode.backgroundColor = self.peersFilter.contains(.excludeRecent) ? UIColor.black.withAlphaComponent(0.5) : theme.chatList.backgroundColor
-//        self.recentListNode.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
-//        self.listNode.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
-//
-//        self.listNode.forEachItemHeaderNode({ itemHeaderNode in
-//            if let itemHeaderNode = itemHeaderNode as? ChatListSearchItemHeaderNode {
-//                itemHeaderNode.updateTheme(theme: theme)
-//            } else if let itemHeaderNode = itemHeaderNode as? ListMessageDateHeaderNode {
-//                itemHeaderNode.updateThemeAndStrings(theme: theme, strings: self.presentationData.strings)
-//            }
-//        })
-//        self.recentListNode.forEachItemHeaderNode({ itemHeaderNode in
-//            if let itemHeaderNode = itemHeaderNode as? ChatListSearchItemHeaderNode {
-//                itemHeaderNode.updateTheme(theme: theme)
-//            }
-//        })
-//    }
+    private func updateTheme(theme: PresentationTheme) {
+        self.backgroundColor = self.peersFilter.contains(.excludeRecent) ? nil : theme.chatList.backgroundColor
+        
+        if let (layout, navigationBarHeight) = self.validLayout {
+            self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+        }
+    }
     
     override public func searchTextUpdated(text: String) {
         let searchQuery: String? = !text.isEmpty ? text : nil
-//        self.interaction?.searchTextHighightState = searchQuery
         self.searchQuery.set(.single(searchQuery))
         self.searchQueryValue = searchQuery
         
@@ -463,11 +464,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         self.validLayout = (layout, navigationBarHeight)
         
-        var topInset = navigationBarHeight
-        var topPanelHeight: CGFloat = 0.0
-        
-        topInset += topPanelHeight
-        
+        let topInset = navigationBarHeight
         transition.updateFrame(node: self.filterContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight + 6.0), size: CGSize(width: layout.size.width, height: 38.0)))
         
         let filters: [ChatListSearchFilter]
@@ -477,7 +474,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             filters = [.chats, .media, .links, .files, .music, .voice]
         }
         
-        self.filterContainerNode.update(size: CGSize(width: layout.size.width, height: 38.0), sideInset: layout.safeInsets.left, filters: filters.map { .filter($0) }, selectedFilter: self.selectedFilterKey, transitionFraction: self.transitionFraction, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
+        self.filterContainerNode.update(size: CGSize(width: layout.size.width - 40.0, height: 38.0), sideInset: layout.safeInsets.left - 20.0, filters: filters.map { .filter($0) }, selectedFilter: self.selectedFilterKey, transitionFraction: self.transitionFraction, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
         
         if let selectedMessageIds = self.stateValue.selectedMessageIds {
             var wasAdded = false
@@ -546,7 +543,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             })
         }
         
-        transition.updateFrame(node: self.paneContainerNode, frame: CGRect(x: 0.0, y: topInset - 48.0, width: layout.size.width, height: layout.size.height - topInset + 48))
+        transition.updateFrame(node: self.paneContainerNode, frame: CGRect(x: 0.0, y: topInset, width: layout.size.width, height: layout.size.height - topInset))
         
         self.paneContainerNode.update(size: CGSize(width: layout.size.width, height: layout.size.height - topInset), sideInset: layout.safeInsets.left, bottomInset: layout.inputHeight ?? 0.0, visibleHeight: layout.size.height - topInset, presentationData: self.presentationData, transition: transition)
     }
