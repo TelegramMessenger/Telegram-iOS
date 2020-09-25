@@ -814,7 +814,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
                 for attribute in item.message.attributes {
                     if let _ = attribute as? ReplyThreadMessageAttribute {
-                        item.controllerInteraction.openMessageReplies(item.message.id, true)
+                        item.controllerInteraction.openMessageReplies(item.message.id, true, false)
                         return
                     }
                 }

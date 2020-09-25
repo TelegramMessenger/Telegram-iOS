@@ -1959,7 +1959,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }, greetingStickerNode: {
             return nil
         }, openPeerContextMenu: { _, _, _, _ in
-        }, openMessageReplies: { _, _ in
+        }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
@@ -5946,7 +5946,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
     private var previousBackButtonBadge: ASDisplayNode?
     private var currentBackButton: ASDisplayNode?
     
-    private var previousTitleNode: (ASDisplayNode, TextNode)?
+    private var previousTitleNode: (ASDisplayNode, ASDisplayNode)?
     private var previousStatusNode: (ASDisplayNode, ASDisplayNode)?
     
     private var didSetup: Bool = false

@@ -8,15 +8,18 @@ import TelegramCore
 import SyncCore
 import TelegramPresentationData
 import RadialStatusNode
+import AnimatedCountLabelNode
+import AnimatedAvatarSetNode
 
 final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
     private let separatorNode: ASDisplayNode
-    private let textNode: TextNode
-    private let alternativeTextNode: TextNode
+    private let countNode: AnimatedCountLabelNode
+    private let alternativeCountNode: AnimatedCountLabelNode
     private let iconNode: ASImageNode
     private let arrowNode: ASImageNode
     private let buttonNode: HighlightTrackingButtonNode
-    private let avatarsNode: MergedAvatarsNode
+    private let avatarsContext: AnimatedAvatarSetContext
+    private let avatarsNode: AnimatedAvatarSetNode
     private let unreadIconNode: ASImageNode
     private var statusNode: RadialStatusNode?
     
@@ -24,17 +27,8 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isUserInteractionEnabled = false
         
-        self.textNode = TextNode()
-        self.textNode.isUserInteractionEnabled = false
-        self.textNode.contentMode = .topLeft
-        self.textNode.contentsScale = UIScreenScale
-        self.textNode.displaysAsynchronously = true
-        
-        self.alternativeTextNode = TextNode()
-        self.alternativeTextNode.isUserInteractionEnabled = false
-        self.alternativeTextNode.contentMode = .topLeft
-        self.alternativeTextNode.contentsScale = UIScreenScale
-        self.alternativeTextNode.displaysAsynchronously = true
+        self.countNode = AnimatedCountLabelNode()
+        self.alternativeCountNode = AnimatedCountLabelNode()
         
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
@@ -51,7 +45,8 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
         self.arrowNode.displayWithoutProcessing = true
         self.arrowNode.isUserInteractionEnabled = false
         
-        self.avatarsNode = MergedAvatarsNode()
+        self.avatarsContext = AnimatedAvatarSetContext()
+        self.avatarsNode = AnimatedAvatarSetNode()
         self.avatarsNode.isUserInteractionEnabled = false
         
         self.buttonNode = HighlightTrackingButtonNode()
@@ -59,8 +54,8 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
         super.init()
         
         self.buttonNode.addSubnode(self.separatorNode)
-        self.buttonNode.addSubnode(self.textNode)
-        self.buttonNode.addSubnode(self.alternativeTextNode)
+        self.buttonNode.addSubnode(self.countNode)
+        self.buttonNode.addSubnode(self.alternativeCountNode)
         self.buttonNode.addSubnode(self.iconNode)
         self.buttonNode.addSubnode(self.unreadIconNode)
         self.buttonNode.addSubnode(self.arrowNode)
@@ -70,12 +65,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 let nodes: [ASDisplayNode] = [
-                    strongSelf.textNode,
-                    strongSelf.alternativeTextNode,
-                    strongSelf.iconNode,
-                    strongSelf.avatarsNode,
-                    strongSelf.unreadIconNode,
-                    strongSelf.arrowNode,
+                    strongSelf.buttonNode
                 ]
                 for node in nodes {
                     if highlighted {
@@ -103,13 +93,13 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
         if item.message.id.peerId.isReplies {
             item.controllerInteraction.openReplyThreadOriginalMessage(item.message)
         } else {
-            item.controllerInteraction.openMessageReplies(item.message.id, true)
+            item.controllerInteraction.openMessageReplies(item.message.id, true, false)
         }
     }
     
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
-        let textLayout = TextNode.asyncLayout(self.textNode)
-        let alternativeTextLayout = TextNode.asyncLayout(self.alternativeTextNode)
+        let makeCountLayout = self.countNode.asyncLayout()
+        let makeAlternativeCountLayout = self.alternativeCountNode.asyncLayout()
         
         return { item, layoutConstants, preparePosition, _, constrainedSize in
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
@@ -146,18 +136,59 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                let rawText: String
-                let rawAlternativeText: String
+                let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
+                
+                let textFont = item.presentationData.messageFont
+                
+                let rawSegments: [AnimatedCountLabelNode.Segment]
+                let rawAlternativeSegments: [AnimatedCountLabelNode.Segment]
                 
                 if item.message.id.peerId.isReplies {
-                    rawText = item.presentationData.strings.Conversation_ViewReply
-                    rawAlternativeText = rawText
+                    rawSegments = [.text(100, NSAttributedString(string: item.presentationData.strings.Conversation_ViewReply, font: textFont, textColor: messageTheme.accentTextColor))]
+                    rawAlternativeSegments = rawSegments
                 } else if dateReplies > 0 {
-                    rawText = item.presentationData.strings.Conversation_MessageViewComments(Int32(dateReplies))
-                    rawAlternativeText = rawText
+                    var commentsPart = item.presentationData.strings.Conversation_MessageViewComments(Int32(dateReplies))
+                    if let startIndex = commentsPart.firstIndex(of: "["), let endIndex = commentsPart.firstIndex(of: "]") {
+                        commentsPart.removeSubrange(startIndex ... endIndex)
+                    }
+                    
+                    var segments: [AnimatedCountLabelNode.Segment] = []
+                    
+                    let (rawText, ranges) = item.presentationData.strings.Conversation_MessageViewCommentsFormat("\(dateReplies)", commentsPart)
+                    var textIndex = 0
+                    var latestIndex = 0
+                    for (index, range) in ranges {
+                        var lowerSegmentIndex = range.lowerBound
+                        if index != 0 {
+                            lowerSegmentIndex = min(lowerSegmentIndex, latestIndex)
+                        } else {
+                            if latestIndex < range.lowerBound {
+                                let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: latestIndex) ..< rawText.index(rawText.startIndex, offsetBy: range.lowerBound)])
+                                segments.append(.text(textIndex, NSAttributedString(string: part, font: textFont, textColor: messageTheme.accentTextColor)))
+                                textIndex += 1
+                            }
+                        }
+                        latestIndex = range.upperBound
+                        
+                        let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: lowerSegmentIndex) ..< rawText.index(rawText.startIndex, offsetBy: range.upperBound)])
+                        if index == 0 {
+                            segments.append(.number(dateReplies, NSAttributedString(string: part, font: textFont, textColor: messageTheme.accentTextColor)))
+                        } else {
+                            segments.append(.text(textIndex, NSAttributedString(string: part, font: textFont, textColor: messageTheme.accentTextColor)))
+                            textIndex += 1
+                        }
+                    }
+                    if latestIndex < rawText.count {
+                        let part = String(rawText[rawText.index(rawText.startIndex, offsetBy: latestIndex)...])
+                        segments.append(.text(textIndex, NSAttributedString(string: part, font: textFont, textColor: messageTheme.accentTextColor)))
+                        textIndex += 1
+                    }
+                    
+                    rawSegments = segments
+                    rawAlternativeSegments = rawSegments
                 } else {
-                    rawText = item.presentationData.strings.Conversation_MessageLeaveComment
-                    rawAlternativeText = item.presentationData.strings.Conversation_MessageLeaveCommentShort
+                    rawSegments = [.text(100, NSAttributedString(string: item.presentationData.strings.Conversation_MessageLeaveComment, font: textFont, textColor: messageTheme.accentTextColor))]
+                    rawAlternativeSegments = [.text(100, NSAttributedString(string: item.presentationData.strings.Conversation_MessageLeaveCommentShort, font: textFont, textColor: messageTheme.accentTextColor))]
                 }
                 
                 let imageSize: CGFloat = 30.0
@@ -169,23 +200,16 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                 } else {
                     textLeftInset = 15.0 + imageSize * min(1.0, CGFloat(replyPeers.count)) + (imageSpacing) * max(0.0, min(2.0, CGFloat(replyPeers.count - 1)))
                 }
-                let textRightInset: CGFloat = 33.0
+                let textRightInset: CGFloat = 36.0
                 
                 let textConstrainedSize = CGSize(width: min(maxTextWidth, constrainedSize.width - horizontalInset - textLeftInset - textRightInset), height: constrainedSize.height)
                 
-                let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
+                let textInsets = UIEdgeInsets()//(top: 2.0, left: 2.0, bottom: 5.0, right: 2.0)
                 
-                let textFont = item.presentationData.messageFont
+                let (countLayout, countApply) = makeCountLayout(textConstrainedSize, rawSegments)
+                let (alternativeCountLayout, alternativeCountApply) = makeAlternativeCountLayout(textConstrainedSize, rawAlternativeSegments)
                 
-                let attributedText = NSAttributedString(string: rawText, font: textFont, textColor: messageTheme.accentTextColor)
-                let alternativeAttributedText = NSAttributedString(string: rawAlternativeText, font: textFont, textColor: messageTheme.accentTextColor)
-                
-                let textInsets = UIEdgeInsets(top: 2.0, left: 2.0, bottom: 5.0, right: 2.0)
-                
-                let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets, lineColor: messageTheme.accentControlColor))
-                let (alternativeTextLayout, alternativeTextApply) = alternativeTextLayout(TextNodeLayoutArguments(attributedString: alternativeAttributedText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: textInsets, lineColor: messageTheme.accentControlColor))
-                
-                var textFrame = CGRect(origin: CGPoint(x: -textInsets.left + textLeftInset, y: -textInsets.top + 5.0 + topOffset), size: textLayout.size)
+                var textFrame = CGRect(origin: CGPoint(x: -textInsets.left + textLeftInset - 2.0, y: -textInsets.top + 5.0 + topOffset), size: countLayout.size)
                 var textFrameWithoutInsets = CGRect(origin: CGPoint(x: textFrame.origin.x + textInsets.left, y: textFrame.origin.y + textInsets.top), size: CGSize(width: textFrame.width - textInsets.left - textInsets.right, height: textFrame.height - textInsets.top - textInsets.bottom))
                 
                 textFrame = textFrame.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top - 5.0 + UIScreenPixel)
@@ -218,25 +242,38 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                         if let strongSelf = self {
                             strongSelf.item = item
                             
-                            strongSelf.textNode.displaysAsynchronously = !item.presentationData.isPreview
-                            strongSelf.alternativeTextNode.displaysAsynchronously = !item.presentationData.isPreview
+                            let transition: ContainedViewLayoutTransition
+                            if animation.isAnimated {
+                                transition = .animated(duration: 0.2, curve: .easeInOut)
+                            } else {
+                                transition = .immediate
+                            }
                             
-                            strongSelf.textNode.isHidden = textLayout.truncated
-                            strongSelf.alternativeTextNode.isHidden = !strongSelf.textNode.isHidden
+                            strongSelf.countNode.isHidden = countLayout.isTruncated
+                            strongSelf.alternativeCountNode.isHidden = !strongSelf.countNode.isHidden
                             
-                            let _ = textApply()
-                            let _ = alternativeTextApply()
+                            let _ = countApply(animation.isAnimated)
+                            let _ = alternativeCountApply(animation.isAnimated)
                             
                             let adjustedTextFrame = textFrame
                             
-                            strongSelf.textNode.frame = adjustedTextFrame
-                            strongSelf.alternativeTextNode.frame = CGRect(origin: adjustedTextFrame.origin, size: alternativeTextLayout.size)
+                            if strongSelf.countNode.frame.isEmpty {
+                                strongSelf.countNode.frame = adjustedTextFrame
+                            } else {
+                                transition.updateFrameAdditive(node: strongSelf.countNode, frame: adjustedTextFrame)
+                            }
+                            
+                            if strongSelf.alternativeCountNode.frame.isEmpty {
+                                strongSelf.alternativeCountNode.frame = CGRect(origin: adjustedTextFrame.origin, size: alternativeCountLayout.size)
+                            } else {
+                                transition.updateFrameAdditive(node: strongSelf.alternativeCountNode, frame: CGRect(origin: adjustedTextFrame.origin, size: alternativeCountLayout.size))
+                            }
                             
                             let effectiveTextFrame: CGRect
-                            if !strongSelf.alternativeTextNode.isHidden {
-                                effectiveTextFrame = strongSelf.alternativeTextNode.frame
+                            if !strongSelf.alternativeCountNode.isHidden {
+                                effectiveTextFrame = strongSelf.alternativeCountNode.frame
                             } else {
-                                effectiveTextFrame = strongSelf.textNode.frame
+                                effectiveTextFrame = strongSelf.countNode.frame
                             }
                             
                             if let iconImage = iconImage {
@@ -247,17 +284,31 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                             if let arrowImage = arrowImage {
                                 strongSelf.arrowNode.image = arrowImage
                                 let arrowFrame = CGRect(origin: CGPoint(x: boundingWidth - 33.0, y: 6.0 + topOffset), size: arrowImage.size)
-                                strongSelf.arrowNode.frame = arrowFrame
+                                if strongSelf.arrowNode.frame.isEmpty {
+                                    strongSelf.arrowNode.frame = arrowFrame
+                                } else {
+                                    transition.updateFrameAdditive(node: strongSelf.arrowNode, frame: arrowFrame)
+                                }
                                 
                                 if let unreadIconImage = unreadIconImage {
                                     strongSelf.unreadIconNode.image = unreadIconImage
-                                    strongSelf.unreadIconNode.frame = CGRect(origin: CGPoint(x: effectiveTextFrame.maxX + 4.0, y: effectiveTextFrame.minY + floor((effectiveTextFrame.height - unreadIconImage.size.height) / 2.0) - 1.0), size: unreadIconImage.size)
+                                    
+                                    let unreadIconFrame = CGRect(origin: CGPoint(x: effectiveTextFrame.maxX + 4.0, y: effectiveTextFrame.minY + floor((effectiveTextFrame.height - unreadIconImage.size.height) / 2.0) + 1.0), size: unreadIconImage.size)
+                                    
+                                    if strongSelf.unreadIconNode.frame.isEmpty {
+                                        strongSelf.unreadIconNode.frame = unreadIconFrame
+                                    } else {
+                                        transition.updateFrameAdditive(node: strongSelf.unreadIconNode, frame: unreadIconFrame)
+                                    }
                                 }
                             }
                             
-                            strongSelf.unreadIconNode.isHidden = !hasUnseenReplies
-
-                            strongSelf.iconNode.isHidden = !replyPeers.isEmpty
+                            if strongSelf.unreadIconNode.alpha.isZero != !hasUnseenReplies {
+                                transition.updateAlpha(node: strongSelf.unreadIconNode, alpha: hasUnseenReplies ? 1.0 : 0.0)
+                                if hasUnseenReplies {
+                                    strongSelf.unreadIconNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, initialVelocity: 0.0)
+                                }
+                            }
                             
                             let hasActivity = item.controllerInteraction.currentMessageWithLoadingReplyThread == item.message.id
                             
@@ -272,7 +323,14 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                                     strongSelf.buttonNode.addSubnode(statusNode)
                                 }
                                 let statusSize = CGSize(width: 20.0, height: 20.0)
-                                statusNode.frame = CGRect(origin: CGPoint(x: boundingWidth - statusSize.width - 11.0, y: 8.0 + topOffset), size: statusSize)
+                                let statusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusSize.width - 11.0, y: 8.0 + topOffset), size: statusSize)
+                                
+                                if statusNode.frame.isEmpty {
+                                    statusNode.frame = statusFrame
+                                } else {
+                                    transition.updateFrameAdditive(node: statusNode, frame: statusFrame)
+                                }
+                                
                                 statusNode.transitionToState(.progress(color: messageTheme.accentTextColor, lineWidth: 1.5, value: nil, cancelEnabled: false), animated: false, synchronous: false, completion: {})
                             } else {
                                 strongSelf.arrowNode.isHidden = false
@@ -285,10 +343,24 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                                 }
                             }
                             
-                            let avatarsFrame = CGRect(origin: CGPoint(x: 13.0, y: 3.0 + topOffset), size: CGSize(width: imageSize * 3.0, height: imageSize))
+                            let avatarContent = strongSelf.avatarsContext.update(peers: replyPeers, animated: animation.isAnimated)
+                            let avatarsSize = strongSelf.avatarsNode.update(context: item.context, content: avatarContent, animated: animation.isAnimated, synchronousLoad: synchronousLoad)
+                            
+                            let iconAlpha: CGFloat = avatarsSize.width.isZero ? 1.0 : 0.0
+                            if iconAlpha.isZero != strongSelf.iconNode.alpha.isZero {
+                                transition.updateAlpha(node: strongSelf.iconNode, alpha: iconAlpha)
+                                if animation.isAnimated {
+                                    if iconAlpha.isZero {
+                                    } else {
+                                        strongSelf.iconNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                                    }
+                                }
+                            }
+                            
+                            let avatarsFrame = CGRect(origin: CGPoint(x: 13.0, y: 3.0 + topOffset), size: avatarsSize)
                             strongSelf.avatarsNode.frame = avatarsFrame
-                            strongSelf.avatarsNode.updateLayout(size: avatarsFrame.size)
-                            strongSelf.avatarsNode.update(context: item.context, peers: replyPeers, synchronousLoad: synchronousLoad, imageSize: imageSize, imageSpacing: imageSpacing, borderWidth: 2.0 - UIScreenPixel)
+                            //strongSelf.avatarsNode.updateLayout(size: avatarsFrame.size)
+                            //strongSelf.avatarsNode.update(context: item.context, peers: replyPeers, synchronousLoad: synchronousLoad, imageSize: imageSize, imageSpacing: imageSpacing, borderWidth: 2.0 - UIScreenPixel)
                             
                             strongSelf.separatorNode.backgroundColor = messageTheme.polls.separator
                             strongSelf.separatorNode.isHidden = !displaySeparator

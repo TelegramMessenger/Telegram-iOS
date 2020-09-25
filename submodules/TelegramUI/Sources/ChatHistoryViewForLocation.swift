@@ -85,40 +85,51 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, context: A
                         }
                         var scrollPosition: ChatHistoryViewScrollPosition?
                         
-                        if let maxReadIndex = view.maxReadIndex, tagMask == nil, view.isAddedToChatList {
+                        let canScrollToRead: Bool
+                        if case .replyThread = chatLocation {
+                            canScrollToRead = true
+                        } else if view.isAddedToChatList {
+                            canScrollToRead = true
+                        } else {
+                            canScrollToRead = false
+                        }
+                        
+                        if let maxReadIndex = view.maxReadIndex, tagMask == nil, canScrollToRead {
                             let aroundIndex = maxReadIndex
                             scrollPosition = .unread(index: maxReadIndex)
                             
-                            var targetIndex = 0
-                            for i in 0 ..< view.entries.count {
-                                if view.entries[i].index >= aroundIndex {
-                                    targetIndex = i
-                                    break
+                            if case .peer = chatLocation {
+                                var targetIndex = 0
+                                for i in 0 ..< view.entries.count {
+                                    if view.entries[i].index >= aroundIndex {
+                                        targetIndex = i
+                                        break
+                                    }
                                 }
-                            }
-                            
-                            let maxIndex = targetIndex + count / 2
-                            let minIndex = targetIndex - count / 2
-                            if minIndex <= 0 && view.holeEarlier {
-                                fadeIn = true
-                                return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
-                            }
-                            if maxIndex >= targetIndex {
-                                if view.holeLater {
+                                
+                                let maxIndex = targetIndex + count / 2
+                                let minIndex = targetIndex - count / 2
+                                if minIndex <= 0 && view.holeEarlier {
                                     fadeIn = true
                                     return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
                                 }
-                                if view.holeEarlier {
-                                    var incomingCount: Int32 = 0
-                                    inner: for entry in view.entries.reversed() {
-                                        if !entry.message.flags.intersection(.IsIncomingMask).isEmpty {
-                                            incomingCount += 1
-                                        }
-                                    }
-                                    if case let .peer(peerId) = chatLocation, let combinedReadStates = view.fixedReadStates, case let .peer(readStates) = combinedReadStates, let readState = readStates[peerId], readState.count == incomingCount {
-                                    } else {
+                                if maxIndex >= targetIndex {
+                                    if view.holeLater {
                                         fadeIn = true
                                         return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
+                                    }
+                                    if view.holeEarlier {
+                                        var incomingCount: Int32 = 0
+                                        inner: for entry in view.entries.reversed() {
+                                            if !entry.message.flags.intersection(.IsIncomingMask).isEmpty {
+                                                incomingCount += 1
+                                            }
+                                        }
+                                        if case let .peer(peerId) = chatLocation, let combinedReadStates = view.fixedReadStates, case let .peer(readStates) = combinedReadStates, let readState = readStates[peerId], readState.count == incomingCount {
+                                        } else {
+                                            fadeIn = true
+                                            return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
+                                        }
                                     }
                                 }
                             }
@@ -294,6 +305,7 @@ struct ReplyThreadInfo {
     var message: ChatReplyThreadMessage
     var isChannelPost: Bool
     var isEmpty: Bool
+    var scrollToLowerBound: Bool
     var contextHolder: Atomic<ChatLocationContextHolder?>
 }
 
@@ -305,9 +317,7 @@ enum ReplyThreadSubject {
 func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThreadSubject, atMessageId: MessageId?) -> Signal<ReplyThreadInfo, FetchChannelReplyThreadMessageError> {
     let message: Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError>
     switch subject {
-    case let .channelPost(messageId):
-        message = fetchChannelReplyThreadMessage(account: context.account, messageId: messageId, atMessageId: atMessageId)
-    case let .groupMessage(messageId):
+    case .channelPost(let messageId), .groupMessage(let messageId):
         message = fetchChannelReplyThreadMessage(account: context.account, messageId: messageId, atMessageId: atMessageId)
     }
     
@@ -316,16 +326,27 @@ func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThrea
         let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
         
         let input: ChatHistoryLocationInput
-        if let atMessageId = atMessageId {
+        let scrollToLowerBound: Bool
+        switch replyThreadMessage.initialAnchor {
+        case .automatic:
+            if let atMessageId = atMessageId {
+                input = ChatHistoryLocationInput(
+                    content: .InitialSearch(location: .id(atMessageId), count: 40),
+                    id: 0
+                )
+            } else {
+                input = ChatHistoryLocationInput(
+                    content: .Initial(count: 40),
+                    id: 0
+                )
+            }
+            scrollToLowerBound = false
+        case .lowerBound:
             input = ChatHistoryLocationInput(
-                content: .InitialSearch(location: .id(atMessageId), count: 30),
+                content: .Navigation(index: .lowerBound, anchorIndex: .lowerBound, count: 40),
                 id: 0
             )
-        } else {
-            input = ChatHistoryLocationInput(
-                content: .Initial(count: 30),
-                id: 0
-            )
+            scrollToLowerBound = true
         }
         
         let preloadSignal = preloadedChatHistoryViewForLocation(
@@ -359,6 +380,7 @@ func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThrea
                 message: replyThreadMessage,
                 isChannelPost: replyThreadMessage.isChannelPost,
                 isEmpty: isEmpty,
+                scrollToLowerBound: scrollToLowerBound,
                 contextHolder: chatLocationContextHolder
             )
         }

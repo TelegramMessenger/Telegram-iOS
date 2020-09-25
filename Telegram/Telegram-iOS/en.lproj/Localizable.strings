@@ -5777,8 +5777,21 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.ContextViewThread" = "View Thread";
 
 "Conversation.ViewReply" = "View Reply";
-"Conversation.MessageViewComments_1" = "%@ Comment";
-"Conversation.MessageViewComments_any" = "%@ Comments";
+
+"Conversation.MessageViewComments_1" = "[%@]Comment";
+"Conversation.MessageViewComments_any" = "[%@]Comments";
+"Conversation.MessageViewCommentsFormat" = "%1$@ %2$@";
+
+"Conversation.TitleCommentsEmpty" = "Comments";
+"Conversation.TitleComments_1" = "[%@]Comment";
+"Conversation.TitleComments_any" = "[%@]Comments";
+"Conversation.TitleCommentsFormat" = "%1$@ %2$@";
+
+"Conversation.TitleRepliesEmpty" = "Replies";
+"Conversation.TitleReplies_1" = "[%@]Comment";
+"Conversation.TitleReplies_any" = "[%@]Comments";
+"Conversation.TitleRepliesFormat" = "%1$@ %2$@";
+
 "Conversation.MessageLeaveComment" = "Leave a Comment";
 "Conversation.MessageLeaveCommentShort" = "Comment";
 
@@ -5788,8 +5801,6 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.InputTextPlaceholderReply" = "Reply";
 "Conversation.InputTextPlaceholderComment" = "Comment";
 
-"Conversation.TitleComments_1" = "%@ Comment";
-"Conversation.TitleComments_any" = "%@ Comments";
 "Conversation.TitleNoComments" = "Comments";
 
 "Conversation.ContextMenuBlock" = "Block User";

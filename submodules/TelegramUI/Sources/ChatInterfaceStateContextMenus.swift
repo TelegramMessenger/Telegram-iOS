@@ -601,7 +601,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replies"), color: theme.actionSheet.primaryTextColor)
             }, action: { c, _ in
                 c.dismiss(completion: {
-                    controllerInteraction.openMessageReplies(messages[0].id, true)
+                    controllerInteraction.openMessageReplies(messages[0].id, true, true)
                 })
             })))
         }

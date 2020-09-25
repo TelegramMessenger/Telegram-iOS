@@ -1100,6 +1100,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private func processDisplayedItemRangeChanged(displayedRange: ListViewDisplayedItemRange, transactionState: ChatHistoryTransactionOpaqueState) {
         let historyView = transactionState.historyView
+        var isTopReplyThreadMessageShownValue = false
         if let visible = displayedRange.visibleRange {
             let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
             if indexRange.0 > indexRange.1 {
@@ -1119,8 +1120,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             var messageIdsWithUnseenPersonalMention: [MessageId] = []
             var messagesWithPreloadableMediaToEarlier: [(Message, Media)] = []
             var messagesWithPreloadableMediaToLater: [(Message, Media)] = []
-            
-            var isTopReplyThreadMessageShownValue = false
             
             if indexRange.0 <= indexRange.1 {
                 for i in (indexRange.0 ... indexRange.1) {
@@ -1320,9 +1319,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     self.maxVisibleMessageIndexUpdated?(maxOverallIndex)
                 }
             }
-            
-            self.isTopReplyThreadMessageShown.set(isTopReplyThreadMessageShownValue)
         }
+        self.isTopReplyThreadMessageShown.set(isTopReplyThreadMessageShownValue)
         
         if let loaded = displayedRange.loadedRange, let firstEntry = historyView.filteredEntries.first, let lastEntry = historyView.filteredEntries.last {
             if loaded.firstIndex < 5 && historyView.originalView.laterId != nil {

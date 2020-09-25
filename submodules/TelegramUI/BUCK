@@ -186,8 +186,6 @@ framework(
         "//submodules/MessageReactionListUI:MessageReactionListUI",
         "//submodules/SegmentedControlNode:SegmentedControlNode",
         "//submodules/AppBundle:AppBundle",
-        #"//submodules/WalletUI:WalletUI",
-        #"//submodules/WalletCore:WalletCore",
         "//submodules/Markdown:Markdown",
         "//submodules/SearchPeerMembers:SearchPeerMembers",
         "//submodules/WidgetItems:WidgetItems",
@@ -211,6 +209,8 @@ framework(
         "//submodules/ChatMessageInteractiveMediaBadge:ChatMessageInteractiveMediaBadge",
         "//submodules/GalleryData:GalleryData",
         "//submodules/ChatInterfaceState:ChatInterfaceState",
+        "//submodules/AnimatedCountLabelNode:AnimatedCountLabelNode",
+        "//submodules/AnimatedAvatarSetNode:AnimatedAvatarSetNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

@@ -112,7 +112,7 @@ public final class ChatControllerInteraction {
     let animateDiceSuccess: () -> Void
     let greetingStickerNode: () -> (ASDisplayNode, ASDisplayNode, ASDisplayNode, () -> Void)?
     let openPeerContextMenu: (Peer, ASDisplayNode, CGRect, ContextGesture?) -> Void
-    let openMessageReplies: (MessageId, Bool) -> Void
+    let openMessageReplies: (MessageId, Bool, Bool) -> Void
     let openReplyThreadOriginalMessage: (Message) -> Void
     
     let requestMessageUpdate: (MessageId) -> Void
@@ -197,7 +197,7 @@ public final class ChatControllerInteraction {
         animateDiceSuccess: @escaping () -> Void,
         greetingStickerNode: @escaping () -> (ASDisplayNode, ASDisplayNode, ASDisplayNode, () -> Void)?,
         openPeerContextMenu: @escaping (Peer, ASDisplayNode, CGRect, ContextGesture?) -> Void,
-        openMessageReplies: @escaping (MessageId, Bool) -> Void,
+        openMessageReplies: @escaping (MessageId, Bool, Bool) -> Void,
         openReplyThreadOriginalMessage: @escaping (Message) -> Void,
         requestMessageUpdate: @escaping (MessageId) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
@@ -319,7 +319,7 @@ public final class ChatControllerInteraction {
         }, greetingStickerNode: {
             return nil
         }, openPeerContextMenu: { _, _, _, _ in
-        }, openMessageReplies: { _, _ in
+        }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
