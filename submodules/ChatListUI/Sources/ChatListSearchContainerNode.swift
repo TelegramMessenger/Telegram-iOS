@@ -474,7 +474,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             filters = [.chats, .media, .links, .files, .music, .voice]
         }
         
-        self.filterContainerNode.update(size: CGSize(width: layout.size.width, height: 38.0), sideInset: layout.safeInsets.left - 20.0, filters: filters.map { .filter($0) }, selectedFilter: self.selectedFilterKey, transitionFraction: self.transitionFraction, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
+        self.filterContainerNode.update(size: CGSize(width: layout.size.width - 40.0, height: 38.0), sideInset: layout.safeInsets.left - 20.0, filters: filters.map { .filter($0) }, selectedFilter: self.selectedFilterKey, transitionFraction: self.transitionFraction, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
         
         if let selectedMessageIds = self.stateValue.selectedMessageIds {
             var wasAdded = false
