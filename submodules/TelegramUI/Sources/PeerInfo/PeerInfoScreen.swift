@@ -4841,11 +4841,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     private func activateSearch() {
-        guard let (layout, navigationBarHeight) = self.validLayout else {
-            return
-        }
-        
-        if let _ = self.searchDisplayController {
+        guard let (layout, navigationBarHeight) = self.validLayout, self.searchDisplayController == nil else {
             return
         }
         
@@ -4912,16 +4908,14 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             transition.updateAlpha(node: navigationBar, alpha: 0.0)
         }
         
-        self.searchDisplayController?.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+        self.searchDisplayController?.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight + 10.0, transition: .immediate)
         self.searchDisplayController?.activate(insertSubnode: { [weak self] subnode, isSearchBar in
             if let strongSelf = self, let navigationBar = strongSelf.controller?.navigationBar {
                 strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
             }
         }, placeholder: nil)
         
-        if let (layout, navigationHeight) = self.validLayout {
-            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
-        }
+        self.containerLayoutUpdated(layout: layout, navigationHeight: navigationBarHeight, transition: .immediate)
     }
     
     private func deactivateSearch() {
@@ -4958,7 +4952,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         
         if let searchDisplayController = self.searchDisplayController {
-            searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: transition)
+            searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight + 10.0, transition: transition)
             if !searchDisplayController.isDeactivating {
                 //vanillaInsets.top += (layout.statusBarHeight ?? 0.0) - navigationBarHeightDelta
             }

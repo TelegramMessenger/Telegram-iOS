@@ -31,17 +31,17 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
     private var nonExtractedRect: CGRect?
     
     private let highlightedBackgroundNode: ASDisplayNode
-    private let separatorNode: ASDisplayNode
+    public let separatorNode: ASDisplayNode
     
     private var selectionNode: ItemListSelectableControlNode?
     
-    private let titleNode: TextNode
-    private let descriptionNode: TextNode
-    private let dateNode: TextNode
+    public let titleNode: TextNode
+    let descriptionNode: TextNode
+    public let dateNode: TextNode
     private let instantViewIconNode: ASImageNode
-    private let linkNode: TextNode
+    public let linkNode: TextNode
     private var linkHighlightingNode: LinkHighlightingNode?
-    private let authorNode: TextNode
+    public let authorNode: TextNode
     
     private let iconTextBackgroundNode: ASImageNode
     private let iconTextNode: TextNode

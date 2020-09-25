@@ -114,7 +114,7 @@ public final class SelectablePeerNode: ASDisplayNode {
         
         self.textNode = ASTextNode()
         self.textNode.isUserInteractionEnabled = false
-        self.textNode.displaysAsynchronously = true
+        self.textNode.displaysAsynchronously = false
         
         self.onlineNode = PeerOnlineMarkerNode()
         

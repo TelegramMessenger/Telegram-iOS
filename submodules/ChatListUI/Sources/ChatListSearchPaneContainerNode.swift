@@ -36,7 +36,7 @@ final class ChatListSearchPaneWrapper {
     }
     
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
-        if let (currentSize, currentSideInset, currentBottomInset, visibleHeight, currentPresentationData) = self.appliedParams {
+        if let (currentSize, currentSideInset, currentBottomInset, _, currentPresentationData) = self.appliedParams {
             if currentSize == size && currentSideInset == sideInset && currentBottomInset == bottomInset && currentPresentationData === presentationData {
                 return
             }
@@ -76,12 +76,13 @@ private final class ChatListSearchPendingPane {
         interaction: ChatListSearchInteraction,
         navigationController: NavigationController?,
         peersFilter: ChatListNodePeersFilter,
+        groupId: PeerGroupId,
         searchQuery: Signal<String?, NoError>,
         searchOptions: Signal<ChatListSearchOptions?, NoError>,
         key: ChatListSearchPaneKey,
         hasBecomeReady: @escaping (ChatListSearchPaneKey) -> Void
     ) {
-        let paneNode = ChatListSearchListPaneNode(context: context, interaction: interaction, key: key, peersFilter: key == .chats ? peersFilter : [], searchQuery: searchQuery, searchOptions: searchOptions, navigationController: navigationController)
+        let paneNode = ChatListSearchListPaneNode(context: context, interaction: interaction, key: key, peersFilter: key == .chats ? peersFilter : [], groupId: groupId, searchQuery: searchQuery, searchOptions: searchOptions, navigationController: navigationController)
         
         self.pane = ChatListSearchPaneWrapper(key: key, node: paneNode)
         self.disposable = (paneNode.isReady
@@ -100,14 +101,12 @@ private final class ChatListSearchPendingPane {
 final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private let context: AccountContext
     private let peersFilter: ChatListNodePeersFilter
+    private let groupId: PeerGroupId
     private let searchQuery: Signal<String?, NoError>
     private let searchOptions: Signal<ChatListSearchOptions?, NoError>
     private let navigationController: NavigationController?
     var interaction: ChatListSearchInteraction?
-    
-    private let coveringBackgroundNode: ASDisplayNode
-    private let separatorNode: ASDisplayNode
-    
+        
     let isReady = Promise<Bool>()
     var didSetIsReady = false
     
@@ -138,23 +137,15 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
     
     private var currentAvailablePanes: [ChatListSearchPaneKey]?
     
-    init(context: AccountContext, peersFilter: ChatListNodePeersFilter, searchQuery: Signal<String?, NoError>, searchOptions: Signal<ChatListSearchOptions?, NoError>, navigationController: NavigationController?) {
+    init(context: AccountContext, peersFilter: ChatListNodePeersFilter, groupId: PeerGroupId, searchQuery: Signal<String?, NoError>, searchOptions: Signal<ChatListSearchOptions?, NoError>, navigationController: NavigationController?) {
         self.context = context
         self.peersFilter = peersFilter
+        self.groupId = groupId
         self.searchQuery = searchQuery
         self.searchOptions = searchOptions
         self.navigationController = navigationController
         
-        self.separatorNode = ASDisplayNode()
-        self.separatorNode.isLayerBacked = true
-        
-        self.coveringBackgroundNode = ASDisplayNode()
-        self.coveringBackgroundNode.isLayerBacked = true
-        
         super.init()
-        
-        self.addSubnode(self.separatorNode)
-        self.addSubnode(self.coveringBackgroundNode)
     }
     
     func requestSelectPane(_ key: ChatListSearchPaneKey) {
@@ -256,7 +247,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
                         directionIsToRight = translation.x > size.width / 2.0
                     }
                 }
-                var updated = false
+                
                 if let directionIsToRight = directionIsToRight {
                     var updatedIndex = currentIndex
                     if directionIsToRight {
@@ -267,7 +258,6 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
                     let switchToKey = availablePanes[updatedIndex]
                     if switchToKey != self.currentPaneKey && self.currentPanes[switchToKey] != nil{
                         self.currentPaneKey = switchToKey
-                        updated = true
                     }
                 }
                 self.transitionFraction = 0.0
@@ -338,19 +328,10 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
         }
         
         self.currentParams = (size, sideInset, bottomInset, visibleHeight, presentationData)
-        
-        transition.updateAlpha(node: self.coveringBackgroundNode, alpha: 0.0)
-        
+                
         self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
-        self.coveringBackgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.backgroundColor
-        self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         
-        let tabsHeight: CGFloat = 48.0
-        
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))
-        transition.updateFrame(node: self.coveringBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: size.width, height: tabsHeight + UIScreenPixel)))
-        
-        let paneFrame = CGRect(origin: CGPoint(x: 0.0, y: tabsHeight), size: CGSize(width: size.width, height: size.height - tabsHeight))
+        let paneFrame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height))
         
         var visiblePaneIndices: [Int] = []
         var requiredPendingKeys: [ChatListSearchPaneKey] = []
@@ -386,6 +367,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
                     interaction: self.interaction!,
                     navigationController: self.navigationController,
                     peersFilter: self.peersFilter,
+                    groupId: self.groupId,
                     searchQuery: self.searchQuery,
                     searchOptions: self.searchOptions,
                     key: key,
@@ -429,8 +411,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
         var paneSwitchAnimationOffset: CGFloat = 0.0
         
         var updatedCurrentIndex = currentIndex
-        var animatePaneTransitionOffset: CGFloat?
-        if let pendingSwitchToPaneKey = self.pendingSwitchToPaneKey, let pane = self.currentPanes[pendingSwitchToPaneKey] {
+        if let pendingSwitchToPaneKey = self.pendingSwitchToPaneKey, let _ = self.currentPanes[pendingSwitchToPaneKey] {
             self.pendingSwitchToPaneKey = nil
             previousPaneKey = self.currentPaneKey
             self.currentPaneKey = pendingSwitchToPaneKey
@@ -463,8 +444,8 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
                         return
                     }
                     pane.isAnimatingOut = false
-                    if let (size, sideInset, bottomInset, visibleHeight, presentationData) = strongSelf.currentParams {
-                        if let currentPaneKey = strongSelf.currentPaneKey, let currentIndex = availablePanes.firstIndex(of: currentPaneKey), let paneIndex = availablePanes.firstIndex(of: key), abs(paneIndex - currentIndex) <= 1 {
+                    if let _ = strongSelf.currentParams {
+                        if let currentPaneKey = strongSelf.currentPaneKey, let currentIndex = availablePanes.firstIndex(of: currentPaneKey), let paneIndex = availablePanes.firstIndex(of: key), paneIndex == 0 || abs(paneIndex - currentIndex) <= 1 {
                         } else {
                             if let pane = strongSelf.currentPanes.removeValue(forKey: key) {
                                 pane.node.removeFromSupernode()

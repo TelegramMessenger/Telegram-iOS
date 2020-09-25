@@ -96,11 +96,10 @@ public final class HashtagSearchController: TelegramBaseController {
                 })
                 
                 let firstTime = previousEntries == nil
-                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, isEmpty: entries.isEmpty, isLoading: false, animated: false, searchQuery: "", context: strongSelf.context, presentationData: strongSelf.presentationData, enableHeaders: false, filter: [], tagMask: nil, interaction: interaction, listInteraction: listInteraction, peerContextAction: nil, toggleExpandLocalResults: {
+                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, isEmpty: entries.isEmpty, isLoading: false, animated: false, context: strongSelf.context, presentationData: strongSelf.presentationData, enableHeaders: false, filter: [], tagMask: nil, interaction: interaction, listInteraction: listInteraction, peerContextAction: nil, toggleExpandLocalResults: {
                 }, toggleExpandGlobalResults: {
                 }, searchPeer: { _ in
-                    
-                }, searchResults: [], searchOptions: nil, messageContextAction: nil)
+                }, searchQuery: "", searchOptions: nil, messageContextAction: nil)
                 strongSelf.controllerNode.enqueueTransition(transition, firstTime: firstTime)
             }
         })

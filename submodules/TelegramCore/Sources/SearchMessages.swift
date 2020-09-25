@@ -8,7 +8,7 @@ import SyncCore
 
 public enum SearchMessagesLocation: Equatable {
     case general(tags: MessageTags?, minDate: Int32?, maxDate: Int32?)
-    case group(PeerGroupId)
+    case group(groupId: PeerGroupId, tags: MessageTags?, minDate: Int32?, maxDate: Int32?)
     case peer(peerId: PeerId, fromId: PeerId?, tags: MessageTags?, topMsgId: MessageId?, minDate: Int32?, maxDate: Int32?)
     case publicForwards(messageId: MessageId, datacenterId: Int?)
 }
@@ -270,9 +270,15 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 }
                 return combineLatest(peerMessages, additionalPeerMessages)
             }
-        case .group:
-            remoteSearchResult = .single((nil, nil))
-        case let .general(tags, minDate, maxDate):
+        case let .general(tags, minDate, maxDate), let .group(_, tags, minDate, maxDate):
+            var flags: Int32 = 0
+            let folderId: Int32?
+            if case let .group(groupId, _, _, _) = location {
+                folderId = groupId.rawValue
+                flags |= (1 << 0)
+            } else {
+                folderId = nil
+            }
             let filter: Api.MessagesFilter = tags.flatMap { messageFilterForTagMask($0) } ?? .inputMessagesFilterEmpty
             remoteSearchResult = account.postbox.transaction { transaction -> (Int32, MessageIndex?, Api.InputPeer) in
                 var lowerBound: MessageIndex?
@@ -286,7 +292,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 } 
             }
             |> mapToSignal { (nextRate, lowerBound, inputPeer) in
-                return account.network.request(Api.functions.messages.searchGlobal(flags: 0, folderId: nil, q: query, filter: filter, minDate: minDate ?? 0, maxDate: maxDate ?? (Int32.max - 1), offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit), automaticFloodWait: false)
+                return account.network.request(Api.functions.messages.searchGlobal(flags: flags, folderId: folderId, q: query, filter: filter, minDate: minDate ?? 0, maxDate: maxDate ?? (Int32.max - 1), offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit), automaticFloodWait: false)
                 |> map { result -> (Api.messages.Messages?, Api.messages.Messages?) in
                     return (result, nil)
                 }

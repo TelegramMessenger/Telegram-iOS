@@ -1703,8 +1703,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     
     public func deactivateSearch(animated: Bool) {
         if !self.displayNavigationBar {
+            var completion: (() -> Void)?
             if let searchContentNode = self.searchContentNode {
-                self.chatListDisplayNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
+                completion = self.chatListDisplayNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
             }
             
             let filtersIsEmpty: Bool
@@ -1721,6 +1722,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             
             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .spring) : .immediate
             self.setDisplayNavigationBar(true, transition: transition)
+            
+            completion?()
             
             (self.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.4, curve: .spring))
         }

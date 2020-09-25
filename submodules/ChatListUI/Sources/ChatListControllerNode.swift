@@ -1088,7 +1088,6 @@ final class ChatListControllerNode: ASDisplayNode {
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
-        
         insets.left += layout.safeInsets.left
         insets.right += layout.safeInsets.right
         
@@ -1195,11 +1194,19 @@ final class ChatListControllerNode: ASDisplayNode {
         })
     }
     
-    func deactivateSearch(placeholderNode: SearchBarPlaceholderNode, animated: Bool) {
+    func deactivateSearch(placeholderNode: SearchBarPlaceholderNode, animated: Bool) -> (() -> Void)? {
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.deactivate(placeholder: placeholderNode, animated: animated)
             self.searchDisplayController = nil
             self.containerNode.accessibilityElementsHidden = false
+            
+            return { [weak self] in
+                if let strongSelf = self, let (layout, _, _, cleanNavigationBarHeight) = strongSelf.containerLayout {
+                    searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: cleanNavigationBarHeight, transition: .animated(duration: 0.4, curve: .spring))
+                }
+            }
+        } else {
+            return nil
         }
     }
     
