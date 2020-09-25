@@ -6089,6 +6089,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let currentButton = self.rightNavigationButton?.action, currentButton == button.action {
                     animated = false
                 }
+                if case .replyThread = self.chatLocation {
+                    animated = false
+                }
                 self.navigationItem.setRightBarButton(button.buttonItem, animated: animated)
                 self.rightNavigationButton = button
             }

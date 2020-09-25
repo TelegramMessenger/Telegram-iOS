@@ -136,12 +136,12 @@ private enum ChannelDiscussionGroupSetupControllerEntry: ItemListNodeEntry {
                 let text: String
                 if let title = title {
                     if isGroup {
-                        text = presentationData.strings.Channel_DiscussionGroup_HeaderGroupSet(title).0
+                        text = presentationData.strings.Channel_CommentsGroup_HeaderGroupSet(title).0
                     } else {
-                        text = presentationData.strings.Channel_DiscussionGroup_HeaderSet(title).0
+                        text = presentationData.strings.Channel_CommentsGroup_HeaderSet(title).0
                     }
                 } else {
-                    text = ""
+                    text = presentationData.strings.Channel_CommentsGroup_Header
                 }
                 return ChatListFilterSettingsHeaderItem(theme: presentationData.theme, text: text, animation: .discussionGroupSetup, sectionId: self.section)
             case let .create(theme, text):

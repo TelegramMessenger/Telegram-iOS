@@ -5806,3 +5806,7 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.ContextMenuBlock" = "Block User";
 
 "Replies.BlockAndDeleteRepliesActionTitle" = "Block and Delete Replies";
+
+"Channel.CommentsGroup.Header" = "Select a group chat that will be used to host comments from your channel.";
+"Channel.CommentsGroup.HeaderSet" = "%@ is selected as the group that will be used to host comments for your channel.";
+"Channel.CommentsGroup.HeaderGroupSet" = "%@ is linking the group as it's discussion board.";
