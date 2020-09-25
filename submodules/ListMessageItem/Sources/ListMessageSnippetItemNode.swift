@@ -374,7 +374,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                     let (messageTextUrl, _) = parseUrl(url: item.message.text, wasConcealed: false)
                                     
                                     if messageTextUrl != rawUrlString, !item.isGlobalSearchResult {
-                                       mutableDescriptionText.append(NSAttributedString(string: item.message.text + "\n", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor))
+                                        mutableDescriptionText.append(NSAttributedString(string: item.message.text + "\n", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor))
                                     }
                                     
                                     let urlAttributedString = NSMutableAttributedString()

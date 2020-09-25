@@ -2205,7 +2205,8 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
             
             let peer1 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: 1), accessHash: nil, firstName: "FirstName", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
             let timestamp1: Int32 = 100000
-            let peers = SimpleDictionary<PeerId, Peer>()
+            var peers = SimpleDictionary<PeerId, Peer>()
+            peers[peer1.id] = peer1
             let interaction = ChatListNodeInteraction(activateSearch: {}, peerSelected: { _, _ in }, disabledPeerSelected: { _ in }, togglePeerSelected: { _ in }, additionalCategorySelected: { _ in
             }, messageSelected: { _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, deletePeer: { _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, hidePsa: { _ in }, activateChatPreview: { _, _, gesture in
                 gesture?.cancel()
@@ -2313,7 +2314,9 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             context.setFillColor(presentationData.theme.chatList.itemSeparatorColor.cgColor)
                             context.fill(itemNode.separatorNode.frame.offsetBy(dx: 0.0, dy: currentY))
                         } else if let itemNode = itemNodes[sampleIndex] as? ListMessageFileItemNode {
+                            var isVoice = false
                             if let media = itemNode.currentMedia as? TelegramMediaFile {
+                                isVoice = media.isVoice
                                 if media.isMusic || media.isVoice {
                                     context.fillEllipse(in: CGRect(x: 12.0, y: currentY + 12.0, width: 40.0, height: 40.0))
                                 } else {
@@ -2324,10 +2327,10 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             }
                             
                             let titleFrame = itemNode.titleNode.frame.offsetBy(dx: 0.0, dy: currentY)
-                            fillLabelPlaceholderRect(origin: CGPoint(x: titleFrame.minX, y: floor(titleFrame.midY - fakeLabelPlaceholderHeight / 2.0)), width: 60.0)
+                            fillLabelPlaceholderRect(origin: CGPoint(x: titleFrame.minX, y: floor(titleFrame.midY - fakeLabelPlaceholderHeight / 2.0)), width: isVoice ? 240.0 : 60.0)
                             
                             let descriptionFrame = itemNode.descriptionNode.frame.offsetBy(dx: 0.0, dy: currentY)
-                            fillLabelPlaceholderRect(origin: CGPoint(x: descriptionFrame.minX, y: floor(descriptionFrame.midY - fakeLabelPlaceholderHeight / 2.0)), width: 240.0)
+                            fillLabelPlaceholderRect(origin: CGPoint(x: descriptionFrame.minX, y: floor(descriptionFrame.midY - fakeLabelPlaceholderHeight / 2.0)), width: isVoice ? 60.0 : 240.0)
                             
                             let dateFrame = itemNode.dateNode.frame.offsetBy(dx: 0.0, dy: currentY)
                             fillLabelPlaceholderRect(origin: CGPoint(x: dateFrame.maxX - 30.0, y: dateFrame.minY), width: 30.0)
