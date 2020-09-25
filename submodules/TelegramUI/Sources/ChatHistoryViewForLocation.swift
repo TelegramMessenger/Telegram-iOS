@@ -32,9 +32,9 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, context: A
     if scheduled {
         var first = true
         var chatScrollPosition: ChatHistoryViewScrollPosition?
-        if case let .Scroll(index, _, sourceIndex, position, animated) = location.content {
+        if case let .Scroll(index, _, sourceIndex, position, animated, highlight) = location.content {
             let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > index ? .Down : .Up
-            chatScrollPosition = .index(index: index, position: position, directionHint: directionHint, animated: animated)
+            chatScrollPosition = .index(index: index, position: position, directionHint: directionHint, animated: animated, highlight: highlight)
         }
         return account.viewTracker.scheduledMessagesViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), additionalData: additionalData)
         |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
@@ -146,7 +146,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, context: A
                         return .HistoryView(view: view, type: .Initial(fadeIn: fadeIn), scrollPosition: scrollPosition, flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
                     }
                 }
-            case let .InitialSearch(searchLocation, count):
+            case let .InitialSearch(searchLocation, count, highlight):
                 var preloaded = false
                 var fadeIn = false
                 
@@ -198,10 +198,10 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, context: A
                         }
                         
                         preloaded = true
-                        return .HistoryView(view: view, type: reportUpdateType, scrollPosition: .index(index: anchorIndex, position: .center(.bottom), directionHint: .Down, animated: false), flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
+                        return .HistoryView(view: view, type: reportUpdateType, scrollPosition: .index(index: anchorIndex, position: .center(.bottom), directionHint: .Down, animated: false, highlight: highlight), flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
                     }
                 }
-            case let .Navigation(index, anchorIndex, count):
+            case let .Navigation(index, anchorIndex, count, highlight):
                 var first = true
                 return account.viewTracker.aroundMessageHistoryViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), index: index, anchorIndex: anchorIndex, count: count, fixedCombinedReadStates: fixedCombinedReadStates, tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData) |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
                     let (cachedData, cachedDataMessages, readStateData) = extractAdditionalData(view: view, chatLocation: chatLocation)
@@ -215,9 +215,9 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, context: A
                     }
                     return .HistoryView(view: view, type: .Generic(type: genericType), scrollPosition: nil, flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
                 }
-            case let .Scroll(index, anchorIndex, sourceIndex, scrollPosition, animated):
+            case let .Scroll(index, anchorIndex, sourceIndex, scrollPosition, animated, highlight):
                 let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > index ? .Down : .Up
-                let chatScrollPosition = ChatHistoryViewScrollPosition.index(index: index, position: scrollPosition, directionHint: directionHint, animated: animated)
+                let chatScrollPosition = ChatHistoryViewScrollPosition.index(index: index, position: scrollPosition, directionHint: directionHint, animated: animated, highlight: highlight)
                 var first = true
                 return account.viewTracker.aroundMessageHistoryViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), index: index, anchorIndex: anchorIndex, count: 128, fixedCombinedReadStates: fixedCombinedReadStates, tagMask: tagMask, orderStatistics: orderStatistics, additionalData: additionalData)
                 |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
@@ -305,7 +305,7 @@ struct ReplyThreadInfo {
     var message: ChatReplyThreadMessage
     var isChannelPost: Bool
     var isEmpty: Bool
-    var scrollToLowerBound: Bool
+    var scrollToLowerBoundMessage: MessageIndex?
     var contextHolder: Atomic<ChatLocationContextHolder?>
 }
 
@@ -326,12 +326,12 @@ func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThrea
         let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
         
         let input: ChatHistoryLocationInput
-        let scrollToLowerBound: Bool
+        var scrollToLowerBoundMessage: MessageIndex?
         switch replyThreadMessage.initialAnchor {
         case .automatic:
             if let atMessageId = atMessageId {
                 input = ChatHistoryLocationInput(
-                    content: .InitialSearch(location: .id(atMessageId), count: 40),
+                    content: .InitialSearch(location: .id(atMessageId), count: 40, highlight: true),
                     id: 0
                 )
             } else {
@@ -340,13 +340,12 @@ func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThrea
                     id: 0
                 )
             }
-            scrollToLowerBound = false
-        case .lowerBound:
+        case let .lowerBoundMessage(index):
             input = ChatHistoryLocationInput(
-                content: .Navigation(index: .lowerBound, anchorIndex: .lowerBound, count: 40),
+                content: .Navigation(index: .message(index), anchorIndex: .message(index), count: 40, highlight: false),
                 id: 0
             )
-            scrollToLowerBound = true
+            scrollToLowerBoundMessage = index
         }
         
         let preloadSignal = preloadedChatHistoryViewForLocation(
@@ -380,7 +379,7 @@ func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThrea
                 message: replyThreadMessage,
                 isChannelPost: replyThreadMessage.isChannelPost,
                 isEmpty: isEmpty,
-                scrollToLowerBound: scrollToLowerBound,
+                scrollToLowerBoundMessage: scrollToLowerBoundMessage,
                 contextHolder: chatLocationContextHolder
             )
         }

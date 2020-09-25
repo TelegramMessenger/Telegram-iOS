@@ -329,7 +329,7 @@ public struct ChatTextInputStateText: PostboxCoding, Equatable {
 }
 
 public enum ChatControllerSubject: Equatable {
-    case message(MessageId)
+    case message(id: MessageId, highlight: Bool)
     case scheduledMessages
 }
 

@@ -9,9 +9,9 @@ public enum ChatHistoryInitialSearchLocation: Equatable {
 
 public enum ChatHistoryLocation: Equatable {
     case Initial(count: Int)
-    case InitialSearch(location: ChatHistoryInitialSearchLocation, count: Int)
-    case Navigation(index: MessageHistoryAnchorIndex, anchorIndex: MessageHistoryAnchorIndex, count: Int)
-    case Scroll(index: MessageHistoryAnchorIndex, anchorIndex: MessageHistoryAnchorIndex, sourceIndex: MessageHistoryAnchorIndex, scrollPosition: ListViewScrollPosition, animated: Bool)
+    case InitialSearch(location: ChatHistoryInitialSearchLocation, count: Int, highlight: Bool)
+    case Navigation(index: MessageHistoryAnchorIndex, anchorIndex: MessageHistoryAnchorIndex, count: Int, highlight: Bool)
+    case Scroll(index: MessageHistoryAnchorIndex, anchorIndex: MessageHistoryAnchorIndex, sourceIndex: MessageHistoryAnchorIndex, scrollPosition: ListViewScrollPosition, animated: Bool, highlight: Bool)
 }
 
 public struct ChatHistoryLocationInput: Equatable {

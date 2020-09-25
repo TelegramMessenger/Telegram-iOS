@@ -383,7 +383,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                                 return .replyThreadMessage(replyThreadMessage: result, messageId: messageId)
                             }
                         } else {
-                            return .single(.peer(foundPeer.id, .chat(textInputState: nil, subject: .message(messageId), peekData: nil)))
+                            return .single(.peer(foundPeer.id, .chat(textInputState: nil, subject: .message(id: messageId, highlight: true), peekData: nil)))
                         }
                     } else {
                         return .single(.inaccessiblePeer)

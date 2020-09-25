@@ -669,7 +669,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
                                 scrollToEndIfExists = true
                             }
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), subject: .message(messageId), purposefulAction: {
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), subject: .message(id: messageId, highlight: true), purposefulAction: {
                                 self?.deactivateSearch(animated: false)
                             }, scrollToEndIfExists: scrollToEndIfExists, options:  strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : []))
                             strongSelf.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
@@ -1780,7 +1780,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     sourceRect = CGRect(x: sourceRect.minX, y: sourceRect.minY + bounds.minY, width: bounds.width, height: bounds.height)
                     sourceRect.size.height -= UIScreenPixel
                     
-                    let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(messageId.peerId), subject: .message(messageId), botStart: nil, mode: .standard(previewing: true))
+                    let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(messageId.peerId), subject: .message(id: messageId, highlight: true), botStart: nil, mode: .standard(previewing: true))
                     chatController.canReadHistory.set(false)
                     chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                     return (chatController, sourceRect)

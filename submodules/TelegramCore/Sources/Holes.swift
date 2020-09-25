@@ -155,6 +155,8 @@ enum FetchMessageHistoryHoleThreadInput: CustomStringConvertible {
 struct FetchMessageHistoryHoleResult: Equatable {
     var removedIndices: IndexSet
     var strictRemovedIndices: IndexSet
+    var actualPeerId: PeerId?
+    var actualThreadId: Int64?
 }
 
 func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, peerInput: FetchMessageHistoryHoleThreadInput, namespace: MessageId.Namespace, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleSpace, count rawCount: Int) -> Signal<FetchMessageHistoryHoleResult, NoError> {
@@ -180,7 +182,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
         }
         |> mapToSignal { (inputPeer, hash) -> Signal<FetchMessageHistoryHoleResult, NoError> in
             guard let inputPeer = inputPeer else {
-                return .single(FetchMessageHistoryHoleResult(removedIndices: IndexSet(), strictRemovedIndices: IndexSet()))
+                return .single(FetchMessageHistoryHoleResult(removedIndices: IndexSet(), strictRemovedIndices: IndexSet(), actualPeerId: nil, actualThreadId: nil))
             }
             
             print("fetchMessageHistoryHole for \(peerInput) direction \(direction) space \(space)")
@@ -537,7 +539,9 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                     
                     return FetchMessageHistoryHoleResult(
                         removedIndices: IndexSet(integersIn: Int(filledRange.lowerBound) ... Int(filledRange.upperBound)),
-                        strictRemovedIndices: strictFilledIndices
+                        strictRemovedIndices: strictFilledIndices,
+                        actualPeerId: storeMessages.first?.id.peerId,
+                        actualThreadId: storeMessages.first?.threadId
                     )
                 })
             }

@@ -5115,7 +5115,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if let navigationController = strongSelf.effectiveNavigationController {
-                let subject: ChatControllerSubject? = sourceMessageId.flatMap(ChatControllerSubject.message)
+                let subject: ChatControllerSubject? = sourceMessageId.flatMap { ChatControllerSubject.message(id: $0, highlight: true) }
                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(replyThreadResult), subject: subject, keepStack: .always))
             }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()))
@@ -8189,7 +8189,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func scrollToEndOfHistory() {
-        let locationInput = ChatHistoryLocationInput(content: .Scroll(index: .upperBound, anchorIndex: .upperBound, sourceIndex: .lowerBound, scrollPosition: .top(0.0), animated: true), id: 0)
+        let locationInput = ChatHistoryLocationInput(content: .Scroll(index: .upperBound, anchorIndex: .upperBound, sourceIndex: .lowerBound, scrollPosition: .top(0.0), animated: true, highlight: false), id: 0)
         
         let historyView = preloadedChatHistoryViewForLocation(locationInput, context: self.context, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
         let signal = historyView
@@ -8253,7 +8253,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func scrollToStartOfHistory() {
-        let locationInput = ChatHistoryLocationInput(content: .Scroll(index: .lowerBound, anchorIndex: .lowerBound, sourceIndex: .upperBound, scrollPosition: .bottom(0.0), animated: true), id: 0)
+        let locationInput = ChatHistoryLocationInput(content: .Scroll(index: .lowerBound, anchorIndex: .lowerBound, sourceIndex: .upperBound, scrollPosition: .bottom(0.0), animated: true, highlight: false), id: 0)
         
         let historyView = preloadedChatHistoryViewForLocation(locationInput, context: self.context, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
         let signal = historyView
@@ -8400,9 +8400,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let subject: ChatControllerSubject?
                 if let atMessageId = atMessageId {
-                    subject = .message(atMessageId)
-                } else if result.scrollToLowerBound {
-                    subject = .message(MessageId(peerId: result.message.messageId.peerId, namespace: Namespaces.Message.Cloud, id: 1))
+                    subject = .message(id: atMessageId, highlight: true)
+                } else if let index = result.scrollToLowerBoundMessage {
+                    subject = .message(id: index.id, highlight: false)
                 } else {
                     subject = nil
                 }
@@ -8456,7 +8456,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             if case let .peer(peerId) = self.chatLocation, let messageId = messageLocation.messageId, (messageId.peerId != peerId && !forceInCurrentChat) || (self.presentationInterfaceState.isScheduledMessages && messageId.id != 0 && !Namespaces.Message.allScheduled.contains(messageId.namespace)) {
                 if let navigationController = self.effectiveNavigationController {
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(messageId.peerId), subject: .message(messageId), keepStack: .always))
+                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(messageId.peerId), subject: .message(id: messageId, highlight: true), keepStack: .always))
                 }
             } else if forceInCurrentChat {
                 if let _ = fromId, let fromIndex = fromIndex, rememberInStack {
@@ -8491,7 +8491,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             case .upperBound:
                                 searchLocation = .index(MessageIndex.upperBound(peerId: self.chatLocation.peerId))
                         }
-                        let historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(location: searchLocation, count: 50), id: 0), context: self.context, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
+                        let historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(location: searchLocation, count: 50, highlight: true), id: 0), context: self.context, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
                         let signal = historyView
                         |> mapToSignal { historyView -> Signal<(MessageIndex?, Bool), NoError> in
                             switch historyView {
@@ -8583,7 +8583,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         self.historyNavigationStack.add(fromIndex)
                     }
                     self.loadingMessage.set(true)
-                    let historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(location: searchLocation, count: 50), id: 0), context: self.context, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
+                    let historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(location: searchLocation, count: 50, highlight: true), id: 0), context: self.context, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
                     let signal = historyView
                         |> mapToSignal { historyView -> Signal<MessageIndex?, NoError> in
                             switch historyView {
@@ -8606,7 +8606,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 completion?()
                             } else {
                                 if let navigationController = strongSelf.effectiveNavigationController {
-                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(messageLocation.peerId), subject: messageLocation.messageId.flatMap { .message($0) }))
+                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(messageLocation.peerId), subject: messageLocation.messageId.flatMap { .message(id: $0, highlight: true) }))
                                 }
                                 completion?()
                             }
@@ -8618,7 +8618,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }))
                 } else {
                     if let navigationController = self.effectiveNavigationController {
-                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(messageLocation.peerId), subject: messageLocation.messageId.flatMap { .message($0) }))
+                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(messageLocation.peerId), subject: messageLocation.messageId.flatMap { .message(id: $0, highlight: true) }))
                     }
                     completion?()
                 }
@@ -9205,7 +9205,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             switch navigation {
                 case let .chat(_, subject, peekData):
                     if case .peer(peerId) = strongSelf.chatLocation {
-                        if let subject = subject, case let .message(messageId) = subject {
+                        if let subject = subject, case let .message(messageId, _) = subject {
                             strongSelf.navigateToMessage(from: nil, to: .id(messageId))
                         }
                     } else if let navigationController = strongSelf.effectiveNavigationController {

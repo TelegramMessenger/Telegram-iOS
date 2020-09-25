@@ -1600,7 +1600,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                     c.dismiss(completion: {
                         if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(message.id)))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(id: message.id, highlight: true)))
                         }
                     })
                 })))
@@ -1703,7 +1703,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                             c.dismiss(completion: {
                                 if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(message.id)))
+                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(id: message.id, highlight: true)))
                                 }
                             })
                         })))

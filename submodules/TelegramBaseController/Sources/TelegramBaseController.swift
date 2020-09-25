@@ -557,7 +557,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     }
                     if let id = state.id as? PeerMessagesMediaPlaylistItemId {
                         if type == .music {
-                            let signal = strongSelf.context.sharedContext.messageFromPreloadedChatHistoryViewForLocation(id: id.messageId, location: ChatHistoryLocationInput(content: .InitialSearch(location: .id(id.messageId), count: 60), id: 0), context: strongSelf.context, chatLocation: .peer(id.messageId.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), tagMask: MessageTags.music)
+                            let signal = strongSelf.context.sharedContext.messageFromPreloadedChatHistoryViewForLocation(id: id.messageId, location: ChatHistoryLocationInput(content: .InitialSearch(location: .id(id.messageId), count: 60, highlight: true), id: 0), context: strongSelf.context, chatLocation: .peer(id.messageId.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), tagMask: MessageTags.music)
                             
                             var cancelImpl: (() -> Void)?
                             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
