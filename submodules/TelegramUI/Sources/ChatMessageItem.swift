@@ -383,14 +383,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                 if telegramFile.isAnimatedSticker, (self.message.id.peerId.namespace == Namespaces.Peer.SecretChat || !telegramFile.previewRepresentations.isEmpty), let size = telegramFile.size, size > 0 && size <= 128 * 1024 {
                     if self.message.id.peerId.namespace == Namespaces.Peer.SecretChat {
                         if telegramFile.fileId.namespace == Namespaces.Media.CloudFile {
-                            inner: for attribute in telegramFile.attributes {
-                                if case let .Sticker(_, packReference, _) = attribute {
-                                    if case .name = packReference {
-                                        viewClassName = ChatMessageAnimatedStickerItemNode.self
-                                    }
-                                    break inner
-                                }
-                            }
+                            viewClassName = ChatMessageAnimatedStickerItemNode.self
                         }
                     } else {
                         viewClassName = ChatMessageAnimatedStickerItemNode.self

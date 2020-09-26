@@ -989,7 +989,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             includePeers.setPeers(state.additionallyIncludePeers)
             var updatedFilter = ChatListFilter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
             if currentPreset == nil {
-                updatedFilter.id = generateNewChatListFilterId(filters: filters)
+                updatedFilter.id = max(2, filters.map({ $0.id + 1 }).max() ?? 2)
             }
             var filters = filters
             if let _ = currentPreset {

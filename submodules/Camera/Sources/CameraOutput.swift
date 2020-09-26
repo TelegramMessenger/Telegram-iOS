@@ -106,13 +106,7 @@ extension CameraOutput: AVCaptureMetadataOutputObjectsDelegate {
     func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
         let codes: [CameraCode] = metadataObjects.filter { $0.type == .qr }.compactMap { object in
             if let object = object as? AVMetadataMachineReadableCodeObject, let stringValue = object.stringValue, !stringValue.isEmpty {
-                let corners: [CGPoint]
-                #if targetEnvironment(simulator)
-                    corners = []
-                #else
-                    corners = object.corners
-                #endif
-                return CameraCode(type: .qr, message: stringValue, corners: corners)
+                return CameraCode(type: .qr, message: stringValue, corners: object.corners)
             } else {
                 return nil
             }

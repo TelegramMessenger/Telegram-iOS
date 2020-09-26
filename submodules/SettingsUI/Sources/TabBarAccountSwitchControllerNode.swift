@@ -306,9 +306,7 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
                 propertyAnimator?.stopAnimation(true)
             }
             self.propertyAnimator = UIViewPropertyAnimator(duration: 0.2 * animationDurationFactor, curve: .easeInOut, animations: { [weak self] in
-                if let strongSelf = self {
-                    strongSelf.effectView.effect = makeCustomZoomBlurEffect(isLight: strongSelf.presentationData.theme.rootController.keyboardColor == .light)
-                }
+                self?.effectView.effect = makeCustomZoomBlurEffect()
             })
         }
         
@@ -321,7 +319,7 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
             }
         } else {
             UIView.animate(withDuration: 0.2 * animationDurationFactor, animations: {
-                self.effectView.effect = makeCustomZoomBlurEffect(isLight: self.presentationData.theme.rootController.keyboardColor == .light)
+                self.effectView.effect = makeCustomZoomBlurEffect()
             }, completion: { _ in
             })
         }
