@@ -20,7 +20,7 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 if let updateTextInputState = params.updateTextInputState {
                     controller.updateTextInputState(updateTextInputState)
                 }
-                if let subject = params.subject, case let .message(messageId) = subject {
+                if let subject = params.subject, case let .message(messageId, _) = subject {
                     let navigationController = params.navigationController
                     let animated = params.animated
                     controller.navigateToMessage(messageLocation: .id(messageId), animated: isFirst, completion: { [weak navigationController, weak controller] in

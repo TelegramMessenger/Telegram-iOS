@@ -420,7 +420,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if isLoading != self.isLoadingValue {
             self.isLoadingValue = isLoading
             if isLoading {
-                self.historyNodeContainer.supernode?.insertSubnode(self.loadingNode, aboveSubnode: self.historyNodeContainer)
+                self.historyNodeContainer.supernode?.insertSubnode(self.loadingNode, belowSubnode: self.historyNodeContainer)
                 self.loadingNode.layer.removeAllAnimations()
                 self.loadingNode.alpha = 1.0
                 if animated {

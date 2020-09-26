@@ -649,18 +649,60 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 } else {
                     var appendedRightsHeader = false
                     
-                    if case let .creator(_, _, prevRank) = prev.participant, case let .creator(_, _, newRank) = new.participant, prevRank != newRank {
-                        appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessageRankName(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), newRank ?? "") : self.presentationData.strings.Channel_AdminLog_MessageRankUsername(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), "@" + new.peer.addressName!, newRank ?? ""), generateEntities: { index in
-                            var result: [MessageTextEntityType] = []
-                            if index == 0 {
-                                result.append(.TextMention(peerId: new.peer.id))
-                            } else if index == 1 {
-                                result.append(.Mention)
-                            } else if index == 2 {
-                                result.append(.Bold)
+                    if case let .creator(_, prevAdminInfo, prevRank) = prev.participant, case let .creator(_, newAdminInfo, newRank) = new.participant, (prevRank != newRank || prevAdminInfo?.rights.flags.contains(.canBeAnonymous) != newAdminInfo?.rights.flags.contains(.canBeAnonymous)) {
+                        if prevRank != newRank {
+                            appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessageRankName(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), newRank ?? "") : self.presentationData.strings.Channel_AdminLog_MessageRankUsername(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), "@" + new.peer.addressName!, newRank ?? ""), generateEntities: { index in
+                                var result: [MessageTextEntityType] = []
+                                if index == 0 {
+                                    result.append(.TextMention(peerId: new.peer.id))
+                                } else if index == 1 {
+                                    result.append(.Mention)
+                                } else if index == 2 {
+                                    result.append(.Bold)
+                                }
+                                return result
+                            }, to: &text, entities: &entities)
+                        }
+                        if prevAdminInfo?.rights.flags.contains(.canBeAnonymous) != newAdminInfo?.rights.flags.contains(.canBeAnonymous) {
+                            let order: [(TelegramChatAdminRightsFlags, String)]
+                            
+                            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                                order = []
+                            } else {
+                                order = [
+                                    (.canBeAnonymous, self.presentationData.strings.Channel_AdminLog_CanBeAnonymous)
+                                ]
                             }
-                            return result
-                        }, to: &text, entities: &entities)
+                            
+                            var appendedRightsHeader = false
+                            for (flag, string) in order {
+                                if prevAdminInfo?.rights.flags.contains(flag) != newAdminInfo?.rights.flags.contains(flag) {
+                                    if !appendedRightsHeader {
+                                        appendedRightsHeader = true
+                                        appendAttributedText(text: new.peer.addressName == nil ? self.presentationData.strings.Channel_AdminLog_MessagePromotedName(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)) : self.presentationData.strings.Channel_AdminLog_MessagePromotedNameUsername(new.peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), "@" + new.peer.addressName!), generateEntities: { index in
+                                            var result: [MessageTextEntityType] = []
+                                            if index == 0 {
+                                                result.append(.TextMention(peerId: new.peer.id))
+                                            } else if index == 1 {
+                                                result.append(.Mention)
+                                            } else if index == 2 {
+                                                result.append(.Bold)
+                                            }
+                                            return result
+                                        }, to: &text, entities: &entities)
+                                        text += "\n"
+                                    }
+                                    
+                                    text += "\n"
+                                    if prevAdminInfo?.rights.flags.contains(flag) != true {
+                                        text += "+"
+                                    } else {
+                                        text += "-"
+                                    }
+                                    appendAttributedText(text: string, withEntities: [.Italic], to: &text, entities: &entities)
+                                }
+                            }
+                        }
                     } else if case let .member(_, _, prevAdminRights, _, prevRank) = prev.participant {
                         if case let .member(_, _, newAdminRights, _, newRank) = new.participant {
                             let prevFlags = prevAdminRights?.rights.flags ?? []

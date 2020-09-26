@@ -89,7 +89,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             dismissInput()
             navigationController?.pushViewController(controller)
         case let .channelMessage(peerId, messageId):
-            openPeer(peerId, .chat(textInputState: nil, subject: .message(messageId), peekData: nil))
+            openPeer(peerId, .chat(textInputState: nil, subject: .message(id: messageId, highlight: true), peekData: nil))
         case let .replyThreadMessage(replyThreadMessage, messageId):
             if let navigationController = navigationController {
                 let _ = ChatControllerImpl.openMessageReplies(context: context, navigationController: navigationController, present: { c, a in

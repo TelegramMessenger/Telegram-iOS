@@ -374,9 +374,9 @@ public class ReplyThreadHistoryContext {
 }
 
 public struct ChatReplyThreadMessage: Equatable {
-    public enum Anchor {
+    public enum Anchor: Equatable {
         case automatic
-        case lowerBound
+        case lowerBoundMessage(MessageIndex)
     }
     
     public var messageId: MessageId
@@ -606,17 +606,13 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
                     }
                     
                     let inputAnchor: HistoryViewInputAnchor
-                    let initialAnchor: ChatReplyThreadMessage.Anchor
                     switch anchor {
                     case .lowerBound:
                         inputAnchor = .lowerBound
-                        initialAnchor = .lowerBound
                     case .upperBound:
                         inputAnchor = .upperBound
-                        initialAnchor = .automatic
                     case let .message(id):
                         inputAnchor = .message(id)
-                        initialAnchor = .automatic
                     }
                     
                     let testView = transaction.getMessagesHistoryViewState(
@@ -635,27 +631,57 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
                         namespaces: .not(Namespaces.Message.allScheduled)
                     )
                     if !testView.isLoading {
+                        let initialAnchor: ChatReplyThreadMessage.Anchor
+                        switch anchor {
+                        case .lowerBound:
+                            if let entry = testView.entries.first {
+                                initialAnchor = .lowerBoundMessage(entry.index)
+                            } else {
+                                initialAnchor = .automatic
+                            }
+                        case .upperBound:
+                            initialAnchor = .automatic
+                        case .message:
+                            initialAnchor = .automatic
+                        }
+                        
                         return .single((FetchMessageHistoryHoleResult(removedIndices: IndexSet(), strictRemovedIndices: IndexSet()), initialAnchor))
                     }
                 }
                 
                 let direction: MessageHistoryViewRelativeHoleDirection
-                let initialAnchor: ChatReplyThreadMessage.Anchor
                 switch anchor {
                 case .lowerBound:
                     direction = .range(start: MessageId(peerId: commentsPeerId, namespace: Namespaces.Message.Cloud, id: 1), end: MessageId(peerId: commentsPeerId, namespace: Namespaces.Message.Cloud, id: Int32.max - 1))
-                    initialAnchor = .lowerBound
                 case .upperBound:
                     direction = .range(start: MessageId(peerId: commentsPeerId, namespace: Namespaces.Message.Cloud, id: Int32.max - 1), end: MessageId(peerId: commentsPeerId, namespace: Namespaces.Message.Cloud, id: 1))
-                    initialAnchor = .automatic
                 case let .message(id):
                     direction = .aroundId(id)
-                    initialAnchor = .automatic
                 }
                 return fetchMessageHistoryHole(accountPeerId: account.peerId, source: .network(account.network), postbox: account.postbox, peerInput: peerInput, namespace: Namespaces.Message.Cloud, direction: direction, space: .everywhere, count: 40)
                 |> castError(FetchChannelReplyThreadMessageError.self)
-                |> map { result -> (FetchMessageHistoryHoleResult, ChatReplyThreadMessage.Anchor) in
-                    return (result, initialAnchor)
+                |> mapToSignal { result -> Signal<(FetchMessageHistoryHoleResult, ChatReplyThreadMessage.Anchor), FetchChannelReplyThreadMessageError> in
+                    return account.postbox.transaction { transaction -> (FetchMessageHistoryHoleResult, ChatReplyThreadMessage.Anchor) in
+                        let initialAnchor: ChatReplyThreadMessage.Anchor
+                        switch anchor {
+                        case .lowerBound:
+                            if let actualPeerId = result.actualPeerId, let actualThreadId = result.actualThreadId {
+                                if let firstMessage = transaction.getMessagesWithThreadId(peerId: actualPeerId, namespace: Namespaces.Message.Cloud, threadId: actualThreadId, from: MessageIndex.lowerBound(peerId: actualPeerId, namespace: Namespaces.Message.Cloud), includeFrom: false, to: MessageIndex.upperBound(peerId: actualPeerId, namespace: Namespaces.Message.Cloud), limit: 1).first {
+                                    initialAnchor = .lowerBoundMessage(firstMessage.index)
+                                } else {
+                                    initialAnchor = .automatic
+                                }
+                            } else {
+                                initialAnchor = .automatic
+                            }
+                        case .upperBound:
+                            initialAnchor = .automatic
+                        case .message:
+                            initialAnchor = .automatic
+                        }
+                        return (result, initialAnchor)
+                    }
+                    |> castError(FetchChannelReplyThreadMessageError.self)
                 }
             }
             |> castError(FetchChannelReplyThreadMessageError.self)

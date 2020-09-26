@@ -135,7 +135,7 @@ public class AnimatedCountLabelNode: ASDisplayNode {
                             textNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
                             textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                         }
-                    } else {
+                    } else if textNode.frame != textFrame {
                         transition.updateFrameAdditive(node: textNode, frame: textFrame)
                     }
                     currentOffset.x += layout.size.width

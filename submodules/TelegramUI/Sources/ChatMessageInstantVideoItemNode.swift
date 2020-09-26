@@ -672,7 +672,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     for attribute in item.content.firstMessage.attributes {
                         if let attribute = attribute as? SourceReferenceMessageAttribute {
                             openPeerId = attribute.messageId.peerId
-                            navigate = .chat(textInputState: nil, subject: .message(attribute.messageId), peekData: nil)
+                            navigate = .chat(textInputState: nil, subject: .message(id: attribute.messageId, highlight: true), peekData: nil)
                         }
                     }
                     
@@ -754,7 +754,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 }
             }
             
-            if item.content.firstMessage.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
+            if item.content.firstMessage.id.peerId.isReplies {
+                item.controllerInteraction.openReplyThreadOriginalMessage(item.content.firstMessage)
+            } else if item.content.firstMessage.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                 for attribute in item.content.firstMessage.attributes {
                     if let attribute = attribute as? SourceReferenceMessageAttribute {
                         item.controllerInteraction.navigateToMessage(item.content.firstMessage.id, attribute.messageId)

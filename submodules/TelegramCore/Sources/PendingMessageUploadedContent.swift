@@ -489,6 +489,8 @@ func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaF
                 attributes.append(.documentAttributeHasStickers)
             case .hintFileIsLarge:
                 break
+            case .hintIsValidated:
+                break
             case let .Video(duration, size, videoFlags):
                 var flags: Int32 = 0
                 if videoFlags.contains(.instantRoundVideo) {

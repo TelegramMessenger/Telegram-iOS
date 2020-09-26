@@ -617,7 +617,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 if titleFrame.size.width < size.width {
                     titleFrame.origin.x = -clearBounds.minX + floor((size.width - titleFrame.width) / 2.0)
                 }
-                transition.updateFrameAdditiveToCenter(node: self.titleNode, frame: titleFrame)
+                transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
             } else {
                 let combinedHeight = titleSize.height + activitySize.height + titleInfoSpacing
                 
@@ -626,7 +626,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                     titleFrame.origin.x = -clearBounds.minX + floor((size.width - titleFrame.width) / 2.0)
                 }
                 titleFrame.origin.x = max(titleFrame.origin.x, clearBounds.minX + leftIconWidth)
-                transition.updateFrameAdditiveToCenter(node: self.titleNode, frame: titleFrame)
+                transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
                 
                 var activityFrame = CGRect(origin: CGPoint(x: floor((clearBounds.width - activitySize.width) / 2.0), y: floor((size.height - combinedHeight) / 2.0) + titleSize.height + titleInfoSpacing), size: activitySize)
                 if activitySize.width < size.width {

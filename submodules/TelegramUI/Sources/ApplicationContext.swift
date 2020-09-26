@@ -702,7 +702,7 @@ final class AuthorizedApplicationContext {
                         }
                         
                         let navigateToMessage = {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(messageId.peerId), subject: .message(messageId)))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(messageId.peerId), subject: .message(id: messageId, highlight: true)))
                         }
                         
                         if chatIsVisible {
@@ -773,7 +773,7 @@ final class AuthorizedApplicationContext {
         
         if visiblePeerId != peerId || messageId != nil {
             if self.rootController.rootTabController != nil {
-                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: .peer(peerId), subject: messageId.flatMap { .message($0) }, activateInput: activateInput))
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: .peer(peerId), subject: messageId.flatMap { .message(id: $0, highlight: true) }, activateInput: activateInput))
             } else {
                 self.scheduledOpenChatWithPeerId = (peerId, messageId, activateInput)
             }
