@@ -34,7 +34,7 @@ class UpdateMessageService: NSObject, MTMessageService {
         self.pipe.putNext(groups)
     }
     
-    func mtProto(_ mtProto: MTProto!, receivedMessage message: MTIncomingMessage!) {
+    func mtProto(_ mtProto: MTProto!, receivedMessage message: MTIncomingMessage!, authInfoSelector: MTDatacenterAuthInfoSelector) {
         if let updates = (message.body as? BoxedMessage)?.body as? Api.Updates {
             self.addUpdates(updates)
         }
@@ -57,25 +57,24 @@ class UpdateMessageService: NSObject, MTMessageService {
                 if groups.count != 0 {
                     self.putNext(groups)
                 }
-            case let .updateShortChatMessage(flags, id, fromId, chatId, message, pts, ptsCount, date, fwdFrom, viaBotId, replyToMsgId, entities):
-                let generatedMessage = Api.Message.message(flags: flags, id: id, fromId: fromId, toId: Api.Peer.peerChat(chatId: chatId), fwdFrom: fwdFrom, viaBotId: viaBotId, replyToMsgId: replyToMsgId, date: date, message: message, media: Api.MessageMedia.messageMediaEmpty, replyMarkup: nil, entities: entities, views: nil, editDate: nil, postAuthor: nil, groupedId: nil, restrictionReason: nil)
+            case let .updateShortChatMessage(flags, id, fromId, chatId, message, pts, ptsCount, date, fwdFrom, viaBotId, replyHeader, entities):
+                let generatedMessage = Api.Message.message(flags: flags, id: id, fromId: .peerChat(chatId: fromId), peerId: Api.Peer.peerChat(chatId: chatId), fwdFrom: fwdFrom, viaBotId: viaBotId, replyTo: replyHeader, date: date, message: message, media: Api.MessageMedia.messageMediaEmpty, replyMarkup: nil, entities: entities, views: nil, forwards: nil, replies: nil, editDate: nil, postAuthor: nil, groupedId: nil, restrictionReason: nil)
                 let update = Api.Update.updateNewMessage(message: generatedMessage, pts: pts, ptsCount: ptsCount)
                 let groups = groupUpdates([update], users: [], chats: [], date: date, seqRange: nil)
                 if groups.count != 0 {
                     self.putNext(groups)
                 }
-            case let .updateShortMessage(flags, id, userId, message, pts, ptsCount, date, fwdFrom, viaBotId, replyToMsgId, entities):
-                let generatedFromId: Int32
-                let generatedToId: Api.Peer
-                if (Int(flags) & 2) != 0 {
-                    generatedFromId = self.peerId.id
-                    generatedToId = Api.Peer.peerUser(userId: userId)
+            case let .updateShortMessage(flags, id, userId, message, pts, ptsCount, date, fwdFrom, viaBotId, replyHeader, entities):
+                let generatedFromId: Api.Peer
+                if (Int(flags) & 1 << 1) != 0 {
+                    generatedFromId = Api.Peer.peerUser(userId: self.peerId.id)
                 } else {
-                    generatedFromId = userId
-                    generatedToId = Api.Peer.peerUser(userId: self.peerId.id)
+                    generatedFromId = Api.Peer.peerUser(userId: userId)
                 }
                 
-                let generatedMessage = Api.Message.message(flags: flags, id: id, fromId: generatedFromId, toId: generatedToId, fwdFrom: fwdFrom, viaBotId: viaBotId, replyToMsgId: replyToMsgId, date: date, message: message, media: Api.MessageMedia.messageMediaEmpty, replyMarkup: nil, entities: entities, views: nil, editDate: nil, postAuthor: nil, groupedId: nil, restrictionReason: nil)
+                let generatedPeerId = Api.Peer.peerUser(userId: userId)
+                
+                let generatedMessage = Api.Message.message(flags: flags, id: id, fromId: generatedFromId, peerId: generatedPeerId, fwdFrom: fwdFrom, viaBotId: viaBotId, replyTo: replyHeader, date: date, message: message, media: Api.MessageMedia.messageMediaEmpty, replyMarkup: nil, entities: entities, views: nil, forwards: nil, replies: nil, editDate: nil, postAuthor: nil, groupedId: nil, restrictionReason: nil)
                 let update = Api.Update.updateNewMessage(message: generatedMessage, pts: pts, ptsCount: ptsCount)
                 let groups = groupUpdates([update], users: [], chats: [], date: date, seqRange: nil)
                 if groups.count != 0 {

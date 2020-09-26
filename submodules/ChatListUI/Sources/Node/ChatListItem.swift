@@ -637,7 +637,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         if let peer = peer {
             var overrideImage: AvatarNodeImageOverride?
-            if peer.id == item.context.account.peerId && !displayAsMessage {
+            if peer.id.isReplies {
+                overrideImage = .repliesIcon
+            } else if peer.id == item.context.account.peerId && !displayAsMessage {
                 overrideImage = .savedMessagesIcon
             } else if peer.isDeleted {
                 overrideImage = .deletedIcon
@@ -1099,7 +1101,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.ChatList_ArchivedChatsTitle, font: titleFont, textColor: theme.titleColor)
                     } else if itemPeer.chatMainPeer?.id == item.context.account.peerId {
                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleFont, textColor: theme.titleColor)
-                    } else if let displayTitle = itemPeer.chatMainPeer?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
+                    } else if let id = itemPeer.chatMainPeer?.id, id.isReplies {
+                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Replies, font: titleFont, textColor: theme.titleColor)
+                     } else if let displayTitle = itemPeer.chatMainPeer?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
                         titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat ? theme.secretTitleColor : theme.titleColor)
                     }
                 case .group:

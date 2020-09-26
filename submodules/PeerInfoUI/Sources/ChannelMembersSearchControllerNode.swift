@@ -216,7 +216,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                     let renderedParticipant: RenderedChannelParticipant
                     switch participant {
                         case .creator:
-                            renderedParticipant = RenderedChannelParticipant(participant: .creator(id: peer.id, rank: nil), peer: peer)
+                            renderedParticipant = RenderedChannelParticipant(participant: .creator(id: peer.id, adminInfo: nil, rank: nil), peer: peer)
                         case .admin:
                             var peers: [PeerId: Peer] = [:]
                             peers[creator.id] = creator

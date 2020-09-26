@@ -855,6 +855,9 @@ func instantPageLayoutForWebPage(_ webPage: TelegramMediaWebpage, boundingWidth:
     if let image = loadedContent.image, let id = image.id {
         media[id] = image
     }
+    if let video = loadedContent.file, let id = video.id {
+        media[id] = video
+    }
     
     var mediaIndexCounter: Int = 0
     var embedIndexCounter: Int = 0

@@ -160,12 +160,15 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
     private var reactionNodes: [StatusReactionNode] = []
     private var reactionCountNode: TextNode?
     private var reactionButtonNode: HighlightTrackingButtonNode?
+    private var repliesIcon: ASImageNode?
+    private var replyCountNode: TextNode?
     
     private var type: ChatMessageDateAndStatusType?
     private var theme: ChatPresentationThemeData?
     private var layoutSize: CGSize?
     
     var openReactions: (() -> Void)?
+    var openReplies: (() -> Void)?
     
     override init() {
         self.dateNode = TextNode()
@@ -177,7 +180,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         self.addSubnode(self.dateNode)
     }
     
-    func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize, _ reactions: [MessageReaction]) -> (CGSize, (Bool) -> Void) {
+    func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize, _ reactions: [MessageReaction], _ replies: Int) -> (CGSize, (Bool) -> Void) {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
         
         var checkReadNode = self.checkReadNode
@@ -187,15 +190,17 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         
         var currentBackgroundNode = self.backgroundNode
         var currentImpressionIcon = self.impressionIcon
+        var currentRepliesIcon = self.repliesIcon
         
         let currentType = self.type
         let currentTheme = self.theme
         
         let makeReactionCountLayout = TextNode.asyncLayout(self.reactionCountNode)
+        let makeReplyCountLayout = TextNode.asyncLayout(self.replyCountNode)
         
         let previousLayoutSize = self.layoutSize
         
-        return { context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions in
+        return { context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replyCount in
             let dateColor: UIColor
             var backgroundImage: UIImage?
             var outgoingStatus: ChatMessageDateAndStatusOutgoingType?
@@ -206,6 +211,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             let clockFrameImage: UIImage?
             let clockMinImage: UIImage?
             var impressionImage: UIImage?
+            var repliesImage: UIImage?
             
             let themeUpdated = presentationData.theme != currentTheme || type != currentType
             
@@ -226,6 +232,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     if impressionCount != nil {
                         impressionImage = graphics.incomingDateAndStatusImpressionIcon
                     }
+                    if replyCount != 0 {
+                        repliesImage = graphics.incomingDateAndStatusRepliesIcon
+                    }
                 case let .BubbleOutgoing(status):
                     dateColor = presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
                     outgoingStatus = status
@@ -237,6 +246,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     if impressionCount != nil {
                         impressionImage = graphics.outgoingDateAndStatusImpressionIcon
                     }
+                    if replyCount != 0 {
+                        repliesImage = graphics.outgoingDateAndStatusRepliesIcon
+                    }
                 case .ImageIncoming:
                     dateColor = presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor
                     backgroundImage = graphics.dateAndStatusMediaBackground
@@ -247,6 +259,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     clockMinImage = graphics.clockMediaMinImage
                     if impressionCount != nil {
                         impressionImage = graphics.mediaImpressionIcon
+                    }
+                    if replyCount != 0 {
+                        repliesImage = graphics.mediaRepliesIcon
                     }
                 case let .ImageOutgoing(status):
                     dateColor = presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor
@@ -260,6 +275,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     if impressionCount != nil {
                         impressionImage = graphics.mediaImpressionIcon
                     }
+                    if replyCount != 0 {
+                        repliesImage = graphics.mediaRepliesIcon
+                    }
                 case .FreeIncoming:
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     dateColor = serviceColor.primaryText
@@ -271,6 +289,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     clockMinImage = graphics.clockFreeMinImage
                     if impressionCount != nil {
                         impressionImage = graphics.freeImpressionIcon
+                    }
+                    if replyCount != 0 {
+                        repliesImage = graphics.freeRepliesIcon
                     }
                 case let .FreeOutgoing(status):
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
@@ -284,6 +305,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     clockMinImage = graphics.clockFreeMinImage
                     if impressionCount != nil {
                         impressionImage = graphics.freeImpressionIcon
+                    }
+                    if replyCount != 0 {
+                        repliesImage = graphics.freeRepliesIcon
                     }
             }
             
@@ -321,6 +345,20 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                 impressionWidth = impressionSize.width + 3.0
             } else {
                 currentImpressionIcon = nil
+            }
+            
+            var repliesIconSize = CGSize()
+            if let repliesImage = repliesImage {
+                if currentRepliesIcon == nil {
+                    let iconNode = ASImageNode()
+                    iconNode.isLayerBacked = true
+                    iconNode.displayWithoutProcessing = true
+                    iconNode.displaysAsynchronously = false
+                    currentRepliesIcon = iconNode
+                }
+                repliesIconSize = repliesImage.size
+            } else {
+                currentRepliesIcon = nil
             }
             
             if let outgoingStatus = outgoingStatus {
@@ -433,6 +471,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             
             let reactionSize: CGFloat = 14.0
             var reactionCountLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            var replyCountLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             
             let reactionSpacing: CGFloat = -4.0
             let reactionTrailingSpacing: CGFloat = 4.0
@@ -458,6 +497,22 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                 reactionInset += max(10.0, layoutAndApply.0.size.width) + 2.0
                 reactionCountLayoutAndApply = layoutAndApply
             }
+            
+            if replyCount > 0 {
+                let countString: String
+                if replyCount > 1000000 {
+                    countString = "\(replyCount / 1000000)M"
+                } else if replyCount > 1000 {
+                    countString = "\(replyCount / 1000)K"
+                } else {
+                    countString = "\(replyCount)"
+                }
+                
+                let layoutAndApply = makeReplyCountLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: countString, font: dateFont, textColor: dateColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0)))
+                reactionInset += 14.0 + layoutAndApply.0.size.width + 4.0
+                replyCountLayoutAndApply = layoutAndApply
+            }
+            
             leftInset += reactionInset
             
             let layoutSize = CGSize(width: leftInset + impressionWidth + date.size.width + statusWidth + backgroundInsets.left + backgroundInsets.right, height: date.size.height + backgroundInsets.top + backgroundInsets.bottom)
@@ -509,7 +564,6 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         impressionIcon.removeFromSupernode()
                         strongSelf.impressionIcon = nil
                     }
-                    
                     
                     strongSelf.dateNode.frame = CGRect(origin: CGPoint(x: leftInset + backgroundInsets.left + impressionWidth, y: backgroundInsets.top + 1.0 + offset), size: date.size)
                     
@@ -677,6 +731,60 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         }
                     }
                     
+                    if let currentRepliesIcon = currentRepliesIcon {
+                        currentRepliesIcon.displaysAsynchronously = !presentationData.isPreview
+                        if currentRepliesIcon.image !== repliesImage {
+                            currentRepliesIcon.image = repliesImage
+                        }
+                        if currentRepliesIcon.supernode == nil {
+                            strongSelf.repliesIcon = currentRepliesIcon
+                            strongSelf.addSubnode(currentRepliesIcon)
+                            if animated {
+                                currentRepliesIcon.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                            }
+                        }
+                        currentRepliesIcon.frame = CGRect(origin: CGPoint(x: reactionOffset - 2.0, y: backgroundInsets.top + offset + floor((date.size.height - repliesIconSize.height) / 2.0)), size: repliesIconSize)
+                        reactionOffset += 9.0
+                    } else if let repliesIcon = strongSelf.repliesIcon {
+                        strongSelf.repliesIcon = nil
+                        if animated {
+                            if let previousLayoutSize = previousLayoutSize {
+                                repliesIcon.frame = repliesIcon.frame.offsetBy(dx: layoutSize.width - previousLayoutSize.width, dy: 0.0)
+                            }
+                            repliesIcon.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak repliesIcon] _ in
+                                repliesIcon?.removeFromSupernode()
+                            })
+                        } else {
+                            repliesIcon.removeFromSupernode()
+                        }
+                    }
+                    
+                    if let (layout, apply) = replyCountLayoutAndApply {
+                        let node = apply()
+                        if strongSelf.replyCountNode !== node {
+                            strongSelf.replyCountNode?.removeFromSupernode()
+                            strongSelf.addSubnode(node)
+                            strongSelf.replyCountNode = node
+                            if animated {
+                                node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                            }
+                        }
+                        node.frame = CGRect(origin: CGPoint(x: reactionOffset + 4.0, y: backgroundInsets.top + 1.0 + offset), size: layout.size)
+                        reactionOffset += 4.0 + layout.size.width
+                    } else if let replyCountNode = strongSelf.replyCountNode {
+                        strongSelf.replyCountNode = nil
+                        if animated {
+                            if let previousLayoutSize = previousLayoutSize {
+                                replyCountNode.frame = replyCountNode.frame.offsetBy(dx: layoutSize.width - previousLayoutSize.width, dy: 0.0)
+                            }
+                            replyCountNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak replyCountNode] _ in
+                                replyCountNode?.removeFromSupernode()
+                            })
+                        } else {
+                            replyCountNode.removeFromSupernode()
+                        }
+                    }
+                    
                     /*if !strongSelf.reactionNodes.isEmpty {
                         if strongSelf.reactionButtonNode == nil {
                             let reactionButtonNode = HighlightTrackingButtonNode()
@@ -709,17 +817,17 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageDateAndStatusNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize, _ reactions: [MessageReaction]) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode) {
+    static func asyncLayout(_ node: ChatMessageDateAndStatusNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize, _ reactions: [MessageReaction], _ replies: Int) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode) {
         let currentLayout = node?.asyncLayout()
-        return { context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions in
+        return { context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replies in
             let resultNode: ChatMessageDateAndStatusNode
             let resultSizeAndApply: (CGSize, (Bool) -> Void)
             if let node = node, let currentLayout = currentLayout {
                 resultNode = node
-                resultSizeAndApply = currentLayout(context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions)
+                resultSizeAndApply = currentLayout(context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replies)
             } else {
                 resultNode = ChatMessageDateAndStatusNode()
-                resultSizeAndApply = resultNode.asyncLayout()(context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions)
+                resultSizeAndApply = resultNode.asyncLayout()(context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replies)
             }
             
             return (resultSizeAndApply.0, { animated in

@@ -9,6 +9,7 @@ import TelegramPresentationData
 import TelegramBaseController
 import AccountContext
 import ChatListUI
+import ListMessageItem
 
 public final class HashtagSearchController: TelegramBaseController {
     private let queue = Queue()
@@ -41,11 +42,11 @@ public final class HashtagSearchController: TelegramBaseController {
         
         let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)
         
-        let location: SearchMessagesLocation = .general(tags: nil)
+        let location: SearchMessagesLocation = .general(tags: nil, minDate: nil, maxDate: nil)
         let search = searchMessages(account: context.account, location: location, query: query, state: nil)
         let foundMessages: Signal<[ChatListSearchEntry], NoError> = search
         |> map { result, _ in
-            return result.messages.map({ .message($0, RenderedPeer(message: $0), result.readStates[$0.id.peerId], chatListPresentationData) })
+            return result.messages.map({ .message($0, RenderedPeer(message: $0), result.readStates[$0.id.peerId], chatListPresentationData, result.totalCount, nil, false) })
         }
         let interaction = ChatListNodeInteraction(activateSearch: {
         }, peerSelected: { _, _ in
@@ -82,10 +83,27 @@ public final class HashtagSearchController: TelegramBaseController {
             if let strongSelf = self {
                 let previousEntries = previousSearchItems.swap(entries)
                 
-                let firstTime = previousEntries == nil
-                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, context: strongSelf.context, presentationData: strongSelf.presentationData, enableHeaders: false, filter: [], interaction: interaction, peerContextAction: nil, toggleExpandLocalResults: {
-                }, toggleExpandGlobalResults: {
+                let listInteraction = ListMessageItemInteraction(openMessage: { message, mode -> Bool in
+                    return true
+                }, openMessageContextMenu: { message, bool, node, rect, gesture in
+                    
+                }, toggleMessagesSelection: { messageId, selected in
+                    
+                }, openUrl: { url, _, _, message in
+                }, openInstantPage: { message, data in
+                    
+                }, longTap: { action, message in
+                    
+                }, getHiddenMedia: {
+                    return [:]
                 })
+                
+                let firstTime = previousEntries == nil
+                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, isEmpty: entries.isEmpty, isLoading: false, animated: false, searchQuery: "", context: strongSelf.context, presentationData: strongSelf.presentationData, enableHeaders: false, filter: [], interaction: interaction, listInteraction: listInteraction, peerContextAction: nil, toggleExpandLocalResults: {
+                }, toggleExpandGlobalResults: {
+                }, searchPeer: { _ in
+                    
+                }, searchResults: [], searchOptions: nil, messageContextAction: nil)
                 strongSelf.controllerNode.enqueueTransition(transition, firstTime: firstTime)
             }
         })

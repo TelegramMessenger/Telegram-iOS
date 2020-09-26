@@ -15,8 +15,8 @@ public enum ChatHistoryLocation: Equatable {
 }
 
 public struct ChatHistoryLocationInput: Equatable {
-    public let content: ChatHistoryLocation
-    public let id: Int32
+    public var content: ChatHistoryLocation
+    public var id: Int32
     
     public init(content: ChatHistoryLocation, id: Int32) {
         self.content = content

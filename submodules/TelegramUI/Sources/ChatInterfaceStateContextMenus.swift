@@ -155,8 +155,8 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
             } else {
                 canReply = true
             }
-        /*case .group:
-            break*/
+        case .replyThread:
+            canReply = true
     }
     return canReply
 }
@@ -297,12 +297,12 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     
     let message = messages[0]
     
-    if Namespaces.Message.allScheduled.contains(message.id.namespace) {
+    if Namespaces.Message.allScheduled.contains(message.id.namespace) || message.id.peerId.isReplies {
         canReply = false
         canPin = false
     } else if messages[0].flags.intersection([.Failed, .Unsent]).isEmpty {
         switch chatPresentationInterfaceState.chatLocation {
-            case .peer:
+            case .peer, .replyThread:
                 if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
                     if !isAction {
                         canPin = channel.hasPermission(.pinMessages)
@@ -371,27 +371,32 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         return transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
     }
     
-    let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia]), NoError> = combineLatest(
+    let cachedData = context.account.postbox.transaction { transaction -> CachedPeerData? in
+        return transaction.getPeerCachedData(peerId: messages[0].id.peerId)
+    }
+    
+    let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?), NoError> = combineLatest(
         loadLimits,
         loadStickerSaveStatusSignal,
         loadResourceStatusSignal,
         context.sharedContext.chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: Set(messages.map { $0.id })),
         context.account.pendingUpdateMessageManager.updatingMessageMedia
-        |> take(1)
+        |> take(1),
+        cachedData
     )
-    |> map { limitsConfiguration, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia]) in
+    |> map { limitsConfiguration, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia, cachedData -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?) in
         var canEdit = false
         if !isAction {
             let message = messages[0]
             canEdit = canEditMessage(context: context, limitsConfiguration: limitsConfiguration, message: message)
         }
         
-        return (MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions), updatingMessageMedia)
+        return (MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions), updatingMessageMedia, cachedData)
     }
     
     return dataSignal
     |> deliverOnMainQueue
-    |> map { data, updatingMessageMedia -> [ContextMenuItem] in
+    |> map { data, updatingMessageMedia, cachedData -> [ContextMenuItem] in
         var actions: [ContextMenuItem] = []
         
         if let starStatus = data.starStatus {
@@ -459,7 +464,12 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             }
         }
         
-        if data.canReply {
+        var isReplyThreadHead = false
+        if case let .replyThread(messageId, _, _) = chatPresentationInterfaceState.chatLocation {
+            isReplyThreadHead = messages[0].id == messageId
+        }
+        
+        if !isReplyThreadHead, data.canReply {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuReply, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reply"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
@@ -574,6 +584,72 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             }
         }
         
+        var threadId: Int64?
+        var threadMessageCount: Int = 0
+        if case .peer = chatPresentationInterfaceState.chatLocation, let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .group = channel.info, let cachedData = cachedData as? CachedChannelData, case let .known(maybeValue) = cachedData.linkedDiscussionPeerId, let _ = maybeValue {
+            if let value = messages[0].threadId {
+                threadId = value
+            } else {
+                for attribute in messages[0].attributes {
+                    if let attribute = attribute as? ReplyThreadMessageAttribute, attribute.count > 0 {
+                        threadId = makeMessageThreadId(messages[0].id)
+                        threadMessageCount = Int(attribute.count)
+                    }
+                }
+            }
+        }
+        
+        if let threadId = threadId {
+            let replyThreadId = makeThreadIdMessageId(peerId: messages[0].id.peerId, threadId: threadId)
+            //TODO:localize
+            let text: String
+            if threadMessageCount != 0 {
+                if threadMessageCount == 1 {
+                    text = "View 1 reply"
+                } else {
+                    text = "View \(threadMessageCount) replies"
+                }
+            } else {
+                text = "View Thread"
+            }
+            actions.append(.action(ContextMenuActionItem(text: text, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replies"), color: theme.actionSheet.primaryTextColor)
+            }, action: { c, _ in
+                let foundIndex = Promise<ChatReplyThreadMessage?>()
+                if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+                    foundIndex.set(fetchChannelReplyThreadMessage(account: context.account, messageId: messages[0].id))
+                }
+                c.dismiss(completion: {
+                    if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
+                        if case .group = channel.info {
+                            interfaceInteraction.viewReplies(messages[0].id, ChatReplyThreadMessage(messageId: replyThreadId, maxReadMessageId: nil))
+                        } else {
+                            var cancelImpl: (() -> Void)?
+                            let statusController = OverlayStatusController(theme: chatPresentationInterfaceState.theme, type: .loading(cancelled: {
+                                cancelImpl?()
+                            }))
+                            controllerInteraction.presentController(statusController, nil)
+                            
+                            let disposable = (foundIndex.get()
+                            |> take(1)
+                            |> deliverOnMainQueue).start(next: { [weak statusController] result in
+                                statusController?.dismiss()
+                                
+                                if let result = result {
+                                    interfaceInteraction.viewReplies(nil, result)
+                                }
+                            })
+                            
+                            cancelImpl = { [weak statusController] in
+                                disposable.dispose()
+                                statusController?.dismiss()
+                            }
+                        }
+                    }
+                })
+            })))
+        }
+        
         if data.canEdit {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
@@ -610,7 +686,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             }
         }
         
-        if data.canPin {
+        if data.canPin, case .peer = chatPresentationInterfaceState.chatLocation {
             if chatPresentationInterfaceState.pinnedMessage?.id != messages[0].id {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_Pin, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Pin"), color: theme.actionSheet.primaryTextColor)
@@ -670,11 +746,15 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             }
         }
         
-        if let message = messages.first, message.id.namespace == Namespaces.Message.Cloud, let channel = message.peers[message.id.peerId] as? TelegramChannel, !(message.media.first is TelegramMediaAction) {
+        if let message = messages.first, message.id.namespace == Namespaces.Message.Cloud, let channel = message.peers[message.id.peerId] as? TelegramChannel, !(message.media.first is TelegramMediaAction), !isReplyThreadHead {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopyLink, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
-                let _ = (exportMessageLink(account: context.account, peerId: message.id.peerId, messageId: message.id)
+                var threadMessageId: MessageId?
+                if case let .replyThread(replyThread, _, _) = chatPresentationInterfaceState.chatLocation {
+                    threadMessageId = replyThread
+                }
+                let _ = (exportMessageLink(account: context.account, peerId: message.id.peerId, messageId: message.id, threadMessageId: threadMessageId)
                 |> map { result -> String? in
                     return result
                 }
@@ -683,7 +763,15 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                         UIPasteboard.general.string = link
                         
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        if channel.addressName == nil {
+                        
+                        var warnAboutPrivate = false
+                        if case let .peer = chatPresentationInterfaceState.chatLocation {
+                            if channel.addressName == nil {
+                                warnAboutPrivate = true
+                            }
+                        }
+                        
+                        if warnAboutPrivate {
                             controllerInteraction.presentGlobalOverlayController(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Conversation_PrivateMessageLinkCopied, true)), nil)
                         } else {
                             controllerInteraction.presentGlobalOverlayController(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.GroupInfo_InviteLink_CopyAlert_Success, false)), nil)
@@ -723,7 +811,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 }
             }
         }
-        if !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty && isAction {
+        if !isReplyThreadHead, !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty && isAction {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
             }, action: { controller, f in
@@ -749,94 +837,6 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             })))
         }
         
-        if canDiscuss {
-            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuDiscuss, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.actionSheet.primaryTextColor)
-            }, action: { c, _ in
-                let timestamp = messages[0].timestamp
-                let channelMessageId = messages[0].id
-                
-                enum DiscussMessageResult {
-                    case message(MessageId)
-                    case peer(PeerId)
-                }
-                
-                let signal = context.account.postbox.transaction { transaction -> PeerId? in
-                    if let cachedData = transaction.getPeerCachedData(peerId: messages[0].id.peerId) as? CachedChannelData {
-                        return cachedData.linkedDiscussionPeerId
-                    } else {
-                        return nil
-                    }
-                }
-                |> mapToSignal { peerId -> Signal<DiscussMessageResult?, NoError> in
-                    guard let peerId = peerId else {
-                        return .single(nil)
-                    }
-                    let historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(location: .index(MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: timestamp)), count: 30), id: 0), account: context.account, chatLocation: .peer(peerId), fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
-                    return historyView
-                    |> mapToSignal { historyView -> Signal<(MessageIndex?, Bool), NoError> in
-                        switch historyView {
-                        case .Loading:
-                            return .single((nil, true))
-                        case let .HistoryView(view, _, _, _, _, _, _):
-                            for entry in view.entries {
-                                for attribute in entry.message.attributes {
-                                    if let attribute = attribute as? SourceReferenceMessageAttribute {
-                                        if attribute.messageId == channelMessageId {
-                                            return .single((entry.message.index, false))
-                                        }
-                                    }
-                                }
-                            }
-                            return .single((nil, false))
-                        }
-                    }
-                    |> take(until: { index in
-                        return SignalTakeAction(passthrough: true, complete: !index.1)
-                    })
-                    |> last
-                    |> map { result -> DiscussMessageResult? in
-                        if let index = result?.0 {
-                            return .message(index.id)
-                        } else {
-                            return .peer(peerId)
-                        }
-                    }
-                }
-                
-                let foundIndex = Promise<DiscussMessageResult?>()
-                foundIndex.set(signal)
-                
-                c.dismiss(completion: { [weak interfaceInteraction] in
-                    var cancelImpl: (() -> Void)?
-                    let statusController = OverlayStatusController(theme: chatPresentationInterfaceState.theme, type: .loading(cancelled: {
-                        cancelImpl?()
-                    }))
-                    controllerInteraction.presentController(statusController, nil)
-                    
-                    let disposable = (foundIndex.get()
-                    |> take(1)
-                    |> deliverOnMainQueue).start(next: { [weak statusController] result in
-                        statusController?.dismiss()
-                        
-                        if let result = result {
-                            switch result {
-                            case let .message(id):
-                                interfaceInteraction?.navigateToMessage(id)
-                            case let .peer(peerId):
-                                interfaceInteraction?.navigateToChat(peerId)
-                            }
-                        }
-                    })
-                    
-                    cancelImpl = { [weak statusController] in
-                        disposable.dispose()
-                        statusController?.dismiss()
-                    }
-                })
-            })))
-        }
-        
         if data.messageActions.options.contains(.report) {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuReport, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.actionSheet.primaryTextColor)
@@ -846,10 +846,10 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         var clearCacheAsDelete = false
-        if let peer = message.peers[message.id.peerId] as? TelegramChannel {
+        if let _ = message.peers[message.id.peerId] as? TelegramChannel {
             clearCacheAsDelete = true
         }
-        if (!data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty || clearCacheAsDelete) && !isAction {
+        if !isReplyThreadHead, (!data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty || clearCacheAsDelete) && !isAction {
             let title: String
             var isSending = false
             var isEditing = false
@@ -1063,7 +1063,7 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                             }
                         }
                     } else if let user = peer as? TelegramUser {
-                        if !isScheduled && message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction {
+                        if !isScheduled && message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction && !message.id.peerId.isReplies {
                             if !(message.flags.isSending || message.flags.contains(.Failed)) {
                                 optionsMap[id]!.insert(.forward)
                             }
@@ -1074,6 +1074,9 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                             canDeleteGlobally = true
                         } else if limitsConfiguration.canRemoveIncomingMessagesInPrivateChats {
                             canDeleteGlobally = true
+                        }
+                        if user.botInfo != nil {
+                            canDeleteGlobally = false
                         }
                         
                         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
@@ -1086,7 +1089,7 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                         if canDeleteGlobally {
                             optionsMap[id]!.insert(.deleteGlobally)
                         }
-                        if user.botInfo != nil {
+                        if user.botInfo != nil && !user.id.isReplies {
                             optionsMap[id]!.insert(.report)
                         }
                     } else if let _ = peer as? TelegramSecretChat {

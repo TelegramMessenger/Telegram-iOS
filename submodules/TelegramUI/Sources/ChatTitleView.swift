@@ -18,7 +18,13 @@ import PhoneNumberFormat
 import ChatTitleActivityNode
 
 enum ChatTitleContent {
+    enum ReplyThreadType {
+        case replies
+        case comments
+    }
+    
     case peer(peerView: PeerView, onlineMemberCount: Int32?, isScheduledMessages: Bool)
+    case replyThread(type: ReplyThreadType, text: String)
     case group([Peer])
     case custom(String)
 }
@@ -101,7 +107,12 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 var isEnabled = true
                 switch titleContent {
                     case let .peer(peerView, _, isScheduledMessages):
-                        if isScheduledMessages {
+                        if peerView.peerId.isReplies {
+                            //TODO:localize
+                            let typeText: String = "Replies"
+                            string = NSAttributedString(string: typeText, font: Font.medium(17.0), textColor: titleTheme.rootController.navigationBar.primaryTextColor)
+                            isEnabled = false
+                        } else if isScheduledMessages {
                             if peerView.peerId == self.account.peerId {
                                  string = NSAttributedString(string: self.strings.ScheduledMessages_RemindersTitle, font: Font.medium(17.0), textColor: titleTheme.rootController.navigationBar.primaryTextColor)
                             } else {
@@ -130,6 +141,22 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                 }
                             }
                         }
+                    case let .replyThread(type, text):
+                        //TODO:localize
+                        let typeText: String
+                        if !text.isEmpty {
+                            typeText = text
+                        } else {
+                            switch type {
+                            case .comments:
+                                typeText = "Comments"
+                            case .replies:
+                                typeText = "Replies"
+                            }
+                        }
+                        
+                        string = NSAttributedString(string: typeText, font: Font.medium(17.0), textColor: titleTheme.rootController.navigationBar.primaryTextColor)
+                        isEnabled = false
                     case .group:
                         string = NSAttributedString(string: "Feed", font: Font.medium(17.0), textColor: titleTheme.rootController.navigationBar.primaryTextColor)
                     case let .custom(text):
@@ -169,6 +196,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                     self.setNeedsLayout()
                 }
                 self.isUserInteractionEnabled = isEnabled
+                self.button.isUserInteractionEnabled = isEnabled
                 self.updateStatus()
             }
         }
@@ -180,7 +208,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
             switch titleContent {
             case let .peer(peerView, _, isScheduledMessages):
                 if let peer = peerViewMainPeer(peerView) {
-                    if peer.id == self.account.peerId || isScheduledMessages {
+                    if peer.id == self.account.peerId || isScheduledMessages || peer.id.isReplies {
                         inputActivitiesAllowed = false
                     }
                 }
@@ -269,7 +297,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                         case let .peer(peerView, onlineMemberCount, isScheduledMessages):
                             if let peer = peerViewMainPeer(peerView) {
                                 let servicePeer = isServicePeer(peer)
-                                if peer.id == self.account.peerId || isScheduledMessages {
+                                if peer.id == self.account.peerId || isScheduledMessages || peer.id.isReplies {
                                     let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                     state = .info(string, .generic)
                                 } else if let user = peer as? TelegramUser {
@@ -601,6 +629,9 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if !self.isUserInteractionEnabled {
+            return nil
+        }
         if self.button.frame.contains(point) {
             return self.button.view
         }

@@ -26,6 +26,147 @@ private func generateBackground(foregroundColor: UIColor, diameter: CGFloat) -> 
     }, opaque: false)?.stretchableImage(withLeftCapWidth: Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
 }
 
+
+public struct SearchBarToken {
+    public struct Style {
+        public let backgroundColor: UIColor
+        public let foregroundColor: UIColor
+        public let strokeColor: UIColor
+        
+        public init(backgroundColor: UIColor, foregroundColor: UIColor, strokeColor: UIColor) {
+            self.backgroundColor = backgroundColor
+            self.foregroundColor = foregroundColor
+            self.strokeColor = strokeColor
+        }
+    }
+    
+    public let id: AnyHashable
+    public let icon: UIImage?
+    public let title: String
+    public let style: Style?
+    
+    public init(id: AnyHashable, icon: UIImage?, title: String, style: Style? = nil) {
+        self.id = id
+        self.icon = icon
+        self.title = title
+        self.style = style
+    }
+}
+
+private final class TokenNode: ASDisplayNode {
+    var theme: SearchBarNodeTheme
+    let token: SearchBarToken
+    let iconNode: ASImageNode
+    let titleNode: ASTextNode
+    let backgroundNode: ASImageNode
+    
+    var isSelected: Bool = false
+    var isCollapsed: Bool = false
+    
+    var tapped: (() -> Void)?
+    
+    init(theme: SearchBarNodeTheme, token: SearchBarToken) {
+        self.theme = theme
+        self.token = token
+        self.iconNode = ASImageNode()
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.displayWithoutProcessing = true
+        self.titleNode = ASTextNode()
+        self.titleNode.isUserInteractionEnabled = false
+        self.titleNode.displaysAsynchronously = false
+        self.titleNode.maximumNumberOfLines = 1
+        self.backgroundNode = ASImageNode()
+        self.backgroundNode.displaysAsynchronously = false
+        self.backgroundNode.displayWithoutProcessing = true
+        
+        super.init()
+        
+        self.clipsToBounds = true
+        
+        self.addSubnode(self.backgroundNode)
+        
+        let backgroundColor = token.style?.backgroundColor ?? theme.inputIcon
+        let strokeColor = token.style?.strokeColor ?? backgroundColor
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 8.0, color: backgroundColor, strokeColor: strokeColor, strokeWidth: UIScreenPixel, backgroundColor: nil)
+        
+        let foregroundColor = token.style?.foregroundColor ?? .white
+        self.iconNode.image = generateTintedImage(image: token.icon, color: foregroundColor)
+        self.addSubnode(self.iconNode)
+        
+        self.titleNode.attributedText = NSAttributedString(string: token.title, font: Font.regular(17.0), textColor: foregroundColor)
+        self.addSubnode(self.titleNode)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture)))
+    }
+    
+    @objc private func tapGesture() {
+        self.tapped?()
+    }
+    
+    func animateIn() {
+        let targetFrame = self.frame
+        self.layer.animateFrame(from: CGRect(origin: targetFrame.origin, size: CGSize(width: 1.0, height: targetFrame.height)), to: targetFrame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        self.iconNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        self.iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+        self.titleNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+    }
+    
+    func animateOut() {
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { [weak self] _ in
+            self?.removeFromSupernode()
+        })
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+    }
+    
+    func update(theme: SearchBarNodeTheme, token: SearchBarToken, isSelected: Bool, isCollapsed: Bool) {
+        let wasSelected = self.isSelected
+        self.isSelected = isSelected
+        self.isCollapsed = isCollapsed
+        
+        if theme !== self.theme || isSelected != wasSelected {
+            let backgroundColor = isSelected ? self.theme.accent : (token.style?.backgroundColor ?? self.theme.inputIcon)
+            let strokeColor = isSelected ? backgroundColor : (token.style?.strokeColor ?? backgroundColor)
+            self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 8.0, color: backgroundColor, strokeColor: strokeColor, strokeWidth: UIScreenPixel, backgroundColor: nil)
+            
+            let foregroundColor = isSelected ? .white : (token.style?.foregroundColor ?? .white)
+            
+            if let image = token.icon {
+                self.iconNode.image = generateTintedImage(image: image, color: foregroundColor)
+            }
+            self.titleNode.attributedText = NSAttributedString(string: token.title, font: Font.regular(17.0), textColor: foregroundColor)
+        }
+    }
+    
+    func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        let height: CGFloat = 24.0
+        
+        var leftInset: CGFloat = 3.0
+        if let icon = self.iconNode.image {
+            leftInset += 1.0
+            transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: leftInset, y: floor((height - icon.size.height) / 2.0)), size: icon.size))
+            leftInset += icon.size.width + 3.0
+        }
+
+        let iconSize = self.token.icon?.size ?? CGSize()
+        let titleSize = self.titleNode.measure(CGSize(width: constrainedSize.width - 6.0, height: constrainedSize.height))
+        var width = titleSize.width + 6.0
+        if !iconSize.width.isZero {
+            width += iconSize.width + 7.0
+        }
+        
+        let size = CGSize(width: self.isCollapsed ? height : width, height: height)
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: floor((height - titleSize.height) / 2.0)), size: titleSize))
+                    
+        return size
+    }
+}
+
 private class SearchBarTextField: UITextField {
     public var didDeleteBackwardWhileEmpty: (() -> Void)?
     
@@ -37,6 +178,164 @@ private class SearchBarTextField: UITextField {
         }
     }
     
+    var tokenNodes: [AnyHashable: TokenNode] = [:]
+    var tokens: [SearchBarToken] = [] {
+        didSet {
+            self._selectedTokenIndex = nil
+            self.layoutTokens(transition: .animated(duration: 0.2, curve: .easeInOut))
+            self.setNeedsLayout()
+            self.updateCursorColor()
+        }
+    }
+    
+    var _selectedTokenIndex: Int?
+    var selectedTokenIndex: Int? {
+        get {
+            return self._selectedTokenIndex
+        }
+        set {
+            _selectedTokenIndex = newValue
+            self.layoutTokens(transition: .animated(duration: 0.2, curve: .easeInOut))
+            self.setNeedsLayout()
+            self.updateCursorColor()
+        }
+    }
+    
+    private func updateCursorColor() {
+        if self._selectedTokenIndex != nil {
+            super.tintColor = UIColor.clear
+        } else {
+            super.tintColor = self._tintColor
+        }
+    }
+    
+    var _tintColor: UIColor = .black
+    override var tintColor: UIColor! {
+        get {
+            return super.tintColor
+        }
+        set {
+            if newValue != UIColor.clear {
+                self._tintColor = newValue
+                
+                if self.selectedTokenIndex == nil {
+                    super.tintColor = newValue
+                }
+            }
+        }
+    }
+    
+    var theme: SearchBarNodeTheme
+    
+    fileprivate func layoutTokens(transition: ContainedViewLayoutTransition = .immediate) {
+        for i in 0 ..< self.tokens.count {
+            let token = self.tokens[i]
+
+            let tokenNode: TokenNode
+            if let current = self.tokenNodes[token.id] {
+                tokenNode = current
+            } else {
+                tokenNode = TokenNode(theme: self.theme, token: token)
+                self.tokenNodes[token.id] = tokenNode
+            }
+            tokenNode.tapped = { [weak self] in
+                self?.selectedTokenIndex = i
+                self?.becomeFirstResponder()
+            }
+            let isSelected = i == self.selectedTokenIndex
+            let isCollapsed = !isSelected && (i < self.tokens.count - 1 || !(self.text?.isEmpty ?? true))
+            tokenNode.update(theme: self.theme, token: token, isSelected: isSelected, isCollapsed: isCollapsed)
+        }
+        var removeKeys: [AnyHashable] = []
+        for (id, _) in self.tokenNodes {
+            if !self.tokens.contains(where: { $0.id == id }) {
+                removeKeys.append(id)
+            }
+        }
+        for id in removeKeys {
+            if let itemNode = self.tokenNodes.removeValue(forKey: id) {
+                if transition.isAnimated {
+                    itemNode.animateOut()
+                } else {
+                    itemNode.removeFromSupernode()
+                }
+            }
+        }
+        
+        var tokenSizes: [(AnyHashable, CGSize, TokenNode, Bool)] = []
+        var totalRawTabSize: CGFloat = 0.0
+        
+        for token in self.tokens {
+            guard let tokenNode = self.tokenNodes[token.id] else {
+                continue
+            }
+            let wasAdded = tokenNode.view.superview == nil
+            var tokenNodeTransition = transition
+            if wasAdded {
+                tokenNodeTransition = .immediate
+                self.addSubnode(tokenNode)
+            }
+            
+            let nodeSize = tokenNode.updateLayout(constrainedSize: self.bounds.size, transition: tokenNodeTransition)
+            tokenSizes.append((token.id, nodeSize, tokenNode, wasAdded))
+            totalRawTabSize += nodeSize.width
+        }
+        
+        let minSpacing: CGFloat = 6.0
+        
+        let resolvedSideInset: CGFloat = 10.0
+        var leftOffset: CGFloat = 0.0
+        if !tokenSizes.isEmpty {
+            leftOffset += resolvedSideInset
+        }
+        
+        var longTitlesWidth: CGFloat = resolvedSideInset
+        for i in 0 ..< tokenSizes.count {
+            let (_, paneNodeSize, _, _) = tokenSizes[i]
+            longTitlesWidth += paneNodeSize.width
+            if i != tokenSizes.count - 1 {
+                longTitlesWidth += minSpacing
+            }
+        }
+        longTitlesWidth += resolvedSideInset
+        
+        let verticalOffset: CGFloat = 0.0
+        var horizontalOffset: CGFloat = 0.0
+        for i in 0 ..< tokenSizes.count {
+            let (_, nodeSize, tokenNode, wasAdded) = tokenSizes[i]
+            let tokenNodeTransition = transition
+                        
+            let nodeFrame = CGRect(origin: CGPoint(x: leftOffset, y: floor((self.frame.height - nodeSize.height) / 2.0) + verticalOffset), size: nodeSize)
+            
+            if wasAdded {
+                if horizontalOffset > 0.0 {
+                    tokenNode.frame = nodeFrame.offsetBy(dx: horizontalOffset, dy: 0.0)
+                    tokenNodeTransition.updatePosition(node: tokenNode, position: nodeFrame.center)
+                } else {
+                    tokenNode.frame = nodeFrame
+                }
+                tokenNode.animateIn()
+            } else {
+                if nodeFrame.width < tokenNode.frame.width {
+                    horizontalOffset += tokenNode.frame.width - nodeFrame.width
+                }
+                tokenNodeTransition.updateFrame(node: tokenNode, frame: nodeFrame)
+            }
+            
+            tokenNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: -minSpacing / 2.0, bottom: 0.0, right: -minSpacing / 2.0)
+                        
+            leftOffset += nodeSize.width + minSpacing
+        }
+        
+        if !tokenSizes.isEmpty {
+            leftOffset -= 6.0
+        }
+        
+        self.tokensWidth = leftOffset
+    }
+    
+    private var tokensWidth: CGFloat = 0.0
+    
     private let measurePrefixLabel: ImmediateTextNode
     let prefixLabel: ImmediateTextNode
     var prefixString: NSAttributedString? {
@@ -47,7 +346,9 @@ private class SearchBarTextField: UITextField {
         }
     }
     
-    override init(frame: CGRect) {
+    init(theme: SearchBarNodeTheme) {
+        self.theme = theme
+        
         self.placeholderLabel = ImmediateTextNode()
         self.placeholderLabel.isUserInteractionEnabled = false
         self.placeholderLabel.displaysAsynchronously = false
@@ -66,7 +367,7 @@ private class SearchBarTextField: UITextField {
         self.prefixLabel.maximumNumberOfLines = 1
         self.prefixLabel.truncationMode = .byTruncatingTail
         
-        super.init(frame: frame)
+        super.init(frame: CGRect())
         
         self.addSubnode(self.placeholderLabel)
         self.addSubnode(self.prefixLabel)
@@ -96,13 +397,18 @@ private class SearchBarTextField: UITextField {
         if bounds.size.width.isZero {
             return CGRect(origin: CGPoint(), size: CGSize())
         }
-        var rect = bounds.insetBy(dx: 4.0, dy: 4.0)
+        var rect = bounds.insetBy(dx: 7.0, dy: 4.0)
+        rect.origin.y += 1.0
         
         let prefixSize = self.measurePrefixLabel.updateLayout(CGSize(width: floor(bounds.size.width * 0.7), height: bounds.size.height))
         if !prefixSize.width.isZero {
             let prefixOffset = prefixSize.width + 3.0
             rect.origin.x += prefixOffset
             rect.size.width -= prefixOffset
+        }
+        if !self.tokensWidth.isZero {
+            rect.origin.x += self.tokensWidth
+            rect.size.width -= self.tokensWidth
         }
         rect.size.width = max(rect.size.width, 10.0)
         return rect
@@ -135,7 +441,16 @@ private class SearchBarTextField: UITextField {
     }
     
     override func deleteBackward() {
-        if self.text == nil || self.text!.isEmpty {
+        var processed = false
+        if let selectedRange = self.selectedTextRange {
+            let cursorPosition = self.offset(from: self.beginningOfDocument, to: selectedRange.start)
+            if cursorPosition == 0 && !self.tokens.isEmpty && self.selectedTokenIndex == nil {
+                self.selectedTokenIndex = self.tokens.count - 1
+                processed = true
+            }
+        }
+        
+        if !processed && (self.text == nil || self.text!.isEmpty) {
             self.didDeleteBackwardWhileEmpty?()
         }
         super.deleteBackward()
@@ -255,6 +570,9 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     public var textUpdated: ((String, String?) -> Void)?
     public var textReturned: ((String) -> Void)?
     public var clearPrefix: (() -> Void)?
+    public var clearTokens: (() -> Void)?
+    
+    public var tokensUpdated: (([SearchBarToken]) -> Void)?
     
     private let backgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
@@ -270,6 +588,15 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             return self.textField.placeholderString
         } set(value) {
             self.textField.placeholderString = value
+        }
+    }
+    
+    public var tokens: [SearchBarToken] {
+        get {
+            return self.textField.tokens
+        } set {
+            self.textField.tokens = newValue
+            self.updateIsEmpty(animated: true)
         }
     }
     
@@ -362,7 +689,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
         
-        self.textField = SearchBarTextField()
+        self.textField = SearchBarTextField(theme: theme)
         self.textField.accessibilityTraits = .searchField
         self.textField.autocorrectionType = .no
         self.textField.returnKeyType = .search
@@ -372,7 +699,6 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.clearButton.imageNode.displaysAsynchronously = false
         self.clearButton.imageNode.displayWithoutProcessing = true
         self.clearButton.displaysAsynchronously = false
-        self.clearButton.isHidden = true
         
         self.cancelButton = HighlightableButtonNode(pointerStyle: .default)
         self.cancelButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
@@ -393,15 +719,24 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textField.addTarget(self, action: #selector(self.textFieldDidChange(_:)), for: .editingChanged)
         
         self.textField.didDeleteBackwardWhileEmpty = { [weak self] in
-            self?.clearPressed()
+            guard let strongSelf = self else {
+                return
+            }
+            if let index = strongSelf.textField.selectedTokenIndex {
+                strongSelf.tokens.remove(at: index)
+                strongSelf.tokensUpdated?(strongSelf.tokens)
+            } else {
+                strongSelf.clearPressed()
+            }
         }
         
         self.cancelButton.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
         self.clearButton.addTarget(self, action: #selector(self.clearPressed), forControlEvents: .touchUpInside)
         
         self.updateThemeAndStrings(theme: theme, strings: strings)
+        self.updateIsEmpty(animated: false)
     }
-    
+        
     public func updateThemeAndStrings(theme: SearchBarNodeTheme, strings: PresentationStrings) {
         if self.theme != theme || self.strings !== strings {
             self.cancelButton.setAttributedTitle(NSAttributedString(string: self.cancelText ?? strings.Common_Cancel, font: self.cancelText != nil ? Font.semibold(17.0) : Font.regular(17.0), textColor: theme.accent), for: [])
@@ -452,16 +787,16 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         
         if let iconImage = self.iconNode.image {
             let iconSize = iconImage.size
-            transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 8.0, y: textBackgroundFrame.minY + floor((textBackgroundFrame.size.height - iconSize.height) / 2.0)), size: iconSize))
+            transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 5.0, y: textBackgroundFrame.minY + floor((textBackgroundFrame.size.height - iconSize.height) / 2.0) - UIScreenPixel), size: iconSize))
         }
         
         if let activityIndicator = self.activityIndicator {
             let indicatorSize = activityIndicator.measure(CGSize(width: 32.0, height: 32.0))
-            transition.updateFrame(node: activityIndicator, frame: CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 7.0, y: textBackgroundFrame.minY + floor((textBackgroundFrame.size.height - indicatorSize.height) / 2.0)), size: indicatorSize))
+            transition.updateFrame(node: activityIndicator, frame: CGRect(origin: CGPoint(x: textBackgroundFrame.minX + 9.0 + UIScreenPixel, y: textBackgroundFrame.minY + floor((textBackgroundFrame.size.height - indicatorSize.height) / 2.0)), size: indicatorSize))
         }
         
         let clearSize = self.clearButton.measure(CGSize(width: 100.0, height: 100.0))
-        transition.updateFrame(node: self.clearButton, frame: CGRect(origin: CGPoint(x: textBackgroundFrame.maxX - 8.0 - clearSize.width, y: textBackgroundFrame.minY + floor((textBackgroundFrame.size.height - clearSize.height) / 2.0)), size: clearSize))
+        transition.updateFrame(node: self.clearButton, frame: CGRect(origin: CGPoint(x: textBackgroundFrame.maxX - 6.0 - clearSize.width, y: textBackgroundFrame.minY + floor((textBackgroundFrame.size.height - clearSize.height) / 2.0)), size: clearSize))
         
         self.textField.frame = textFrame
     }
@@ -499,7 +834,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textBackgroundNode.layer.animateFrame(from: initialTextBackgroundFrame, to: self.textBackgroundNode.frame, duration: duration, timingFunction: timingFunction)
         
         let textFieldFrame = self.textField.frame
-        let initialLabelNodeFrame = CGRect(origin: node.labelNode.frame.offsetBy(dx: initialTextBackgroundFrame.origin.x - 4.0, dy: initialTextBackgroundFrame.origin.y - 7.0).origin, size: textFieldFrame.size)
+        let initialLabelNodeFrame = CGRect(origin: node.labelNode.frame.offsetBy(dx: initialTextBackgroundFrame.origin.x - 7.0, dy: initialTextBackgroundFrame.origin.y - 8.0).origin, size: textFieldFrame.size)
         self.textField.layer.animateFrame(from: initialLabelNodeFrame, to: self.textField.frame, duration: duration, timingFunction: timingFunction)
         
         let iconFrame = self.iconNode.frame
@@ -515,7 +850,9 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textField.resignFirstResponder()
         if clear {
             self.textField.text = nil
-            self.textField.placeholderLabel.isHidden = false
+            self.textField.tokens = []
+            self.textField.prefixString = nil
+            self.textField.placeholderLabel.alpha = 1.0
         }
     }
     
@@ -576,7 +913,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         transitionBackgroundNode.layer.animateFrame(from: self.textBackgroundNode.frame, to: targetTextBackgroundFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
         
         let textFieldFrame = self.textField.frame
-        let targetLabelNodeFrame = CGRect(origin: CGPoint(x: node.labelNode.frame.minX + targetTextBackgroundFrame.origin.x - 4.0, y: targetTextBackgroundFrame.minY + floorToScreenPixels((targetTextBackgroundFrame.size.height - textFieldFrame.size.height) / 2.0)), size: textFieldFrame.size)
+        let targetLabelNodeFrame = CGRect(origin: CGPoint(x: node.labelNode.frame.minX + targetTextBackgroundFrame.origin.x - 7.0, y: targetTextBackgroundFrame.minY + floorToScreenPixels((targetTextBackgroundFrame.size.height - textFieldFrame.size.height) / 2.0) - UIScreenPixel), size: textFieldFrame.size)
         self.textField.layer.animateFrame(from: self.textField.frame, to: targetLabelNodeFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             if let snapshot = node.labelNode.layer.snapshotContentTree() {
@@ -626,9 +963,17 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     
     @objc private func textFieldDidChange(_ textField: UITextField) {
         self.updateIsEmpty()
+        if let _ = self.textField.selectedTokenIndex {
+            self.textField.selectedTokenIndex = nil
+        }
         if let textUpdated = self.textUpdated {
             textUpdated(textField.text ?? "", textField.textInputMode?.primaryLanguage)
+            self.textField.layoutTokens(transition: .animated(duration: 0.2, curve: .easeInOut))
         }
+    }
+    
+    public func textFieldDidEndEditing(_ textField: UITextField) {
+        self.textField.selectedTokenIndex = nil
     }
     
     public func selectAll() {
@@ -636,12 +981,24 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textField.selectAll(nil)
     }
     
-    private func updateIsEmpty() {
-        let isEmpty = !(self.textField.text?.isEmpty ?? true)
-        if isEmpty != self.textField.placeholderLabel.isHidden {
-            self.textField.placeholderLabel.isHidden = isEmpty
+    public func selectLastToken() {
+        if !self.textField.tokens.isEmpty {
+            self.textField.selectedTokenIndex = self.textField.tokens.count - 1
+            self.textField.becomeFirstResponder()
         }
-        self.clearButton.isHidden = !isEmpty && self.prefixString == nil
+    }
+    
+    private func updateIsEmpty(animated: Bool = false) {
+        let isEmpty = (self.textField.text?.isEmpty ?? true) && self.tokens.isEmpty
+        
+        let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .spring) : .immediate
+        let placeholderTransition = !isEmpty ? .immediate : transition
+        placeholderTransition.updateAlpha(node: self.textField.placeholderLabel, alpha: isEmpty ? 1.0 : 0.0)
+    
+        let clearIsHidden = isEmpty && self.prefixString == nil
+        transition.updateAlpha(node: self.clearButton, alpha: clearIsHidden ? 0.0 : 1.0)
+        transition.updateTransformScale(node: self.clearButton, scale: clearIsHidden ? 0.2 : 1.0)
+        self.clearButton.isUserInteractionEnabled = !clearIsHidden
     }
     
     @objc private func cancelPressed() {
@@ -654,6 +1011,9 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         if (self.textField.text?.isEmpty ?? true) {
             if self.prefixString != nil {
                 self.clearPrefix?()
+            }
+            if !self.tokens.isEmpty {
+                self.clearTokens?()
             }
         } else {
             self.textField.text = ""

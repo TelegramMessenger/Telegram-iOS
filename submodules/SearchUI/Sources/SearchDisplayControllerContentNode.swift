@@ -4,11 +4,12 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
+import SearchBarNode
 
 open class SearchDisplayControllerContentNode: ASDisplayNode {
     public final var dismissInput: (() -> Void)?
     public final var cancel: (() -> Void)?
-    public final var setQuery: ((NSAttributedString?, String) -> Void)?
+    public final var setQuery: ((NSAttributedString?, [SearchBarToken], String) -> Void)?
     public final var setPlaceholder: ((String) -> Void)?
     
     open var isSearching: Signal<Bool, NoError> {
@@ -25,7 +26,13 @@ open class SearchDisplayControllerContentNode: ASDisplayNode {
     open func searchTextUpdated(text: String) {
     }
     
+    open func searchTokensUpdated(tokens: [SearchBarToken]) {
+    }
+    
     open func searchTextClearPrefix() {
+    }
+    
+    open func searchTextClearTokens() {
     }
     
     open func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

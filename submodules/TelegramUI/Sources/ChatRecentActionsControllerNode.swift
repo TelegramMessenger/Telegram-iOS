@@ -157,7 +157,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     }
                 }
-                return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, message: message, standalone: true, reverseMessageGalleryOrder: false, navigationController: navigationController, dismissInput: {
+                return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: nil, chatLocationContextHolder: nil, message: message, standalone: true, reverseMessageGalleryOrder: false, navigationController: navigationController, dismissInput: {
                     //self?.chatDisplayNode.dismissInput()
                 }, present: { c, a in
                     self?.presentController(c, a)
@@ -451,6 +451,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, greetingStickerNode: {
             return nil
         }, openPeerContextMenu: { _, _, _, _ in
+        }, openMessageReplies: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
@@ -814,6 +815,10 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     case let .channelMessage(peerId, messageId):
                         if let navigationController = strongSelf.getNavigationController() {
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: .message(messageId)))
+                        }
+                   case let .replyThreadMessage(replyThreadMessageId, isChannelPost, maxReadMessageId, messageId):
+                        if let navigationController = strongSelf.getNavigationController() {
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(threadMessageId: replyThreadMessageId, isChannelPost: isChannelPost, maxReadMessageId: maxReadMessageId), subject: .message(messageId)))
                         }
                     case let .stickerPack(name):
                         let packReference: StickerPackReference = .name(name)

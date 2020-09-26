@@ -13,6 +13,9 @@ import TextFormat
 import AccountContext
 import UrlEscaping
 import PhotoResources
+import WebsiteType
+import ChatMessageInteractiveMediaBadge
+import GalleryData
 
 private let buttonFont = Font.semibold(13.0)
 
@@ -314,11 +317,16 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 edited = true
             }
             var viewCount: Int?
+            var dateReplies = 0
             for attribute in message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute {
                     edited = !attribute.isHidden
                 } else if let attribute = attribute as? ViewCountMessageAttribute {
                     viewCount = attribute.count
+                } else if let attribute = attribute as? ReplyThreadMessageAttribute {
+                    if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
+                        dateReplies = Int(attribute.count)
+                    }
                 }
             }
             
@@ -523,7 +531,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 var additionalImageBadgeContent: ChatMessageInteractiveMediaBadgeContent?
                 
                 switch position {
-                    case .linear(_, .None):
+                    case .linear(_, .None), .linear(_, .Neighbour(true, _)):
                         let imageMode = !((refineContentImageLayout == nil && refineContentFileLayout == nil && contentInstantVideoSizeAndApply == nil) || preferMediaBeforeText)
                         statusInText = !imageMode
                         
@@ -564,7 +572,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 }
                             }
                         
-                            statusSizeAndApply = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions)
+                            statusSizeAndApply = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions, dateReplies)
                         }
                     default:
                         break

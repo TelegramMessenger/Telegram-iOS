@@ -61,7 +61,7 @@ public func requestPeerPhotos(postbox: Postbox, network: Network, peerId: PeerId
                 }
             }
         } else if let peer = peer, let inputPeer = apiInputPeer(peer) {
-            return network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, filter: .inputMessagesFilterChatPhotos, minDate: 0, maxDate: 0, offsetId: 0, addOffset: 0, limit: 1000, maxId: 0, minId: 0, hash: 0))
+            return network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, topMsgId: nil, filter: .inputMessagesFilterChatPhotos, minDate: 0, maxDate: 0, offsetId: 0, addOffset: 0, limit: 1000, maxId: 0, minId: 0, hash: 0))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
                 return .single(nil)
@@ -121,7 +121,7 @@ public func requestPeerPhotos(postbox: Postbox, network: Network, peerId: PeerId
                                 switch media.action {
                                     case let .photoUpdated(image):
                                         if let image = image {
-                                            photos.append(TelegramPeerPhoto(image: image, reference: nil, date: message.timestamp, index: index, totalCount: messages.count, messageId: message.id))
+                                            photos.append(TelegramPeerPhoto(image: image, reference: image.reference, date: message.timestamp, index: index, totalCount: messages.count, messageId: message.id))
                                         }
                                     default:
                                         break

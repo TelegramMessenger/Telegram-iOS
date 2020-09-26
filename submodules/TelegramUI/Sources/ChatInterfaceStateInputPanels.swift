@@ -71,6 +71,17 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
     var displayInputTextPanel = false
     
     if let peer = chatPresentationInterfaceState.renderedPeer?.peer {
+        if peer.id.isReplies {
+            if let currentPanel = (currentPanel as? ChatChannelSubscriberInputPanelNode) ?? (currentSecondaryPanel as? ChatChannelSubscriberInputPanelNode) {
+                return (currentPanel, nil)
+            } else {
+                let panel = ChatChannelSubscriberInputPanelNode()
+                panel.interfaceInteraction = interfaceInteraction
+                panel.context = context
+                return (panel, nil)
+            }
+        }
+        
         if let secretChat = peer as? TelegramSecretChat {
             switch secretChat.embeddedState {
                 case .handshake:
@@ -109,7 +120,9 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             case .member:
                 isMember = true
             case .left:
-                break
+                if case .replyThread = chatPresentationInterfaceState.chatLocation {
+                    isMember = true
+                }
             }
             
             if isMember && channel.hasBannedPermission(.banSendMessages) != nil {
@@ -140,13 +153,15 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             case .group:
                 switch channel.participationStatus {
                 case .kicked, .left:
-                    if let currentPanel = (currentPanel as? ChatChannelSubscriberInputPanelNode) ?? (currentSecondaryPanel as? ChatChannelSubscriberInputPanelNode) {
-                        return (currentPanel, nil)
-                    } else {
-                        let panel = ChatChannelSubscriberInputPanelNode()
-                        panel.interfaceInteraction = interfaceInteraction
-                        panel.context = context
-                        return (panel, nil)
+                    if !isMember {
+                        if let currentPanel = (currentPanel as? ChatChannelSubscriberInputPanelNode) ?? (currentSecondaryPanel as? ChatChannelSubscriberInputPanelNode) {
+                            return (currentPanel, nil)
+                        } else {
+                            let panel = ChatChannelSubscriberInputPanelNode()
+                            panel.interfaceInteraction = interfaceInteraction
+                            panel.context = context
+                            return (panel, nil)
+                        }
                     }
                 case .member:
                     break

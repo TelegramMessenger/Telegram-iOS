@@ -21,229 +21,11 @@ import AlertUI
 import PresentationDataUtils
 import ShareController
 import UndoUI
-
-private enum ChatMessageGalleryControllerData {
-    case url(String)
-    case pass(TelegramMediaFile)
-    case instantPage(InstantPageGalleryController, Int, Media)
-    case map(TelegramMediaMap)
-    case stickerPack(StickerPackReference)
-    case audio(TelegramMediaFile)
-    case document(TelegramMediaFile, Bool)
-    case gallery(Signal<GalleryController, NoError>)
-    case secretGallery(SecretMediaPreviewController)
-    case chatAvatars(AvatarGalleryController, Media)
-    case theme(TelegramMediaFile)
-    case other(Media)
-}
-
-private func chatMessageGalleryControllerData(context: AccountContext, message: Message, navigationController: NavigationController?, standalone: Bool, reverseMessageGalleryOrder: Bool, mode: ChatControllerInteractionOpenMessageMode, synchronousLoad: Bool, actionInteraction: GalleryControllerActionInteraction?) -> ChatMessageGalleryControllerData? {
-    var galleryMedia: Media?
-    var otherMedia: Media?
-    var instantPageMedia: (TelegramMediaWebpage, [InstantPageGalleryEntry])?
-    for media in message.media {
-        if let action = media as? TelegramMediaAction {
-            switch action.action {
-            case let .photoUpdated(image):
-                if let peer = messageMainPeer(message), let image = image {
-                    let promise: Promise<[AvatarGalleryEntry]> = Promise([AvatarGalleryEntry.image(image.imageId, image.reference, image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), peer, message.timestamp, nil, message.id, image.immediateThumbnailData, "action")])
-                    let galleryController = AvatarGalleryController(context: context, peer: peer, sourceCorners: .roundRect(15.5), remoteEntries: promise, skipInitial: true, replaceRootController: { controller, ready in
-                        
-                    })
-                    return .chatAvatars(galleryController, image)
-                }
-            default:
-                break
-            }
-        } else if let file = media as? TelegramMediaFile {
-            galleryMedia = file
-        } else if let image = media as? TelegramMediaImage {
-            galleryMedia = image
-        } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-            if let file = content.file {
-                galleryMedia = file
-            } else if let image = content.image {
-                if case .link = mode {
-                } else if ["photo", "document", "video", "gif", "telegram_album"].contains(content.type) {
-                    galleryMedia = image
-                }
-            }
-            
-            if let instantPage = content.instantPage, let galleryMedia = galleryMedia {
-                switch instantPageType(of: content) {
-                    case .album:
-                        let medias = instantPageGalleryMedia(webpageId: webpage.webpageId, page: instantPage, galleryMedia: galleryMedia)
-                        if medias.count > 1 {
-                            instantPageMedia = (webpage, medias)
-                        }      
-                    default:
-                        break
-                }
-            }
-        } else if let mapMedia = media as? TelegramMediaMap {
-            galleryMedia = mapMedia
-        } else if let contactMedia = media as? TelegramMediaContact {
-            otherMedia = contactMedia
-        }
-    }
-    
-    var stream = false
-    var autoplayingVideo = false
-    var landscape = false
-    var timecode: Double? = nil
-    
-    switch mode {
-        case .stream:
-            stream = true
-        case .automaticPlayback:
-            autoplayingVideo = true
-        case .landscape:
-            autoplayingVideo = true
-            landscape = true
-        case let .timecode(time):
-            timecode = time
-        default:
-            break
-    }
-    
-    if let (webPage, instantPageMedia) = instantPageMedia, let galleryMedia = galleryMedia {
-        var centralIndex: Int = 0
-        for i in 0 ..< instantPageMedia.count {
-            if instantPageMedia[i].media.media.id == galleryMedia.id {
-                centralIndex = i
-                break
-            }
-        }
-        
-        let gallery = InstantPageGalleryController(context: context, webPage: webPage, message: message, entries: instantPageMedia, centralIndex: centralIndex, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, replaceRootController: { [weak navigationController] controller, ready in
-            if let navigationController = navigationController {
-                navigationController.replaceTopController(controller, animated: false, ready: ready)
-            }
-        }, baseNavigationController: navigationController)
-        return .instantPage(gallery, centralIndex, galleryMedia)
-    } else if let galleryMedia = galleryMedia {
-        if let mapMedia = galleryMedia as? TelegramMediaMap {
-            return .map(mapMedia)
-        } else if let file = galleryMedia as? TelegramMediaFile, (file.isSticker || file.isAnimatedSticker) {
-            for attribute in file.attributes {
-                if case let .Sticker(_, reference, _) = attribute {
-                    if let reference = reference {
-                        return .stickerPack(reference)
-                    }
-                    break
-                }
-            }
-        } else if let file = galleryMedia as? TelegramMediaFile, file.isAnimatedSticker {
-            return nil
-        } else if let file = galleryMedia as? TelegramMediaFile, file.isMusic || file.isVoice || file.isInstantVideo {
-            return .audio(file)
-        } else if let file = galleryMedia as? TelegramMediaFile, file.mimeType == "application/vnd.apple.pkpass" || (file.fileName != nil && file.fileName!.lowercased().hasSuffix(".pkpass")) {
-            return .pass(file)
-        } else {
-            if let file = galleryMedia as? TelegramMediaFile {
-                if let fileName = file.fileName {
-                    let ext = (fileName as NSString).pathExtension.lowercased()
-                    if ext == "tgios-theme" {
-                        return .theme(file)
-                    } else if ext == "wav" || ext == "opus" {
-                        return .audio(file)
-                    } else if ext == "json", let fileSize = file.size, fileSize < 1024 * 1024 {
-                        if let path = context.account.postbox.mediaBox.completedResourcePath(file.resource), let composition = LOTComposition(filePath: path), composition.timeDuration > 0.0 {
-                            let gallery = GalleryController(context: context, source: .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
-                                navigationController?.replaceTopController(controller, animated: false, ready: ready)
-                                }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
-                            return .gallery(.single(gallery))
-                        }
-                    }
-                    
-                    if ext == "mkv" {
-                        return .document(file, true)
-                    }
-                }
-                
-                if internalDocumentItemSupportsMimeType(file.mimeType, fileName: file.fileName ?? "file") {
-                    let gallery = GalleryController(context: context, source: .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
-                        navigationController?.replaceTopController(controller, animated: false, ready: ready)
-                        }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
-                    return .gallery(.single(gallery))
-                }
-                
-                if !file.isVideo {
-                    return .document(file, false)
-                }
-            }
-            
-            if message.containsSecretMedia {
-                let gallery = SecretMediaPreviewController(context: context, messageId: message.id)
-                return .secretGallery(gallery)
-            } else {
-                let startTimecode: Signal<Double?, NoError>
-                if let timecode = timecode {
-                    startTimecode = .single(timecode)
-                } else {
-                    startTimecode = mediaPlaybackStoredState(postbox: context.account.postbox, messageId: message.id)
-                    |> map { state in
-                        return state?.timestamp
-                    }
-                }
-                
-                return .gallery(startTimecode
-                |> deliverOnMainQueue
-                |> map { timecode in
-                    let gallery = GalleryController(context: context, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
-                        navigationController?.replaceTopController(controller, animated: false, ready: ready)
-                    }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
-                    gallery.temporaryDoNotWaitForReady = autoplayingVideo
-                    return gallery
-                })
-            }
-        }
-    }
-    if let otherMedia = otherMedia {
-        return .other(otherMedia)
-    } else {
-        return nil
-    }
-}
-
-enum ChatMessagePreviewControllerData {
-    case instantPage(InstantPageGalleryController, Int, Media)
-    case gallery(GalleryController)
-}
-
-func chatMessagePreviewControllerData(context: AccountContext, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?) -> ChatMessagePreviewControllerData? {
-    if let mediaData = chatMessageGalleryControllerData(context: context, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, mode: .default, synchronousLoad: true, actionInteraction: nil) {
-        switch mediaData {
-            case let .gallery(gallery):
-                break
-            case let .instantPage(gallery, centralIndex, galleryMedia):
-                return .instantPage(gallery, centralIndex, galleryMedia)
-            default:
-                break
-        }
-    }
-    return nil
-}
-
-func chatMediaListPreviewControllerData(context: AccountContext, message: Message, standalone: Bool, reverseMessageGalleryOrder: Bool, navigationController: NavigationController?) -> Signal<ChatMessagePreviewControllerData?, NoError> {
-    if let mediaData = chatMessageGalleryControllerData(context: context, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, mode: .default, synchronousLoad: true, actionInteraction: nil) {
-        switch mediaData {
-            case let .gallery(gallery):
-                return gallery
-                |> map { gallery in
-                    return .gallery(gallery)
-                }
-            case let .instantPage(gallery, centralIndex, galleryMedia):
-                return .single(.instantPage(gallery, centralIndex, galleryMedia))
-            default:
-                break
-        }
-    }
-    return .single(nil)
-}
+import WebsiteType
+import GalleryData
 
 func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
-    if let mediaData = chatMessageGalleryControllerData(context: params.context, message: params.message, navigationController: params.navigationController, standalone: params.standalone, reverseMessageGalleryOrder: params.reverseMessageGalleryOrder, mode: params.mode, synchronousLoad: false, actionInteraction: params.actionInteraction) {
+    if let mediaData = chatMessageGalleryControllerData(context: params.context, chatLocation: params.chatLocation, chatLocationContextHolder: params.chatLocationContextHolder, message: params.message, navigationController: params.navigationController, standalone: params.standalone, reverseMessageGalleryOrder: params.reverseMessageGalleryOrder, mode: params.mode, source: params.gallerySource, synchronousLoad: false, actionInteraction: params.actionInteraction) {
         switch mediaData {
             case let .url(url):
                 params.openUrl(url)
@@ -351,15 +133,19 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     control = .seek(time)
                 }
                 if (file.isVoice || file.isInstantVideo) && params.message.tags.contains(.voiceOrInstantVideo) {
-                    if params.standalone {
+                    if let playlistLocation = params.playlistLocation {
+                        location = playlistLocation
+                    } else if params.standalone {
                         location = .recentActions(params.message)
                     } else {
                         location = .messages(peerId: params.message.id.peerId, tagMask: .voiceOrInstantVideo, at: params.message.id)
                     }
                     playerType = .voice
                 } else if file.isMusic && params.message.tags.contains(.music) {
-                    if params.standalone {
-                            location = .recentActions(params.message)
+                    if let playlistLocation = params.playlistLocation {
+                        location = playlistLocation
+                    } else if params.standalone {
+                        location = .recentActions(params.message)
                     } else {
                         location = .messages(peerId: params.message.id.peerId, tagMask: .music, at: params.message.id)
                     }
@@ -455,52 +241,9 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
 }
 
 func openChatInstantPage(context: AccountContext, message: Message, sourcePeerType: MediaAutoDownloadPeerType?, navigationController: NavigationController) {
-    for media in message.media {
-        if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-            if let _ = content.instantPage {
-                var textUrl: String?
-                if let pageUrl = URL(string: content.url) {
-                    inner: for attribute in message.attributes {
-                        if let attribute = attribute as? TextEntitiesMessageAttribute {
-                            for entity in attribute.entities {
-                                switch entity.type {
-                                case let .TextUrl(url):
-                                    if let parsedUrl = URL(string: url) {
-                                        if pageUrl.scheme == parsedUrl.scheme && pageUrl.host == parsedUrl.host && pageUrl.path == parsedUrl.path {
-                                            textUrl = url
-                                        }
-                                    }
-                                case .Url:
-                                    let nsText = message.text as NSString
-                                    var entityRange = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
-                                    if entityRange.location + entityRange.length > nsText.length {
-                                        entityRange.location = max(0, nsText.length - entityRange.length)
-                                        entityRange.length = nsText.length - entityRange.location
-                                    }
-                                    let url = nsText.substring(with: entityRange)
-                                    if let parsedUrl = URL(string: url) {
-                                        if pageUrl.scheme == parsedUrl.scheme && pageUrl.host == parsedUrl.host && pageUrl.path == parsedUrl.path {
-                                            textUrl = url
-                                        }
-                                    }
-                                default:
-                                    break
-                                }
-                            }
-                            break inner
-                        }
-                    }
-                }
-                var anchor: String?
-                if let textUrl = textUrl, let anchorRange = textUrl.range(of: "#") {
-                    anchor = String(textUrl[anchorRange.upperBound...])
-                }
-                
-                let pageController = InstantPageController(context: context, webPage: webpage, sourcePeerType: sourcePeerType ?? .channel, anchor: anchor)
-                navigationController.pushViewController(pageController)
-            }
-            break
-        }
+    if let (webpage, anchor) = instantPageAndAnchor(message: message) {
+        let pageController = InstantPageController(context: context, webPage: webpage, sourcePeerType: sourcePeerType ?? .channel, anchor: anchor)
+        navigationController.pushViewController(pageController)
     }
 }
 

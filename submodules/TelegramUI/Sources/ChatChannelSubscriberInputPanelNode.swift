@@ -46,7 +46,11 @@ private func actionForPeer(peer: Peer, isMuted: Bool) -> SubscriberAction? {
                 }
         }
     } else {
-        return nil
+        if isMuted {
+            return .unmuteNotifications
+        } else {
+            return .muteNotifications
+        }
     }
 }
 
@@ -178,7 +182,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                 self.badgeBackground.image = PresentationResourcesChatList.badgeBackgroundActive(interfaceState.theme, diameter: 20.0)
             }
             
-            if previousState?.peerDiscussionId != interfaceState.peerDiscussionId {
+            /*if previousState?.peerDiscussionId != interfaceState.peerDiscussionId {
                 let signal: Signal<Int?, NoError>
                 if let peerDiscussionId = interfaceState.peerDiscussionId, let context = self.context {
                     let key = PostboxViewKey.unreadCounts(items: [.peer(peerDiscussionId)])
@@ -222,9 +226,9 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                         strongSelf.badgeText.isHidden = false
                     }
                 }))
-            }
+            }*/
             
-            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.theme !== interfaceState.theme || previousState?.strings !== interfaceState.strings || previousState?.peerIsMuted != interfaceState.peerIsMuted || previousState?.peerDiscussionId != interfaceState.peerDiscussionId {
+            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.theme !== interfaceState.theme || previousState?.strings !== interfaceState.strings || previousState?.peerIsMuted != interfaceState.peerIsMuted /*|| previousState?.peerDiscussionId != interfaceState.peerDiscussionId*/ {
                 if let action = actionForPeer(peer: peer, isMuted: interfaceState.peerIsMuted) {
                     self.action = action
                     let (title, color) = titleAndColorForAction(action, theme: interfaceState.theme, strings: interfaceState.strings)
@@ -233,12 +237,12 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                     self.action = nil
                 }
                 
-                if interfaceState.peerDiscussionId != nil {
+                /*if interfaceState.peerDiscussionId != nil {
                     self.discussButtonText.attributedText = NSAttributedString(string: interfaceState.strings.Channel_DiscussionGroup_HeaderLabel, font: Font.regular(17.0), textColor: interfaceState.theme.chat.inputPanel.panelControlAccentColor)
                     self.discussButton.isHidden = false
-                } else {
+                } else {*/
                     self.discussButton.isHidden = true
-                }
+                //}
             }
         }
         

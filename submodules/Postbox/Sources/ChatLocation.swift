@@ -1,6 +1,12 @@
 import Foundation
+import SwiftSignalKit
 
-public enum ChatLocation: Equatable {
+public enum ChatLocationInput {
     case peer(PeerId)
-    //case group(PeerGroupId)
+    case external(PeerId, Signal<MessageHistoryViewExternalInput, NoError>)
+}
+
+enum ResolvedChatLocationInput {
+    case peer(PeerId)
+    case external(MessageHistoryViewExternalInput)
 }

@@ -810,6 +810,42 @@ public struct stats {
         }
     
     }
+    public enum MessageStats: TypeConstructorDescription {
+        case messageStats(viewsGraph: Api.StatsGraph)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .messageStats(let viewsGraph):
+                    if boxed {
+                        buffer.appendInt32(-1986399595)
+                    }
+                    viewsGraph.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageStats(let viewsGraph):
+                return ("messageStats", [("viewsGraph", viewsGraph)])
+    }
+    }
+    
+        public static func parse_messageStats(_ reader: BufferReader) -> MessageStats? {
+            var _1: Api.StatsGraph?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.StatsGraph
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.stats.MessageStats.messageStats(viewsGraph: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
 }
 }
 public extension Api {

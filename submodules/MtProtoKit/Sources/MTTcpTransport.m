@@ -747,7 +747,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     }];
 }
 
-- (void)mtProto:(MTProto *)__unused mtProto receivedMessage:(MTIncomingMessage *)incomingMessage
+- (void)mtProto:(MTProto *)__unused mtProto receivedMessage:(MTIncomingMessage *)incomingMessage authInfoSelector:(MTDatacenterAuthInfoSelector)authInfoSelector
 {
     if ([incomingMessage.body isKindOfClass:[MTPongMessage class]])
     {

@@ -74,6 +74,7 @@ final class SettingsSearchItem: ItemListControllerSearch {
     let presentController: (ViewController, Any?) -> Void
     let pushController: (ViewController) -> Void
     let getNavigationController: (() -> NavigationController?)?
+    let resolvedFaqUrl: Signal<ResolvedUrl?, NoError>
     let exceptionsList: Signal<NotificationExceptionsList?, NoError>
     let archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>
     let privacySettings: Signal<AccountPrivacySettings?, NoError>
@@ -85,7 +86,7 @@ final class SettingsSearchItem: ItemListControllerSearch {
     private var activity: ValuePromise<Bool> = ValuePromise(ignoreRepeated: false)
     private let activityDisposable = MetaDisposable()
     
-    init(context: AccountContext, theme: PresentationTheme, placeholder: String, activated: Bool, updateActivated: @escaping (Bool) -> Void, presentController: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, getNavigationController: (() -> NavigationController?)?, exceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, hasWallet: Signal<Bool, NoError>, activeSessionsContext: Signal<ActiveSessionsContext?, NoError>, webSessionsContext: Signal<WebSessionsContext?, NoError>) {
+    init(context: AccountContext, theme: PresentationTheme, placeholder: String, activated: Bool, updateActivated: @escaping (Bool) -> Void, presentController: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, getNavigationController: (() -> NavigationController?)?, resolvedFaqUrl: Signal<ResolvedUrl?, NoError>, exceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, hasWallet: Signal<Bool, NoError>, activeSessionsContext: Signal<ActiveSessionsContext?, NoError>, webSessionsContext: Signal<WebSessionsContext?, NoError>) {
         self.context = context
         self.theme = theme
         self.placeholder = placeholder
@@ -94,6 +95,7 @@ final class SettingsSearchItem: ItemListControllerSearch {
         self.presentController = presentController
         self.pushController = pushController
         self.getNavigationController = getNavigationController
+        self.resolvedFaqUrl = resolvedFaqUrl
         self.exceptionsList = exceptionsList
         self.archivedStickerPacks = archivedStickerPacks
         self.privacySettings = privacySettings
@@ -163,7 +165,7 @@ final class SettingsSearchItem: ItemListControllerSearch {
                 pushController(c)
             }, presentController: { c, a in
                 presentController(c, a)
-            }, getNavigationController: self.getNavigationController, exceptionsList: self.exceptionsList, archivedStickerPacks: self.archivedStickerPacks, privacySettings: self.privacySettings, hasWallet: self.hasWallet, activeSessionsContext: self.activeSessionsContext, webSessionsContext: self.webSessionsContext)
+            }, getNavigationController: self.getNavigationController, resolvedFaqUrl: self.resolvedFaqUrl, exceptionsList: self.exceptionsList, archivedStickerPacks: self.archivedStickerPacks, privacySettings: self.privacySettings, hasWallet: self.hasWallet, activeSessionsContext: self.activeSessionsContext, webSessionsContext: self.webSessionsContext)
         }
     }
 }
@@ -360,7 +362,7 @@ public final class SettingsSearchContainerNode: SearchDisplayControllerContentNo
     private var presentationDataDisposable: Disposable?
     private let presentationDataPromise: Promise<PresentationData>
     
-    public init(context: AccountContext, openResult: @escaping (SettingsSearchableItem) -> Void, exceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, hasWallet: Signal<Bool, NoError>, activeSessionsContext: Signal<ActiveSessionsContext?, NoError>, webSessionsContext: Signal<WebSessionsContext?, NoError>) {
+    public init(context: AccountContext, openResult: @escaping (SettingsSearchableItem) -> Void, resolvedFaqUrl: Signal<ResolvedUrl?, NoError>, exceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, hasWallet: Signal<Bool, NoError>, activeSessionsContext: Signal<ActiveSessionsContext?, NoError>, webSessionsContext: Signal<WebSessionsContext?, NoError>) {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationDataPromise = Promise(self.presentationData)
         
@@ -390,9 +392,9 @@ public final class SettingsSearchContainerNode: SearchDisplayControllerContentNo
         searchableItems.set(settingsSearchableItems(context: context, notificationExceptionsList: exceptionsList, archivedStickerPacks: archivedStickerPacks, privacySettings: privacySettings, hasWallet: hasWallet, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext))
         
         let faqItems = Promise<[SettingsSearchableItem]>()
-        faqItems.set(faqSearchableItems(context: context, suggestAccountDeletion: false))
+        faqItems.set(faqSearchableItems(context: context, resolvedUrl: resolvedFaqUrl, suggestAccountDeletion: false))
         
-        let queryAndFoundItems = combineLatest(searchableItems.get(), faqSearchableItems(context: context, suggestAccountDeletion: true))
+        let queryAndFoundItems = combineLatest(searchableItems.get(), faqSearchableItems(context: context, resolvedUrl: resolvedFaqUrl, suggestAccountDeletion: true))
         |> mapToSignal { searchableItems, faqSearchableItems -> Signal<(String, [SettingsSearchableItem])?, NoError> in
             return self.searchQuery.get()
             |> mapToSignal { query -> Signal<(String, [SettingsSearchableItem])?, NoError> in
@@ -656,6 +658,7 @@ private final class SettingsSearchItemNode: ItemListControllerSearchNode {
     let pushController: (ViewController) -> Void
     let presentController: (ViewController, Any?) -> Void
     let getNavigationController: (() -> NavigationController?)?
+    let resolvedFaqUrl: Signal<ResolvedUrl?, NoError>
     let exceptionsList: Signal<NotificationExceptionsList?, NoError>
     let archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>
     let privacySettings: Signal<AccountPrivacySettings?, NoError>
@@ -665,13 +668,14 @@ private final class SettingsSearchItemNode: ItemListControllerSearchNode {
     
     var cancel: () -> Void
     
-    init(context: AccountContext, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, Any?) -> Void, getNavigationController: (() -> NavigationController?)?, exceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, hasWallet: Signal<Bool, NoError>, activeSessionsContext: Signal<ActiveSessionsContext?, NoError>, webSessionsContext: Signal<WebSessionsContext?, NoError>) {
+    init(context: AccountContext, cancel: @escaping () -> Void, updateActivity: @escaping(Bool) -> Void, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, Any?) -> Void, getNavigationController: (() -> NavigationController?)?, resolvedFaqUrl: Signal<ResolvedUrl?, NoError>, exceptionsList: Signal<NotificationExceptionsList?, NoError>, archivedStickerPacks: Signal<[ArchivedStickerPackItem]?, NoError>, privacySettings: Signal<AccountPrivacySettings?, NoError>, hasWallet: Signal<Bool, NoError>, activeSessionsContext: Signal<ActiveSessionsContext?, NoError>, webSessionsContext: Signal<WebSessionsContext?, NoError>) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.cancel = cancel
         self.pushController = pushController
         self.presentController = presentController
         self.getNavigationController = getNavigationController
+        self.resolvedFaqUrl = resolvedFaqUrl
         self.exceptionsList = exceptionsList
         self.archivedStickerPacks = archivedStickerPacks
         self.privacySettings = privacySettings
@@ -717,7 +721,7 @@ private final class SettingsSearchItemNode: ItemListControllerSearchNode {
                     }
                 })
             }
-        }, exceptionsList: self.exceptionsList, archivedStickerPacks: self.archivedStickerPacks, privacySettings: self.privacySettings, hasWallet: self.hasWallet, activeSessionsContext: self.activeSessionsContext, webSessionsContext: self.webSessionsContext), cancel: { [weak self] in
+        }, resolvedFaqUrl: self.resolvedFaqUrl, exceptionsList: self.exceptionsList, archivedStickerPacks: self.archivedStickerPacks, privacySettings: self.privacySettings, hasWallet: self.hasWallet, activeSessionsContext: self.activeSessionsContext, webSessionsContext: self.webSessionsContext), cancel: { [weak self] in
             self?.cancel()
         })
         

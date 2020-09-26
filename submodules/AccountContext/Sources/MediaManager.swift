@@ -8,6 +8,120 @@ import AsyncDisplayKit
 import TelegramAudio
 import UniversalMediaPlayer
 
+public enum PeerMessagesMediaPlaylistId: Equatable, SharedMediaPlaylistId {
+    case peer(PeerId)
+    case recentActions(PeerId)
+    case custom
+    
+    public func isEqual(to: SharedMediaPlaylistId) -> Bool {
+        if let to = to as? PeerMessagesMediaPlaylistId {
+            return self == to
+        }
+        return false
+    }
+}
+    
+public enum PeerMessagesPlaylistLocation: Equatable, SharedMediaPlaylistLocation {
+    case messages(peerId: PeerId, tagMask: MessageTags, at: MessageId)
+    case singleMessage(MessageId)
+    case recentActions(Message)
+    case custom(messages: Signal<([Message], Int32, Bool), NoError>, at: MessageId, loadMore: (() -> Void)?)
+
+    public var playlistId: PeerMessagesMediaPlaylistId {
+        switch self {
+            case let .messages(peerId, _, _):
+                return .peer(peerId)
+            case let .singleMessage(id):
+                return .peer(id.peerId)
+            case let .recentActions(message):
+                return .recentActions(message.id.peerId)
+            case .custom:
+                return .custom
+        }
+    }
+    
+    public var messageId: MessageId? {
+        switch self {
+            case let .messages(_, _, messageId), let .singleMessage(messageId), let .custom(_, messageId, _):
+                return messageId
+            default:
+                return nil
+        }
+    }
+    
+    public func isEqual(to: SharedMediaPlaylistLocation) -> Bool {
+        if let to = to as? PeerMessagesPlaylistLocation {
+            return self == to
+        } else {
+            return false
+        }
+    }
+    
+    public static func ==(lhs: PeerMessagesPlaylistLocation, rhs: PeerMessagesPlaylistLocation) -> Bool {
+        switch lhs {
+            case let .messages(peerId, tagMask, at):
+                if case .messages(peerId, tagMask, at) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .singleMessage(messageId):
+                if case .singleMessage(messageId) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .recentActions(lhsMessage):
+                if case let .recentActions(rhsMessage) = rhs, lhsMessage.id == rhsMessage.id {
+                    return true
+                } else {
+                    return false
+                }
+            case let .custom(_, lhsAt, _):
+                if case let .custom(_, rhsAt, _) = rhs, lhsAt == rhsAt {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
+
+public func peerMessageMediaPlayerType(_ message: Message) -> MediaManagerPlayerType? {
+    func extractFileMedia(_ message: Message) -> TelegramMediaFile? {
+        var file: TelegramMediaFile?
+        for media in message.media {
+            if let media = media as? TelegramMediaFile {
+                file = media
+                break
+            } else if let media = media as? TelegramMediaWebpage, case let .Loaded(content) = media.content, let f = content.file {
+                file = f
+                break
+            }
+        }
+        return file
+    }
+    
+    if let file = extractFileMedia(message) {
+        if file.isVoice || file.isInstantVideo {
+            return .voice
+        } else if file.isMusic {
+            return .music
+        }
+    }
+    return nil
+}
+    
+public func peerMessagesMediaPlaylistAndItemId(_ message: Message, isRecentActions: Bool, isGlobalSearch: Bool) -> (SharedMediaPlaylistId, SharedMediaPlaylistItemId)? {
+    if isGlobalSearch {
+        return (PeerMessagesMediaPlaylistId.custom, PeerMessagesMediaPlaylistItemId(messageId: message.id))
+    } else if isRecentActions {
+        return (PeerMessagesMediaPlaylistId.recentActions(message.id.peerId), PeerMessagesMediaPlaylistItemId(messageId: message.id))
+    } else {
+        return (PeerMessagesMediaPlaylistId.peer(message.id.peerId), PeerMessagesMediaPlaylistItemId(messageId: message.id))
+    }
+}
+
 public enum MediaManagerPlayerType {
     case voice
     case music

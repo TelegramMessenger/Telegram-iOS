@@ -75,7 +75,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, navigateMessageSearch: { _ in
         }, openCalendarSearch: {
         }, toggleMembersSearch: { _ in
-        }, navigateToMessage: { _ in
+        }, navigateToMessage: { _, _ in
         }, navigateToChat: { _ in
         }, navigateToProfile: { _ in
         }, openPeerInfo: {
@@ -125,7 +125,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, openScheduledMessages: {
         }, openPeersNearby: {
         }, displaySearchResultsTooltip: { _, _ in
-        }, unarchivePeer: {}, statuses: nil)
+        }, unarchivePeer: {}, viewReplies: { _, _ in }, statuses: nil)
         
         self.navigationItem.titleView = self.titleView
         

@@ -24,7 +24,68 @@ func updateMessageMedia(transaction: Transaction, id: MediaId, media: Media?) {
             if let forwardInfo = currentMessage.forwardInfo {
                 storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType)
             }
-            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
+            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
         })
+    }
+}
+
+func updateMessageThreadStats(transaction: Transaction, threadMessageId: MessageId, difference: Int, addedMessagePeers: [PeerId]) {
+    updateMessageThreadStatsInternal(transaction: transaction, threadMessageId: threadMessageId, difference: difference, addedMessagePeers: addedMessagePeers, allowChannel: false)
+}
+    
+private func updateMessageThreadStatsInternal(transaction: Transaction, threadMessageId: MessageId, difference: Int, addedMessagePeers: [PeerId], allowChannel: Bool) {
+    guard let channel = transaction.getPeer(threadMessageId.peerId) as? TelegramChannel else {
+        return
+    }
+    var isGroup = true
+    if case .broadcast = channel.info {
+        isGroup = false
+        if !allowChannel {
+            return
+        }
+    }
+    
+    var channelThreadMessageId: MessageId?
+    
+    func mergeLatestUsers(current: [PeerId], added: [PeerId], isGroup: Bool, isEmpty: Bool) -> [PeerId] {
+        if isEmpty {
+            return []
+        }
+        if isGroup {
+            return current
+        }
+        var current = current
+        for i in 0 ..< min(3, added.count) {
+            let peerId = added[added.count - 1 - i]
+            if let index = current.firstIndex(of: peerId) {
+                current.remove(at: index)
+                current.insert(peerId, at: 0)
+            } else {
+                if current.count >= 3 {
+                    current.removeLast()
+                }
+                current.insert(peerId, at: 0)
+            }
+        }
+        return current
+    }
+    
+    transaction.updateMessage(threadMessageId, update: { currentMessage in
+        let countDifference = Int32(difference)
+        
+        var attributes = currentMessage.attributes
+        loop: for j in 0 ..< attributes.count {
+            if let attribute = attributes[j] as? ReplyThreadMessageAttribute {
+                let count = max(0, attribute.count + countDifference)
+                attributes[j] = ReplyThreadMessageAttribute(count: count, latestUsers: mergeLatestUsers(current: attribute.latestUsers, added: addedMessagePeers, isGroup: isGroup, isEmpty: count == 0), commentsPeerId: attribute.commentsPeerId)
+            } else if let attribute = attributes[j] as? SourceReferenceMessageAttribute {
+                channelThreadMessageId = attribute.messageId
+            }
+        }
+        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+    })
+    
+    if let channelThreadMessageId = channelThreadMessageId {
+        updateMessageThreadStatsInternal(transaction: transaction, threadMessageId: channelThreadMessageId, difference: difference, addedMessagePeers: addedMessagePeers, allowChannel: true)
     }
 }
