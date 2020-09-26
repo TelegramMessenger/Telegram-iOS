@@ -353,7 +353,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                 
                                 let rawUrlString = urlString
                                 var parsedUrl = URL(string: urlString)
-                                if parsedUrl == nil || parsedUrl!.host == nil || parsedUrl!.host!.isEmpty {
+                                if (parsedUrl == nil || parsedUrl!.host == nil || parsedUrl!.host!.isEmpty) && !urlString.contains("@") {
                                     urlString = "http://" + urlString
                                     parsedUrl = URL(string: urlString)
                                 }
@@ -400,7 +400,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                 var (urlString, concealed) = parseUrl(url: url, wasConcealed: false)
                                 let rawUrlString = urlString
                                 var parsedUrl = URL(string: urlString)
-                                if parsedUrl == nil || parsedUrl!.host == nil || parsedUrl!.host!.isEmpty {
+                                if (parsedUrl == nil || parsedUrl!.host == nil || parsedUrl!.host!.isEmpty) && !urlString.contains("@") {
                                     urlString = "http://" + urlString
                                     parsedUrl = URL(string: urlString)
                                 }

@@ -406,8 +406,7 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
         }
         
         if let selectedFrame = selectedFrame {
-            let wasAdded = self.selectedLineNode.isHidden
-            self.selectedLineNode.isHidden = false
+            let wasAdded = self.selectedLineNode.alpha < 1.0
             let lineFrame = CGRect(origin: CGPoint(x: selectedFrame.minX, y: size.height - 4.0), size: CGSize(width: selectedFrame.width, height: 4.0))
             if wasAdded {
                 self.selectedLineNode.frame = lineFrame
@@ -441,7 +440,7 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
             self.previousSelectedAbsFrame = selectedFrame.offsetBy(dx: -self.scrollNode.bounds.minX, dy: 0.0)
             self.previousSelectedFrame = selectedFrame
         } else {
-            self.selectedLineNode.isHidden = true
+            transition.updateAlpha(node: self.selectedLineNode, alpha: 0.0)
             self.previousSelectedAbsFrame = nil
             self.previousSelectedFrame = nil
         }

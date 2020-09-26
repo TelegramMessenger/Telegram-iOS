@@ -875,19 +875,19 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             let location: SearchMessagesLocation
             if let options = options {
                 if let (peerId, _, _) = options.peer {
-                    location = .peer(peerId: peerId, fromId: nil, tags: self.tagMask, topMsgId: nil, minDate: options.minDate?.0, maxDate: options.maxDate?.0)
+                    location = .peer(peerId: peerId, fromId: nil, tags: tagMask, topMsgId: nil, minDate: options.minDate?.0, maxDate: options.maxDate?.0)
                 } else {
                     if let groupId = groupId {
-                        location = .group(groupId: groupId, tags: self.tagMask, minDate: options.minDate?.0, maxDate: options.maxDate?.0)
+                        location = .group(groupId: groupId, tags: tagMask, minDate: options.minDate?.0, maxDate: options.maxDate?.0)
                     } else {
-                        location = .general(tags: self.tagMask, minDate: options.minDate?.0, maxDate: options.maxDate?.0)
+                        location = .general(tags: tagMask, minDate: options.minDate?.0, maxDate: options.maxDate?.0)
                     }
                 }
             } else {
                 if let groupId = groupId {
-                    location = .group(groupId: groupId, tags: self.tagMask, minDate: nil, maxDate: nil)
+                    location = .group(groupId: groupId, tags: tagMask, minDate: nil, maxDate: nil)
                 } else {
-                    location = .general(tags: self.tagMask, minDate: nil, maxDate: nil)
+                    location = .general(tags: tagMask, minDate: nil, maxDate: nil)
                 }
             }
             
@@ -1250,7 +1250,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     }
                 }
                 return transitionNode
-            }, addToTransitionSurface: { view in
+            }, addToTransitionSurface: { [weak self] view in
                 self?.addToTransitionSurface(view: view)
             }, openUrl: { url in
                 interaction.openUrl(url)
@@ -1304,20 +1304,11 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 strongSelf._isSearching.set(isSearching)
                 
                 if strongSelf.tagMask == .photoOrVideo {
-                    var totalCount: Int32 = 0
-                    if let entries = entriesAndFlags?.0 {
-                        for entry in entries {
-                            if case let .message(_, _, _, _, count, _, _) = entry {
-                                totalCount = count
-                                break
-                            }
-                        }
-                    }
                     var entries: [ChatListSearchEntry]? = entriesAndFlags?.0 ?? []
                     if isSearching && (entries?.isEmpty ?? true) {
                         entries = nil
                     }
-                    strongSelf.mediaNode.updateHistory(entries: entries, totalCount: totalCount, updateType: .Initial)
+                    strongSelf.mediaNode.updateHistory(entries: entries, totalCount: 0, updateType: .Initial)
                 }
                 
                 var entriesAndFlags = entriesAndFlags
@@ -1328,6 +1319,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     for entry in entries {
                         if case let .localPeer(peer, _, _, _, _, _, _, _, _) = entry {
                             peers.append(peer)
+                        } else if case .globalPeer = entry {    
                         } else {
                             filteredEntries.append(entry)
                         }
@@ -1345,7 +1337,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 let firstTime = previousEntries == nil
                 let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: newEntries, displayingResults: entriesAndFlags?.0 != nil, isEmpty: !isSearching && (entriesAndFlags?.0.isEmpty ?? false), isLoading: isSearching, animated: animated, context: context, presentationData: strongSelf.presentationData, enableHeaders: true, filter: peersFilter, tagMask: tagMask, interaction: chatListInteraction, listInteraction: listInteraction, peerContextAction: { message, node, rect, gesture in
                     interaction.peerContextAction?(message, node, rect, gesture)
-                }, toggleExpandLocalResults: {
+                }, toggleExpandLocalResults: { [weak self] in
                     guard let strongSelf = self else {
                         return
                     }
@@ -1354,7 +1346,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         state.expandLocalSearch = !state.expandLocalSearch
                         return state
                     }
-                }, toggleExpandGlobalResults: {
+                }, toggleExpandGlobalResults: { [weak self] in
                     guard let strongSelf = self else {
                         return
                     }
@@ -1484,9 +1476,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 }, clearRecentlySearchedPeers: {
                     interaction.clearRecentSearch()
                 }, deletePeer: { peerId in
-                    if let strongSelf = self {
-                        let _ = removeRecentlySearchedPeer(postbox: strongSelf.context.account.postbox, peerId: peerId).start()
-                    }
+                    let _ = removeRecentlySearchedPeer(postbox: context.account.postbox, peerId: peerId).start()
                 })
                 strongSelf.enqueueRecentTransition(transition, firstTime: firstTime)
             }

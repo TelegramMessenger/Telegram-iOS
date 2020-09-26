@@ -98,7 +98,6 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private let searchQuery = Promise<String?>(nil)
     private var searchOptionsValue: ChatListSearchOptions?
     private let searchOptions = Promise<ChatListSearchOptions?>(nil)
-    private let searchDisposable = MetaDisposable()
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -155,7 +154,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             if peer.id.namespace != Namespaces.Peer.SecretChat {
                 addAppLogEvent(postbox: context.account.postbox, type: "search_global_open_message", peerId: peer.id, data: .dictionary(["msg_id": .number(Double(messageId.id))]))
             }
-        }, openUrl: { url in
+        }, openUrl: { [weak self] url in
             openUserGeneratedUrl(context: context, url: url, concealed: false, present: { c in
                 present(c, nil)
             }, openResolved: { [weak self] resolved in
@@ -329,7 +328,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     } else {
                         isGroup = false
                     }
-                    suggestedFilters.append(.peer(peer.id, isGroup, peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), peer.compactDisplayTitle))
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    suggestedFilters.append(.peer(peer.id, isGroup, peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), peer.compactDisplayTitle))
                 }
             }
             return suggestedFilters
@@ -375,7 +375,6 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     deinit {
         self.activeActionDisposable.dispose()
-        self.searchDisposable.dispose()
         self.presentationDataDisposable?.dispose()
         self.suggestedFiltersDisposable.dispose()
     }
@@ -545,7 +544,18 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         transition.updateFrame(node: self.paneContainerNode, frame: CGRect(x: 0.0, y: topInset, width: layout.size.width, height: layout.size.height - topInset))
         
-        self.paneContainerNode.update(size: CGSize(width: layout.size.width, height: layout.size.height - topInset), sideInset: layout.safeInsets.left, bottomInset: layout.inputHeight ?? 0.0, visibleHeight: layout.size.height - topInset, presentationData: self.presentationData, transition: transition)
+        var bottomInset = layout.intrinsicInsets.bottom
+        if let inputHeight = layout.inputHeight {
+            bottomInset = inputHeight
+        } else {
+            if !layout.safeInsets.left.isZero {
+                bottomInset -= 34.0
+            } else {
+                bottomInset -= 49.0
+            }
+        }
+        
+        self.paneContainerNode.update(size: CGSize(width: layout.size.width, height: layout.size.height - topInset), sideInset: layout.safeInsets.left, bottomInset: bottomInset, visibleHeight: layout.size.height - topInset, presentationData: self.presentationData, transition: transition)
     }
     
     private var currentMessages: ([PeerId: Peer], [MessageId: Message]) {
@@ -713,7 +723,64 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     }
     
     func deleteMessages(messageIds: Set<MessageId>?) {
-        let messageIds = messageIds ?? self.stateValue.selectedMessageIds
+        if let messageIds = messageIds ?? self.stateValue.selectedMessageIds, !messageIds.isEmpty {
+            self.activeActionDisposable.set((self.context.sharedContext.chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: messageIds)
+            |> deliverOnMainQueue).start(next: { [weak self] actions in
+                if let strongSelf = self, !actions.options.isEmpty {
+                    let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                    var items: [ActionSheetItem] = []
+                    var personalPeerName: String?
+                    var isChannel = false
+//                    if let user = peer as? TelegramUser {
+//                        personalPeerName = user.compactDisplayTitle
+//                    } else if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+//                        isChannel = true
+//                    }
+                    
+                    if actions.options.contains(.deleteGlobally) {
+                        let globalTitle: String
+                        if isChannel {
+                            globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
+                        } else if let personalPeerName = personalPeerName {
+                            globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesFor(personalPeerName).0
+                        } else {
+                            globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesForEveryone
+                        }
+                        items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            if let strongSelf = self {
+//                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
+                                let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forEveryone).start()
+                            }
+                        }))
+                    }
+                    if actions.options.contains(.deleteLocally) {
+                        var localOptionText = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
+//                        if strongSelf.context.account.peerId == strongSelf.peerId {
+//                            if messageIds.count == 1 {
+//                                localOptionText = strongSelf.presentationData.strings.Conversation_Moderate_Delete
+//                            } else {
+//                                localOptionText = strongSelf.presentationData.strings.Conversation_DeleteManyMessages
+//                            }
+//                        }
+                        items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            if let strongSelf = self {
+//                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
+                                let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forLocalPeer).start()
+                            }
+                        }))
+                    }
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    strongSelf.view.endEditing(true)
+                    strongSelf.present?(actionSheet, nil)
+                }
+            }))
+        }
     }
     
     func forwardMessages(messageIds: Set<MessageId>?) {
