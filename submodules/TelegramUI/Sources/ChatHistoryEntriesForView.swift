@@ -191,7 +191,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                 }
             }
             if case let .peer(peerId) = location, peerId.isReplies {
-                entries.insert(.ChatInfoEntry(presentationData.strings.RepliesChat_DescriptionTitle, presentationData.strings.RepliesChat_DescriptionText, presentationData), at: 0)
+                entries.insert(.ChatInfoEntry("", presentationData.strings.RepliesChat_DescriptionText, presentationData), at: 0)
             } else if let cachedPeerData = cachedPeerData as? CachedUserData, let botInfo = cachedPeerData.botInfo, !botInfo.description.isEmpty {
                 entries.insert(.ChatInfoEntry(presentationData.strings.Bot_DescriptionTitle, botInfo.description, presentationData), at: 0)
             } else {
