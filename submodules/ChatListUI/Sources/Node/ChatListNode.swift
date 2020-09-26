@@ -1843,7 +1843,9 @@ private func statusStringForPeerType(accountPeerId: PeerId, strings: Presentatio
         }
     }
     
-    if let user = peer as? TelegramUser {
+    if peer.id.isReplies {
+        return nil
+    } else if let user = peer as? TelegramUser {
         if user.botInfo != nil || user.flags.contains(.isSupport) {
             return (strings.ChatList_PeerTypeBot, false)
         } else if isContact {

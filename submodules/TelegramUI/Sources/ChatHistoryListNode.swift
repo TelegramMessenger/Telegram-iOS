@@ -277,8 +277,8 @@ private func mappedInsertEntries(context: AccountContext, chatLocation: ChatLoca
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index, presentationData: presentationData, context: context), directionHint: entry.directionHint)
             case let .ReplyCountEntry(_, isComments, count, presentationData):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatReplyCountItem(index: entry.entry.index, isComments: isComments, count: count, presentationData: presentationData, context: context), directionHint: entry.directionHint)
-            case let .ChatInfoEntry(text, presentationData):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(text: text, controllerInteraction: controllerInteraction, presentationData: presentationData), directionHint: entry.directionHint)
+            case let .ChatInfoEntry(title, text, presentationData):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(title: title, text: text, controllerInteraction: controllerInteraction, presentationData: presentationData), directionHint: entry.directionHint)
             case let .SearchEntry(theme, strings):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
                     controllerInteraction.openSearch()
@@ -322,8 +322,8 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index, presentationData: presentationData, context: context), directionHint: entry.directionHint)
             case let .ReplyCountEntry(_, isComments, count, presentationData):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatReplyCountItem(index: entry.entry.index, isComments: isComments, count: count, presentationData: presentationData, context: context), directionHint: entry.directionHint)
-            case let .ChatInfoEntry(text, presentationData):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(text: text, controllerInteraction: controllerInteraction, presentationData: presentationData), directionHint: entry.directionHint)
+            case let .ChatInfoEntry(title, text, presentationData):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(title: title, text: text, controllerInteraction: controllerInteraction, presentationData: presentationData), directionHint: entry.directionHint)
             case let .SearchEntry(theme, strings):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
                     controllerInteraction.openSearch()

@@ -3231,14 +3231,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self, let combinedInitialData = combinedInitialData else {
                 return
             }
-            if var interfaceState = combinedInitialData.initialData?.chatInterfaceState as? ChatInterfaceState {
-                switch strongSelf.chatLocation {
-                case .peer:
-                    break
-                default:
-                    interfaceState = ChatInterfaceState()
-                }
-                
+            if let interfaceState = combinedInitialData.initialData?.chatInterfaceState as? ChatInterfaceState {
                 var pinnedMessageId: MessageId?
                 var peerIsBlocked: Bool = false
                 var callsAvailable: Bool = true
@@ -5715,16 +5708,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func saveInterfaceState(includeScrollState: Bool = true) {
-        if case let .peer(peerId) = self.chatLocation {
-            let timestamp = Int32(Date().timeIntervalSince1970)
-            var interfaceState = self.presentationInterfaceState.interfaceState.withUpdatedTimestamp(timestamp)
-            if includeScrollState {
-                let scrollState = self.chatDisplayNode.historyNode.immediateScrollState()
-                interfaceState = interfaceState.withUpdatedHistoryScrollState(scrollState)
-            }
-            interfaceState = interfaceState.withUpdatedInputLanguage(self.chatDisplayNode.currentTextInputLanguage)
-            let _ = updatePeerChatInterfaceState(account: self.context.account, peerId: peerId, state: interfaceState).start()
+        var peerId: PeerId
+        var threadId: Int64?
+        switch self.chatLocation {
+        case let .peer(peerIdValue):
+            peerId = peerIdValue
+        case let .replyThread(replyThreadMessage):
+            peerId = replyThreadMessage.messageId.peerId
+            threadId = makeMessageThreadId(replyThreadMessage.messageId)
         }
+        
+        let timestamp = Int32(Date().timeIntervalSince1970)
+        var interfaceState = self.presentationInterfaceState.interfaceState.withUpdatedTimestamp(timestamp)
+        if includeScrollState && threadId == nil {
+            let scrollState = self.chatDisplayNode.historyNode.immediateScrollState()
+            interfaceState = interfaceState.withUpdatedHistoryScrollState(scrollState)
+        }
+        interfaceState = interfaceState.withUpdatedInputLanguage(self.chatDisplayNode.currentTextInputLanguage)
+        let _ = updatePeerChatInterfaceState(account: self.context.account, peerId: peerId, threadId: threadId, state: interfaceState).start()
     }
     
     override public func viewDidDisappear(_ animated: Bool) {
@@ -8359,7 +8360,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 controllerInteraction.currentMessageWithLoadingReplyThread = displayProgressInMessage
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(displayProgressInMessage)
                 if let previousId = previousId {
-                    strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(displayProgressInMessage)
+                    strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(previousId)
                 }
             }
             
@@ -8368,7 +8369,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction else {
                         return
                     }
-                    if let displayProgressInMessage = displayProgressInMessage, controllerInteraction.currentMessageWithLoadingReplyThread == messageId {
+                    if let displayProgressInMessage = displayProgressInMessage, controllerInteraction.currentMessageWithLoadingReplyThread == displayProgressInMessage {
                         controllerInteraction.currentMessageWithLoadingReplyThread = nil
                         strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(displayProgressInMessage)
                     }
