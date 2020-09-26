@@ -274,6 +274,11 @@ public final class Transaction {
         self.postbox?.updatePeerChatInterfaceState(id, update: update)
     }
     
+    public func updatePeerChatThreadInterfaceState(_ id: PeerId, threadId: Int64, update: (PeerChatInterfaceState?) -> (PeerChatInterfaceState?)) {
+        assert(!self.disposed)
+        self.postbox?.updatePeerChatThreadInterfaceState(id, threadId: threadId, update: update)
+    }
+    
     public func getPeer(_ id: PeerId) -> Peer? {
         assert(!self.disposed)
         return self.postbox?.peerTable.get(id)
@@ -1294,6 +1299,7 @@ public final class Postbox {
     let itemCollectionItemTable: ItemCollectionItemTable
     let itemCollectionReverseIndexTable: ReverseIndexReferenceTable<ItemCollectionItemReverseIndexReference>
     let peerChatInterfaceStateTable: PeerChatInterfaceStateTable
+    let peerChatThreadInterfaceStateTable: PeerChatThreadInterfaceStateTable
     let itemCacheMetaTable: ItemCacheMetaTable
     let itemCacheTable: ItemCacheTable
     let peerNameTokenIndexTable: ReverseIndexReferenceTable<PeerIdReverseIndexReference>
@@ -1394,6 +1400,7 @@ public final class Postbox {
         self.itemCollectionReverseIndexTable = ReverseIndexReferenceTable<ItemCollectionItemReverseIndexReference>(valueBox: self.valueBox, table: ReverseIndexReferenceTable<ItemCollectionItemReverseIndexReference>.tableSpec(36))
         self.itemCollectionItemTable = ItemCollectionItemTable(valueBox: self.valueBox, table: ItemCollectionItemTable.tableSpec(22), reverseIndexTable: self.itemCollectionReverseIndexTable)
         self.peerChatInterfaceStateTable = PeerChatInterfaceStateTable(valueBox: self.valueBox, table: PeerChatInterfaceStateTable.tableSpec(23))
+        self.peerChatThreadInterfaceStateTable = PeerChatThreadInterfaceStateTable(valueBox: self.valueBox, table: PeerChatThreadInterfaceStateTable.tableSpec(64))
         self.itemCacheMetaTable = ItemCacheMetaTable(valueBox: self.valueBox, table: ItemCacheMetaTable.tableSpec(24))
         self.itemCacheTable = ItemCacheTable(valueBox: self.valueBox, table: ItemCacheTable.tableSpec(25))
         self.chatListIndexTable = ChatListIndexTable(valueBox: self.valueBox, table: ChatListIndexTable.tableSpec(8), peerNameIndexTable: self.peerNameIndexTable, metadataTable: self.messageHistoryMetadataTable, readStateTable: self.readStateTable, notificationSettingsTable: self.peerNotificationSettingsTable)
@@ -1445,6 +1452,7 @@ public final class Postbox {
         tables.append(self.itemCollectionItemTable)
         tables.append(self.itemCollectionReverseIndexTable)
         tables.append(self.peerChatInterfaceStateTable)
+        tables.append(self.peerChatThreadInterfaceStateTable)
         tables.append(self.itemCacheMetaTable)
         tables.append(self.itemCacheTable)
         tables.append(self.peerNameIndexTable)
@@ -2119,6 +2127,11 @@ public final class Postbox {
         }
     }
     
+    fileprivate func updatePeerChatThreadInterfaceState(_ id: PeerId, threadId: Int64, update: (PeerChatInterfaceState?) -> (PeerChatInterfaceState?)) {
+        let updatedState = update(self.peerChatThreadInterfaceStateTable.get(PeerChatThreadId(peerId: id, threadId: threadId)))
+        let _ = self.peerChatThreadInterfaceStateTable.set(PeerChatThreadId(peerId: id, threadId: threadId), state: updatedState)
+    }
+    
     fileprivate func replaceRemoteContactCount(_ count: Int32) {
         self.metadataTable.setRemoteContactCount(count)
         self.currentReplaceRemoteContactCount = count
@@ -2666,11 +2679,11 @@ public final class Postbox {
         let initialData: InitialMessageHistoryData
         switch peerIds {
             case let .single(peerId):
-                initialData = self.initialMessageHistoryData(peerId: peerId)
+                initialData = self.initialMessageHistoryData(peerId: peerId, threadId: nil)
             case let .associated(peerId, _):
-                initialData = self.initialMessageHistoryData(peerId: peerId)
+                initialData = self.initialMessageHistoryData(peerId: peerId, threadId: nil)
             case let .external(input):
-                initialData = self.initialMessageHistoryData(peerId: input.peerId)
+                initialData = self.initialMessageHistoryData(peerId: input.peerId, threadId: input.threadId)
         }
         
         subscriber.putNext((MessageHistoryView(mutableView), initialUpdateType, initialData))
@@ -2687,17 +2700,30 @@ public final class Postbox {
         }
     }
     
-    private func initialMessageHistoryData(peerId: PeerId) -> InitialMessageHistoryData {
-        let chatInterfaceState = self.peerChatInterfaceStateTable.get(peerId)
-        var associatedMessages: [MessageId: Message] = [:]
-        if let chatInterfaceState = chatInterfaceState {
-            for id in chatInterfaceState.associatedMessageIds {
-                if let message = self.getMessage(id) {
-                    associatedMessages[message.id] = message
+    private func initialMessageHistoryData(peerId: PeerId, threadId: Int64?) -> InitialMessageHistoryData {
+        if let threadId = threadId {
+            let chatInterfaceState = self.peerChatThreadInterfaceStateTable.get(PeerChatThreadId(peerId: peerId, threadId: threadId))
+            var associatedMessages: [MessageId: Message] = [:]
+            if let chatInterfaceState = chatInterfaceState {
+                for id in chatInterfaceState.associatedMessageIds {
+                    if let message = self.getMessage(id) {
+                        associatedMessages[message.id] = message
+                    }
                 }
             }
+            return InitialMessageHistoryData(peer: self.peerTable.get(peerId), chatInterfaceState: chatInterfaceState, associatedMessages: associatedMessages)
+        } else {
+            let chatInterfaceState = self.peerChatInterfaceStateTable.get(peerId)
+            var associatedMessages: [MessageId: Message] = [:]
+            if let chatInterfaceState = chatInterfaceState {
+                for id in chatInterfaceState.associatedMessageIds {
+                    if let message = self.getMessage(id) {
+                        associatedMessages[message.id] = message
+                    }
+                }
+            }
+            return InitialMessageHistoryData(peer: self.peerTable.get(peerId), chatInterfaceState: chatInterfaceState, associatedMessages: associatedMessages)
         }
-        return InitialMessageHistoryData(peer: self.peerTable.get(peerId), chatInterfaceState: chatInterfaceState, associatedMessages: associatedMessages)
     }
     
     public func messageIndexAtId(_ id: MessageId) -> Signal<MessageIndex?, NoError> {

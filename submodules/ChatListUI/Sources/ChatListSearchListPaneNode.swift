@@ -149,7 +149,9 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 }
                 
                 let status: ContactsPeerItemStatus
-                if let user = primaryPeer as? TelegramUser {
+                if primaryPeer.id.isReplies {
+                    status = .none
+                } else if let user = primaryPeer as? TelegramUser {
                     let servicePeer = isServicePeer(primaryPeer)
                     if user.flags.contains(.isSupport) && !servicePeer {
                         status = .custom(string: strings.Bot_GenericSupportStatus, multiline: false)

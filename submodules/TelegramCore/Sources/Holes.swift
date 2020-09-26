@@ -159,7 +159,7 @@ struct FetchMessageHistoryHoleResult: Equatable {
     var actualThreadId: Int64?
 }
 
-func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, peerInput: FetchMessageHistoryHoleThreadInput, namespace: MessageId.Namespace, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleSpace, count rawCount: Int) -> Signal<FetchMessageHistoryHoleResult, NoError> {
+func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, peerInput: FetchMessageHistoryHoleThreadInput, namespace: MessageId.Namespace, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleSpace, count rawCount: Int) -> Signal<FetchMessageHistoryHoleResult?, NoError> {
     let count = min(100, rawCount)
     
     return postbox.stateView()
@@ -171,7 +171,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
         }
     }
     |> take(1)
-    |> mapToSignal { _ -> Signal<FetchMessageHistoryHoleResult, NoError> in
+    |> mapToSignal { _ -> Signal<FetchMessageHistoryHoleResult?, NoError> in
         return postbox.transaction { transaction -> (Api.InputPeer?, Int32) in
             switch peerInput {
             case let .direct(peerId, _):
@@ -180,7 +180,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                 return (transaction.getPeer(channelMessageId.peerId).flatMap(forceApiInputPeer), 0)
             }
         }
-        |> mapToSignal { (inputPeer, hash) -> Signal<FetchMessageHistoryHoleResult, NoError> in
+        |> mapToSignal { (inputPeer, hash) -> Signal<FetchMessageHistoryHoleResult?, NoError> in
             guard let inputPeer = inputPeer else {
                 return .single(FetchMessageHistoryHoleResult(removedIndices: IndexSet(), strictRemovedIndices: IndexSet(), actualPeerId: nil, actualThreadId: nil))
             }
@@ -404,8 +404,27 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
             }
             
             return request
-            |> retryRequest
-            |> mapToSignal { result -> Signal<FetchMessageHistoryHoleResult, NoError> in
+            |> retry(retryOnError: { error in
+                if error.errorDescription == "CHANNEL_PRIVATE" {
+                    switch peerInput {
+                    case let .direct(_, threadId):
+                        if threadId != nil {
+                            return false
+                        }
+                    case .threadFromChannel:
+                        return false
+                    }
+                }
+                return true
+            }, delayIncrement: 0.1, maxDelay: 2.0, maxRetries: 0, onQueue: .concurrentDefaultQueue())
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
+                return .single(nil)
+            }
+            |> mapToSignal { result -> Signal<FetchMessageHistoryHoleResult?, NoError> in
+                guard let result = result else {
+                    return .single(nil)
+                }
                 let messages: [Api.Message]
                 let chats: [Api.Chat]
                 let users: [Api.User]

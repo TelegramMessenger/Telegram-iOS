@@ -1556,6 +1556,7 @@
 
 "Channel.ErrorAccessDenied" = "Sorry, this channel is private.";
 "Group.ErrorAccessDenied" = "Sorry, this group is private.";
+"CommentsGroup.ErrorAccessDenied" = "Sorry, you can't access this chat because you were banned by an admin";
 "Conversation.InputTextBroadcastPlaceholder" = "Broadcast";
 
 "Channel.NotificationLoading" = "Loading...";
@@ -5810,3 +5811,6 @@ Any member of this group will be able to see messages in the channel.";
 "Channel.CommentsGroup.Header" = "Select a group chat that will be used to host comments from your channel.";
 "Channel.CommentsGroup.HeaderSet" = "%@ is selected as the group that will be used to host comments for your channel.";
 "Channel.CommentsGroup.HeaderGroupSet" = "%@ is linking the group as it's discussion board.";
+
+"RepliesChat.DescriptionTitle" = "What is it?";
+"RepliesChat.DescriptionText" = "This is a chat with replies.";
