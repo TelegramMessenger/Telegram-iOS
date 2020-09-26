@@ -1108,6 +1108,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.updateVisibleItemRange(force: true)
     }
     
+    func refocusOnUnreadMessagesIfNeeded() {
+        self.forEachItemNode({ itemNode in
+            if let itemNode = itemNode as? ChatUnreadItemNode {
+                self.ensureItemNodeVisible(itemNode, animated: false, overflow: 0.0, curve: .Default(duration: nil))
+            }
+        })
+    }
+    
     private func processDisplayedItemRangeChanged(displayedRange: ListViewDisplayedItemRange, transactionState: ChatHistoryTransactionOpaqueState) {
         let historyView = transactionState.historyView
         var isTopReplyThreadMessageShownValue = false

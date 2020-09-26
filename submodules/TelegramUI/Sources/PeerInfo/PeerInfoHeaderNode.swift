@@ -3308,7 +3308,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     }
                 } else {
                     switch buttonKey {
-                    case .mute, .search, .mute:
+                    case .mute, .search, .videoCall:
                         hiddenWhileExpanded = true
                     default:
                         hiddenWhileExpanded = false

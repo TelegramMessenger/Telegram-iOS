@@ -2195,7 +2195,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            strongSelf.openMessageReplies(messageId: messageId, isChannelPost: isChannelPost, atMessage: nil, displayModalProgress: displayModalProgress)
+            strongSelf.openMessageReplies(messageId: messageId, displayProgressInMessage: displayModalProgress ? nil : messageId, isChannelPost: isChannelPost, atMessage: nil, displayModalProgress: displayModalProgress)
         }, openReplyThreadOriginalMessage: { [weak self] message in
             guard let strongSelf = self else {
                 return
@@ -2211,7 +2211,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let attribute = attribute as? SourceReferenceMessageAttribute {
                     if let threadMessageId = threadMessageId {
                         if let _ = strongSelf.navigationController as? NavigationController {
-                            strongSelf.openMessageReplies(messageId: threadMessageId, isChannelPost: true, atMessage: attribute.messageId, displayModalProgress: true)
+                            strongSelf.openMessageReplies(messageId: threadMessageId, displayProgressInMessage: message.id, isChannelPost: true, atMessage: attribute.messageId, displayModalProgress: false)
                         }
                     } else {
                         strongSelf.navigateToMessage(from: nil, to: .id(attribute.messageId))
@@ -3491,7 +3491,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         })
         
-        self.ready.set(combineLatest(self.chatDisplayNode.historyNode.historyState.get(), self._chatLocationInfoReady.get(), self.cachedDataReady.get(), initialData) |> map { _, chatLocationInfoReady, cachedDataReady, _ in
+        let effectiveCachedDataReady: Signal<Bool, NoError>
+        if case .replyThread = self.chatLocation {
+            effectiveCachedDataReady = self.cachedDataReady.get()
+        } else {
+            effectiveCachedDataReady = .single(true)
+        }
+        self.ready.set(combineLatest(self.chatDisplayNode.historyNode.historyState.get(), self._chatLocationInfoReady.get(), effectiveCachedDataReady, initialData) |> map { _, chatLocationInfoReady, cachedDataReady, _ in
             return chatLocationInfoReady && cachedDataReady
         })
         
@@ -5402,6 +5408,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.chatDisplayNode.historyNode.refreshPollActionsForVisibleMessages()
         } else {
             self.willAppear = true
+            
+            // Limit this to reply threads just to be safe now
+            if case .replyThread = self.chatLocation {
+                self.chatDisplayNode.historyNode.refocusOnUnreadMessagesIfNeeded()
+            }
         }
         
         if self.scheduledActivateInput {
@@ -8329,12 +8340,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
     }
     
-    private func openMessageReplies(messageId: MessageId, isChannelPost: Bool, atMessage atMessageId: MessageId?, displayModalProgress: Bool) {
+    private func openMessageReplies(messageId: MessageId, displayProgressInMessage: MessageId?, isChannelPost: Bool, atMessage atMessageId: MessageId?, displayModalProgress: Bool) {
         guard let navigationController = self.navigationController as? NavigationController else {
             return
         }
         
-        if !displayModalProgress, self.controllerInteraction?.currentMessageWithLoadingReplyThread == messageId {
+        if let displayProgressInMessage = displayProgressInMessage, self.controllerInteraction?.currentMessageWithLoadingReplyThread == displayProgressInMessage {
             return
         }
         
@@ -8343,12 +8354,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return EmptyDisposable
             }
             
-            if !displayModalProgress, controllerInteraction.currentMessageWithLoadingReplyThread != messageId {
+            if let displayProgressInMessage = displayProgressInMessage, controllerInteraction.currentMessageWithLoadingReplyThread != displayProgressInMessage {
                 let previousId = controllerInteraction.currentMessageWithLoadingReplyThread
-                controllerInteraction.currentMessageWithLoadingReplyThread = messageId
-                strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(messageId)
+                controllerInteraction.currentMessageWithLoadingReplyThread = displayProgressInMessage
+                strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(displayProgressInMessage)
                 if let previousId = previousId {
-                    strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(previousId)
+                    strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(displayProgressInMessage)
                 }
             }
             
@@ -8357,9 +8368,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction else {
                         return
                     }
-                    if !displayModalProgress, controllerInteraction.currentMessageWithLoadingReplyThread == messageId {
+                    if let displayProgressInMessage = displayProgressInMessage, controllerInteraction.currentMessageWithLoadingReplyThread == messageId {
                         controllerInteraction.currentMessageWithLoadingReplyThread = nil
-                        strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(messageId)
+                        strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(displayProgressInMessage)
                     }
                 }
             }
