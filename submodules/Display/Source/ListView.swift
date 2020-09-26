@@ -3654,7 +3654,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
     }
     
-    private func updateVisibleItemRange(force: Bool = false) {
+    public func updateVisibleItemRange(force: Bool = false) {
         let currentRange = self.immediateDisplayedItemRange()
         
         if currentRange != self.displayedItemRange || force {

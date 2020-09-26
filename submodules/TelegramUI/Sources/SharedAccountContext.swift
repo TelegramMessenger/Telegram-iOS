@@ -1072,6 +1072,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return chatAvailableMessageActionsImpl(postbox: postbox, accountPeerId: accountPeerId, messageIds: messageIds)
     }
     
+    public func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>, messages: [MessageId: Message] = [:], peers: [PeerId: Peer] = [:]) -> Signal<ChatAvailableMessageActions, NoError> {
+        return chatAvailableMessageActionsImpl(postbox: postbox, accountPeerId: accountPeerId, messageIds: messageIds, messages: messages, peers: peers)
+    }
+    
     public func navigateToChatController(_ params: NavigateToChatControllerParams) {
         navigateToChatControllerImpl(params)
     }
@@ -1194,7 +1198,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }, greetingStickerNode: {
                 return nil
             }, openPeerContextMenu: { _, _, _, _ in
-            }, openMessageReplies: { _ in
+            }, openMessageReplies: { _, _, _ in
+            }, openReplyThreadOriginalMessage: { _ in
             }, requestMessageUpdate: { _ in
             }, cancelInteractiveKeyboardGestures: {
             }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

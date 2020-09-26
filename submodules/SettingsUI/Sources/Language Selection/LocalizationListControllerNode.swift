@@ -94,6 +94,10 @@ private final class LocalizationListSearchContainerNode: SearchDisplayController
     
     private let presentationDataPromise: Promise<PresentationData>
     
+    public override var hasDim: Bool {
+        return true
+    }
+    
     init(context: AccountContext, listState: LocalizationListState, selectLocalization: @escaping (LocalizationInfo) -> Void, applyingCode: Signal<String?, NoError>) {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

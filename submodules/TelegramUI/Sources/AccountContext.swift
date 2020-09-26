@@ -303,9 +303,19 @@ public final class AccountContextImpl: AccountContext {
         switch location {
         case let .peer(peerId):
             return .peer(peerId)
-        case let .replyThread(messageId, _, maxReadMessageId):
-            let context = chatLocationContext(holder: contextHolder, account: self.account, messageId: messageId, maxReadMessageId: maxReadMessageId)
-            return .external(messageId.peerId, context.state)
+        case let .replyThread(data):
+            let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
+            return .external(data.messageId.peerId, makeMessageThreadId(data.messageId), context.state)
+        }
+    }
+    
+    public func chatLocationOutgoingReadState(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<MessageId?, NoError> {
+        switch location {
+        case .peer:
+            return .single(nil)
+        case let .replyThread(data):
+            let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
+            return context.maxReadOutgoingMessageId
         }
     }
     
@@ -313,19 +323,19 @@ public final class AccountContextImpl: AccountContext {
         switch location {
         case .peer:
             let _ = applyMaxReadIndexInteractively(postbox: self.account.postbox, stateManager: self.account.stateManager, index: messageIndex).start()
-        case let .replyThread(messageId, _, maxReadMessageId):
-            let context = chatLocationContext(holder: contextHolder, account: self.account, messageId: messageId, maxReadMessageId: maxReadMessageId)
+        case let .replyThread(data):
+            let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
             context.applyMaxReadIndex(messageIndex: messageIndex)
         }
     }
 }
 
-private func chatLocationContext(holder: Atomic<ChatLocationContextHolder?>, account: Account, messageId: MessageId, maxReadMessageId: MessageId?) -> ReplyThreadHistoryContext {
+private func chatLocationContext(holder: Atomic<ChatLocationContextHolder?>, account: Account, data: ChatReplyThreadMessage) -> ReplyThreadHistoryContext {
     let holder = holder.modify { current in
         if let current = current as? ChatLocationContextHolderImpl {
             return current
         } else {
-            return ChatLocationContextHolderImpl(account: account, messageId: messageId, maxReadMessageId: maxReadMessageId)
+            return ChatLocationContextHolderImpl(account: account, data: data)
         }
     } as! ChatLocationContextHolderImpl
     return holder.context
@@ -334,8 +344,8 @@ private func chatLocationContext(holder: Atomic<ChatLocationContextHolder?>, acc
 private final class ChatLocationContextHolderImpl: ChatLocationContextHolder {
     let context: ReplyThreadHistoryContext
     
-    init(account: Account, messageId: MessageId, maxReadMessageId: MessageId?) {
-        self.context = ReplyThreadHistoryContext(account: account, peerId: messageId.peerId, threadMessageId: messageId, maxReadMessageId: maxReadMessageId)
+    init(account: Account, data: ChatReplyThreadMessage) {
+        self.context = ReplyThreadHistoryContext(account: account, peerId: data.messageId.peerId, data: data)
     }
 }
 

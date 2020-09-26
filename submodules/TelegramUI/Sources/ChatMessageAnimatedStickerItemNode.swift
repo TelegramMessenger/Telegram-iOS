@@ -561,11 +561,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 } else if incoming {
                     hasAvatar = true
                 }
-            case let .replyThread(messageId, _, _):
-                if messageId.peerId != item.context.account.peerId {
-                    if messageId.peerId.isGroupOrChannel && item.message.author != nil {
+            case let .replyThread(replyThreadMessage):
+                if replyThreadMessage.messageId.peerId != item.context.account.peerId {
+                    if replyThreadMessage.messageId.peerId.isGroupOrChannel && item.message.author != nil {
                         var isBroadcastChannel = false
                         if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                            isBroadcastChannel = true
+                        }
+                        
+                        if replyThreadMessage.isChannelPost, replyThreadMessage.messageId == item.message.id {
                             isBroadcastChannel = true
                         }
                         
@@ -672,7 +676,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     edited = true
                 } else if let attribute = attribute as? ViewCountMessageAttribute {
                     viewCount = attribute.count
-                } else if let attribute = attribute as? ReplyThreadMessageAttribute {
+                } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = item.chatLocation {
                     if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
                         dateReplies = Int(attribute.count)
                     }
@@ -742,7 +746,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-                    if case let .replyThread(replyThreadMessageId, _, _) = item.chatLocation, replyThreadMessageId == replyAttribute.messageId {
+                    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyAttribute.messageId {
                     } else {
                         replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableContentWidth, height: CGFloat.greatestFiniteMagnitude))
                     }
@@ -1123,7 +1127,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         for attribute in item.content.firstMessage.attributes {
                             if let attribute = attribute as? SourceReferenceMessageAttribute {
                                 openPeerId = attribute.messageId.peerId
-                                navigate = .chat(textInputState: nil, subject: .message(attribute.messageId), peekData: nil)
+                                navigate = .chat(textInputState: nil, subject: .message(id: attribute.messageId, highlight: true), peekData: nil)
                             }
                         }
                         
@@ -1249,13 +1253,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
                 for attribute in item.message.attributes {
                     if let _ = attribute as? ReplyThreadMessageAttribute {
-                        item.controllerInteraction.openMessageReplies(item.message.id)
+                        item.controllerInteraction.openMessageReplies(item.message.id, true, false)
                         return
                     }
                 }
             }
             
-            if item.content.firstMessage.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
+            if item.content.firstMessage.id.peerId.isReplies {
+                item.controllerInteraction.openReplyThreadOriginalMessage(item.content.firstMessage)
+            } else if item.content.firstMessage.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                 for attribute in item.content.firstMessage.attributes {
                     if let attribute = attribute as? SourceReferenceMessageAttribute {
                         item.controllerInteraction.navigateToMessage(item.content.firstMessage.id, attribute.messageId)
@@ -1352,6 +1358,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     override func updateSelectionState(animated: Bool) {
         guard let item = self.item else {
+            return
+        }
+        
+        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == item.message.id {
             return
         }
         

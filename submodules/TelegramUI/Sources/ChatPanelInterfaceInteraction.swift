@@ -56,6 +56,7 @@ final class ChatPanelInterfaceInteraction {
     let deleteSelectedMessages: () -> Void
     let reportSelectedMessages: () -> Void
     let reportMessages: ([Message], ContextController?) -> Void
+    let blockMessageAuthor: (Message, ContextController?) -> Void
     let deleteMessages: ([Message], ContextController?, @escaping (ContextMenuActionResult) -> Void) -> Void
     let forwardSelectedMessages: () -> Void
     let forwardCurrentForwardMessages: () -> Void
@@ -120,6 +121,7 @@ final class ChatPanelInterfaceInteraction {
     let displaySearchResultsTooltip: (ASDisplayNode, CGRect) -> Void
     let openPeersNearby: () -> Void
     let unarchivePeer: () -> Void
+    let scrollToTop: () -> Void
     let viewReplies: (MessageId?, ChatReplyThreadMessage) -> Void
     let statuses: ChatPanelInterfaceInteractionStatuses?
     
@@ -130,6 +132,7 @@ final class ChatPanelInterfaceInteraction {
         deleteSelectedMessages: @escaping () -> Void,
         reportSelectedMessages: @escaping () -> Void,
         reportMessages: @escaping ([Message], ContextController?) -> Void,
+        blockMessageAuthor: @escaping (Message, ContextController?) -> Void,
         deleteMessages: @escaping ([Message], ContextController?, @escaping (ContextMenuActionResult) -> Void) -> Void,
         forwardSelectedMessages: @escaping () -> Void,
         forwardCurrentForwardMessages: @escaping () -> Void,
@@ -194,6 +197,7 @@ final class ChatPanelInterfaceInteraction {
         openPeersNearby: @escaping () -> Void,
         displaySearchResultsTooltip: @escaping (ASDisplayNode, CGRect) -> Void,
         unarchivePeer: @escaping () -> Void,
+        scrollToTop: @escaping () -> Void,
         viewReplies: @escaping (MessageId?, ChatReplyThreadMessage) -> Void,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
@@ -203,6 +207,7 @@ final class ChatPanelInterfaceInteraction {
         self.deleteSelectedMessages = deleteSelectedMessages
         self.reportSelectedMessages = reportSelectedMessages
         self.reportMessages = reportMessages
+        self.blockMessageAuthor = blockMessageAuthor
         self.deleteMessages = deleteMessages
         self.forwardSelectedMessages = forwardSelectedMessages
         self.forwardCurrentForwardMessages = forwardCurrentForwardMessages
@@ -267,6 +272,7 @@ final class ChatPanelInterfaceInteraction {
         self.openPeersNearby = openPeersNearby
         self.displaySearchResultsTooltip = displaySearchResultsTooltip
         self.unarchivePeer = unarchivePeer
+        self.scrollToTop = scrollToTop
         self.viewReplies = viewReplies
         self.statuses = statuses
     }

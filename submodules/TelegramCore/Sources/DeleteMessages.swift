@@ -46,7 +46,7 @@ public func deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [M
                         if let manualAddMessageThreadStatsDifference = manualAddMessageThreadStatsDifference {
                             manualAddMessageThreadStatsDifference(messageThreadId, 0, 1)
                         } else {
-                            updateMessageThreadStats(transaction: transaction, threadMessageId: messageThreadId, difference: -1, addedMessagePeers: [])
+                            updateMessageThreadStats(transaction: transaction, threadMessageId: messageThreadId, removedCount: 1, addedMessagePeers: [])
                         }
                     }
                 }
@@ -60,6 +60,16 @@ public func deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [M
 public func deleteAllMessagesWithAuthor(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace) {
     var resourceIds: [WrappedMediaResourceId] = []
     transaction.removeAllMessagesWithAuthor(peerId, authorId: authorId, namespace: namespace, forEachMedia: { media in
+        addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
+    })
+    if !resourceIds.isEmpty {
+        let _ = mediaBox.removeCachedResources(Set(resourceIds)).start()
+    }
+}
+
+public func deleteAllMessagesWithForwardAuthor(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, forwardAuthorId: PeerId, namespace: MessageId.Namespace) {
+    var resourceIds: [WrappedMediaResourceId] = []
+    transaction.removeAllMessagesWithForwardAuthor(peerId, forwardAuthorId: forwardAuthorId, namespace: namespace, forEachMedia: { media in
         addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
     })
     if !resourceIds.isEmpty {

@@ -361,6 +361,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, reportSelectedMessages: {
             reportMessages()
         }, reportMessages: { _, _ in
+        }, blockMessageAuthor: { _, _ in
         }, deleteMessages: { _, _, f in
             f(.default)
         }, forwardSelectedMessages: {
@@ -430,7 +431,9 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, openScheduledMessages: {
         }, openPeersNearby: {
         }, displaySearchResultsTooltip: { _, _ in
-        }, unarchivePeer: {}, viewReplies: { _, _ in }, statuses: nil)
+        }, unarchivePeer: {
+        }, scrollToTop: {
+        }, viewReplies: { _, _ in }, statuses: nil)
         
         self.selectionPanel.interfaceInteraction = interfaceInteraction
         
@@ -1597,7 +1600,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                     c.dismiss(completion: {
                         if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(message.id)))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(id: message.id, highlight: true)))
                         }
                     })
                 })))
@@ -1700,7 +1703,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                             c.dismiss(completion: {
                                 if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(message.id)))
+                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), subject: .message(id: message.id, highlight: true)))
                                 }
                             })
                         })))
@@ -1956,7 +1959,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }, greetingStickerNode: {
             return nil
         }, openPeerContextMenu: { _, _, _, _ in
-        }, openMessageReplies: { _ in
+        }, openMessageReplies: { _, _, _ in
+        }, openReplyThreadOriginalMessage: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
@@ -4134,7 +4138,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 guard let strongSelf = self else {
                     return
                 }
-                let controller = WebSearchController(context: strongSelf.context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: strongSelf.isSettings ? nil : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { [weak self] result in
+                let controller = WebSearchController(context: strongSelf.context, peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: strongSelf.isSettings ? nil : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { [weak self] result in
                     assetsController?.dismiss()
                     self?.updateProfilePhoto(result)
                 }))
@@ -4837,11 +4841,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     private func activateSearch() {
-        guard let (layout, navigationBarHeight) = self.validLayout else {
-            return
-        }
-        
-        if let _ = self.searchDisplayController {
+        guard let (layout, navigationBarHeight) = self.validLayout, self.searchDisplayController == nil else {
             return
         }
         
@@ -4908,16 +4908,14 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             transition.updateAlpha(node: navigationBar, alpha: 0.0)
         }
         
-        self.searchDisplayController?.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+        self.searchDisplayController?.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight + 10.0, transition: .immediate)
         self.searchDisplayController?.activate(insertSubnode: { [weak self] subnode, isSearchBar in
             if let strongSelf = self, let navigationBar = strongSelf.controller?.navigationBar {
                 strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
             }
         }, placeholder: nil)
         
-        if let (layout, navigationHeight) = self.validLayout {
-            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
-        }
+        self.containerLayoutUpdated(layout: layout, navigationHeight: navigationBarHeight, transition: .immediate)
     }
     
     private func deactivateSearch() {
@@ -4954,7 +4952,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         
         if let searchDisplayController = self.searchDisplayController {
-            searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: transition)
+            searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight + 10.0, transition: transition)
             if !searchDisplayController.isDeactivating {
                 //vanillaInsets.top += (layout.statusBarHeight ?? 0.0) - navigationBarHeightDelta
             }
@@ -5942,7 +5940,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
     private var previousBackButtonBadge: ASDisplayNode?
     private var currentBackButton: ASDisplayNode?
     
-    private var previousTitleNode: (ASDisplayNode, TextNode)?
+    private var previousTitleNode: (ASDisplayNode, ASDisplayNode)?
     private var previousStatusNode: (ASDisplayNode, ASDisplayNode)?
     
     private var didSetup: Bool = false

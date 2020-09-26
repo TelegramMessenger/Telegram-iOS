@@ -233,7 +233,9 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             if message.id.namespace == Namespaces.Message.Local && updatedId.namespace == Namespaces.Message.Cloud && updatedId.peerId.namespace == Namespaces.Peer.CloudChannel {
                 if let threadId = updatedMessage.threadId {
                     let messageThreadId = makeThreadIdMessageId(peerId: updatedMessage.id.peerId, threadId: threadId)
-                    updateMessageThreadStats(transaction: transaction, threadMessageId: messageThreadId, difference: 1, addedMessagePeers: [accountPeerId])
+                    if let authorId = updatedMessage.authorId {
+                        updateMessageThreadStats(transaction: transaction, threadMessageId: messageThreadId, removedCount: 0, addedMessagePeers: [ReplyThreadUserMessage(id: authorId, messageId: updatedId, isOutgoing: true)])
+                    }
                 }
             }
         }

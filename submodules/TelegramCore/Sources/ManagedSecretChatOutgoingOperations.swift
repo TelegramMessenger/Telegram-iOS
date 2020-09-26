@@ -523,6 +523,8 @@ private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute], t
                 break
             case .hintFileIsLarge:
                 break
+            case .hintIsValidated:
+                break
         }
     }
     return result
@@ -580,6 +582,10 @@ private func decryptedAttributes73(_ attributes: [TelegramMediaFileAttribute], t
                 break
             case .hintFileIsLarge:
                 break
+            case .hintIsValidated:
+                break
+            case .hintIsValidated:
+                break
         }
     }
     return result
@@ -636,6 +642,8 @@ private func decryptedAttributes101(_ attributes: [TelegramMediaFileAttribute], 
             case .HasLinkedStickers:
                 break
             case .hintFileIsLarge:
+                break
+            case .hintIsValidated:
                 break
         }
     }

@@ -276,13 +276,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         var effectiveAuthor: Peer?
         let displayAuthorInfo: Bool
         
-        let messagePeerId: PeerId
-        switch chatLocation {
-        case let .peer(peerId):
-            messagePeerId = peerId
-        case let .replyThread(messageId, _, _):
-            messagePeerId = messageId.peerId
-        }
+        let messagePeerId: PeerId = chatLocation.peerId
         
         do {
             let peerId = messagePeerId
@@ -333,6 +327,8 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                 if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
                     isBroadcastChannel = true
                 }
+            } else if case let .replyThread(replyThreadMessage) = chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.messageId == message.id {
+                isBroadcastChannel = true
             }
             if !hasActionMedia && !isBroadcastChannel {
                 if let effectiveAuthor = effectiveAuthor {
@@ -351,7 +347,24 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                 if telegramFile.isAnimatedSticker, (self.message.id.peerId.namespace == Namespaces.Peer.SecretChat || !telegramFile.previewRepresentations.isEmpty), let size = telegramFile.size, size > 0 && size <= 128 * 1024 {
                     if self.message.id.peerId.namespace == Namespaces.Peer.SecretChat {
                         if telegramFile.fileId.namespace == Namespaces.Media.CloudFile {
-                            viewClassName = ChatMessageAnimatedStickerItemNode.self
+                            var isValidated = false
+                            for attribute in telegramFile.attributes {
+                                if case .hintIsValidated = attribute {
+                                    isValidated = true
+                                    break
+                                }
+                            }
+                            
+                            inner: for attribute in telegramFile.attributes {
+                                if case let .Sticker(_, packReference, _) = attribute {
+                                    if case .name = packReference {
+                                        viewClassName = ChatMessageAnimatedStickerItemNode.self
+                                    } else if isValidated {
+                                        viewClassName = ChatMessageAnimatedStickerItemNode.self
+                                    }
+                                    break inner
+                                }
+                            }
                         }
                     } else {
                         viewClassName = ChatMessageAnimatedStickerItemNode.self

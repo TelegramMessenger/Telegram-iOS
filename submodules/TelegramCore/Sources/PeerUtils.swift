@@ -227,6 +227,9 @@ public extension RenderedPeer {
 
 public func isServicePeer(_ peer: Peer) -> Bool {
     if let peer = peer as? TelegramUser {
+        if peer.id.isReplies {
+            return true
+        }
         return (peer.id.namespace == Namespaces.Peer.CloudUser && (peer.id.id == 777000 || peer.id.id == 333000))
     }
     return false

@@ -3,10 +3,10 @@ import SwiftSignalKit
 
 public enum ChatLocationInput {
     case peer(PeerId)
-    case external(PeerId, Signal<MessageHistoryViewExternalInput, NoError>)
+    case external(PeerId, Int64, Signal<MessageHistoryViewExternalInput, NoError>)
 }
 
-enum ResolvedChatLocationInput {
+public enum ResolvedChatLocationInput {
     case peer(PeerId)
     case external(MessageHistoryViewExternalInput)
 }

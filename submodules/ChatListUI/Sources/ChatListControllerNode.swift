@@ -1088,7 +1088,6 @@ final class ChatListControllerNode: ASDisplayNode {
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
-        
         insets.left += layout.safeInsets.left
         insets.right += layout.safeInsets.right
         
@@ -1147,7 +1146,7 @@ final class ChatListControllerNode: ASDisplayNode {
         }
     }
     
-    func activateSearch(placeholderNode: SearchBarPlaceholderNode, navigationController: NavigationController?, updatedSearchOptions: ((ChatListSearchOptions?, Bool) -> Void)?) -> (ASDisplayNode, () -> Void)? {
+    func activateSearch(placeholderNode: SearchBarPlaceholderNode, navigationController: NavigationController?) -> (ASDisplayNode, () -> Void)? {
         guard let (containerLayout, _, _, cleanNavigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
             return nil
         }
@@ -1169,9 +1168,7 @@ final class ChatListControllerNode: ASDisplayNode {
             self?.controller?.present(c, in: .window(.root), with: a)
         }, presentInGlobalOverlay: { [weak self] c, a in
             self?.controller?.presentInGlobalOverlay(c, with: a)
-        }, navigationController: navigationController, updatedSearchOptions: { options, hasDate in
-            updatedSearchOptions?(options, hasDate)
-        })
+        }, navigationController: navigationController)
         
         self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: contentNode, cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {
@@ -1197,11 +1194,19 @@ final class ChatListControllerNode: ASDisplayNode {
         })
     }
     
-    func deactivateSearch(placeholderNode: SearchBarPlaceholderNode, animated: Bool) {
+    func deactivateSearch(placeholderNode: SearchBarPlaceholderNode, animated: Bool) -> (() -> Void)? {
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.deactivate(placeholder: placeholderNode, animated: animated)
             self.searchDisplayController = nil
             self.containerNode.accessibilityElementsHidden = false
+            
+            return { [weak self] in
+                if let strongSelf = self, let (layout, _, _, cleanNavigationBarHeight) = strongSelf.containerLayout {
+                    searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: cleanNavigationBarHeight, transition: .animated(duration: 0.4, curve: .spring))
+                }
+            }
+        } else {
+            return nil
         }
     }
     

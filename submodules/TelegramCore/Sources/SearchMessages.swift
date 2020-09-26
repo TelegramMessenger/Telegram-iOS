@@ -8,7 +8,7 @@ import SyncCore
 
 public enum SearchMessagesLocation: Equatable {
     case general(tags: MessageTags?, minDate: Int32?, maxDate: Int32?)
-    case group(PeerGroupId)
+    case group(groupId: PeerGroupId, tags: MessageTags?, minDate: Int32?, maxDate: Int32?)
     case peer(peerId: PeerId, fromId: PeerId?, tags: MessageTags?, topMsgId: MessageId?, minDate: Int32?, maxDate: Int32?)
     case publicForwards(messageId: MessageId, datacenterId: Int?)
 }
@@ -237,7 +237,13 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                     peerMessages = .single(nil)
                 } else {
                     let lowerBound = state?.main.messages.last.flatMap({ $0.index })
-                    peerMessages =  account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, topMsgId: topMsgId?.id, filter: filter, minDate: minDate ?? 0, maxDate: maxDate ?? (Int32.max - 1), offsetId: lowerBound?.id.id ?? 0, addOffset: 0, limit: limit, maxId: Int32.max - 1, minId: 0, hash: 0))
+                    let signal: Signal<Api.messages.Messages, MTRpcError>
+                    if peer.id.namespace == Namespaces.Peer.CloudChannel && query.isEmpty && fromId == nil && tags == nil && minDate == nil && maxDate == nil {
+                        signal = account.network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: lowerBound?.id.id ?? 0, offsetDate: 0, addOffset: 0, limit: limit, maxId: Int32.max - 1, minId: 0, hash: 0))
+                    } else {
+                        signal = account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputUser, topMsgId: topMsgId?.id, filter: filter, minDate: minDate ?? 0, maxDate: maxDate ?? (Int32.max - 1), offsetId: lowerBound?.id.id ?? 0, addOffset: 0, limit: limit, maxId: Int32.max - 1, minId: 0, hash: 0))
+                    }
+                    peerMessages = signal
                     |> map(Optional.init)
                     |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
                         return .single(nil)
@@ -264,9 +270,15 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 }
                 return combineLatest(peerMessages, additionalPeerMessages)
             }
-        case .group:
-            remoteSearchResult = .single((nil, nil))
-        case let .general(tags, minDate, maxDate):
+        case let .general(tags, minDate, maxDate), let .group(_, tags, minDate, maxDate):
+            var flags: Int32 = 0
+            let folderId: Int32?
+            if case let .group(groupId, _, _, _) = location {
+                folderId = groupId.rawValue
+                flags |= (1 << 0)
+            } else {
+                folderId = nil
+            }
             let filter: Api.MessagesFilter = tags.flatMap { messageFilterForTagMask($0) } ?? .inputMessagesFilterEmpty
             remoteSearchResult = account.postbox.transaction { transaction -> (Int32, MessageIndex?, Api.InputPeer) in
                 var lowerBound: MessageIndex?
@@ -280,7 +292,7 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 } 
             }
             |> mapToSignal { (nextRate, lowerBound, inputPeer) in
-                return account.network.request(Api.functions.messages.searchGlobal(flags: 0, folderId: nil, q: query, filter: filter, minDate: minDate ?? 0, maxDate: maxDate ?? (Int32.max - 1), offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit), automaticFloodWait: false)
+                return account.network.request(Api.functions.messages.searchGlobal(flags: flags, folderId: folderId, q: query, filter: filter, minDate: minDate ?? 0, maxDate: maxDate ?? (Int32.max - 1), offsetRate: nextRate, offsetPeer: inputPeer, offsetId: lowerBound?.id.id ?? 0, limit: limit), automaticFloodWait: false)
                 |> map { result -> (Api.messages.Messages?, Api.messages.Messages?) in
                     return (result, nil)
                 }
@@ -533,14 +545,13 @@ func fetchRemoteMessage(postbox: Postbox, source: FetchMessageHistoryHoleSource,
     }
 }
 
-public func searchMessageIdByTimestamp(account: Account, peerId: PeerId, timestamp: Int32) -> Signal<MessageId?, NoError> {
+public func searchMessageIdByTimestamp(account: Account, peerId: PeerId, threadId: Int64?, timestamp: Int32) -> Signal<MessageId?, NoError> {
     return account.postbox.transaction { transaction -> Signal<MessageId?, NoError> in
         if peerId.namespace == Namespaces.Peer.SecretChat {
             return .single(transaction.findClosestMessageIdByTimestamp(peerId: peerId, timestamp: timestamp))
         } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-            var secondaryIndex: Signal<MessageIndex?, NoError> = .single(nil)
-            if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData, let migrationReference = cachedData.migrationReference, let secondaryPeer = transaction.getPeer(migrationReference.maxMessageId.peerId), let inputSecondaryPeer = apiInputPeer(secondaryPeer) {
-                secondaryIndex = account.network.request(Api.functions.messages.getHistory(peer: inputSecondaryPeer, offsetId: 0, offsetDate: timestamp, addOffset: -1, limit: 1, maxId: 0, minId: 0, hash: 0))
+            if let threadId = threadId {
+                let primaryIndex = account.network.request(Api.functions.messages.getReplies(peer: inputPeer, msgId: makeThreadIdMessageId(peerId: peerId, threadId: threadId).id, offsetId: 0, offsetDate: timestamp, addOffset: -1, limit: 1, maxId: 0, minId: 0, hash: 0))
                 |> map { result -> MessageIndex? in
                     let messages: [Api.Message]
                     switch result {
@@ -563,44 +574,75 @@ public func searchMessageIdByTimestamp(account: Account, peerId: PeerId, timesta
                 |> `catch` { _ -> Signal<MessageIndex?, NoError> in
                     return .single(nil)
                 }
-            }
-            let primaryIndex = account.network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: 0, offsetDate: timestamp, addOffset: -1, limit: 1, maxId: 0, minId: 0, hash: 0))
-            |> map { result -> MessageIndex? in
-                let messages: [Api.Message]
-                switch result {
-                    case let .messages(apiMessages, _, _):
-                        messages = apiMessages
-                    case let .channelMessages(_, _, _, apiMessages, _, _):
-                        messages = apiMessages
-                    case let .messagesSlice(_, _, _, apiMessages, _, _):
-                        messages = apiMessages
-                    case .messagesNotModified:
-                        messages = []
+                return primaryIndex
+                |> map { primaryIndex -> MessageId? in
+                    return primaryIndex?.id
                 }
-                for message in messages {
-                    if let message = StoreMessage(apiMessage: message) {
-                        return message.index
+            } else {
+                var secondaryIndex: Signal<MessageIndex?, NoError> = .single(nil)
+                if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData, let migrationReference = cachedData.migrationReference, let secondaryPeer = transaction.getPeer(migrationReference.maxMessageId.peerId), let inputSecondaryPeer = apiInputPeer(secondaryPeer) {
+                    secondaryIndex = account.network.request(Api.functions.messages.getHistory(peer: inputSecondaryPeer, offsetId: 0, offsetDate: timestamp, addOffset: -1, limit: 1, maxId: 0, minId: 0, hash: 0))
+                    |> map { result -> MessageIndex? in
+                        let messages: [Api.Message]
+                        switch result {
+                            case let .messages(apiMessages, _, _):
+                                messages = apiMessages
+                            case let .channelMessages(_, _, _, apiMessages, _, _):
+                                messages = apiMessages
+                            case let .messagesSlice(_, _, _, apiMessages, _, _):
+                                messages = apiMessages
+                            case .messagesNotModified:
+                                messages = []
+                        }
+                        for message in messages {
+                            if let message = StoreMessage(apiMessage: message) {
+                                return message.index
+                            }
+                        }
+                        return nil
+                    }
+                    |> `catch` { _ -> Signal<MessageIndex?, NoError> in
+                        return .single(nil)
                     }
                 }
-                return nil
-            }
-            |> `catch` { _ -> Signal<MessageIndex?, NoError> in
-                return .single(nil)
-            }
-            return combineLatest(primaryIndex, secondaryIndex)
-            |> map { primaryIndex, secondaryIndex -> MessageId? in
-                if let primaryIndex = primaryIndex, let secondaryIndex = secondaryIndex {
-                    if abs(primaryIndex.timestamp - timestamp) < abs(secondaryIndex.timestamp - timestamp) {
-                        return primaryIndex.id
-                    } else {
-                        return secondaryIndex.id
+                let primaryIndex = account.network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: 0, offsetDate: timestamp, addOffset: -1, limit: 1, maxId: 0, minId: 0, hash: 0))
+                |> map { result -> MessageIndex? in
+                    let messages: [Api.Message]
+                    switch result {
+                        case let .messages(apiMessages, _, _):
+                            messages = apiMessages
+                        case let .channelMessages(_, _, _, apiMessages, _, _):
+                            messages = apiMessages
+                        case let .messagesSlice(_, _, _, apiMessages, _, _):
+                            messages = apiMessages
+                        case .messagesNotModified:
+                            messages = []
                     }
-                } else if let primaryIndex = primaryIndex {
-                    return primaryIndex.id
-                } else if let secondaryIndex = secondaryIndex {
-                    return secondaryIndex.id
-                } else {
+                    for message in messages {
+                        if let message = StoreMessage(apiMessage: message) {
+                            return message.index
+                        }
+                    }
                     return nil
+                }
+                |> `catch` { _ -> Signal<MessageIndex?, NoError> in
+                    return .single(nil)
+                }
+                return combineLatest(primaryIndex, secondaryIndex)
+                |> map { primaryIndex, secondaryIndex -> MessageId? in
+                    if let primaryIndex = primaryIndex, let secondaryIndex = secondaryIndex {
+                        if abs(primaryIndex.timestamp - timestamp) < abs(secondaryIndex.timestamp - timestamp) {
+                            return primaryIndex.id
+                        } else {
+                            return secondaryIndex.id
+                        }
+                    } else if let primaryIndex = primaryIndex {
+                        return primaryIndex.id
+                    } else if let secondaryIndex = secondaryIndex {
+                        return secondaryIndex.id
+                    } else {
+                        return nil
+                    }
                 }
             }
         } else {
@@ -620,18 +662,25 @@ public func updatedRemotePeer(postbox: Postbox, network: Network, peer: PeerRefe
             return .generic
         }
         |> mapToSignal { result -> Signal<Peer, UpdatedRemotePeerError> in
-            if let updatedPeer = result.first.flatMap(TelegramUser.init(user:)), updatedPeer.id == peer.id {
-                return postbox.transaction { transaction -> Peer in
-                    updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
-                        return updated
-                    })
-                    return updatedPeer
-                }
-                |> mapError { _ -> UpdatedRemotePeerError in
-                    return .generic
-                }
-            } else {
+            guard let apiUser = result.first else {
                 return .fail(.generic)
+            }
+            return postbox.transaction { transaction -> Peer? in
+                guard let peer = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) else {
+                    return nil
+                }
+                updatePeers(transaction: transaction, peers: [peer], update: { _, updated in
+                    return updated
+                })
+                return peer
+            }
+            |> castError(UpdatedRemotePeerError.self)
+            |> mapToSignal { peer -> Signal<Peer, UpdatedRemotePeerError> in
+                if let peer = peer {
+                    return .single(peer)
+                } else {
+                    return .fail(.generic)
+                }
             }
         }
     } else if case let .group(id) = peer {

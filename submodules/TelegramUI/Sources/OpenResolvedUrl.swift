@@ -89,10 +89,12 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             dismissInput()
             navigationController?.pushViewController(controller)
         case let .channelMessage(peerId, messageId):
-            openPeer(peerId, .chat(textInputState: nil, subject: .message(messageId), peekData: nil))
-        case let .replyThreadMessage(replyThreadMessageId, isChannelPost, maxReadMessageId, messageId):
+            openPeer(peerId, .chat(textInputState: nil, subject: .message(id: messageId, highlight: true), peekData: nil))
+        case let .replyThreadMessage(replyThreadMessage, messageId):
             if let navigationController = navigationController {
-                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .replyThread(threadMessageId: replyThreadMessageId, isChannelPost: isChannelPost, maxReadMessageId: maxReadMessageId), subject: .message(messageId)))
+                let _ = ChatControllerImpl.openMessageReplies(context: context, navigationController: navigationController, present: { c, a in
+                    present(c, a)
+                }, messageId: replyThreadMessage.messageId, isChannelPost: replyThreadMessage.isChannelPost, atMessage: messageId, displayModalProgress: true).start()
             }
         case let .stickerPack(name):
             dismissInput()

@@ -55,6 +55,7 @@ static_library(
 	"//submodules/ListSectionHeaderNode:ListSectionHeaderNode",
 	"//submodules/ChatInterfaceState:ChatInterfaceState",
         "//submodules/GridMessageSelectionNode:GridMessageSelectionNode",
+        "//submodules/ChatListFilterSettingsHeaderItem:ChatListFilterSettingsHeaderItem",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

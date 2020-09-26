@@ -1,5 +1,6 @@
 import Foundation
 import TelegramPresentationData
+import TelegramStringFormatting
 
 private let telegramReleaseDate = Date(timeIntervalSince1970: 1376438400.0)
 
@@ -80,60 +81,72 @@ func suggestDates(for string: String, strings: PresentationStrings, dateTimeForm
             if date > telegramReleaseDate {
                 result.append((date, "\(value)"))
             }
-        } else if !dateSeparator.isEmpty && string.contains(dateSeparator) {
-            let stringComponents = string.components(separatedBy: dateSeparator)
-            if stringComponents.count > 1 {
-                let locale = Locale(identifier: strings.baseLanguageCode)
-                do {
-                    let dd = try NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue)
-                    if let match = dd.firstMatch(in: string, options: [], range: NSMakeRange(0, string.utf16.count)), let date = match.date, date > telegramReleaseDate {
-                        var resultDate = date
-                        if resultDate > now {
-                            if let date = calendar.date(byAdding: .year, value: -1, to: resultDate) {
-                                resultDate = date
-                            }
+        } else {
+            do {
+                let dd = try NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue)
+                if let match = dd.firstMatch(in: string, options: [], range: NSMakeRange(0, string.utf16.count)), let date = match.date, date > telegramReleaseDate {
+                    var resultDate = date
+                    if resultDate > now && !calendar.isDate(resultDate, equalTo: now, toGranularity: .year) {
+                        if let date = calendar.date(byAdding: .year, value: -1, to: resultDate) {
+                            resultDate = date
                         }
-                        
+                    }
+                    
+                    let stringComponents = string.components(separatedBy: dateSeparator)
+                    if stringComponents.count < 3 {
                         for i in 0..<5 {
                             if let date = calendar.date(byAdding: .year, value: -i, to: resultDate) {
                                 result.append((date, nil))
                             }
                         }
+                    } else if resultDate < now {
+                        result.append((resultDate, nil))
                     }
-                } catch {
-                
                 }
+            } catch {
+                
             }
         }
-    } else {
-        for (day, value) in weekDays {
-            let dayName = value.0.lowercased()
-            let shortDayName = value.1.lowercased()
-            if string == shortDayName || (string.count >= shortDayName.count && dayName.hasPrefix(string)) {
-                var nextDateComponent = calendar.dateComponents([.hour, .minute, .second], from: now)
-                nextDateComponent.weekday = day + calendar.firstWeekday
-                if let date = calendar.nextDate(after: now, matching: nextDateComponent, matchingPolicy: .nextTime, direction: .backward) {
-                    let upperDate = getUpperDate(for: date)
-                    for i in 0..<5 {
-                        if let date = calendar.date(byAdding: .hour, value: -24 * 7 * i, to: upperDate) {
-                            if calendar.isDate(date, equalTo: now, toGranularity: .weekOfYear) {
-                                result.append((date, value.0))
-                            } else {
-                                result.append((date, nil))
-                            }
+    }
+    
+    for (day, value) in weekDays {
+        let dayName = value.0.lowercased()
+        let shortDayName = value.1.lowercased()
+        if string == shortDayName || (string.count >= shortDayName.count && dayName.hasPrefix(string)) {
+            var nextDateComponent = calendar.dateComponents([.hour, .minute, .second], from: now)
+            nextDateComponent.weekday = day + calendar.firstWeekday
+            if let date = calendar.nextDate(after: now, matching: nextDateComponent, matchingPolicy: .nextTime, direction: .backward) {
+                let upperDate = getUpperDate(for: date)
+                for i in 0..<5 {
+                    if let date = calendar.date(byAdding: .hour, value: -24 * 7 * i, to: upperDate) {
+                        if calendar.isDate(date, equalTo: now, toGranularity: .weekOfYear) {
+                            result.append((date, value.0))
+                        } else {
+                            result.append((date, nil))
                         }
                     }
                 }
             }
         }
-        for (month, value) in months {
-            let monthName = value.0.lowercased()
-            let shortMonthName = value.1.lowercased()
-            if string == shortMonthName || (string.count >= shortMonthName.count && monthName.hasPrefix(string)) {
+    }
+    
+    let cleanString = string.trimmingCharacters(in: .decimalDigits).trimmingCharacters(in: .whitespacesAndNewlines)
+    let cleanDigits = string.trimmingCharacters(in: .letters).trimmingCharacters(in: .whitespacesAndNewlines)
+    
+    for (month, value) in months {
+        let monthName = value.0.lowercased()
+        let shortMonthName = value.1.lowercased()
+        if cleanString == shortMonthName || (cleanString.count >= shortMonthName.count && monthName.hasPrefix(cleanString)) {
+            if cleanDigits.count == 4, let year = Int(cleanDigits) {
+                let date = getUpperMonthDate(month: month, year: year)
+                if date <= now && date > telegramReleaseDate {
+                    result.append((date, stringForMonth(strings: strings, month: Int32(month - 1), ofYear: Int32(year - 1900))))
+                }
+            } else if cleanDigits.isEmpty {
                 for i in (year - 7 ... year).reversed() {
                     let date = getUpperMonthDate(month: month, year: i)
                     if date <= now && date > telegramReleaseDate {
-                        result.append((date, nil))
+                        result.append((date, stringForMonth(strings: strings, month: Int32(month - 1), ofYear: Int32(i - 1900))))
                     }
                 }
             }

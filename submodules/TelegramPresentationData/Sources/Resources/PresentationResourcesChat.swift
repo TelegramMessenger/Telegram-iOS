@@ -1115,6 +1115,14 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatMessageCommentsUnreadDotIcon(_ theme: PresentationTheme, incoming: Bool) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatMessageCommentsUnreadDotIcon(incoming: incoming), { theme in
+            let messageTheme = incoming ? theme.chat.message.incoming : theme.chat.message.outgoing
+            
+            return generateFilledCircleImage(diameter: 6.0, color: messageTheme.accentTextColor)
+        })
+    }
+    
     public static func chatFreeCommentButtonBackground(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> UIImage? {
         return theme.image(PresentationResourceKey.chatFreeCommentButtonBackground.rawValue, { _ in
             let strokeColor = bubbleVariableColor(variableColor: theme.chat.message.shareButtonStrokeColor, wallpaper: wallpaper)

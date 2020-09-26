@@ -38,6 +38,7 @@ public func openUserGeneratedUrl(context: AccountContext, url: String, concealed
             }
         }
         |> deliverOnMainQueue).start(next: { result in
+            progressDisposable.dispose()
             openResolved(result)
         }))
     }

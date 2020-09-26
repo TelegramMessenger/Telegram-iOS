@@ -31,17 +31,17 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
     private var nonExtractedRect: CGRect?
     
     private let highlightedBackgroundNode: ASDisplayNode
-    private let separatorNode: ASDisplayNode
+    public let separatorNode: ASDisplayNode
     
     private var selectionNode: ItemListSelectableControlNode?
     
-    private let titleNode: TextNode
-    private let descriptionNode: TextNode
-    private let dateNode: TextNode
+    public let titleNode: TextNode
+    let descriptionNode: TextNode
+    public let dateNode: TextNode
     private let instantViewIconNode: ASImageNode
-    private let linkNode: TextNode
+    public let linkNode: TextNode
     private var linkHighlightingNode: LinkHighlightingNode?
-    private let authorNode: TextNode
+    public let authorNode: TextNode
     
     private let iconTextBackgroundNode: ASImageNode
     private let iconTextNode: TextNode
@@ -374,7 +374,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                     let (messageTextUrl, _) = parseUrl(url: item.message.text, wasConcealed: false)
                                     
                                     if messageTextUrl != rawUrlString, !item.isGlobalSearchResult {
-                                       mutableDescriptionText.append(NSAttributedString(string: item.message.text + "\n", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor))
+                                        mutableDescriptionText.append(NSAttributedString(string: item.message.text + "\n", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor))
                                     }
                                     
                                     let urlAttributedString = NSMutableAttributedString()
@@ -479,7 +479,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
             
             var authorString = ""
             if item.isGlobalSearchResult {
-                authorString = fullAuthorString(for: item)
+                authorString = stringForFullAuthorName(message: item.message, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
             }
             
             let authorText = NSAttributedString(string: authorString, font: authorFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)

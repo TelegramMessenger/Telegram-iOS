@@ -167,6 +167,7 @@ private var declaredEncodables: Void = {
     declareEncodable(Country.self, f: { Country(decoder: $0) })
     declareEncodable(Country.CountryCode.self, f: { Country.CountryCode(decoder: $0) })
     declareEncodable(CountriesList.self, f: { CountriesList(decoder: $0) })
+    declareEncodable(ValidationMessageAttribute.self, f: { ValidationMessageAttribute(decoder: $0) })
     
     return
 }()

@@ -170,7 +170,7 @@ public enum ResolvedUrl {
     case botStart(peerId: PeerId, payload: String)
     case groupBotStart(peerId: PeerId, payload: String)
     case channelMessage(peerId: PeerId, messageId: MessageId)
-    case replyThreadMessage(replyThreadMessageId: MessageId, isChannelPost: Bool, maxReadMessageId: MessageId?, messageId: MessageId)
+    case replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage, messageId: MessageId)
     case stickerPack(name: String)
     case instantView(TelegramMediaWebpage, String?)
     case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
@@ -253,7 +253,7 @@ public enum ChatSearchDomain: Equatable {
 
 public enum ChatLocation: Equatable {
     case peer(PeerId)
-    case replyThread(threadMessageId: MessageId, isChannelPost: Bool, maxReadMessageId: MessageId?)
+    case replyThread(ChatReplyThreadMessage)
 }
 
 public final class NavigateToChatControllerParams {
@@ -261,6 +261,7 @@ public final class NavigateToChatControllerParams {
     public let chatController: ChatController?
     public let context: AccountContext
     public let chatLocation: ChatLocation
+    public let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
     public let subject: ChatControllerSubject?
     public let botStart: ChatControllerInitialBotStart?
     public let updateTextInputState: ChatTextInputState?
@@ -277,9 +278,10 @@ public final class NavigateToChatControllerParams {
     public let parentGroupId: PeerGroupId?
     public let completion: (ChatController) -> Void
     
-    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping (ChatController) -> Void = { _ in }) {
+    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping (ChatController) -> Void = { _ in }) {
         self.navigationController = navigationController
         self.chatController = chatController
+        self.chatLocationContextHolder = chatLocationContextHolder
         self.context = context
         self.chatLocation = chatLocation
         self.subject = subject
@@ -552,6 +554,7 @@ public protocol SharedAccountContext: class {
     func navigateToChatController(_ params: NavigateToChatControllerParams)
     func openExternalUrl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void)
     func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError>
+    func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>, messages: [MessageId: Message], peers: [PeerId: Peer]) -> Signal<ChatAvailableMessageActions, NoError>
     func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError>
     func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, contentContext: Any?)
     func openAddContact(context: AccountContext, firstName: String, lastName: String, phoneNumber: String, label: String, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void)
@@ -671,5 +674,6 @@ public protocol AccountContext: class {
     func getStoredSecureIdPassword() -> String?
     
     func chatLocationInput(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> ChatLocationInput
+    func chatLocationOutgoingReadState(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<MessageId?, NoError>
     func applyMaxReadIndex(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>, messageIndex: MessageIndex)
 }

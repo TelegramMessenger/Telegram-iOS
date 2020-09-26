@@ -11,9 +11,9 @@ import AccountContext
 import TelegramUIPreferences
 
 public final class ListMessageItemInteraction {
-    let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
-    let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void
-    let toggleMessagesSelection: ([MessageId], Bool) -> Void
+    public let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
+    public let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void
+    public let toggleMessagesSelection: ([MessageId], Bool) -> Void
     let openUrl: (String, Bool, Bool?, Message?) -> Void
     let openInstantPage: (Message, ChatMessageItemAssociatedData?) -> Void
     let longTap: (ChatControllerInteractionLongTapAction, Message?) -> Void
@@ -28,6 +28,17 @@ public final class ListMessageItemInteraction {
         self.longTap = longTap
         self.getHiddenMedia = getHiddenMedia
     }
+    
+    public static var `default`: ListMessageItemInteraction = ListMessageItemInteraction(openMessage: { _, _ in
+        return false
+    }, openMessageContextMenu: { _, _, _, _, _ in
+    }, toggleMessagesSelection: { _, _ in
+    }, openUrl: { _, _, _, _ in
+    }, openInstantPage: { _, _ in
+    }, longTap: { _, _ in
+    }, getHiddenMedia: { () -> [MessageId : [Media]] in
+        return [:]
+    })
 }
 
 public final class ListMessageItem: ListViewItem {

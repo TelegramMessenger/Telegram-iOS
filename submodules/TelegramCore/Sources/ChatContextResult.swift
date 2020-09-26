@@ -423,8 +423,8 @@ extension ChatContextResultMessage {
                     parsedReplyMarkup = ReplyMarkupMessageAttribute(apiMarkup: replyMarkup)
                 }
                 self = .text(text: message, entities: parsedEntities, disableUrlPreview: (flags & (1 << 0)) != 0, replyMarkup: parsedReplyMarkup)
-            case let .botInlineMessageMediaGeo(_, geo, replyMarkup):
-                let media = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: nil)
+            case let .botInlineMessageMediaGeo(_, geo, period, replyMarkup):
+                let media = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: period)
                 var parsedReplyMarkup: ReplyMarkupMessageAttribute?
                 if let replyMarkup = replyMarkup {
                     parsedReplyMarkup = ReplyMarkupMessageAttribute(apiMarkup: replyMarkup)

@@ -57,7 +57,7 @@ public final class HashtagSearchController: TelegramBaseController {
             if let strongSelf = self {
                 strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.context.account, peer: peer) |> deliverOnMainQueue).start(next: { actualPeerId in
                     if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
-                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), subject: message.id.peerId == actualPeerId ? .message(message.id) : nil, keepStack: .always))
+                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), subject: message.id.peerId == actualPeerId ? .message(id: message.id, highlight: true) : nil, keepStack: .always))
                     }
                 }))
                 strongSelf.controllerNode.listNode.clearHighlightAnimated(true)
@@ -88,22 +88,18 @@ public final class HashtagSearchController: TelegramBaseController {
                 }, openMessageContextMenu: { message, bool, node, rect, gesture in
                     
                 }, toggleMessagesSelection: { messageId, selected in
-                    
                 }, openUrl: { url, _, _, message in
                 }, openInstantPage: { message, data in
-                    
-                }, longTap: { action, message in
-                    
+                }, longTap: { action, message in 
                 }, getHiddenMedia: {
                     return [:]
                 })
                 
                 let firstTime = previousEntries == nil
-                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, isEmpty: entries.isEmpty, isLoading: false, animated: false, searchQuery: "", context: strongSelf.context, presentationData: strongSelf.presentationData, enableHeaders: false, filter: [], interaction: interaction, listInteraction: listInteraction, peerContextAction: nil, toggleExpandLocalResults: {
+                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, isEmpty: entries.isEmpty, isLoading: false, animated: false, context: strongSelf.context, presentationData: strongSelf.presentationData, enableHeaders: false, filter: [], tagMask: nil, interaction: interaction, listInteraction: listInteraction, peerContextAction: nil, toggleExpandLocalResults: {
                 }, toggleExpandGlobalResults: {
                 }, searchPeer: { _ in
-                    
-                }, searchResults: [], searchOptions: nil, messageContextAction: nil)
+                }, searchQuery: "", searchOptions: nil, messageContextAction: nil)
                 strongSelf.controllerNode.enqueueTransition(transition, firstTime: firstTime)
             }
         })

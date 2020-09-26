@@ -55,6 +55,8 @@ swift_library(
         "//submodules/ChatInterfaceState:ChatInterfaceState",
         "//submodules/ShareController:ShareController",
         "//submodules/GridMessageSelectionNode:GridMessageSelectionNode",
+        "//submodules/ChatListFilterSettingsHeaderItem:ChatListFilterSettingsHeaderItem",
+        "//submodules/TelegramStringFormatting:TelegramStringFormatting",
     ],
     visibility = [
         "//visibility:public",

@@ -1186,17 +1186,17 @@ public class Account {
         return self.viewTracker.chatHistoryPreloadManager.addAdditionalPeerId(peerId: peerId)
     }
     
-    public func peerInputActivities(peerId: PeerId) -> Signal<[(PeerId, PeerInputActivity)], NoError> {
+    public func peerInputActivities(peerId: PeerActivitySpace) -> Signal<[(PeerId, PeerInputActivity)], NoError> {
         return self.peerInputActivityManager.activities(peerId: peerId)
         |> map { activities in
             return activities.map({ ($0.0, $0.1.activity) })
         }
     }
     
-    public func allPeerInputActivities() -> Signal<[PeerId: [PeerId: PeerInputActivity]], NoError> {
+    public func allPeerInputActivities() -> Signal<[PeerActivitySpace: [PeerId: PeerInputActivity]], NoError> {
         return self.peerInputActivityManager.allActivities()
         |> map { activities in
-            var result: [PeerId: [PeerId: PeerInputActivity]] = [:]
+            var result: [PeerActivitySpace: [PeerId: PeerInputActivity]] = [:]
             for (chatPeerId, chatActivities) in activities {
                 result[chatPeerId] = chatActivities.mapValues({ $0.activity })
             }
@@ -1204,7 +1204,7 @@ public class Account {
         }
     }
     
-    public func updateLocalInputActivity(peerId: PeerId, activity: PeerInputActivity, isPresent: Bool) {
+    public func updateLocalInputActivity(peerId: PeerActivitySpace, activity: PeerInputActivity, isPresent: Bool) {
         self.localInputActivityManager.transaction { manager in
             if isPresent {
                 manager.addActivity(chatPeerId: peerId, peerId: self.peerId, activity: activity)
@@ -1214,7 +1214,7 @@ public class Account {
         }
     }
     
-    public func acquireLocalInputActivity(peerId: PeerId, activity: PeerInputActivity) -> Disposable {
+    public func acquireLocalInputActivity(peerId: PeerActivitySpace, activity: PeerInputActivity) -> Disposable {
         return self.localInputActivityManager.acquireActivity(chatPeerId: peerId, peerId: self.peerId, activity: activity)
     }
     

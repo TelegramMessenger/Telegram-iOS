@@ -415,8 +415,8 @@ enum ChatListFilterTabEntry: Equatable {
         switch self {
         case .all:
             return .all
-        case let .filter(filter):
-            return .filter(filter.id)
+        case let .filter(id, _, _):
+            return .filter(id)
         }
     }
     
@@ -424,8 +424,8 @@ enum ChatListFilterTabEntry: Equatable {
         switch self {
         case .all:
             return strings.ChatList_Tabs_AllChats
-        case let .filter(filter):
-            return filter.text
+        case let .filter(_, text, _):
+            return text
         }
     }
     
@@ -433,8 +433,8 @@ enum ChatListFilterTabEntry: Equatable {
         switch self {
         case .all:
             return strings.ChatList_Tabs_All
-        case let .filter(filter):
-            return filter.text
+        case let .filter(_, text, _):
+            return text
         }
     }
 }
@@ -700,8 +700,8 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                     strongSelf.scrollNode.view.panGestureRecognizer.isEnabled = true
                     strongSelf.scrollNode.view.setContentOffset(strongSelf.scrollNode.view.contentOffset, animated: false)
                     switch filter {
-                    case let .filter(filter):
-                        strongSelf.contextGesture?(filter.id, sourceNode, gesture)
+                    case let .filter(id, _, _):
+                        strongSelf.contextGesture?(id, sourceNode, gesture)
                     default:
                         strongSelf.contextGesture?(nil, sourceNode, gesture)
                     }
@@ -716,9 +716,9 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                 unreadCount = count
                 unreadHasUnmuted = true
                 isNoFilter = true
-            case let .filter(filter):
-                unreadCount = filter.unread.value
-                unreadHasUnmuted = filter.unread.hasUnmuted
+            case let .filter(_, _, unread):
+                unreadCount = unread.value
+                unreadHasUnmuted = unread.hasUnmuted
             }
             if !wasAdded && (itemNode.unreadCount != 0) != (unreadCount != 0) {
                 badgeAnimations[filter.id] = (unreadCount != 0) ? .in : .out
@@ -789,7 +789,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
         
         var longTitlesWidth: CGFloat = resolvedSideInset
         for i in 0 ..< tabSizes.count {
-            let (itemId, paneNodeSize, paneNodeShortSize, paneNode, wasAdded) = tabSizes[i]
+            let (_, paneNodeSize, _, _, _) = tabSizes[i]
             longTitlesWidth += paneNodeSize.width
             if i != tabSizes.count - 1 {
                 longTitlesWidth += minSpacing
@@ -837,8 +837,6 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
         
         self.scrollNode.view.contentSize = CGSize(width: leftOffset, height: size.height)
         
-        var previousFrame: CGRect?
-        var nextFrame: CGRect?
         var selectedFrame: CGRect?
         if let selectedFilter = selectedFilter, let currentIndex = reorderedFilters.firstIndex(where: { $0.id == selectedFilter }) {
             func interpolateFrame(from fromValue: CGRect, to toValue: CGRect, t: CGFloat) -> CGRect {

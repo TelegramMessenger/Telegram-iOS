@@ -13,7 +13,6 @@ import TelegramStringFormatting
 import UniversalMediaPlayer
 import ListMessageItem
 import ChatMessageInteractiveMediaBadge
-import ShimmerEffect
 import GridMessageSelectionNode
 
 private let mediaBadgeBackgroundColor = UIColor(white: 0.0, alpha: 0.6)
@@ -49,7 +48,6 @@ private final class VisualMediaItemNode: ASDisplayNode {
     private let imageNode: TransformImageNode
     private var statusNode: RadialStatusNode
     private let mediaBadgeNode: ChatMessageInteractiveMediaBadge
-    private var placeholderNode: ShimmerEffectNode?
     private var selectionNode: GridMessageSelectionNode?
     
     private let fetchStatusDisposable = MetaDisposable()
@@ -117,7 +115,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
         if case .ended = recognizer.state {
             if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
                 if case .tap = gesture {
-                    if let (item, _, _, _) = self.item {
+                    if let _ = self.item {
                         var media: Media?
                         for value in message.media {
                             if let image = value as? TelegramMediaImage {
@@ -179,7 +177,6 @@ private final class VisualMediaItemNode: ASDisplayNode {
     }
     
     func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {
-        self.placeholderNode?.updateAbsoluteRect(absoluteRect, within: containerSize)
     }
     
     func update(size: CGSize, item: VisualMediaItem, theme: PresentationTheme, synchronousLoad: Bool) {
@@ -225,7 +222,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 
                 self.fetchStatusDisposable.set((messageMediaFileStatus(context: context, messageId: message.id, file: file)
                 |> deliverOnMainQueue).start(next: { [weak self] status in
-                    if let strongSelf = self, let (item, _, _, _) = strongSelf.item {
+                    if let strongSelf = self, let _ = strongSelf.item {
                         strongSelf.resourceStatus = status
                         
                         let isStreamable = isMediaStreamable(message: message, media: file)
@@ -302,20 +299,9 @@ private final class VisualMediaItemNode: ASDisplayNode {
             self.selectionNode?.frame = CGRect(origin: CGPoint(), size: size)
             
             self.updateHiddenMedia()
-            
-            if let placeholderNode = self.placeholderNode {
-                self.placeholderNode = nil
-                placeholderNode.removeFromSupernode()
-            }
-        } else if item.isEmpty, self.placeholderNode == nil {
-            let placeholderNode = ShimmerEffectNode()
-            placeholderNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: [.rect(rect: CGRect(origin: CGPoint(), size: size))], size: size)
-            self.addSubnode(placeholderNode)
-            self.placeholderNode = placeholderNode
         }
         
         let imageFrame = CGRect(origin: CGPoint(), size: size)
-        self.placeholderNode?.frame = imageFrame
         
         if let (item, media, _, mediaDimensions) = self.item {
             self.item = (item, media, size, mediaDimensions)
@@ -435,15 +421,6 @@ private final class VisualMediaItem {
     let message: Message?
     let dimensions: CGSize
     let aspectRatio: CGFloat
-    let isEmpty: Bool
-    
-    init(index: UInt32) {
-        self.index = index
-        self.message = nil
-        self.dimensions = CGSize(width: 100.0, height: 100.0)
-        self.aspectRatio = 1.0
-        self.isEmpty = true
-    }
     
     init(message: Message) {
         self.index = nil
@@ -461,7 +438,6 @@ private final class VisualMediaItem {
         }
         self.aspectRatio = aspectRatio
         self.dimensions = dimensions
-        self.isEmpty = false
     }
     
     var stableId: UInt32 {
@@ -741,23 +717,16 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
             break
         default:
             self.mediaItems.removeAll()
-            let loading: Bool
-            if let entries = entries {
-                loading = false
+            
+            if let entries = entries {   
                 for entry in entries {
                     if case let .message(message, _, _, _, _, _, _) = entry {
                         self.mediaItems.append(VisualMediaItem(message: message))
                     }
                 }
-            } else {
-                loading = true
-                for i in 0 ..< 21 {
-                    self.mediaItems.append(VisualMediaItem(index: UInt32(i)))
-                }
             }
             self.itemsLayout = nil
             
-            let wasInitialized = self.initialized
             self.initialized = true
             
             if let (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = self.currentParams {

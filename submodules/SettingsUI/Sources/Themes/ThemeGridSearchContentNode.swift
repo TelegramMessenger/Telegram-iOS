@@ -371,7 +371,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
     override var isSearching: Signal<Bool, NoError> {
         return self._isSearching.get()
     }
-    
+        
     init(context: AccountContext, openResult: @escaping (ChatContextResult) -> Void) {
         self.context = context
         self.queryPromise = Promise<WallpaperSearchQuery>(self.queryValue)

@@ -206,6 +206,8 @@ swift_library(
         "//submodules/ChatMessageInteractiveMediaBadge:ChatMessageInteractiveMediaBadge",
         "//submodules/GalleryData:GalleryData",
         "//submodules/ChatInterfaceState:ChatInterfaceState",
+        "//submodules/AnimatedCountLabelNode:AnimatedCountLabelNode",
+        "//submodules/AnimatedAvatarSetNode:AnimatedAvatarSetNode",
     ],
     visibility = [
         "//visibility:public",

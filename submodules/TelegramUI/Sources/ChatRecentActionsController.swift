@@ -58,6 +58,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, deleteSelectedMessages: {
         }, reportSelectedMessages: {
         }, reportMessages: { _, _ in
+        }, blockMessageAuthor: { _, _ in
         }, deleteMessages: { _, _, f in
             f(.default)
         }, forwardSelectedMessages: {
@@ -125,7 +126,9 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, openScheduledMessages: {
         }, openPeersNearby: {
         }, displaySearchResultsTooltip: { _, _ in
-        }, unarchivePeer: {}, viewReplies: { _, _ in }, statuses: nil)
+        }, unarchivePeer: {
+        }, scrollToTop: {
+        }, viewReplies: { _, _ in }, statuses: nil)
         
         self.navigationItem.titleView = self.titleView
         

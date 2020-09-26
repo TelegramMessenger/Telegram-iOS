@@ -41,11 +41,8 @@ private final class ChatEmptyNodeRegularChatContent: ASDisplayNode, ChatEmptyNod
             
             let text: String
             switch interfaceState.chatLocation {
-            case .peer:
+            case .peer, .replyThread:
                 text = interfaceState.isScheduledMessages ? interfaceState.strings.ScheduledMessages_EmptyPlaceholder : interfaceState.strings.Conversation_EmptyPlaceholder
-            case .replyThread:
-                //TODO:localize
-                text = "No comments here yet"
             }
             
             self.textNode.attributedText = NSAttributedString(string: text, font: messageFont, textColor: serviceColor.primaryText)

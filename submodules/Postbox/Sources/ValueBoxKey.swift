@@ -39,6 +39,7 @@ public struct ValueBoxKey: Equatable, Hashable, CustomStringConvertible, Compara
     }
     
     public func setData(_ offset: Int, value: Data) {
+        assert(offset >= 0 && offset + value.count <= self.length)
         let valueLength = value.count
         value.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
             memcpy(self.memory + offset, bytes, valueLength)
@@ -46,66 +47,78 @@ public struct ValueBoxKey: Equatable, Hashable, CustomStringConvertible, Compara
     }
     
     public func setInt32(_ offset: Int, value: Int32) {
+        assert(offset >= 0 && offset + 4 <= self.length)
         var bigEndianValue = Int32(bigEndian: value)
         memcpy(self.memory + offset, &bigEndianValue, 4)
     }
     
     public func setUInt32(_ offset: Int, value: UInt32) {
+        assert(offset >= 0 && offset + 4 <= self.length)
         var bigEndianValue = UInt32(bigEndian: value)
         memcpy(self.memory + offset, &bigEndianValue, 4)
     }
     
     public func setInt64(_ offset: Int, value: Int64) {
+        assert(offset >= 0 && offset + 8 <= self.length)
         var bigEndianValue = Int64(bigEndian: value)
         memcpy(self.memory + offset, &bigEndianValue, 8)
     }
     
     public func setInt8(_ offset: Int, value: Int8) {
+        assert(offset >= 0 && offset + 1 <= self.length)
         var varValue = value
         memcpy(self.memory + offset, &varValue, 1)
     }
     
     public func setUInt8(_ offset: Int, value: UInt8) {
+        assert(offset >= 0 && offset + 1 <= self.length)
         var varValue = value
         memcpy(self.memory + offset, &varValue, 1)
     }
     
     public func setUInt16(_ offset: Int, value: UInt16) {
+        assert(offset >= 0 && offset + 2 <= self.length)
         var varValue = value
         memcpy(self.memory + offset, &varValue, 2)
     }
     
     public func getInt32(_ offset: Int) -> Int32 {
+        assert(offset >= 0 && offset + 4 <= self.length)
         var value: Int32 = 0
         memcpy(&value, self.memory + offset, 4)
         return Int32(bigEndian: value)
     }
     
     public func getUInt32(_ offset: Int) -> UInt32 {
+        assert(offset >= 0 && offset + 4 <= self.length)
         var value: UInt32 = 0
         memcpy(&value, self.memory + offset, 4)
         return UInt32(bigEndian: value)
     }
     
     public func getInt64(_ offset: Int) -> Int64 {
+        assert(offset >= 0 && offset + 8 <= self.length)
         var value: Int64 = 0
         memcpy(&value, self.memory + offset, 8)
         return Int64(bigEndian: value)
     }
     
     public func getInt8(_ offset: Int) -> Int8 {
+        assert(offset >= 0 && offset + 1 <= self.length)
         var value: Int8 = 0
         memcpy(&value, self.memory + offset, 1)
         return value
     }
     
     public func getUInt8(_ offset: Int) -> UInt8 {
+        assert(offset >= 0 && offset + 1 <= self.length)
         var value: UInt8 = 0
         memcpy(&value, self.memory + offset, 1)
         return value
     }
     
     public func getUInt16(_ offset: Int) -> UInt16 {
+        assert(offset >= 0 && offset + 2 <= self.length)
         var value: UInt16 = 0
         memcpy(&value, self.memory + offset, 2)
         return value
@@ -206,6 +219,7 @@ public struct ValueBoxKey: Equatable, Hashable, CustomStringConvertible, Compara
     }
     
     public func substringValue(_ range: Range<Int>) -> String? {
+        assert(range.lowerBound >= 0 && range.upperBound <= self.length)
         return String(data: Data(bytes: self.memory.advanced(by: range.lowerBound), count: range.count), encoding: .utf8)
     }
     

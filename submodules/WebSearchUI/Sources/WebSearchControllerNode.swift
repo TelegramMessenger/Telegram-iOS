@@ -128,6 +128,7 @@ private func preparedWebSearchRecentTransition(from fromEntries: [WebSearchRecen
 class WebSearchControllerNode: ASDisplayNode {
     private let context: AccountContext
     private let peer: Peer?
+    private let chatLocation: ChatLocation?
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     private var presentationData: PresentationData
@@ -180,13 +181,14 @@ class WebSearchControllerNode: ASDisplayNode {
     
     var presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)?
     
-    init(context: AccountContext, presentationData: PresentationData, controllerInteraction: WebSearchControllerInteraction, peer: Peer?, mode: WebSearchMode) {
+    init(context: AccountContext, presentationData: PresentationData, controllerInteraction: WebSearchControllerInteraction, peer: Peer?, chatLocation: ChatLocation?, mode: WebSearchMode) {
         self.context = context
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         self.presentationData = presentationData
         self.controllerInteraction = controllerInteraction
         self.peer = peer
+        self.chatLocation = chatLocation
         self.mode = mode
         
         self.webSearchInterfaceState = WebSearchInterfaceState(presentationData: context.sharedContext.currentPresentationData.with { $0 })
@@ -694,7 +696,7 @@ class WebSearchControllerNode: ASDisplayNode {
         if self.controllerInteraction.selectionState != nil {
             if let state = self.webSearchInterfaceState.state, state.scope == .images {
                 if let results = self.currentProcessedResults?.results {
-                    presentLegacyWebSearchGallery(context: self.context, peer: self.peer, presentationData: self.presentationData, results: results, current: currentResult, selectionContext: self.controllerInteraction.selectionState, editingContext: self.controllerInteraction.editingState, updateHiddenMedia: { [weak self] id in
+                    presentLegacyWebSearchGallery(context: self.context, peer: self.peer, chatLocation: self.chatLocation, presentationData: self.presentationData, results: results, current: currentResult, selectionContext: self.controllerInteraction.selectionState, editingContext: self.controllerInteraction.editingState, updateHiddenMedia: { [weak self] id in
                         self?.hiddenMediaId.set(.single(id))
                     }, initialLayout: self.containerLayout?.0, transitionHostView: { [weak self] in
                         return self?.gridNode.view

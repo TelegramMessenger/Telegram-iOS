@@ -1120,7 +1120,7 @@
     [_playerItemDisposable setDisposable:[[itemSignal deliverOn:[SQueue mainQueue]] startWithNext:^(AVPlayerItem *playerItem)
     {
         __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
-        if (strongSelf == nil)
+        if (strongSelf == nil || ![playerItem isKindOfClass:[AVPlayerItem class]])
             return;
         
         strongSelf->_player = [AVPlayer playerWithPlayerItem:playerItem];

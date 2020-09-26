@@ -836,10 +836,6 @@ open class NavigationBar: ASDisplayNode {
         
         self.validLayout = (size, defaultHeight, additionalHeight, leftInset, rightInset, appearsHidden)
         
-        if let secondaryContentNode = self.secondaryContentNode {
-//            transition.updateAlpha(node: secondaryContentNode, alpha: appearsHidden ? 0.0 : 1.0)
-        }
-        
         let apparentAdditionalHeight: CGFloat = self.secondaryContentNode != nil ? NavigationBar.defaultSecondaryContentHeight : 0.0
         
         let leftButtonInset: CGFloat = leftInset + 16.0
@@ -1217,8 +1213,8 @@ open class NavigationBar: ASDisplayNode {
     
     public func setSecondaryContentNode(_ secondaryContentNode: ASDisplayNode?, animated: Bool = false) {
         if self.secondaryContentNode !== secondaryContentNode {
-            if let previous = self.secondaryContentNode {
-                if animated && previous.supernode === self.clippingNode {
+            if let previous = self.secondaryContentNode, previous.supernode === self.clippingNode {
+                if animated {
                     previous.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak previous] finished in
                         if finished {
                             previous?.removeFromSupernode()

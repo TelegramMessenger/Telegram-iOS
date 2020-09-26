@@ -126,6 +126,7 @@ public final class WebSearchController: ViewController {
     private let context: AccountContext
     private let mode: WebSearchControllerMode
     private let peer: Peer?
+    private let chatLocation: ChatLocation?
     private let configuration: SearchBotsConfiguration
     
     private var controllerNode: WebSearchControllerNode {
@@ -155,10 +156,11 @@ public final class WebSearchController: ViewController {
         }
     }
     
-    public init(context: AccountContext, peer: Peer?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
+    public init(context: AccountContext, peer: Peer?, chatLocation: ChatLocation?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
         self.context = context
         self.mode = mode
         self.peer = peer
+        self.chatLocation = chatLocation
         self.configuration = configuration
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -319,7 +321,7 @@ public final class WebSearchController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = WebSearchControllerNode(context: self.context, presentationData: self.interfaceState.presentationData, controllerInteraction: self.controllerInteraction!, peer: self.peer, mode: self.mode.mode)
+        self.displayNode = WebSearchControllerNode(context: self.context, presentationData: self.interfaceState.presentationData, controllerInteraction: self.controllerInteraction!, peer: self.peer, chatLocation: self.chatLocation, mode: self.mode.mode)
         self.controllerNode.requestUpdateInterfaceState = { [weak self] animated, f in
             if let strongSelf = self {
                 strongSelf.updateInterfaceState(f)

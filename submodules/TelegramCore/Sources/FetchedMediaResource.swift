@@ -540,7 +540,18 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                                     if let updatedResource = findUpdatedMediaResource(media: item.file, previousMedia: media, resource: resource) {
                                         return postbox.transaction { transaction -> RevalidatedMediaResource in
                                             if let id = media.id {
-                                                updateMessageMedia(transaction: transaction, id: id, media: item.file)
+                                                var attributes = item.file.attributes
+                                                if !attributes.contains(where: { attribute in
+                                                    if case .hintIsValidated = attribute {
+                                                        return true
+                                                    } else {
+                                                        return false
+                                                    }
+                                                }) {
+                                                    attributes.append(.hintIsValidated)
+                                                }
+                                                let file = item.file.withUpdatedAttributes(attributes)
+                                                updateMessageMedia(transaction: transaction, id: id, media: file)
                                             }
                                             return RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil)
                                         }

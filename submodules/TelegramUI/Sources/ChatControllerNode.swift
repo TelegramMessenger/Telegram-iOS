@@ -420,7 +420,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if isLoading != self.isLoadingValue {
             self.isLoadingValue = isLoading
             if isLoading {
-                self.historyNodeContainer.supernode?.insertSubnode(self.loadingNode, aboveSubnode: self.historyNodeContainer)
+                self.historyNodeContainer.supernode?.insertSubnode(self.loadingNode, belowSubnode: self.historyNodeContainer)
                 self.loadingNode.layer.removeAllAnimations()
                 self.loadingNode.alpha = 1.0
                 if animated {
@@ -2734,7 +2734,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
 
                     var forwardingToSameChat = false
-                    if case let .peer(id) = self.chatPresentationInterfaceState.chatLocation, id.namespace == Namespaces.Peer.CloudUser, id != self.context.account.peerId, let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
+                    if case let .peer(id) = self.chatPresentationInterfaceState.chatLocation, id.namespace == Namespaces.Peer.CloudUser, id != self.context.account.peerId, let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds, forwardMessageIds.count == 1 {
                         for messageId in forwardMessageIds {
                             if messageId.peerId == id {
                                 forwardingToSameChat = true

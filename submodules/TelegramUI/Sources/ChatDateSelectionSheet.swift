@@ -92,6 +92,10 @@ private final class ChatDateSelectorItemNode: ActionSheetItemNode {
         self.pickerView.minimumDate = Date(timeIntervalSince1970: 1376438400.0)
         self.pickerView.maximumDate = Date(timeIntervalSinceNow: 2.0)
         
+        if #available(iOS 13.4, *) {
+            self.pickerView.preferredDatePickerStyle = .wheels
+        }
+        
         super.init(theme: theme)
         
         self.view.addSubview(self.pickerView)

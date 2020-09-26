@@ -669,7 +669,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
                                 scrollToEndIfExists = true
                             }
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), subject: .message(messageId), purposefulAction: {
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), subject: .message(id: messageId, highlight: true), purposefulAction: {
                                 self?.deactivateSearch(animated: false)
                             }, scrollToEndIfExists: scrollToEndIfExists, options:  strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : []))
                             strongSelf.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
@@ -1682,45 +1682,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     scrollToTop()
                 }
                                 
-                if let searchContentNode = strongSelf.searchContentNode {
-                    var updatedSearchOptionsImpl: ((ChatListSearchOptions?, Bool) -> Void)?
-                    
-                    if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, navigationController: strongSelf.navigationController as? NavigationController, updatedSearchOptions: { options, hasDate in
-                        updatedSearchOptionsImpl?(options, hasDate)
-                    }) {
+                if let searchContentNode = strongSelf.searchContentNode {                    
+                    if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, navigationController: strongSelf.navigationController as? NavigationController) {
                         let (filterContainerNode, activate) = filterContainerNodeAndActivate
                         strongSelf.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: false)
                         if let parentController = strongSelf.parent as? TabBarController {
                             parentController.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: true)
                         }
                         activate()
-                        
-                        var currentHasSuggestions = true
-                        updatedSearchOptionsImpl = { [weak self, weak filterContainerNode] options, hasSuggestions in
-                            guard let strongSelf = self, let strongFilterContainerNode = filterContainerNode else {
-                                return
-                            }
-                            if currentHasSuggestions != hasSuggestions {
-                                currentHasSuggestions = hasSuggestions
-                            
-                                var node: ASDisplayNode?
-                                if let options = options, options.messageTags != nil && !hasSuggestions {
-                                } else {
-                                    node = strongFilterContainerNode
-                                }
-                                
-                                strongSelf.navigationBar?.setSecondaryContentNode(node, animated: false)
-                                if let parentController = strongSelf.parent as? TabBarController {
-                                    parentController.navigationBar?.setSecondaryContentNode(node, animated: true)
-                                }
-                                
-                                let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
-                                if let layout = strongSelf.validLayout {
-                                    strongSelf.containerLayoutUpdated(layout, transition: transition)
-                                    (strongSelf.parent as? TabBarController)?.updateLayout(transition: transition)
-                                }
-                            }
-                        }
                     }
                 }
                 
@@ -1734,8 +1703,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     
     public func deactivateSearch(animated: Bool) {
         if !self.displayNavigationBar {
+            var completion: (() -> Void)?
             if let searchContentNode = self.searchContentNode {
-                self.chatListDisplayNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
+                completion = self.chatListDisplayNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
             }
             
             let filtersIsEmpty: Bool
@@ -1752,6 +1722,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             
             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .spring) : .immediate
             self.setDisplayNavigationBar(true, transition: transition)
+            
+            completion?()
             
             (self.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.4, curve: .spring))
         }
@@ -1808,7 +1780,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     sourceRect = CGRect(x: sourceRect.minX, y: sourceRect.minY + bounds.minY, width: bounds.width, height: bounds.height)
                     sourceRect.size.height -= UIScreenPixel
                     
-                    let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(messageId.peerId), subject: .message(messageId), botStart: nil, mode: .standard(previewing: true))
+                    let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(messageId.peerId), subject: .message(id: messageId, highlight: true), botStart: nil, mode: .standard(previewing: true))
                     chatController.canReadHistory.set(false)
                     chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                     return (chatController, sourceRect)

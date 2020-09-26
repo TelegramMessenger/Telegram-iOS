@@ -182,7 +182,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                         edited = !attribute.isHidden
                     } else if let attribute = attribute as? ViewCountMessageAttribute {
                         viewCount = attribute.count
-                    } else if let attribute = attribute as? ReplyThreadMessageAttribute {
+                    } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = item.chatLocation {
                         if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
                             dateReplies = Int(attribute.count)
                         }

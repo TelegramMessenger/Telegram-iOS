@@ -574,6 +574,8 @@ private final class CallSessionManagerContext {
                     self.ringingStatesUpdated()
                 }
             }
+        } else {
+            self.contextUpdated(internalId: internalId)
         }
     }
     

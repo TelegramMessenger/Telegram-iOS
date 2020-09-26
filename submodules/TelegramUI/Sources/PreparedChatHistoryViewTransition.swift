@@ -143,8 +143,8 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                         index += 1
                     }
                 }
-            case let .index(scrollIndex, position, directionHint, animated):
-                if case .center = position {
+            case let .index(scrollIndex, position, directionHint, animated, highlight):
+                if case .center = position, highlight {
                     scrolledToIndex = scrollIndex
                 }
                 var index = toView.filteredEntries.count - 1

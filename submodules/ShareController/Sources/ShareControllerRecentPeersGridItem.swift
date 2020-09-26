@@ -17,7 +17,7 @@ final class ShareControllerRecentPeersGridItem: GridItem {
     let controllerInteraction: ShareControllerInteraction
     
     let section: GridSection? = nil
-    let fillsRowWithHeight: (CGFloat, Bool)? = (130.0, true)
+    let fillsRowWithHeight: (CGFloat, Bool)? = (102.0, true)
     
     init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ShareControllerInteraction) {
         self.context = context

@@ -5743,6 +5743,7 @@ Any member of this group will be able to see messages in the channel.";
 
 "Call.AccountIsLoggedOnCurrentDevice" = "Sorry, you can't call %@ because that account is logged in to Telegram on the device you're using for the call.";
 
+"ChatList.Search.FilterChats" = "Chats";
 "ChatList.Search.FilterMedia" = "Media";
 "ChatList.Search.FilterLinks" = "Links";
 "ChatList.Search.FilterFiles" = "Files";
@@ -5770,3 +5771,42 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.InputTextAnonymousPlaceholder" = "Send anonymously";
 
 "DialogList.Replies" = "Replies";
+
+"Conversation.ContextViewReplies_1" = "View %@ Reply";
+"Conversation.ContextViewReplies_any" = "View %@ Replies";
+"Conversation.ContextViewThread" = "View Thread";
+
+"Conversation.ViewReply" = "View Reply";
+
+"Conversation.MessageViewComments_1" = "[%@]Comment";
+"Conversation.MessageViewComments_any" = "[%@]Comments";
+"Conversation.MessageViewCommentsFormat" = "%1$@ %2$@";
+
+"Conversation.TitleCommentsEmpty" = "Comments";
+"Conversation.TitleComments_1" = "[%@]Comment";
+"Conversation.TitleComments_any" = "[%@]Comments";
+"Conversation.TitleCommentsFormat" = "%1$@ %2$@";
+
+"Conversation.TitleRepliesEmpty" = "Replies";
+"Conversation.TitleReplies_1" = "[%@]Comment";
+"Conversation.TitleReplies_any" = "[%@]Comments";
+"Conversation.TitleRepliesFormat" = "%1$@ %2$@";
+
+"Conversation.MessageLeaveComment" = "Leave a Comment";
+"Conversation.MessageLeaveCommentShort" = "Comment";
+
+"Conversation.DiscussionNotStarted" = "No comments here yet...";
+"Conversation.DiscussionStarted" = "Discussion started";
+
+"Conversation.InputTextPlaceholderReply" = "Reply";
+"Conversation.InputTextPlaceholderComment" = "Comment";
+
+"Conversation.TitleNoComments" = "Comments";
+
+"Conversation.ContextMenuBlock" = "Block User";
+
+"Replies.BlockAndDeleteRepliesActionTitle" = "Block and Delete Replies";
+
+"Channel.CommentsGroup.Header" = "Select a group chat that will be used to host comments from your channel.";
+"Channel.CommentsGroup.HeaderSet" = "%@ is selected as the group that will be used to host comments for your channel.";
+"Channel.CommentsGroup.HeaderGroupSet" = "%@ is linking the group as it's discussion board.";

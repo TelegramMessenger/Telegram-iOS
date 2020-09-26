@@ -108,15 +108,16 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                     var peers: [Peer] = []
                     var peerPresences: [PeerId: PeerPresence] = [:]
                     for chat in chats {
-                        if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                        if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
                             peers.append(groupOrChannel)
                         }
                     }
-                    for user in users {
-                        let telegramUser = TelegramUser(user: user)
-                        peers.append(telegramUser)
-                        if let presence = TelegramUserPresence(apiUser: user) {
-                            peerPresences[telegramUser.id] = presence
+                    for apiUser in users {
+                        if let user = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) {
+                            peers.append(user)
+                            if let presence = TelegramUserPresence(apiUser: apiUser) {
+                                peerPresences[user.id] = presence
+                            }
                         }
                     }
                     
@@ -189,7 +190,7 @@ private func wrappedHistoryViewAdditionalData(chatLocation: ChatLocationInput, a
                     result.append(.peerChatState(peerId))
                 }
             }
-        case let .external(peerId, _):
+        case let .external(peerId, _, _):
             if peerId.namespace == Namespaces.Peer.CloudChannel {
                 if result.firstIndex(where: { if case .peerChatState = $0 { return true } else { return false } }) == nil {
                     result.append(.peerChatState(peerId))
@@ -238,7 +239,29 @@ private final class FeaturedStickerPacksContext {
         self.disposable.dispose()
     }
 }
+
+private struct ViewCountContextState {
+    struct ReplyInfo {
+        var commentsPeerId: PeerId?
+        var maxReadIncomingMessageId: MessageId?
+        var maxMessageId: MessageId?
+    }
     
+    var timestamp: Int32
+    var clientId: Int32
+    var result: ReplyInfo?
+    
+    func isStillValidFor(_ other: ViewCountContextState) -> Bool {
+        if other.timestamp > self.timestamp + 30 {
+            return false
+        }
+        if other.clientId > self.clientId {
+            return false
+        }
+        return true
+    }
+}
+
 public final class AccountViewTracker {
     weak var account: Account?
     private let queue = Queue()
@@ -255,7 +278,7 @@ public final class AccountViewTracker {
     private var visibleCallListHoleIds: [MessageIndex: Int] = [:]
     private var visibleCallListHoleDisposables: [MessageIndex: Disposable] = [:]
     
-    private var updatedViewCountMessageIdsAndTimestamps: [MessageId: Int32] = [:]
+    private var updatedViewCountMessageIdsAndTimestamps: [MessageId: ViewCountContextState] = [:]
     private var nextUpdatedViewCountDisposableId: Int32 = 0
     private var updatedViewCountDisposables = DisposableDict<Int32>()
     
@@ -576,14 +599,46 @@ public final class AccountViewTracker {
         }
     }
     
-    public func updateViewCountForMessageIds(messageIds: Set<MessageId>) {
+    public struct UpdatedMessageReplyInfo {
+        var timestamp: Int32
+        var commentsPeerId: PeerId
+        var maxReadIncomingMessageId: MessageId?
+        var maxMessageId: MessageId?
+    }
+    
+    func applyMaxReadIncomingMessageIdForReplyInfo(id: MessageId, maxReadIncomingMessageId: MessageId) {
+        self.queue.async {
+            if var state = self.updatedViewCountMessageIdsAndTimestamps[id], var result = state.result {
+                result.maxReadIncomingMessageId = maxReadIncomingMessageId
+                state.result = result
+                self.updatedViewCountMessageIdsAndTimestamps[id] = state
+            }
+        }
+    }
+    
+    public func replyInfoForMessageId(_ id: MessageId) -> Signal<UpdatedMessageReplyInfo?, NoError> {
+        return Signal { [weak self] subscriber in
+            let state = self?.updatedViewCountMessageIdsAndTimestamps[id]
+            let result = state?.result
+            if let state = state, let result = result, let commentsPeerId = result.commentsPeerId {
+                subscriber.putNext(UpdatedMessageReplyInfo(timestamp: state.timestamp, commentsPeerId: commentsPeerId, maxReadIncomingMessageId: result.maxReadIncomingMessageId, maxMessageId: result.maxMessageId))
+            } else {
+                subscriber.putNext(nil)
+            }
+            subscriber.putCompletion()
+            return EmptyDisposable
+        }
+        |> runOn(self.queue)
+    }
+    
+    public func updateViewCountForMessageIds(messageIds: Set<MessageId>, clientId: Int32) {
         self.queue.async {
             var addedMessageIds: [MessageId] = []
-            let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+            let updatedState = ViewCountContextState(timestamp: Int32(CFAbsoluteTimeGetCurrent()), clientId: clientId, result: nil)
             for messageId in messageIds {
                 let messageTimestamp = self.updatedViewCountMessageIdsAndTimestamps[messageId]
-                if messageTimestamp == nil || messageTimestamp! < timestamp - 5 * 60 {
-                    self.updatedViewCountMessageIdsAndTimestamps[messageId] = timestamp
+                if messageTimestamp == nil || !messageTimestamp!.isStillValidFor(updatedState) {
+                    self.updatedViewCountMessageIdsAndTimestamps[messageId] = updatedState
                     addedMessageIds.append(messageId)
                 }
             }
@@ -593,79 +648,140 @@ public final class AccountViewTracker {
                     self.nextUpdatedViewCountDisposableId += 1
                     
                     if let account = self.account {
-                        let signal = (account.postbox.transaction { transaction -> Signal<Void, NoError> in
-                            if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-                                return account.network.request(Api.functions.messages.getMessagesViews(peer: inputPeer, id: messageIds.map { $0.id }, increment: .boolTrue))
-                                    |> map(Optional.init)
-                                    |> `catch` { _ -> Signal<Api.messages.MessageViews?, NoError> in
-                                        return .single(nil)
-                                    }
-                                    |> mapToSignal { result -> Signal<Void, NoError> in
-                                        guard case let .messageViews(viewCounts, _)? = result else {
-                                            return .complete()
-                                        }
-                                        
-                                        return account.postbox.transaction { transaction -> Void in
-                                            for i in 0 ..< messageIds.count {
-                                                if i < viewCounts.count {
-                                                    if case let .messageViews(_, views, forwards, replies) = viewCounts[i] {
-                                                        transaction.updateMessage(messageIds[i], update: { currentMessage in
-                                                            let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
-                                                            var attributes = currentMessage.attributes
-                                                            var foundReplies = false
-                                                            var commentsChannelId: PeerId?
-                                                            var recentRepliersPeerIds: [PeerId]?
-                                                            var repliesCount: Int32?
-                                                            if let replies = replies {
-                                                                switch replies {
-                                                                case let .messageReplies(_, repliesCountValue, _, recentRepliers, channelId, _, _):
-                                                                    if let channelId = channelId {
-                                                                        commentsChannelId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                                                                    }
-                                                                    repliesCount = repliesCountValue
-                                                                    if let recentRepliers = recentRepliers {
-                                                                        recentRepliersPeerIds = recentRepliers.map { $0.peerId }
-                                                                    } else {
-                                                                        recentRepliersPeerIds = nil
-                                                                    }
-                                                                }
-                                                            }
-                                                            loop: for j in 0 ..< attributes.count {
-                                                                if let attribute = attributes[j] as? ViewCountMessageAttribute {
-                                                                    if let views = views {
-                                                                        attributes[j] = ViewCountMessageAttribute(count: max(attribute.count, Int(views)))
-                                                                    }
-                                                                } else if let _ = attributes[j] as? ForwardCountMessageAttribute {
-                                                                    if let forwards = forwards {
-                                                                        attributes[j] = ForwardCountMessageAttribute(count: Int(forwards))
-                                                                    }
-                                                                } else if let _ = attributes[j] as? ReplyThreadMessageAttribute {
-                                                                    foundReplies = true
-                                                                    if let repliesCount = repliesCount {
-                                                                        attributes[j] = ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsChannelId)
-                                                                    }
-                                                                }
-                                                            }
-                                                            if !foundReplies, let repliesCount = repliesCount {
-                                                                attributes.append(ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsChannelId))
-                                                            }
-                                                            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
-                                                        })
-                                                    }
-                                                }
+                        let signal: Signal<[MessageId: ViewCountContextState], NoError> = (account.postbox.transaction { transaction -> Signal<[MessageId: ViewCountContextState], NoError> in
+                            guard let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) else {
+                                return .complete()
+                            }
+                            return account.network.request(Api.functions.messages.getMessagesViews(peer: inputPeer, id: messageIds.map { $0.id }, increment: .boolTrue))
+                            |> map(Optional.init)
+                            |> `catch` { _ -> Signal<Api.messages.MessageViews?, NoError> in
+                                return .single(nil)
+                            }
+                            |> mapToSignal { result -> Signal<[MessageId: ViewCountContextState], NoError> in
+                                guard case let .messageViews(viewCounts, chats, users)? = result else {
+                                    return .complete()
+                                }
+                                
+                                return account.postbox.transaction { transaction -> [MessageId: ViewCountContextState] in
+                                    var peers: [Peer] = []
+                                    var peerPresences: [PeerId: PeerPresence] = [:]
+                                    
+                                    var resultStates: [MessageId: ViewCountContextState] = [:]
+                                    
+                                    for apiUser in users {
+                                        if let user = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) {
+                                            peers.append(user)
+                                            if let presence = TelegramUserPresence(apiUser: apiUser) {
+                                                peerPresences[user.id] = presence
                                             }
                                         }
                                     }
-                            } else {
-                                return .complete()
+                                    for chat in chats {
+                                        if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
+                                            peers.append(groupOrChannel)
+                                        }
+                                    }
+                                    
+                                    updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                                        return updated
+                                    })
+                                    
+                                    updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                                    
+                                    for i in 0 ..< messageIds.count {
+                                        if i < viewCounts.count {
+                                            if case let .messageViews(_, views, forwards, replies) = viewCounts[i] {
+                                                transaction.updateMessage(messageIds[i], update: { currentMessage in
+                                                    let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+                                                    var attributes = currentMessage.attributes
+                                                    var foundReplies = false
+                                                    var commentsChannelId: PeerId?
+                                                    var recentRepliersPeerIds: [PeerId]?
+                                                    var repliesCount: Int32?
+                                                    var repliesMaxId: Int32?
+                                                    var repliesReadMaxId: Int32?
+                                                    if let replies = replies {
+                                                        switch replies {
+                                                        case let .messageReplies(_, repliesCountValue, _, recentRepliers, channelId, maxId, readMaxId):
+                                                            if let channelId = channelId {
+                                                                commentsChannelId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                                                            }
+                                                            repliesCount = repliesCountValue
+                                                            if let recentRepliers = recentRepliers {
+                                                                recentRepliersPeerIds = recentRepliers.map { $0.peerId }
+                                                            } else {
+                                                                recentRepliersPeerIds = nil
+                                                            }
+                                                            repliesMaxId = maxId
+                                                            repliesReadMaxId = readMaxId
+                                                        }
+                                                    }
+                                                    var maxMessageId: MessageId?
+                                                    if let commentsChannelId = commentsChannelId {
+                                                        if let repliesMaxId = repliesMaxId {
+                                                            maxMessageId = MessageId(peerId: commentsChannelId, namespace: Namespaces.Message.Cloud, id: repliesMaxId)
+                                                        }
+                                                    }
+                                                    loop: for j in 0 ..< attributes.count {
+                                                        if let attribute = attributes[j] as? ViewCountMessageAttribute {
+                                                            if let views = views {
+                                                                attributes[j] = ViewCountMessageAttribute(count: max(attribute.count, Int(views)))
+                                                            }
+                                                        } else if let _ = attributes[j] as? ForwardCountMessageAttribute {
+                                                            if let forwards = forwards {
+                                                                attributes[j] = ForwardCountMessageAttribute(count: Int(forwards))
+                                                            }
+                                                        } else if let attribute = attributes[j] as? ReplyThreadMessageAttribute {
+                                                            foundReplies = true
+                                                            if let repliesCount = repliesCount {
+                                                                var resolvedMaxReadMessageId: MessageId.Id?
+                                                                if let previousMaxReadMessageId = attribute.maxReadMessageId, let repliesReadMaxIdValue = repliesReadMaxId {
+                                                                    resolvedMaxReadMessageId = max(previousMaxReadMessageId, repliesReadMaxIdValue)
+                                                                    repliesReadMaxId = resolvedMaxReadMessageId
+                                                                } else if let repliesReadMaxIdValue = repliesReadMaxId {
+                                                                    resolvedMaxReadMessageId = repliesReadMaxIdValue
+                                                                    repliesReadMaxId = resolvedMaxReadMessageId
+                                                                } else {
+                                                                    resolvedMaxReadMessageId = attribute.maxReadMessageId
+                                                                }
+                                                                attributes[j] = ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsChannelId, maxMessageId: repliesMaxId, maxReadMessageId: resolvedMaxReadMessageId)
+                                                            }
+                                                        }
+                                                    }
+                                                    var maxReadIncomingMessageId: MessageId?
+                                                    if let commentsChannelId = commentsChannelId {
+                                                        if let repliesReadMaxId = repliesReadMaxId {
+                                                            maxReadIncomingMessageId = MessageId(peerId: commentsChannelId, namespace: Namespaces.Message.Cloud, id: repliesReadMaxId)
+                                                        }
+                                                    }
+                                                    resultStates[messageIds[i]] = ViewCountContextState(timestamp: Int32(CFAbsoluteTimeGetCurrent()), clientId: clientId, result: ViewCountContextState.ReplyInfo(commentsPeerId: commentsChannelId, maxReadIncomingMessageId: maxReadIncomingMessageId, maxMessageId: maxMessageId))
+                                                    if !foundReplies, let repliesCount = repliesCount {
+                                                        attributes.append(ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsChannelId, maxMessageId: repliesMaxId, maxReadMessageId: repliesReadMaxId))
+                                                    }
+                                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                                })
+                                            }
+                                        }
+                                    }
+                                    return resultStates
+                                }
                             }
-                        } |> switchToLatest)
+                        }
+                        |> switchToLatest)
                         |> afterDisposed { [weak self] in
                             self?.queue.async {
                                 self?.updatedViewCountDisposables.set(nil, forKey: disposableId)
                             }
                         }
-                        self.updatedViewCountDisposables.set(signal.start(), forKey: disposableId)
+                        |> deliverOn(self.queue)
+                        self.updatedViewCountDisposables.set(signal.start(next: { [weak self] updatedStates in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            for (id, state) in updatedStates {
+                                strongSelf.updatedViewCountMessageIdsAndTimestamps[id] = state
+                            }
+                        }), forKey: disposableId)
                     }
                 }
             }
@@ -876,15 +992,16 @@ public final class AccountViewTracker {
                                     var peerPresences: [PeerId: PeerPresence] = [:]
                                     
                                     for chat in chats {
-                                        if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                                        if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
                                             peers.append(groupOrChannel)
                                         }
                                     }
-                                    for user in users {
-                                        let telegramUser = TelegramUser(user: user)
-                                        peers.append(telegramUser)
-                                        if let presence = TelegramUserPresence(apiUser: user) {
-                                            peerPresences[telegramUser.id] = presence
+                                    for apiUser in users {
+                                        if let user = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) {
+                                            peers.append(user)
+                                            if let presence = TelegramUserPresence(apiUser: apiUser) {
+                                                peerPresences[user.id] = presence
+                                            }
                                         }
                                     }
                                     
@@ -1072,7 +1189,7 @@ public final class AccountViewTracker {
         }
     }
     
-    func polledChannel(peerId: PeerId) -> Signal<Void, NoError> {
+    public func polledChannel(peerId: PeerId) -> Signal<Void, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.queue.async {
@@ -1124,6 +1241,8 @@ public final class AccountViewTracker {
                     strongSelf.updatePolls(viewId: viewId, messageIds: pollMessageIds, messages: pollMessageDict)
                     if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
                         strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0)
+                    } else if case let .external(peerId, _, _) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
+                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0, location: chatLocation)
                     }
                 }
             }
@@ -1137,16 +1256,23 @@ public final class AccountViewTracker {
                             if peerId.namespace == Namespaces.Peer.CloudChannel {
                                 strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)
                             }
-                        case let .external(peerId, _):
+                        case let .external(peerId, _, _):
                             if peerId.namespace == Namespaces.Peer.CloudChannel {
-                                strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)
+                                strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil, location: chatLocation)
                             }
                     }
                 }
             }
         })
         
-        if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
+        let peerId: PeerId
+        switch chatLocation {
+        case let .peer(peerIdValue):
+            peerId = peerIdValue
+        case let .external(peerIdValue, _, _):
+            peerId = peerIdValue
+        }
+        if peerId.namespace == Namespaces.Peer.CloudChannel {
             return Signal { subscriber in
                 let combinedDisposable = MetaDisposable()
                 self.queue.async {
@@ -1162,7 +1288,7 @@ public final class AccountViewTracker {
                         let _ = self.account?.postbox.transaction({ transaction -> Void in
                             if transaction.getPeerChatListIndex(peerId) == nil {
                                 if let message = transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud) {
-                                    transaction.addHole(peerId: peerId, namespace: Namespaces.Message.Cloud, space: .everywhere, range: message.id + 1 ... (Int32.max - 1))
+                                    //transaction.addHole(peerId: peerId, namespace: Namespaces.Message.Cloud, space: .everywhere, range: message.id + 1 ... (Int32.max - 1))
                                 }
                             }
                         }).start()

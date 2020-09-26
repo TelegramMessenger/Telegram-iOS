@@ -182,8 +182,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             switch item.chatLocation {
             case let .peer(peerId):
                 messagePeerId = peerId
-            case let .replyThread(messageId, _, _):
-                messagePeerId = messageId.peerId
+            case let .replyThread(replyThreadMessage):
+                messagePeerId = replyThreadMessage.messageId.peerId
             }
             
             do {
@@ -191,6 +191,10 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     if messagePeerId.isGroupOrChannel && item.message.author != nil {
                         var isBroadcastChannel = false
                         if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                            isBroadcastChannel = true
+                        }
+                        
+                        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.messageId == item.message.id {
                             isBroadcastChannel = true
                         }
                         
@@ -272,7 +276,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 }
             }
             
-            let (videoLayout, videoApply) = makeVideoLayout(ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: item.message, read: item.read, presentationData: item.presentationData, associatedData: item.associatedData, attributes: item.content.firstMessageAttributes), params.width - params.leftInset - params.rightInset - avatarInset, displaySize, .free, automaticDownload)
+            let (videoLayout, videoApply) = makeVideoLayout(ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: item.message, read: item.read, chatLocation: item.chatLocation, presentationData: item.presentationData, associatedData: item.associatedData, attributes: item.content.firstMessageAttributes), params.width - params.leftInset - params.rightInset - avatarInset, displaySize, .free, automaticDownload)
             
             let videoFrame = CGRect(origin: CGPoint(x: (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - videoLayout.contentSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: videoLayout.contentSize)
             
@@ -288,7 +292,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             var ignoreSource = false
             
             if let forwardInfo = item.message.forwardInfo {
-                if item.message.id.peerId != item.context.account.peerId {
+                if !item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                     for attribute in item.message.attributes {
                         if let attribute = attribute as? SourceReferenceMessageAttribute {
                             if attribute.messageId.peerId == forwardInfo.author?.id {
@@ -299,6 +303,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                             break
                         }
                     }
+                } else {
+                    ignoreForward = true
                 }
             }
             
@@ -322,7 +328,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     }
                 }
                 
-                if !ignoreSource, item.message.id.peerId != item.context.account.peerId {
+                if !ignoreSource, !item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                     for attribute in item.message.attributes {
                         if let attribute = attribute as? SourceReferenceMessageAttribute {
                             if let sourcePeer = item.message.peers[attribute.messageId.peerId] {
@@ -337,7 +343,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 }
                 
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-                    if case let .replyThread(replyThreadMessageId, _, _) = item.chatLocation, replyThreadMessageId == replyAttribute.messageId {
+                    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyAttribute.messageId {
                     } else {
                         replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                     }
@@ -666,7 +672,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                     for attribute in item.content.firstMessage.attributes {
                         if let attribute = attribute as? SourceReferenceMessageAttribute {
                             openPeerId = attribute.messageId.peerId
-                            navigate = .chat(textInputState: nil, subject: .message(attribute.messageId), peekData: nil)
+                            navigate = .chat(textInputState: nil, subject: .message(id: attribute.messageId, highlight: true), peekData: nil)
                         }
                     }
                     
@@ -712,8 +718,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                 }
                             }
                             item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
-                        } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
-                            item.controllerInteraction.openPeer(id, .info, nil)
+                        } else if let peer = forwardInfo.source ?? forwardInfo.author {
+                            item.controllerInteraction.openPeer(peer.id, peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil)
                         } else if let _ = forwardInfo.authorSignature {
                             item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
                         }
@@ -742,13 +748,15 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
                 for attribute in item.message.attributes {
                     if let _ = attribute as? ReplyThreadMessageAttribute {
-                        item.controllerInteraction.openMessageReplies(item.message.id)
+                        item.controllerInteraction.openMessageReplies(item.message.id, true, false)
                         return
                     }
                 }
             }
             
-            if item.content.firstMessage.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
+            if item.content.firstMessage.id.peerId.isReplies {
+                item.controllerInteraction.openReplyThreadOriginalMessage(item.content.firstMessage)
+            } else if item.content.firstMessage.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                 for attribute in item.content.firstMessage.attributes {
                     if let attribute = attribute as? SourceReferenceMessageAttribute {
                         item.controllerInteraction.navigateToMessage(item.content.firstMessage.id, attribute.messageId)
@@ -847,6 +855,10 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     
     override func updateSelectionState(animated: Bool) {
         guard let item = self.item else {
+            return
+        }
+        
+        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == item.message.id {
             return
         }
         
