@@ -19,6 +19,8 @@ public final class ListMessageItemInteraction {
     let longTap: (ChatControllerInteractionLongTapAction, Message?) -> Void
     let getHiddenMedia: () -> [MessageId: [Media]]
     
+    public var searchTextHighightState: String?
+    
     public init(openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool, openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void, toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void, openUrl: @escaping (String, Bool, Bool?, Message?) -> Void, openInstantPage: @escaping (Message, ChatMessageItemAssociatedData?) -> Void, longTap: @escaping (ChatControllerInteractionLongTapAction, Message?) -> Void, getHiddenMedia: @escaping () -> [MessageId: [Media]]) {
         self.openMessage = openMessage
         self.openMessageContextMenu = openMessageContextMenu

@@ -442,6 +442,13 @@ public final class ChatListNode: ListView {
     
     private let viewProcessingQueue = Queue()
     private var chatListView: ChatListNodeView?
+    var entriesCount: Int {
+        if let chatListView = self.chatListView {
+            return chatListView.filteredEntries.count
+        } else {
+            return 0
+        }
+    }
     private var interaction: ChatListNodeInteraction?
     
     private var dequeuedInitialTransitionOnLayout = false

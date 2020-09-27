@@ -54,6 +54,8 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
     
     private var appliedItem: ListMessageItem?
     
+    private var cachedChatListSearchResult: CachedChatListSearchResult?
+    
     public required init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
@@ -212,6 +214,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
         let currentIconImageRepresentation = self.currentIconImageRepresentation
         
         let currentItem = self.appliedItem
+        let currentChatListSearchResult = self.cachedChatListSearchResult
         
         let selectionNodeLayout = ItemListSelectableControlNode.asyncLayout(self.selectionNode)
         
@@ -437,6 +440,36 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                         }
                     }
                 }
+            }
+            
+            var chatListSearchResult: CachedChatListSearchResult?
+            if let searchQuery = item.interaction.searchTextHighightState {
+                if let cached = currentChatListSearchResult, cached.matches(text: item.message.text, searchQuery: searchQuery) {
+                    chatListSearchResult = cached
+                } else {
+                    let (ranges, text) = findSubstringRanges(in: item.message.text, query: searchQuery)
+                    chatListSearchResult = CachedChatListSearchResult(text: text, searchQuery: searchQuery, resultRanges: ranges)
+                }
+            } else {
+                chatListSearchResult = nil
+            }
+            
+            if let chatListSearchResult = chatListSearchResult, !chatListSearchResult.resultRanges.isEmpty, let firstRange = chatListSearchResult.resultRanges.first {
+                var text = NSMutableAttributedString(string: item.message.text, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
+                for range in chatListSearchResult.resultRanges {
+                    let stringRange = NSRange(range, in: chatListSearchResult.text)
+                    if stringRange.location >= 0 && stringRange.location + stringRange.length <= text.length {
+                        text.addAttribute(.foregroundColor, value: item.presentationData.theme.theme.chatList.messageHighlightedTextColor, range: stringRange)
+                    }
+                }
+                
+                let firstRangeOrigin = item.message.text.distance(from: item.message.text.startIndex, to: firstRange.lowerBound)
+                if firstRangeOrigin > 20 {
+                    text = text.attributedSubstring(from: NSMakeRange(firstRangeOrigin - 10, text.length - firstRangeOrigin + 10)).mutableCopy() as! NSMutableAttributedString
+                    text.insert(NSAttributedString(string: "\u{2026}", attributes: [NSAttributedString.Key.font: descriptionFont, NSAttributedString.Key.foregroundColor: item.presentationData.theme.theme.list.itemSecondaryTextColor]), at: 0)
+                }
+                
+                descriptionText = text
             }
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)

@@ -123,6 +123,28 @@ private enum FileIconImage: Equatable {
     }
 }
 
+final class CachedChatListSearchResult {
+    let text: String
+    let searchQuery: String
+    let resultRanges: [Range<String.Index>]
+    
+    init(text: String, searchQuery: String, resultRanges: [Range<String.Index>]) {
+        self.text = text
+        self.searchQuery = searchQuery
+        self.resultRanges = resultRanges
+    }
+    
+    func matches(text: String, searchQuery: String) -> Bool {
+        if self.text != text {
+            return false
+        }
+        if self.searchQuery != searchQuery {
+            return false
+        }
+        return true
+    }
+}
+
 public final class ListMessageFileItemNode: ListMessageNode {
     private let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
@@ -139,6 +161,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
     private var selectionNode: ItemListSelectableControlNode?
     
     public let titleNode: TextNode
+    public let textNode: TextNode
     public let descriptionNode: TextNode
     private let descriptionProgressNode: ImmediateTextNode
     public let dateNode: TextNode
@@ -170,6 +193,8 @@ public final class ListMessageFileItemNode: ListMessageNode {
     private var contentSizeValue: CGSize?
     private var currentLeftOffset: CGFloat = 0.0
     
+    private var cachedChatListSearchResult: CachedChatListSearchResult?
+    
     public required init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
@@ -189,6 +214,9 @@ public final class ListMessageFileItemNode: ListMessageNode {
         
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
+
+        self.textNode = TextNode()
+        self.textNode.isUserInteractionEnabled = false
         
         self.descriptionNode = TextNode()
         self.descriptionNode.isUserInteractionEnabled = false
@@ -231,6 +259,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
         self.contextSourceNode.contentNode.addSubnode(self.extractedBackgroundImageNode)
         self.contextSourceNode.contentNode.addSubnode(self.offsetContainerNode)
         self.offsetContainerNode.addSubnode(self.titleNode)
+        self.offsetContainerNode.addSubnode(self.textNode)
         self.offsetContainerNode.addSubnode(self.descriptionNode)
         self.offsetContainerNode.addSubnode(self.descriptionProgressNode)
         self.offsetContainerNode.addSubnode(self.dateNode)
@@ -307,6 +336,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
     
     override public func asyncLayout() -> (_ item: ListMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let titleNodeMakeLayout = TextNode.asyncLayout(self.titleNode)
+        let textNodeMakeLayout = TextNode.asyncLayout(self.textNode)
         let descriptionNodeMakeLayout = TextNode.asyncLayout(self.descriptionNode)
         let extensionIconTextMakeLayout = TextNode.asyncLayout(self.extensionIconText)
         let dateNodeMakeLayout = TextNode.asyncLayout(self.dateNode)
@@ -315,6 +345,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
         let currentMedia = self.currentMedia
         let currentMessage = self.message
         let currentIconImage = self.currentIconImage
+        let currentChatListSearchResult = self.cachedChatListSearchResult
         
         let currentItem = self.appliedItem
         
@@ -547,6 +578,36 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 }
             }
             
+            var chatListSearchResult: CachedChatListSearchResult?
+            if let searchQuery = item.interaction.searchTextHighightState {
+                if let cached = currentChatListSearchResult, cached.matches(text: item.message.text, searchQuery: searchQuery) {
+                    chatListSearchResult = cached
+                } else {
+                    let (ranges, text) = findSubstringRanges(in: item.message.text, query: searchQuery)
+                    chatListSearchResult = CachedChatListSearchResult(text: text, searchQuery: searchQuery, resultRanges: ranges)
+                }
+            } else {
+                chatListSearchResult = nil
+            }
+            
+            var captionText: NSMutableAttributedString?
+            if let chatListSearchResult = chatListSearchResult, !chatListSearchResult.resultRanges.isEmpty, let firstRange = chatListSearchResult.resultRanges.first {
+                let text = NSMutableAttributedString(string: item.message.text, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
+                for range in chatListSearchResult.resultRanges {
+                    let stringRange = NSRange(range, in: chatListSearchResult.text)
+                    if stringRange.location >= 0 && stringRange.location + stringRange.length <= text.length {
+                        text.addAttribute(.foregroundColor, value: item.presentationData.theme.theme.chatList.messageHighlightedTextColor, range: stringRange)
+                    }
+                }
+                captionText = text
+                
+                let firstRangeOrigin = item.message.text.distance(from: item.message.text.startIndex, to: firstRange.lowerBound)
+                if firstRangeOrigin > 20 {
+                    captionText = text.attributedSubstring(from: NSMakeRange(firstRangeOrigin - 10, text.length - firstRangeOrigin + 10)).mutableCopy() as? NSMutableAttributedString
+                    captionText?.insert(NSAttributedString(string: "\u{2026}", attributes: [NSAttributedString.Key.font: descriptionFont, NSAttributedString.Key.foregroundColor: item.presentationData.theme.theme.list.itemSecondaryTextColor]), at: 0)
+                }
+            }
+            
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
             let dateText = stringForRelativeTimestamp(strings: item.presentationData.strings, relativeTimestamp: item.message.timestamp, relativeTo: timestamp, dateTimeFormat: item.presentationData.dateTimeFormat)
             let dateAttributedString = NSAttributedString(string: dateText, font: dateFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
@@ -554,6 +615,8 @@ public final class ListMessageFileItemNode: ListMessageNode {
             let (dateNodeLayout, dateNodeApply) = dateNodeMakeLayout(TextNodeLayoutArguments(attributedString: dateAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 12.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (titleNodeLayout, titleNodeApply) = titleNodeMakeLayout(TextNodeLayoutArguments(attributedString: titleText, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .middle, constrainedSize: CGSize(width: params.width - leftInset - leftOffset - rightInset - dateNodeLayout.size.width - 4.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (textNodeLayout, textNodeApply) = textNodeMakeLayout(TextNodeLayoutArguments(attributedString: captionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 30.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(TextNodeLayoutArguments(attributedString: descriptionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 30.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -600,7 +663,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 insets.top += header.height
             }
             
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 8.0 * 2.0 + titleNodeLayout.size.height + 3.0 + descriptionNodeLayout.size.height), insets: insets)
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 8.0 * 2.0 + titleNodeLayout.size.height + 3.0 + descriptionNodeLayout.size.height + (textNodeLayout.size.height > 0.0 ? textNodeLayout.size.height + 3.0 : 0.0)), insets: insets)
             
             return (nodeLayout, { animation in
                 if let strongSelf = self {
@@ -683,7 +746,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         }
                     }
                     
-                    transition.updateFrame(node: strongSelf.descriptionNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset + descriptionOffset, y: strongSelf.titleNode.frame.maxY + 1.0), size: descriptionNodeLayout.size))
+                    transition.updateFrame(node: strongSelf.textNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset + descriptionOffset, y: strongSelf.titleNode.frame.maxY + 1.0), size: textNodeLayout.size))
+                    let _ = textNodeApply()
+                    
+                    transition.updateFrame(node: strongSelf.descriptionNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset + descriptionOffset, y: strongSelf.titleNode.frame.maxY + 1.0 + (textNodeLayout.size.height > 0.0 ? textNodeLayout.size.height + 3.0 : 0.0)), size: descriptionNodeLayout.size))
                     let _ = descriptionNodeApply()
                     
                     let _ = dateNodeApply()

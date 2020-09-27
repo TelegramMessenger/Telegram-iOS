@@ -1682,12 +1682,19 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     scrollToTop()
                 }
                                 
+                var displaySearchFilters = true
+                if strongSelf.chatListDisplayNode.containerNode.mainItemNode.entriesCount < 10 {
+                    displaySearchFilters = false
+                }
+                
                 if let searchContentNode = strongSelf.searchContentNode {                    
-                    if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, navigationController: strongSelf.navigationController as? NavigationController) {
+                    if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, displaySearchFilters: displaySearchFilters, navigationController: strongSelf.navigationController as? NavigationController) {
                         let (filterContainerNode, activate) = filterContainerNodeAndActivate
-                        strongSelf.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: false)
-                        if let parentController = strongSelf.parent as? TabBarController {
-                            parentController.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: true)
+                        if displaySearchFilters {
+                            strongSelf.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: false)
+                            if let parentController = strongSelf.parent as? TabBarController {
+                                parentController.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: true)
+                            }
                         }
                         activate()
                     }

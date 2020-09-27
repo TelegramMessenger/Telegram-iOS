@@ -83,8 +83,7 @@ func suggestDates(for string: String, strings: PresentationStrings, dateTimeForm
             }
         } else {
             do {
-                let dd = try NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue)
-                if let match = dd.firstMatch(in: string, options: [], range: NSMakeRange(0, string.utf16.count)), let date = match.date, date > telegramReleaseDate {
+                func process(_ date: Date) {
                     var resultDate = date
                     if resultDate > now && !calendar.isDate(resultDate, equalTo: now, toGranularity: .year) {
                         if let date = calendar.date(byAdding: .year, value: -1, to: resultDate) {
@@ -102,6 +101,12 @@ func suggestDates(for string: String, strings: PresentationStrings, dateTimeForm
                     } else if resultDate < now {
                         result.append((resultDate, nil))
                     }
+                }
+                let dd = try NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue)
+                if let match = dd.firstMatch(in: string, options: [], range: NSMakeRange(0, string.utf16.count)), let date = match.date, date > telegramReleaseDate {
+                    process(date)
+                } else if let match = dd.firstMatch(in: string.replacingOccurrences(of: ".", with: "/"), options: [], range: NSMakeRange(0, string.utf16.count)), let date = match.date, date > telegramReleaseDate {
+                    process(date)
                 }
             } catch {
                 

@@ -431,6 +431,10 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         return self.currentItemNodeValue!.listNode
     }
     
+    var mainItemNode: ChatListNode {
+        return self.itemNodes[.all]!.listNode
+    }
+    
     private let currentItemStateValue = Promise<(state: ChatListNodeState, filterId: Int32?)>()
     var currentItemState: Signal<(state: ChatListNodeState, filterId: Int32?), NoError> {
         return self.currentItemStateValue.get()
@@ -1146,7 +1150,7 @@ final class ChatListControllerNode: ASDisplayNode {
         }
     }
     
-    func activateSearch(placeholderNode: SearchBarPlaceholderNode, navigationController: NavigationController?) -> (ASDisplayNode, () -> Void)? {
+    func activateSearch(placeholderNode: SearchBarPlaceholderNode, displaySearchFilters: Bool, navigationController: NavigationController?) -> (ASDisplayNode, () -> Void)? {
         guard let (containerLayout, _, _, cleanNavigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
             return nil
         }

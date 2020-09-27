@@ -504,7 +504,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
             case let .message(message, peer, readState, presentationData, totalCount, selected, displayCustomHeader):
                 let header = ChatListSearchItemHeader(type: .messages(totalCount), theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
                 let selection: ChatHistoryMessageSelection = selected.flatMap { .selectable(selected: $0) } ?? .none
-                if let tagMask = tagMask, tagMask != .photoOrVideo && (searchQuery?.isEmpty ?? true) {
+                if let tagMask = tagMask, tagMask != .photoOrVideo {
                     return ListMessageItem(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .builtin(WallpaperSettings())), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0.0, auxiliaryRadius: 0.0, mergeBubbleCorners: false)), context: context, chatLocation: .peer(peer.peerId), interaction: listInteraction, message: message, selection: selection, displayHeader: enableHeaders && !displayCustomHeader, customHeader: nil, hintIsLink: tagMask == .webPage, isGlobalSearchResult: true)
                 } else {
                     return ChatListItem(presentationData: presentationData, context: context, peerGroupId: .root, filterData: nil, index: ChatListIndex(pinningIndex: nil, messageIndex: message.index), content: .peer(messages: [message], peer: peer, combinedReadState: readState, isRemovedFromTotalUnreadCount: false, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(), embeddedState: nil, inputActivities: nil, promoInfo: nil, ignoreUnreadBadge: true, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: tagMask == nil ? header : nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
@@ -779,9 +779,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.addSubnode(self.recentListNode)
         self.addSubnode(self.listNode)
         self.addSubnode(self.mediaNode)
-        if key != .chats {
-            self.addSubnode(self.shimmerNode)
-        }
+        self.addSubnode(self.shimmerNode)
         self.addSubnode(self.mediaAccessoryPanelContainer)
         
         self.addSubnode(self.emptyResultsAnimationNode)
@@ -1285,8 +1283,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         let previousSelectedMessages = Atomic<Set<MessageId>?>(value: nil)
         
         let _ = (searchQuery
-        |> deliverOnMainQueue).start(next: { [weak self, weak chatListInteraction] query in
+        |> deliverOnMainQueue).start(next: { [weak self, weak listInteraction, weak chatListInteraction] query in
             self?.searchQueryValue = query
+            listInteraction?.searchTextHighightState = query
             chatListInteraction?.searchTextHighightState = query
         })
         
@@ -1817,7 +1816,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         let insets = UIEdgeInsets(top: topPanelHeight, left: sideInset, bottom: bottomInset, right: sideInset)
         
         self.shimmerNode.frame = CGRect(origin: CGPoint(x: overflowInset, y: topInset), size: CGSize(width: size.width - overflowInset * 2.0, height: size.height))
-        self.shimmerNode.update(context: self.context, size: CGSize(width: size.width - overflowInset * 2.0, height: size.height), presentationData: self.presentationData, key: (self.searchQueryValue?.isEmpty ?? true) ? self.key : .chats, transition: transition)
+        self.shimmerNode.update(context: self.context, size: CGSize(width: size.width - overflowInset * 2.0, height: size.height), presentationData: self.presentationData, key: !(self.searchQueryValue?.isEmpty ?? true) && self.key == .media ? .chats : self.key, transition: transition)
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         self.recentListNode.frame = CGRect(origin: CGPoint(), size: size)
@@ -1995,7 +1994,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     strongSelf.emptyResultsTextNode.isHidden = !emptyResults
                     strongSelf.emptyResultsAnimationNode.visibility = emptyResults
                                              
-                    ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).updateAlpha(node: strongSelf.shimmerNode, alpha: transition.isLoading ? 1.0 : 0.0)
+                    let displayPlaceholder = transition.isLoading && (strongSelf.key != .chats || strongSelf.searchOptionsValue?.peer != nil || strongSelf.searchOptionsValue?.minDate != nil || strongSelf.searchOptionsValue?.maxDate != nil)
+                    ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).updateAlpha(node: strongSelf.shimmerNode, alpha: displayPlaceholder ? 1.0 : 0.0)
            
                     strongSelf.recentListNode.isHidden = displayingResults || strongSelf.peersFilter.contains(.excludeRecent)
 //                    strongSelf.dimNode.isHidden = displayingResults
