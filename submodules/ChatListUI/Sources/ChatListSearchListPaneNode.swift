@@ -25,6 +25,7 @@ import InstantPageUI
 import GalleryData
 import AppBundle
 import ShimmerEffect
+import ChatListSearchRecentPeersNode
 
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers
@@ -438,7 +439,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                 }, contextAction: peerContextAction.flatMap { peerContextAction in
                     return { node, gesture in
                         if let chatPeer = chatPeer, chatPeer.id.namespace != Namespaces.Peer.SecretChat {
-                            peerContextAction(chatPeer, .search, node, gesture)
+                            peerContextAction(chatPeer, .search(nil), node, gesture)
                         } else {
                             gesture?.cancel()
                         }
@@ -500,7 +501,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                     interaction.peerSelected(peer.peer, nil)
                 }, contextAction: peerContextAction.flatMap { peerContextAction in
                     return { node, gesture in
-                        peerContextAction(peer.peer, .search, node, gesture)
+                        peerContextAction(peer.peer, .search(nil), node, gesture)
                     }
                 })
             case let .message(message, peer, readState, presentationData, totalCount, selected, displayCustomHeader):
@@ -607,7 +608,7 @@ private struct ChatListSearchMessagesContext {
 public enum ChatListSearchContextActionSource {
     case recentPeers
     case recentSearch
-    case search
+    case search(MessageId?)
 }
 
 public struct ChatListSearchOptions {
@@ -1221,9 +1222,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 return
             }
             switch item.content {
-            case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _):
-                if let peer = peer.peer {
-                    peerContextAction(peer, .search, node, gesture)
+            case let .peer(messages, peer, _, _, _, _, _, _, _, _, _, _):
+                if let peer = peer.peer, let message = messages.first {
+                    peerContextAction(peer, .search(message.id), node, gesture)
                 }
             case .groupReference:
                 gesture?.cancel()
@@ -1370,10 +1371,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 }
                 strongSelf.searchCurrentMessages = messages
                 
-                if !strongSelf.didSetReady {
-                    strongSelf.ready.set(.single(true))
-                    strongSelf.didSetReady = true
-                } else if tagMask == nil {
+                if strongSelf.didSetReady && tagMask == nil {
                     interaction.updateSuggestedPeers(Array(peers.prefix(8)), strongSelf.key)
                 }
             }
@@ -1915,7 +1913,26 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 options.insert(.AnimateInsertion)
             }
             
-            self.recentListNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
+            self.recentListNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                if !strongSelf.didSetReady && !strongSelf.recentListNode.isHidden {
+                    var ready: Signal<Bool, NoError>?
+                    strongSelf.recentListNode.forEachItemNode { node in
+                        if let node = node as? ChatListSearchRecentPeersNode {
+                            ready = node.isReady
+                        }
+                    }
+                    
+                    if let ready = ready {
+                        strongSelf.ready.set(ready)
+                    } else {
+                        strongSelf.ready.set(.single(true))
+                    }
+                    strongSelf.didSetReady = true
+                }
             })
         }
     }
@@ -2002,6 +2019,11 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     strongSelf.recentListNode.isHidden = displayingResults || strongSelf.peersFilter.contains(.excludeRecent)
 //                    strongSelf.dimNode.isHidden = displayingResults
                     strongSelf.backgroundColor = !displayingResults && strongSelf.peersFilter.contains(.excludeRecent) ? nil : strongSelf.presentationData.theme.chatList.backgroundColor
+                    
+                    if !strongSelf.didSetReady && strongSelf.recentListNode.isHidden {
+                        strongSelf.ready.set(.single(true))
+                        strongSelf.didSetReady = true
+                    }
                 }
             })
         }

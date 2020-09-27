@@ -122,6 +122,12 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
     private var items: [ListViewItem] = []
     private var queuedTransitions: [ChatListSearchRecentNodeTransition] = []
     
+    private let ready = Promise<Bool>()
+    private var didSetReady: Bool = false
+    public var isReady: Signal<Bool, NoError> {
+        return self.ready.get()
+    }
+    
     public init(context: AccountContext, theme: PresentationTheme, mode: HorizontalPeerItemMode, strings: PresentationStrings, peerSelected: @escaping (Peer) -> Void, peerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, share: Bool = false) {
         self.theme = theme
         self.strings = strings
@@ -207,6 +213,11 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
                 let transition = preparedRecentPeersTransition(context: context, mode: mode, peerSelected: peerSelected, peerContextAction: peerContextAction, isPeerSelected: isPeerSelected, from: previous.swap(entries), to: entries, firstTime: !animated, animated: animated)
 
                 strongSelf.enqueueTransition(transition)
+                
+                if !strongSelf.didSetReady {
+                    strongSelf.ready.set(.single(true))
+                    strongSelf.didSetReady = true
+                }
             }
         }))
         if case .actionSheet = mode {

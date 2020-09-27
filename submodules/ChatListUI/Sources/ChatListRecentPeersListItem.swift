@@ -69,6 +69,11 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
     
     private var item: ChatListRecentPeersListItem?
     
+    private let ready = Promise<Bool>()
+    public var isReady: Signal<Bool, NoError> {
+        return self.ready.get()
+    }
+    
     required init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
@@ -124,6 +129,7 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
                         }, isPeerSelected: { _ in
                             return false
                         })
+                        strongSelf.ready.set(peersNode.isReady)
                         strongSelf.peersNode = peersNode
                         strongSelf.addSubnode(peersNode)
                     }
