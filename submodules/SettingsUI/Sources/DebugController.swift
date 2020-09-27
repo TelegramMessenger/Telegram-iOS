@@ -176,7 +176,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         let arguments = arguments as! DebugControllerArguments
         switch self {
         case let .sendLogs(theme):
-            return ItemListDisclosureItem(presentationData: presentationData, title: "Send Logs", label: "", sectionId: self.section, style: .blocks, action: {
+            return ItemListDisclosureItem(presentationData: presentationData, title: "Send Logs (Up to 40 MB)", label: "", sectionId: self.section, style: .blocks, action: {
                 let _ = (Logger.shared.collectLogs()
                 |> deliverOnMainQueue).start(next: { logs in
                     let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
@@ -193,12 +193,29 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                 if let strongController = controller {
                                     strongController.dismiss()
                                     
-                                    let messages = logs.map { (name, path) -> EnqueueMessage in
-                                        let id = arc4random64()
-                                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
-                                        return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                                    let lineFeed = "\n".data(using: .utf8)!
+                                    var logData: Data = Data()
+                                    for (name, path) in logs {
+                                        if !logData.isEmpty {
+                                            logData.append(lineFeed)
+                                            logData.append(lineFeed)
+                                        }
+                                        
+                                        logData.append("------ File: \(name) ------\n".data(using: .utf8)!)
+                                        
+                                        if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                                            logData.append(data)
+                                        }
                                     }
-                                    let _ = enqueueMessages(account: context.account, peerId: peerId, messages: messages).start()
+                                    
+                                    let id = arc4random64()
+                                    let fileResource = LocalFileMediaResource(fileId: id, size: logData.count, isSecretRelated: false)
+                                    context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: logData)
+                                    
+                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: logData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt")])
+                                    let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                                    
+                                    let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
                                 }
                             }
                             arguments.pushController(controller)
@@ -227,7 +244,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 })
             })
         case let .sendOneLog(theme):
-            return ItemListDisclosureItem(presentationData: presentationData, title: "Send Latest Log", label: "", sectionId: self.section, style: .blocks, action: {
+            return ItemListDisclosureItem(presentationData: presentationData, title: "Send Latest Logs (Up to 4 MB)", label: "", sectionId: self.section, style: .blocks, action: {
                 let _ = (Logger.shared.collectLogs()
                     |> deliverOnMainQueue).start(next: { logs in
                         let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
@@ -244,14 +261,39 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                     if let strongController = controller {
                                         strongController.dismiss()
                                         
-                                        let updatedLogs = logs.last.flatMap({ [$0] }) ?? []
+                                        let lineFeed = "\n".data(using: .utf8)!
+                                        var logData: Data = Data()
                                         
-                                        let messages = updatedLogs.map { (name, path) -> EnqueueMessage in
-                                            let id = arc4random64()
-                                            let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: name)])
-                                            return .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                                        var latestLogs: [(String, String)] = []
+                                        if logs.count < 2 {
+                                            latestLogs = logs
+                                        } else {
+                                            for i in (logs.count - 2) ..< logs.count {
+                                                latestLogs.append(logs[i])
+                                            }
                                         }
-                                        let _ = enqueueMessages(account: context.account, peerId: peerId, messages: messages).start()
+                                        
+                                        for (name, path) in latestLogs {
+                                            if !logData.isEmpty {
+                                                logData.append(lineFeed)
+                                                logData.append(lineFeed)
+                                            }
+                                            
+                                            logData.append("------ File: \(name) ------\n".data(using: .utf8)!)
+                                            
+                                            if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                                                logData.append(data)
+                                            }
+                                        }
+                                        
+                                        let id = arc4random64()
+                                        let fileResource = LocalFileMediaResource(fileId: id, size: logData.count, isSecretRelated: false)
+                                        context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: logData)
+                                        
+                                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: logData.count, attributes: [.FileName(fileName: "Log-iOS-Short.txt")])
+                                        let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                                        
+                                        let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
                                     }
                                 }
                                 arguments.pushController(controller)
