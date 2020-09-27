@@ -473,7 +473,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             filters = [.chats, .media, .links, .files, .music, .voice]
         }
         
-        self.filterContainerNode.update(size: CGSize(width: layout.size.width - 40.0, height: 38.0), sideInset: layout.safeInsets.left - 20.0, filters: filters.map { .filter($0) }, selectedFilter: self.selectedFilterKey, transitionFraction: self.transitionFraction, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
+        let overflowInset: CGFloat = 20.0
+        self.filterContainerNode.update(size: CGSize(width: layout.size.width - overflowInset * 2.0, height: 38.0), sideInset: layout.safeInsets.left - overflowInset, filters: filters.map { .filter($0) }, selectedFilter: self.selectedFilterKey, transitionFraction: self.transitionFraction, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
         
         if let selectedMessageIds = self.stateValue.selectedMessageIds {
             var wasAdded = false
@@ -527,6 +528,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 self.addSubnode(selectionPanelNode)
             }
             selectionPanelNode.selectedMessages = selectedMessageIds
+            
             let panelHeight = selectionPanelNode.update(layout: layout, presentationData: self.presentationData, transition: wasAdded ? .immediate : transition)
             let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight))
             if wasAdded {

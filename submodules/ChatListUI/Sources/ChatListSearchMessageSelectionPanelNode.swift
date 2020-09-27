@@ -134,8 +134,8 @@ final class ChatListSearchMessageSelectionPanelNode: ASDisplayNode {
        
         let width = layout.size.width
         let insets = layout.insets(options: [])
-        let leftInset = insets.left
-        let rightInset = insets.left
+        let leftInset = insets.left + layout.safeInsets.left
+        let rightInset = insets.right + layout.safeInsets.right
        
         let panelHeight: CGFloat
         if case .regular = layout.metrics.widthClass, case .regular = layout.metrics.heightClass {

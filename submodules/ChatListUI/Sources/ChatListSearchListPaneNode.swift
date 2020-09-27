@@ -571,6 +571,8 @@ public func chatListSearchContainerPreparedTransition(from fromEntries: [ChatLis
 private struct ChatListSearchListPaneNodeState: Equatable {
     var expandLocalSearch: Bool = false
     var expandGlobalSearch: Bool = false
+    var deletedMessageIds = Set<MessageId>()
+    var deletedGlobalMessageIds = Set<Int32>()
 }
 
 private func doesPeerMatchFilter(peer: Peer, filter: ChatListNodePeersFilter) -> Bool {
@@ -660,6 +662,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     private let searchStatePromise = ValuePromise<ChatListSearchListPaneNodeState>()
     private let searchContextValue = Atomic<ChatListSearchMessagesContext?>(value: nil)
     var searchCurrentMessages: [Message]?
+    
+    private var deletedMessagesDisposable: Disposable?
     
     private var searchQueryValue: String?
     private var searchOptionsValue: ChatListSearchOptions?
@@ -1108,6 +1112,11 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 if !foundRemotePeers.2 {
                     index = 0
                     for message in foundRemoteMessages.0.0 {
+                        if searchState.deletedMessageIds.contains(message.id) {
+                            continue
+                        } else if message.id.namespace == Namespaces.Message.Cloud && searchState.deletedGlobalMessageIds.contains(message.id.id) {
+                            continue
+                        }
                         let headerId = listMessageDateHeaderId(timestamp: message.timestamp)
                         if firstHeaderId == nil {
                             firstHeaderId = headerId
@@ -1561,6 +1570,30 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 }
             })
         }
+        
+        self.deletedMessagesDisposable = (context.account.stateManager.deletedMessages
+        |> deliverOnMainQueue).start(next: { [weak self] messageIds in
+            if let strongSelf = self {
+                strongSelf.updateState { state in
+                    var state = state
+                    var deletedMessageIds = state.deletedMessageIds
+                    var deletedGlobalMessageIds = state.deletedGlobalMessageIds
+
+                    for messageId in messageIds {
+                        switch messageId {
+                            case let .messageId(id):
+                                deletedMessageIds.insert(id)
+                            case let .global(id):
+                                deletedGlobalMessageIds.insert(id)
+                        }
+                    }
+                    
+                    state.deletedMessageIds = deletedMessageIds
+                    state.deletedGlobalMessageIds = deletedGlobalMessageIds
+                    return state
+                }
+            }
+        })
     }
     
     deinit {
@@ -1571,6 +1604,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.playlistPreloadDisposable?.dispose()
         self.recentDisposable.dispose()
         self.updatedRecentPeersDisposable.dispose()
+        self.deletedMessagesDisposable?.dispose()
     }
     
     override func didLoad() {

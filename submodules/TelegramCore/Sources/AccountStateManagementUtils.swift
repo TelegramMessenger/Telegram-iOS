@@ -2207,6 +2207,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     var delayNotificatonsUntil: Int32?
     var peerActivityTimestamps: [PeerId: Int32] = [:]
     var syncChatListFilters = false
+    var deletedMessageIds: [DeletedMessageId] = []
     
     var holesFromPreviousStateMessageIds: [MessageId] = []
     var clearHolesFromPreviousStateForChannelMessagesWithPts: [PeerIdAndMessageNamespace: Int32] = [:]
@@ -2235,7 +2236,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
         }
     }
     
-    var wasOpearationScheduledMessegeIds: [MessageId] = []
+    var wasOperationScheduledMessageIds: [MessageId] = []
     
     var addedOperationIncomingMessageIds: [MessageId] = []
     for operation in finalState.state.operations {
@@ -2251,7 +2252,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                                 }
                             }
                             if message.flags.contains(.WasScheduled) {
-                                wasOpearationScheduledMessegeIds.append(id)
+                                wasOperationScheduledMessageIds.append(id)
                             }
                         }
                     }
@@ -2263,9 +2264,9 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     var wasScheduledMessageIds:[MessageId] = []
     var addedIncomingMessageIds: [MessageId] = []
     
-    if !wasOpearationScheduledMessegeIds.isEmpty {
-        let existingIds = transaction.filterStoredMessageIds(Set(wasOpearationScheduledMessegeIds))
-        for id in wasOpearationScheduledMessegeIds {
+    if !wasOperationScheduledMessageIds.isEmpty {
+        let existingIds = transaction.filterStoredMessageIds(Set(wasOperationScheduledMessageIds))
+        for id in wasOperationScheduledMessageIds {
             if !existingIds.contains(id) {
                 wasScheduledMessageIds.append(id)
             }
@@ -2440,10 +2441,12 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 if !resourceIds.isEmpty {
                     let _ = mediaBox.removeCachedResources(Set(resourceIds)).start()
                 }
+                deletedMessageIds.append(contentsOf: ids.map { .global($0) })
             case let .DeleteMessages(ids):
                 deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids, manualAddMessageThreadStatsDifference: { id, add, remove in
                     addMessageThreadStatsDifference(threadMessageId: id, remove: remove, addedMessagePeer: nil, addedMessageId: nil, isOutgoing: false)
                 })
+                deletedMessageIds.append(contentsOf: ids.map { .messageId($0) })
             case let .UpdateMinAvailableMessage(id):
                 if let message = transaction.getMessage(id) {
                     updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: id.peerId, minTimestamp: message.timestamp, forceRootGroupIfNotExists: false)
@@ -3316,5 +3319,5 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
         requestChatListFiltersSync(transaction: transaction)
     }
     
-    return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, wasScheduledMessageIds: wasScheduledMessageIds, addedSecretMessageIds: addedSecretMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, addedCallSignalingData: addedCallSignalingData, updatedPeersNearby: updatedPeersNearby, isContactUpdates: isContactUpdates, delayNotificatonsUntil: delayNotificatonsUntil, updatedIncomingThreadReadStates: updatedIncomingThreadReadStates, updatedOutgoingThreadReadStates: updatedOutgoingThreadReadStates)
+    return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, wasScheduledMessageIds: wasScheduledMessageIds, addedSecretMessageIds: addedSecretMessageIds, deletedMessageIds: deletedMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, addedCallSignalingData: addedCallSignalingData, updatedPeersNearby: updatedPeersNearby, isContactUpdates: isContactUpdates, delayNotificatonsUntil: delayNotificatonsUntil, updatedIncomingThreadReadStates: updatedIncomingThreadReadStates, updatedOutgoingThreadReadStates: updatedOutgoingThreadReadStates)
 }

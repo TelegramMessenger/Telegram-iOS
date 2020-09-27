@@ -46,6 +46,11 @@ private final class UpdatedPeersNearbySubscriberContext {
     let subscribers = Bag<([PeerNearby]) -> Void>()
 }
 
+public enum DeletedMessageId: Hashable {
+    case global(Int32)
+    case messageId(MessageId)
+}
+
 public final class AccountStateManager {
     private let queue = Queue()
     private let accountPeerId: PeerId
@@ -141,6 +146,11 @@ public final class AccountStateManager {
     private let threadReadStateUpdatesPipe = ValuePipe<(incoming: [MessageId: MessageId.Id], outgoing: [MessageId: MessageId.Id])>()
     var threadReadStateUpdates: Signal<(incoming: [MessageId: MessageId.Id], outgoing: [MessageId: MessageId.Id]), NoError> {
         return self.threadReadStateUpdatesPipe.signal()
+    }
+    
+    private let deletedMessagesPipe = ValuePipe<[DeletedMessageId]>()
+    public var deletedMessages: Signal<[DeletedMessageId], NoError> {
+        return self.deletedMessagesPipe.signal()
     }
     
     private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
@@ -740,6 +750,10 @@ public final class AccountStateManager {
                 if events.authorizationListUpdated {
                     self.authorizationListUpdatesPipe.putNext(Void())
                 }
+                
+                if !events.deletedMessageIds.isEmpty {
+                    self.deletedMessagesPipe.putNext(events.deletedMessageIds)
+                }
             case let .pollCompletion(pollId, preMessageIds, preSubscribers):
                 if self.operations.count > 1 {
                     self.operations.removeFirst()
@@ -1016,6 +1030,10 @@ public final class AccountStateManager {
         for subscriber in self.updatedPeersNearbyContext.subscribers.copyItems() {
             subscriber(updatedPeersNearby)
         }
+    }
+    
+    func notifyDeletedMessages(messageIds: [MessageId]) {
+        self.deletedMessagesPipe.putNext(messageIds.map { .messageId($0) })
     }
     
     public func processIncomingCallUpdate(data: Data, completion: @escaping ((CallSessionRingingState, CallSession)?) -> Void) {

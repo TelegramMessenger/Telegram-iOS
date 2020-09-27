@@ -592,6 +592,7 @@ struct AccountReplayedFinalState {
     let addedIncomingMessageIds: [MessageId]
     let wasScheduledMessageIds: [MessageId]
     let addedSecretMessageIds: [MessageId]
+    let deletedMessageIds: [DeletedMessageId]
     let updatedTypingActivities: [PeerActivitySpace: [PeerId: PeerInputActivity?]]
     let updatedWebpages: [MediaId: TelegramMediaWebpage]
     let updatedCalls: [Api.PhoneCall]
@@ -606,6 +607,7 @@ struct AccountReplayedFinalState {
 struct AccountFinalStateEvents {
     let addedIncomingMessageIds: [MessageId]
     let wasScheduledMessageIds:[MessageId]
+    let deletedMessageIds: [DeletedMessageId]
     let updatedTypingActivities: [PeerActivitySpace: [PeerId: PeerInputActivity?]]
     let updatedWebpages: [MediaId: TelegramMediaWebpage]
     let updatedCalls: [Api.PhoneCall]
@@ -622,12 +624,13 @@ struct AccountFinalStateEvents {
     let updatedOutgoingThreadReadStates: [MessageId: MessageId.Id]
     
     var isEmpty: Bool {
-        return self.addedIncomingMessageIds.isEmpty && self.wasScheduledMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty && self.updatedCalls.isEmpty && self.addedCallSignalingData.isEmpty && self.updatedPeersNearby?.isEmpty ?? true && self.isContactUpdates.isEmpty && self.displayAlerts.isEmpty && delayNotificatonsUntil == nil && self.updatedMaxMessageId == nil && self.updatedQts == nil && self.externallyUpdatedPeerId.isEmpty && !authorizationListUpdated && self.updatedIncomingThreadReadStates.isEmpty && self.updatedOutgoingThreadReadStates.isEmpty
+        return self.addedIncomingMessageIds.isEmpty && self.wasScheduledMessageIds.isEmpty && self.deletedMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty && self.updatedCalls.isEmpty && self.addedCallSignalingData.isEmpty && self.updatedPeersNearby?.isEmpty ?? true && self.isContactUpdates.isEmpty && self.displayAlerts.isEmpty && self.delayNotificatonsUntil == nil && self.updatedMaxMessageId == nil && self.updatedQts == nil && self.externallyUpdatedPeerId.isEmpty && !authorizationListUpdated && self.updatedIncomingThreadReadStates.isEmpty && self.updatedOutgoingThreadReadStates.isEmpty
     }
     
-    init(addedIncomingMessageIds: [MessageId] = [], wasScheduledMessageIds: [MessageId] = [], updatedTypingActivities: [PeerActivitySpace: [PeerId: PeerInputActivity?]] = [:], updatedWebpages: [MediaId: TelegramMediaWebpage] = [:], updatedCalls: [Api.PhoneCall] = [], addedCallSignalingData: [(Int64, Data)] = [], updatedPeersNearby: [PeerNearby]? = nil, isContactUpdates: [(PeerId, Bool)] = [], displayAlerts: [(text: String, isDropAuth: Bool)] = [], delayNotificatonsUntil: Int32? = nil, updatedMaxMessageId: Int32? = nil, updatedQts: Int32? = nil, externallyUpdatedPeerId: Set<PeerId> = Set(), authorizationListUpdated: Bool = false, updatedIncomingThreadReadStates: [MessageId: MessageId.Id] = [:], updatedOutgoingThreadReadStates: [MessageId: MessageId.Id] = [:]) {
+    init(addedIncomingMessageIds: [MessageId] = [], wasScheduledMessageIds: [MessageId] = [], deletedMessageIds: [DeletedMessageId] = [], updatedTypingActivities: [PeerActivitySpace: [PeerId: PeerInputActivity?]] = [:], updatedWebpages: [MediaId: TelegramMediaWebpage] = [:], updatedCalls: [Api.PhoneCall] = [], addedCallSignalingData: [(Int64, Data)] = [], updatedPeersNearby: [PeerNearby]? = nil, isContactUpdates: [(PeerId, Bool)] = [], displayAlerts: [(text: String, isDropAuth: Bool)] = [], delayNotificatonsUntil: Int32? = nil, updatedMaxMessageId: Int32? = nil, updatedQts: Int32? = nil, externallyUpdatedPeerId: Set<PeerId> = Set(), authorizationListUpdated: Bool = false, updatedIncomingThreadReadStates: [MessageId: MessageId.Id] = [:], updatedOutgoingThreadReadStates: [MessageId: MessageId.Id] = [:]) {
         self.addedIncomingMessageIds = addedIncomingMessageIds
         self.wasScheduledMessageIds = wasScheduledMessageIds
+        self.deletedMessageIds = deletedMessageIds
         self.updatedTypingActivities = updatedTypingActivities
         self.updatedWebpages = updatedWebpages
         self.updatedCalls = updatedCalls
@@ -647,6 +650,7 @@ struct AccountFinalStateEvents {
     init(state: AccountReplayedFinalState) {
         self.addedIncomingMessageIds = state.addedIncomingMessageIds
         self.wasScheduledMessageIds = state.wasScheduledMessageIds
+        self.deletedMessageIds = state.deletedMessageIds
         self.updatedTypingActivities = state.updatedTypingActivities
         self.updatedWebpages = state.updatedWebpages
         self.updatedCalls = state.updatedCalls
@@ -686,6 +690,6 @@ struct AccountFinalStateEvents {
         let externallyUpdatedPeerId = self.externallyUpdatedPeerId.union(other.externallyUpdatedPeerId)
         let authorizationListUpdated = self.authorizationListUpdated || other.authorizationListUpdated
         
-        return AccountFinalStateEvents(addedIncomingMessageIds: self.addedIncomingMessageIds + other.addedIncomingMessageIds, wasScheduledMessageIds: self.wasScheduledMessageIds + other.wasScheduledMessageIds, updatedTypingActivities: self.updatedTypingActivities, updatedWebpages: self.updatedWebpages, updatedCalls: self.updatedCalls + other.updatedCalls, addedCallSignalingData: self.addedCallSignalingData + other.addedCallSignalingData, isContactUpdates: self.isContactUpdates + other.isContactUpdates, displayAlerts: self.displayAlerts + other.displayAlerts, delayNotificatonsUntil: delayNotificatonsUntil, updatedMaxMessageId: updatedMaxMessageId, updatedQts: updatedQts, externallyUpdatedPeerId: externallyUpdatedPeerId, authorizationListUpdated: authorizationListUpdated, updatedIncomingThreadReadStates: self.updatedIncomingThreadReadStates.merging(other.updatedIncomingThreadReadStates, uniquingKeysWith: { lhs, _ in lhs }))
+        return AccountFinalStateEvents(addedIncomingMessageIds: self.addedIncomingMessageIds + other.addedIncomingMessageIds, wasScheduledMessageIds: self.wasScheduledMessageIds + other.wasScheduledMessageIds, deletedMessageIds: self.deletedMessageIds + other.deletedMessageIds, updatedTypingActivities: self.updatedTypingActivities, updatedWebpages: self.updatedWebpages, updatedCalls: self.updatedCalls + other.updatedCalls, addedCallSignalingData: self.addedCallSignalingData + other.addedCallSignalingData, isContactUpdates: self.isContactUpdates + other.isContactUpdates, displayAlerts: self.displayAlerts + other.displayAlerts, delayNotificatonsUntil: delayNotificatonsUntil, updatedMaxMessageId: updatedMaxMessageId, updatedQts: updatedQts, externallyUpdatedPeerId: externallyUpdatedPeerId, authorizationListUpdated: authorizationListUpdated, updatedIncomingThreadReadStates: self.updatedIncomingThreadReadStates.merging(other.updatedIncomingThreadReadStates, uniquingKeysWith: { lhs, _ in lhs }))
     }
 }

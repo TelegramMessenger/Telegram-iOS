@@ -90,6 +90,8 @@ func deleteMessagesInteractively(transaction: Transaction, stateManager: Account
     }
     deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: messageIds)
     
+    stateManager?.notifyDeletedMessages(messageIds: messageIds)
+    
     if !uniqueIds.isEmpty && removeIfPossiblyDelivered {
         stateManager?.removePossiblyDeliveredMessages(uniqueIds: uniqueIds)
     }
