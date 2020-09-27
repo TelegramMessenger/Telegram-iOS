@@ -601,7 +601,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 }
                 captionText = text
                 
-                let firstRangeOrigin = item.message.text.distance(from: item.message.text.startIndex, to: firstRange.lowerBound)
+                let firstRangeOrigin = chatListSearchResult.text.distance(from: chatListSearchResult.text.startIndex, to: firstRange.lowerBound)
                 if firstRangeOrigin > 20 {
                     captionText = text.attributedSubstring(from: NSMakeRange(firstRangeOrigin - 10, text.length - firstRangeOrigin + 10)).mutableCopy() as? NSMutableAttributedString
                     captionText?.insert(NSAttributedString(string: "\u{2026}", attributes: [NSAttributedString.Key.font: descriptionFont, NSAttributedString.Key.foregroundColor: item.presentationData.theme.theme.list.itemSecondaryTextColor]), at: 0)
