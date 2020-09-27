@@ -676,6 +676,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                             case .random:
                                 var playbackStack = self.playbackStack
                                 inputIndex = messages
+                                |> take(1)
                                 |> map { messages, _, _ -> MessageIndex in
                                     if case let .random(previous) = navigation, previous {
                                         let _ = playbackStack.pop()
@@ -695,6 +696,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                         let historySignal = inputIndex
                         |> mapToSignal { inputIndex -> Signal<(Message, [Message])?, NoError> in
                             return messages
+                            |> take(1)
                             |> mapToSignal { messages, _, loadMore -> Signal<(Message, [Message])?, NoError> in
                                 let position: NavigatedMessageFromViewPosition
                                 switch navigation {
