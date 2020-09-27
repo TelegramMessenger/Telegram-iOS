@@ -182,7 +182,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
     }
     
     if includeChatInfoEntry {
-        if view.earlierId == nil {
+        if view.earlierId == nil, !view.isLoading {
             var cachedPeerData: CachedPeerData?
             for entry in view.additionalData {
                 if case let .cachedPeerData(_, data) = entry {
@@ -190,8 +190,10 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
                     break
                 }
             }
-            if let cachedPeerData = cachedPeerData as? CachedUserData, let botInfo = cachedPeerData.botInfo, !botInfo.description.isEmpty {
-                entries.insert(.ChatInfoEntry(botInfo.description, presentationData), at: 0)
+            if case let .peer(peerId) = location, peerId.isReplies {
+                entries.insert(.ChatInfoEntry("", presentationData.strings.RepliesChat_DescriptionText, presentationData), at: 0)
+            } else if let cachedPeerData = cachedPeerData as? CachedUserData, let botInfo = cachedPeerData.botInfo, !botInfo.description.isEmpty {
+                entries.insert(.ChatInfoEntry(presentationData.strings.Bot_DescriptionTitle, botInfo.description, presentationData), at: 0)
             } else {
                 var isEmpty = true
                 if entries.count <= 3 {

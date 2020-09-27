@@ -742,6 +742,7 @@ public final class ChatListNode: ListView {
                             return true
                         case let .peers(filter, _, _, _):
                             guard !filter.contains(.excludeSavedMessages) || peer.peerId != currentPeerId else { return false }
+                            guard !filter.contains(.excludeSavedMessages) || !peer.peerId.isReplies else { return false }
                             guard !filter.contains(.excludeSecretChats) || peer.peerId.namespace != Namespaces.Peer.SecretChat else { return false }
                             guard !filter.contains(.onlyPrivateChats) || peer.peerId.namespace == Namespaces.Peer.CloudUser else { return false }
 
@@ -1850,7 +1851,9 @@ private func statusStringForPeerType(accountPeerId: PeerId, strings: Presentatio
         }
     }
     
-    if let user = peer as? TelegramUser {
+    if peer.id.isReplies {
+        return nil
+    } else if let user = peer as? TelegramUser {
         if user.botInfo != nil || user.flags.contains(.isSupport) {
             return (strings.ChatList_PeerTypeBot, false)
         } else if isContact {

@@ -225,7 +225,7 @@ private class ReplyThreadHistoryContextImpl {
             self.currentHole?.1.dispose()
             if let entry = entry {
                 self.currentHole = (entry, self.fetchHole(entry: entry).start(next: { [weak self] removedHoleIndices in
-                    guard let strongSelf = self else {
+                    guard let strongSelf = self, let removedHoleIndices = removedHoleIndices else {
                         return
                     }
                     if var currentHoles = strongSelf.stateValue?.holeIndices[Namespaces.Message.Cloud] {
@@ -239,7 +239,7 @@ private class ReplyThreadHistoryContextImpl {
         }
     }
     
-    private func fetchHole(entry: MessageHistoryHolesViewEntry) -> Signal<FetchMessageHistoryHoleResult, NoError> {
+    private func fetchHole(entry: MessageHistoryHolesViewEntry) -> Signal<FetchMessageHistoryHoleResult?, NoError> {
         switch entry.hole {
         case let .peer(hole):
             let fetchCount = min(entry.count, 100)
@@ -386,8 +386,9 @@ public struct ChatReplyThreadMessage: Equatable {
     public var maxReadOutgoingMessageId: MessageId?
     public var initialFilledHoles: IndexSet
     public var initialAnchor: Anchor
+    public var isNotAvailable: Bool
     
-    fileprivate init(messageId: MessageId, isChannelPost: Bool, maxMessage: MessageId?, maxReadIncomingMessageId: MessageId?, maxReadOutgoingMessageId: MessageId?, initialFilledHoles: IndexSet, initialAnchor: Anchor) {
+    fileprivate init(messageId: MessageId, isChannelPost: Bool, maxMessage: MessageId?, maxReadIncomingMessageId: MessageId?, maxReadOutgoingMessageId: MessageId?, initialFilledHoles: IndexSet, initialAnchor: Anchor, isNotAvailable: Bool) {
         self.messageId = messageId
         self.isChannelPost = isChannelPost
         self.maxMessage = maxMessage
@@ -395,6 +396,7 @@ public struct ChatReplyThreadMessage: Equatable {
         self.maxReadOutgoingMessageId = maxReadOutgoingMessageId
         self.initialFilledHoles = initialFilledHoles
         self.initialAnchor = initialAnchor
+        self.isNotAvailable = isNotAvailable
     }
 }
 
@@ -590,11 +592,11 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
         }
         
         let preloadedHistory = preloadedHistoryPosition
-        |> mapToSignal { peerInput, commentsPeerId, threadMessageId, anchor, maxMessageId -> Signal<(FetchMessageHistoryHoleResult, ChatReplyThreadMessage.Anchor), FetchChannelReplyThreadMessageError> in
+        |> mapToSignal { peerInput, commentsPeerId, threadMessageId, anchor, maxMessageId -> Signal<(FetchMessageHistoryHoleResult?, ChatReplyThreadMessage.Anchor), FetchChannelReplyThreadMessageError> in
             guard let maxMessageId = maxMessageId else {
                 return .single((FetchMessageHistoryHoleResult(removedIndices: IndexSet(integersIn: 1 ..< Int(Int32.max - 1)), strictRemovedIndices: IndexSet()), .automatic))
             }
-            return account.postbox.transaction { transaction -> Signal<(FetchMessageHistoryHoleResult, ChatReplyThreadMessage.Anchor), FetchChannelReplyThreadMessageError> in
+            return account.postbox.transaction { transaction -> Signal<(FetchMessageHistoryHoleResult?, ChatReplyThreadMessage.Anchor), FetchChannelReplyThreadMessageError> in
                 if let threadMessageId = threadMessageId {
                     var holes = transaction.getThreadIndexHoles(peerId: threadMessageId.peerId, threadId: makeMessageThreadId(threadMessageId), namespace: Namespaces.Message.Cloud)
                     holes.remove(integersIn: Int(maxMessageId.id + 1) ..< Int(Int32.max))
@@ -660,8 +662,11 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
                 }
                 return fetchMessageHistoryHole(accountPeerId: account.peerId, source: .network(account.network), postbox: account.postbox, peerInput: peerInput, namespace: Namespaces.Message.Cloud, direction: direction, space: .everywhere, count: 40)
                 |> castError(FetchChannelReplyThreadMessageError.self)
-                |> mapToSignal { result -> Signal<(FetchMessageHistoryHoleResult, ChatReplyThreadMessage.Anchor), FetchChannelReplyThreadMessageError> in
-                    return account.postbox.transaction { transaction -> (FetchMessageHistoryHoleResult, ChatReplyThreadMessage.Anchor) in
+                |> mapToSignal { result -> Signal<(FetchMessageHistoryHoleResult?, ChatReplyThreadMessage.Anchor), FetchChannelReplyThreadMessageError> in
+                    return account.postbox.transaction { transaction -> (FetchMessageHistoryHoleResult?, ChatReplyThreadMessage.Anchor) in
+                        guard let result = result else {
+                            return (nil, .automatic)
+                        }
                         let initialAnchor: ChatReplyThreadMessage.Anchor
                         switch anchor {
                         case .lowerBound:
@@ -700,8 +705,10 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
             }
             let (initialFilledHoles, initialAnchor) = initialFilledHolesAndInitialAnchor
             return account.postbox.transaction { transaction -> Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError> in
-                for range in initialFilledHoles.strictRemovedIndices.rangeView {
-                    transaction.removeThreadIndexHole(peerId: discussionMessage.messageId.peerId, threadId: makeMessageThreadId(discussionMessage.messageId), namespace: Namespaces.Message.Cloud, space: .everywhere, range: Int32(range.lowerBound) ... Int32(range.upperBound))
+                if let initialFilledHoles = initialFilledHoles {
+                    for range in initialFilledHoles.strictRemovedIndices.rangeView {
+                        transaction.removeThreadIndexHole(peerId: discussionMessage.messageId.peerId, threadId: makeMessageThreadId(discussionMessage.messageId), namespace: Namespaces.Message.Cloud, space: .everywhere, range: Int32(range.lowerBound) ... Int32(range.upperBound))
+                    }
                 }
                 
                 return .single(ChatReplyThreadMessage(
@@ -710,8 +717,9 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
                     maxMessage: discussionMessage.maxMessage,
                     maxReadIncomingMessageId: discussionMessage.maxReadIncomingMessageId,
                     maxReadOutgoingMessageId: discussionMessage.maxReadOutgoingMessageId,
-                    initialFilledHoles: initialFilledHoles.removedIndices,
-                    initialAnchor: initialAnchor
+                    initialFilledHoles: initialFilledHoles?.removedIndices ?? IndexSet(),
+                    initialAnchor: initialAnchor,
+                    isNotAvailable: initialFilledHoles == nil
                 ))
             }
             |> castError(FetchChannelReplyThreadMessageError.self)

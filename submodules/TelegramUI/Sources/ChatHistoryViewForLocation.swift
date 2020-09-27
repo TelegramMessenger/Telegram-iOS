@@ -348,6 +348,16 @@ func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThrea
             scrollToLowerBoundMessage = index
         }
         
+        if replyThreadMessage.isNotAvailable {
+            return .single(ReplyThreadInfo(
+                message: replyThreadMessage,
+                isChannelPost: replyThreadMessage.isChannelPost,
+                isEmpty: false,
+                scrollToLowerBoundMessage: nil,
+                contextHolder: chatLocationContextHolder
+            ))
+        }
+        
         let preloadSignal = preloadedChatHistoryViewForLocation(
             input,
             context: context,

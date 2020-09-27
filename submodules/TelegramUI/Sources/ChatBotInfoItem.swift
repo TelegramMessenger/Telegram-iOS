@@ -17,11 +17,13 @@ private let messageBoldItalicFont = Font.semiboldItalic(17.0)
 private let messageFixedFont = UIFont(name: "Menlo-Regular", size: 16.0) ?? UIFont.systemFont(ofSize: 17.0)
 
 final class ChatBotInfoItem: ListViewItem {
+    fileprivate let title: String
     fileprivate let text: String
     fileprivate let controllerInteraction: ChatControllerInteraction
     fileprivate let presentationData: ChatPresentationData
     
-    init(text: String, controllerInteraction: ChatControllerInteraction, presentationData: ChatPresentationData) {
+    init(title: String, text: String, controllerInteraction: ChatControllerInteraction, presentationData: ChatPresentationData) {
+        self.title = title
         self.text = text
         self.controllerInteraction = controllerInteraction
         self.presentationData = presentationData
@@ -163,18 +165,18 @@ final class ChatBotInfoItemNode: ListViewItemNode {
             let verticalItemInset: CGFloat = 10.0
             let verticalContentInset: CGFloat = 8.0
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Bot_DescriptionTitle, font: messageBoldFont, textColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: messageBoldFont, textColor: item.presentationData.theme.theme.chat.message.infoPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - horizontalEdgeInset * 2.0 - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let textSpacing: CGFloat = 1.0
-            let textSize = CGSize(width: max(titleLayout.size.width, textLayout.size.width), height: (titleLayout.size.height + textSpacing + textLayout.size.height))
+            let textSize = CGSize(width: max(titleLayout.size.width, textLayout.size.width), height: (titleLayout.size.height + (titleLayout.size.width.isZero ? 0.0 : textSpacing) + textLayout.size.height))
             
             let backgroundFrame = CGRect(origin: CGPoint(x: floor((params.width - textSize.width - horizontalContentInset * 2.0) / 2.0), y: verticalItemInset + 4.0), size: CGSize(width: textSize.width + horizontalContentInset * 2.0, height: textSize.height + verticalContentInset * 2.0))
             let titleFrame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + horizontalContentInset, y: backgroundFrame.origin.y + verticalContentInset), size: titleLayout.size)
-            let textFrame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + horizontalContentInset, y: backgroundFrame.origin.y + verticalContentInset + titleLayout.size.height + textSpacing), size: textLayout.size)
+            let textFrame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + horizontalContentInset, y: backgroundFrame.origin.y + verticalContentInset + titleLayout.size.height + (titleLayout.size.width.isZero ? 0.0 : textSpacing)), size: textLayout.size)
             
-            let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: textLayout.size.height + verticalItemInset * 2.0 + verticalContentInset * 2.0 + 4.0), insets: UIEdgeInsets())
+            let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: textLayout.size.height  + verticalItemInset * 2.0 + verticalContentInset * 2.0 + titleLayout.size.height + (titleLayout.size.width.isZero ? 0.0 : textSpacing) - 3.0), insets: UIEdgeInsets())
             return (itemLayout, { _ in
                 if let strongSelf = self {
                     strongSelf.theme = item.presentationData.theme
