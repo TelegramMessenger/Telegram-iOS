@@ -295,7 +295,7 @@ private class SearchBarTextField: UITextField, UIScrollViewDelegate {
                 self.tokenContainerNode.addSubnode(tokenNode)
             }
             
-            let constrainedSize = CGSize(width: self.bounds.size.width - 60.0, height: self.bounds.size.height)
+            let constrainedSize = CGSize(width: self.bounds.size.width - 90.0, height: self.bounds.size.height)
             let nodeSize = tokenNode.updateLayout(constrainedSize: constrainedSize, transition: tokenNodeTransition)
             tokenSizes.append((token.id, nodeSize, tokenNode, wasAdded))
             totalRawTabSize += nodeSize.width
@@ -481,8 +481,12 @@ private class SearchBarTextField: UITextField, UIScrollViewDelegate {
             rect.size.width -= prefixOffset
         }
         if !self.tokensWidth.isZero && self.scrollView?.superview == nil {
-             rect.origin.x += self.tokensWidth
-             rect.size.width -= self.tokensWidth
+            var offset = self.tokensWidth
+            if let scrollView = self.scrollView {
+                offset = scrollView.contentOffset.x * -1.0
+            }
+            rect.origin.x += offset
+            rect.size.width -= offset
          }
         rect.size.width = max(rect.size.width, 10.0)
         return rect
