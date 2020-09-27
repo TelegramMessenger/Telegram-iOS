@@ -705,11 +705,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         |> map { value -> [MessageId: ChatUpdatingMessageMedia] in
             var result = value
             for id in value.keys {
-                if case let .peer(peerId) = chatLocation {
-                    if id.peerId != peerId {
-                        result.removeValue(forKey: id)
-                    }
-                } else {
+                if id.peerId != chatLocation.peerId {
                     result.removeValue(forKey: id)
                 }
             }
