@@ -1678,18 +1678,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     
     public func activateSearch() {
         if self.displayNavigationBar {
-            let _ = (self.chatListDisplayNode.containerNode.currentItemNode.contentsReady
-            |> take(1)
-            |> deliverOnMainQueue).start(completed: { [weak self] in
+            let _ = (combineLatest(self.chatListDisplayNode.containerNode.currentItemNode.contentsReady |> take(1), self.context.account.postbox.tailChatListView(groupId: .root, count: 16, summaryComponents: ChatListEntrySummaryComponents(tagSummary: nil, actionsSummary: nil)) |> take(1))
+            |> deliverOnMainQueue).start(next: { [weak self] _, chatListView in
                 guard let strongSelf = self else {
                     return
                 }
                 if let scrollToTop = strongSelf.scrollToTop {
                     scrollToTop()
                 }
-                                
+                
                 var displaySearchFilters = true
-                if strongSelf.chatListDisplayNode.containerNode.mainItemNode.entriesCount < 10 {
+                if chatListView.0.entries.count < 10 {
                     displaySearchFilters = false
                 }
                 

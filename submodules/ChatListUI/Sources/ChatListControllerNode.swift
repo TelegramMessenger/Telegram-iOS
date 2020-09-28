@@ -431,10 +431,6 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         return self.currentItemNodeValue!.listNode
     }
     
-    var mainItemNode: ChatListNode {
-        return self.itemNodes[.all]!.listNode
-    }
-    
     private let currentItemStateValue = Promise<(state: ChatListNodeState, filterId: Int32?)>()
     var currentItemState: Signal<(state: ChatListNodeState, filterId: Int32?), NoError> {
         return self.currentItemStateValue.get()
