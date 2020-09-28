@@ -178,9 +178,17 @@ private class ReplyThreadHistoryContextImpl {
                             resolvedMaxMessage = nil
                         }
                         
+                        var isChannelPost = false
+                        for attribute in topMessage.attributes {
+                            if let _ = attribute as? SourceReferenceMessageAttribute {
+                                isChannelPost = true
+                                break
+                            }
+                        }
+                        
                         return .single(DiscussionMessage(
                             messageId: parsedIndex.id,
-                            isChannelPost: true,
+                            isChannelPost: isChannelPost,
                             maxMessage: resolvedMaxMessage,
                             maxReadIncomingMessageId: readInboxMaxId.flatMap { readMaxId in
                                 MessageId(peerId: parsedIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: readMaxId)
@@ -472,9 +480,17 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
                         resolvedMaxMessage = nil
                     }
                     
+                    var isChannelPost = false
+                    for attribute in topMessage.attributes {
+                        if let _ = attribute as? SourceReferenceMessageAttribute {
+                            isChannelPost = true
+                            break
+                        }
+                    }
+                    
                     return DiscussionMessage(
                         messageId: parsedIndex.id,
-                        isChannelPost: true,
+                        isChannelPost: isChannelPost,
                         maxMessage: resolvedMaxMessage,
                         maxReadIncomingMessageId: readInboxMaxId.flatMap { readMaxId in
                             MessageId(peerId: parsedIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: readMaxId)
@@ -511,6 +527,7 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
                 guard let discussionMessageId = foundDiscussionMessageId else {
                     return nil
                 }
+                
                 return DiscussionMessage(
                     messageId: discussionMessageId,
                     isChannelPost: true,

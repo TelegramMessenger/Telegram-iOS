@@ -5789,8 +5789,8 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.TitleCommentsFormat" = "%1$@ %2$@";
 
 "Conversation.TitleRepliesEmpty" = "Replies";
-"Conversation.TitleReplies_1" = "[%@]Comment";
-"Conversation.TitleReplies_any" = "[%@]Comments";
+"Conversation.TitleReplies_1" = "[%@]Reply";
+"Conversation.TitleReplies_any" = "[%@]Replies";
 "Conversation.TitleRepliesFormat" = "%1$@ %2$@";
 
 "Conversation.MessageLeaveComment" = "Leave a Comment";
