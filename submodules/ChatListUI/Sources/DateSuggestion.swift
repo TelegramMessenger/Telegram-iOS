@@ -71,9 +71,6 @@ func suggestDates(for string: String, strings: PresentationStrings, dateTimeForm
     }
     
     func getLowerMonthDate(month: Int, year: Int) -> Date {
-        let monthComponents = DateComponents(year: year, month: month)
-        let date = calendar.date(from: monthComponents)!
-        let range = calendar.range(of: .day, in: .month, for: date)!
         let upperComponents = DateComponents(year: year, month: month, day: 1, hour: 0, minute: 0, second: 0)
         return calendar.date(from: upperComponents)!
     }
@@ -108,7 +105,7 @@ func suggestDates(for string: String, strings: PresentationStrings, dateTimeForm
                     let stringComponents = string.components(separatedBy: dateSeparator)
                     if stringComponents.count < 3 {
                         for i in 0..<5 {
-                            if let date = calendar.date(byAdding: .year, value: -i, to: resultDate) {
+                            if let date = calendar.date(byAdding: .year, value: -i, to: resultDate), date < now {
                                 result.append((nil, date, nil))
                             }
                         }
