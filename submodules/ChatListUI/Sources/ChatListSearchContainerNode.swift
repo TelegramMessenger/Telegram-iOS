@@ -564,6 +564,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             } else {
                 transition.updateFrame(node: selectionPanelNode, frame: panelFrame)
             }
+            
+            bottomIntrinsicInset = panelHeight
         } else if let selectionPanelNode = self.selectionPanelNode {
             self.selectionPanelNode = nil
             transition.updateFrame(node: selectionPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: selectionPanelNode.bounds.size), completion: { [weak selectionPanelNode] _ in
@@ -576,6 +578,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         var bottomInset = layout.intrinsicInsets.bottom
         if let inputHeight = layout.inputHeight {
             bottomInset = inputHeight
+        } else if let _ = self.selectionPanelNode {
+            bottomInset = bottomIntrinsicInset
         } else if case .root = self.groupId {
             bottomInset -= bottomIntrinsicInset
         }
