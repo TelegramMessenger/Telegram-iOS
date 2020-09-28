@@ -936,8 +936,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         })
     }
     
-    public func makeOverlayAudioPlayerController(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, isGlobalSearch: Bool, parentNavigationController: NavigationController?) -> ViewController & OverlayAudioPlayerController {
-        return OverlayAudioPlayerControllerImpl(context: context, peerId: peerId, type: type, initialMessageId: initialMessageId, initialOrder: initialOrder, isGlobalSearch: isGlobalSearch, parentNavigationController: parentNavigationController)
+    public func makeOverlayAudioPlayerController(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, playlistLocation: SharedMediaPlaylistLocation?, parentNavigationController: NavigationController?) -> ViewController & OverlayAudioPlayerController {
+        return OverlayAudioPlayerControllerImpl(context: context, peerId: peerId, type: type, initialMessageId: initialMessageId, initialOrder: initialOrder, playlistLocation: playlistLocation, parentNavigationController: parentNavigationController)
     }
     
     public func makeTempAccountContext(account: Account) -> AccountContext {

@@ -431,6 +431,11 @@ private struct ChatHistoryAnimatedEmojiConfiguration {
 
 private var nextClientId: Int32 = 1
 
+public enum ChatHistoryListSource {
+    case `default`
+    case custom(messages: Signal<([Message], Int32, Bool), NoError>, messageId: MessageId, loadMore: (() -> Void)?)
+}
+
 public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let context: AccountContext
     private let chatLocation: ChatLocation
@@ -549,7 +554,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private let clientId: Atomic<Int32>
     
-    public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles) {
+    public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, source: ChatHistoryListSource = .default, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles) {
         self.context = context
         self.chatLocation = chatLocation
         self.chatLocationContextHolder = chatLocationContextHolder
@@ -643,28 +648,43 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
 
         let currentViewVersion = Atomic<Int?>(value: nil)
         
-        let historyViewUpdate = self.chatHistoryLocationPromise.get()
-        |> distinctUntilChanged
-        |> mapToSignal { location in
-            return chatHistoryViewForLocation(location, context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, scheduled: isScheduledMessages, fixedCombinedReadStates: fixedCombinedReadStates.with { $0 }, tagMask: tagMask, additionalData: additionalData)
-            |> beforeNext { viewUpdate in
-                switch viewUpdate {
-                    case let .HistoryView(view, _, _, _, _, _, _):
-                        let _ = fixedCombinedReadStates.swap(view.fixedReadStates)
-                    default:
-                        break
+        let historyViewUpdate: Signal<(ChatHistoryViewUpdate, Int), NoError>
+        if case let .custom(messages, _, loadMore) = source {
+            historyViewUpdate = messages
+            |> map { messages, _, hasMore in
+                let version = currentViewVersion.modify({ value in
+                    if let value = value {
+                        return value + 1
+                    } else {
+                        return 0
+                    }
+                })!
+                return (ChatHistoryViewUpdate.HistoryView(view: MessageHistoryView(tagMask: nil, namespaces: .all, entries: messages.reversed().map { MessageHistoryEntry(message: $0, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) }, holeEarlier: hasMore), type: .Generic(type: ViewUpdateType.Initial), scrollPosition: nil, flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: nil, buttonKeyboardMessage: nil, cachedData: nil, cachedDataMessages: nil, readStateData: nil), id: 0), version)
+            }
+        } else {
+            historyViewUpdate = self.chatHistoryLocationPromise.get()
+            |> distinctUntilChanged
+            |> mapToSignal { location in
+                return chatHistoryViewForLocation(location, context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, scheduled: isScheduledMessages, fixedCombinedReadStates: fixedCombinedReadStates.with { $0 }, tagMask: tagMask, additionalData: additionalData)
+                |> beforeNext { viewUpdate in
+                    switch viewUpdate {
+                        case let .HistoryView(view, _, _, _, _, _, _):
+                            let _ = fixedCombinedReadStates.swap(view.fixedReadStates)
+                        default:
+                            break
+                    }
                 }
             }
-        }
-        |> map { view -> (ChatHistoryViewUpdate, Int) in
-            let version = currentViewVersion.modify({ value in
-                if let value = value {
-                    return value + 1
-                } else {
-                    return 0
-                }
-            })!
-            return (view, version)
+            |> map { view -> (ChatHistoryViewUpdate, Int) in
+                let version = currentViewVersion.modify({ value in
+                    if let value = value {
+                        return value + 1
+                    } else {
+                        return 0
+                    }
+                })!
+                return (view, version)
+            }
         }
         
         let previousView = Atomic<(ChatHistoryView, Int, Set<MessageId>?)?>(value: nil)

@@ -355,7 +355,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         return self.chatLocation
     }
     
-    var purposefulAction: (() -> Void)?
+    public var purposefulAction: (() -> Void)?
     
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil) {
         let _ = ChatControllerCount.modify { value in

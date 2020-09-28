@@ -892,6 +892,9 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
 //                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
 
                                 let controller = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
+                                controller.purposefulAction = { [weak self] in
+                                    self?.cancel?()
+                                }
                                 strongSelf.navigationController?.pushViewController(controller, animated: false, completion: {
                                     if let peerSelectionController = peerSelectionController {
                                         peerSelectionController.dismiss()

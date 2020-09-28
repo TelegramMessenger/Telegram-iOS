@@ -293,7 +293,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                                     } else {
                                         controllerContext = strongSelf.context.sharedContext.makeTempAccountContext(account: account)
                                     }
-                                    let controller = strongSelf.context.sharedContext.makeOverlayAudioPlayerController(context: controllerContext, peerId: id.messageId.peerId, type: type, initialMessageId: id.messageId, initialOrder: order, isGlobalSearch: false, parentNavigationController: strongSelf.chatControllerInteraction.navigationController())
+                                    let controller = strongSelf.context.sharedContext.makeOverlayAudioPlayerController(context: controllerContext, peerId: id.messageId.peerId, type: type, initialMessageId: id.messageId, initialOrder: order, playlistLocation: nil, parentNavigationController: strongSelf.chatControllerInteraction.navigationController())
                                     strongSelf.view.window?.endEditing(true)
                                     strongSelf.chatControllerInteraction.presentController(controller, nil)
                                 } else if index.1 {

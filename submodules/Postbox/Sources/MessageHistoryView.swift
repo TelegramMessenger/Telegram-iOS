@@ -881,6 +881,23 @@ public final class MessageHistoryView {
     public let isLoading: Bool
     public let isAddedToChatList: Bool
     
+    public init(tagMask: MessageTags?, namespaces: MessageIdNamespaces, entries: [MessageHistoryEntry], holeEarlier: Bool) {
+        self.tagMask = tagMask
+        self.namespaces = namespaces
+        self.anchorIndex = .lowerBound
+        self.earlierId = nil
+        self.laterId = nil
+        self.holeEarlier = holeEarlier
+        self.holeLater = false
+        self.entries = entries
+        self.maxReadIndex = nil
+        self.fixedReadStates = nil
+        self.topTaggedMessages = []
+        self.additionalData = []
+        self.isLoading = false
+        self.isAddedToChatList = false
+    }
+    
     init(_ mutableView: MutableMessageHistoryView) {
         self.tagMask = mutableView.tag
         self.namespaces = mutableView.namespaces
