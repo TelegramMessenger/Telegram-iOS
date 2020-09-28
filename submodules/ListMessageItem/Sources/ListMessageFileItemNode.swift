@@ -171,6 +171,8 @@ public final class ListMessageFileItemNode: ListMessageNode {
     private let iconImageNode: TransformImageNode
     private let iconStatusNode: SemanticStatusNode
     
+    private let restrictionNode: ASDisplayNode
+    
     private var currentIconImage: FileIconImage?
     public var currentMedia: Media?
     
@@ -193,6 +195,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
     private var contentSizeValue: CGSize?
     private var currentLeftOffset: CGFloat = 0.0
     
+    private var currentIsRestricted = false
     private var cachedSearchResult: CachedChatListSearchResult?
     
     public required init() {
@@ -248,9 +251,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
         self.downloadStatusIconNode.displaysAsynchronously = false
         self.downloadStatusIconNode.displayWithoutProcessing = true
         
-        super.init()
+        self.restrictionNode = ASDisplayNode()
+        self.restrictionNode.isHidden = true
         
-        self.addSubnode(self.separatorNode)
+        super.init()
         
         self.containerNode.addSubnode(self.contextSourceNode)
         self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
@@ -266,6 +270,9 @@ public final class ListMessageFileItemNode: ListMessageNode {
         self.offsetContainerNode.addSubnode(self.extensionIconNode)
         self.offsetContainerNode.addSubnode(self.extensionIconText)
         self.offsetContainerNode.addSubnode(self.iconStatusNode)
+        
+        self.addSubnode(self.restrictionNode)
+        self.addSubnode(self.separatorNode)
         
         self.containerNode.activated = { [weak self] gesture, _ in
             guard let strongSelf = self, let item = strongSelf.item else {
@@ -388,6 +395,8 @@ public final class ListMessageFileItemNode: ListMessageNode {
             var isAudio = false
             var isVoice = false
             var isInstantVideo = false
+            
+            var isRestricted = false
             
             let message = item.message
             
@@ -527,6 +536,12 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 }
             }
     
+            for attribute in message.attributes {
+                if let attribute = attribute as? RestrictedContentMessageAttribute, attribute.platformText(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) != nil {
+                    isRestricted = true
+                    break
+                }
+            }
             
             var mediaUpdated = false
             if let currentMedia = currentMedia {
@@ -684,10 +699,13 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         transition = .immediate
                     }
                     
+                    strongSelf.restrictionNode.isHidden = !isRestricted
+                    
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
                     strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
                     strongSelf.offsetContainerNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
                     strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
+                    strongSelf.restrictionNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
                     
                     let nonExtractedRect = CGRect(origin: CGPoint(), size: CGSize(width: nodeLayout.contentSize.width - 16.0, height: nodeLayout.contentSize.height))
                     let extractedRect = CGRect(origin: CGPoint(), size: nodeLayout.contentSize).insetBy(dx: 16.0 + params.leftInset, dy: 0.0)
@@ -701,6 +719,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     }
                     strongSelf.contextSourceNode.contentRect = extractedRect
                     
+                    strongSelf.currentIsRestricted = isRestricted
                     strongSelf.currentMedia = selectedMedia
                     strongSelf.message = message
                     strongSelf.context = item.context
@@ -713,6 +732,8 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         strongSelf.separatorNode.backgroundColor = item.presentationData.theme.theme.list.itemPlainSeparatorColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.theme.list.itemHighlightedBackgroundColor
                         strongSelf.linearProgressNode?.updateTheme(theme: item.presentationData.theme.theme)
+                        
+                        strongSelf.restrictionNode.backgroundColor = item.presentationData.theme.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.6)
                     }
                     
                     if let (selectionWidth, selectionApply) = selectionNodeWidthAndApply {
@@ -1112,6 +1133,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
             case .Local:
                 break
         }
+    }
+    
+    public override var canBeSelected: Bool {
+        return !self.currentIsRestricted
     }
 }
 
