@@ -928,7 +928,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
         if highlighted, let item = self.item, case .none = item.selection {
             self.highlightedBackgroundNode.alpha = 1.0
             if self.highlightedBackgroundNode.supernode == nil {
-                self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: self.separatorNode)
+                self.insertSubnode(self.highlightedBackgroundNode, at: 0)
             }
         } else {
             if self.highlightedBackgroundNode.supernode != nil {
