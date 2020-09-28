@@ -615,23 +615,18 @@ public enum ChatListSearchContextActionSource {
 
 public struct ChatListSearchOptions {
     let peer: (PeerId, Bool, String)?
-    let minDate: (Int32, String)?
-    let maxDate: (Int32, String)?
+    let date: (Int32?, Int32, String)?
     
     var isEmpty: Bool {
-        return self.peer == nil && self.minDate == nil && self.maxDate == nil
+        return self.peer == nil && self.date == nil
     }
     
     func withUpdatedPeer(_ peerIdIsGroupAndName: (PeerId, Bool, String)?) -> ChatListSearchOptions {
-        return ChatListSearchOptions(peer: peerIdIsGroupAndName, minDate: self.minDate, maxDate: self.maxDate)
+        return ChatListSearchOptions(peer: peerIdIsGroupAndName, date: self.date)
     }
     
-    func withUpdatedMinDate(_ minDateAndTitle: (Int32, String)?) -> ChatListSearchOptions {
-        return ChatListSearchOptions(peer: self.peer, minDate: minDateAndTitle, maxDate: self.maxDate)
-    }
-
-    func withUpdatedMaxDate(_ maxDateAndTitle: (Int32, String)?) -> ChatListSearchOptions {
-        return ChatListSearchOptions(peer: self.peer, minDate: self.minDate, maxDate: maxDateAndTitle)
+    func withUpdatedDate(_ minDateMaxDateAndTitle: (Int32?, Int32, String)?) -> ChatListSearchOptions {
+        return ChatListSearchOptions(peer: self.peer, date: minDateMaxDateAndTitle)
     }
 }
 
@@ -880,12 +875,12 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             let location: SearchMessagesLocation
             if let options = options {
                 if let (peerId, _, _) = options.peer {
-                    location = .peer(peerId: peerId, fromId: nil, tags: tagMask, topMsgId: nil, minDate: options.minDate?.0, maxDate: options.maxDate?.0)
+                    location = .peer(peerId: peerId, fromId: nil, tags: tagMask, topMsgId: nil, minDate: options.date?.0, maxDate: options.date?.1)
                 } else {
                     if let groupId = groupId {
-                        location = .group(groupId: groupId, tags: tagMask, minDate: options.minDate?.0, maxDate: options.maxDate?.0)
+                        location = .group(groupId: groupId, tags: tagMask, minDate: options.date?.0, maxDate: options.date?.1)
                     } else {
-                        location = .general(tags: tagMask, minDate: options.minDate?.0, maxDate: options.maxDate?.0)
+                        location = .general(tags: tagMask, minDate: options.date?.0, maxDate: options.date?.1)
                     }
                 }
             } else {
@@ -1208,8 +1203,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }, additionalCategorySelected: { _ in
         }, messageSelected: { [weak self] peer, message, _ in
             interaction.dismissInput()
-            if let peer = message.peers[message.id.peerId] {
-                interaction.openMessage(peer, message.id)
+            if let strongSelf = self, let peer = message.peers[message.id.peerId] {
+                interaction.openMessage(peer, message.id, strongSelf.key == .chats)
             }
             self?.listNode.clearHighlightAnimated(true)
         }, groupSelected: { _ in
@@ -1336,7 +1331,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         }
                     }
                     
-                    if strongSelf.tagMask != nil || strongSelf.searchOptionsValue?.maxDate != nil || strongSelf.searchOptionsValue?.peer != nil {
+                    if strongSelf.tagMask != nil || strongSelf.searchOptionsValue?.date != nil || strongSelf.searchOptionsValue?.peer != nil {
                         entriesAndFlags?.0 = filteredEntries
                     }
                 }
@@ -2013,7 +2008,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                             emptyResultsTitle = strongSelf.presentationData.strings.ChatList_Search_NoResults
                             emptyResultsText = strongSelf.presentationData.strings.ChatList_Search_NoResultsQueryDescription(query).0
                         } else {
-                            if let searchOptions = searchOptions, searchOptions.minDate == nil && searchOptions.maxDate == nil && searchOptions.peer == nil {
+                            if let searchOptions = searchOptions, searchOptions.date == nil && searchOptions.peer == nil {
                                 emptyResultsTitle = strongSelf.presentationData.strings.ChatList_Search_NoResultsFilter
                                 if strongSelf.tagMask == .photoOrVideo {
                                     emptyResultsText = strongSelf.presentationData.strings.ChatList_Search_NoResultsFitlerMedia
@@ -2047,7 +2042,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     strongSelf.emptyResultsTextNode.isHidden = !emptyResults
                     strongSelf.emptyResultsAnimationNode.visibility = emptyResults
                                              
-                    let displayPlaceholder = transition.isLoading && (strongSelf.key != .chats || strongSelf.searchOptionsValue?.peer != nil || strongSelf.searchOptionsValue?.minDate != nil || strongSelf.searchOptionsValue?.maxDate != nil)
+                    let displayPlaceholder = transition.isLoading && (strongSelf.key != .chats || strongSelf.searchOptionsValue?.peer != nil || strongSelf.searchOptionsValue?.date != nil)
                     ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).updateAlpha(node: strongSelf.shimmerNode, alpha: displayPlaceholder ? 1.0 : 0.0)
            
                     strongSelf.recentListNode.isHidden = displayingResults || strongSelf.peersFilter.contains(.excludeRecent)
@@ -2274,7 +2269,7 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                         return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(peer1.id), interaction: ListMessageItemInteraction.default, message: message, selection: .none, displayHeader: false, customHeader: nil, hintIsLink: true, isGlobalSearchResult: true)
                     case .files:
                         var media: [Media] = []
-                        media.append(TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: 0, attributes: [.Audio(isVoice: false, duration: 0, title: nil, performer: nil, waveform: MemoryBuffer(data: Data()))]))
+                        media.append(TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: 0, attributes: [.FileName(fileName: "Text.txt")]))
                         let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer1.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: timestamp1, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer1, text: "Text", attributes: [], media: media, peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
                         
                         return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(peer1.id), interaction: ListMessageItemInteraction.default, message: message, selection: .none, displayHeader: false, customHeader: nil, hintIsLink: false, isGlobalSearchResult: true)
@@ -2356,7 +2351,7 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             fillLabelPlaceholderRect(origin: CGPoint(x: titleFrame.minX + 120.0 + 10.0, y: currentY + floor((itemHeight - fakeLabelPlaceholderHeight) / 2.0)), width: 60.0)
                             
                             let dateFrame = itemNode.dateNode.frame.offsetBy(dx: 0.0, dy: currentY)
-                            fillLabelPlaceholderRect(origin: CGPoint(x: dateFrame.maxX - 30.0, y: dateFrame.minY), width: 30.0)
+                            fillLabelPlaceholderRect(origin: CGPoint(x: dateFrame.maxX - 30.0, y: floor(dateFrame.midY - fakeLabelPlaceholderHeight / 2.0)), width: 30.0)
                             
                             context.setBlendMode(.normal)
                             context.setFillColor(presentationData.theme.chatList.itemSeparatorColor.cgColor)
@@ -2381,7 +2376,7 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             fillLabelPlaceholderRect(origin: CGPoint(x: descriptionFrame.minX, y: floor(descriptionFrame.midY - fakeLabelPlaceholderHeight / 2.0)), width: isVoice ? 60.0 : 240.0)
                             
                             let dateFrame = itemNode.dateNode.frame.offsetBy(dx: 0.0, dy: currentY)
-                            fillLabelPlaceholderRect(origin: CGPoint(x: dateFrame.maxX - 30.0, y: dateFrame.minY), width: 30.0)
+                            fillLabelPlaceholderRect(origin: CGPoint(x: dateFrame.maxX - 30.0, y: floor(dateFrame.midY - fakeLabelPlaceholderHeight / 2.0)), width: 30.0)
                             
                             context.setBlendMode(.normal)
                             context.setFillColor(presentationData.theme.chatList.itemSeparatorColor.cgColor)
@@ -2401,7 +2396,7 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             fillLabelPlaceholderRect(origin: CGPoint(x: authorFrame.minX, y: floor(authorFrame.midY - fakeLabelPlaceholderHeight / 2.0)), width: 60.0)
                             
                             let dateFrame = itemNode.dateNode.frame.offsetBy(dx: 0.0, dy: currentY)
-                            fillLabelPlaceholderRect(origin: CGPoint(x: dateFrame.maxX - 30.0, y: dateFrame.minY), width: 30.0)
+                            fillLabelPlaceholderRect(origin: CGPoint(x: dateFrame.maxX - 30.0, y: floor(dateFrame.midY - fakeLabelPlaceholderHeight / 2.0)), width: 30.0)
                             
                             context.setBlendMode(.normal)
                             context.setFillColor(presentationData.theme.chatList.itemSeparatorColor.cgColor)

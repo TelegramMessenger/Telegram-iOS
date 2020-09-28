@@ -39,7 +39,7 @@ private enum ChatListTokenId: Int32 {
 final class ChatListSearchInteraction {
     let openPeer: (Peer, Bool) -> Void
     let openDisabledPeer: (Peer) -> Void
-    let openMessage: (Peer, MessageId) -> Void
+    let openMessage: (Peer, MessageId, Bool) -> Void
     let openUrl: (String) -> Void
     let clearRecentSearch: () -> Void
     let addContact: (String) -> Void
@@ -52,7 +52,7 @@ final class ChatListSearchInteraction {
     let updateSuggestedPeers: ([Peer], ChatListSearchPaneKey) -> Void
     let getSelectedMessageIds: () -> Set<MessageId>?
     
-    init(openPeer: @escaping (Peer, Bool) -> Void, openDisabledPeer: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId) -> Void, openUrl: @escaping (String) -> Void, clearRecentSearch: @escaping () -> Void, addContact: @escaping (String) -> Void, toggleMessageSelection: @escaping (MessageId, Bool) -> Void, messageContextAction: @escaping ((Message, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), mediaMessageContextAction: @escaping ((Message, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, updateSuggestedPeers: @escaping ([Peer], ChatListSearchPaneKey) -> Void, getSelectedMessageIds: @escaping () -> Set<MessageId>?) {
+    init(openPeer: @escaping (Peer, Bool) -> Void, openDisabledPeer: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId, Bool) -> Void, openUrl: @escaping (String) -> Void, clearRecentSearch: @escaping () -> Void, addContact: @escaping (String) -> Void, toggleMessageSelection: @escaping (MessageId, Bool) -> Void, messageContextAction: @escaping ((Message, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), mediaMessageContextAction: @escaping ((Message, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, updateSuggestedPeers: @escaping ([Peer], ChatListSearchPaneKey) -> Void, getSelectedMessageIds: @escaping () -> Set<MessageId>?) {
         self.openPeer = openPeer
         self.openDisabledPeer = openDisabledPeer
         self.openMessage = openMessage
@@ -102,7 +102,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    private let suggestedDates = Promise<[(Date, String?)]>([])
+    private let suggestedDates = Promise<[(Date?, Date, String?)]>([])
     private let suggestedPeers = Promise<[Peer]>([])
     private var suggestedFilters: [ChatListSearchFilter]?
     private let suggestedFiltersDisposable = MetaDisposable()
@@ -149,8 +149,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }
         }, openDisabledPeer: { peer in
             openDisabledPeer(peer)
-        }, openMessage: { peer, messageId in
-            originalOpenMessage(peer, messageId, true)
+        }, openMessage: { peer, messageId, deactivateOnAction in
+            originalOpenMessage(peer, messageId, deactivateOnAction)
             if peer.id.namespace != Namespaces.Peer.SecretChat {
                 addAppLogEvent(postbox: context.account.postbox, type: "search_global_open_message", peerId: peer.id, data: .dictionary(["msg_id": .number(Double(messageId.id))]))
             }
@@ -269,7 +269,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }
             
             var key: ChatListSearchPaneKey?
-            var maxDate = strongSelf.currentSearchOptions.maxDate
+            var date = strongSelf.currentSearchOptions.date
             var peer = strongSelf.currentSearchOptions.peer
             
             switch filter {
@@ -285,8 +285,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     key = .music
                 case .voice:
                     key = .voice
-                case let .date(date, title):
-                    maxDate = (date, title)
+                case let .date(minDate, maxDate, title):
+                    date = (minDate, maxDate, title)
                 case let .peer(id, isGroup, _, compactDisplayTitle):
                     peer = (id, isGroup, compactDisplayTitle)
             }
@@ -294,16 +294,28 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             if let key = key {
                 strongSelf.paneContainerNode.requestSelectPane(key)
             } else {
-                strongSelf.updateSearchOptions(strongSelf.currentSearchOptions.withUpdatedMaxDate(maxDate).withUpdatedPeer(peer), clearQuery: true)
+                strongSelf.updateSearchOptions(strongSelf.currentSearchOptions.withUpdatedDate(date).withUpdatedPeer(peer), clearQuery: true)
             }
         }
         
-        self.suggestedFiltersDisposable.set((combineLatest(self.suggestedPeers.get(), self.suggestedDates.get(), self.selectedFilterKeyPromise.get())
-        |> mapToSignal { peers, dates, selectedFilter -> Signal<([Peer], [(Date, String?)], ChatListSearchFilterEntryId?), NoError> in
-            if (peers.isEmpty && dates.isEmpty) || peers.isEmpty {
+        let suggestedPeers = self.searchQuery.get()
+        |> mapToSignal { query -> Signal<[Peer], NoError> in
+            if let query = query {
+                return context.account.postbox.searchPeers(query: query.lowercased())
+                |> map { local -> [Peer] in
+                    return Array(local.compactMap { $0.peer }.prefix(10))
+                }
+            } else {
+                return .single([])
+            }
+        }
+                        
+        self.suggestedFiltersDisposable.set((combineLatest(suggestedPeers, self.suggestedDates.get(), self.selectedFilterKeyPromise.get(), self.searchQuery.get())
+        |> mapToSignal { peers, dates, selectedFilter, searchQuery -> Signal<([Peer], [(Date?, Date, String?)], ChatListSearchFilterEntryId?), NoError> in
+            if searchQuery?.isEmpty ?? true {
                 return .single((peers, dates, selectedFilter))
             } else {
-                return (.complete() |> delay(0.2, queue: Queue.mainQueue()))
+                return (.complete() |> delay(0.25, queue: Queue.mainQueue()))
                 |> then(.single((peers, dates, selectedFilter)))
             }
         } |> map { peers, dates, selectedFilter -> [ChatListSearchFilter] in
@@ -313,9 +325,9 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 formatter.timeStyle = .none
                 formatter.dateStyle = .medium
                 
-                for (date, string) in dates {
-                    let title = string ?? formatter.string(from: date)
-                    suggestedFilters.append(.date(Int32(date.timeIntervalSince1970), title))
+                for (minDate, maxDate, string) in dates {
+                    let title = string ?? formatter.string(from: maxDate)
+                    suggestedFilters.append(.date(minDate.flatMap { Int32($0.timeIntervalSince1970) }, Int32(maxDate.timeIntervalSince1970), title))
                 }
             }
             if !peers.isEmpty && selectedFilter != .filter(ChatListSearchFilter.chats.id) {
@@ -339,7 +351,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }
             var filteredFilters: [ChatListSearchFilter] = []
             for filter in filters {
-                if case .date = filter, strongSelf.searchOptionsValue?.maxDate == nil {
+                if case .date = filter, strongSelf.searchOptionsValue?.date == nil {
                     filteredFilters.append(filter)
                 }
                 if case .peer = filter, strongSelf.searchOptionsValue?.peer == nil {
@@ -390,7 +402,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     }
 
     private var currentSearchOptions: ChatListSearchOptions {
-        return self.searchOptionsValue ?? ChatListSearchOptions(peer: nil, minDate: nil, maxDate: nil)
+        return self.searchOptionsValue ?? ChatListSearchOptions(peer: nil, date: nil)
     }
     
     public override func searchTokensUpdated(tokens: [SearchBarToken]) {
@@ -399,8 +411,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         for token in tokens {
             tokensIdSet.insert(token.id)
         }
-        if !tokensIdSet.contains(ChatListTokenId.date.rawValue) && updatedOptions?.maxDate != nil {
-             updatedOptions = updatedOptions?.withUpdatedMaxDate(nil)
+        if !tokensIdSet.contains(ChatListTokenId.date.rawValue) && updatedOptions?.date != nil {
+             updatedOptions = updatedOptions?.withUpdatedDate(nil)
         }
         if !tokensIdSet.contains(ChatListTokenId.peer.rawValue) && updatedOptions?.peer != nil {
              updatedOptions = updatedOptions?.withUpdatedPeer(nil)
@@ -429,7 +441,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             tokens.append(SearchBarToken(id: ChatListTokenId.peer.rawValue, icon:image, title: peerName))
         }
         
-        if let (_, dateTitle) = options?.maxDate {
+        if let (_, _, dateTitle) = options?.date {
             tokens.append(SearchBarToken(id: ChatListTokenId.date.rawValue, icon: UIImage(bundleImageName: "Chat List/Search/Calendar"), title: dateTitle))
             
             self.suggestedDates.set(.single([]))

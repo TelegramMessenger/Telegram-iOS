@@ -15,7 +15,7 @@ enum ChatListSearchFilter: Equatable {
     case music
     case voice
     case peer(PeerId, Bool, String, String)
-    case date(Int32, String)
+    case date(Int32?, Int32, String)
     
     var id: Int32 {
         switch self {
@@ -33,7 +33,7 @@ enum ChatListSearchFilter: Equatable {
                 return 5
             case let .peer(peerId, _, _, _):
                 return peerId.id
-            case let .date(date, _):
+            case let .date(_, date, _):
                 return date
         }
     }
@@ -139,7 +139,7 @@ private final class ItemNode: ASDisplayNode {
                     image = UIImage(bundleImageName: "Chat List/Search/User")
                 }
                 icon = generateTintedImage(image: image, color: color)
-            case let .date(_, displayTitle):
+            case let .date(_, _, displayTitle):
                 title = displayTitle
                 icon = generateTintedImage(image: UIImage(bundleImageName: "Chat List/Search/Calendar"), color: color)
         }

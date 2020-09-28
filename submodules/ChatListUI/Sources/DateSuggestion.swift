@@ -4,7 +4,7 @@ import TelegramStringFormatting
 
 private let telegramReleaseDate = Date(timeIntervalSince1970: 1376438400.0)
 
-func suggestDates(for string: String, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> [(Date, String?)] {
+func suggestDates(for string: String, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> [(minDate: Date?, maxDate: Date, string: String?)] {
     let string = string.folding(options: .diacriticInsensitive, locale: .current).trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     if string.count < 3 {
         return []
@@ -39,9 +39,14 @@ func suggestDates(for string: String, strings: PresentationStrings, dateTimeForm
     let yesterday = strings.Weekday_Yesterday
     let dateSeparator = dateTimeFormat.dateSeparator
     
-    var result: [(Date, String?)] = []
+    var result: [(Date?, Date, String?)] = []
     
     let calendar = Calendar.current
+    func getLowerDate(for date: Date) -> Date {
+        let components = calendar.dateComponents(in: .current, from: date)
+        let upperComponents = DateComponents(year: components.year, month: components.month, day: components.day, hour: 0, minute: 0, second: 0)
+        return calendar.date(from: upperComponents)!
+    }
     func getUpperDate(for date: Date) -> Date {
         let components = calendar.dateComponents(in: .current, from: date)
         let upperComponents = DateComponents(year: components.year, month: components.month, day: components.day, hour: 23, minute: 59, second: 59)
@@ -54,15 +59,23 @@ func suggestDates(for string: String, strings: PresentationStrings, dateTimeForm
         return []
     }
     
-    let midnight = calendar.startOfDay(for: now)
+    let midnightDate = calendar.startOfDay(for: now)
     if today.lowercased().hasPrefix(string) {
-        let todayDate = getUpperDate(for: midnight)
-        result.append((todayDate, today))
+        let todayDate = getUpperDate(for: midnightDate)
+        result.append((midnightDate, todayDate, today))
     }
     if yesterday.lowercased().hasPrefix(string) {
-        let yesterdayMidnight = calendar.date(byAdding: .day, value: -1, to: midnight)!
+        let yesterdayMidnight = calendar.date(byAdding: .day, value: -1, to: midnightDate)!
         let yesterdayDate = getUpperDate(for: yesterdayMidnight)
-        result.append((yesterdayDate, yesterday))
+        result.append((yesterdayMidnight, yesterdayDate, yesterday))
+    }
+    
+    func getLowerMonthDate(month: Int, year: Int) -> Date {
+        let monthComponents = DateComponents(year: year, month: month)
+        let date = calendar.date(from: monthComponents)!
+        let range = calendar.range(of: .day, in: .month, for: date)!
+        let upperComponents = DateComponents(year: year, month: month, day: 1, hour: 0, minute: 0, second: 0)
+        return calendar.date(from: upperComponents)!
     }
     
     func getUpperMonthDate(month: Int, year: Int) -> Date {
@@ -77,9 +90,10 @@ func suggestDates(for string: String, strings: PresentationStrings, dateTimeForm
     let decimalRange = string.rangeOfCharacter(from: .decimalDigits)
     if decimalRange != nil {
         if string.count == 4, let value = Int(string), value <= year {
-            let date = getUpperMonthDate(month: 12, year: value)
-            if date > telegramReleaseDate {
-                result.append((date, "\(value)"))
+            let minDate = getLowerMonthDate(month: 1, year: value)
+            let maxDate = getUpperMonthDate(month: 12, year: value)
+            if maxDate > telegramReleaseDate {
+                result.append((minDate, maxDate, "\(value)"))
             }
         } else {
             do {
@@ -95,11 +109,11 @@ func suggestDates(for string: String, strings: PresentationStrings, dateTimeForm
                     if stringComponents.count < 3 {
                         for i in 0..<5 {
                             if let date = calendar.date(byAdding: .year, value: -i, to: resultDate) {
-                                result.append((date, nil))
+                                result.append((nil, date, nil))
                             }
                         }
                     } else if resultDate < now {
-                        result.append((resultDate, nil))
+                        result.append((nil, resultDate, nil))
                     }
                 }
                 let dd = try NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue)
@@ -121,13 +135,14 @@ func suggestDates(for string: String, strings: PresentationStrings, dateTimeForm
             var nextDateComponent = calendar.dateComponents([.hour, .minute, .second], from: now)
             nextDateComponent.weekday = day + calendar.firstWeekday
             if let date = calendar.nextDate(after: now, matching: nextDateComponent, matchingPolicy: .nextTime, direction: .backward) {
-                let upperDate = getUpperDate(for: date)
+                let lowerAnchorDate = getLowerDate(for: date)
+                let upperAnchorDate = getUpperDate(for: date)
                 for i in 0..<5 {
-                    if let date = calendar.date(byAdding: .hour, value: -24 * 7 * i, to: upperDate) {
-                        if calendar.isDate(date, equalTo: now, toGranularity: .weekOfYear) {
-                            result.append((date, value.0))
+                    if let lowerDate = calendar.date(byAdding: .hour, value: -24 * 7 * i, to: lowerAnchorDate), let upperDate = calendar.date(byAdding: .hour, value: -24 * 7 * i, to: upperAnchorDate) {
+                        if calendar.isDate(upperDate, equalTo: now, toGranularity: .weekOfYear) {
+                            result.append((lowerDate, upperDate, value.0))
                         } else {
-                            result.append((date, nil))
+                            result.append((lowerDate, upperDate, nil))
                         }
                     }
                 }
@@ -143,15 +158,17 @@ func suggestDates(for string: String, strings: PresentationStrings, dateTimeForm
         let shortMonthName = value.1.lowercased()
         if cleanString == shortMonthName || (cleanString.count >= shortMonthName.count && monthName.hasPrefix(cleanString)) {
             if cleanDigits.count == 4, let year = Int(cleanDigits) {
-                let date = getUpperMonthDate(month: month, year: year)
-                if date <= now && date > telegramReleaseDate {
-                    result.append((date, stringForMonth(strings: strings, month: Int32(month - 1), ofYear: Int32(year - 1900))))
+                let lowerDate = getLowerMonthDate(month: month, year: year)
+                let upperDate = getUpperMonthDate(month: month, year: year)
+                if upperDate <= now && upperDate > telegramReleaseDate {
+                    result.append((lowerDate, upperDate, stringForMonth(strings: strings, month: Int32(month - 1), ofYear: Int32(year - 1900))))
                 }
             } else if cleanDigits.isEmpty {
                 for i in (year - 7 ... year).reversed() {
-                    let date = getUpperMonthDate(month: month, year: i)
-                    if date <= now && date > telegramReleaseDate {
-                        result.append((date, stringForMonth(strings: strings, month: Int32(month - 1), ofYear: Int32(i - 1900))))
+                    let lowerDate = getUpperMonthDate(month: month, year: i)
+                    let upperDate = getUpperMonthDate(month: month, year: i)
+                    if upperDate <= now && upperDate > telegramReleaseDate {
+                        result.append((lowerDate, upperDate, stringForMonth(strings: strings, month: Int32(month - 1), ofYear: Int32(i - 1900))))
                     }
                 }
             }

@@ -1151,7 +1151,12 @@ final class ChatListControllerNode: ASDisplayNode {
             return nil
         }
         
-        let contentNode = ChatListSearchContainerNode(context: self.context, filter: [], groupId: self.groupId, openPeer: { [weak self] peer, dismissSearch in
+        var filter: ChatListNodePeersFilter = []
+        if false, case .group = self.groupId {
+            filter.insert(.excludeRecent)
+        }
+        
+        let contentNode = ChatListSearchContainerNode(context: self.context, filter: filter, groupId: self.groupId, openPeer: { [weak self] peer, dismissSearch in
             self?.requestOpenPeerFromSearch?(peer, dismissSearch)
         }, openDisabledPeer: { _ in
         }, openRecentPeerOptions: { [weak self] peer in
