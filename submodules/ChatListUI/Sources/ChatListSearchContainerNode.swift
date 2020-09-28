@@ -792,6 +792,13 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                             if let strongSelf = self {
 //                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
                                 let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forEveryone).start()
+                                
+                                strongSelf.updateState { state in
+                                    return state.withUpdatedSelectedMessageIds(nil)
+                                }
+                                if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                                }
                             }
                         }))
                     }
@@ -809,6 +816,13 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                             if let strongSelf = self {
 //                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone)
                                 let _ = deleteMessagesInteractively(account: strongSelf.context.account, messageIds: Array(messageIds), type: .forLocalPeer).start()
+                                
+                                strongSelf.updateState { state in
+                                    return state.withUpdatedSelectedMessageIds(nil)
+                                }
+                                if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                                }
                             }
                         }))
                     }

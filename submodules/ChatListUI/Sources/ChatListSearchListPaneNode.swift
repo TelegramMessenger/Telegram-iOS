@@ -657,6 +657,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     private let searchStatePromise = ValuePromise<ChatListSearchListPaneNodeState>()
     private let searchContextValue = Atomic<ChatListSearchMessagesContext?>(value: nil)
     var searchCurrentMessages: [Message]?
+    var currentEntries: [ChatListSearchEntry]?
     
     private var deletedMessagesDisposable: Disposable?
     
@@ -1367,6 +1368,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 }, searchQuery: strongSelf.searchQueryValue, searchOptions: strongSelf.searchOptionsValue, messageContextAction: { message, node, rect, gesture in
                     interaction.messageContextAction(message, node, rect, gesture)
                 })
+                strongSelf.currentEntries = newEntries
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
                 
                 var messages: [Message] = []
@@ -1966,7 +1968,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 if !strongSelf.didSetReady && !strongSelf.recentListNode.isHidden {
                     var ready: Signal<Bool, NoError>?
                     strongSelf.recentListNode.forEachItemNode { node in
-                        if let node = node as? ChatListSearchRecentPeersNode {
+                        if let node = node as? ChatListRecentPeersListItemNode {
                             ready = node.isReady
                         }
                     }
@@ -2058,7 +2060,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     strongSelf.emptyResultsTextNode.isHidden = !emptyResults
                     strongSelf.emptyResultsAnimationNode.visibility = emptyResults
                                              
-                    let displayPlaceholder = transition.isLoading && (strongSelf.key != .chats || strongSelf.searchOptionsValue?.peer != nil || strongSelf.searchOptionsValue?.date != nil)
+                    let displayPlaceholder = transition.isLoading && (strongSelf.key != .chats || (strongSelf.currentEntries?.isEmpty ?? true))
                     ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).updateAlpha(node: strongSelf.shimmerNode, alpha: displayPlaceholder ? 1.0 : 0.0)
            
                     strongSelf.recentListNode.isHidden = displayingResults || strongSelf.peersFilter.contains(.excludeRecent)
