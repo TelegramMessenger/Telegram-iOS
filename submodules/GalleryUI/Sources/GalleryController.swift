@@ -1124,9 +1124,10 @@ public class GalleryController: ViewController, StandalonePresentableController 
                                             
                                             strongSelf.galleryNode.pager.replaceItems(items, centralItemIndex: centralItemIndex)
                                         }
+                                        
+                                        strongSelf.updateVisibleDisposable.set(nil)
+                                        strongSelf.loadingMore = false
                                     }
-                                    
-                                    strongSelf.loadingMore = false
                                 }))
                             }
                         default:

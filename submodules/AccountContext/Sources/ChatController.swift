@@ -458,6 +458,8 @@ public protocol ChatController: ViewController {
     var canReadHistory: ValuePromise<Bool> { get }
     var parentController: ViewController? { get set }
     
+    var purposefulAction: (() -> Void)? { get set }
+    
     func updatePresentationMode(_ mode: ChatControllerPresentationMode)
     func beginMessageSearch(_ query: String)
     func displayPromoAnnouncement(text: String)

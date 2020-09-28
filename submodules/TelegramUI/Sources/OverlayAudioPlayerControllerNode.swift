@@ -20,6 +20,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
     private let type: MediaManagerPlayerType
     private let requestDismiss: () -> Void
     private let requestShare: (MessageId) -> Void
+    private let playlistLocation: SharedMediaPlaylistLocation?
     private let isGlobalSearch: Bool
     
     private let controllerInteraction: ChatControllerInteraction
@@ -41,14 +42,14 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
     private var presentationDataDisposable: Disposable?
     private let replacementHistoryNodeReadyDisposable = MetaDisposable()
     
-    init(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, isGlobalSearch: Bool, requestDismiss: @escaping () -> Void, requestShare: @escaping (MessageId) -> Void) {
+    init(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, playlistLocation: SharedMediaPlaylistLocation?, requestDismiss: @escaping () -> Void, requestShare: @escaping (MessageId) -> Void) {
         self.context = context
         self.peerId = peerId
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.type = type
         self.requestDismiss = requestDismiss
         self.requestShare = requestShare
-        self.isGlobalSearch = isGlobalSearch
+        self.playlistLocation = playlistLocation
         
         if case .regular = initialOrder {
             self.currentIsReversed = false
@@ -165,7 +166,16 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         
         let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
         
-        self.historyNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), chatLocationContextHolder: chatLocationContextHolder, tagMask: tagMask, subject: .message(id: initialMessageId, highlight: true), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: self.currentIsReversed, displayHeaders: .none, hintLinks: false, isGlobalSearch: isGlobalSearch))
+        let source: ChatHistoryListSource
+        if let playlistLocation = playlistLocation as? PeerMessagesPlaylistLocation, case let .custom(messages, at, loadMore) = playlistLocation {
+            source = .custom(messages: messages, messageId: at, loadMore: loadMore)
+            self.isGlobalSearch = true
+        } else {
+            source = .default
+            self.isGlobalSearch = false
+        }
+        
+        self.historyNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), chatLocationContextHolder: chatLocationContextHolder, tagMask: tagMask, source: source,  subject: .message(id: initialMessageId, highlight: true), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: self.currentIsReversed, displayHeaders: .none, hintLinks: false, isGlobalSearch: self.isGlobalSearch))
         
         super.init()
         

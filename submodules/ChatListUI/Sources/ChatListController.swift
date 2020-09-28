@@ -1687,6 +1687,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     scrollToTop()
                 }
                 
+                let tabsIsEmpty: Bool
+                if let (resolvedItems, displayTabsAtBottom) = strongSelf.tabContainerData {
+                    tabsIsEmpty = resolvedItems.count <= 1 || displayTabsAtBottom
+                } else {
+                    tabsIsEmpty = true
+                }
+                
                 var displaySearchFilters = true
                 if chatListView.0.entries.count < 10 {
                     displaySearchFilters = false
@@ -1701,7 +1708,16 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                                 parentController.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: true)
                             }
                         }
+                        
                         activate()
+                        
+                        if !tabsIsEmpty {
+                            Queue.mainQueue().after(0.01) {
+                                filterContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 38.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                                
+                                strongSelf.tabContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -64.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                            }
+                        }
                     }
                 }
                 
@@ -1716,20 +1732,26 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     public func deactivateSearch(animated: Bool) {
         if !self.displayNavigationBar {
             var completion: (() -> Void)?
+            
+            var filterContainerNode: ASDisplayNode?
+            if animated, let searchContentNode = self.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode {
+                filterContainerNode = searchContentNode.filterContainerNode
+            }
+            
             if let searchContentNode = self.searchContentNode {
                 completion = self.chatListDisplayNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
             }
             
-            let filtersIsEmpty: Bool
-            if let (resolvedItems, displayTabsAtBottom) = tabContainerData {
-                filtersIsEmpty = resolvedItems.count <= 1 || displayTabsAtBottom
+            let tabsIsEmpty: Bool
+            if let (resolvedItems, displayTabsAtBottom) = self.tabContainerData {
+                tabsIsEmpty = resolvedItems.count <= 1 || displayTabsAtBottom
             } else {
-                filtersIsEmpty = true
+                tabsIsEmpty = true
             }
             
-            self.navigationBar?.setSecondaryContentNode(filtersIsEmpty ? nil : self.tabContainerNode, animated: false)
+            self.navigationBar?.setSecondaryContentNode(tabsIsEmpty ? nil : self.tabContainerNode, animated: false)
             if let parentController = self.parent as? TabBarController {
-                parentController.navigationBar?.setSecondaryContentNode(filtersIsEmpty ? nil : self.tabContainerNode, animated: animated)
+                parentController.navigationBar?.setSecondaryContentNode(tabsIsEmpty ? nil : self.tabContainerNode, animated: animated)
             }
             
             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .spring) : .immediate
@@ -1738,6 +1760,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             completion?()
             
             (self.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.4, curve: .spring))
+            
+            if let filterContainerNode = filterContainerNode {
+                filterContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -44.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+                
+                if !tabsIsEmpty {
+                    self.tabContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -64.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                }
+            }
         }
     }
     

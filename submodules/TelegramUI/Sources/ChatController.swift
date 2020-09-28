@@ -355,7 +355,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         return self.chatLocation
     }
     
-    var purposefulAction: (() -> Void)?
+    public var purposefulAction: (() -> Void)?
     
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil) {
         let _ = ChatControllerCount.modify { value in
@@ -3654,7 +3654,44 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     transformedMessages = strongSelf.transformEnqueueMessages(messages)
                 }
                 
-                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: transformedMessages)
+                var forwardedMessages: [[EnqueueMessage]] = []
+                var forwardSourcePeerIds = Set<PeerId>()
+                for message in transformedMessages {
+                    if case let .forward(source, _, _) = message {
+                        forwardSourcePeerIds.insert(source.peerId)
+                        
+                        var added = false
+                        if var last = forwardedMessages.last {
+                            if let currentMessage = last.first, case let .forward(currentSource, _, _) = currentMessage, currentSource.peerId == source.peerId {
+                                last.append(message)
+                                added = true
+                            }
+                        }
+                        if !added {
+                            forwardedMessages.append([message])
+                        }
+                    }
+                }
+                
+                let signal: Signal<[MessageId?], NoError>
+                if forwardSourcePeerIds.count > 1 {
+                    var signals: [Signal<[MessageId?], NoError>] = []
+                    for messagesGroup in forwardedMessages {
+                        signals.append(enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messagesGroup))
+                    }
+                    signal = combineLatest(signals)
+                    |> map { results in
+                        var ids: [MessageId?] = []
+                        for result in results {
+                            ids.append(contentsOf: result)
+                        }
+                        return ids
+                    }
+                } else {
+                    signal = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: transformedMessages)
+                }
+                
+                let _ = (signal
                 |> deliverOnMainQueue).start(next: { messageIds in
                     if let strongSelf = self {
                         if strongSelf.presentationInterfaceState.isScheduledMessages {

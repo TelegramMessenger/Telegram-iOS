@@ -138,7 +138,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                 
                 let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
                 
-                let textFont = item.presentationData.messageFont
+                let textFont = Font.regular(17.0)
                 
                 let rawSegments: [AnimatedCountLabelNode.Segment]
                 let rawAlternativeSegments: [AnimatedCountLabelNode.Segment]

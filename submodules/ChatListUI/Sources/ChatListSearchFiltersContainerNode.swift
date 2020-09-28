@@ -243,11 +243,12 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
         
         if self.currentParams?.presentationData.theme !== presentationData.theme {
             self.backgroundColor = presentationData.theme.rootController.navigationBar.backgroundColor
-            self.selectedLineNode.image = generateImage(CGSize(width: 8.0, height: 4.0), rotatedContext: { size, context in
+            self.selectedLineNode.image = generateImage(CGSize(width: 5.0, height: 3.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 context.setFillColor(presentationData.theme.list.itemAccentColor.cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.width)))
-            })?.stretchableImage(withLeftCapWidth: 4, topCapHeight: 1)
+                context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + 1.0)))
+                context.fill(CGRect(x: 0.0, y: 2.0, width: size.width, height: 2.0))
+            })?.stretchableImage(withLeftCapWidth: 2, topCapHeight: 2)
         }
         
         self.currentParams = (size: size, sideInset: sideInset, filters: filters, selectedFilter: selectedFilter, transitionFraction: transitionFraction, presentationData: presentationData)
@@ -346,7 +347,7 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
             spacing = (size.width - titlesWidth - resolvedSideInset * 2.0) / CGFloat(tabSizes.count - 1)
         }
         
-        let verticalOffset: CGFloat = -3.0
+        let verticalOffset: CGFloat = -4.0
         for i in 0 ..< tabSizes.count {
             let (_, paneNodeSize, paneNode, wasAdded) = tabSizes[i]
             let itemNodeTransition = transition
@@ -407,7 +408,7 @@ final class ChatListSearchFiltersContainerNode: ASDisplayNode {
         
         if let selectedFrame = selectedFrame {
             let wasAdded = self.selectedLineNode.alpha < 1.0
-            let lineFrame = CGRect(origin: CGPoint(x: selectedFrame.minX, y: size.height - 4.0), size: CGSize(width: selectedFrame.width, height: 4.0))
+            let lineFrame = CGRect(origin: CGPoint(x: selectedFrame.minX, y: size.height - 3.0), size: CGSize(width: selectedFrame.width, height: 3.0))
             if wasAdded {
                 self.selectedLineNode.frame = lineFrame
                 self.selectedLineNode.alpha = 0.0
