@@ -55,7 +55,7 @@ enum ChatListSearchPaneKey {
     case voice
 }
 
-private let availablePanes: [ChatListSearchPaneKey] = [.chats, .media, .links, .files, .music, .voice]
+let defaultAvailableSearchPanes: [ChatListSearchPaneKey] = [.chats, .media, .links, .files, .music, .voice]
 
 struct ChatListSearchPaneSpecifier: Equatable {
     var key: ChatListSearchPaneKey
@@ -112,7 +112,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
     
     var isAdjacentLoadingEnabled = false
     
-    private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData)?
+    private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData, [ChatListSearchPaneKey])?
     
     private(set) var currentPaneKey: ChatListSearchPaneKey?
     var pendingSwitchToPaneKey: ChatListSearchPaneKey?
@@ -160,14 +160,14 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
         if self.currentPanes[key] != nil {
             self.currentPaneKey = key
 
-            if let (size, sideInset, bottomInset, visibleHeight, presentationData) = self.currentParams {
-                self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, transition: .animated(duration: 0.4, curve: .spring))
+            if let (size, sideInset, bottomInset, visibleHeight, presentationData, availablePanes) = self.currentParams {
+                self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, availablePanes: availablePanes, transition: .animated(duration: 0.4, curve: .spring))
             }
         } else if self.pendingSwitchToPaneKey != key {
             self.pendingSwitchToPaneKey = key
 
-            if let (size, sideInset, bottomInset, visibleHeight, presentationData) = self.currentParams {
-                self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, transition: .animated(duration: 0.4, curve: .spring))
+            if let (size, sideInset, bottomInset, visibleHeight, presentationData, availablePanes) = self.currentParams {
+                self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, availablePanes: availablePanes, transition: .animated(duration: 0.4, curve: .spring))
             }
         }
     }
@@ -176,7 +176,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
         super.didLoad()
         
         let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] point in
-            guard let strongSelf = self, let currentPaneKey = strongSelf.currentPaneKey, let index = availablePanes.firstIndex(of: currentPaneKey) else {
+            guard let strongSelf = self, let (_, _, _, _, _, availablePanes) = strongSelf.currentParams, let currentPaneKey = strongSelf.currentPaneKey, let index = availablePanes.firstIndex(of: currentPaneKey) else {
                 return []
             }
             if index == 0 {
@@ -222,7 +222,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
             
             cancelContextGestures(view: self.view)
         case .changed:
-            if let (size, sideInset, bottomInset, visibleHeight, presentationData) = self.currentParams, let currentPaneKey = self.currentPaneKey, let currentIndex = availablePanes.firstIndex(of: currentPaneKey) {
+            if let (size, sideInset, bottomInset, visibleHeight, presentationData, availablePanes) = self.currentParams, let currentPaneKey = self.currentPaneKey, let currentIndex = availablePanes.firstIndex(of: currentPaneKey) {
                 self.isAdjacentLoadingEnabled = true
                 let translation = recognizer.translation(in: self.view)
                 var transitionFraction = translation.x / size.width
@@ -233,10 +233,10 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
                     transitionFraction = max(0.0, transitionFraction)
                 }
                 self.transitionFraction = transitionFraction
-                self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, transition: .immediate)
+                self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, availablePanes: availablePanes, transition: .immediate)
             }
         case .cancelled, .ended:
-            if let (size, sideInset, bottomInset, visibleHeight, presentationData) = self.currentParams, let currentPaneKey = self.currentPaneKey, let currentIndex = availablePanes.firstIndex(of: currentPaneKey) {
+            if let (size, sideInset, bottomInset, visibleHeight, presentationData, availablePanes) = self.currentParams, let currentPaneKey = self.currentPaneKey, let currentIndex = availablePanes.firstIndex(of: currentPaneKey) {
                 let translation = recognizer.translation(in: self.view)
                 let velocity = recognizer.velocity(in: self.view)
                 var directionIsToRight: Bool?
@@ -261,7 +261,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
                     }
                 }
                 self.transitionFraction = 0.0
-                self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, transition: .animated(duration: 0.35, curve: .spring))
+                self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, availablePanes: availablePanes, transition: .animated(duration: 0.35, curve: .spring))
             }
         default:
             break
@@ -293,7 +293,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
         }
     }
     
-    func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData, availablePanes: [ChatListSearchPaneKey], transition: ContainedViewLayoutTransition) {
         let previousAvailablePanes = self.currentAvailablePanes ?? []
         self.currentAvailablePanes = availablePanes
                 
@@ -327,7 +327,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
             currentIndex = nil
         }
         
-        self.currentParams = (size, sideInset, bottomInset, visibleHeight, presentationData)
+        self.currentParams = (size, sideInset, bottomInset, visibleHeight, presentationData, availablePanes)
                 
         self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
         
@@ -376,12 +376,12 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
                             guard let strongSelf = self else {
                                 return
                             }
-                            if let (size, sideInset, bottomInset, visibleHeight, presentationData) = strongSelf.currentParams {
+                            if let (size, sideInset, bottomInset, visibleHeight, presentationData, availablePanes) = strongSelf.currentParams {
                                 var transition: ContainedViewLayoutTransition = .immediate
                                 if strongSelf.pendingSwitchToPaneKey == key && strongSelf.currentPaneKey != nil {
                                     transition = .animated(duration: 0.4, curve: .spring)
                                 }
-                                strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, transition: transition)
+                                strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, availablePanes: availablePanes, transition: transition)
                             }
                         }
                         if leftScope {
