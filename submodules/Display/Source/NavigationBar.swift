@@ -1215,7 +1215,7 @@ open class NavigationBar: ASDisplayNode {
         if self.secondaryContentNode !== secondaryContentNode {
             if let previous = self.secondaryContentNode, previous.supernode === self.clippingNode {
                 if animated {
-                    previous.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak previous] finished in
+                    previous.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previous] finished in
                         if finished {
                             previous?.removeFromSupernode()
                             previous?.layer.removeAllAnimations()

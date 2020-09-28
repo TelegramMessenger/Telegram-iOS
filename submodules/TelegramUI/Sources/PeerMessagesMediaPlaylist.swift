@@ -187,14 +187,14 @@ private func navigatedMessageFromMessages(_ messages: [Message], anchorIndex: Me
             switch position {
                 case .exact:
                     return (message, aroundMessagesFromMessages(messages, centralIndex: message.index), true)
-                case .later:
+                case .earlier:
                     if index + 1 < messages.count {
                         let message = messages[index + 1]
                         return (message, aroundMessagesFromMessages(messages, centralIndex: messages[index + 1].index), true)
                     } else {
                         return nil
                     }
-                case .earlier:
+                case .later:
                     if index != 0 {
                         let message = messages[index - 1]
                         return (message, aroundMessagesFromMessages(messages, centralIndex: messages[index - 1].index), true)
@@ -207,10 +207,10 @@ private func navigatedMessageFromMessages(_ messages: [Message], anchorIndex: Me
     }
     if !messages.isEmpty {
         switch position {
-            case .later, .exact:
+            case .earlier, .exact:
                 let message = messages[messages.count - 1]
                 return (message, aroundMessagesFromMessages(messages, centralIndex: messages[messages.count - 1].index), false)
-            case .earlier:
+            case .later:
                 let message = messages[0]
                 return (message, aroundMessagesFromMessages(messages, centralIndex: messages[0].index), false)
         }
@@ -318,6 +318,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
     var currentItemDisappeared: (() -> Void)?
     
     private let navigationDisposable = MetaDisposable()
+    private let loadMoreDisposable = MetaDisposable()
     
     private var playbackStack = PlaybackStack()
     
@@ -325,6 +326,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
     private var currentlyObservedMessageId: MessageId?
     private let currentlyObservedMessageDisposable = MetaDisposable()
     private var loadingItem: Bool = false
+    private var loadingMore: Bool = false
     private var playedToEnd: Bool = false
     private var order: MusicPlaybackSettingsOrder = .regular
     private(set) var looping: MusicPlaybackSettingsLooping = .none
@@ -357,6 +359,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
     
     deinit {
         self.navigationDisposable.dispose()
+        self.loadMoreDisposable.dispose()
         self.currentlyObservedMessageDisposable.dispose()
     }
     
@@ -522,9 +525,15 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                 if let message = messages.0.first(where: { $0.id == at }) {
                                     strongSelf.playbackStack.clear()
                                     strongSelf.playbackStack.push(message.id)
-                                    strongSelf.currentItem = (message, [])
+                                    if let (message, aroundMessages, _) = navigatedMessageFromMessages(messages.0, anchorIndex: message.index, position: .exact) {
+                                        strongSelf.currentItem = (message, aroundMessages)
+                                    } else {
+                                        strongSelf.currentItem = (message, [])
+                                    }
+                                    strongSelf.playedToEnd = false
                                 } else {
                                     strongSelf.currentItem = nil
+                                    strongSelf.playedToEnd = true
                                 }
                                 strongSelf.updateState()
                             }
@@ -694,10 +703,10 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                 }
                         }
                         let historySignal = inputIndex
-                        |> mapToSignal { inputIndex -> Signal<(Message, [Message])?, NoError> in
+                        |> mapToSignal { inputIndex -> Signal<((Message, [Message])?, Int, Bool), NoError> in
                             return messages
                             |> take(1)
-                            |> mapToSignal { messages, _, loadMore -> Signal<(Message, [Message])?, NoError> in
+                            |> mapToSignal { messages, _, hasMore -> Signal<((Message, [Message])?, Int, Bool), NoError> in
                                 let position: NavigatedMessageFromViewPosition
                                 switch navigation {
                                     case .later:
@@ -711,10 +720,10 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                 if let (message, aroundMessages, exact) = navigatedMessageFromMessages(messages, anchorIndex: inputIndex, position: position) {
                                     switch navigation {
                                         case .random:
-                                            return .single((message, []))
+                                            return .single(((message, []), messages.count, false))
                                         default:
                                             if exact {
-                                                return .single((message, aroundMessages))
+                                                return .single(((message, aroundMessages), messages.count, false))
                                             }
                                     }
                                 }
@@ -726,7 +735,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                     } else {
                                         viewIndex = .lowerBound
                                     }
-                                    return .single(nil)
+                                    return .single((nil, messages.count, false))
 //                                    return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: viewIndex, count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [])
 //                                        |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
 //                                            let position: NavigatedMessageFromViewPosition
@@ -743,31 +752,55 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
 //                                            }
 //                                    }
                                 } else {
-                                    return .single(nil)
+                                    if hasMore {
+                                        return .single((nil, messages.count, true))
+                                    } else {
+                                        return .single((nil, messages.count, false))
+                                    }
                                 }
-                                
-                                return .complete()
                             }
                         }
                         |> take(1)
                         |> deliverOnMainQueue
-                        self.navigationDisposable.set(historySignal.start(next: { [weak self] messageAndAroundMessages in
+                        self.navigationDisposable.set(historySignal.start(next: { [weak self] messageAndAroundMessages, previousMessagesCount, shouldLoadMore in
                             if let strongSelf = self {
                                 assert(strongSelf.loadingItem)
                                 
-                                strongSelf.loadingItem = false
-                                if let (message, aroundMessages) = messageAndAroundMessages {
-                                    if case let .random(previous) = navigation, previous {
-                                        strongSelf.playbackStack.resetToId(message.id)
-                                    } else {
-                                        strongSelf.playbackStack.push(message.id)
+                                if shouldLoadMore {
+                                    if strongSelf.loadingMore {
+                                        return
                                     }
-                                    strongSelf.currentItem = (message, aroundMessages)
-                                    strongSelf.playedToEnd = false
+                                    strongSelf.loadingMore = true
+                                    loadMore?()
+                                    
+                                    strongSelf.loadMoreDisposable.set((messages
+                                    |> deliverOnMainQueue).start(next: { messages, totalCount, hasMore in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        
+                                        if messages.count > previousMessagesCount {
+                                            strongSelf.loadItem(anchor: anchor, navigation: navigation)
+                                            
+                                            strongSelf.loadMoreDisposable.set(nil)
+                                            strongSelf.loadingMore = false
+                                        }
+                                    }))
                                 } else {
-                                    strongSelf.playedToEnd = true
+                                    strongSelf.loadingItem = false
+                                    if let (message, aroundMessages) = messageAndAroundMessages {
+                                        if case let .random(previous) = navigation, previous {
+                                            strongSelf.playbackStack.resetToId(message.id)
+                                        } else {
+                                            strongSelf.playbackStack.push(message.id)
+                                        }
+                                        strongSelf.currentItem = (message, aroundMessages)
+                                        strongSelf.playedToEnd = false
+                                    } else {
+                                        strongSelf.playedToEnd = true
+                                    }
+                                    strongSelf.updateState()
                                 }
-                                strongSelf.updateState()
                             }
                         }))
             }
