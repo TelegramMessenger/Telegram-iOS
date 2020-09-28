@@ -798,6 +798,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+        let previousParams = self.currentParams
         self.currentParams = (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
                 
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
@@ -805,7 +806,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
         let availableWidth = size.width - sideInset * 2.0
         
         let itemsLayout: ItemsLayout
-        if let current = self.itemsLayout {
+        if let current = self.itemsLayout, previousParams?.size.width == size.width {
             itemsLayout = current
         } else {
             switch self.contentType {
