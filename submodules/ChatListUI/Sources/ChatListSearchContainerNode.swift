@@ -756,7 +756,16 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     func deleteMessages(messageIds: Set<MessageId>?) {
         if let messageIds = messageIds ?? self.stateValue.selectedMessageIds, !messageIds.isEmpty {
-            self.activeActionDisposable.set((self.context.sharedContext.chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: messageIds)
+            let (peers, messages) = self.currentMessages
+            let _ = (self.context.account.postbox.transaction { transaction -> Void in
+                for id in messageIds {
+                    if transaction.getMessage(id) == nil, let message = messages[id] {
+                        storeMessageFromSearch(transaction: transaction, message: message)
+                    }
+                }
+            }).start()
+            
+            self.activeActionDisposable.set((self.context.sharedContext.chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: messageIds, messages: messages, peers: peers)
             |> deliverOnMainQueue).start(next: { [weak self] actions in
                 if let strongSelf = self, !actions.options.isEmpty {
                     let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
@@ -818,6 +827,15 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     func forwardMessages(messageIds: Set<MessageId>?) {
         let messageIds = messageIds ?? self.stateValue.selectedMessageIds
         if let messageIds = messageIds, !messageIds.isEmpty {
+            let messages = self.paneContainerNode.allCurrentMessages()
+            let _ = (self.context.account.postbox.transaction { transaction -> Void in
+                for id in messageIds {
+                    if transaction.getMessage(id) == nil, let message = messages[id] {
+                        storeMessageFromSearch(transaction: transaction, message: message)
+                    }
+                }
+            }).start()
+            
             let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled]))
             peerSelectionController.peerSelected = { [weak self, weak peerSelectionController] peerId in
                 if let strongSelf = self, let _ = peerSelectionController {
@@ -832,22 +850,22 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                                         return nil
                                     }
                                     return strongSelf.context.account.pendingMessageManager.pendingMessageStatus(id)
-                                        |> mapToSignal { status, _ -> Signal<Bool, NoError> in
-                                            if status != nil {
-                                                return .never()
-                                            } else {
-                                                return .single(true)
-                                            }
+                                    |> mapToSignal { status, _ -> Signal<Bool, NoError> in
+                                        if status != nil {
+                                            return .never()
+                                        } else {
+                                            return .single(true)
                                         }
-                                        |> take(1)
+                                    }
+                                    |> take(1)
                                 })
                                 strongSelf.activeActionDisposable.set((combineLatest(signals)
-                                    |> deliverOnMainQueue).start(completed: {
-                                        guard let strongSelf = self else {
-                                            return
-                                        }
-                                        strongSelf.present?(OverlayStatusController(theme: strongSelf.presentationData.theme, type: .success), nil)
-                                    }))
+                                |> deliverOnMainQueue).start(completed: {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.present?(OverlayStatusController(theme: strongSelf.presentationData.theme, type: .success), nil)
+                                }))
                             }
                         })
                         if let peerSelectionController = peerSelectionController {
