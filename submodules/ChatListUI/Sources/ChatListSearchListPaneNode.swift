@@ -1845,7 +1845,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         let insets = UIEdgeInsets(top: topPanelHeight, left: sideInset, bottom: bottomInset, right: sideInset)
         
         self.shimmerNode.frame = CGRect(origin: CGPoint(x: overflowInset, y: topInset), size: CGSize(width: size.width - overflowInset * 2.0, height: size.height))
-        self.shimmerNode.update(context: self.context, size: CGSize(width: size.width - overflowInset * 2.0, height: size.height), presentationData: self.presentationData, key: !(self.searchQueryValue?.isEmpty ?? true) && self.key == .media ? .chats : self.key, transition: transition)
+        self.shimmerNode.update(context: self.context, size: CGSize(width: size.width - overflowInset * 2.0, height: size.height), presentationData: self.presentationData, key: !(self.searchQueryValue?.isEmpty ?? true) && self.key == .media ? .chats : self.key, hasSelection: self.selectedMessages != nil, transition: transition)
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         self.recentListNode.frame = CGRect(origin: CGPoint(), size: size)
@@ -1977,14 +1977,14 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     }
     
     private func dequeueTransition() {
-        if let (transition, _) = self.enqueuedTransitions.first {
+        if let (transition, isFirstTime) = self.enqueuedTransitions.first {
             self.enqueuedTransitions.remove(at: 0)
             
             var options = ListViewDeleteAndInsertOptions()
-            options.insert(.PreferSynchronousDrawing)
-            options.insert(.PreferSynchronousResourceLoading)
-            
-            if transition.animated {
+            if isFirstTime && self.key == .chats {
+                options.insert(.PreferSynchronousDrawing)
+                options.insert(.PreferSynchronousResourceLoading)
+            } else if transition.animated {
                 options.insert(.AnimateInsertion)
             }
             
@@ -2240,7 +2240,7 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
         self.addSubnode(self.maskNode)
     }
     
-    func update(context: AccountContext, size: CGSize, presentationData: PresentationData, key: ChatListSearchPaneKey, transition: ContainedViewLayoutTransition) {
+    func update(context: AccountContext, size: CGSize, presentationData: PresentationData, key: ChatListSearchPaneKey, hasSelection: Bool, transition: ContainedViewLayoutTransition) {
         if self.currentParams?.size != size || self.currentParams?.presentationData !== presentationData || self.currentParams?.key != key {
             self.currentParams = (size, presentationData, key)
             
@@ -2266,25 +2266,25 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                         media.append(TelegramMediaWebpage(webpageId: MediaId(namespace: 0, id: 0), content: .Loaded(TelegramMediaWebpageLoadedContent(url: "https://telegram.org", displayUrl: "https://telegram.org", hash: 0, type: nil, websiteName: "Telegram", title: "Telegram Telegram", text: "Telegram", embedUrl: nil, embedType: nil, embedSize: nil, duration: nil, author: nil, image: nil, file: nil, attributes: [], instantPage: nil))))
                         let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer1.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: timestamp1, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer1, text: "Text", attributes: [], media: media, peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
                         
-                        return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(peer1.id), interaction: ListMessageItemInteraction.default, message: message, selection: .none, displayHeader: false, customHeader: nil, hintIsLink: true, isGlobalSearchResult: true)
+                        return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(peer1.id), interaction: ListMessageItemInteraction.default, message: message, selection: hasSelection ? .selectable(selected: false) : .none, displayHeader: false, customHeader: nil, hintIsLink: true, isGlobalSearchResult: true)
                     case .files:
                         var media: [Media] = []
                         media.append(TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: 0, attributes: [.FileName(fileName: "Text.txt")]))
                         let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer1.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: timestamp1, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer1, text: "Text", attributes: [], media: media, peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
                         
-                        return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(peer1.id), interaction: ListMessageItemInteraction.default, message: message, selection: .none, displayHeader: false, customHeader: nil, hintIsLink: false, isGlobalSearchResult: true)
+                        return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(peer1.id), interaction: ListMessageItemInteraction.default, message: message, selection: hasSelection ? .selectable(selected: false) : .none, displayHeader: false, customHeader: nil, hintIsLink: false, isGlobalSearchResult: true)
                     case .music:
                         var media: [Media] = []
                         media.append(TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: 0, attributes: [.Audio(isVoice: false, duration: 0, title: nil, performer: nil, waveform: MemoryBuffer(data: Data()))]))
                         let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer1.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: timestamp1, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer1, text: "Text", attributes: [], media: media, peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
                         
-                        return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(peer1.id), interaction: ListMessageItemInteraction.default, message: message, selection: .none, displayHeader: false, customHeader: nil, hintIsLink: false, isGlobalSearchResult: true)
+                        return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(peer1.id), interaction: ListMessageItemInteraction.default, message: message, selection: hasSelection ? .selectable(selected: false) : .none, displayHeader: false, customHeader: nil, hintIsLink: false, isGlobalSearchResult: true)
                     case .voice:
                         var media: [Media] = []
                         media.append(TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: 0, attributes: [.Audio(isVoice: true, duration: 0, title: nil, performer: nil, waveform: MemoryBuffer(data: Data()))]))
                         let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer1.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: timestamp1, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer1, text: "Text", attributes: [], media: media, peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
                         
-                        return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(peer1.id), interaction: ListMessageItemInteraction.default, message: message, selection: .none, displayHeader: false, customHeader: nil, hintIsLink: false, isGlobalSearchResult: true)
+                        return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(peer1.id), interaction: ListMessageItemInteraction.default, message: message, selection: hasSelection ? .selectable(selected: false) : .none, displayHeader: false, customHeader: nil, hintIsLink: false, isGlobalSearchResult: true)
                 }
             }
             
@@ -2340,6 +2340,8 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                         context.setBlendMode(.copy)
                         context.setFillColor(UIColor.clear.cgColor)
                         
+                        let selectionOffset: CGFloat = hasSelection ? 45.0 : 0.0
+                        
                         if let itemNode = itemNodes[sampleIndex] as? ChatListItemNode {
                             context.fillEllipse(in: itemNode.avatarNode.frame.offsetBy(dx: 0.0, dy: currentY))
                             let titleFrame = itemNode.titleNode.frame.offsetBy(dx: 0.0, dy: currentY)
@@ -2361,9 +2363,9 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             if let media = itemNode.currentMedia as? TelegramMediaFile {
                                 isVoice = media.isVoice
                                 if media.isMusic || media.isVoice {
-                                    context.fillEllipse(in: CGRect(x: 12.0, y: currentY + 8.0, width: 40.0, height: 40.0))
+                                    context.fillEllipse(in: CGRect(x: 12.0 + selectionOffset, y: currentY + 8.0, width: 40.0, height: 40.0))
                                 } else {
-                                    let path = UIBezierPath(roundedRect: CGRect(x: 12.0, y: currentY + 8.0, width: 40.0, height: 40.0), cornerRadius: 6.0)
+                                    let path = UIBezierPath(roundedRect: CGRect(x: 12.0 + selectionOffset, y: currentY + 8.0, width: 40.0, height: 40.0), cornerRadius: 6.0)
                                     context.addPath(path.cgPath)
                                     context.fillPath()
                                 }
@@ -2382,7 +2384,7 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             context.setFillColor(presentationData.theme.chatList.itemSeparatorColor.cgColor)
                             context.fill(itemNode.separatorNode.frame.offsetBy(dx: 0.0, dy: currentY))
                         } else if let itemNode = itemNodes[sampleIndex] as? ListMessageSnippetItemNode {
-                            let path = UIBezierPath(roundedRect: CGRect(x: 12.0, y: currentY + 12.0, width: 40.0, height: 40.0), cornerRadius: 6.0)
+                            let path = UIBezierPath(roundedRect: CGRect(x: 12.0 + selectionOffset, y: currentY + 12.0, width: 40.0, height: 40.0), cornerRadius: 6.0)
                             context.addPath(path.cgPath)
                             context.fillPath()
                             

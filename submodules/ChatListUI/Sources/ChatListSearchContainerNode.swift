@@ -401,7 +401,9 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             self.stateValue = state
             self.statePromise.set(state)
         }
-        self.paneContainerNode.currentPane?.node.updateSelectedMessages(animated: true)
+        for pane in self.paneContainerNode.currentPanes.values {
+            pane.node.updateSelectedMessages(animated: true)
+        }
         self.selectionPanelNode?.selectedMessages = self.stateValue.selectedMessageIds ?? []
     }
 

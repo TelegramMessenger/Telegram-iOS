@@ -125,7 +125,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
         }
     }
     
-    private var currentPanes: [ChatListSearchPaneKey: ChatListSearchPaneWrapper] = [:]
+    var currentPanes: [ChatListSearchPaneKey: ChatListSearchPaneWrapper] = [:]
     private var pendingPanes: [ChatListSearchPaneKey: ChatListSearchPendingPane] = [:]
     
     private var transitionFraction: CGFloat = 0.0
