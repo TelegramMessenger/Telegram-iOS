@@ -81,6 +81,7 @@ private struct ChatListSearchContainerNodeSearchState: Equatable {
 public final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     private let context: AccountContext
     private let peersFilter: ChatListNodePeersFilter
+    private let groupId: PeerGroupId
     private var interaction: ChatListSearchInteraction?
     private let openMessage: (Peer, MessageId, Bool) -> Void
     private let navigationController: NavigationController?
@@ -125,6 +126,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     public init(context: AccountContext, filter: ChatListNodePeersFilter, groupId: PeerGroupId, openPeer originalOpenPeer: @escaping (Peer, Bool) -> Void, openDisabledPeer: @escaping (Peer) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage originalOpenMessage: @escaping (Peer, MessageId, Bool) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, navigationController: NavigationController?) {
         self.context = context
         self.peersFilter = filter
+        self.groupId = groupId
         self.navigationController = navigationController
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -488,6 +490,15 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         let overflowInset: CGFloat = 20.0
         self.filterContainerNode.update(size: CGSize(width: layout.size.width - overflowInset * 2.0, height: 38.0), sideInset: layout.safeInsets.left - overflowInset, filters: filters.map { .filter($0) }, selectedFilter: self.selectedFilterKey, transitionFraction: self.transitionFraction, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
         
+        var bottomIntrinsicInset = layout.intrinsicInsets.bottom
+        if case .root = self.groupId {
+            if layout.safeInsets.left > overflowInset {
+                bottomIntrinsicInset -= 34.0
+            } else {
+                bottomIntrinsicInset -= 49.0
+            }
+        }
+        
         if let selectedMessageIds = self.stateValue.selectedMessageIds {
             var wasAdded = false
             let selectionPanelNode: ChatListSearchMessageSelectionPanelNode
@@ -541,7 +552,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }
             selectionPanelNode.selectedMessages = selectedMessageIds
             
-            let panelHeight = selectionPanelNode.update(layout: layout, presentationData: self.presentationData, transition: wasAdded ? .immediate : transition)
+            let panelHeight = selectionPanelNode.update(layout: layout.addedInsets(insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: -(layout.intrinsicInsets.bottom - bottomIntrinsicInset), right: 0.0)), presentationData: self.presentationData, transition: wasAdded ? .immediate : transition)
             let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight))
             if wasAdded {
                 selectionPanelNode.frame = panelFrame
@@ -561,12 +572,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         var bottomInset = layout.intrinsicInsets.bottom
         if let inputHeight = layout.inputHeight {
             bottomInset = inputHeight
-        } else {
-            if !layout.safeInsets.left.isZero {
-                bottomInset -= 34.0
-            } else {
-                bottomInset -= 49.0
-            }
+        } else if case .root = self.groupId {
+            bottomInset -= bottomIntrinsicInset
         }
         
         self.paneContainerNode.update(size: CGSize(width: layout.size.width, height: layout.size.height - topInset), sideInset: layout.safeInsets.left, bottomInset: bottomInset, visibleHeight: layout.size.height - topInset, presentationData: self.presentationData, transition: transition)

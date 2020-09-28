@@ -554,7 +554,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                     strongSelf.offsetContainerNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
                     
                     let nonExtractedRect = CGRect(origin: CGPoint(), size: CGSize(width: nodeLayout.contentSize.width - 16.0, height: nodeLayout.contentSize.height))
-                    let extractedRect = CGRect(origin: CGPoint(), size: nodeLayout.contentSize).insetBy(dx: 16.0, dy: 0.0)
+                    let extractedRect = CGRect(origin: CGPoint(), size: nodeLayout.contentSize).insetBy(dx: 16.0 + params.leftInset, dy: 0.0)
                     strongSelf.extractedRect = extractedRect
                     strongSelf.nonExtractedRect = nonExtractedRect
                     

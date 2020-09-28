@@ -2361,9 +2361,9 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             if let media = itemNode.currentMedia as? TelegramMediaFile {
                                 isVoice = media.isVoice
                                 if media.isMusic || media.isVoice {
-                                    context.fillEllipse(in: CGRect(x: 12.0, y: currentY + 12.0, width: 40.0, height: 40.0))
+                                    context.fillEllipse(in: CGRect(x: 12.0, y: currentY + 8.0, width: 40.0, height: 40.0))
                                 } else {
-                                    let path = UIBezierPath(roundedRect: CGRect(x: 12.0, y: currentY + 12.0, width: 40.0, height: 40.0), cornerRadius: 6.0)
+                                    let path = UIBezierPath(roundedRect: CGRect(x: 12.0, y: currentY + 8.0, width: 40.0, height: 40.0), cornerRadius: 6.0)
                                     context.addPath(path.cgPath)
                                     context.fillPath()
                                 }
@@ -2389,7 +2389,7 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             let titleFrame = itemNode.titleNode.frame.offsetBy(dx: 0.0, dy: currentY)
                             fillLabelPlaceholderRect(origin: CGPoint(x: titleFrame.minX, y: floor(titleFrame.midY - fakeLabelPlaceholderHeight / 2.0)), width: 120.0)
                             
-                            let linkFrame = itemNode.linkNode.frame.offsetBy(dx: 0.0, dy: currentY)
+                            let linkFrame = itemNode.linkNode.frame.offsetBy(dx: 0.0, dy: currentY - 1.0)
                             fillLabelPlaceholderRect(origin: CGPoint(x: linkFrame.minX, y: floor(linkFrame.midY - fakeLabelPlaceholderHeight / 2.0)), width: 240.0)
                             
                             let authorFrame = itemNode.authorNode.frame.offsetBy(dx: 0.0, dy: currentY)
