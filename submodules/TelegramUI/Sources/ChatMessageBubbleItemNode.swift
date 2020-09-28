@@ -1032,6 +1032,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             case .group:
                 break
         }
+        
         var inlineBotNameString: String?
         var replyMessage: Message?
         var replyMarkup: ReplyMarkupMessageAttribute?
@@ -1051,6 +1052,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 }
             } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty && !isPreview {
                 replyMarkup = attribute
+            } else if let attribute = attribute as? AuthorSignatureMessageAttribute {
+                if firstMessage.author is TelegramChannel, !attribute.signature.isEmpty {
+                    authorRank = .custom(attribute.signature)
+                }
             }
         }
         

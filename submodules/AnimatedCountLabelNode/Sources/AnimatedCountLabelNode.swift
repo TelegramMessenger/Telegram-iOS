@@ -54,7 +54,7 @@ public class AnimatedCountLabelNode: ASDisplayNode {
         }
     }
     
-    private var segments: [Segment.Key: (Segment, TextNode)] = [:]
+    fileprivate var resolvedSegments: [Segment.Key: (Segment, TextNode)] = [:]
     
     override public init() {
         super.init()
@@ -62,7 +62,8 @@ public class AnimatedCountLabelNode: ASDisplayNode {
     
     public func asyncLayout() -> (CGSize, [Segment]) -> (Layout, (Bool) -> Void) {
         var segmentLayouts: [Segment.Key: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode)] = [:]
-        for (segmentKey, segmentAndTextNode) in self.segments {
+        let wasEmpty = self.resolvedSegments.isEmpty
+        for (segmentKey, segmentAndTextNode) in self.resolvedSegments {
             segmentLayouts[segmentKey] = TextNode.asyncLayout(segmentAndTextNode.1)
         }
         
@@ -76,7 +77,7 @@ public class AnimatedCountLabelNode: ASDisplayNode {
             var contentSize = CGSize()
             var remainingSize = size
             
-            var calculatedSegments: [Segment.Key: (TextNodeLayout, () -> TextNode)] = [:]
+            var calculatedSegments: [Segment.Key: (TextNodeLayout, CGFloat, () -> TextNode)] = [:]
             var isTruncated = false
             
             var validKeys: [Segment.Key] = []
@@ -84,8 +85,14 @@ public class AnimatedCountLabelNode: ASDisplayNode {
             for segment in segments {
                 validKeys.append(segment.key)
                 let (layout, apply) = segmentLayouts[segment.key]!(TextNodeLayoutArguments(attributedString: segment.attributedText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: remainingSize, alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets(), lineColor: nil, textShadowColor: nil, textStroke: nil))
-                calculatedSegments[segment.key] = (layout, apply)
-                contentSize.width += layout.size.width
+                var effectiveSegmentWidth = layout.size.width
+                if case .number = segment {
+                    effectiveSegmentWidth = ceil(effectiveSegmentWidth / 2.0) * 2.0
+                } else if segment.attributedText.string == " " {
+                    effectiveSegmentWidth = max(effectiveSegmentWidth, 4.0)
+                }
+                calculatedSegments[segment.key] = (layout, effectiveSegmentWidth, apply)
+                contentSize.width += effectiveSegmentWidth
                 contentSize.height = max(contentSize.height, layout.size.height)
                 remainingSize.width = max(0.0, remainingSize.width - layout.size.width)
                 if layout.truncated {
@@ -98,7 +105,7 @@ public class AnimatedCountLabelNode: ASDisplayNode {
                     return
                 }
                 let transition: ContainedViewLayoutTransition
-                if animated {
+                if animated && !wasEmpty {
                     transition = .animated(duration: 0.2, curve: .easeInOut)
                 } else {
                     transition = .immediate
@@ -107,8 +114,8 @@ public class AnimatedCountLabelNode: ASDisplayNode {
                 var currentOffset = CGPoint()
                 for segment in segments {
                     var animation: (CGFloat, Double)?
-                    if let (currentSegment, currentTextNode) = strongSelf.segments[segment.key] {
-                        if case let .number(currentValue, _) = currentSegment, case let .number(updatedValue, _) = segment, animated, currentValue != updatedValue, let snapshot = currentTextNode.layer.snapshotContentTree() {
+                    if let (currentSegment, currentTextNode) = strongSelf.resolvedSegments[segment.key] {
+                        if case let .number(currentValue, _) = currentSegment, case let .number(updatedValue, _) = segment, animated, !wasEmpty, currentValue != updatedValue, let snapshot = currentTextNode.layer.snapshotContentTree() {
                             let offsetY: CGFloat
                             if currentValue > updatedValue {
                                 offsetY = -floor(currentTextNode.bounds.height * 0.6)
@@ -126,20 +133,20 @@ public class AnimatedCountLabelNode: ASDisplayNode {
                         }
                     }
                     
-                    let (layout, apply) = calculatedSegments[segment.key]!
+                    let (layout, effectiveSegmentWidth, apply) = calculatedSegments[segment.key]!
                     let textNode = apply()
                     let textFrame = CGRect(origin: currentOffset, size: layout.size)
                     if textNode.frame.isEmpty {
                         textNode.frame = textFrame
-                        if animated, animation == nil {
+                        if animated, !wasEmpty, animation == nil {
                             textNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
                             textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                         }
                     } else if textNode.frame != textFrame {
                         transition.updateFrameAdditive(node: textNode, frame: textFrame)
                     }
-                    currentOffset.x += layout.size.width
-                    if let (_, currentTextNode) = strongSelf.segments[segment.key] {
+                    currentOffset.x += effectiveSegmentWidth
+                    if let (_, currentTextNode) = strongSelf.resolvedSegments[segment.key] {
                         if currentTextNode !== textNode {
                             currentTextNode.removeFromSupernode()
                             strongSelf.addSubnode(textNode)
@@ -154,18 +161,18 @@ public class AnimatedCountLabelNode: ASDisplayNode {
                         textNode.layer.animateScale(from: 0.3, to: 1.0, duration: duration)
                         textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
                     }
-                    strongSelf.segments[segment.key] = (segment, textNode)
+                    strongSelf.resolvedSegments[segment.key] = (segment, textNode)
                 }
                 
                 var removeKeys: [Segment.Key] = []
-                for key in strongSelf.segments.keys {
+                for key in strongSelf.resolvedSegments.keys {
                     if !validKeys.contains(key) {
                         removeKeys.append(key)
                     }
                 }
                 
                 for key in removeKeys {
-                    guard let (_, textNode) = strongSelf.segments.removeValue(forKey: key) else {
+                    guard let (_, textNode) = strongSelf.resolvedSegments.removeValue(forKey: key) else {
                         continue
                     }
                     if animated {
@@ -198,7 +205,22 @@ public final class ImmediateAnimatedCountLabelNode: AnimatedCountLabelNode {
     
     public func makeCopy() -> ASDisplayNode {
         let node = ImmediateAnimatedCountLabelNode()
+        node.frame = self.frame
         node.segments = self.segments
+        if let subnodes = self.subnodes {
+            for subnode in subnodes {
+                if let subnode = subnode as? ASImageNode {
+                    let copySubnode = ASImageNode()
+                    copySubnode.isLayerBacked = subnode.isLayerBacked
+                    copySubnode.image = subnode.image
+                    copySubnode.displaysAsynchronously = false
+                    copySubnode.displayWithoutProcessing = true
+                    copySubnode.frame = subnode.frame
+                    copySubnode.alpha = subnode.alpha
+                    node.addSubnode(copySubnode)
+                }
+            }
+        }
         if let constrainedSize = self.constrainedSize {
             let _ = node.updateLayout(size: constrainedSize, animated: false)
         }
