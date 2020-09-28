@@ -193,7 +193,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
     private var contentSizeValue: CGSize?
     private var currentLeftOffset: CGFloat = 0.0
     
-    private var cachedChatListSearchResult: CachedChatListSearchResult?
+    private var cachedSearchResult: CachedChatListSearchResult?
     
     public required init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
@@ -345,7 +345,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
         let currentMedia = self.currentMedia
         let currentMessage = self.message
         let currentIconImage = self.currentIconImage
-        let currentChatListSearchResult = self.cachedChatListSearchResult
+        let currentSearchResult = self.cachedSearchResult
         
         let currentItem = self.appliedItem
         
@@ -363,7 +363,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
             let descriptionFont = Font.regular(floor(item.presentationData.fontSize.baseDisplaySize * 14.0 / 17.0))
             let dateFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
             
-            var leftInset: CGFloat = 65.0 + params.leftInset
+            let leftInset: CGFloat = 65.0 + params.leftInset
             let rightInset: CGFloat = 8.0 + params.rightInset
             
             var leftOffset: CGFloat = 0.0
@@ -579,11 +579,13 @@ public final class ListMessageFileItemNode: ListMessageNode {
             }
             
             var chatListSearchResult: CachedChatListSearchResult?
+            let messageText = foldLineBreaks(item.message.text)
+            
             if let searchQuery = item.interaction.searchTextHighightState {
-                if let cached = currentChatListSearchResult, cached.matches(text: item.message.text, searchQuery: searchQuery) {
+                if let cached = currentSearchResult, cached.matches(text: messageText, searchQuery: searchQuery) {
                     chatListSearchResult = cached
                 } else {
-                    let (ranges, text) = findSubstringRanges(in: item.message.text, query: searchQuery)
+                    let (ranges, text) = findSubstringRanges(in: messageText, query: searchQuery)
                     chatListSearchResult = CachedChatListSearchResult(text: text, searchQuery: searchQuery, resultRanges: ranges)
                 }
             } else {
@@ -591,21 +593,29 @@ public final class ListMessageFileItemNode: ListMessageNode {
             }
             
             var captionText: NSMutableAttributedString?
-            if let chatListSearchResult = chatListSearchResult, !chatListSearchResult.resultRanges.isEmpty, let firstRange = chatListSearchResult.resultRanges.first {
-                let text = NSMutableAttributedString(string: item.message.text, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
+            if let chatListSearchResult = chatListSearchResult, let firstRange = chatListSearchResult.resultRanges.first {
+                var text = NSMutableAttributedString(string: messageText, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
                 for range in chatListSearchResult.resultRanges {
                     let stringRange = NSRange(range, in: chatListSearchResult.text)
                     if stringRange.location >= 0 && stringRange.location + stringRange.length <= text.length {
                         text.addAttribute(.foregroundColor, value: item.presentationData.theme.theme.chatList.messageHighlightedTextColor, range: stringRange)
                     }
                 }
-                captionText = text
                 
                 let firstRangeOrigin = chatListSearchResult.text.distance(from: chatListSearchResult.text.startIndex, to: firstRange.lowerBound)
-                if firstRangeOrigin > 20 {
-                    captionText = text.attributedSubstring(from: NSMakeRange(firstRangeOrigin - 10, text.length - firstRangeOrigin + 10)).mutableCopy() as? NSMutableAttributedString
-                    captionText?.insert(NSAttributedString(string: "\u{2026}", attributes: [NSAttributedString.Key.font: descriptionFont, NSAttributedString.Key.foregroundColor: item.presentationData.theme.theme.list.itemSecondaryTextColor]), at: 0)
+                if firstRangeOrigin > 24 {
+                    var leftOrigin: Int = 0
+                    (text.string as NSString).enumerateSubstrings(in: NSMakeRange(0, firstRangeOrigin), options: [.byWords, .reverse]) { (str, range1, _, _) in
+                        let distanceFromEnd = firstRangeOrigin - range1.location
+                        if (distanceFromEnd > 12 || range1.location == 0) && leftOrigin == 0 {
+                            leftOrigin = range1.location
+                        }
+                    }
+                    text = text.attributedSubstring(from: NSMakeRange(leftOrigin, text.length - leftOrigin)).mutableCopy() as! NSMutableAttributedString
+                    text.insert(NSAttributedString(string: "\u{2026}", attributes: [NSAttributedString.Key.font: descriptionFont, NSAttributedString.Key.foregroundColor: item.presentationData.theme.theme.list.itemSecondaryTextColor]), at: 0)
                 }
+                
+                captionText = text
             }
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
@@ -616,7 +626,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
             
             let (titleNodeLayout, titleNodeApply) = titleNodeMakeLayout(TextNodeLayoutArguments(attributedString: titleText, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .middle, constrainedSize: CGSize(width: params.width - leftInset - leftOffset - rightInset - dateNodeLayout.size.width - 4.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (textNodeLayout, textNodeApply) = textNodeMakeLayout(TextNodeLayoutArguments(attributedString: captionText, backgroundColor: nil, maximumNumberOfLines: 3, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 30.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (textNodeLayout, textNodeApply) = textNodeMakeLayout(TextNodeLayoutArguments(attributedString: captionText, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 30.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(TextNodeLayoutArguments(attributedString: descriptionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 30.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             

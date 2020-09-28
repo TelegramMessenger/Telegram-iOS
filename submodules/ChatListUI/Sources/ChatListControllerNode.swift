@@ -1001,7 +1001,7 @@ final class ChatListControllerNode: ASDisplayNode {
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((Peer, Bool) -> Void)?
     var requestOpenRecentPeerOptions: ((Peer) -> Void)?
-    var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
+    var requestOpenMessageFromSearch: ((Peer, MessageId, Bool) -> Void)?
     var requestAddContact: ((String) -> Void)?
     var peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?
     var dismissSelfIfCompletedPresentation: (() -> Void)?
@@ -1160,9 +1160,9 @@ final class ChatListControllerNode: ASDisplayNode {
         }, openDisabledPeer: { _ in
         }, openRecentPeerOptions: { [weak self] peer in
             self?.requestOpenRecentPeerOptions?(peer)
-        }, openMessage: { [weak self] peer, messageId in
+        }, openMessage: { [weak self] peer, messageId, deactivateOnAction in
             if let requestOpenMessageFromSearch = self?.requestOpenMessageFromSearch {
-                requestOpenMessageFromSearch(peer, messageId)
+                requestOpenMessageFromSearch(peer, messageId, deactivateOnAction)
             }
         }, addContact: { [weak self] phoneNumber in
             if let requestAddContact = self?.requestAddContact {

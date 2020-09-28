@@ -505,7 +505,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                     }
                 })
             case let .message(message, peer, readState, presentationData, totalCount, selected, displayCustomHeader):
-                let header = ChatListSearchItemHeader(type: .messages(totalCount), theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
+                let header = ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
                 let selection: ChatHistoryMessageSelection = selected.flatMap { .selectable(selected: $0) } ?? .none
                 if let tagMask = tagMask, tagMask != .photoOrVideo {
                     return ListMessageItem(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .builtin(WallpaperSettings())), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0.0, auxiliaryRadius: 0.0, mergeBubbleCorners: false)), context: context, chatLocation: .peer(peer.peerId), interaction: listInteraction, message: message, selection: selection, displayHeader: enableHeaders && !displayCustomHeader, customHeader: nil, hintIsLink: tagMask == .webPage, isGlobalSearchResult: true)
@@ -2260,7 +2260,7 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                 gesture?.cancel()
             }, present: { _ in })
             
-            let items = (0 ..< 1).compactMap { _ -> ListViewItem? in
+            let items = (0 ..< 2).compactMap { _ -> ListViewItem? in
                 switch key {
                     case .chats:
                         return ChatListItem(presentationData: chatListPresentationData, context: context, peerGroupId: .root, filterData: nil, index: ChatListIndex(pinningIndex: 0, messageIndex: MessageIndex(id: MessageId(peerId: peer1.id, namespace: 0, id: 0), timestamp: timestamp1)), content: .peer(messages: [Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer1.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: timestamp1, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer1, text: "Text", attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])], peer: RenderedPeer(peer: peer1), combinedReadState: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, PeerReadState.idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: 0, markedUnread: false))]), isRemovedFromTotalUnreadCount: false, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, promoInfo: nil, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)

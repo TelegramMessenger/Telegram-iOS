@@ -21,7 +21,7 @@ public enum ChatListSearchItemHeaderType {
     case chats
     case chatTypes
     case faq
-    case messages(Int32)
+    case messages
     
     fileprivate func title(strings: PresentationStrings) -> String {
         switch self {
@@ -57,8 +57,8 @@ public enum ChatListSearchItemHeaderType {
                 return strings.ChatList_ChatTypesSection
             case .faq:
                 return strings.Settings_FrequentlyAskedQuestions
-            case let .messages(count):
-                return strings.ChatList_Search_Messages(count)
+            case let .messages:
+                return strings.DialogList_SearchSectionMessages
         }
     }
     

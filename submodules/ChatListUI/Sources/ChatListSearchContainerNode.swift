@@ -82,7 +82,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private let context: AccountContext
     private let peersFilter: ChatListNodePeersFilter
     private var interaction: ChatListSearchInteraction?
-    private let openMessage: (Peer, MessageId) -> Void
+    private let openMessage: (Peer, MessageId, Bool) -> Void
     private let navigationController: NavigationController?
     
     let filterContainerNode: ChatListSearchFiltersContainerNode
@@ -122,7 +122,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
-    public init(context: AccountContext, filter: ChatListNodePeersFilter, groupId: PeerGroupId, openPeer originalOpenPeer: @escaping (Peer, Bool) -> Void, openDisabledPeer: @escaping (Peer) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage originalOpenMessage: @escaping (Peer, MessageId) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, navigationController: NavigationController?) {
+    public init(context: AccountContext, filter: ChatListNodePeersFilter, groupId: PeerGroupId, openPeer originalOpenPeer: @escaping (Peer, Bool) -> Void, openDisabledPeer: @escaping (Peer) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage originalOpenMessage: @escaping (Peer, MessageId, Bool) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, navigationController: NavigationController?) {
         self.context = context
         self.peersFilter = filter
         self.navigationController = navigationController
@@ -150,7 +150,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         }, openDisabledPeer: { peer in
             openDisabledPeer(peer)
         }, openMessage: { peer, messageId in
-            originalOpenMessage(peer, messageId)
+            originalOpenMessage(peer, messageId, true)
             if peer.id.namespace != Namespaces.Peer.SecretChat {
                 addAppLogEvent(postbox: context.account.postbox, type: "search_global_open_message", peerId: peer.id, data: .dictionary(["msg_id": .number(Double(messageId.id))]))
             }
@@ -627,7 +627,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             })))
             items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                 c.dismiss(completion: { [weak self] in
-                    self?.openMessage(message.peers[message.id.peerId]!, message.id)
+                    self?.openMessage(message.peers[message.id.peerId]!, message.id, false)
                 })
             })))
             
@@ -673,7 +673,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         
                         items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                             c.dismiss(completion: {
-                                self?.openMessage(message.peers[message.id.peerId]!, message.id)
+                                self?.openMessage(message.peers[message.id.peerId]!, message.id, false)
                             })
                         })))
                         

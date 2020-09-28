@@ -659,7 +659,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             }
         }
         
-        self.chatListDisplayNode.requestOpenMessageFromSearch = { [weak self] peer, messageId in
+        self.chatListDisplayNode.requestOpenMessageFromSearch = { [weak self] peer, messageId, deactivateOnAction in
             if let strongSelf = self {
                 strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.context.account, peer: peer)
                 |> deliverOnMainQueue).start(next: { [weak strongSelf] actualPeerId in
@@ -670,7 +670,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                                 scrollToEndIfExists = true
                             }
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), subject: .message(id: messageId, highlight: true), purposefulAction: {
-                                self?.deactivateSearch(animated: false)
+                                if deactivateOnAction {
+                                    self?.deactivateSearch(animated: false)
+                                }
                             }, scrollToEndIfExists: scrollToEndIfExists, options:  strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : []))
                             strongSelf.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
                         }

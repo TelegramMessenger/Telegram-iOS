@@ -454,7 +454,8 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                 chatListSearchResult = nil
             }
             
-            if let chatListSearchResult = chatListSearchResult, !chatListSearchResult.resultRanges.isEmpty, let firstRange = chatListSearchResult.resultRanges.first {
+            var descriptionMaxNumberOfLines = 3
+            if let chatListSearchResult = chatListSearchResult, let firstRange = chatListSearchResult.resultRanges.first {
                 var text = NSMutableAttributedString(string: item.message.text, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
                 for range in chatListSearchResult.resultRanges {
                     let stringRange = NSRange(range, in: chatListSearchResult.text)
@@ -464,12 +465,20 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                 }
                 
                 let firstRangeOrigin = chatListSearchResult.text.distance(from: chatListSearchResult.text.startIndex, to: firstRange.lowerBound)
-                if firstRangeOrigin > 20 {
-                    text = text.attributedSubstring(from: NSMakeRange(firstRangeOrigin - 10, text.length - firstRangeOrigin + 10)).mutableCopy() as! NSMutableAttributedString
+                if firstRangeOrigin > 24 {
+                    var leftOrigin: Int = 0
+                    (text.string as NSString).enumerateSubstrings(in: NSMakeRange(0, firstRangeOrigin), options: [.byWords, .reverse]) { (str, range1, _, _) in
+                        let distanceFromEnd = firstRangeOrigin - range1.location
+                        if (distanceFromEnd > 12 || range1.location == 0) && leftOrigin == 0 {
+                            leftOrigin = range1.location
+                        }
+                    }
+                    text = text.attributedSubstring(from: NSMakeRange(leftOrigin, text.length - leftOrigin)).mutableCopy() as! NSMutableAttributedString
                     text.insert(NSAttributedString(string: "\u{2026}", attributes: [NSAttributedString.Key.font: descriptionFont, NSAttributedString.Key.foregroundColor: item.presentationData.theme.theme.list.itemSecondaryTextColor]), at: 0)
                 }
                 
                 descriptionText = text
+                descriptionMaxNumberOfLines = 2
             }
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
@@ -480,7 +489,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
             
             let (titleNodeLayout, titleNodeApply) = titleNodeMakeLayout(TextNodeLayoutArguments(attributedString: title, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .middle, constrainedSize: CGSize(width: params.width - leftInset - leftOffset - 8.0 - params.rightInset - 16.0 - dateNodeLayout.size.width, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(TextNodeLayoutArguments(attributedString: descriptionText, backgroundColor: nil, maximumNumberOfLines: 3, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - params.rightInset - 16.0 - 8.0, height: CGFloat.infinity), alignment: .natural, lineSpacing: 0.3, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)))
+            let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(TextNodeLayoutArguments(attributedString: descriptionText, backgroundColor: nil, maximumNumberOfLines: descriptionMaxNumberOfLines, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - params.rightInset - 16.0 - 8.0, height: CGFloat.infinity), alignment: .natural, lineSpacing: 0.3, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)))
             
             let (linkNodeLayout, linkNodeApply) = linkNodeMakeLayout(TextNodeLayoutArguments(attributedString: linkText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - params.rightInset - 16.0 - 8.0, height: CGFloat.infinity), alignment: .natural, lineSpacing: 0.3, cutout: isInstantView ? TextNodeCutout(topLeft: CGSize(width: 14.0, height: 8.0)) : nil, insets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)))
             var instantViewImage: UIImage?
