@@ -187,14 +187,14 @@ private func navigatedMessageFromMessages(_ messages: [Message], anchorIndex: Me
             switch position {
                 case .exact:
                     return (message, aroundMessagesFromMessages(messages, centralIndex: message.index), true)
-                case .later:
+                case .earlier:
                     if index + 1 < messages.count {
                         let message = messages[index + 1]
                         return (message, aroundMessagesFromMessages(messages, centralIndex: messages[index + 1].index), true)
                     } else {
                         return nil
                     }
-                case .earlier:
+                case .later:
                     if index != 0 {
                         let message = messages[index - 1]
                         return (message, aroundMessagesFromMessages(messages, centralIndex: messages[index - 1].index), true)
@@ -207,10 +207,10 @@ private func navigatedMessageFromMessages(_ messages: [Message], anchorIndex: Me
     }
     if !messages.isEmpty {
         switch position {
-            case .later, .exact:
+            case .earlier, .exact:
                 let message = messages[messages.count - 1]
                 return (message, aroundMessagesFromMessages(messages, centralIndex: messages[messages.count - 1].index), false)
-            case .earlier:
+            case .later:
                 let message = messages[0]
                 return (message, aroundMessagesFromMessages(messages, centralIndex: messages[0].index), false)
         }
@@ -522,9 +522,15 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                 if let message = messages.0.first(where: { $0.id == at }) {
                                     strongSelf.playbackStack.clear()
                                     strongSelf.playbackStack.push(message.id)
-                                    strongSelf.currentItem = (message, [])
+                                    if let (message, aroundMessages, _) = navigatedMessageFromMessages(messages.0, anchorIndex: message.index, position: .exact) {
+                                        strongSelf.currentItem = (message, aroundMessages)
+                                    } else {
+                                        strongSelf.currentItem = (message, [])
+                                    }
+                                    strongSelf.playedToEnd = false
                                 } else {
                                     strongSelf.currentItem = nil
+                                    strongSelf.playedToEnd = true
                                 }
                                 strongSelf.updateState()
                             }
