@@ -594,7 +594,7 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
         let preloadedHistory = preloadedHistoryPosition
         |> mapToSignal { peerInput, commentsPeerId, threadMessageId, anchor, maxMessageId -> Signal<(FetchMessageHistoryHoleResult?, ChatReplyThreadMessage.Anchor), FetchChannelReplyThreadMessageError> in
             guard let maxMessageId = maxMessageId else {
-                return .single((FetchMessageHistoryHoleResult(removedIndices: IndexSet(integersIn: 1 ..< Int(Int32.max - 1)), strictRemovedIndices: IndexSet()), .automatic))
+                return .single((FetchMessageHistoryHoleResult(removedIndices: IndexSet(integersIn: 1 ..< Int(Int32.max - 1)), strictRemovedIndices: IndexSet(), actualPeerId: nil, actualThreadId: nil), .automatic))
             }
             return account.postbox.transaction { transaction -> Signal<(FetchMessageHistoryHoleResult?, ChatReplyThreadMessage.Anchor), FetchChannelReplyThreadMessageError> in
                 if let threadMessageId = threadMessageId {
@@ -647,7 +647,7 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
                             initialAnchor = .automatic
                         }
                         
-                        return .single((FetchMessageHistoryHoleResult(removedIndices: IndexSet(), strictRemovedIndices: IndexSet()), initialAnchor))
+                        return .single((FetchMessageHistoryHoleResult(removedIndices: IndexSet(), strictRemovedIndices: IndexSet(), actualPeerId: nil, actualThreadId: nil), initialAnchor))
                     }
                 }
                 
