@@ -255,9 +255,10 @@ private class SearchBarTextField: UITextField, UIScrollViewDelegate {
                     strongSelf.selectedTokenIndex = i
                     if !strongSelf.isFirstResponder {
                         let _ = strongSelf.becomeFirstResponder()
+                    } else {
+                        let newPosition = strongSelf.beginningOfDocument
+                        strongSelf.selectedTextRange = strongSelf.textRange(from: newPosition, to: newPosition)
                     }
-                    let newPosition = strongSelf.beginningOfDocument
-                    strongSelf.selectedTextRange = strongSelf.textRange(from: newPosition, to: newPosition)
                 }
             }
             let isSelected = i == self.selectedTokenIndex
@@ -358,7 +359,9 @@ private class SearchBarTextField: UITextField, UIScrollViewDelegate {
         self.tokenContainerNode.frame = CGRect(origin: self.tokenContainerNode.frame.origin, size: CGSize(width: self.tokensWidth, height: self.bounds.height))
         
         if let scrollView = self.scrollView {
-            scrollView.contentInset = UIEdgeInsets(top: 0.0, left: leftOffset, bottom: 0.0, right: 0.0)
+            if scrollView.contentInset.left != leftOffset {
+                scrollView.contentInset = UIEdgeInsets(top: 0.0, left: leftOffset, bottom: 0.0, right: 0.0)
+            }
             if leftOffset.isZero {
                 scrollView.contentOffset = CGPoint()
             } else if self.tokensWidth != previousTokensWidth {
@@ -441,14 +444,22 @@ private class SearchBarTextField: UITextField, UIScrollViewDelegate {
         return nil
     }
     
+    var fixAutoScroll: CGPoint?
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        self.updateTokenContainerPosition()
+        if let fixAutoScroll = self.fixAutoScroll {
+            self.scrollView?.setContentOffset(fixAutoScroll, animated: true)
+            self.scrollView?.setContentOffset(fixAutoScroll, animated: false)
+            self.fixAutoScroll = nil
+        } else {
+            self.updateTokenContainerPosition()
+        }
     }
     
     override func becomeFirstResponder() -> Bool {
         if let contentOffset = self.scrollView?.contentOffset {
-            Queue.mainQueue().after(0.03) {
-                self.scrollView?.setContentOffset(contentOffset, animated: true)
+            self.fixAutoScroll = contentOffset
+            Queue.mainQueue().after(0.1) {
+                self.fixAutoScroll = nil
             }
         }
         return super.becomeFirstResponder()
