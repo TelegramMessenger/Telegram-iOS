@@ -106,11 +106,13 @@ func suggestDates(for string: String, strings: PresentationStrings, dateTimeForm
                     if stringComponents.count < 3 {
                         for i in 0..<5 {
                             if let date = calendar.date(byAdding: .year, value: -i, to: resultDate), date < now {
-                                result.append((nil, date, nil))
+                                let lowerDate = getLowerDate(for: resultDate)
+                                result.append((lowerDate, date, nil))
                             }
                         }
                     } else if resultDate < now {
-                        result.append((nil, resultDate, nil))
+                        let lowerDate = getLowerDate(for: resultDate)
+                        result.append((lowerDate, resultDate, nil))
                     }
                 }
                 let dd = try NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue)
