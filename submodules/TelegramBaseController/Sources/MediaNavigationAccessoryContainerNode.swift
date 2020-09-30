@@ -37,10 +37,10 @@ public final class MediaNavigationAccessoryContainerNode: ASDisplayNode, UIGestu
     }
     
     func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: self.currentHeaderHeight)))
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: self.currentHeaderHeight)))
         
         let headerHeight = self.currentHeaderHeight
-        transition.updateFrame(node: self.headerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: headerHeight)))
+        transition.updateFrame(node: self.headerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: headerHeight)))
         self.headerNode.updateLayout(size: CGSize(width: size.width, height: headerHeight), leftInset: leftInset, rightInset: rightInset, transition: transition)
     }
     

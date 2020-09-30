@@ -1556,6 +1556,7 @@
 
 "Channel.ErrorAccessDenied" = "Sorry, this channel is private.";
 "Group.ErrorAccessDenied" = "Sorry, this group is private.";
+"CommentsGroup.ErrorAccessDenied" = "Sorry, you can't access this chat because you were banned by an admin.";
 "Conversation.InputTextBroadcastPlaceholder" = "Broadcast";
 
 "Channel.NotificationLoading" = "Loading...";
@@ -2607,6 +2608,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.CanInviteUsers" = "Add Users";
 "Channel.AdminLog.CanPinMessages" = "Pin Messages";
 "Channel.AdminLog.CanAddAdmins" = "Add New Admins";
+"Channel.AdminLog.CanBeAnonymous" = "Remain Anonymous";
 "Channel.AdminLog.CanEditMessages" = "Edit Messages";
 
 "Channel.AdminLog.MessageToggleInvitesOn" = "%@ enabled group invites";
@@ -5741,3 +5743,73 @@ Any member of this group will be able to see messages in the channel.";
 "AccessDenied.VideoCallCamera" = "Telegram needs access to your camera to make video calls.\n\nPlease go to Settings > Privacy > Camera and set Telegram to ON.";
 
 "Call.AccountIsLoggedOnCurrentDevice" = "Sorry, you can't call %@ because that account is logged in to Telegram on the device you're using for the call.";
+
+"ChatList.Search.FilterChats" = "Chats";
+"ChatList.Search.FilterMedia" = "Media";
+"ChatList.Search.FilterLinks" = "Links";
+"ChatList.Search.FilterFiles" = "Files";
+"ChatList.Search.FilterMusic" = "Music";
+"ChatList.Search.FilterVoice" = "Voice";
+
+"ChatList.Search.NoResults" = "No Results";
+"ChatList.Search.NoResultsQueryDescription" = "There were no results for \"%@\".\nTry a new search.";
+"ChatList.Search.NoResultsDescription" = "There were no results.\nTry a new search.";
+
+"ChatList.Search.NoResultsFilter" = "Nothing Yet";
+"ChatList.Search.NoResultsFitlerMedia" = "Photos and videos from all your chats will be shown here.";
+"ChatList.Search.NoResultsFitlerLinks" = "Links from all your chats will be shown here.";
+"ChatList.Search.NoResultsFitlerFiles" = "Files from all your chats will be shown here.";
+"ChatList.Search.NoResultsFitlerMusic" = "Music from all your chats will be shown here.";
+"ChatList.Search.NoResultsFitlerVoice" = "Voice and video messages from all your chats will be shown here.";
+
+"ChatList.Search.Messages_0" = "%@ messages";
+"ChatList.Search.Messages_1" = "%@ message";
+"ChatList.Search.Messages_2" = "%@ messages";
+"ChatList.Search.Messages_3_10" = "%@ messages";
+"ChatList.Search.Messages_many" = "%@ messages";
+"ChatList.Search.Messages_any" = "%@ messages";
+
+"Conversation.InputTextAnonymousPlaceholder" = "Send anonymously";
+
+"DialogList.Replies" = "Replies";
+
+"Conversation.ContextViewReplies_1" = "View %@ Reply";
+"Conversation.ContextViewReplies_any" = "View %@ Replies";
+"Conversation.ContextViewThread" = "View Thread";
+
+"Conversation.ViewReply" = "View Reply";
+
+"Conversation.MessageViewComments_1" = "[%@]Comment";
+"Conversation.MessageViewComments_any" = "[%@]Comments";
+"Conversation.MessageViewCommentsFormat" = "%1$@ %2$@";
+
+"Conversation.TitleCommentsEmpty" = "Comments";
+"Conversation.TitleComments_1" = "[%@]Comment";
+"Conversation.TitleComments_any" = "[%@]Comments";
+"Conversation.TitleCommentsFormat" = "%1$@ %2$@";
+
+"Conversation.TitleRepliesEmpty" = "Replies";
+"Conversation.TitleReplies_1" = "[%@]Reply";
+"Conversation.TitleReplies_any" = "[%@]Replies";
+"Conversation.TitleRepliesFormat" = "%1$@ %2$@";
+
+"Conversation.MessageLeaveComment" = "Leave a Comment";
+"Conversation.MessageLeaveCommentShort" = "Comment";
+
+"Conversation.DiscussionNotStarted" = "No comments here yet...";
+"Conversation.DiscussionStarted" = "Discussion started";
+
+"Conversation.InputTextPlaceholderReply" = "Reply";
+"Conversation.InputTextPlaceholderComment" = "Comment";
+
+"Conversation.TitleNoComments" = "Comments";
+
+"Conversation.ContextMenuBlock" = "Block User";
+
+"Replies.BlockAndDeleteRepliesActionTitle" = "Block and Delete Replies";
+
+"Channel.CommentsGroup.Header" = "Select a group chat that will be used to host comments from your channel.";
+"Channel.CommentsGroup.HeaderSet" = "%@ is selected as the group that will be used to host comments for your channel.";
+"Channel.CommentsGroup.HeaderGroupSet" = "%@ is linking the group as it's discussion board.";
+
+"RepliesChat.DescriptionText" = "This chat helps you keep track of replies to your comments in Channels.";

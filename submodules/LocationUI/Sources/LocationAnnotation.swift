@@ -15,7 +15,7 @@ import AccountContext
 let locationPinReuseIdentifier = "locationPin"
 
 private func generateSmallBackgroundImage(color: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 56.0, height: 56.0)) { size, context in
+    return generateImage(CGSize(width: 56.0, height: 56.0), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
         context.setShadow(offset: CGSize(), blur: 4.0, color: UIColor(rgb: 0x000000, alpha: 0.5).cgColor)
@@ -25,7 +25,7 @@ private func generateSmallBackgroundImage(color: UIColor) -> UIImage? {
         context.setShadow(offset: CGSize(), blur: 0.0, color: nil)
         context.setFillColor(color.cgColor)
         context.fillEllipse(in: CGRect(x: 17.0 + UIScreenPixel, y: 17.0 + UIScreenPixel, width: 22.0 - 2.0 * UIScreenPixel, height: 22.0 - 2.0 * UIScreenPixel))
-    }
+    })
 }
 
 class LocationPinAnnotation: NSObject, MKAnnotation {

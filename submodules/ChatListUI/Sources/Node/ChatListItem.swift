@@ -637,7 +637,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         if let peer = peer {
             var overrideImage: AvatarNodeImageOverride?
-            if peer.id == item.context.account.peerId && !displayAsMessage {
+            if peer.id.isReplies {
+                overrideImage = .repliesIcon
+            } else if peer.id == item.context.account.peerId && !displayAsMessage {
                 overrideImage = .savedMessagesIcon
             } else if peer.isDeleted {
                 overrideImage = .deletedIcon
@@ -962,7 +964,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         attributedText = NSAttributedString(string: foldLineBreaks(embeddedState.text.string.replacingOccurrences(of: "\n\n", with: " ")), font: textFont, textColor: theme.messageTextColor)
                     } else if let message = messages.last {
-                        let composedString: NSMutableAttributedString
+                        var composedString: NSMutableAttributedString
                         if let inlineAuthorPrefix = inlineAuthorPrefix {
                             composedString = NSMutableAttributedString()
                             composedString.append(NSAttributedString(string: "\(inlineAuthorPrefix): ", font: textFont, textColor: theme.titleColor))
@@ -982,12 +984,25 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             chatListSearchResult = nil
                         }
                         
-                        if let chatListSearchResult = chatListSearchResult {
+                        if let chatListSearchResult = chatListSearchResult, let firstRange = chatListSearchResult.resultRanges.first {
                             for range in chatListSearchResult.resultRanges {
                                 let stringRange = NSRange(range, in: chatListSearchResult.text)
                                 if stringRange.location >= 0 && stringRange.location + stringRange.length <= composedString.length {
                                     composedString.addAttribute(.foregroundColor, value: theme.messageHighlightedTextColor, range: stringRange)
                                 }
+                            }
+                            
+                            let firstRangeOrigin = chatListSearchResult.text.distance(from: chatListSearchResult.text.startIndex, to: firstRange.lowerBound)
+                            if firstRangeOrigin > 24 {
+                                var leftOrigin: Int = 0
+                                (composedString.string as NSString).enumerateSubstrings(in: NSMakeRange(0, firstRangeOrigin), options: [.byWords, .reverse]) { (str, range1, _, _) in
+                                    let distanceFromEnd = firstRangeOrigin - range1.location
+                                    if (distanceFromEnd > 12 || range1.location == 0) && leftOrigin == 0 {
+                                        leftOrigin = range1.location
+                                    }
+                                }
+                                composedString = composedString.attributedSubstring(from: NSMakeRange(leftOrigin, composedString.length - leftOrigin)).mutableCopy() as! NSMutableAttributedString
+                                composedString.insert(NSAttributedString(string: "\u{2026}", attributes: [NSAttributedString.Key.font: textFont, NSAttributedString.Key.foregroundColor: theme.messageTextColor]), at: 0)
                             }
                         }
                         
@@ -1099,7 +1114,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.ChatList_ArchivedChatsTitle, font: titleFont, textColor: theme.titleColor)
                     } else if itemPeer.chatMainPeer?.id == item.context.account.peerId {
                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleFont, textColor: theme.titleColor)
-                    } else if let displayTitle = itemPeer.chatMainPeer?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
+                    } else if let id = itemPeer.chatMainPeer?.id, id.isReplies {
+                         titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Replies, font: titleFont, textColor: theme.titleColor)
+                     } else if let displayTitle = itemPeer.chatMainPeer?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder) {
                         titleAttributedString = NSAttributedString(string: displayTitle, font: titleFont, textColor: item.index.messageIndex.id.peerId.namespace == Namespaces.Peer.SecretChat ? theme.secretTitleColor : theme.titleColor)
                     }
                 case .group:
@@ -2056,20 +2073,4 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.backgroundNode.alpha = 1.0
         return result
     }
-}
-
-private func foldLineBreaks(_ text: String) -> String {
-    let lines = text.split { $0.isNewline }
-    var result = ""
-    for line in lines {
-        if line.isEmpty {
-            continue
-        }
-        if result.isEmpty {
-            result += line
-        } else {
-            result += " " + line
-        }
-    }
-    return result
 }

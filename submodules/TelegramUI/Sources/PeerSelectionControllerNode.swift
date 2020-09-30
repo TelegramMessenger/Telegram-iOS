@@ -212,19 +212,20 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         if self.chatListNode.supernode != nil {
-            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChatListSearchContainerNode(context: self.context, filter: self.filter, groupId: .root, openPeer: { [weak self] peer, _ in
+            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ChatListSearchContainerNode(context: self.context, filter: self.filter, groupId: .root, displaySearchFilters: false, openPeer: { [weak self] peer, _ in
                 if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                     requestOpenPeerFromSearch(peer)
                 }
             }, openDisabledPeer: { [weak self] peer in
                 self?.requestOpenDisabledPeer?(peer)
             }, openRecentPeerOptions: { _ in
-            }, openMessage: { [weak self] peer, messageId in
+            }, openMessage: { [weak self] peer, messageId, _ in
                 if let requestOpenMessageFromSearch = self?.requestOpenMessageFromSearch {
                     requestOpenMessageFromSearch(peer, messageId)
                 }
-            }, addContact: nil, peerContextAction: nil, present: { _ in
-            }), cancel: { [weak self] in
+            }, addContact: nil, peerContextAction: nil, present: { _, _ in
+            }, presentInGlobalOverlay: { _, _ in
+            }, navigationController: nil), cancel: { [weak self] in
                 if let requestDeactivateSearch = self?.requestDeactivateSearch {
                     requestDeactivateSearch()
                 }

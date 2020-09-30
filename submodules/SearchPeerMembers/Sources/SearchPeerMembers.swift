@@ -5,8 +5,10 @@ import SyncCore
 import SwiftSignalKit
 import AccountContext
 
-public func searchPeerMembers(context: AccountContext, peerId: PeerId, query: String) -> Signal<[Peer], NoError> {
-    if peerId.namespace == Namespaces.Peer.CloudChannel {
+public func searchPeerMembers(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, query: String) -> Signal<[Peer], NoError> {
+    if case .replyThread = chatLocation {
+        return .single([])
+    } else if peerId.namespace == Namespaces.Peer.CloudChannel {
         return context.account.postbox.transaction { transaction -> CachedChannelData? in
             return transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData
         }

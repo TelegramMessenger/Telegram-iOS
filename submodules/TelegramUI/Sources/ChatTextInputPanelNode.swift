@@ -790,6 +790,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     } else {
                         placeholder = interfaceState.strings.Conversation_InputTextBroadcastPlaceholder
                     }
+                } else if let channel = peer as? TelegramChannel, case .group = channel.info, channel.hasPermission(.canBeAnonymous) {
+                    placeholder = interfaceState.strings.Conversation_InputTextAnonymousPlaceholder
+                } else if case let .replyThread(replyThreadMessage) = interfaceState.chatLocation {
+                    if replyThreadMessage.isChannelPost {
+                        placeholder = interfaceState.strings.Conversation_InputTextPlaceholderComment
+                    } else {
+                        placeholder = interfaceState.strings.Conversation_InputTextPlaceholderReply
+                    }
                 } else {
                     placeholder = interfaceState.strings.Conversation_InputTextPlaceholder
                 }

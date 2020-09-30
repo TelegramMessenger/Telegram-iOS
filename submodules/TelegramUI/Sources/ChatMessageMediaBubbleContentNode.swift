@@ -174,6 +174,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                         edited = true
                     }
                     var viewCount: Int?
+                    var dateReplies = 0
                     for attribute in item.message.attributes {
                         if let attribute = attribute as? EditedMessageAttribute {
                             if case .mosaic = preparePosition {
@@ -182,6 +183,10 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                         } else if let attribute = attribute as? ViewCountMessageAttribute {
                             viewCount = attribute.count
+                        } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = item.chatLocation {
+                            if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
+                                dateReplies = Int(attribute.count)
+                            }
                         }
                     }
                     
@@ -202,7 +207,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     let statusType: ChatMessageDateAndStatusType?
                     switch position {
-                        case .linear(_, .None):
+                        case .linear(_, .None), .linear(_, .Neighbour(true, _)):
                             if item.message.effectivelyIncoming(item.context.account.peerId) {
                                 statusType = .ImageIncoming
                             } else {
@@ -226,7 +231,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     var statusApply: ((Bool) -> Void)?
                     
                     if let statusType = statusType {
-                        let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: imageSize.width - 30.0, height: CGFloat.greatestFiniteMagnitude), dateReactions)
+                        let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: imageSize.width - 30.0, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies)
                         statusSize = size
                         statusApply = apply
                     }

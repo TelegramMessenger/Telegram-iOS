@@ -12,83 +12,7 @@ import AccountContext
 import WebsiteType
 import InstantPageUI
 import UrlHandling
-
-enum InstantPageType {
-    case generic
-    case album
-}
-
-func instantPageType(of webpage: TelegramMediaWebpageLoadedContent) -> InstantPageType {
-    if let type = webpage.type, type == "telegram_album" {
-        return .album
-    }
-    
-    switch websiteType(of: webpage.websiteName) {
-        case .instagram, .twitter:
-            return .album
-        default:
-            return .generic
-    }
-}
-
-func instantPageGalleryMedia(webpageId: MediaId, page: InstantPage, galleryMedia: Media) -> [InstantPageGalleryEntry] {
-    var result: [InstantPageGalleryEntry] = []
-    var counter: Int = 0
-    
-    for block in page.blocks {
-        result.append(contentsOf: instantPageBlockMedia(pageId: webpageId, block: block, media: page.media, counter: &counter))
-    }
-    
-    var found = false
-    for item in result {
-        if item.media.media.id == galleryMedia.id {
-            found = true
-            break
-        }
-    }
-    
-    if !found {
-        result.insert(InstantPageGalleryEntry(index: Int32(counter), pageId: webpageId, media: InstantPageMedia(index: counter, media: galleryMedia, url: nil, caption: nil, credit: nil), caption: nil, credit: nil, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0)), at: 0)
-    }
-    
-    for i in 0 ..< result.count {
-        let item = result[i]
-        result[i] = InstantPageGalleryEntry(index: Int32(i), pageId: item.pageId, media: item.media, caption: item.caption, credit: item.credit, location: InstantPageGalleryEntryLocation(position: Int32(i), totalCount: Int32(result.count)))
-    }
-    return result
-}
-
-private func instantPageBlockMedia(pageId: MediaId, block: InstantPageBlock, media: [MediaId: Media], counter: inout Int) -> [InstantPageGalleryEntry] {
-    switch block {
-        case let .image(id, caption, _, _):
-            if let m = media[id] {
-                let result = [InstantPageGalleryEntry(index: Int32(counter), pageId: pageId, media: InstantPageMedia(index: counter, media: m, url: nil, caption: caption.text, credit: caption.credit), caption: caption.text, credit: caption.credit, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0))]
-                counter += 1
-                return result
-            }
-        case let .video(id, caption, _, _):
-            if let m = media[id] {
-                let result = [InstantPageGalleryEntry(index: Int32(counter), pageId: pageId, media: InstantPageMedia(index: counter, media: m, url: nil, caption: caption.text, credit: caption.credit), caption: caption.text, credit: caption.credit, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0))]
-                counter += 1
-                return result
-            }
-        case let .collage(items, _):
-            var result: [InstantPageGalleryEntry] = []
-            for item in items {
-                result.append(contentsOf: instantPageBlockMedia(pageId: pageId, block: item, media: media, counter: &counter))
-            }
-            return result
-        case let .slideshow(items, _):
-            var result: [InstantPageGalleryEntry] = []
-            for item in items {
-                result.append(contentsOf: instantPageBlockMedia(pageId: pageId, block: item, media: media, counter: &counter))
-            }
-            return result
-        default:
-            break
-    }
-    return []
-}
+import GalleryData
 
 private let titleFont: UIFont = Font.semibold(15.0)
 
@@ -370,7 +294,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
-            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.attributes, item.context, item.controllerInteraction, item.message, item.read, title, subtitle, text, entities, mediaAndFlags, badge, actionIcon, actionTitle, true, layoutConstants, constrainedSize)
+            let (initialWidth, continueLayout) = contentNodeLayout(item.presentationData, item.controllerInteraction.automaticMediaDownloadSettings, item.associatedData, item.attributes, item.context, item.controllerInteraction, item.message, item.read, item.chatLocation, title, subtitle, text, entities, mediaAndFlags, badge, actionIcon, actionTitle, true, layoutConstants, constrainedSize)
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 8.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             

@@ -72,12 +72,12 @@ public struct ChannelParticipantBannedInfo: PostboxCoding, Equatable {
 }
 
 public enum ChannelParticipant: PostboxCoding, Equatable {
-    case creator(id: PeerId, rank: String?)
+    case creator(id: PeerId, adminInfo: ChannelParticipantAdminInfo?, rank: String?)
     case member(id: PeerId, invitedAt: Int32, adminInfo: ChannelParticipantAdminInfo?, banInfo: ChannelParticipantBannedInfo?, rank: String?)
     
     public var peerId: PeerId {
         switch self {
-            case let .creator(id, _):
+            case let .creator(id, _, _):
                 return id
             case let .member(id, _, _, _, _):
                 return id
@@ -86,7 +86,7 @@ public enum ChannelParticipant: PostboxCoding, Equatable {
     
     public var rank: String? {
         switch self {
-            case let .creator(_, rank):
+            case let .creator(_, _, rank):
                 return rank
             case let .member(_, _, _, _, rank):
                 return rank
@@ -116,8 +116,8 @@ public enum ChannelParticipant: PostboxCoding, Equatable {
                 } else {
                     return false
                 }
-            case let .creator(id, rank):
-                if case .creator(id, rank) = rhs {
+            case let .creator(id, adminInfo, rank):
+                if case .creator(id, adminInfo, rank) = rhs {
                     return true
                 } else {
                     return false
@@ -130,7 +130,7 @@ public enum ChannelParticipant: PostboxCoding, Equatable {
             case ChannelParticipantValue.member.rawValue:
                 self = .member(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), invitedAt: decoder.decodeInt32ForKey("t", orElse: 0), adminInfo: decoder.decodeObjectForKey("ai", decoder: { ChannelParticipantAdminInfo(decoder: $0) }) as? ChannelParticipantAdminInfo, banInfo: decoder.decodeObjectForKey("bi", decoder: { ChannelParticipantBannedInfo(decoder: $0) }) as? ChannelParticipantBannedInfo, rank: decoder.decodeOptionalStringForKey("rank"))
             case ChannelParticipantValue.creator.rawValue:
-                self = .creator(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), rank: decoder.decodeOptionalStringForKey("rank"))
+                self = .creator(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), adminInfo: decoder.decodeObjectForKey("ai", decoder: { ChannelParticipantAdminInfo(decoder: $0) }) as? ChannelParticipantAdminInfo, rank: decoder.decodeOptionalStringForKey("rank"))
             default:
                 self = .member(id: PeerId(decoder.decodeInt64ForKey("i", orElse: 0)), invitedAt: decoder.decodeInt32ForKey("t", orElse: 0), adminInfo: nil, banInfo: nil, rank: nil)
         }
@@ -157,9 +157,14 @@ public enum ChannelParticipant: PostboxCoding, Equatable {
                 } else {
                     encoder.encodeNil(forKey: "rank")
                 }
-            case let .creator(id, rank):
+            case let .creator(id, adminInfo, rank):
                 encoder.encodeInt32(ChannelParticipantValue.creator.rawValue, forKey: "r")
                 encoder.encodeInt64(id.toInt64(), forKey: "i")
+                if let adminInfo = adminInfo {
+                    encoder.encodeObject(adminInfo, forKey: "ai")
+                } else {
+                    encoder.encodeNil(forKey: "ai")
+                }
                 if let rank = rank {
                     encoder.encodeString(rank, forKey: "rank")
                 } else {
@@ -195,8 +200,8 @@ extension ChannelParticipant {
         switch apiParticipant {
             case let .channelParticipant(userId, date):
                 self = .member(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), invitedAt: date, adminInfo: nil, banInfo: nil, rank: nil)
-            case let .channelParticipantCreator(_, userId, rank):
-                self = .creator(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), rank: rank)
+            case let .channelParticipantCreator(_, userId, adminRights, rank):
+                self = .creator(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(apiAdminRights: adminRights), promotedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId), canBeEditedByAccountPeer: true), rank: rank)
             case let .channelParticipantBanned(flags, userId, restrictedBy, date, bannedRights):
                 let hasLeft = (flags & (1 << 0)) != 0
                 let banInfo = ChannelParticipantBannedInfo(rights: TelegramChatBannedRights(apiBannedRights: bannedRights), restrictedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: restrictedBy), timestamp: date, isMember: !hasLeft)

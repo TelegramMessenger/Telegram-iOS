@@ -58,6 +58,7 @@ final class ChatPanelInterfaceInteraction {
     let deleteSelectedMessages: () -> Void
     let reportSelectedMessages: () -> Void
     let reportMessages: ([Message], ContextController?) -> Void
+    let blockMessageAuthor: (Message, ContextController?) -> Void
     let deleteMessages: ([Message], ContextController?, @escaping (ContextMenuActionResult) -> Void) -> Void
     let forwardSelectedMessages: () -> Void
     let forwardCurrentForwardMessages: () -> Void
@@ -74,7 +75,7 @@ final class ChatPanelInterfaceInteraction {
     let openSearchResults: () -> Void
     let openCalendarSearch: () -> Void
     let toggleMembersSearch: (Bool) -> Void
-    let navigateToMessage: (MessageId) -> Void
+    let navigateToMessage: (MessageId, Bool) -> Void
     let navigateToChat: (PeerId) -> Void
     let navigateToProfile: (PeerId) -> Void
     let openPeerInfo: () -> Void
@@ -122,6 +123,8 @@ final class ChatPanelInterfaceInteraction {
     let displaySearchResultsTooltip: (ASDisplayNode, CGRect) -> Void
     let openPeersNearby: () -> Void
     let unarchivePeer: () -> Void
+    let scrollToTop: () -> Void
+    let viewReplies: (MessageId?, ChatReplyThreadMessage) -> Void
     let statuses: ChatPanelInterfaceInteractionStatuses?
     
     init(
@@ -133,6 +136,7 @@ final class ChatPanelInterfaceInteraction {
         deleteSelectedMessages: @escaping () -> Void,
         reportSelectedMessages: @escaping () -> Void,
         reportMessages: @escaping ([Message], ContextController?) -> Void,
+        blockMessageAuthor: @escaping (Message, ContextController?) -> Void,
         deleteMessages: @escaping ([Message], ContextController?, @escaping (ContextMenuActionResult) -> Void) -> Void,
         forwardSelectedMessages: @escaping () -> Void,
         forwardCurrentForwardMessages: @escaping () -> Void,
@@ -149,7 +153,7 @@ final class ChatPanelInterfaceInteraction {
         navigateMessageSearch: @escaping (ChatPanelSearchNavigationAction) -> Void,
         openCalendarSearch: @escaping () -> Void,
         toggleMembersSearch: @escaping (Bool) -> Void,
-        navigateToMessage: @escaping (MessageId) -> Void,
+        navigateToMessage: @escaping (MessageId, Bool) -> Void,
         navigateToChat: @escaping (PeerId) -> Void,
         navigateToProfile: @escaping (PeerId) -> Void,
         openPeerInfo: @escaping () -> Void,
@@ -197,6 +201,8 @@ final class ChatPanelInterfaceInteraction {
         openPeersNearby: @escaping () -> Void,
         displaySearchResultsTooltip: @escaping (ASDisplayNode, CGRect) -> Void,
         unarchivePeer: @escaping () -> Void,
+        scrollToTop: @escaping () -> Void,
+        viewReplies: @escaping (MessageId?, ChatReplyThreadMessage) -> Void,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
         self.cloudMessages = cloudMessages
@@ -207,6 +213,7 @@ final class ChatPanelInterfaceInteraction {
         self.deleteSelectedMessages = deleteSelectedMessages
         self.reportSelectedMessages = reportSelectedMessages
         self.reportMessages = reportMessages
+        self.blockMessageAuthor = blockMessageAuthor
         self.deleteMessages = deleteMessages
         self.forwardSelectedMessages = forwardSelectedMessages
         self.forwardCurrentForwardMessages = forwardCurrentForwardMessages
@@ -271,6 +278,8 @@ final class ChatPanelInterfaceInteraction {
         self.openPeersNearby = openPeersNearby
         self.displaySearchResultsTooltip = displaySearchResultsTooltip
         self.unarchivePeer = unarchivePeer
+        self.scrollToTop = scrollToTop
+        self.viewReplies = viewReplies
         self.statuses = statuses
     }
 }

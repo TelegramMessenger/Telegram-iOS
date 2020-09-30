@@ -42,7 +42,7 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: 
     }
 }
 
-func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, result: Api.Updates) -> Signal<Void, NoError> {
+func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, result: Api.Updates, accountPeerId: PeerId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         let messageId: Int32?
         var apiMessage: Api.Message?
@@ -89,6 +89,8 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         if let updatedTimestamp = updatedTimestamp {
             transaction.offsetPendingMessagesTimestamps(lowerBound: message.id, excludeIds: Set([message.id]), timestamp: updatedTimestamp)
         }
+        
+        var updatedMessage: StoreMessage?
         
         transaction.updateMessage(message.id, update: { currentMessage in
             let updatedId: MessageId
@@ -222,8 +224,21 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 }
             }
             
-            return .update(StoreMessage(id: updatedId, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: forwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media))
+            let updatedMessageValue = StoreMessage(id: updatedId, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: forwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media)
+            updatedMessage = updatedMessageValue
+            
+            return .update(updatedMessageValue)
         })
+        if let updatedMessage = updatedMessage, case let .Id(updatedId) = updatedMessage.id {
+            if message.id.namespace == Namespaces.Message.Local && updatedId.namespace == Namespaces.Message.Cloud && updatedId.peerId.namespace == Namespaces.Peer.CloudChannel {
+                if let threadId = updatedMessage.threadId {
+                    let messageThreadId = makeThreadIdMessageId(peerId: updatedMessage.id.peerId, threadId: threadId)
+                    if let authorId = updatedMessage.authorId {
+                        updateMessageThreadStats(transaction: transaction, threadMessageId: messageThreadId, removedCount: 0, addedMessagePeers: [ReplyThreadUserMessage(id: authorId, messageId: updatedId, isOutgoing: true)])
+                    }
+                }
+            }
+        }
         for file in sentStickers {
             transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
         }
@@ -288,20 +303,21 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         var sentStickers: [TelegramMediaFile] = []
         var sentGifs: [TelegramMediaFile] = []
         
-        var updatedGroupingKey: Int64?
-        for (_, _, updatedMessage) in mapping {
-            if let updatedGroupingKey = updatedGroupingKey {
-                assert(updatedGroupingKey == updatedMessage.groupingKey)
+        var updatedGroupingKey: [Int64 : [MessageId]] = [:]
+        for (message, _, updatedMessage) in mapping {
+            if let groupingKey = updatedMessage.groupingKey {
+                var ids = updatedGroupingKey[groupingKey] ?? []
+                ids.append(message.id)
+                updatedGroupingKey[groupingKey] = ids
             }
-            updatedGroupingKey = updatedMessage.groupingKey
         }
         
         if let latestPreviousId = latestPreviousId, let latestIndex = mapping.last?.1 {
             transaction.offsetPendingMessagesTimestamps(lowerBound: latestPreviousId, excludeIds: Set(mapping.map { $0.0.id }), timestamp: latestIndex.timestamp)
         }
         
-        if let updatedGroupingKey = updatedGroupingKey {
-            transaction.updateMessageGroupingKeysAtomically(mapping.map { $0.0.id }, groupingKey: updatedGroupingKey)
+        for (key, ids) in updatedGroupingKey {
+            transaction.updateMessageGroupingKeysAtomically(ids, groupingKey: key)
         }
         
         for (message, _, updatedMessage) in mapping {
@@ -360,7 +376,7 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                 
                 let (tags, globalTags) = tagsForStoreMessage(incoming: currentMessage.flags.contains(.Incoming), attributes: attributes, media: media, textEntities: entitiesAttribute?.entities)
                 
-                return .update(StoreMessage(id: updatedId, globallyUniqueId: nil, groupingKey: currentMessage.groupingKey, timestamp: updatedMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media))
+                return .update(StoreMessage(id: updatedId, globallyUniqueId: nil, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: updatedMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media))
             })
         }
         

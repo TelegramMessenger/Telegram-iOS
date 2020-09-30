@@ -15,6 +15,7 @@ import AlertUI
 import PresentationDataUtils
 import ItemListPeerItem
 import ItemListPeerActionItem
+import ChatListFilterSettingsHeaderItem
 
 private final class ChannelDiscussionGroupSetupControllerArguments {
     let context: AccountContext
@@ -131,8 +132,18 @@ private enum ChannelDiscussionGroupSetupControllerEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChannelDiscussionGroupSetupControllerArguments
         switch self {
-            case let .header(theme, strings, title, isGroup, label):
-                return ChannelDiscussionGroupSetupHeaderItem(theme: theme, strings: strings, title: title, isGroup: isGroup, label: label, sectionId: self.section)
+            case let .header(_, _, title, isGroup, _):
+                let text: String
+                if let title = title {
+                    if isGroup {
+                        text = presentationData.strings.Channel_CommentsGroup_HeaderGroupSet(title).0
+                    } else {
+                        text = presentationData.strings.Channel_CommentsGroup_HeaderSet(title).0
+                    }
+                } else {
+                    text = presentationData.strings.Channel_CommentsGroup_Header
+                }
+                return ChatListFilterSettingsHeaderItem(theme: presentationData.theme, text: text, animation: .discussionGroupSetup, sectionId: self.section)
             case let .create(theme, text):
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, sectionId: self.section, editing: false, action: {
                     arguments.createGroup()
@@ -166,7 +177,7 @@ private func channelDiscussionGroupSetupControllerEntries(presentationData: Pres
     
     var entries: [ChannelDiscussionGroupSetupControllerEntry] = []
     
-    if let linkedDiscussionPeerId = cachedData.linkedDiscussionPeerId {
+    if case let .known(maybeLinkedDiscussionPeerId) = cachedData.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId {
         if let group = view.peers[linkedDiscussionPeerId] {
             if case .group = peer.info {
                 entries.append(.header(presentationData.theme, presentationData.strings, group.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), true, presentationData.strings.Channel_DiscussionGroup_HeaderLabel))
@@ -299,7 +310,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                 return
             }
             
-            if groupId == cachedData.linkedDiscussionPeerId {
+            if case let .known(maybeLinkedDiscussionPeerId) = cachedData.linkedDiscussionPeerId, maybeLinkedDiscussionPeerId == groupId {
                 navigateToGroupImpl?(groupId)
                 return
             }
@@ -483,7 +494,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
             let applyPeerId: PeerId
             if case .broadcast = peer.info {
                 applyPeerId = peerId
-            } else if let linkedDiscussionPeerId = cachedData.linkedDiscussionPeerId {
+            } else if case let .known(maybeLinkedDiscussionPeerId) = cachedData.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId {
                 applyPeerId = linkedDiscussionPeerId
             } else {
                 return

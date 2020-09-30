@@ -9,35 +9,6 @@ import SyncCore
 import TelegramPresentationData
 import ListSectionHeaderNode
 
-private func nodeColor(for color: WallpaperSearchColor) -> UIColor {
-    switch color {
-        case .blue:
-            return UIColor(rgb: 0x0076ff)
-        case .red:
-            return UIColor(rgb: 0xff0000)
-        case .orange:
-            return UIColor(rgb: 0xff8a00)
-        case .yellow:
-            return UIColor(rgb: 0xffca00)
-        case .green:
-            return UIColor(rgb: 0x00e432)
-        case .teal:
-            return UIColor(rgb: 0x1fa9ab)
-        case .purple:
-            return UIColor(rgb: 0x7300aa)
-        case .pink:
-            return UIColor(rgb: 0xf9bec5)
-        case .brown:
-            return UIColor(rgb: 0x734021)
-        case .black:
-            return UIColor(rgb: 0x000000)
-        case .gray:
-            return UIColor(rgb: 0x5c585f)
-        case .white:
-            return UIColor(rgb: 0xffffff)
-    }
-}
-
 private class ThemeGridColorNode: HighlightableButtonNode {
     let action: () -> Void
     
@@ -54,7 +25,7 @@ private class ThemeGridColorNode: HighlightableButtonNode {
         } else if color == .black && dark {
             image = generateFilledCircleImage(diameter: 42.0, color: .black, strokeColor: strokeColor, strokeWidth: 1.0)
         } else {
-            image = generateFilledCircleImage(diameter: 42.0, color: nodeColor(for: color))
+            image = generateFilledCircleImage(diameter: 42.0, color: color.displayColor)
         }
         self.setImage(image, for: .normal)
     }

@@ -39,7 +39,9 @@ class ChatListRecentPeersListItem: ListViewItem {
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
-            completion(node, nodeApply)
+            completion(node, {
+                return (nil, { _ in nodeApply(synchronousLoads) })
+            })
         }
     }
     
@@ -50,8 +52,8 @@ class ChatListRecentPeersListItem: ListViewItem {
                 async {
                     let (nodeLayout, apply) = layout(self, params, nextItem != nil)
                     Queue.mainQueue().async {
-                        completion(nodeLayout, { info in
-                            apply().1(info)
+                        completion(nodeLayout, { _ in
+                            apply(false)
                         })
                     }
                 }
@@ -66,6 +68,11 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
     private var peersNode: ChatListSearchRecentPeersNode?
     
     private var item: ChatListRecentPeersListItem?
+    
+    private let ready = Promise<Bool>()
+    public var isReady: Signal<Bool, NoError> {
+        return self.ready.get()
+    }
     
     required init() {
         self.backgroundNode = ASDisplayNode()
@@ -86,56 +93,55 @@ class ChatListRecentPeersListItemNode: ListViewItemNode {
             let (nodeLayout, nodeApply) = makeLayout(item, params, nextItem == nil)
             self.contentSize = nodeLayout.contentSize
             self.insets = nodeLayout.insets
-            let _ = nodeApply()
+            let _ = nodeApply(false)
         }
     }
     
-    func asyncLayout() -> (_ item: ChatListRecentPeersListItem, _ params: ListViewItemLayoutParams, _ last: Bool) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) {
+    func asyncLayout() -> (_ item: ChatListRecentPeersListItem, _ params: ListViewItemLayoutParams, _ last: Bool) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let currentItem = self.item
         
         return { [weak self] item, params, last in
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 124.0), insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0))
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 96.0), insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0))
             
-            return (nodeLayout, { [weak self] in
-                var updatedTheme: PresentationTheme?
-                if currentItem?.theme !== item.theme {
-                    updatedTheme = item.theme
-                }
-                
-                return (nil, { _ in
-                    if let strongSelf = self {
-                        strongSelf.item = item
-                        
-                        if let _ = updatedTheme {
-                            strongSelf.separatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
-                            strongSelf.backgroundNode.backgroundColor = item.theme.list.plainBackgroundColor
-                        }
-                        
-                        let peersNode: ChatListSearchRecentPeersNode
-                        if let currentPeersNode = strongSelf.peersNode {
-                            peersNode = currentPeersNode
-                            peersNode.updateThemeAndStrings(theme: item.theme, strings: item.strings)
-                        } else {
-                            peersNode = ChatListSearchRecentPeersNode(context: item.context, theme: item.theme, mode: .list, strings: item.strings, peerSelected: { peer in
-                                self?.item?.peerSelected(peer)
-                            }, peerContextAction: { peer, node, gesture in
-                                self?.item?.peerContextAction(peer, node, gesture)
-                            }, isPeerSelected: { _ in
-                                return false
-                            })
-                            strongSelf.peersNode = peersNode
-                            strongSelf.addSubnode(peersNode)
-                        }
-                        
-                        peersNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
-                        peersNode.updateLayout(size: nodeLayout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
-                        
-                        let separatorHeight = UIScreenPixel
-                        strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))
-                        strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: nodeLayout.size.width, height: separatorHeight))
-                        strongSelf.separatorNode.isHidden = true
+            var updatedTheme: PresentationTheme?
+            if currentItem?.theme !== item.theme {
+                updatedTheme = item.theme
+            }
+            
+            return (nodeLayout, { [weak self] synchronousLoads in
+                if let strongSelf = self {
+                    strongSelf.item = item
+                    
+                    if let _ = updatedTheme {
+                        strongSelf.separatorNode.backgroundColor = item.theme.list.itemPlainSeparatorColor
+                        strongSelf.backgroundNode.backgroundColor = item.theme.list.plainBackgroundColor
                     }
-                })
+                    
+                    let peersNode: ChatListSearchRecentPeersNode
+                    if let currentPeersNode = strongSelf.peersNode {
+                        peersNode = currentPeersNode
+                        peersNode.updateThemeAndStrings(theme: item.theme, strings: item.strings)
+                    } else {
+                        peersNode = ChatListSearchRecentPeersNode(context: item.context, theme: item.theme, mode: .list, strings: item.strings, peerSelected: { peer in
+                            self?.item?.peerSelected(peer)
+                        }, peerContextAction: { peer, node, gesture in
+                            self?.item?.peerContextAction(peer, node, gesture)
+                        }, isPeerSelected: { _ in
+                            return false
+                        })
+                        strongSelf.ready.set(peersNode.isReady)
+                        strongSelf.peersNode = peersNode
+                        strongSelf.addSubnode(peersNode)
+                    }
+                    
+                    peersNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
+                    peersNode.updateLayout(size: nodeLayout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
+                    
+                    let separatorHeight = UIScreenPixel
+                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))
+                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: nodeLayout.size.width, height: separatorHeight))
+                    strongSelf.separatorNode.isHidden = true
+                }
             })
         }
     }

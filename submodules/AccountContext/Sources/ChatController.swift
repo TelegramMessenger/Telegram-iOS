@@ -10,6 +10,93 @@ import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
 
+public final class ChatMessageItemAssociatedData: Equatable {
+    public enum ChannelDiscussionGroupStatus: Equatable {
+        case unknown
+        case known(PeerId?)
+    }
+    
+    public let automaticDownloadPeerType: MediaAutoDownloadPeerType
+    public let automaticDownloadNetworkType: MediaAutoDownloadNetworkType
+    public let isRecentActions: Bool
+    public let isScheduledMessages: Bool
+    public let contactsPeerIds: Set<PeerId>
+    public let channelDiscussionGroup: ChannelDiscussionGroupStatus
+    public let animatedEmojiStickers: [String: [StickerPackItem]]
+    public let forcedResourceStatus: FileMediaResourceStatus?
+    
+    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, isScheduledMessages: Bool = false, contactsPeerIds: Set<PeerId> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil) {
+        self.automaticDownloadPeerType = automaticDownloadPeerType
+        self.automaticDownloadNetworkType = automaticDownloadNetworkType
+        self.isRecentActions = isRecentActions
+        self.isScheduledMessages = isScheduledMessages
+        self.contactsPeerIds = contactsPeerIds
+        self.channelDiscussionGroup = channelDiscussionGroup
+        self.animatedEmojiStickers = animatedEmojiStickers
+        self.forcedResourceStatus = forcedResourceStatus
+    }
+    
+    public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
+        if lhs.automaticDownloadPeerType != rhs.automaticDownloadPeerType {
+            return false
+        }
+        if lhs.automaticDownloadNetworkType != rhs.automaticDownloadNetworkType {
+            return false
+        }
+        if lhs.isRecentActions != rhs.isRecentActions {
+            return false
+        }
+        if lhs.isScheduledMessages != rhs.isScheduledMessages {
+            return false
+        }
+        if lhs.contactsPeerIds != rhs.contactsPeerIds {
+            return false
+        }
+        if lhs.channelDiscussionGroup != rhs.channelDiscussionGroup {
+            return false
+        }
+        if lhs.animatedEmojiStickers != rhs.animatedEmojiStickers {
+            return false
+        }
+        if lhs.forcedResourceStatus != rhs.forcedResourceStatus {
+            return false
+        }
+        return true
+    }
+}
+
+public enum ChatControllerInteractionLongTapAction {
+    case url(String)
+    case mention(String)
+    case peerMention(PeerId, String)
+    case command(String)
+    case hashtag(String)
+    case timecode(Double, String)
+    case bankCard(String)
+}
+
+public enum ChatHistoryMessageSelection: Equatable {
+    case none
+    case selectable(selected: Bool)
+    
+    public static func ==(lhs: ChatHistoryMessageSelection, rhs: ChatHistoryMessageSelection) -> Bool {
+        switch lhs {
+            case .none:
+                if case .none = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .selectable(selected):
+                if case .selectable(selected) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+}
+
 public enum ChatControllerInitialBotStartBehavior {
     case interactive
     case automatic(returnToPeerId: PeerId, scheduled: Bool)
@@ -242,7 +329,7 @@ public struct ChatTextInputStateText: PostboxCoding, Equatable {
 }
 
 public enum ChatControllerSubject: Equatable {
-    case message(MessageId)
+    case message(id: MessageId, highlight: Bool)
     case scheduledMessages
 }
 
@@ -370,6 +457,8 @@ public protocol ChatController: ViewController {
     var chatLocation: ChatLocation { get }
     var canReadHistory: ValuePromise<Bool> { get }
     var parentController: ViewController? { get set }
+    
+    var purposefulAction: (() -> Void)? { get set }
     
     func updatePresentationMode(_ mode: ChatControllerPresentationMode)
     func beginMessageSearch(_ query: String)

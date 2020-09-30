@@ -112,36 +112,13 @@ extension Api.Message {
                 let flags = message.flags
                 let id = message.id
                 let fromId = message.fromId
-                let toId = message.toId
                 
-                let peerId: PeerId
-                switch toId {
-                    case let .peerUser(userId):
-                        let id: PeerId.Id
-                        if namespace == Namespaces.Message.ScheduledCloud {
-                            id = userId
-                        } else {
-                            id = (flags & Int32(2)) != 0 ? userId : (fromId ?? userId)
-                        }
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: id)
-                    case let .peerChat(chatId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                    case let .peerChannel(channelId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                }
+                let peerId: PeerId = message.peerId.peerId
                 return MessageId(peerId: peerId, namespace: namespace, id: id)
             case .messageEmpty:
                 return nil
-            case let .messageService(flags, id, fromId, toId, _, _, _):
-                let peerId: PeerId
-                switch toId {
-                    case let .peerUser(userId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
-                    case let .peerChat(chatId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                    case let .peerChannel(channelId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                }
+            case let .messageService(flags, id, fromId, chatPeerId, _, _, _):
+                let peerId: PeerId = chatPeerId.peerId
                 return MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id)
         }
     }

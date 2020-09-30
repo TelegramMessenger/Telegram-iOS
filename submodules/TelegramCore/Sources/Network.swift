@@ -424,7 +424,17 @@ public struct NetworkInitializationArguments {
 private let cloudDataContext = Atomic<CloudDataContext?>(value: nil)
 #endif
 
-func initializedNetwork(arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, networkSettings: NetworkSettings?, phoneNumber: String?) -> Signal<Network, NoError> {
+private final class SharedContextStore {
+    struct Key: Hashable {
+        var accountId: AccountRecordId
+    }
+    
+    var contexts: [Key: MTContext] = [:]
+}
+
+private let sharedContexts = Atomic<SharedContextStore>(value: SharedContextStore())
+
+func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, networkSettings: NetworkSettings?, phoneNumber: String?) -> Signal<Network, NoError> {
     return Signal { subscriber in
         let queue = Queue()
         queue.async {
@@ -464,7 +474,22 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
                 }
             }
             
-            let context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: false)!
+            var contextValue: MTContext?
+            sharedContexts.with { store in
+                let key = SharedContextStore.Key(accountId: accountId)
+                
+                let context: MTContext
+                if false, let current = store.contexts[key] {
+                    context = current
+                    context.updateApiEnvironment({ _ in return apiEnvironment})
+                } else {
+                    context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: true)!
+                    store.contexts[key] = context
+                }
+                contextValue = context
+            }
+            
+            let context = contextValue!
             
             let seedAddressList: [Int: [String]]
             

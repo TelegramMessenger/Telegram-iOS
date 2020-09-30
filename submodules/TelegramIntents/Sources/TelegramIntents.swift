@@ -12,7 +12,7 @@ import AvatarNode
 import AccountContext
 
 private let savedMessagesAvatar: UIImage = {
-    return generateImage(CGSize(width: 60.0, height: 60.0)) { size, context in
+    return generateImage(CGSize(width: 60.0, height: 60.0), rotatedContext: { size, context in
         var locations: [CGFloat] = [1.0, 0.0]
                
         let colorSpace = CGColorSpaceCreateDeviceRGB()
@@ -28,7 +28,7 @@ private let savedMessagesAvatar: UIImage = {
         if let savedMessagesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/SavedMessagesIcon"), color: .white) {
             context.draw(savedMessagesIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - savedMessagesIcon.size.width) / 2.0), y: floor((size.height - savedMessagesIcon.size.height) / 2.0)), size: savedMessagesIcon.size))
         }
-    }!
+    })!
 }()
 
 public enum SendMessageIntentContext {
@@ -68,6 +68,7 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
         |> mapToSignal { unlocked -> Signal<[(Peer, SendMessageIntentSubject, UIImage?)], NoError> in
             if unlocked {
                 return sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.intentsSettings])
+                |> take(1)
                 |> mapToSignal { sharedData -> Signal<[(Peer, SendMessageIntentSubject)], NoError> in
                     let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.intentsSettings] as? IntentsSettings) ?? IntentsSettings.defaultSettings
                     if let accountId = settings.account, accountId != account.peerId {
@@ -136,7 +137,20 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
                         } else {
                             let peerAndAvatar = (peerAvatarImage(account: account, peerReference: PeerReference(peer), authorOfMessage: nil, representation: peer.smallProfileImage, round: false) ?? .single(nil))
                             |> map { imageVersions -> (Peer, SendMessageIntentSubject, UIImage?) in
-                                let avatarImage = imageVersions?.0
+                                var avatarImage: UIImage?
+                                if let image = imageVersions?.0 {
+                                    avatarImage = image
+                                } else {
+                                    let avatarFont = avatarPlaceholderFont(size: 26.0)
+                                    let size = CGSize(width: 60.0, height: 60.0)
+                                    if let image = generateImage(size, rotatedContext: { size, context in
+                                        context.clear(CGRect(origin: CGPoint(), size: size))
+                                        
+                                        drawPeerAvatarLetters(context: context, size: CGSize(width: size.width, height: size.height), font: avatarFont, letters: peer.displayLetters, peerId: peer.id)
+                                    })?.withRenderingMode(.alwaysOriginal) {
+                                        avatarImage = image
+                                    }
+                                }
                                 return (peer, subject, avatarImage)
                             }
                             signals.append(peerAndAvatar)
@@ -151,7 +165,7 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
         |> deliverOnMainQueue).start(next: { peers in
             let presentationData = sharedContext.currentPresentationData.with { $0 }
             
-            for (peer, subject, avatarImage) in peers {
+            for (peer, _, avatarImage) in peers {
                 let recipientHandle = INPersonHandle(value: "tg\(peer.id.toInt64())", type: .unknown)
                 let displayTitle: String
                 var nameComponents = PersonNameComponents()

@@ -3,13 +3,26 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-public func exportMessageLink(account: Account, peerId: PeerId, messageId: MessageId) -> Signal<String?, NoError> {
-    return account.postbox.transaction { transaction -> Peer? in
-        return transaction.getPeer(peerId)
+public func exportMessageLink(account: Account, peerId: PeerId, messageId: MessageId, isThread: Bool = false) -> Signal<String?, NoError> {
+    return account.postbox.transaction { transaction -> (Peer, MessageId)? in
+        var peer: Peer? = transaction.getPeer(messageId.peerId)
+        if let peer = peer {
+            return (peer, messageId)
+        } else {
+            return nil
+        }
     }
-    |> mapToSignal { peer -> Signal<String?, NoError> in
-        if let peer = peer, let input = apiInputChannel(peer) {
-            return account.network.request(Api.functions.channels.exportMessageLink(channel: input, id: messageId.id, grouped: .boolTrue)) |> mapError { _ in return }
+    |> mapToSignal { data -> Signal<String?, NoError> in
+        guard let (peer, sourceMessageId) = data else {
+            return .single(nil)
+        }
+        if let input = apiInputChannel(peer) {
+            var flags: Int32 = 0
+            flags |= 1 << 0
+            if isThread {
+                flags |= 1 << 1
+            }
+            return account.network.request(Api.functions.channels.exportMessageLink(flags: flags, channel: input, id: sourceMessageId.id)) |> mapError { _ in return }
             |> map { res in
                 switch res {
                     case let .exportedMessageLink(link, _):

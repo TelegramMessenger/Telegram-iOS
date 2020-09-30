@@ -1090,4 +1090,49 @@ public struct PresentationResourcesChat {
             }
         })
     }
+    
+    public static func chatMessageCommentsIcon(_ theme: PresentationTheme, incoming: Bool) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatMessageCommentsIcon(incoming: incoming), { theme in
+            let messageTheme = incoming ? theme.chat.message.incoming : theme.chat.message.outgoing
+            
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BubbleComments"), color: messageTheme.accentTextColor)
+        })
+    }
+    
+    public static func chatMessageRepliesIcon(_ theme: PresentationTheme, incoming: Bool) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatMessageRepliesIcon(incoming: incoming), { theme in
+            let messageTheme = incoming ? theme.chat.message.incoming : theme.chat.message.outgoing
+            
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BubbleReplies"), color: messageTheme.accentTextColor)
+        })
+    }
+    
+    public static func chatMessageCommentsArrowIcon(_ theme: PresentationTheme, incoming: Bool) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatMessageCommentsArrowIcon(incoming: incoming), { theme in
+            let messageTheme = incoming ? theme.chat.message.incoming : theme.chat.message.outgoing
+            
+            return generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: messageTheme.accentTextColor)
+        })
+    }
+    
+    public static func chatMessageCommentsUnreadDotIcon(_ theme: PresentationTheme, incoming: Bool) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.chatMessageCommentsUnreadDotIcon(incoming: incoming), { theme in
+            let messageTheme = incoming ? theme.chat.message.incoming : theme.chat.message.outgoing
+            
+            return generateFilledCircleImage(diameter: 6.0, color: messageTheme.accentTextColor)
+        })
+    }
+    
+    public static func chatFreeCommentButtonBackground(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatFreeCommentButtonBackground.rawValue, { _ in
+            let strokeColor = bubbleVariableColor(variableColor: theme.chat.message.shareButtonStrokeColor, wallpaper: wallpaper)
+            return generateStretchableFilledCircleImage(diameter: 30.0, color: bubbleVariableColor(variableColor: theme.chat.message.shareButtonFillColor, wallpaper: wallpaper), strokeColor: strokeColor, strokeWidth: strokeColor.alpha.isZero ? nil : 1.0)
+        })
+    }
+    
+    public static func chatFreeCommentButtonIcon(_ theme: PresentationTheme, wallpaper: TelegramWallpaper) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatFreeCommentButtonIcon.rawValue, { _ in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/FreeRepliesIcon"), color: bubbleVariableColor(variableColor: theme.chat.message.shareButtonForegroundColor, wallpaper: wallpaper))
+        })
+    }
 }

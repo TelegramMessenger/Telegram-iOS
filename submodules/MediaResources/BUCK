@@ -10,6 +10,7 @@ static_library(
         "//submodules/SyncCore:SyncCore#shared",
     	"//submodules/Postbox:Postbox#shared",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+	"//submodules/TelegramUIPreferences:TelegramUIPreferences",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

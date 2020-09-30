@@ -128,3 +128,39 @@ public final class UnreadMessageCountsView: PostboxView {
         return nil
     }
 }
+
+final class MutableCombinedReadStateView: MutablePostboxView {
+    private let peerId: PeerId
+    fileprivate var state: CombinedPeerReadState?
+    
+    init(postbox: Postbox, peerId: PeerId) {
+        self.peerId = peerId
+        self.state = postbox.readStateTable.getCombinedState(peerId)
+    }
+    
+    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+        var updated = false
+        
+        if transaction.alteredInitialPeerCombinedReadStates[self.peerId] != nil {
+            let state = postbox.readStateTable.getCombinedState(peerId)
+            if state != self.state {
+                self.state = state
+                updated = true
+            }
+        }
+        
+        return updated
+    }
+    
+    func immutableView() -> PostboxView {
+        return CombinedReadStateView(self)
+    }
+}
+
+public final class CombinedReadStateView: PostboxView {
+    public let state: CombinedPeerReadState?
+    
+    init(_ view: MutableCombinedReadStateView) {
+        self.state = view.state
+    }
+}

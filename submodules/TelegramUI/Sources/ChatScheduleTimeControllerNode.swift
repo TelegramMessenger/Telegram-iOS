@@ -8,7 +8,6 @@ import SyncCore
 import TelegramPresentationData
 import TelegramStringFormatting
 import AccountContext
-import ShareController
 import SolidRoundedButtonNode
 import PresentationDataUtils
 
@@ -189,6 +188,9 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         pickerView.minuteInterval = 1
         self.contentContainerNode.view.addSubview(pickerView)
         pickerView.addTarget(self, action: #selector(self.datePickerUpdated), for: .valueChanged)
+        if #available(iOS 13.4, *) {
+            pickerView.preferredDatePickerStyle = .wheels
+        }
         self.pickerView = pickerView
         
         self.updateMinimumDate(currentTime: currentTime)

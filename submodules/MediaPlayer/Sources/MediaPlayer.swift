@@ -490,6 +490,8 @@ private final class MediaPlayerContext {
             case .playing:
                 break
         }
+        
+        self.stoppedAtEnd = false
     }
     
     fileprivate func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek = .start) {
@@ -537,6 +539,8 @@ private final class MediaPlayerContext {
                 self.play()
             }
         }
+        
+        self.stoppedAtEnd = false
     }
     
     fileprivate func continuePlayingWithoutSound() {
@@ -892,7 +896,7 @@ private final class MediaPlayerContext {
             let _ = self.playerStatusValue.swap(status)
         }
         
-        if performActionAtEndNow {
+        if performActionAtEndNow && !self.stoppedAtEnd {
             switch self.actionAtEnd {
                 case let .loop(f):
                     self.stoppedAtEnd = false

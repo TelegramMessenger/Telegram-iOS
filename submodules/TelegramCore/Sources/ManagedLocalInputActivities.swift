@@ -6,19 +6,29 @@ import MtProtoKit
 
 import SyncCore
 
+public struct PeerActivitySpace: Hashable {
+    public var peerId: PeerId
+    public var threadId: Int64?
+    
+    public init(peerId: PeerId, threadId: Int64?) {
+        self.peerId = peerId
+        self.threadId = threadId
+    }
+}
+
 struct PeerInputActivityRecord: Equatable {
     let activity: PeerInputActivity
     let updateId: Int32
 }
 
 private final class ManagedLocalTypingActivitiesContext {
-    private var disposables: [PeerId: (PeerInputActivityRecord, MetaDisposable)] = [:]
+    private var disposables: [PeerActivitySpace: (PeerInputActivityRecord, MetaDisposable)] = [:]
     
-    func update(activities: [PeerId: [PeerId: PeerInputActivityRecord]]) -> (start: [(PeerId, PeerInputActivityRecord?, MetaDisposable)], dispose: [MetaDisposable]) {
-        var start: [(PeerId, PeerInputActivityRecord?, MetaDisposable)] = []
+    func update(activities: [PeerActivitySpace: [PeerId: PeerInputActivityRecord]]) -> (start: [(PeerActivitySpace, PeerInputActivityRecord?, MetaDisposable)], dispose: [MetaDisposable]) {
+        var start: [(PeerActivitySpace, PeerInputActivityRecord?, MetaDisposable)] = []
         var dispose: [MetaDisposable] = []
         
-        var validPeerIds = Set<PeerId>()
+        var validPeerIds = Set<PeerActivitySpace>()
         for (peerId, record) in activities {
             if let activity = record.values.first {
                 validPeerIds.insert(peerId)
@@ -37,7 +47,7 @@ private final class ManagedLocalTypingActivitiesContext {
             }
         }
         
-        var removePeerIds: [PeerId] = []
+        var removePeerIds: [PeerActivitySpace] = []
         for key in self.disposables.keys {
             if !validPeerIds.contains(key) {
                 removePeerIds.append(key)
@@ -60,7 +70,7 @@ private final class ManagedLocalTypingActivitiesContext {
     }
 }
 
-func managedLocalTypingActivities(activities: Signal<[PeerId: [PeerId: PeerInputActivityRecord]], NoError>, postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
+func managedLocalTypingActivities(activities: Signal<[PeerActivitySpace: [PeerId: PeerInputActivityRecord]], NoError>, postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
     return Signal { subscriber in
         let context = Atomic(value: ManagedLocalTypingActivitiesContext())
         let disposable = activities.start(next: { activities in
@@ -73,7 +83,7 @@ func managedLocalTypingActivities(activities: Signal<[PeerId: [PeerId: PeerInput
             }
             
             for (peerId, activity, disposable) in start {
-                disposable.set(requestActivity(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId, activity: activity?.activity).start())
+                disposable.set(requestActivity(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId.peerId, threadId: peerId.threadId, activity: activity?.activity).start())
             }
         })
         return ActionDisposable {
@@ -111,7 +121,7 @@ private func actionFromActivity(_ activity: PeerInputActivity?) -> Api.SendMessa
     }
 }
 
-private func requestActivity(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, activity: PeerInputActivity?) -> Signal<Void, NoError> {
+private func requestActivity(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, threadId: Int64?, activity: PeerInputActivity?) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(peerId) {
             if peerId == accountPeerId {
@@ -122,7 +132,12 @@ private func requestActivity(postbox: Postbox, network: Network, accountPeerId: 
             }
             
             if let inputPeer = apiInputPeer(peer) {
-                return network.request(Api.functions.messages.setTyping(peer: inputPeer, action: actionFromActivity(activity)))
+                var flags: Int32 = 0
+                let topMessageId = threadId.flatMap { makeThreadIdMessageId(peerId: peerId, threadId: $0) }
+                if topMessageId != nil {
+                    flags |= 1 << 0
+                }
+                return network.request(Api.functions.messages.setTyping(flags: flags, peer: inputPeer, topMsgId: topMessageId?.id, action: actionFromActivity(activity)))
                 |> `catch` { _ -> Signal<Api.Bool, NoError> in
                     return .single(.boolFalse)
                 }

@@ -110,6 +110,9 @@ private final class DateSelectionActionSheetItemNode: ActionSheetItemNode {
         self.pickerView.datePickerMode = .date
         self.pickerView.date = Date(timeIntervalSince1970: Double(roundDateToDays(currentValue)))
         self.pickerView.locale = localeWithStrings(strings)
+        if #available(iOS 13.4, *) {
+            self.pickerView.preferredDatePickerStyle = .wheels
+        }
         if let minimumDate = minimumDate {
             self.pickerView.minimumDate = minimumDate
         }

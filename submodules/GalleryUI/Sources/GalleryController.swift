@@ -149,12 +149,12 @@ private func galleryMessageCaptionText(_ message: Message) -> String {
     return message.text
 }
 
-public func galleryItemForEntry(context: AccountContext, presentationData: PresentationData, entry: MessageHistoryEntry, isCentral: Bool = false, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, configuration: GalleryConfiguration? = nil, tempFilePath: String? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, storeMediaPlaybackState: @escaping (MessageId, Double?) -> Void = { _, _ in }, present: @escaping (ViewController, Any?) -> Void) -> GalleryItem? {
+public func galleryItemForEntry(context: AccountContext, presentationData: PresentationData, entry: MessageHistoryEntry, isCentral: Bool = false, streamVideos: Bool, loopVideos: Bool = false, hideControls: Bool = false, fromPlayingVideo: Bool = false, landscape: Bool = false, timecode: Double? = nil, displayInfoOnTop: Bool = false, configuration: GalleryConfiguration? = nil, tempFilePath: String? = nil, playbackCompleted: @escaping () -> Void = {}, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, openActionOptions: @escaping (GalleryControllerInteractionTapAction) -> Void = { _ in }, storeMediaPlaybackState: @escaping (MessageId, Double?) -> Void = { _, _ in }, present: @escaping (ViewController, Any?) -> Void) -> GalleryItem? {
     let message = entry.message
     let location = entry.location
     if let (media, mediaImage) = mediaForMessage(message: message) {
         if let _ = media as? TelegramMediaImage {
-            return ChatImageGalleryItem(context: context, presentationData: presentationData, message: message, location: location, performAction: performAction, openActionOptions: openActionOptions, present: present)
+            return ChatImageGalleryItem(context: context, presentationData: presentationData, message: message, location: location, displayInfoOnTop: displayInfoOnTop, performAction: performAction, openActionOptions: openActionOptions, present: present)
         } else if let file = media as? TelegramMediaFile {
             if file.isVideo {
                 let content: UniversalVideoContent
@@ -182,7 +182,7 @@ public func galleryItemForEntry(context: AccountContext, presentationData: Prese
                 }
                 
                 let caption = galleryCaptionStringWithAppliedEntities(text, entities: entities)
-                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.effectiveAuthor?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: caption, hideControls: hideControls, fromPlayingVideo: fromPlayingVideo, landscape: landscape, timecode: timecode, configuration: configuration, playbackCompleted: playbackCompleted, performAction: performAction, openActionOptions: openActionOptions, storeMediaPlaybackState: storeMediaPlaybackState, present: present)
+                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.effectiveAuthor?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: caption, displayInfoOnTop: displayInfoOnTop, hideControls: hideControls, fromPlayingVideo: fromPlayingVideo, landscape: landscape, timecode: timecode, configuration: configuration, playbackCompleted: playbackCompleted, performAction: performAction, openActionOptions: openActionOptions, storeMediaPlaybackState: storeMediaPlaybackState, present: present)
             } else {
                 if let fileName = file.fileName, (fileName as NSString).pathExtension.lowercased() == "json" {
                     return ChatAnimationGalleryItem(context: context, presentationData: presentationData, message: message, location: location)
@@ -193,7 +193,7 @@ public func galleryItemForEntry(context: AccountContext, presentationData: Prese
                         pixelsCount = Int(dimensions.width) * Int(dimensions.height)
                     }
                     if (file.size == nil || file.size! < 4 * 1024 * 1024) && pixelsCount < 4096 * 4096 {
-                        return ChatImageGalleryItem(context: context, presentationData: presentationData, message: message, location: location, performAction: performAction, openActionOptions: openActionOptions, present: present)
+                        return ChatImageGalleryItem(context: context, presentationData: presentationData, message: message, location: location, displayInfoOnTop: displayInfoOnTop, performAction: performAction, openActionOptions: openActionOptions, present: present)
                     } else {
                         return ChatDocumentGalleryItem(context: context, presentationData: presentationData, message: message, location: location)
                     }
@@ -221,7 +221,7 @@ public func galleryItemForEntry(context: AccountContext, presentationData: Prese
                     }
             }
             if let content = content {
-                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.effectiveAuthor?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), fromPlayingVideo: fromPlayingVideo, landscape: landscape, timecode: timecode, configuration: configuration, performAction: performAction, openActionOptions: openActionOptions, storeMediaPlaybackState: storeMediaPlaybackState, present: present)
+                return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.effectiveAuthor?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: NSAttributedString(string: ""), displayInfoOnTop: displayInfoOnTop, fromPlayingVideo: fromPlayingVideo, landscape: landscape, timecode: timecode, configuration: configuration, performAction: performAction, openActionOptions: openActionOptions, storeMediaPlaybackState: storeMediaPlaybackState, present: present)
             } else {
                 return nil
             }
@@ -252,20 +252,20 @@ public final class GalleryControllerPresentationArguments {
 
 private enum GalleryMessageHistoryView {
     case view(MessageHistoryView)
-    case single(MessageHistoryEntry)
+    case entries([MessageHistoryEntry], Bool, Bool)
     
     var entries: [MessageHistoryEntry] {
         switch self {
             case let .view(view):
                 return view.entries
-            case let .single(entry):
-                return [entry]
+            case let .entries(entries, _, _):
+                return entries
         }
     }
     
     var tagMask: MessageTags? {
         switch self {
-        case .single:
+        case .entries:
             return nil
         case let .view(view):
             return view.tagMask
@@ -274,8 +274,8 @@ private enum GalleryMessageHistoryView {
     
     var hasEarlier: Bool {
         switch self {
-        case .single:
-            return false
+        case let .entries(_, hasEarlier, _):
+            return hasEarlier
         case let .view(view):
             return view.earlierId != nil
         }
@@ -283,17 +283,12 @@ private enum GalleryMessageHistoryView {
     
     var hasLater: Bool {
         switch self {
-        case .single:
-            return false
+        case let .entries(_ , _, hasLater):
+            return hasLater
         case let .view(view):
             return view.laterId != nil
         }
     }
-}
-
-public enum GalleryControllerItemSource {
-    case peerMessagesAtId(MessageId)
-    case standaloneMessage(Message)
 }
 
 public enum GalleryControllerInteractionTapAction {
@@ -366,6 +361,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
     private var entries: [MessageHistoryEntry] = []
     private var hasLeftEntries: Bool = false
     private var hasRightEntries: Bool = false
+    private var loadingMore: Bool = false
     private var tagMask: MessageTags?
     private var centralEntryStableId: UInt32?
     private var configuration: GalleryConfiguration?
@@ -426,17 +422,23 @@ public class GalleryController: ViewController, StandalonePresentableController 
         
         let message: Signal<Message?, NoError>
         switch source {
-            case let .peerMessagesAtId(messageId):
+            case let .peerMessagesAtId(messageId, _, _):
                 message = context.account.postbox.messageAtId(messageId)
             case let .standaloneMessage(m):
                 message = .single(m)
+            case let .custom(messages, messageId, _):
+                message = messages
+                |> take(1)
+                |> map { messages, _, _ in
+                    return messages.first(where: { $0.id == messageId })
+                }
         }
         
         let messageView = message
         |> filter({ $0 != nil })
         |> mapToSignal { message -> Signal<GalleryMessageHistoryView?, NoError> in
             switch source {
-                case .peerMessagesAtId:
+                case let .peerMessagesAtId(_, chatLocation, chatLocationContextHolder):
                     if let tags = tagsForMessage(message!) {
                         let namespaces: MessageIdNamespaces
                         if Namespaces.Message.allScheduled.contains(message!.id.namespace) {
@@ -444,16 +446,27 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         } else {
                             namespaces = .not(Namespaces.Message.allScheduled)
                         }
-                        return context.account.postbox.aroundMessageHistoryViewForLocation(.peer(message!.id.peerId), anchor: .index(message!.index), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, namespaces: namespaces, orderStatistics: [.combinedLocation])
-                        |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
-                            let mapped = GalleryMessageHistoryView.view(view)
-                            return .single(mapped)
+                        return context.account.postbox.aroundMessageHistoryViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), anchor: .index(message!.index), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, namespaces: namespaces, orderStatistics: [.combinedLocation])
+                            |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
+                                let mapped = GalleryMessageHistoryView.view(view)
+                                return .single(mapped)
                         }
                     } else {
-                        return .single(GalleryMessageHistoryView.single(MessageHistoryEntry(message: message!, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false))))
-                    }
+                        return .single(GalleryMessageHistoryView.entries([MessageHistoryEntry(message: message!, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false))], false, false))
+                }
                 case .standaloneMessage:
-                    return .single(GalleryMessageHistoryView.single(MessageHistoryEntry(message: message!, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false))))
+                    return .single(GalleryMessageHistoryView.entries([MessageHistoryEntry(message: message!, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false))], false ,false))
+                case let .custom(messages, _, _):
+                    return messages
+                    |> map { messages, totalCount, hasMore in
+                        var entries: [MessageHistoryEntry] = []
+                        var index = messages.count
+                        for message in messages.reversed() {
+                            entries.append(MessageHistoryEntry(message: message, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)))
+                            index -= 1
+                        }
+                        return GalleryMessageHistoryView.entries(entries, hasMore, false)
+                    }
             }
         }
         |> take(1)
@@ -463,6 +476,11 @@ public class GalleryController: ViewController, StandalonePresentableController 
             semaphore = DispatchSemaphore(value: 0)
         } else {
             semaphore = nil
+        }
+        
+        var displayInfoOnTop = false
+        if case .custom = source {
+            displayInfoOnTop = true
         }
         
         let syncResult = Atomic<(Bool, (() -> Void)?)>(value: (false, nil))
@@ -479,13 +497,18 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         loop: for i in 0 ..< entries.count {
                             let message = entries[i].message
                             switch source {
-                                case let .peerMessagesAtId(messageId):
+                                case let .peerMessagesAtId(messageId, _, _):
                                     if message.id == messageId {
                                         centralEntryStableId = message.stableId
                                         break loop
                                     }
                                 case let .standaloneMessage(m):
                                     if message.id == m.id {
+                                        centralEntryStableId = message.stableId
+                                        break loop
+                                    }
+                                case let .custom(_, messageId, _):
+                                    if message.id == messageId {
                                         centralEntryStableId = message.stableId
                                         break loop
                                     }
@@ -515,7 +538,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                                 if entry.message.stableId == strongSelf.centralEntryStableId {
                                     isCentral = true
                                 }
-                                if let item = galleryItemForEntry(context: context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: streamSingleVideo, fromPlayingVideo: isCentral && fromPlayingVideo, landscape: isCentral && landscape, timecode: isCentral ? timecode : nil, configuration: configuration, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions, storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _ in }, present: { [weak self] c, a in
+                                if let item = galleryItemForEntry(context: context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: streamSingleVideo, fromPlayingVideo: isCentral && fromPlayingVideo, landscape: isCentral && landscape, timecode: isCentral ? timecode : nil, displayInfoOnTop: displayInfoOnTop, configuration: configuration, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions, storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _ in }, present: { [weak self] c, a in
                                     if let strongSelf = self {
                                         strongSelf.presentInGlobalOverlay(c, with: a)
                                     }
@@ -822,7 +845,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
         self.isOpaqueWhenInOverlay = true
         
         switch source {
-        case let .peerMessagesAtId(id):
+        case let .peerMessagesAtId(id, _, _):
             if id.peerId.namespace == Namespaces.Peer.SecretChat {
                 self.screenCaptureEventsDisposable = (screenCaptureEvents()
                 |> deliverOnMainQueue).start(next: { [weak self] _ in
@@ -952,6 +975,11 @@ public class GalleryController: ViewController, StandalonePresentableController 
             return baseNavigationController
         }
         
+        var displayInfoOnTop = false
+        if case .custom = source {
+            displayInfoOnTop = true
+        }
+        
         var items: [GalleryItem] = []
         var centralItemIndex: Int?
         for entry in self.entries {
@@ -959,7 +987,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
             if entry.message.stableId == self.centralEntryStableId {
                 isCentral = true
             }
-            if let item = galleryItemForEntry(context: self.context, presentationData: self.presentationData, entry: entry, streamVideos: self.streamVideos, fromPlayingVideo: isCentral && self.fromPlayingVideo, landscape: isCentral && self.landscape, timecode: isCentral ? self.timecode : nil, configuration: self.configuration, performAction: self.performAction, openActionOptions: self.openActionOptions, storeMediaPlaybackState: self.actionInteraction?.storeMediaPlaybackState ?? { _, _ in }, present: { [weak self] c, a in
+            if let item = galleryItemForEntry(context: self.context, presentationData: self.presentationData, entry: entry, streamVideos: self.streamVideos, fromPlayingVideo: isCentral && self.fromPlayingVideo, landscape: isCentral && self.landscape, timecode: isCentral ? self.timecode : nil, displayInfoOnTop: displayInfoOnTop, configuration: self.configuration, performAction: self.performAction, openActionOptions: self.openActionOptions, storeMediaPlaybackState: self.actionInteraction?.storeMediaPlaybackState ?? { _, _ in }, present: { [weak self] c, a in
                 if let strongSelf = self {
                     strongSelf.presentInGlobalOverlay(c, with: a)
                 }
@@ -993,70 +1021,126 @@ public class GalleryController: ViewController, StandalonePresentableController 
                     }
                     
                     switch strongSelf.source {
-                    case let .peerMessagesAtId(initialMessageId):
-                        var reloadAroundIndex: MessageIndex?
-                        if index <= 2 && strongSelf.hasLeftEntries {
-                            reloadAroundIndex = strongSelf.entries.first?.index
-                        } else if index >= strongSelf.entries.count - 3 && strongSelf.hasRightEntries {
-                            reloadAroundIndex = strongSelf.entries.last?.index
-                        }
-                        if let reloadAroundIndex = reloadAroundIndex, let tagMask = strongSelf.tagMask {
-                            let namespaces: MessageIdNamespaces
-                            if Namespaces.Message.allScheduled.contains(message.id.namespace) {
-                                namespaces = .just(Namespaces.Message.allScheduled)
-                            } else {
-                                namespaces = .not(Namespaces.Message.allScheduled)
+                        case let .peerMessagesAtId(_, chatLocation, chatLocationContextHolder):
+                            var reloadAroundIndex: MessageIndex?
+                            if index <= 2 && strongSelf.hasLeftEntries {
+                                reloadAroundIndex = strongSelf.entries.first?.index
+                            } else if index >= strongSelf.entries.count - 3 && strongSelf.hasRightEntries {
+                                reloadAroundIndex = strongSelf.entries.last?.index
                             }
-                            let signal = strongSelf.context.account.postbox.aroundMessageHistoryViewForLocation(.peer(initialMessageId.peerId), anchor: .index(reloadAroundIndex), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [.combinedLocation])
-                            |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
-                                let mapped = GalleryMessageHistoryView.view(view)
-                                return .single(mapped)
-                            }
-                            |> take(1)
-                            
-                            strongSelf.updateVisibleDisposable.set((signal
-                            |> deliverOnMainQueue).start(next: { view in
-                                guard let strongSelf = self, let view = view else {
-                                    return
-                                }
-                                
-                                let entries = view.entries
-                                
-                                if strongSelf.invertItemOrder {
-                                    strongSelf.entries = entries.reversed()
-                                    strongSelf.hasLeftEntries = view.hasLater
-                                    strongSelf.hasRightEntries = view.hasEarlier
+                            if let reloadAroundIndex = reloadAroundIndex, let tagMask = strongSelf.tagMask {
+                                let namespaces: MessageIdNamespaces
+                                if Namespaces.Message.allScheduled.contains(message.id.namespace) {
+                                    namespaces = .just(Namespaces.Message.allScheduled)
                                 } else {
-                                    strongSelf.entries = entries
-                                    strongSelf.hasLeftEntries = view.hasEarlier
-                                    strongSelf.hasRightEntries = view.hasLater
+                                    namespaces = .not(Namespaces.Message.allScheduled)
                                 }
-                                if strongSelf.isViewLoaded {
-                                    var items: [GalleryItem] = []
-                                    var centralItemIndex: Int?
-                                    for entry in strongSelf.entries {
-                                        var isCentral = false
-                                        if entry.message.stableId == strongSelf.centralEntryStableId {
-                                            isCentral = true
+                                let signal = strongSelf.context.account.postbox.aroundMessageHistoryViewForLocation(strongSelf.context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), anchor: .index(reloadAroundIndex), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [.combinedLocation])
+                                    |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
+                                        let mapped = GalleryMessageHistoryView.view(view)
+                                        return .single(mapped)
+                                    }
+                                    |> take(1)
+                                
+                                strongSelf.updateVisibleDisposable.set((signal
+                                    |> deliverOnMainQueue).start(next: { view in
+                                        guard let strongSelf = self, let view = view else {
+                                            return
                                         }
-                                        if let item = galleryItemForEntry(context: strongSelf.context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: false, fromPlayingVideo: isCentral && strongSelf.fromPlayingVideo, landscape: isCentral && strongSelf.landscape, timecode: isCentral ? strongSelf.timecode : nil, configuration: strongSelf.configuration, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions, storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _ in }, present: { [weak self] c, a in
-                                            if let strongSelf = self {
-                                                strongSelf.presentInGlobalOverlay(c, with: a)
-                                            }
-                                        }) {
-                                            if isCentral {
-                                                centralItemIndex = items.count
-                                            }
-                                            items.append(item)
+                                        
+                                        let entries = view.entries
+                                        
+                                        if strongSelf.invertItemOrder {
+                                            strongSelf.entries = entries.reversed()
+                                            strongSelf.hasLeftEntries = view.hasLater
+                                            strongSelf.hasRightEntries = view.hasEarlier
+                                        } else {
+                                            strongSelf.entries = entries
+                                            strongSelf.hasLeftEntries = view.hasEarlier
+                                            strongSelf.hasRightEntries = view.hasLater
                                         }
+                                        if strongSelf.isViewLoaded {
+                                            var items: [GalleryItem] = []
+                                            var centralItemIndex: Int?
+                                            for entry in strongSelf.entries {
+                                                var isCentral = false
+                                                if entry.message.stableId == strongSelf.centralEntryStableId {
+                                                    isCentral = true
+                                                }
+                                                if let item = galleryItemForEntry(context: strongSelf.context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: false, fromPlayingVideo: isCentral && strongSelf.fromPlayingVideo, landscape: isCentral && strongSelf.landscape, timecode: isCentral ? strongSelf.timecode : nil, displayInfoOnTop: displayInfoOnTop, configuration: strongSelf.configuration, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions, storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _ in }, present: { [weak self] c, a in
+                                                    if let strongSelf = self {
+                                                        strongSelf.presentInGlobalOverlay(c, with: a)
+                                                    }
+                                                }) {
+                                                    if isCentral {
+                                                        centralItemIndex = items.count
+                                                    }
+                                                    items.append(item)
+                                                }
+                                            }
+                                            
+                                            strongSelf.galleryNode.pager.replaceItems(items, centralItemIndex: centralItemIndex)
+                                        }
+                                    }))
+                        }
+                        case let .custom(messages, _, loadMore):
+                            if index >= strongSelf.entries.count - 3 && strongSelf.hasRightEntries && !strongSelf.loadingMore {
+                                strongSelf.loadingMore = true
+                                loadMore?()
+                                
+                                strongSelf.updateVisibleDisposable.set((messages
+                                |> deliverOnMainQueue).start(next: { messages, totalCount, hasMore in
+                                    guard let strongSelf = self else {
+                                        return
                                     }
                                     
-                                    strongSelf.galleryNode.pager.replaceItems(items, centralItemIndex: centralItemIndex)
-                                }
-                            }))
-                        }
-                    default:
-                        break
+                                    var entries: [MessageHistoryEntry] = []
+                                    var index = messages.count
+                                    for message in messages.reversed() {
+                                        entries.append(MessageHistoryEntry(message: message, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)))
+                                        index -= 1
+                                    }
+                                    
+                                    if entries.count > strongSelf.entries.count {
+                                        if strongSelf.invertItemOrder {
+                                            strongSelf.entries = entries.reversed()
+                                            strongSelf.hasLeftEntries = false
+                                            strongSelf.hasRightEntries = hasMore
+                                        } else {
+                                            strongSelf.entries = entries
+                                            strongSelf.hasLeftEntries = hasMore
+                                            strongSelf.hasRightEntries = false
+                                        }
+                                        if strongSelf.isViewLoaded {
+                                            var items: [GalleryItem] = []
+                                            var centralItemIndex: Int?
+                                            for entry in strongSelf.entries {
+                                                var isCentral = false
+                                                if entry.message.stableId == strongSelf.centralEntryStableId {
+                                                    isCentral = true
+                                                }
+                                                if let item = galleryItemForEntry(context: strongSelf.context, presentationData: strongSelf.presentationData, entry: entry, isCentral: isCentral, streamVideos: false, fromPlayingVideo: isCentral && strongSelf.fromPlayingVideo, landscape: isCentral && strongSelf.landscape, timecode: isCentral ? strongSelf.timecode : nil, displayInfoOnTop: displayInfoOnTop, configuration: strongSelf.configuration, performAction: strongSelf.performAction, openActionOptions: strongSelf.openActionOptions, storeMediaPlaybackState: strongSelf.actionInteraction?.storeMediaPlaybackState ?? { _, _ in }, present: { [weak self] c, a in
+                                                    if let strongSelf = self {
+                                                        strongSelf.presentInGlobalOverlay(c, with: a)
+                                                    }
+                                                }) {
+                                                    if isCentral {
+                                                        centralItemIndex = items.count
+                                                    }
+                                                    items.append(item)
+                                                }
+                                            }
+                                            
+                                            strongSelf.galleryNode.pager.replaceItems(items, centralItemIndex: centralItemIndex)
+                                        }
+                                        
+                                        strongSelf.updateVisibleDisposable.set(nil)
+                                        strongSelf.loadingMore = false
+                                    }
+                                }))
+                            }
+                        default:
+                            break
                     }
                 }
                 if strongSelf.didSetReady {
@@ -1161,6 +1245,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
             self.adjustedForInitialPreviewingLayout = true
             self.galleryNode.setControlsHidden(true, animated: false)
             if let centralItemNode = self.galleryNode.pager.centralItemNode(), let itemSize = centralItemNode.contentSize() {
+                centralItemNode.adjustForPreviewing()
                 self.preferredContentSize = itemSize.aspectFitted(layout.size)
                 self.containerLayoutUpdated(ContainerViewLayout(size: self.preferredContentSize, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
             }

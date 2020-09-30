@@ -8,7 +8,7 @@ func parsedTelegramProfilePhoto(_ photo: Api.UserProfilePhoto) -> [TelegramMedia
     var representations: [TelegramMediaImageRepresentation] = []
     switch photo {
         case let .userProfilePhoto(flags, _, photoSmall, photoBig, dcId):
-            let hasVideo = (flags & (1 << 0)) != 0
+            let _ = (flags & (1 << 0)) != 0
             
             let smallResource: TelegramMediaResource
             let fullSizeResource: TelegramMediaResource
@@ -136,6 +136,39 @@ extension TelegramUser {
                 }
             case .userEmpty:
                 return TelegramUser(user: rhs)
+        }
+    }
+    
+    static func merge(lhs: TelegramUser?, rhs: TelegramUser) -> TelegramUser {
+        guard let lhs = lhs else {
+            return rhs
+        }
+        if case .personal? = rhs.accessHash {
+            return rhs
+        } else {
+            var userFlags: UserInfoFlags = []
+            if rhs.flags.contains(.isVerified) {
+                userFlags.insert(.isVerified)
+            }
+            if rhs.flags.contains(.isSupport) {
+                userFlags.insert(.isSupport)
+            }
+            if rhs.flags.contains(.isScam) {
+                userFlags.insert(.isScam)
+            }
+            
+            let botInfo: BotUserInfo? = rhs.botInfo
+            
+            let restrictionInfo: PeerAccessRestrictionInfo? = rhs.restrictionInfo
+            
+            let accessHash: TelegramPeerAccessHash?
+            if let rhsAccessHashValue = lhs.accessHash, case .personal = rhsAccessHashValue {
+                accessHash = rhsAccessHashValue
+            } else {
+                accessHash = lhs.accessHash ?? rhs.accessHash
+            }
+            
+            return TelegramUser(id: lhs.id, accessHash: accessHash, firstName: lhs.firstName, lastName: lhs.lastName, username: rhs.username, phone: lhs.phone, photo: rhs.photo.isEmpty ? lhs.photo : rhs.photo, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags)
         }
     }
 }

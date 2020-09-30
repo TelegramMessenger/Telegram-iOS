@@ -9,7 +9,9 @@ import WebSearchUI
 import InstantPageCache
 import SettingsUI
 import WallpaperResources
+import MediaResources
 import LocationUI
+import ChatInterfaceState
 
 private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(InAppNotificationSettings.self, f: { InAppNotificationSettings(decoder: $0) })

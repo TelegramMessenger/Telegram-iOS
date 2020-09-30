@@ -140,6 +140,26 @@ private enum NavigatedMessageFromViewPosition {
     case exact
 }
 
+private func aroundMessagesFromMessages(_ messages: [Message], centralIndex: MessageIndex) -> [Message] {
+    guard let index = messages.firstIndex(where: { $0.index.id == centralIndex.id }) else {
+        return []
+    }
+    var result: [Message] = []
+    if index != 0 {
+        for i in (0 ..< index).reversed() {
+            result.append(messages[i])
+            break
+        }
+    }
+    if index != messages.count - 1 {
+        for i in index + 1 ..< messages.count {
+            result.append(messages[i])
+            break
+        }
+    }
+    return result
+}
+
 private func aroundMessagesFromView(view: MessageHistoryView, centralIndex: MessageIndex) -> [Message] {
     guard let index = view.entries.firstIndex(where: { $0.index.id == centralIndex.id }) else {
         return []
@@ -158,6 +178,45 @@ private func aroundMessagesFromView(view: MessageHistoryView, centralIndex: Mess
         }
     }
     return result
+}
+
+private func navigatedMessageFromMessages(_ messages: [Message], anchorIndex: MessageIndex, position: NavigatedMessageFromViewPosition) -> (message: Message, around: [Message], exact: Bool)? {
+    var index = 0
+    for message in messages {
+        if message.index.id == anchorIndex.id {
+            switch position {
+                case .exact:
+                    return (message, aroundMessagesFromMessages(messages, centralIndex: message.index), true)
+                case .earlier:
+                    if index + 1 < messages.count {
+                        let message = messages[index + 1]
+                        return (message, aroundMessagesFromMessages(messages, centralIndex: messages[index + 1].index), true)
+                    } else {
+                        return nil
+                    }
+                case .later:
+                    if index != 0 {
+                        let message = messages[index - 1]
+                        return (message, aroundMessagesFromMessages(messages, centralIndex: messages[index - 1].index), true)
+                    } else {
+                        return nil
+                    }
+            }
+        }
+        index += 1
+    }
+    if !messages.isEmpty {
+        switch position {
+            case .earlier, .exact:
+                let message = messages[messages.count - 1]
+                return (message, aroundMessagesFromMessages(messages, centralIndex: messages[messages.count - 1].index), false)
+            case .later:
+                let message = messages[0]
+                return (message, aroundMessagesFromMessages(messages, centralIndex: messages[0].index), false)
+        }
+    } else {
+        return nil
+    }
 }
 
 private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: MessageIndex, position: NavigatedMessageFromViewPosition) -> (message: Message, around: [Message], exact: Bool)? {
@@ -196,94 +255,6 @@ private func navigatedMessageFromView(_ view: MessageHistoryView, anchorIndex: M
         }
     } else {
         return nil
-    }
-}
-
-enum PeerMessagesPlaylistLocation: Equatable, SharedMediaPlaylistLocation {
-    case messages(peerId: PeerId, tagMask: MessageTags, at: MessageId)
-    case singleMessage(MessageId)
-    case recentActions(Message)
-
-    var playlistId: PeerMessagesMediaPlaylistId {
-        switch self {
-            case let .messages(peerId, _, _):
-                return .peer(peerId)
-            case let .singleMessage(id):
-                return .peer(id.peerId)
-            case let .recentActions(message):
-                return .recentActions(message.id.peerId)
-        }
-    }
-    
-    var messageId: MessageId? {
-        switch self {
-            case let .messages(_, _, messageId), let .singleMessage(messageId):
-                return messageId
-            default:
-                return nil
-        }
-    }
-    
-    func isEqual(to: SharedMediaPlaylistLocation) -> Bool {
-        if let to = to as? PeerMessagesPlaylistLocation {
-            return self == to
-        } else {
-            return false
-        }
-    }
-    
-    static func ==(lhs: PeerMessagesPlaylistLocation, rhs: PeerMessagesPlaylistLocation) -> Bool {
-        switch lhs {
-            case let .messages(peerId, tagMask, at):
-                if case .messages(peerId, tagMask, at) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .singleMessage(messageId):
-                if case .singleMessage(messageId) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .recentActions(lhsMessage):
-                if case let .recentActions(rhsMessage) = rhs, lhsMessage.id == rhsMessage.id {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-}
-
-enum PeerMessagesMediaPlaylistId: Equatable, SharedMediaPlaylistId {
-    case peer(PeerId)
-    case recentActions(PeerId)
-    
-    func isEqual(to: SharedMediaPlaylistId) -> Bool {
-        if let to = to as? PeerMessagesMediaPlaylistId {
-            return self == to
-        }
-        return false
-    }
-}
-    
-func peerMessageMediaPlayerType(_ message: Message) -> MediaManagerPlayerType? {
-    if let file = extractFileMedia(message) {
-        if file.isVoice || file.isInstantVideo {
-            return .voice
-        } else if file.isMusic {
-            return .music
-        }
-    }
-    return nil
-}
-    
-func peerMessagesMediaPlaylistAndItemId(_ message: Message, isRecentActions: Bool) -> (SharedMediaPlaylistId, SharedMediaPlaylistItemId)? {
-    if isRecentActions {
-        return (PeerMessagesMediaPlaylistId.recentActions(message.id.peerId), PeerMessagesMediaPlaylistItemId(messageId: message.id))
-    } else {
-        return (PeerMessagesMediaPlaylistId.peer(message.id.peerId), PeerMessagesMediaPlaylistItemId(messageId: message.id))
     }
 }
 
@@ -347,6 +318,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
     var currentItemDisappeared: (() -> Void)?
     
     private let navigationDisposable = MetaDisposable()
+    private let loadMoreDisposable = MetaDisposable()
     
     private var playbackStack = PlaybackStack()
     
@@ -354,6 +326,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
     private var currentlyObservedMessageId: MessageId?
     private let currentlyObservedMessageDisposable = MetaDisposable()
     private var loadingItem: Bool = false
+    private var loadingMore: Bool = false
     private var playedToEnd: Bool = false
     private var order: MusicPlaybackSettingsOrder = .regular
     private(set) var looping: MusicPlaybackSettingsLooping = .none
@@ -375,9 +348,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
         self.messagesLocation = location
         
         switch self.messagesLocation {
-            case let .messages(_, _, messageId):
-                self.loadItem(anchor: .messageId(messageId), navigation: .later)
-            case let .singleMessage(messageId):
+            case let .messages(_, _, messageId), let .singleMessage(messageId), let .custom(_, messageId, _):
                 self.loadItem(anchor: .messageId(messageId), navigation: .later)
             case let .recentActions(message):
                 self.loadingItem = false
@@ -388,6 +359,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
     
     deinit {
         self.navigationDisposable.dispose()
+        self.loadMoreDisposable.dispose()
         self.currentlyObservedMessageDisposable.dispose()
     }
     
@@ -430,7 +402,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                             self.currentItem = nil
                             self.updateState()
                         } else {
-                             self.loadItem(anchor: .index(currentItem.current.index), navigation: navigation)
+                            self.loadItem(anchor: .index(currentItem.current.index), navigation: navigation)
                         }
                     }
                 }
@@ -506,59 +478,84 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
         
         switch anchor {
             case let .messageId(messageId):
-                if case let .messages(peerId, tagMask, _) = self.messagesLocation {
-                    let historySignal = self.postbox.messageAtId(messageId)
-                    |> take(1)
-                    |> mapToSignal { message -> Signal<(Message, [Message])?, NoError> in
-                        guard let message = message else {
-                            return .single(nil)
-                        }
-                        
-                        return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .index(message.index), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [])
-                        |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
-                            if let (message, aroundMessages, _) = navigatedMessageFromView(view.0, anchorIndex: message.index, position: .exact) {
-                                return .single((message, aroundMessages))
-                            } else {
-                                return .single((message, []))
+                switch self.messagesLocation {
+                    case let .messages(peerId, tagMask, _):
+                        let historySignal = self.postbox.messageAtId(messageId)
+                        |> take(1)
+                        |> mapToSignal { message -> Signal<(Message, [Message])?, NoError> in
+                            guard let message = message else {
+                                return .single(nil)
                             }
-                        }
-                    }
-                    |> take(1)
-                    |> deliverOnMainQueue
-                    self.navigationDisposable.set(historySignal.start(next: { [weak self] messageAndAroundMessages in
-                        if let strongSelf = self {
-                            assert(strongSelf.loadingItem)
                             
-                            strongSelf.loadingItem = false
-                            if let (message, aroundMessages) = messageAndAroundMessages {
-                                strongSelf.playbackStack.clear()
-                                strongSelf.playbackStack.push(message.id)
-                                strongSelf.currentItem = (message, aroundMessages)
-                                strongSelf.playedToEnd = false
-                            } else {
-                                strongSelf.playedToEnd = true
+                            return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .index(message.index), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [])
+                            |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
+                                if let (message, aroundMessages, _) = navigatedMessageFromView(view.0, anchorIndex: message.index, position: .exact) {
+                                    return .single((message, aroundMessages))
+                                } else {
+                                    return .single((message, []))
+                                }
                             }
-                            strongSelf.updateState()
                         }
-                    }))
-                } else {
-                    self.navigationDisposable.set((self.postbox.messageAtId(messageId)
-                    |> take(1)
-                    |> deliverOnMainQueue).start(next: { [weak self] message in
-                        if let strongSelf = self {
-                            assert(strongSelf.loadingItem)
-                            
-                            strongSelf.loadingItem = false
-                            if let message = message {
-                                strongSelf.playbackStack.clear()
-                                strongSelf.playbackStack.push(message.id)
-                                strongSelf.currentItem = (message, [])
-                            } else {
-                                strongSelf.currentItem = nil
+                        |> take(1)
+                        |> deliverOnMainQueue
+                        self.navigationDisposable.set(historySignal.start(next: { [weak self] messageAndAroundMessages in
+                            if let strongSelf = self {
+                                assert(strongSelf.loadingItem)
+                                
+                                strongSelf.loadingItem = false
+                                if let (message, aroundMessages) = messageAndAroundMessages {
+                                    strongSelf.playbackStack.clear()
+                                    strongSelf.playbackStack.push(message.id)
+                                    strongSelf.currentItem = (message, aroundMessages)
+                                    strongSelf.playedToEnd = false
+                                } else {
+                                    strongSelf.playedToEnd = true
+                                }
+                                strongSelf.updateState()
                             }
-                            strongSelf.updateState()
-                        }
-                    }))
+                        }))
+                    case let .custom(messages, at, _):
+                        self.navigationDisposable.set((messages
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { [weak self] messages in
+                            if let strongSelf = self {
+                                assert(strongSelf.loadingItem)
+                                
+                                strongSelf.loadingItem = false
+                                if let message = messages.0.first(where: { $0.id == at }) {
+                                    strongSelf.playbackStack.clear()
+                                    strongSelf.playbackStack.push(message.id)
+                                    if let (message, aroundMessages, _) = navigatedMessageFromMessages(messages.0, anchorIndex: message.index, position: .exact) {
+                                        strongSelf.currentItem = (message, aroundMessages)
+                                    } else {
+                                        strongSelf.currentItem = (message, [])
+                                    }
+                                    strongSelf.playedToEnd = false
+                                } else {
+                                    strongSelf.currentItem = nil
+                                    strongSelf.playedToEnd = true
+                                }
+                                strongSelf.updateState()
+                            }
+                        }))
+                    default:
+                        self.navigationDisposable.set((self.postbox.messageAtId(messageId)
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { [weak self] message in
+                            if let strongSelf = self {
+                                assert(strongSelf.loadingItem)
+                                
+                                strongSelf.loadingItem = false
+                                if let message = message {
+                                    strongSelf.playbackStack.clear()
+                                    strongSelf.playbackStack.push(message.id)
+                                    strongSelf.currentItem = (message, [])
+                                } else {
+                                    strongSelf.currentItem = nil
+                                }
+                                strongSelf.updateState()
+                            }
+                        }))
                 }
             case let .index(index):
                 switch self.messagesLocation {
@@ -679,6 +676,133 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                         self.loadingItem = false
                         self.currentItem = (message, [])
                         self.updateState()
+                    case let .custom(messages, _, loadMore):
+                        let inputIndex: Signal<MessageIndex, NoError>
+                        let looping = self.looping
+                        switch self.order {
+                            case .regular, .reversed:
+                                inputIndex = .single(index)
+                            case .random:
+                                var playbackStack = self.playbackStack
+                                inputIndex = messages
+                                |> take(1)
+                                |> map { messages, _, _ -> MessageIndex in
+                                    if case let .random(previous) = navigation, previous {
+                                        let _ = playbackStack.pop()
+                                        while true {
+                                            if let id = playbackStack.pop() {
+                                                if let message = messages.first(where: { $0.id == id }) {
+                                                    return message.index
+                                                }
+                                            } else {
+                                                break
+                                            }
+                                        }
+                                    }
+                                    return messages.randomElement()?.index ?? index
+                                }
+                        }
+                        let historySignal = inputIndex
+                        |> mapToSignal { inputIndex -> Signal<((Message, [Message])?, Int, Bool), NoError> in
+                            return messages
+                            |> take(1)
+                            |> mapToSignal { messages, _, hasMore -> Signal<((Message, [Message])?, Int, Bool), NoError> in
+                                let position: NavigatedMessageFromViewPosition
+                                switch navigation {
+                                    case .later:
+                                        position = .later
+                                    case .earlier:
+                                        position = .earlier
+                                    case .random:
+                                        position = .exact
+                                }
+                                
+                                if let (message, aroundMessages, exact) = navigatedMessageFromMessages(messages, anchorIndex: inputIndex, position: position) {
+                                    switch navigation {
+                                        case .random:
+                                            return .single(((message, []), messages.count, false))
+                                        default:
+                                            if exact {
+                                                return .single(((message, aroundMessages), messages.count, false))
+                                            }
+                                    }
+                                }
+                                
+                                if case .all = looping {
+                                    let viewIndex: HistoryViewInputAnchor
+                                    if case .earlier = navigation {
+                                        viewIndex = .upperBound
+                                    } else {
+                                        viewIndex = .lowerBound
+                                    }
+                                    return .single((nil, messages.count, false))
+//                                    return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: viewIndex, count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [])
+//                                        |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
+//                                            let position: NavigatedMessageFromViewPosition
+//                                            switch navigation {
+//                                                case .later, .random:
+//                                                    position = .earlier
+//                                                case .earlier:
+//                                                    position = .later
+//                                            }
+//                                            if let (message, aroundMessages, _) = navigatedMessageFromView(view.0, anchorIndex: MessageIndex.absoluteLowerBound(), position: position) {
+//                                                return .single((message, aroundMessages))
+//                                            } else {
+//                                                return .single(nil)
+//                                            }
+//                                    }
+                                } else {
+                                    if hasMore {
+                                        return .single((nil, messages.count, true))
+                                    } else {
+                                        return .single((nil, messages.count, false))
+                                    }
+                                }
+                            }
+                        }
+                        |> take(1)
+                        |> deliverOnMainQueue
+                        self.navigationDisposable.set(historySignal.start(next: { [weak self] messageAndAroundMessages, previousMessagesCount, shouldLoadMore in
+                            if let strongSelf = self {
+                                assert(strongSelf.loadingItem)
+                                
+                                if shouldLoadMore {
+                                    if strongSelf.loadingMore {
+                                        return
+                                    }
+                                    strongSelf.loadingMore = true
+                                    loadMore?()
+                                    
+                                    strongSelf.loadMoreDisposable.set((messages
+                                    |> deliverOnMainQueue).start(next: { messages, totalCount, hasMore in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        
+                                        if messages.count > previousMessagesCount {
+                                            strongSelf.loadItem(anchor: anchor, navigation: navigation)
+                                            
+                                            strongSelf.loadMoreDisposable.set(nil)
+                                            strongSelf.loadingMore = false
+                                        }
+                                    }))
+                                } else {
+                                    strongSelf.loadingItem = false
+                                    if let (message, aroundMessages) = messageAndAroundMessages {
+                                        if case let .random(previous) = navigation, previous {
+                                            strongSelf.playbackStack.resetToId(message.id)
+                                        } else {
+                                            strongSelf.playbackStack.push(message.id)
+                                        }
+                                        strongSelf.currentItem = (message, aroundMessages)
+                                        strongSelf.playedToEnd = false
+                                    } else {
+                                        strongSelf.playedToEnd = true
+                                    }
+                                    strongSelf.updateState()
+                                }
+                            }
+                        }))
             }
         }
     }

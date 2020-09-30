@@ -5,6 +5,7 @@ import TelegramCore
 import SyncCore
 import Display
 import MergeLists
+import AccountContext
 
 func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toView: ChatHistoryView, reason: ChatHistoryViewTransitionReason, reverse: Bool, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, scrollPosition: ChatHistoryViewScrollPosition?, initialData: InitialMessageHistoryData?, keyboardButtonsMessage: Message?, cachedData: CachedPeerData?, cachedDataMessages: [MessageId: Message]?, readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?, flashIndicators: Bool, updatedMessageSelection: Bool) -> ChatHistoryViewTransition {
     let mergeResult: (deleteIndices: [Int], indicesAndItems: [(Int, ChatHistoryEntry, Int?)], updateIndices: [(Int, ChatHistoryEntry, Int)])
@@ -142,8 +143,8 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                         index += 1
                     }
                 }
-            case let .index(scrollIndex, position, directionHint, animated):
-                if case .center = position {
+            case let .index(scrollIndex, position, directionHint, animated, highlight):
+                if case .center = position, highlight {
                     scrolledToIndex = scrollIndex
                 }
                 var index = toView.filteredEntries.count - 1

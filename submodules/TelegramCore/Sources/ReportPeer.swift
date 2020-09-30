@@ -199,3 +199,30 @@ public func dismissPeerStatusOptions(account: Account, peerId: PeerId) -> Signal
         }
     } |> switchToLatest
 }
+
+public func reportRepliesMessage(account: Account, messageId: MessageId, deleteMessage: Bool, deleteHistory: Bool, reportSpam: Bool) -> Signal<Never, NoError> {
+    if messageId.namespace != Namespaces.Message.Cloud {
+        return .complete()
+    }
+    var flags: Int32 = 0
+    if deleteMessage {
+        flags |= 1 << 0
+    }
+    if deleteHistory {
+        flags |= 1 << 1
+    }
+    if reportSpam {
+        flags |= 1 << 2
+    }
+    return account.network.request(Api.functions.contacts.blockFromReplies(flags: flags, msgId: messageId.id))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+        return .single(nil)
+    }
+    |> mapToSignal { updates -> Signal<Never, NoError> in
+        if let updates = updates {
+            account.stateManager.addUpdates(updates)
+        }
+        return .complete()
+    }
+}

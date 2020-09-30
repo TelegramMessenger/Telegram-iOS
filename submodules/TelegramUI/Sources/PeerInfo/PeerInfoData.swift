@@ -653,7 +653,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 }
                 
                 var discussionPeer: Peer?
-                if let linkedDiscussionPeerId = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
+                if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
                 }
                 
@@ -782,7 +782,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 }
                 
                 var discussionPeer: Peer?
-                if let linkedDiscussionPeerId = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
+                if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
                 }
                 
@@ -948,13 +948,17 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
     } else if let channel = peer as? TelegramChannel {
         var displayLeave = !channel.flags.contains(.isCreator)
         var canViewStats = false
+        var hasDiscussion = false
         if let cachedChannelData = cachedData as? CachedChannelData {
             canViewStats = cachedChannelData.flags.contains(.canViewStats)
         }
         switch channel.info {
-        case .broadcast:
+        case let .broadcast(info):
             if !channel.flags.contains(.isCreator) {
                 displayLeave = true
+            }
+            if info.flags.contains(.hasDiscussionGroup) {
+                hasDiscussion = true
             }
         case .group:
             displayLeave = false
@@ -972,6 +976,9 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             displayLeave = false
         }
         result.append(.mute)
+        if hasDiscussion {
+            result.append(.discussion)
+        }
         result.append(.search)
         if displayLeave {
             result.append(.leave)

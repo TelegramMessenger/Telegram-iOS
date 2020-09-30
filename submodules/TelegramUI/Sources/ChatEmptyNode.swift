@@ -38,7 +38,14 @@ private final class ChatEmptyNodeRegularChatContent: ASDisplayNode, ChatEmptyNod
             self.currentStrings = interfaceState.strings
             
             let serviceColor = serviceMessageColorComponents(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
-            self.textNode.attributedText = NSAttributedString(string: interfaceState.isScheduledMessages ? interfaceState.strings.ScheduledMessages_EmptyPlaceholder : interfaceState.strings.Conversation_EmptyPlaceholder, font: messageFont, textColor: serviceColor.primaryText)
+            
+            let text: String
+            switch interfaceState.chatLocation {
+            case .peer, .replyThread:
+                text = interfaceState.isScheduledMessages ? interfaceState.strings.ScheduledMessages_EmptyPlaceholder : interfaceState.strings.Conversation_EmptyPlaceholder
+            }
+            
+            self.textNode.attributedText = NSAttributedString(string: text, font: messageFont, textColor: serviceColor.primaryText)
         }
         
         let insets = UIEdgeInsets(top: 6.0, left: 10.0, bottom: 6.0, right: 10.0)
@@ -639,7 +646,9 @@ final class ChatEmptyNode: ASDisplayNode {
         }
         
         let contentType: ChatEmptyNodeContentType
-        if let peer = interfaceState.renderedPeer?.peer, !interfaceState.isScheduledMessages {
+        if case .replyThread = interfaceState.chatLocation {
+            contentType = .regular
+        } else if let peer = interfaceState.renderedPeer?.peer, !interfaceState.isScheduledMessages {
             if peer.id == self.account.peerId {
                 contentType = .cloud
             } else if let _ = peer as? TelegramSecretChat {
