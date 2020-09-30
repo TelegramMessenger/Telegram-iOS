@@ -17,7 +17,7 @@ private let timezoneOffset: Int32 = {
 }()
 
 public func listMessageDateHeaderId(timestamp: Int32) -> Int64 {
-    let unclippedValue: Int64 = min(Int64(Int32.max), Int64(timestamp) + Int64(timezoneOffset))
+    let unclippedValue: Int64 = min(Int64(Int32.max), Int64(timestamp))
     
     var time: time_t = time_t(Int32(clamping: unclippedValue))
     var timeinfo: tm = tm()
@@ -29,7 +29,7 @@ public func listMessageDateHeaderId(timestamp: Int32) -> Int64 {
 }
 
 public func listMessageDateHeaderInfo(timestamp: Int32) -> (year: Int32, month: Int32) {
-    var time: time_t = time_t(timestamp + timezoneOffset)
+    var time: time_t = time_t(timestamp)
     var timeinfo: tm = tm()
     localtime_r(&time, &timeinfo)
     
@@ -53,7 +53,7 @@ final class ListMessageDateHeader: ListViewItemHeader {
         self.strings = strings
         self.fontSize = fontSize
         
-        var time: time_t = time_t(timestamp + timezoneOffset)
+        var time: time_t = time_t(timestamp)
         var timeinfo: tm = tm()
         localtime_r(&time, &timeinfo)
         

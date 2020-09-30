@@ -649,7 +649,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let currentViewVersion = Atomic<Int?>(value: nil)
         
         let historyViewUpdate: Signal<(ChatHistoryViewUpdate, Int), NoError>
-        if case let .custom(messages, _, loadMore) = source {
+        var isFirstTime = true
+        if case let .custom(messages, at, _) = source {
             historyViewUpdate = messages
             |> map { messages, _, hasMore in
                 let version = currentViewVersion.modify({ value in
@@ -659,7 +660,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         return 0
                     }
                 })!
-                return (ChatHistoryViewUpdate.HistoryView(view: MessageHistoryView(tagMask: nil, namespaces: .all, entries: messages.reversed().map { MessageHistoryEntry(message: $0, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) }, holeEarlier: hasMore), type: .Generic(type: ViewUpdateType.Initial), scrollPosition: nil, flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: nil, buttonKeyboardMessage: nil, cachedData: nil, cachedDataMessages: nil, readStateData: nil), id: 0), version)
+                
+                let scrollPosition: ChatHistoryViewScrollPosition?
+                if isFirstTime, let messageIndex = messages.first(where: { $0.id == at })?.index {
+                    scrollPosition = .index(index: .message(messageIndex), position: .center(.bottom), directionHint: .Down, animated: false, highlight: false)
+                    isFirstTime = false
+                } else {
+                    scrollPosition = nil
+                }
+                
+                return (ChatHistoryViewUpdate.HistoryView(view: MessageHistoryView(tagMask: nil, namespaces: .all, entries: messages.reversed().map { MessageHistoryEntry(message: $0, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false)) }, holeEarlier: hasMore), type: .Generic(type: ViewUpdateType.Initial), scrollPosition: scrollPosition, flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: nil, buttonKeyboardMessage: nil, cachedData: nil, cachedDataMessages: nil, readStateData: nil), id: 0), version)
             }
         } else {
             historyViewUpdate = self.chatHistoryLocationPromise.get()

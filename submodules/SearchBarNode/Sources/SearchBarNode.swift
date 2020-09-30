@@ -251,11 +251,14 @@ private class SearchBarTextField: UITextField, UIScrollViewDelegate {
                 self.tokenNodes[token.id] = tokenNode
             }
             tokenNode.tapped = { [weak self] in
-                self?.selectedTokenIndex = i
-                self?.becomeFirstResponder()
                 if let strongSelf = self {
-                    let newPosition = strongSelf.beginningOfDocument
-                    strongSelf.selectedTextRange = strongSelf.textRange(from: newPosition, to: newPosition)
+                    strongSelf.selectedTokenIndex = i
+                    if !strongSelf.isFirstResponder {
+                        let _ = strongSelf.becomeFirstResponder()
+                    } else {
+                        let newPosition = strongSelf.beginningOfDocument
+                        strongSelf.selectedTextRange = strongSelf.textRange(from: newPosition, to: newPosition)
+                    }
                 }
             }
             let isSelected = i == self.selectedTokenIndex
@@ -356,7 +359,9 @@ private class SearchBarTextField: UITextField, UIScrollViewDelegate {
         self.tokenContainerNode.frame = CGRect(origin: self.tokenContainerNode.frame.origin, size: CGSize(width: self.tokensWidth, height: self.bounds.height))
         
         if let scrollView = self.scrollView {
-            scrollView.contentInset = UIEdgeInsets(top: 0.0, left: leftOffset, bottom: 0.0, right: 0.0)
+            if scrollView.contentInset.left != leftOffset {
+                scrollView.contentInset = UIEdgeInsets(top: 0.0, left: leftOffset, bottom: 0.0, right: 0.0)
+            }
             if leftOffset.isZero {
                 scrollView.contentOffset = CGPoint()
             } else if self.tokensWidth != previousTokensWidth {
@@ -439,8 +444,25 @@ private class SearchBarTextField: UITextField, UIScrollViewDelegate {
         return nil
     }
     
+    var fixAutoScroll: CGPoint?
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        self.updateTokenContainerPosition()
+        if let fixAutoScroll = self.fixAutoScroll {
+            self.scrollView?.setContentOffset(fixAutoScroll, animated: true)
+            self.scrollView?.setContentOffset(fixAutoScroll, animated: false)
+            self.fixAutoScroll = nil
+        } else {
+            self.updateTokenContainerPosition()
+        }
+    }
+    
+    override func becomeFirstResponder() -> Bool {
+        if let contentOffset = self.scrollView?.contentOffset {
+            self.fixAutoScroll = contentOffset
+            Queue.mainQueue().after(0.1) {
+                self.fixAutoScroll = nil
+            }
+        }
+        return super.becomeFirstResponder()
     }
     
     private func updateTokenContainerPosition(transition: ContainedViewLayoutTransition = .immediate) {
@@ -460,7 +482,7 @@ private class SearchBarTextField: UITextField, UIScrollViewDelegate {
             }
             super.keyboardAppearance = newValue
             if resigning {
-                self.becomeFirstResponder()
+                let _ = self.becomeFirstResponder()
             }
         }
     }
@@ -553,7 +575,6 @@ private class SearchBarTextField: UITextField, UIScrollViewDelegate {
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let _ = self.selectedTokenIndex {
-            self.selectedTokenIndex = nil
             if let touch = touches.first, let gestureRecognizers = touch.gestureRecognizers {
                 let point = touch.location(in: self.tokenContainerNode.view)
                 for (_, tokenNode) in self.tokenNodes {
@@ -562,6 +583,7 @@ private class SearchBarTextField: UITextField, UIScrollViewDelegate {
                         return
                     }
                 }
+                self.selectedTokenIndex = nil
                 for gesture in gestureRecognizers {
                     if gesture is UITapGestureRecognizer, gesture.isEnabled {
                         gesture.isEnabled = false
@@ -931,7 +953,9 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     public func activate() {
-        self.textField.becomeFirstResponder()
+        if !self.textField.isFirstResponder {
+            let _ = self.textField.becomeFirstResponder()
+        }
     }
     
     public func animateIn(from node: SearchBarPlaceholderNode, duration: Double, timingFunction: String) {
@@ -1102,14 +1126,18 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     public func selectAll() {
-        self.textField.becomeFirstResponder()
+        if !self.textField.isFirstResponder {
+            let _ = self.textField.becomeFirstResponder()
+        }
         self.textField.selectAll(nil)
     }
     
     public func selectLastToken() {
         if !self.textField.tokens.isEmpty {
             self.textField.selectedTokenIndex = self.textField.tokens.count - 1
-            self.textField.becomeFirstResponder()
+            if !self.textField.isFirstResponder {
+                let _ = self.textField.becomeFirstResponder()
+            }
         }
     }
     
