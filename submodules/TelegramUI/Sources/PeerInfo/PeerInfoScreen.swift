@@ -4126,51 +4126,56 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             return false
        }), in: .current)
         
+        
+        var premiumIntroController: PremiumIntroController? = nil
+        
+        let observer = NotificationCenter.default.addObserver(forName: .IAPHelperPurchaseNotification, object: nil, queue: .main, using: {  notification in
+            let productID = notification.object as? String
+            
+            if productID == NicegramProducts.Premium {
+                NGSettings.premium = true
+                validatePremium(isPremium(), forceValid: true)
+                
+                if (isPremium()) {
+                    (self.controller?.navigationController as? NavigationController)?.replaceTopController(premiumController(context: self.context), animated: true)
+                } else {
+                    let alertController = getIAPErrorController(context: self.context, "IAP.Common.ValidateError", presentationData)
+                    premiumIntroController?.present(alertController, in: .window(.root))
+                }
+            }
+        })
+        let errorobserver = NotificationCenter.default.addObserver(forName: .IAPHelperErrorNotification, object: nil, queue: .main, using: {  notification in
+            let errorText = notification.object as! String
+            let alertController = textAlertController(context: self.context, title: nil, text: errorText, actions: [ TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})])
+            premiumIntroController?.present(alertController, in: .window(.root))
+        })
+        
+        
         NicegramProducts.store.requestProducts{ success, products in
             Queue.mainQueue().async {
                 if success {
                     if let products = products {
                         for product in products {
                             if product.productIdentifier == NicegramProducts.Premium {
-                                let premiumIntroController = getPremiumIntroController(context: self.context, presentationData: presentationData, product: product)
+                                premiumIntroController = getPremiumIntroController(context: self.context, presentationData: presentationData, product: product)
                                 
                                 let canPay = IAPHelper.canMakePayments()
                                 
                                 if !isPremium() {
-                                    premiumIntroController.proceed = { result in
+                                    premiumIntroController!.proceed = { result in
                                         if canPay {
-                                            let observer = NotificationCenter.default.addObserver(forName: .IAPHelperPurchaseNotification, object: nil, queue: .main, using: {  notification in
-                                                let productID = notification.object as? String
-                                                if productID == NicegramProducts.Premium {
-                                                    NGSettings.premium = true
-                                                    validatePremium(isPremium(), forceValid: true)
-                                                    
-                                                    if (isPremium()) {
-                                                        (self.controller?.navigationController as? NavigationController)?.replaceTopController(premiumController(context: self.context), animated: true)
-                                                    } else {
-                                                        let alertController = getIAPErrorController(context: self.context, "IAP.Common.ValidateError", presentationData)
-                                                        premiumIntroController.present(alertController, in: .window(.root))
-                                                    }
-                                                }
-                                            })
-					                         let errorobserver = NotificationCenter.default.addObserver(forName: .IAPHelperErrorNotification, object: nil, queue: .main, using: {  notification in
-                                                let errorText = notification.object as! String
-                                                let alertController = textAlertController(context: self.context, title: nil, text: errorText, actions: [ TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})])
-                                                premiumIntroController.present(alertController, in: .window(.root))
-                                            })
-					     premiumIntroController.present(UndoOverlayController(presentationData: self.presentationData, content: .info(text: l("IAP.Common.Connecting", locale)), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
-                                               return false
-                                           }), in: .current)
-
+                                            premiumIntroController?.present(UndoOverlayController(presentationData: self.presentationData, content: .info(text: l("IAP.Common.Connecting", locale)), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                                                                  return false
+                                                              }), in: .current)
                                             NicegramProducts.store.buyProduct(product)
                                         } else {
                                             let alertController = textAlertController(context: self.context, title: nil, text: l("IAP.Common.CantPay", presentationData.strings.baseLanguageCode), actions: [
                                                 TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                                                 })])
-                                            premiumIntroController.present(alertController, in: .window(.root))
+                                            premiumIntroController!.present(alertController, in: .window(.root))
                                         }
                                     }
-                                    self.controller?.push(premiumIntroController)
+                                    self.controller?.push(premiumIntroController!)
                                 } else {
                                     self.controller?.push(premiumController(context: self.context))
                                 }

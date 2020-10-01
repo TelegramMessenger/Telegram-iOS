@@ -129,6 +129,7 @@ extension IAPHelper: SKPaymentTransactionObserver {
                 ngLog("paymentQueue purchasing", LOGTAG)
                 break
             @unknown default:
+                ngLog("paymentQueue unknown (fail)")
                 fail(transaction: transaction)
                 break
             }

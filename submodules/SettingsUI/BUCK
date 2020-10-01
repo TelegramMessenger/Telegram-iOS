@@ -1,11 +1,13 @@
 load("//Config:buck_rule_macros.bzl", "static_library")
 
+NGDEPS = ["//Nicegram/NGData:NGData"]
+
 static_library(
     name = "SettingsUI",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
-    deps = [
+    deps = NGDEPS + [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
         "//submodules/Display:Display#shared",

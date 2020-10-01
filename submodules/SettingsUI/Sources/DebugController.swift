@@ -13,6 +13,7 @@ import ItemListUI
 import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
+import NGData
 
 @objc private final class DebugControllerMailComposeDelegate: NSObject, MFMailComposeViewControllerDelegate {
     public func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
@@ -80,6 +81,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case enableVoipTcp(Bool)
     case hostInfo(PresentationTheme, String)
     case versionInfo(PresentationTheme)
+    case resetPremium
     
     var section: ItemListSectionId {
         switch self {
@@ -97,7 +99,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.videoExperiments.rawValue
         case .disableVideoAspectScaling, .enableVoipTcp:
             return DebugControllerSection.videoExperiments2.rawValue
-        case .hostInfo, .versionInfo:
+        case .hostInfo, .versionInfo, .resetPremium:
             return DebugControllerSection.info.rawValue
         }
     }
@@ -168,6 +170,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 102
         case .versionInfo:
             return 103
+        case .resetPremium:
+            return 1000
         }
     }
     
@@ -713,7 +717,28 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             let bundleId = bundle.bundleIdentifier ?? ""
             let bundleVersion = bundle.infoDictionary?["CFBundleShortVersionString"] ?? ""
             let bundleBuild = bundle.infoDictionary?[kCFBundleVersionKey as String] ?? ""
-            return ItemListTextItem(presentationData: presentationData, text: .plain("\(bundleId)\n\(bundleVersion) (\(bundleBuild))"), sectionId: self.section)
+            let isPremiumS = isPremium() ? "PREMIUM" : ""
+            return ItemListTextItem(presentationData: presentationData, text: .plain("\(bundleId)\n\(bundleVersion) (\(bundleBuild)) \(isPremiumS)"), sectionId: self.section)
+        case .resetPremium:
+            return ItemListActionItem(presentationData: presentationData, title: "Reset Premium", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                guard let context = arguments.context else {
+                    return
+                }
+                let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                    ActionSheetTextItem(title: "Reset Premium? You will be able to restore purchase."),
+                    ActionSheetButtonItem(title: "Reset Premiuum", color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        NGSettings.premium = false
+                    }),
+                    ]), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                        ])])
+                arguments.presentController(actionSheet, nil)
+        })
         }
     }
 }
@@ -772,6 +797,8 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
         entries.append(.hostInfo(presentationData.theme, "Host: \(backupHostOverride)"))
     }
     entries.append(.versionInfo(presentationData.theme))
+    
+    entries.append(.resetPremium)
     
     return entries
 }
