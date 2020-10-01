@@ -1257,7 +1257,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         if let _ = accessoryPanelNode as? ReplyAccessoryPanelNode {
                             strongSelf.requestUpdateChatInterfaceState(true, false, { $0.withUpdatedReplyMessageId(nil) })
                         } else if let _ = accessoryPanelNode as? ForwardAccessoryPanelNode {
-                            strongSelf.requestUpdateChatInterfaceState(true, false, { $0.withUpdatedForwardMessageIds(nil) })
+                            strongSelf.requestUpdateChatInterfaceState(true, false, { $0.withUpdatedForwardMessageIds(nil).withUpdatedForwardAsCopy(false) })
                         } else if let _ = accessoryPanelNode as? EditAccessoryPanelNode {
                             strongSelf.interfaceInteraction?.setupEditMessage(nil, { _ in })
                         } else if let _ = accessoryPanelNode as? WebpagePreviewAccessoryPanelNode {
@@ -2770,7 +2770,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         if let strongSelf = self, let textInputPanelNode = strongSelf.inputPanelNode as? ChatTextInputPanelNode {
                             strongSelf.ignoreUpdateHeight = true
                             textInputPanelNode.text = ""
-                            strongSelf.requestUpdateChatInterfaceState(false, true, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedComposeDisableUrlPreview(nil) })
+                            strongSelf.requestUpdateChatInterfaceState(false, true, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedComposeDisableUrlPreview(nil).withUpdatedForwardAsCopy(false) })
                             strongSelf.ignoreUpdateHeight = false
                         }
                     })
