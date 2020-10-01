@@ -8,6 +8,7 @@
 
 import StoreKit
 import NGLogging
+import NGData
 
 fileprivate let LOGTAG = extractNameFromPath(#file)
 
@@ -168,6 +169,9 @@ extension IAPHelper: SKPaymentTransactionObserver {
         
         purchasedProductIdentifiers.insert(identifier)
         UserDefaults.standard.set(true, forKey: identifier)
+//        if identifier == NicegramProducts.Premium {
+//            patchPurchasePremium()
+//        }
         NotificationCenter.default.post(name: .IAPHelperPurchaseNotification, object: identifier)
     }
     

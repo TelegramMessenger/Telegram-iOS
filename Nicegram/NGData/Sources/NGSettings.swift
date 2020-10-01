@@ -94,11 +94,7 @@ public struct NGWebSettings {
 }
 
 
-public func isPremium() -> Bool {
-    #if targetEnvironment(simulator)
-        return true
-    #endif
-    
+public func isPremium() -> Bool {    
     let bb = (Bundle.main.infoDictionary?[kCFBundleVersionKey as String] ?? "") as! String
     if bb.last != "1" {
         return false
