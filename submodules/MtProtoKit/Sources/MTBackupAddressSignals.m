@@ -240,7 +240,7 @@ static NSString *makeRandomPadding() {
     apiEnvironment.disableUpdates = true;
     apiEnvironment.langPack = currentContext.apiEnvironment.langPack;
     
-    MTContext *context = [[MTContext alloc] initWithSerialization:currentContext.serialization encryptionProvider:currentContext.encryptionProvider apiEnvironment:apiEnvironment isTestingEnvironment:currentContext.isTestingEnvironment useTempAuthKeys:address.datacenterId != 0 ? currentContext.useTempAuthKeys : false];
+    MTContext *context = [[MTContext alloc] initWithSerialization:currentContext.serialization encryptionProvider:currentContext.encryptionProvider apiEnvironment:apiEnvironment isTestingEnvironment:currentContext.isTestingEnvironment useTempAuthKeys:false];
     
     if (address.datacenterId != 0) {
         //context.keychain = currentContext.keychain;

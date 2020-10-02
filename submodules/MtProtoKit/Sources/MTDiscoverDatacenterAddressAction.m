@@ -117,8 +117,10 @@
             
             [_requestService addRequest:request];
         }
-        else
+        else {
+            
             [context authInfoForDatacenterWithIdRequired:_targetDatacenterId isCdn:false selector:MTDatacenterAuthInfoSelectorPersistent];
+        }
     }
 }
 
