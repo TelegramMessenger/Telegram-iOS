@@ -277,7 +277,11 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 var consumableContentIcon: UIImage?
                 for attribute in message.attributes {
                     if let attribute = attribute as? ConsumableContentMessageAttribute {
-                        if !attribute.consumed {
+                        var isConsumed = attribute.consumed
+                        if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+                            isConsumed = true
+                        }
+                        if !isConsumed {
                             if incoming {
                                 consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentIncomingIcon(presentationData.theme.theme)
                             } else {

@@ -6,6 +6,7 @@ import TelegramApi
 
 private struct DiscussionMessage {
     public var messageId: MessageId
+    public var channelMessageId: MessageId?
     public var isChannelPost: Bool
     public var maxMessage: MessageId?
     public var maxReadIncomingMessageId: MessageId?
@@ -143,6 +144,14 @@ private class ReplyThreadHistoryContextImpl {
                             return .fail(.generic)
                         }
                         
+                        var channelMessageId: MessageId?
+                        for attribute in topMessage.attributes {
+                            if let attribute = attribute as? SourceReferenceMessageAttribute {
+                                channelMessageId = attribute.messageId
+                                break
+                            }
+                        }
+                        
                         var peers: [Peer] = []
                         var peerPresences: [PeerId: PeerPresence] = [:]
                         
@@ -188,6 +197,7 @@ private class ReplyThreadHistoryContextImpl {
                         
                         return .single(DiscussionMessage(
                             messageId: parsedIndex.id,
+                            channelMessageId: channelMessageId,
                             isChannelPost: isChannelPost,
                             maxMessage: resolvedMaxMessage,
                             maxReadIncomingMessageId: readInboxMaxId.flatMap { readMaxId in
@@ -388,6 +398,7 @@ public struct ChatReplyThreadMessage: Equatable {
     }
     
     public var messageId: MessageId
+    public var channelMessageId: MessageId?
     public var isChannelPost: Bool
     public var maxMessage: MessageId?
     public var maxReadIncomingMessageId: MessageId?
@@ -396,8 +407,9 @@ public struct ChatReplyThreadMessage: Equatable {
     public var initialAnchor: Anchor
     public var isNotAvailable: Bool
     
-    fileprivate init(messageId: MessageId, isChannelPost: Bool, maxMessage: MessageId?, maxReadIncomingMessageId: MessageId?, maxReadOutgoingMessageId: MessageId?, initialFilledHoles: IndexSet, initialAnchor: Anchor, isNotAvailable: Bool) {
+    fileprivate init(messageId: MessageId, channelMessageId: MessageId?, isChannelPost: Bool, maxMessage: MessageId?, maxReadIncomingMessageId: MessageId?, maxReadOutgoingMessageId: MessageId?, initialFilledHoles: IndexSet, initialAnchor: Anchor, isNotAvailable: Bool) {
         self.messageId = messageId
+        self.channelMessageId = channelMessageId
         self.isChannelPost = isChannelPost
         self.maxMessage = maxMessage
         self.maxReadIncomingMessageId = maxReadIncomingMessageId
@@ -445,6 +457,14 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
                         return nil
                     }
                     
+                    var channelMessageId: MessageId?
+                    for attribute in topMessage.attributes {
+                        if let attribute = attribute as? SourceReferenceMessageAttribute {
+                            channelMessageId = attribute.messageId
+                            break
+                        }
+                    }
+                    
                     var peers: [Peer] = []
                     var peerPresences: [PeerId: PeerPresence] = [:]
                     
@@ -490,6 +510,7 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
                     
                     return DiscussionMessage(
                         messageId: parsedIndex.id,
+                        channelMessageId: channelMessageId,
                         isChannelPost: isChannelPost,
                         maxMessage: resolvedMaxMessage,
                         maxReadIncomingMessageId: readInboxMaxId.flatMap { readMaxId in
@@ -530,6 +551,7 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
                 
                 return DiscussionMessage(
                     messageId: discussionMessageId,
+                    channelMessageId: messageId,
                     isChannelPost: true,
                     maxMessage: replyInfo.maxMessageId,
                     maxReadIncomingMessageId: replyInfo.maxReadIncomingMessageId,
@@ -730,6 +752,7 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
                 
                 return .single(ChatReplyThreadMessage(
                     messageId: discussionMessage.messageId,
+                    channelMessageId: discussionMessage.channelMessageId,
                     isChannelPost: discussionMessage.isChannelPost,
                     maxMessage: discussionMessage.maxMessage,
                     maxReadIncomingMessageId: discussionMessage.maxReadIncomingMessageId,

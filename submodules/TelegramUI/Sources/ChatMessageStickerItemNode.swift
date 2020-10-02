@@ -257,7 +257,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                                 isBroadcastChannel = true
                             }
                             
-                            if replyThreadMessage.isChannelPost, replyThreadMessage.messageId == item.message.id {
+                            if replyThreadMessage.isChannelPost, replyThreadMessage.effectiveTopId == item.message.id {
                                 isBroadcastChannel = true
                             }
                             
@@ -568,7 +568,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                             strongSelf.addSubnode(updatedShareButtonNode)
                             updatedShareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
                         }
-                        let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, message: item.message, account: item.context.account)
+                        let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, message: item.message, account: item.context.account)
                         let shareButtonFrame = CGRect(origin: CGPoint(x: baseShareButtonFrame.minX, y: baseShareButtonFrame.maxY - buttonSize.height), size: buttonSize)
                         transition.updateFrame(node: updatedShareButtonNode, frame: shareButtonFrame)
                     } else if let shareButtonNode = strongSelf.shareButtonNode {
@@ -922,7 +922,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             return
         }
         
-        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == item.message.id {
+        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.effectiveTopId == item.message.id {
             return
         }
         

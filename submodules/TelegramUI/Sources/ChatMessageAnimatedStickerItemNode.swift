@@ -55,7 +55,7 @@ class ChatMessageShareButton: HighlightableButtonNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(presentationData: ChatPresentationData, message: Message, account: Account) -> CGSize {
+    func update(presentationData: ChatPresentationData, chatLocation: ChatLocation, message: Message, account: Account) -> CGSize {
         var isReplies = false
         var replyCount = 0
         if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
@@ -66,6 +66,10 @@ class ChatMessageShareButton: HighlightableButtonNode {
                     break
                 }
             }
+        }
+        if case let .replyThread(replyThreadMessage) = chatLocation, replyThreadMessage.effectiveTopId == message.id {
+            replyCount = 0
+            isReplies = false
         }
         
         if self.theme !== presentationData.theme.theme || self.isReplies != isReplies {
@@ -569,7 +573,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             isBroadcastChannel = true
                         }
                         
-                        if replyThreadMessage.isChannelPost, replyThreadMessage.messageId == item.message.id {
+                        if replyThreadMessage.isChannelPost, replyThreadMessage.effectiveTopId == item.message.id {
                             isBroadcastChannel = true
                         }
                         
@@ -925,7 +929,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             strongSelf.addSubnode(updatedShareButtonNode)
                             updatedShareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
                         }
-                        let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, message: item.message, account: item.context.account)
+                        let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, message: item.message, account: item.context.account)
                         updatedShareButtonNode.frame = CGRect(origin: CGPoint(x: updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - buttonSize.height - 4.0), size: buttonSize)
                     } else if let shareButtonNode = strongSelf.shareButtonNode {
                         shareButtonNode.removeFromSupernode()
@@ -1361,7 +1365,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             return
         }
         
-        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == item.message.id {
+        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.effectiveTopId == item.message.id {
             return
         }
         

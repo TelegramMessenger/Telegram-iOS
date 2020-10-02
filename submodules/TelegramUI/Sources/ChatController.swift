@@ -289,6 +289,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var stickerSettingsDisposable: Disposable?
     
     private var applicationInForegroundDisposable: Disposable?
+    private var applicationInFocusDisposable: Disposable?
     
     private var checkedPeerChatServiceActions = false
     
@@ -3071,6 +3072,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         })
         
+        if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.SecretChat {
+            self.applicationInFocusDisposable = (context.sharedContext.applicationBindings.applicationIsActive
+            |> distinctUntilChanged
+            |> deliverOn(Queue.mainQueue())).start(next: { [weak self] value in
+                guard let strongSelf = self, strongSelf.isNodeLoaded else {
+                    return
+                }
+                strongSelf.chatDisplayNode.updateIsBlurred(!value)
+            })
+        }
+        
         self.canReadHistoryDisposable = (combineLatest(context.sharedContext.applicationBindings.applicationInForeground, self.canReadHistory.get()) |> map { a, b in
             return a && b
         } |> deliverOnMainQueue).start(next: { [weak self] value in
@@ -3139,6 +3151,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.presentationDataDisposable?.dispose()
         self.searchDisposable?.dispose()
         self.applicationInForegroundDisposable?.dispose()
+        self.applicationInFocusDisposable?.dispose()
         self.canReadHistoryDisposable?.dispose()
         self.networkStateDisposable?.dispose()
         self.chatAdditionalDataDisposable.dispose()
@@ -8461,7 +8474,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }, error: { _ in
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 
-                present(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                present(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_DiscussionMessageUnavailable, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             })
             
             cancelImpl = { [weak statusController] in
