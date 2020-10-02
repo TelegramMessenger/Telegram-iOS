@@ -17,7 +17,7 @@ extension NetworkSettings {
     }
 }
 
-public func updateNetworkSettingsInteractively(transaction: Transaction, network: Network, _ f: @escaping (NetworkSettings) -> NetworkSettings) {
+public func updateNetworkSettingsInteractively(transaction: Transaction, network: Network?, _ f: @escaping (NetworkSettings) -> NetworkSettings) {
     var updateNetwork = false
     var updatedSettings: NetworkSettings?
     transaction.updatePreferencesEntry(key: PreferencesKeys.networkSettings, { current in
@@ -33,7 +33,7 @@ public func updateNetworkSettingsInteractively(transaction: Transaction, network
         return updated
     })
     
-    if updateNetwork, let updatedSettings = updatedSettings {
+    if let network = network, updateNetwork, let updatedSettings = updatedSettings {
         network.context.updateApiEnvironment { current in
             return current?.withUpdatedNetworkSettings(updatedSettings.mtNetworkSettings)
         }
