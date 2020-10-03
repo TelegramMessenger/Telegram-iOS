@@ -8,7 +8,7 @@ public struct NetworkSettings: PreferencesEntry, Equatable {
     public var userEnableTempKeys: Bool?
     
     public static var defaultSettings: NetworkSettings {
-        return NetworkSettings(reducedBackupDiscoveryTimeout: false, applicationUpdateUrlPrefix: nil, backupHostOverride: nil, defaultEnableTempKeys: true, userEnableTempKeys: nil)
+        return NetworkSettings(reducedBackupDiscoveryTimeout: false, applicationUpdateUrlPrefix: nil, backupHostOverride: nil, defaultEnableTempKeys: false, userEnableTempKeys: nil)
     }
     
     public init(reducedBackupDiscoveryTimeout: Bool, applicationUpdateUrlPrefix: String?, backupHostOverride: String?, defaultEnableTempKeys: Bool, userEnableTempKeys: Bool?) {
@@ -23,7 +23,7 @@ public struct NetworkSettings: PreferencesEntry, Equatable {
         self.reducedBackupDiscoveryTimeout = decoder.decodeInt32ForKey("reducedBackupDiscoveryTimeout", orElse: 0) != 0
         self.applicationUpdateUrlPrefix = decoder.decodeOptionalStringForKey("applicationUpdateUrlPrefix")
         self.backupHostOverride = decoder.decodeOptionalStringForKey("backupHostOverride")
-        self.defaultEnableTempKeys = decoder.decodeBoolForKey("defaultEnableTempKeys", orElse: true)
+        self.defaultEnableTempKeys = decoder.decodeBoolForKey("defaultEnableTempKeys", orElse: false)
         self.userEnableTempKeys = decoder.decodeOptionalBoolForKey("userEnableTempKeys")
     }
     
