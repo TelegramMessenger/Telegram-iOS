@@ -1726,8 +1726,13 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 {
     [[MTProto managerQueue] dispatchOnQueue:^
     {
-        if (transport != _transport || completion == nil)
+        if (transport != _transport || completion == nil) {
             return;
+        }
+        
+        if (_useUnauthorizedMode) {
+            return;
+        }
         
         MTDatacenterAuthKey *authKey = [self getAuthKeyForCurrentScheme:scheme createIfNeeded:false authInfoSelector:nil];
         if (authKey == nil) {
@@ -2038,11 +2043,18 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
 - (void)handleMissingKey:(MTTransportScheme *)scheme {
     NSAssert([[MTProto managerQueue] isCurrentQueue], @"invalid queue");
     
+    if (_useUnauthorizedMode) {
+        if (MTLogEnabled()) {
+            MTLog(@"[MTProto#%p@%p don't handleMissingKey when useUnauthorizedMode]", self, _context);
+        }
+        return;
+    }
+    
     MTDatacenterAuthInfoSelector authInfoSelector;
     [self getAuthKeyForCurrentScheme:scheme createIfNeeded:false authInfoSelector:&authInfoSelector];
     
     if (MTLogEnabled()) {
-        MTLog(@"[MTProto#%p@%p missing key %lld selector]", self, _context, _validAuthInfo.authInfo.authKeyId, authInfoSelector);
+        MTLog(@"[MTProto#%p@%p missing key %lld selector %d]", self, _context, _validAuthInfo.authInfo.authKeyId, authInfoSelector);
     }
     
     if (_useExplicitAuthKey != nil) {
@@ -2618,7 +2630,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
 {
     [_context setGlobalTimeDifference:timeDifference];
     
-    if (saltList != nil)
+    if (!_useUnauthorizedMode && saltList != nil)
     {
         if (_useExplicitAuthKey) {
             if (_validAuthInfo != nil && _validAuthInfo.selector == authInfoSelector) {
