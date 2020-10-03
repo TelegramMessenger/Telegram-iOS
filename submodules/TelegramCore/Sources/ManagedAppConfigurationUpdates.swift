@@ -23,15 +23,6 @@ func updateAppConfigurationOnce(postbox: Postbox, network: Network) -> Signal<Vo
                     configuration.data = data
                     return configuration
                 })
-                var defaultEnableTempKeys = true
-                if let value = data["disable_pfs"] as? Bool {
-                    defaultEnableTempKeys = false
-                }
-                updateNetworkSettingsInteractively(transaction: transaction, network: nil, { settings in
-                    var settings = settings
-                    settings.defaultEnableTempKeys = defaultEnableTempKeys
-                    return settings
-                })
             }
         }
     }
