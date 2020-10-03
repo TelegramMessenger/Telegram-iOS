@@ -109,9 +109,9 @@ static NSDictionary *selectPublicKey(NSArray *fingerprints, NSArray<NSDictionary
     {
         for (NSDictionary *keyDesc in publicKeys)
         {
-            int64_t keyFingerprint = [[keyDesc objectForKey:@"fingerprint"] longLongValue];
+            uint64_t keyFingerprint = [[keyDesc objectForKey:@"fingerprint"] unsignedLongLongValue];
             
-            if ([nFingerprint longLongValue] == keyFingerprint)
+            if ([nFingerprint unsignedLongLongValue] == keyFingerprint)
                 return keyDesc;
         }
     }
@@ -132,7 +132,6 @@ typedef enum {
     id<EncryptionProvider> _encryptionProvider;
     
     bool _tempAuth;
-    MTSessionInfo *_sessionInfo;
     
     MTDatacenterAuthStage _stage;
     int64_t _currentStageMessageId;
@@ -165,7 +164,6 @@ typedef enum {
     {
         _encryptionProvider = context.encryptionProvider;
         _tempAuth = tempAuth;
-        _sessionInfo = [[MTSessionInfo alloc] initWithRandomSessionIdAndContext:context];
     }
     return self;
 }
@@ -267,7 +265,7 @@ typedef enum {
                 [reqDhBuffer appendInt64:_dhPublicKeyFingerprint];
                 [reqDhBuffer appendTLBytes:_dhEncryptedData];
                 
-                NSString *messageDescription = [NSString stringWithFormat:@"reqDh nonce:%@ serverNonce:%@ p:%@ q:%@ fingerprint:%llx", _nonce, _serverNonce, _dhP, _dhQ, _dhPublicKeyFingerprint];
+                NSString *messageDescription = [NSString stringWithFormat:@"reqDh nonce:%@ serverNonce:%@ p:%@ q:%@ fingerprint:%llx dhEncryptedData:%d bytes", _nonce, _serverNonce, _dhP, _dhQ, _dhPublicKeyFingerprint, (int)_dhEncryptedData.length];
                 MTOutgoingMessage *message = [[MTOutgoingMessage alloc] initWithData:reqDhBuffer.data metadata:messageDescription additionalDebugDescription:nil shortMetadata:messageDescription messageId:_currentStageMessageId messageSeqNo:_currentStageMessageSeqNo];
                 return [[MTMessageTransaction alloc] initWithMessagePayload:@[message] prepared:nil failed:nil completion:^(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
                 {
@@ -402,7 +400,11 @@ typedef enum {
                         arc4random_buf(&random, 1);
                         [dataWithHash appendBytes:&random length:1];
                     }
+                    
                     NSData *encryptedData = MTRsaEncrypt(_encryptionProvider, [publicKey objectForKey:@"key"], dataWithHash);
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p encryptedData length %d dataWithHash length %d]", self, (int)encryptedData.length, (int)dataWithHash.length);
+                    }
                     if (encryptedData.length < 256)
                     {
                         NSMutableData *newEncryptedData = [[NSMutableData alloc] init];
@@ -438,8 +440,11 @@ typedef enum {
                         arc4random_buf(&random, 1);
                         [dataWithHash appendBytes:&random length:1];
                     }
-                    
+
                     NSData *encryptedData = MTRsaEncrypt(_encryptionProvider, [publicKey objectForKey:@"key"], dataWithHash);
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p encryptedData length %d dataWithHash length %d]", self, (int)encryptedData.length, (int)dataWithHash.length);
+                    }
                     if (encryptedData.length < 256)
                     {
                         NSMutableData *newEncryptedData = [[NSMutableData alloc] init];
