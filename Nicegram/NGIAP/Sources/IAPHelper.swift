@@ -8,7 +8,6 @@
 
 import StoreKit
 import NGLogging
-import NGData
 
 fileprivate let LOGTAG = extractNameFromPath(#file)
 
