@@ -180,7 +180,6 @@
 - (void)cancel
 {
     [self cleanup];
-    [self fail];
 }
 
 - (void)complete {

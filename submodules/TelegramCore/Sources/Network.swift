@@ -474,6 +474,17 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
                 }
             }
             
+            let useTempAuthKeys: Bool
+            if let networkSettings = networkSettings {
+                if let userEnableTempKeys = networkSettings.userEnableTempKeys {
+                    useTempAuthKeys = userEnableTempKeys
+                } else {
+                    useTempAuthKeys = networkSettings.defaultEnableTempKeys
+                }
+            } else {
+                useTempAuthKeys = true
+            }
+            
             var contextValue: MTContext?
             sharedContexts.with { store in
                 let key = SharedContextStore.Key(accountId: accountId)
@@ -483,7 +494,7 @@ func initializedNetwork(accountId: AccountRecordId, arguments: NetworkInitializa
                     context = current
                     context.updateApiEnvironment({ _ in return apiEnvironment})
                 } else {
-                    context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: true)!
+                    context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: useTempAuthKeys)!
                     store.contexts[key] = context
                 }
                 contextValue = context
