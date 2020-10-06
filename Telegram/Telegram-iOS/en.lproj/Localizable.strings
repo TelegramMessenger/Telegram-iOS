@@ -1921,6 +1921,7 @@
 "Conversation.Unpin" = "Unpin";
 "Conversation.Report" = "Report Spam";
 "Conversation.PinnedMessage" = "Pinned Message";
+"Conversation.PinnedPreviousMessage" = "Previous Message";
 
 "Conversation.Moderate.Delete" = "Delete Message";
 "Conversation.Moderate.Ban" = "Ban User";

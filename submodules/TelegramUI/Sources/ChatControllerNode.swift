@@ -997,7 +997,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        if let pinnedMessage = self.chatPresentationInterfaceState.pinnedMessage, self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding, self.context.sharedContext.immediateExperimentalUISettings.playlistPlayback, self.embeddedTitleContentNode == nil, let url = extractExperimentalPlaylistUrl(pinnedMessage.text), self.didProcessExperimentalEmbedUrl != url {
+        if let pinnedMessage = self.chatPresentationInterfaceState.pinnedMessage, self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding, self.context.sharedContext.immediateExperimentalUISettings.playlistPlayback, self.embeddedTitleContentNode == nil, let url = extractExperimentalPlaylistUrl(pinnedMessage.message.text), self.didProcessExperimentalEmbedUrl != url {
             self.didProcessExperimentalEmbedUrl = url
             let context = self.context
             let baseNavigationController = self.controller?.navigationController as? NavigationController

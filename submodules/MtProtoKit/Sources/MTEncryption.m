@@ -292,12 +292,13 @@ NSData *MTAesDecrypt(NSData *data, NSData *key, NSData *iv)
 NSData *MTRsaEncrypt(id<EncryptionProvider> provider, NSString *publicKey, NSData *data)
 {
 #if TARGET_OS_IOS
-    NSMutableData *updatedData = [[NSMutableData alloc] initWithData:data];
+    return [provider rsaEncryptWithPublicKey:publicKey data:data];
+    /*NSMutableData *updatedData = [[NSMutableData alloc] initWithData:data];
     while (updatedData.length < 256) {
         uint8_t zero = 0;
         [updatedData replaceBytesInRange:NSMakeRange(0, 0) withBytes:&zero length:1];
     }
-    return [MTRsa encryptData:updatedData publicKey:publicKey];
+    return [MTRsa encryptData:updatedData publicKey:publicKey];*/
 #else
     return [provider macosRSAEncrypt:publicKey data:data];
 #endif

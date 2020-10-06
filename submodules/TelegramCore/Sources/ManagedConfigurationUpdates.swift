@@ -35,10 +35,14 @@ func managedConfigurationUpdates(accountManager: AccountManager, postbox: Postbo
                         }
                         
                         let blockedMode = (config.flags & 8) != 0
+                        
+                        let defaultEnableTempKeys = (config.flags & (1 << 13)) != 0
+                        
                         updateNetworkSettingsInteractively(transaction: transaction, network: network, { settings in
                             var settings = settings
                             settings.reducedBackupDiscoveryTimeout = blockedMode
                             settings.applicationUpdateUrlPrefix = config.autoupdateUrlPrefix
+                            settings.defaultEnableTempKeys = defaultEnableTempKeys
                             return settings
                         })
                         
