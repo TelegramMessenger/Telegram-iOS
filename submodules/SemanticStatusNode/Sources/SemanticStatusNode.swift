@@ -454,13 +454,15 @@ private final class SemanticStatusNodeDrawingState: NSObject {
     let hollow: Bool
     let transitionState: SemanticStatusNodeTransitionDrawingState?
     let drawingState: SemanticStatusNodeStateDrawingState
+    let cutout: SemanticStatusNode.Cutout?
     
-    init(background: UIColor, foreground: UIColor, hollow: Bool, transitionState: SemanticStatusNodeTransitionDrawingState?, drawingState: SemanticStatusNodeStateDrawingState) {
+    init(background: UIColor, foreground: UIColor, hollow: Bool, transitionState: SemanticStatusNodeTransitionDrawingState?, drawingState: SemanticStatusNodeStateDrawingState, cutout: SemanticStatusNode.Cutout?) {
         self.background = background
         self.foreground = foreground
         self.hollow = hollow
         self.transitionState = transitionState
         self.drawingState = drawingState
+        self.cutout = cutout
         
         super.init()
     }
@@ -481,6 +483,10 @@ private final class SemanticStatusNodeTransitionContext {
 }
 
 public final class SemanticStatusNode: ASControlNode {
+    final class Cutout {
+        
+    }
+    
     public var backgroundNodeColor: UIColor {
         didSet {
             if !self.backgroundNodeColor.isEqual(oldValue) {
@@ -589,7 +595,7 @@ public final class SemanticStatusNode: ASControlNode {
             transitionState = SemanticStatusNodeTransitionDrawingState(transition: t, drawingState: transitionContext.previousStateContext.drawingState(transitionFraction: 1.0 - t))
         }
         
-        return SemanticStatusNodeDrawingState(background: self.backgroundNodeColor, foreground: self.foregroundNodeColor, hollow: self.hollow, transitionState: transitionState, drawingState: self.stateContext.drawingState(transitionFraction: transitionFraction))
+        return SemanticStatusNodeDrawingState(background: self.backgroundNodeColor, foreground: self.foregroundNodeColor, hollow: self.hollow, transitionState: transitionState, drawingState: self.stateContext.drawingState(transitionFraction: transitionFraction), cutout: nil)
     }
     
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {

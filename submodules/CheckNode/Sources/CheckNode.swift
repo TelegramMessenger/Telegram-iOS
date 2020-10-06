@@ -8,6 +8,7 @@ public enum CheckNodeStyle {
     case plain
     case overlay
     case navigation
+    case compact
 }
 
 public final class CheckNode: ASDisplayNode {
@@ -47,6 +48,9 @@ public final class CheckNode: ASDisplayNode {
         case .navigation:
             style = TGCheckButtonStyleGallery
             checkSize = CGSize(width: 39.0, height: 39.0)
+        case .compact:
+            style = TGCheckButtonStyleCompact
+            checkSize = CGSize(width: 30.0, height: 30.0)
         }
         let checkView = TGCheckButtonView(style: style, pallete: TGCheckButtonPallete(defaultBackgroundColor: self.fillColor, accentBackgroundColor: self.fillColor, defaultBorderColor: self.strokeColor, mediaBorderColor: self.strokeColor, chatBorderColor: self.strokeColor, check: self.foregroundColor, blueColor: self.fillColor, barBackgroundColor: self.fillColor))!
         checkView.setSelected(true, animated: false)

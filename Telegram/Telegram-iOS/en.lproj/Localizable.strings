@@ -5817,3 +5817,6 @@ Any member of this group will be able to see messages in the channel.";
 "Channel.DiscussionMessageUnavailable" = "Sorry, this post has been removed from the discussion group.";
 
 "Conversation.ContextViewStats" = "View Statistics";
+
+"ChatList.MessageMusic_1" = "1 Music File";
+"ChatList.MessageMusic_any" = "%@ Music Files";

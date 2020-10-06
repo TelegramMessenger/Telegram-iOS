@@ -1148,23 +1148,21 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             let contentItem = ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: message, read: read, chatLocation: item.chatLocation, presentationData: item.presentationData, associatedData: item.associatedData, attributes: attributes)
             
             var itemSelection: Bool?
-            if case .mosaic = prepareContentPosition {
-                switch content {
-                    case .message:
-                        break
-                    case let .group(messages):
-                        for (m, _, selection, _) in messages {
-                            if m.id == message.id {
-                                switch selection {
-                                    case .none:
-                                        break
-                                    case let .selectable(selected):
-                                        itemSelection = selected
-                                }
-                                break
+            switch content {
+                case .message:
+                    break
+                case let .group(messages):
+                    for (m, _, selection, _) in messages {
+                        if m.id == message.id {
+                            switch selection {
+                                case .none:
+                                    break
+                                case let .selectable(selected):
+                                    itemSelection = selected
                             }
+                            break
                         }
-                }
+                    }
             }
             
             let (properties, unboundSize, maxNodeWidth, nodeLayout) = prepareLayout(contentItem, layoutConstants, prepareContentPosition, itemSelection, CGSize(width: maximumContentWidth, height: CGFloat.greatestFiniteMagnitude))
@@ -2777,7 +2775,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     }
     
     private func traceSelectionNodes(parent: ASDisplayNode, point: CGPoint) -> ASDisplayNode? {
-        if let parent = parent as? GridMessageSelectionNode, parent.bounds.contains(point) {
+        if let parent = parent as? FileMessageSelectionNode, parent.bounds.contains(point) {
+            return parent
+        } else if let parent = parent as? GridMessageSelectionNode, parent.bounds.contains(point) {
             return parent
         } else {
             if let parentSubnodes = parent.subnodes {

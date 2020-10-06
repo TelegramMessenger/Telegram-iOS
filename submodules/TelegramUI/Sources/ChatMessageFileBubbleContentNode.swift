@@ -34,19 +34,21 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         
         self.addSubnode(self.interactiveFileNode)
         
+        self.interactiveFileNode.toggleSelection = { [weak self] value in
+            if let strongSelf = self, let item = strongSelf.item {
+                item.controllerInteraction.toggleMessagesSelection([item.message.id], value)
+            }
+        }
+        
         self.interactiveFileNode.activateLocalContent = { [weak self] in
-            if let strongSelf = self {
-                if let item = strongSelf.item {
-                    let _ = item.controllerInteraction.openMessage(item.message, .default)
-                }
+            if let strongSelf = self, let item = strongSelf.item {
+                let _ = item.controllerInteraction.openMessage(item.message, .default)
             }
         }
         
         self.interactiveFileNode.requestUpdateLayout = { [weak self] _ in
-            if let strongSelf = self {
-                if let item = strongSelf.item {
-                    let _ = item.controllerInteraction.requestMessageUpdate(item.message.id)
-                }
+            if let strongSelf = self, let item = strongSelf.item {
+                let _ = item.controllerInteraction.requestMessageUpdate(item.message.id)
             }
         }
     }
@@ -58,7 +60,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
         let interactiveFileLayout = self.interactiveFileNode.asyncLayout()
         
-        return { item, layoutConstants, preparePosition, _, constrainedSize in
+        return { item, layoutConstants, preparePosition, selection, constrainedSize in
             var selectedFile: TelegramMediaFile?
             for media in item.message.media {
                 if let telegramFile = media as? TelegramMediaFile {
@@ -87,7 +89,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
             
             let automaticDownload = shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: selectedFile!)
             
-            let (initialWidth, refineLayout) = interactiveFileLayout(item.context, item.presentationData, item.message, item.chatLocation, item.attributes, selectedFile!, automaticDownload, item.message.effectivelyIncoming(item.context.account.peerId), item.associatedData.isRecentActions, item.associatedData.forcedResourceStatus, statusType, CGSize(width: constrainedSize.width - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right, height: constrainedSize.height))
+            let (initialWidth, refineLayout) = interactiveFileLayout(item.context, item.presentationData, item.message, item.chatLocation, item.attributes, selectedFile!, automaticDownload, item.message.effectivelyIncoming(item.context.account.peerId), item.associatedData.isRecentActions, item.associatedData.forcedResourceStatus, statusType, item.message.groupingKey != nil ? selection : nil, CGSize(width: constrainedSize.width - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right, height: constrainedSize.height))
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             
@@ -97,7 +99,15 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 return (refinedWidth + layoutConstants.file.bubbleInsets.left + layoutConstants.file.bubbleInsets.right, { boundingWidth in
                     let (fileSize, fileApply) = finishLayout(boundingWidth - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right)
                     
-                    return (CGSize(width: fileSize.width + layoutConstants.file.bubbleInsets.left + layoutConstants.file.bubbleInsets.right, height: fileSize.height + layoutConstants.file.bubbleInsets.top + layoutConstants.file.bubbleInsets.bottom), { [weak self] _, synchronousLoads in
+                    var bottomInset = layoutConstants.file.bubbleInsets.bottom
+                    
+                    if case let .linear(_, bottom) = position {
+                        if case .Neighbour = bottom {
+                            bottomInset -= 20.0
+                        }
+                    }
+                    
+                    return (CGSize(width: fileSize.width + layoutConstants.file.bubbleInsets.left + layoutConstants.file.bubbleInsets.right, height: fileSize.height + layoutConstants.file.bubbleInsets.top + bottomInset), { [weak self] _, synchronousLoads in
                         if let strongSelf = self {
                             strongSelf.item = item
                             
