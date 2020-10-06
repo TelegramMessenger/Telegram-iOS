@@ -2220,6 +2220,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     break
                 }
             }
+        }, openMessageStats: { [weak self] id in
+            let _ = (context.account.postbox.transaction { transaction -> CachedPeerData? in
+                return transaction.getPeerCachedData(peerId: id.peerId)
+            } |> deliverOnMainQueue).start(next: { [weak self] cachedPeerData in
+                guard let strongSelf = self, let cachedPeerData = cachedPeerData else {
+                    return
+                }
+                strongSelf.push(messageStatsController(context: context, messageId: id, cachedPeerData: cachedPeerData))
+            })
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)

@@ -1200,6 +1200,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }, openPeerContextMenu: { _, _, _, _ in
             }, openMessageReplies: { _, _, _ in
             }, openReplyThreadOriginalMessage: { _ in
+            }, openMessageStats: { _ in
             }, requestMessageUpdate: { _ in
             }, cancelInteractiveKeyboardGestures: {
             }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

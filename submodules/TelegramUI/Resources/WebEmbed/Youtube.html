@@ -38,7 +38,7 @@
             function getCurrentTime() {
                  downloadProgress = player.getVideoLoadedFraction();
                  position = player.getCurrentTime();
-                 storyboardSpec = player.getStoryboardFormat();
+                 //storyboardSpec = player.getStoryboardFormat();
                  
                  updateState();
                  invoke("tick");
@@ -67,6 +67,7 @@
         function onReady(event) {
             window.location.href = "embed://onReady?data=" + event.data;
             iframe = document.getElementById("player");
+            iframe.referrerPolicy = "origin";
             duration = player.getDuration();
             invoke("tick");
         }
