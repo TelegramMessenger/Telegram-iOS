@@ -6991,7 +6991,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             if mimeType == "application/pdf" {
                                                 previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 320, height: 320), resource: ICloudFileResource(urlData: item.urlData, thumbnail: true), progressiveSizes: []))
                                             }
-                                            let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: fileId), partialReference: nil, resource: ICloudFileResource(urlData: item.urlData, thumbnail: false), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: item.fileSize, attributes: [.FileName(fileName: item.fileName)])
+                                            var attributes: [TelegramMediaFileAttribute] = []
+                                            attributes.append(.FileName(fileName: item.fileName))
+                                            if let audioMetadata = item.audioMetadata {
+                                                attributes.append(.Audio(isVoice: false, duration: audioMetadata.duration, title: audioMetadata.title, performer: audioMetadata.performer, waveform: nil))
+                                            }
+                                            
+                                            let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: fileId), partialReference: nil, resource: ICloudFileResource(urlData: item.urlData, thumbnail: false), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: item.fileSize, attributes: attributes)
                                             let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: replyMessageId, localGroupingKey: groupingKey)
                                             messages.append(message)
                                         }

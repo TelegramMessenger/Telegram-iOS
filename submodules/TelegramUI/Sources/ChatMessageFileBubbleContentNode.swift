@@ -103,7 +103,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     if case let .linear(_, bottom) = position {
                         if case .Neighbour = bottom {
-                            bottomInset -= 20.0
+                            bottomInset -= 24.0
                         }
                     }
                     
