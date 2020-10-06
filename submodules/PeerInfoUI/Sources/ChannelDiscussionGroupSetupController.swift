@@ -560,9 +560,15 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
         var isEmptyState = false
         var displayGroupList = false
         if let cachedData = view.cachedData as? CachedChannelData {
-            let isEmpty = cachedData.linkedDiscussionPeerId == nil
+            var isEmpty = true
+            switch cachedData.linkedDiscussionPeerId {
+            case .unknown:
+                isEmpty = true
+            case let .known(value):
+                isEmpty = value == nil
+            }
             if let peer = view.peers[view.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                if cachedData.linkedDiscussionPeerId == nil {
+                if isEmpty {
                     if groups == nil {
                         isEmptyState = true
                     } else {
@@ -570,13 +576,13 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                     }
                 }
             }
-            if let wasEmpty = wasEmpty, wasEmpty != isEmpty {
-                crossfade = true
-            }
-            wasEmpty = isEmpty
         } else {
             isEmptyState = true
         }
+        if let wasEmpty = wasEmpty, wasEmpty != isEmptyState {
+            crossfade = true
+        }
+        wasEmpty = isEmptyState
         
         var emptyStateItem: ItemListControllerEmptyStateItem?
         if isEmptyState {

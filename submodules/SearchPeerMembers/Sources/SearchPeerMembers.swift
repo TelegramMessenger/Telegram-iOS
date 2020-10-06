@@ -11,14 +11,12 @@ public enum SearchPeerMembersScope {
 }
 
 public func searchPeerMembers(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, query: String, scope: SearchPeerMembersScope) -> Signal<[Peer], NoError> {
-    if case .replyThread = chatLocation {
-        return .single([])
-    } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+    if peerId.namespace == Namespaces.Peer.CloudChannel {
         return context.account.postbox.transaction { transaction -> CachedChannelData? in
             return transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData
         }
         |> mapToSignal { cachedData -> Signal<([Peer], Bool), NoError> in
-            if let cachedData = cachedData, let memberCount = cachedData.participantsSummary.memberCount, memberCount <= 64 {
+            if case .peer = chatLocation, let cachedData = cachedData, let memberCount = cachedData.participantsSummary.memberCount, memberCount <= 64 {
                 return Signal { subscriber in
                     let (disposable, _) = context.peerChannelMemberCategoriesContextsManager.recent(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, searchQuery: nil, requestUpdate: false, updated: { state in
                         if case .ready = state.loadingState {
@@ -54,19 +52,37 @@ public func searchPeerMembers(context: AccountContext, peerId: PeerId, chatLocat
             }
             
             return Signal { subscriber in
-                let (disposable, _) = context.peerChannelMemberCategoriesContextsManager.recent(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, searchQuery: query.isEmpty ? nil : query, updated: { state in
-                    if case .ready = state.loadingState {
-                        subscriber.putNext((state.list.compactMap { participant in
-                            if participant.peer.isDeleted {
-                                return nil
-                            }
-                            return participant.peer
-                        }, true))
+                switch chatLocation {
+                case let .peer(peerId):
+                    let (disposable, _) = context.peerChannelMemberCategoriesContextsManager.recent(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, searchQuery: query.isEmpty ? nil : query, updated: { state in
+                        if case .ready = state.loadingState {
+                            subscriber.putNext((state.list.compactMap { participant in
+                                if participant.peer.isDeleted {
+                                    return nil
+                                }
+                                return participant.peer
+                            }, true))
+                        }
+                    })
+                    
+                    return ActionDisposable {
+                        disposable.dispose()
                     }
-                })
-                
-                return ActionDisposable {
-                    disposable.dispose()
+                case let .replyThread(replyThreadMessage):
+                    let (disposable, _) = context.peerChannelMemberCategoriesContextsManager.mentions(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, threadMessageId: replyThreadMessage.messageId, searchQuery: query.isEmpty ? nil : query, updated: { state in
+                        if case .ready = state.loadingState {
+                            subscriber.putNext((state.list.compactMap { participant in
+                                if participant.peer.isDeleted {
+                                    return nil
+                                }
+                                return participant.peer
+                            }, true))
+                        }
+                    })
+                    
+                    return ActionDisposable {
+                        disposable.dispose()
+                    }
                 }
             } |> runOn(Queue.mainQueue())
         }

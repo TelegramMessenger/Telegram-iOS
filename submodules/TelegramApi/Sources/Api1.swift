@@ -9991,7 +9991,7 @@ public extension Api {
         case channelParticipantsSearch(q: String)
         case channelParticipantsKicked(q: String)
         case channelParticipantsContacts(q: String)
-        case channelParticipantsMentions(q: String)
+        case channelParticipantsMentions(flags: Int32, q: String?, topMsgId: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -10037,11 +10037,13 @@ public extension Api {
                     }
                     serializeString(q, buffer: buffer, boxed: false)
                     break
-                case .channelParticipantsMentions(let q):
+                case .channelParticipantsMentions(let flags, let q, let topMsgId):
                     if boxed {
-                        buffer.appendInt32(915357814)
+                        buffer.appendInt32(-531931925)
                     }
-                    serializeString(q, buffer: buffer, boxed: false)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(q!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(topMsgId!, buffer: buffer, boxed: false)}
                     break
     }
     }
@@ -10062,8 +10064,8 @@ public extension Api {
                 return ("channelParticipantsKicked", [("q", q)])
                 case .channelParticipantsContacts(let q):
                 return ("channelParticipantsContacts", [("q", q)])
-                case .channelParticipantsMentions(let q):
-                return ("channelParticipantsMentions", [("q", q)])
+                case .channelParticipantsMentions(let flags, let q, let topMsgId):
+                return ("channelParticipantsMentions", [("flags", flags), ("q", q), ("topMsgId", topMsgId)])
     }
     }
     
@@ -10121,11 +10123,17 @@ public extension Api {
             }
         }
         public static func parse_channelParticipantsMentions(_ reader: BufferReader) -> ChannelParticipantsFilter? {
-            var _1: String?
-            _1 = parseString(reader)
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = parseString(reader) }
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_3 = reader.readInt32() }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.ChannelParticipantsFilter.channelParticipantsMentions(q: _1!)
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.ChannelParticipantsFilter.channelParticipantsMentions(flags: _1!, q: _2, topMsgId: _3)
             }
             else {
                 return nil
