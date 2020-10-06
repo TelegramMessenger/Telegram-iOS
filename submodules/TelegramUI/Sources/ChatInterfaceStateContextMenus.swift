@@ -643,7 +643,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         if data.canPin, case .peer = chatPresentationInterfaceState.chatLocation {
-            if chatPresentationInterfaceState.pinnedMessage?.id != messages[0].id {
+            if chatPresentationInterfaceState.pinnedMessage?.message.id != messages[0].id {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_Pin, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Pin"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in

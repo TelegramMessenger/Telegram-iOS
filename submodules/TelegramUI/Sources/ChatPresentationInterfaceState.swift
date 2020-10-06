@@ -257,6 +257,32 @@ struct ChatSlowmodeState: Equatable {
     var variant: ChatSlowmodeVariant
 }
 
+final class ChatPinnedMessage: Equatable {
+    let message: Message
+    let isLatest: Bool
+    
+    init(message: Message, isLatest: Bool) {
+        self.message = message
+        self.isLatest = isLatest
+    }
+    
+    static func ==(lhs: ChatPinnedMessage, rhs: ChatPinnedMessage) -> Bool {
+        if lhs === rhs {
+            return true
+        }
+        if lhs.message.id != rhs.message.id {
+            return false
+        }
+        if lhs.message.stableVersion != rhs.message.stableVersion {
+            return false
+        }
+        if lhs.isLatest != rhs.isLatest {
+            return false
+        }
+        return true
+    }
+}
+
 final class ChatPresentationInterfaceState: Equatable {
     let interfaceState: ChatInterfaceState
     let chatLocation: ChatLocation
@@ -274,7 +300,7 @@ final class ChatPresentationInterfaceState: Equatable {
     let titlePanelContexts: [ChatTitlePanelContext]
     let keyboardButtonsMessage: Message?
     let pinnedMessageId: MessageId?
-    let pinnedMessage: Message?
+    let pinnedMessage: ChatPinnedMessage?
     let peerIsBlocked: Bool
     let peerIsMuted: Bool
     let peerDiscussionId: PeerId?
@@ -348,7 +374,7 @@ final class ChatPresentationInterfaceState: Equatable {
         self.peerNearbyData = peerNearbyData
     }
     
-    init(interfaceState: ChatInterfaceState, chatLocation: ChatLocation, renderedPeer: RenderedPeer?, isNotAccessible: Bool, explicitelyCanPinMessages: Bool, contactStatus: ChatContactStatus?, hasBots: Bool, isArchived: Bool, inputTextPanelState: ChatTextInputPanelState, editMessageState: ChatEditInterfaceMessageState?, recordedMediaPreview: ChatRecordedMediaPreview?, inputQueryResults: [ChatPresentationInputQueryKind: ChatPresentationInputQueryResult], inputMode: ChatInputMode, titlePanelContexts: [ChatTitlePanelContext], keyboardButtonsMessage: Message?, pinnedMessageId: MessageId?, pinnedMessage: Message?, peerIsBlocked: Bool, peerIsMuted: Bool, peerDiscussionId: PeerId?, peerGeoLocation: PeerGeoLocation?, callsAvailable: Bool, callsPrivate: Bool, slowmodeState: ChatSlowmodeState?, chatHistoryState: ChatHistoryNodeHistoryState?, botStartPayload: String?, urlPreview: (String, TelegramMediaWebpage)?, editingUrlPreview: (String, TelegramMediaWebpage)?, search: ChatSearchData?, searchQuerySuggestionResult: ChatPresentationInputQueryResult?, chatWallpaper: TelegramWallpaper, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, limitsConfiguration: LimitsConfiguration, fontSize: PresentationFontSize, bubbleCorners: PresentationChatBubbleCorners, accountPeerId: PeerId, mode: ChatControllerPresentationMode, hasScheduledMessages: Bool, isScheduledMessages: Bool, peerNearbyData: ChatPeerNearbyData?) {
+    init(interfaceState: ChatInterfaceState, chatLocation: ChatLocation, renderedPeer: RenderedPeer?, isNotAccessible: Bool, explicitelyCanPinMessages: Bool, contactStatus: ChatContactStatus?, hasBots: Bool, isArchived: Bool, inputTextPanelState: ChatTextInputPanelState, editMessageState: ChatEditInterfaceMessageState?, recordedMediaPreview: ChatRecordedMediaPreview?, inputQueryResults: [ChatPresentationInputQueryKind: ChatPresentationInputQueryResult], inputMode: ChatInputMode, titlePanelContexts: [ChatTitlePanelContext], keyboardButtonsMessage: Message?, pinnedMessageId: MessageId?, pinnedMessage: ChatPinnedMessage?, peerIsBlocked: Bool, peerIsMuted: Bool, peerDiscussionId: PeerId?, peerGeoLocation: PeerGeoLocation?, callsAvailable: Bool, callsPrivate: Bool, slowmodeState: ChatSlowmodeState?, chatHistoryState: ChatHistoryNodeHistoryState?, botStartPayload: String?, urlPreview: (String, TelegramMediaWebpage)?, editingUrlPreview: (String, TelegramMediaWebpage)?, search: ChatSearchData?, searchQuerySuggestionResult: ChatPresentationInputQueryResult?, chatWallpaper: TelegramWallpaper, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, limitsConfiguration: LimitsConfiguration, fontSize: PresentationFontSize, bubbleCorners: PresentationChatBubbleCorners, accountPeerId: PeerId, mode: ChatControllerPresentationMode, hasScheduledMessages: Bool, isScheduledMessages: Bool, peerNearbyData: ChatPeerNearbyData?) {
         self.interfaceState = interfaceState
         self.chatLocation = chatLocation
         self.renderedPeer = renderedPeer
@@ -447,14 +473,7 @@ final class ChatPresentationInterfaceState: Equatable {
         if lhs.pinnedMessageId != rhs.pinnedMessageId {
             return false
         }
-        if let lhsMessage = lhs.pinnedMessage, let rhsMessage = rhs.pinnedMessage {
-            if lhsMessage.id != rhsMessage.id {
-                return false
-            }
-            if lhsMessage.stableVersion != rhsMessage.stableVersion {
-                return false
-            }
-        } else if (lhs.pinnedMessage != nil) != (rhs.pinnedMessage != nil) {
+        if lhs.pinnedMessage != rhs.pinnedMessage {
             return false
         }
         if lhs.callsAvailable != rhs.callsAvailable {
@@ -613,7 +632,7 @@ final class ChatPresentationInterfaceState: Equatable {
         return ChatPresentationInterfaceState(interfaceState: self.interfaceState, chatLocation: self.chatLocation, renderedPeer: self.renderedPeer, isNotAccessible: self.isNotAccessible, explicitelyCanPinMessages: self.explicitelyCanPinMessages, contactStatus: self.contactStatus, hasBots: self.hasBots, isArchived: self.isArchived, inputTextPanelState: self.inputTextPanelState, editMessageState: self.editMessageState, recordedMediaPreview: self.recordedMediaPreview, inputQueryResults: self.inputQueryResults, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: pinnedMessageId, pinnedMessage: self.pinnedMessage, peerIsBlocked: self.peerIsBlocked, peerIsMuted: self.peerIsMuted, peerDiscussionId: self.peerDiscussionId, peerGeoLocation: self.peerGeoLocation, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, slowmodeState: self.slowmodeState,  chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: self.urlPreview, editingUrlPreview: self.editingUrlPreview, search: self.search, searchQuerySuggestionResult: self.searchQuerySuggestionResult, chatWallpaper: self.chatWallpaper, theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, nameDisplayOrder: self.nameDisplayOrder, limitsConfiguration: self.limitsConfiguration, fontSize: self.fontSize, bubbleCorners: self.bubbleCorners, accountPeerId: self.accountPeerId, mode: self.mode, hasScheduledMessages: self.hasScheduledMessages, isScheduledMessages: self.isScheduledMessages, peerNearbyData: self.peerNearbyData)
     }
     
-    func updatedPinnedMessage(_ pinnedMessage: Message?) -> ChatPresentationInterfaceState {
+    func updatedPinnedMessage(_ pinnedMessage: ChatPinnedMessage?) -> ChatPresentationInterfaceState {
         return ChatPresentationInterfaceState(interfaceState: self.interfaceState, chatLocation: self.chatLocation, renderedPeer: self.renderedPeer, isNotAccessible: self.isNotAccessible, explicitelyCanPinMessages: self.explicitelyCanPinMessages, contactStatus: self.contactStatus, hasBots: self.hasBots, isArchived: self.isArchived, inputTextPanelState: self.inputTextPanelState, editMessageState: self.editMessageState, recordedMediaPreview: self.recordedMediaPreview, inputQueryResults: self.inputQueryResults, inputMode: self.inputMode, titlePanelContexts: self.titlePanelContexts, keyboardButtonsMessage: self.keyboardButtonsMessage, pinnedMessageId: self.pinnedMessageId, pinnedMessage: pinnedMessage, peerIsBlocked: self.peerIsBlocked, peerIsMuted: self.peerIsMuted, peerDiscussionId: self.peerDiscussionId, peerGeoLocation: self.peerGeoLocation, callsAvailable: self.callsAvailable, callsPrivate: self.callsPrivate, slowmodeState: self.slowmodeState, chatHistoryState: self.chatHistoryState, botStartPayload: self.botStartPayload, urlPreview: self.urlPreview, editingUrlPreview: self.editingUrlPreview, search: self.search, searchQuerySuggestionResult: self.searchQuerySuggestionResult, chatWallpaper: self.chatWallpaper, theme: self.theme, strings: self.strings, dateTimeFormat: self.dateTimeFormat, nameDisplayOrder: self.nameDisplayOrder, limitsConfiguration: self.limitsConfiguration, fontSize: self.fontSize, bubbleCorners: self.bubbleCorners, accountPeerId: self.accountPeerId, mode: self.mode, hasScheduledMessages: self.hasScheduledMessages, isScheduledMessages: self.isScheduledMessages, peerNearbyData: self.peerNearbyData)
     }
     

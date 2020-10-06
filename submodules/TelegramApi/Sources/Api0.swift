@@ -322,6 +322,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[106343499] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsSearch($0) }
     dict[-1548400251] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsKicked($0) }
     dict[-1150621555] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsContacts($0) }
+    dict[915357814] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsMentions($0) }
     dict[-350980120] = { return Api.WebPage.parse_webPageEmpty($0) }
     dict[-981018084] = { return Api.WebPage.parse_webPagePending($0) }
     dict[-392411726] = { return Api.WebPage.parse_webPage($0) }

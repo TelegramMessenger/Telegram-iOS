@@ -24,6 +24,11 @@ extension ChatReplyThreadMessage {
     }
 }
 
+struct ChatTopVisibleMessage: Equatable {
+    var id: MessageId
+    var isLast: Bool
+}
+
 private class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {
     private let selectionGestureActivationThreshold: CGFloat = 5.0
     
@@ -557,6 +562,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private var loadedMessagesFromCachedDataDisposable: Disposable?
     
     let isTopReplyThreadMessageShown = ValuePromise<Bool>(false, ignoreRepeated: true)
+    let topVisibleMessage = ValuePromise<ChatTopVisibleMessage?>(nil, ignoreRepeated: true)
     
     private let clientId: Atomic<Int32>
     
@@ -1151,6 +1157,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private func processDisplayedItemRangeChanged(displayedRange: ListViewDisplayedItemRange, transactionState: ChatHistoryTransactionOpaqueState) {
         let historyView = transactionState.historyView
         var isTopReplyThreadMessageShownValue = false
+        var topVisibleMessage: ChatTopVisibleMessage?
         if let visible = displayedRange.visibleRange {
             let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
             if indexRange.0 > indexRange.1 {
@@ -1225,6 +1232,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.effectiveTopId == message.id {
                             isTopReplyThreadMessageShownValue = true
                         }
+                        topVisibleMessage = ChatTopVisibleMessage(id: message.id, isLast: i == historyView.filteredEntries.count - 1)
                     case let .MessageGroupEntry(_, messages, _):
                         for (message, _, _, _) in messages {
                             var hasUnconsumedMention = false
@@ -1255,6 +1263,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.effectiveTopId == message.id {
                                 isTopReplyThreadMessageShownValue = true
                             }
+                            topVisibleMessage = ChatTopVisibleMessage(id: message.id, isLast: i == historyView.filteredEntries.count - 1)
                         }
                     default:
                         break
@@ -1371,6 +1380,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         }
         self.isTopReplyThreadMessageShown.set(isTopReplyThreadMessageShownValue)
+        self.topVisibleMessage.set(topVisibleMessage)
         
         if let loaded = displayedRange.loadedRange, let firstEntry = historyView.filteredEntries.first, let lastEntry = historyView.filteredEntries.last {
             if loaded.firstIndex < 5 && historyView.originalView.laterId != nil {

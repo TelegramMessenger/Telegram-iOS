@@ -9991,6 +9991,7 @@ public extension Api {
         case channelParticipantsSearch(q: String)
         case channelParticipantsKicked(q: String)
         case channelParticipantsContacts(q: String)
+        case channelParticipantsMentions(q: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -10036,6 +10037,12 @@ public extension Api {
                     }
                     serializeString(q, buffer: buffer, boxed: false)
                     break
+                case .channelParticipantsMentions(let q):
+                    if boxed {
+                        buffer.appendInt32(915357814)
+                    }
+                    serializeString(q, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -10055,6 +10062,8 @@ public extension Api {
                 return ("channelParticipantsKicked", [("q", q)])
                 case .channelParticipantsContacts(let q):
                 return ("channelParticipantsContacts", [("q", q)])
+                case .channelParticipantsMentions(let q):
+                return ("channelParticipantsMentions", [("q", q)])
     }
     }
     
@@ -10106,6 +10115,17 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.ChannelParticipantsFilter.channelParticipantsContacts(q: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelParticipantsMentions(_ reader: BufferReader) -> ChannelParticipantsFilter? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelParticipantsFilter.channelParticipantsMentions(q: _1!)
             }
             else {
                 return nil
