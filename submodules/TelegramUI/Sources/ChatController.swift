@@ -3492,8 +3492,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                 } else {
-                    pinnedMessageId = topPinnedMessage?.message.id
-                    pinnedMessage = topPinnedMessage
+                    if let pinnedMessageId = pinnedMessageId {
+                        if let message = messages?[pinnedMessageId] {
+                            pinnedMessage = ChatPinnedMessage(message: message, isLatest: true)
+                        }
+                    }
+                    //pinnedMessageId = topPinnedMessage?.message.id
+                    //pinnedMessage = topPinnedMessage
                 }
                 
                 var pinnedMessageUpdated = false
