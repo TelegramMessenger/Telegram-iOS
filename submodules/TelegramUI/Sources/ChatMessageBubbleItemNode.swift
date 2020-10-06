@@ -144,6 +144,9 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
         if let channel = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
             hasDiscussion = true
         }
+        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.effectiveTopId == firstMessage.id {
+            hasDiscussion = false
+        }
         
         if hasDiscussion {
             var canComment = false
@@ -879,7 +882,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                         allowFullWidth = true
                     }
                     
-                    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.messageId == firstMessage.id {
+                    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.effectiveTopId == firstMessage.id {
                         isBroadcastChannel = true
                     }
                     
@@ -906,7 +909,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
         
         var needShareButton = false
-        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == item.message.id {
+        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.effectiveTopId == item.message.id {
             needShareButton = false
             allowFullWidth = true
         } else if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
@@ -2955,7 +2958,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             default:
                 break
         }
-        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == item.message.id {
+        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.effectiveTopId == item.message.id {
             canHaveSelection = false
         }
         

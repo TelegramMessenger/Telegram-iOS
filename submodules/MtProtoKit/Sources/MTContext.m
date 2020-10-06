@@ -229,6 +229,7 @@ static int32_t fixedTimeDifferenceValue = 0;
         _useTempAuthKeys = useTempAuthKeys;
 #if DEBUG
         _tempKeyExpiration = 1 * 60 * 60;
+        _tempKeyExpiration = 5;
 #else
         _tempKeyExpiration = 24 * 60 * 60;
 #endif
@@ -380,12 +381,12 @@ static int32_t fixedTimeDifferenceValue = 0;
             if (datacenterAuthInfoById != nil) {
                 _datacenterAuthInfoById = [[NSMutableDictionary alloc] initWithDictionary:datacenterAuthInfoById];
 #if DEBUG
-                /*NSArray<NSNumber *> *keys = [_datacenterAuthInfoById allKeys];
+                NSArray<NSNumber *> *keys = [_datacenterAuthInfoById allKeys];
                 for (NSNumber *key in keys) {
                     if (parseAuthInfoMapKeyInteger(key).selector != MTDatacenterAuthInfoSelectorPersistent) {
                         [_datacenterAuthInfoById removeObjectForKey:key];
                     }
-                }*/
+                }
 #endif
             }
             

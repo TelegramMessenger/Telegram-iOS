@@ -5814,4 +5814,6 @@ Any member of this group will be able to see messages in the channel.";
 
 "RepliesChat.DescriptionText" = "This chat helps you keep track of replies to your comments in Channels.";
 
+"Channel.DiscussionMessageUnavailable" = "Sorry, this post has been removed from the discussion group.";
+
 "Conversation.ContextViewStats" = "View Statistics";

@@ -457,7 +457,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         
         var isReplyThreadHead = false
         if case let .replyThread(replyThreadMessage) = chatPresentationInterfaceState.chatLocation {
-            isReplyThreadHead = messages[0].id == replyThreadMessage.messageId
+            isReplyThreadHead = messages[0].id == replyThreadMessage.effectiveTopId
         }
         
         if !isReplyThreadHead, data.canReply {

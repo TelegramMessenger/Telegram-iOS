@@ -18,6 +18,12 @@ import ListMessageItem
 import AccountContext
 import ChatInterfaceState
 
+extension ChatReplyThreadMessage {
+    var effectiveTopId: MessageId {
+        return self.channelMessageId ?? self.messageId
+    }
+}
+
 private class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {
     private let selectionGestureActivationThreshold: CGFloat = 5.0
     
@@ -643,7 +649,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 additionalData.append(.peer(replyThreadMessage.messageId.peerId))
             }
             
-            additionalData.append(.message(replyThreadMessage.messageId))
+            additionalData.append(.message(replyThreadMessage.effectiveTopId))
         }
 
         let currentViewVersion = Atomic<Int?>(value: nil)
@@ -1216,7 +1222,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         if hasUnconsumedMention && !hasUnconsumedContent {
                             messageIdsWithUnseenPersonalMention.append(message.id)
                         }
-                        if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.messageId == message.id {
+                        if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.effectiveTopId == message.id {
                             isTopReplyThreadMessageShownValue = true
                         }
                     case let .MessageGroupEntry(_, messages, _):
@@ -1246,7 +1252,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             if hasUnconsumedMention && !hasUnconsumedContent {
                                 messageIdsWithUnseenPersonalMention.append(message.id)
                             }
-                            if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.messageId == message.id {
+                            if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.effectiveTopId == message.id {
                                 isTopReplyThreadMessageShownValue = true
                             }
                         }

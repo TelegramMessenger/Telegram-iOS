@@ -223,6 +223,10 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                     
                     return postbox.transaction { transaction -> AdminLogEventsResult in
                         updatePeers(transaction: transaction, peers: peers.map { $0.1 }, update: { return $1 })
+                        var peers = peers
+                        if peers[peerId] == nil, let peer = transaction.getPeer(peerId) {
+                            peers[peer.id] = peer
+                        }
                         return AdminLogEventsResult(peerId: peerId, peers: peers, events: events)
                     } |> castError(MTRpcError.self)
                 }

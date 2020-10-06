@@ -456,7 +456,12 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                     
                     var accessibilityText = ""
                     for segment in self.titleNode.segments {
-                        accessibilityText.append(segment.attributedText.string)
+                        switch segment {
+                        case let .number(_, string):
+                            accessibilityText.append(string.string)
+                        case let .text(_, string):
+                            accessibilityText.append(string.string)
+                        }
                     }
                     
                     self.accessibilityLabel = accessibilityText

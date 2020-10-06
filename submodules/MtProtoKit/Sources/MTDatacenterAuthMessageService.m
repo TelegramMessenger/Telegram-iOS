@@ -402,7 +402,13 @@ typedef enum {
                         arc4random_buf(&random, 1);
                         [dataWithHash appendBytes:&random length:1];
                     }
+                    #if DEBUG
+                    assert(dataWithHash.length == 255);
+                    #endif
                     NSData *encryptedData = MTRsaEncrypt(_encryptionProvider, [publicKey objectForKey:@"key"], dataWithHash);
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTDatacenterAuthMessageService#%p encryptedData.length = %d]", self, encryptedData.length);
+                    }
                     if (encryptedData.length < 256)
                     {
                         NSMutableData *newEncryptedData = [[NSMutableData alloc] init];
@@ -415,6 +421,9 @@ typedef enum {
                         [newEncryptedData appendData:encryptedData];
                         encryptedData = newEncryptedData;
                     }
+                    #if DEBUG
+                    assert(encryptedData.length == 256);
+                    #endif
                     
                     _dhEncryptedData = encryptedData;
                 } else {

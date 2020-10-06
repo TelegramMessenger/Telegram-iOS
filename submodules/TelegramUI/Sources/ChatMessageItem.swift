@@ -327,7 +327,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                 if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
                     isBroadcastChannel = true
                 }
-            } else if case let .replyThread(replyThreadMessage) = chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.messageId == message.id {
+            } else if case let .replyThread(replyThreadMessage) = chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.effectiveTopId == message.id {
                 isBroadcastChannel = true
             }
             if !hasActionMedia && !isBroadcastChannel {
