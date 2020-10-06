@@ -4098,7 +4098,7 @@ Unused sets are archived when you add more.";
 
 "GroupPermission.PermissionGloballyDisabled" = "This permission is disabled in this group.";
 
-"ChannelInfo.Stats" = "Statistics";
+"ChannelInfo.Stats" = "View Statistics";
 
 "Conversation.PressVolumeButtonForSound" = "Press volume button\nto unmute the video";
 
@@ -5813,3 +5813,5 @@ Any member of this group will be able to see messages in the channel.";
 "Channel.CommentsGroup.HeaderGroupSet" = "%@ is linking the group as it's discussion board.";
 
 "RepliesChat.DescriptionText" = "This chat helps you keep track of replies to your comments in Channels.";
+
+"Conversation.ContextViewStats" = "View Statistics";

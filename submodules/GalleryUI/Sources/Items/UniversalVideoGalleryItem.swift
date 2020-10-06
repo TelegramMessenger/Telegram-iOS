@@ -493,6 +493,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             var disablePictureInPicture = false
             var disablePlayerControls = false
             var forceEnablePiP = false
+            var forceEnableUserInteraction = false
             var isAnimated = false
             if let content = item.content as? NativeVideoContent {
                 isAnimated = content.fileReference.media.isAnimated
@@ -503,6 +504,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 let type = webEmbedType(content: content.webpageContent)
                 switch type {
                     case .youtube:
+                        forceEnableUserInteraction = true
                         disablePictureInPicture = !(item.configuration?.youtubePictureInPictureEnabled ?? false)
                         self.videoFramePreview = YoutubeEmbedFramePreview(context: item.context, content: content)
                     case .iframe:
@@ -527,7 +529,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             let mediaManager = item.context.sharedContext.mediaManager
             
             let videoNode = UniversalVideoNode(postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .gallery)
-            let videoSize = CGSize(width: item.content.dimensions.width * 2.0, height: item.content.dimensions.height * 2.0)
+            
+            let videoScale: CGFloat
+            if item.content is WebEmbedVideoContent {
+                videoScale = 1.0
+            } else {
+                videoScale = 2.0
+            }
+            let videoSize = CGSize(width: item.content.dimensions.width * videoScale, height: item.content.dimensions.height * videoScale)
             videoNode.updateLayout(size: videoSize, transition: .immediate)
             videoNode.ownsContentNodeUpdated = { [weak self] value in
                 if let strongSelf = self {
@@ -546,7 +555,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
             self.videoNode = videoNode
-            videoNode.isUserInteractionEnabled = disablePlayerControls
+            videoNode.isUserInteractionEnabled = disablePlayerControls || forceEnableUserInteraction
             videoNode.backgroundColor = videoNode.ownsContentNode ? UIColor.black : UIColor(rgb: 0x333335)
             if item.fromPlayingVideo {
                 videoNode.canAttachContent = false

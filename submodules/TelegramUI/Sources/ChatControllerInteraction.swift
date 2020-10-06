@@ -114,6 +114,7 @@ public final class ChatControllerInteraction {
     let openPeerContextMenu: (Peer, ASDisplayNode, CGRect, ContextGesture?) -> Void
     let openMessageReplies: (MessageId, Bool, Bool) -> Void
     let openReplyThreadOriginalMessage: (Message) -> Void
+    let openMessageStats: (MessageId) -> Void
     
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
@@ -199,6 +200,7 @@ public final class ChatControllerInteraction {
         openPeerContextMenu: @escaping (Peer, ASDisplayNode, CGRect, ContextGesture?) -> Void,
         openMessageReplies: @escaping (MessageId, Bool, Bool) -> Void,
         openReplyThreadOriginalMessage: @escaping (Message) -> Void,
+        openMessageStats: @escaping (MessageId) -> Void,
         requestMessageUpdate: @escaping (MessageId) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
@@ -271,6 +273,7 @@ public final class ChatControllerInteraction {
         self.openPeerContextMenu = openPeerContextMenu
         self.openMessageReplies = openMessageReplies
         self.openReplyThreadOriginalMessage = openReplyThreadOriginalMessage
+        self.openMessageStats = openMessageStats
         
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
@@ -321,6 +324,7 @@ public final class ChatControllerInteraction {
         }, openPeerContextMenu: { _, _, _, _ in
         }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in
+        }, openMessageStats: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

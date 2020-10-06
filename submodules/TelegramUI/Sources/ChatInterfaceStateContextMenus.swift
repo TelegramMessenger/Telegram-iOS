@@ -605,7 +605,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 })
             })))
         }
-        
+                
         if data.canEdit {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
@@ -808,9 +808,26 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         var clearCacheAsDelete = false
-        if let _ = message.peers[message.id.peerId] as? TelegramChannel {
+        if message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
+            var views: Int = 0
+            for attribute in message.attributes {
+                if let attribute = attribute as? ViewCountMessageAttribute {
+                    views = attribute.count
+                }
+            }
+            if views >= 100 {
+                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextViewStats, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.actionSheet.primaryTextColor)
+                }, action: { c, _ in
+                    c.dismiss(completion: {
+                        controllerInteraction.openMessageStats(messages[0].id)
+                    })
+                })))
+            }
+            
             clearCacheAsDelete = true
         }
+        
         if !isReplyThreadHead, (!data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty || clearCacheAsDelete) && !isAction {
             let title: String
             var isSending = false

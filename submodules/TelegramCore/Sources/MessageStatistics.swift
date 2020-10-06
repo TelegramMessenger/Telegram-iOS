@@ -9,11 +9,13 @@ public struct MessageStats: Equatable {
     public let views: Int
     public let forwards: Int
     public let interactionsGraph: StatsGraph
+    public let detailedInteractionsGraph: StatsGraph?
     
-    init(views: Int, forwards: Int, interactionsGraph: StatsGraph) {
+    init(views: Int, forwards: Int, interactionsGraph: StatsGraph, detailedInteractionsGraph: StatsGraph?) {
         self.views = views
         self.forwards = forwards
         self.interactionsGraph = interactionsGraph
+        self.detailedInteractionsGraph = detailedInteractionsGraph
     }
     
     public static func == (lhs: MessageStats, rhs: MessageStats) -> Bool {
@@ -26,11 +28,14 @@ public struct MessageStats: Equatable {
         if lhs.interactionsGraph != rhs.interactionsGraph {
             return false
         }
+        if lhs.detailedInteractionsGraph != rhs.detailedInteractionsGraph {
+            return false
+        }
         return true
     }
     
     public func withUpdatedInteractionsGraph(_ interactionsGraph: StatsGraph) -> MessageStats {
-        return MessageStats(views: self.views, forwards: self.forwards, interactionsGraph: self.interactionsGraph)
+        return MessageStats(views: self.views, forwards: self.forwards, interactionsGraph: interactionsGraph, detailedInteractionsGraph: self.detailedInteractionsGraph)
     }
 }
 
@@ -39,8 +44,7 @@ public struct MessageStatsContextState: Equatable {
 }
 
 private func requestMessageStats(postbox: Postbox, network: Network, datacenterId: Int32, messageId: MessageId, dark: Bool = false) -> Signal<MessageStats?, NoError> {
-    return .single(nil)
-    /*return postbox.transaction { transaction -> (Peer, Message)? in
+    return postbox.transaction { transaction -> (Peer, Message)? in
         if let peer = transaction.getPeer(messageId.peerId), let message = transaction.getMessage(messageId) {
             return (peer, message)
         } else {
@@ -79,15 +83,25 @@ private func requestMessageStats(postbox: Postbox, network: Network, datacenterI
         }
         
         return signal
-        |> map { result -> MessageStats? in
+        |> mapToSignal { result -> Signal<MessageStats?, MTRpcError> in
             if case let .messageStats(apiViewsGraph) = result {
-                return MessageStats(views: views, forwards: forwards, interactionsGraph: StatsGraph(apiStatsGraph: apiViewsGraph))
+                let interactionsGraph = StatsGraph(apiStatsGraph: apiViewsGraph)
+                let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+                if case let .Loaded(tokenValue, _) = interactionsGraph, let token = tokenValue, Int64(message.timestamp + 60 * 60 * 24 * 2) > Int64(timestamp) {
+                    return requestGraph(network: network, datacenterId: datacenterId, token: token, x: 1601596800000)
+                    |> castError(MTRpcError.self)
+                    |> map { detailedGraph -> MessageStats? in
+                        return MessageStats(views: views, forwards: forwards, interactionsGraph: interactionsGraph, detailedInteractionsGraph: detailedGraph)
+                    }
+                } else {
+                    return .single(MessageStats(views: views, forwards: forwards, interactionsGraph: interactionsGraph, detailedInteractionsGraph: nil))
+                }
             } else {
-                return nil
+                return .single(nil)
             }
         }
         |> retryRequest
-    }*/
+    }
 }
 
 private final class MessageStatsContextImpl {

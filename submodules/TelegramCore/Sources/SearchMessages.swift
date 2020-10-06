@@ -345,15 +345,32 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
     |> mapToSignal { result, additionalResult -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> in
         return account.postbox.transaction { transaction -> (SearchMessagesResult, SearchMessagesState) in
             var additional: SearchMessagesPeerState? = mergedState(transaction: transaction, state: state?.additional, result: additionalResult)
-            if state?.additional == nil, case let .general(tags, _, _) = location {
-                let secretMessages = transaction.searchMessages(peerId: nil, query: query, tags: tags)
-                var readStates: [PeerId: CombinedPeerReadState] = [:]
-                for message in secretMessages {
-                    if let readState = transaction.getCombinedPeerReadState(message.id.peerId) {
-                        readStates[message.id.peerId] = readState
-                    }
+            
+            if state?.additional == nil {
+                switch location {
+                    case let .general(tags, minDate, maxDate), let .group(_, tags, minDate, maxDate):
+                        let secretMessages = transaction.searchMessages(peerId: nil, query: query, tags: tags)
+                        var filteredMessages: [Message] = []
+                        var readStates: [PeerId: CombinedPeerReadState] = [:]
+                        for message in secretMessages {
+                            var match = true
+                            if let minDate = minDate, message.timestamp < minDate {
+                                match = false
+                            }
+                            if let maxDate = maxDate, message.timestamp > maxDate {
+                                match = false
+                            }
+                            if match {
+                                filteredMessages.append(message)
+                                if let readState = transaction.getCombinedPeerReadState(message.id.peerId) {
+                                    readStates[message.id.peerId] = readState
+                                }
+                            }
+                        }
+                        additional = SearchMessagesPeerState(messages: filteredMessages, readStates: readStates, totalCount: Int32(filteredMessages.count), completed: true, nextRate: nil)
+                    default:
+                        break
                 }
-                additional = SearchMessagesPeerState(messages: secretMessages, readStates: readStates, totalCount: Int32(secretMessages.count), completed: true, nextRate: nil)
             }
             
             let updatedState = SearchMessagesState(main: mergedState(transaction: transaction, state: state?.main, result: result) ?? SearchMessagesPeerState(messages: [], readStates: [:], totalCount: 0, completed: true, nextRate: nil), additional: additional)

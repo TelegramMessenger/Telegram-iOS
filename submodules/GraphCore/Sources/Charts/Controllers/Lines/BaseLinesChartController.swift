@@ -44,6 +44,15 @@ public class BaseLinesChartController: BaseChartController {
         self.setBackButtonVisibilityClosure?(isZoomed, animated)
         
         updateChartRangeTitle(animated: animated)
+        
+        let initial = initialChartsCollection
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1) {
+            if let lastDate = initial.axisValues.last {
+                TimeInterval.animationDurationMultipler = 0.00001
+                self.didTapZoomIn(date: lastDate, pointIndex: initial.axisValues.count - 1)
+                TimeInterval.animationDurationMultipler = 1.0
+            }
+        }
     }
     
     func updateChartRangeTitle(animated: Bool) {

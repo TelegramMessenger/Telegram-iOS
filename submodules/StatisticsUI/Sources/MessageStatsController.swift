@@ -39,7 +39,7 @@ private enum StatsEntry: ItemListNodeEntry {
     case overview(PresentationTheme, MessageStats, Int32?)
     
     case interactionsTitle(PresentationTheme, String)
-    case interactionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
+    case interactionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, StatsGraph?, ChartType)
     
     case publicForwardsTitle(PresentationTheme, String)
     case publicForward(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Message)
@@ -92,8 +92,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .interactionsGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType):
-                if case let .interactionsGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType {
+            case let .interactionsGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsDetailedGraph, lhsType):
+                if case let .interactionsGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsDetailedGraph, rhsType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsDetailedGraph == rhsDetailedGraph, lhsType == rhsType {
                     return true
                 } else {
                     return false
@@ -126,13 +126,17 @@ private enum StatsEntry: ItemListNodeEntry {
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .overview(_, stats, publicShares):
                 return MessageStatsOverviewItem(presentationData: presentationData, stats: stats, publicShares: publicShares, sectionId: self.section, style: .blocks)
-            case let .interactionsGraph(_, _, _, graph, type):
+            case let .interactionsGraph(_, _, _, graph, detailedGraph, type):
                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, getDetailsData: { date, completion in
-                    let _ = arguments.loadDetailedGraph(graph, Int64(date.timeIntervalSince1970) * 1000).start(next: { graph in
-                        if let graph = graph, case let .Loaded(_, data) = graph {
-                            completion(data)
-                        }
-                    })
+                    if let detailedGraph = detailedGraph, case let .Loaded(_, data) = detailedGraph {
+                        completion(data)
+                    } else {
+                        let _ = arguments.loadDetailedGraph(graph, Int64(date.timeIntervalSince1970) * 1000).start(next: { graph in
+                            if let graph = graph, case let .Loaded(_, data) = graph {
+                                completion(data)
+                            }
+                        })
+                    }
                 }, sectionId: self.section, style: .blocks)
             case let .publicForward(_, _, _, _, message):
                 var views: Int = 0
@@ -148,9 +152,6 @@ private enum StatsEntry: ItemListNodeEntry {
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .military, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ",", groupingSeparator: ""), nameDisplayOrder: .firstLast, context: arguments.context, peer: message.peers[message.id.peerId]!, height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(text), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: nil), revealOptions: nil, switchValue: nil, enabled: true, highlighted: false, selectable: true, sectionId: self.section, action: {
                     arguments.openMessage(message.id)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: nil, contextAction: nil)
-//                return StatsMessageItem(context: arguments.context, presentationData: presentationData, message: message, views: 0, forwards: 0, sectionId: self.section, style: .blocks, action: {
-//                    arguments.openMessage(message.id)
-//                })
         }
     }
 }
@@ -164,7 +165,7 @@ private func messageStatsControllerEntries(data: MessageStats?, messages: Search
     
         if !data.interactionsGraph.isEmpty {
             entries.append(.interactionsTitle(presentationData.theme, presentationData.strings.Stats_MessageInteractionsTitle.uppercased()))
-            entries.append(.interactionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.interactionsGraph, .twoAxisStep))
+            entries.append(.interactionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.interactionsGraph, data.detailedInteractionsGraph, .twoAxisStep))
         }
 
         if let messages = messages, !messages.messages.isEmpty {
