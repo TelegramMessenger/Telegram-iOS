@@ -157,7 +157,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                 if activeLiveBroadcastingTimeout != nil || selectedMedia?.venue != nil {
                     var relativePosition = position
                     if case let .linear(top, _) = position {
-                        relativePosition = .linear(top: top, bottom: .Neighbour(false, .freeform))
+                        relativePosition = .linear(top: top, bottom: .Neighbour(false, .freeform, .default))
                     }
                     imageCorners = chatMessageBubbleImageContentCorners(relativeContentPosition: relativePosition, normalRadius: layoutConstants.image.defaultCornerRadius, mergedRadius: layoutConstants.image.mergedCornerRadius, mergedWithAnotherContentRadius: layoutConstants.image.contentMergedCornerRadius, layoutConstants: layoutConstants, chatPresentationData: item.presentationData)
                     
@@ -212,7 +212,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let statusType: ChatMessageDateAndStatusType?
                 switch position {
-                    case .linear(_, .None), .linear(_, .Neighbour(true, _)):
+                    case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
                         if selectedMedia?.venue != nil || activeLiveBroadcastingTimeout != nil {
                             if item.message.effectivelyIncoming(item.context.account.peerId) {
                                 statusType = .BubbleIncoming
