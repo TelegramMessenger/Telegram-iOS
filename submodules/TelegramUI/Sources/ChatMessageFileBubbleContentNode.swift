@@ -71,7 +71,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
             let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
             let statusType: ChatMessageDateAndStatusType?
             switch preparePosition {
-            case .linear(_, .None), .linear(_, .Neighbour(true, _)):
+            case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
                     if incoming {
                         statusType = .BubbleIncoming
                     } else {
@@ -102,7 +102,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                     var bottomInset = layoutConstants.file.bubbleInsets.bottom
                     
                     if case let .linear(_, bottom) = position {
-                        if case .Neighbour = bottom {
+                        if case .Neighbour(_, _, .condensed) = bottom {
                             bottomInset -= 24.0
                         }
                     }

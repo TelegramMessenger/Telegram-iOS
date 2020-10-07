@@ -46,9 +46,14 @@ enum ChatMessageBubbleRelativePosition {
         case freeform
     }
     
+    enum NeighbourSpacing {
+        case `default`
+        case condensed
+    }
+    
     case None(ChatMessageBubbleMergeStatus)
     case BubbleNeighbour
-    case Neighbour(Bool, NeighbourType)
+    case Neighbour(Bool, NeighbourType, NeighbourSpacing)
 }
 
 enum ChatMessageBubbleContentMosaicNeighbor {
