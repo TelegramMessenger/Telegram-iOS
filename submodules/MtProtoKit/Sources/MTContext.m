@@ -229,7 +229,6 @@ static int32_t fixedTimeDifferenceValue = 0;
         _useTempAuthKeys = useTempAuthKeys;
 #if DEBUG
         _tempKeyExpiration = 1 * 60 * 60;
-        _tempKeyExpiration = 5;
 #else
         _tempKeyExpiration = 24 * 60 * 60;
 #endif

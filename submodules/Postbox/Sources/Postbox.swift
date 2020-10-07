@@ -1105,7 +1105,7 @@ func debugRestoreState(basePath:String, name: String) {
 
 private let sharedQueue = Queue(name: "org.telegram.postbox.Postbox")
 
-public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, encryptionParameters: ValueBoxEncryptionParameters) -> Signal<PostboxResult, NoError> {
+public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, encryptionParameters: ValueBoxEncryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32) -> Signal<PostboxResult, NoError> {
     let queue = sharedQueue
     return Signal { subscriber in
         queue.async {
@@ -1177,7 +1177,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                 let endTime = CFAbsoluteTimeGetCurrent()
                 print("Postbox load took \((endTime - startTime) * 1000.0) ms")
                 
-                subscriber.putNext(.postbox(Postbox(queue: queue, basePath: basePath, seedConfiguration: seedConfiguration, valueBox: valueBox)))
+                subscriber.putNext(.postbox(Postbox(queue: queue, basePath: basePath, seedConfiguration: seedConfiguration, valueBox: valueBox, timestampForAbsoluteTimeBasedOperations: timestampForAbsoluteTimeBasedOperations)))
                 subscriber.putCompletion()
                 break
             }
@@ -1330,7 +1330,7 @@ public final class Postbox {
     
     var installedMessageActionsByPeerId: [PeerId: Bag<([StoreMessage], Transaction) -> Void>] = [:]
     
-    init(queue: Queue, basePath: String, seedConfiguration: SeedConfiguration, valueBox: SqliteValueBox) {
+    init(queue: Queue, basePath: String, seedConfiguration: SeedConfiguration, valueBox: SqliteValueBox, timestampForAbsoluteTimeBasedOperations: Int32) {
         assert(queue.isCurrent())
         
         let startTime = CFAbsoluteTimeGetCurrent()
@@ -1534,6 +1534,9 @@ public final class Postbox {
             for id in self.messageHistoryUnsentTable.get() {
                 transaction.updateMessage(id, update: { message in
                     if !message.flags.contains(.Failed) {
+                        if message.timestamp + 60 * 10 > timestampForAbsoluteTimeBasedOperations {
+                            return .skip
+                        }
                         var flags = StoreMessageFlags(message.flags)
                         flags.remove(.Unsent)
                         flags.remove(.Sending)

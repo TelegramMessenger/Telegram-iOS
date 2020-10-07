@@ -1056,7 +1056,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty && !isPreview {
                 replyMarkup = attribute
             } else if let attribute = attribute as? AuthorSignatureMessageAttribute {
-                if firstMessage.author is TelegramChannel, !attribute.signature.isEmpty {
+                if let chatPeer = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case .group = chatPeer.info, firstMessage.author is TelegramChannel, !attribute.signature.isEmpty {
                     authorRank = .custom(attribute.signature)
                 }
             }
