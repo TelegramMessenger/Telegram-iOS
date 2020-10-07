@@ -18,6 +18,17 @@ import ListMessageItem
 import AccountContext
 import ChatInterfaceState
 
+extension ChatReplyThreadMessage {
+    var effectiveTopId: MessageId {
+        return self.channelMessageId ?? self.messageId
+    }
+}
+
+struct ChatTopVisibleMessage: Equatable {
+    var id: MessageId
+    var isLast: Bool
+}
+
 private class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {
     private let selectionGestureActivationThreshold: CGFloat = 5.0
     
@@ -503,6 +514,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let messageReactionsProcessingManager = ChatMessageThrottledProcessingManager()
     private let seenLiveLocationProcessingManager = ChatMessageThrottledProcessingManager()
     private let unsupportedMessageProcessingManager = ChatMessageThrottledProcessingManager()
+    private let refreshMediaProcessingManager = ChatMessageThrottledProcessingManager()
     private let messageMentionProcessingManager = ChatMessageThrottledProcessingManager(delay: 0.2)
     let prefetchManager: InChatPrefetchManager
     private var currentEarlierPrefetchMessages: [(Message, Media)] = []
@@ -551,6 +563,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private var loadedMessagesFromCachedDataDisposable: Disposable?
     
     let isTopReplyThreadMessageShown = ValuePromise<Bool>(false, ignoreRepeated: true)
+    let topVisibleMessage = ValuePromise<ChatTopVisibleMessage?>(nil, ignoreRepeated: true)
     
     private let clientId: Atomic<Int32>
     
@@ -592,6 +605,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         self.unsupportedMessageProcessingManager.process = { [weak context] messageIds in
             context?.account.viewTracker.updateUnsupportedMediaForMessageIds(messageIds: messageIds)
+        }
+        self.refreshMediaProcessingManager.process = { [weak context] messageIds in
+            context?.account.viewTracker.refreshSecretMediaMediaForMessageIds(messageIds: messageIds)
         }
         self.messageMentionProcessingManager.process = { [weak context] messageIds in
             context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
@@ -643,7 +659,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 additionalData.append(.peer(replyThreadMessage.messageId.peerId))
             }
             
-            additionalData.append(.message(replyThreadMessage.messageId))
+            additionalData.append(.message(replyThreadMessage.effectiveTopId))
         }
 
         let currentViewVersion = Atomic<Int?>(value: nil)
@@ -1145,6 +1161,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private func processDisplayedItemRangeChanged(displayedRange: ListViewDisplayedItemRange, transactionState: ChatHistoryTransactionOpaqueState) {
         let historyView = transactionState.historyView
         var isTopReplyThreadMessageShownValue = false
+        var topVisibleMessage: ChatTopVisibleMessage?
         if let visible = displayedRange.visibleRange {
             let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
             if indexRange.0 > indexRange.1 {
@@ -1161,6 +1178,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             var messageIdsWithUpdateableReactions: [MessageId] = []
             var messageIdsWithLiveLocation: [MessageId] = []
             var messageIdsWithUnsupportedMedia: [MessageId] = []
+            var messageIdsWithRefreshMedia: [MessageId] = []
             var messageIdsWithUnseenPersonalMention: [MessageId] = []
             var messagesWithPreloadableMediaToEarlier: [(Message, Media)] = []
             var messagesWithPreloadableMediaToLater: [(Message, Media)] = []
@@ -1179,6 +1197,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             }
                         }
                         var contentRequiredValidation = false
+                        var mediaRequiredValidation = false
                         for attribute in message.attributes {
                             if attribute is ViewCountMessageAttribute {
                                 if message.id.namespace == Namespaces.Message.Cloud {
@@ -1205,6 +1224,24 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 }
                             } else if let _ = media as? TelegramMediaAction {
                                 isAction = true
+                            } else if let telegramFile = media as? TelegramMediaFile {
+                                if telegramFile.isAnimatedSticker, (message.id.peerId.namespace == Namespaces.Peer.SecretChat || !telegramFile.previewRepresentations.isEmpty), let size = telegramFile.size, size > 0 && size <= 128 * 1024 {
+                                    if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                                        if telegramFile.fileId.namespace == Namespaces.Media.CloudFile {
+                                            var isValidated = false
+                                            attributes: for attribute in telegramFile.attributes {
+                                                if case .hintIsValidated = attribute {
+                                                    isValidated = true
+                                                    break attributes
+                                                }
+                                            }
+                                            
+                                            if !isValidated {
+                                                mediaRequiredValidation = true
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                         if !isAction && message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
@@ -1213,12 +1250,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         if contentRequiredValidation {
                             messageIdsWithUnsupportedMedia.append(message.id)
                         }
+                        if mediaRequiredValidation {
+                            messageIdsWithRefreshMedia.append(message.id)
+                        }
                         if hasUnconsumedMention && !hasUnconsumedContent {
                             messageIdsWithUnseenPersonalMention.append(message.id)
                         }
-                        if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.messageId == message.id {
+                        if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.effectiveTopId == message.id {
                             isTopReplyThreadMessageShownValue = true
                         }
+                        topVisibleMessage = ChatTopVisibleMessage(id: message.id, isLast: i == historyView.filteredEntries.count - 1)
                     case let .MessageGroupEntry(_, messages, _):
                         for (message, _, _, _) in messages {
                             var hasUnconsumedMention = false
@@ -1246,9 +1287,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             if hasUnconsumedMention && !hasUnconsumedContent {
                                 messageIdsWithUnseenPersonalMention.append(message.id)
                             }
-                            if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.messageId == message.id {
+                            if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.effectiveTopId == message.id {
                                 isTopReplyThreadMessageShownValue = true
                             }
+                            topVisibleMessage = ChatTopVisibleMessage(id: message.id, isLast: i == historyView.filteredEntries.count - 1)
                         }
                     default:
                         break
@@ -1331,6 +1373,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             if !messageIdsWithUnsupportedMedia.isEmpty {
                 self.unsupportedMessageProcessingManager.add(messageIdsWithUnsupportedMedia)
             }
+            if !messageIdsWithRefreshMedia.isEmpty {
+                self.refreshMediaProcessingManager.add(messageIdsWithRefreshMedia)
+            }
             if !messageIdsWithUnseenPersonalMention.isEmpty {
                 self.messageMentionProcessingManager.add(messageIdsWithUnseenPersonalMention)
             }
@@ -1365,6 +1410,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         }
         self.isTopReplyThreadMessageShown.set(isTopReplyThreadMessageShownValue)
+        self.topVisibleMessage.set(topVisibleMessage)
         
         if let loaded = displayedRange.loadedRange, let firstEntry = historyView.filteredEntries.first, let lastEntry = historyView.filteredEntries.last {
             if loaded.firstIndex < 5 && historyView.originalView.laterId != nil {

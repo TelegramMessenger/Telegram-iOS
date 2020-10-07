@@ -18,6 +18,7 @@ public enum ChannelMembersCategory {
     case bots(ChannelMembersCategoryFilter)
     case restricted(ChannelMembersCategoryFilter)
     case banned(ChannelMembersCategoryFilter)
+    case mentions(threadId: MessageId?, filter: ChannelMembersCategoryFilter)
 }
 
 public func channelMembers(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, category: ChannelMembersCategory = .recent(.all), offset: Int32 = 0, limit: Int32 = 64, hash: Int32 = 0) -> Signal<[RenderedChannelParticipant]?, NoError> {
@@ -31,6 +32,24 @@ public func channelMembers(postbox: Postbox, network: Network, accountPeerId: Pe
                             apiFilter = .channelParticipantsRecent
                         case let .search(query):
                             apiFilter = .channelParticipantsSearch(q: query)
+                    }
+                case let .mentions(threadId, filter):
+                    switch filter {
+                        case .all:
+                            var flags: Int32 = 0
+                            if threadId != nil {
+                                flags |= 1 << 1
+                            }
+                            apiFilter = .channelParticipantsMentions(flags: flags, q: nil, topMsgId: threadId?.id)
+                        case let .search(query):
+                            var flags: Int32 = 0
+                            if threadId != nil {
+                                flags |= 1 << 1
+                            }
+                            if !query.isEmpty {
+                                flags |= 1 << 0
+                            }
+                            apiFilter = .channelParticipantsMentions(flags: flags, q: query.isEmpty ? nil : query, topMsgId: threadId?.id)
                     }
                 case .admins:
                     apiFilter = .channelParticipantsAdmins

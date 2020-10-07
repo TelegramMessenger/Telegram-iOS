@@ -14,7 +14,7 @@ public func legacySuggestionContext(context: AccountContext, peerId: PeerId, cha
     suggestionContext.userListSignal = { query in
         return SSignal { subscriber in
             if let query = query {
-                let disposable = searchPeerMembers(context: context, peerId: peerId, chatLocation: chatLocation, query: query).start(next: { peers in
+                let disposable = searchPeerMembers(context: context, peerId: peerId, chatLocation: chatLocation, query: query, scope: .mention).start(next: { peers in
                     let users = NSMutableArray()
                     for peer in peers {
                         let user = TGUser()

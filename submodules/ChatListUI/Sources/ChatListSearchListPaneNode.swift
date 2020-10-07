@@ -1494,6 +1494,18 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             if let strongSelf = self {
                 strongSelf.presentationData = presentationData
                 strongSelf.presentationDataPromise.set(.single(ChatListPresentationData(theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)))
+                
+                strongSelf.listNode.forEachItemHeaderNode({ itemHeaderNode in
+                    if let itemHeaderNode = itemHeaderNode as? ChatListSearchItemHeaderNode {
+                        itemHeaderNode.updateTheme(theme: presentationData.theme)
+                    }
+                })
+                
+                strongSelf.recentListNode.forEachItemHeaderNode({ itemHeaderNode in
+                    if let itemHeaderNode = itemHeaderNode as? ChatListSearchItemHeaderNode {
+                        itemHeaderNode.updateTheme(theme: presentationData.theme)
+                    }
+                })
             }
         })
                         

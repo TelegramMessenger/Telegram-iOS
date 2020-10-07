@@ -10,11 +10,6 @@ public class AnimatedCountLabelNode: ASDisplayNode {
     }
     
     public enum Segment: Equatable {
-        public enum Key: Hashable {
-            case number
-            case text(Int)
-        }
-        
         case number(Int, NSAttributedString)
         case text(Int, NSAttributedString)
         
@@ -34,10 +29,37 @@ public class AnimatedCountLabelNode: ASDisplayNode {
                 }
             }
         }
+    }
+    
+    fileprivate enum ResolvedSegment: Equatable {
+        public enum Key: Hashable {
+            case number(Int)
+            case text(Int)
+        }
+        
+        case number(id: Int, value: Int, string: NSAttributedString)
+        case text(id: Int, string: NSAttributedString)
+        
+        public static func ==(lhs: ResolvedSegment, rhs: ResolvedSegment) -> Bool {
+            switch lhs {
+            case let .number(id, number, text):
+                if case let .number(rhsId, rhsNumber, rhsText) = rhs, id == rhsId, number == rhsNumber, text.isEqual(to: rhsText) {
+                    return true
+                } else {
+                    return false
+                }
+            case let .text(index, text):
+                if case let .text(rhsIndex, rhsText) = rhs, index == rhsIndex, text.isEqual(to: rhsText) {
+                    return true
+                } else {
+                    return false
+                }
+            }
+        }
         
         public var attributedText: NSAttributedString {
             switch self {
-            case let .number(_, text):
+            case let .number(_, _, text):
                 return text
             case let .text(_, text):
                 return text
@@ -46,28 +68,53 @@ public class AnimatedCountLabelNode: ASDisplayNode {
         
         var key: Key {
             switch self {
-            case .number:
-                return .number
+            case let .number(id, _, _):
+                return .number(id)
             case let .text(index, _):
                 return .text(index)
             }
         }
     }
     
-    fileprivate var resolvedSegments: [Segment.Key: (Segment, TextNode)] = [:]
+    fileprivate var resolvedSegments: [ResolvedSegment.Key: (ResolvedSegment, TextNode)] = [:]
     
     override public init() {
         super.init()
     }
     
     public func asyncLayout() -> (CGSize, [Segment]) -> (Layout, (Bool) -> Void) {
-        var segmentLayouts: [Segment.Key: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode)] = [:]
+        var segmentLayouts: [ResolvedSegment.Key: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode)] = [:]
         let wasEmpty = self.resolvedSegments.isEmpty
         for (segmentKey, segmentAndTextNode) in self.resolvedSegments {
             segmentLayouts[segmentKey] = TextNode.asyncLayout(segmentAndTextNode.1)
         }
         
-        return { [weak self] size, segments in
+        return { [weak self] size, initialSegments in
+            var segments: [ResolvedSegment] = []
+            loop: for segment in initialSegments {
+                switch segment {
+                case let .number(value, string):
+                    if string.string.isEmpty {
+                        continue loop
+                    }
+                    let attributes = string.attributes(at: 0, longestEffectiveRange: nil, in: NSRange(location: 0, length: 1))
+                    
+                    var remainingValue = value
+                    
+                    while true {
+                        let digitValue = remainingValue % 10
+                        
+                        segments.insert(.number(id: 1000 - segments.count, value: value, string: NSAttributedString(string: "\(digitValue)", attributes: attributes)), at: 0)
+                        remainingValue /= 10
+                        if remainingValue == 0 {
+                            break
+                        }
+                    }
+                case let .text(id, string):
+                    segments.append(.text(id: id, string: string))
+                }
+            }
+            
             for segment in segments {
                 if segmentLayouts[segment.key] == nil {
                     segmentLayouts[segment.key] = TextNode.asyncLayout(nil)
@@ -77,17 +124,17 @@ public class AnimatedCountLabelNode: ASDisplayNode {
             var contentSize = CGSize()
             var remainingSize = size
             
-            var calculatedSegments: [Segment.Key: (TextNodeLayout, CGFloat, () -> TextNode)] = [:]
+            var calculatedSegments: [ResolvedSegment.Key: (TextNodeLayout, CGFloat, () -> TextNode)] = [:]
             var isTruncated = false
             
-            var validKeys: [Segment.Key] = []
+            var validKeys: [ResolvedSegment.Key] = []
             
             for segment in segments {
                 validKeys.append(segment.key)
                 let (layout, apply) = segmentLayouts[segment.key]!(TextNodeLayoutArguments(attributedString: segment.attributedText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: remainingSize, alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets(), lineColor: nil, textShadowColor: nil, textStroke: nil))
                 var effectiveSegmentWidth = layout.size.width
                 if case .number = segment {
-                    effectiveSegmentWidth = ceil(effectiveSegmentWidth / 2.0) * 2.0
+                    //effectiveSegmentWidth = ceil(effectiveSegmentWidth / 2.0) * 2.0
                 } else if segment.attributedText.string == " " {
                     effectiveSegmentWidth = max(effectiveSegmentWidth, 4.0)
                 }
@@ -115,7 +162,7 @@ public class AnimatedCountLabelNode: ASDisplayNode {
                 for segment in segments {
                     var animation: (CGFloat, Double)?
                     if let (currentSegment, currentTextNode) = strongSelf.resolvedSegments[segment.key] {
-                        if case let .number(currentValue, _) = currentSegment, case let .number(updatedValue, _) = segment, animated, !wasEmpty, currentValue != updatedValue, let snapshot = currentTextNode.layer.snapshotContentTree() {
+                        if case let .number(_, currentValue, currentString) = currentSegment, case let .number(_, updatedValue, updatedString) = segment, animated, !wasEmpty, currentValue != updatedValue, currentString.string != updatedString.string, let snapshot = currentTextNode.layer.snapshotContentTree() {
                             let offsetY: CGFloat
                             if currentValue > updatedValue {
                                 offsetY = -floor(currentTextNode.bounds.height * 0.6)
@@ -164,7 +211,7 @@ public class AnimatedCountLabelNode: ASDisplayNode {
                     strongSelf.resolvedSegments[segment.key] = (segment, textNode)
                 }
                 
-                var removeKeys: [Segment.Key] = []
+                var removeKeys: [ResolvedSegment.Key] = []
                 for key in strongSelf.resolvedSegments.keys {
                     if !validKeys.contains(key) {
                         removeKeys.append(key)

@@ -289,6 +289,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var stickerSettingsDisposable: Disposable?
     
     private var applicationInForegroundDisposable: Disposable?
+    private var applicationInFocusDisposable: Disposable?
     
     private var checkedPeerChatServiceActions = false
     
@@ -2219,6 +2220,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     break
                 }
             }
+        }, openMessageStats: { [weak self] id in
+            let _ = (context.account.postbox.transaction { transaction -> CachedPeerData? in
+                return transaction.getPeerCachedData(peerId: id.peerId)
+            } |> deliverOnMainQueue).start(next: { [weak self] cachedPeerData in
+                guard let strongSelf = self, let cachedPeerData = cachedPeerData else {
+                    return
+                }
+                strongSelf.push(messageStatsController(context: context, messageId: id, cachedPeerData: cachedPeerData))
+            })
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -3058,6 +3068,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         })
         
+        var wasInForeground = true
         self.applicationInForegroundDisposable = (context.sharedContext.applicationBindings.applicationInForeground
         |> distinctUntilChanged
         |> deliverOn(Queue.mainQueue())).start(next: { [weak self] value in
@@ -3067,9 +3078,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.raiseToListen?.applicationResignedActive()
                     
                     strongSelf.stopMediaRecorder()
+                } else {
+                    if !wasInForeground {
+                        strongSelf.chatDisplayNode.recursivelyEnsureDisplaySynchronously(true)
+                    }
                 }
+                wasInForeground = value
             }
         })
+        
+        if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.SecretChat {
+            self.applicationInFocusDisposable = (context.sharedContext.applicationBindings.applicationIsActive
+            |> distinctUntilChanged
+            |> deliverOn(Queue.mainQueue())).start(next: { [weak self] value in
+                guard let strongSelf = self, strongSelf.isNodeLoaded else {
+                    return
+                }
+                strongSelf.chatDisplayNode.updateIsBlurred(!value)
+            })
+        }
         
         self.canReadHistoryDisposable = (combineLatest(context.sharedContext.applicationBindings.applicationInForeground, self.canReadHistory.get()) |> map { a, b in
             return a && b
@@ -3139,6 +3166,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.presentationDataDisposable?.dispose()
         self.searchDisposable?.dispose()
         self.applicationInForegroundDisposable?.dispose()
+        self.applicationInFocusDisposable?.dispose()
         self.canReadHistoryDisposable?.dispose()
         self.networkStateDisposable?.dispose()
         self.chatAdditionalDataDisposable.dispose()
@@ -3255,13 +3283,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 if case let .replyThread(replyThreadMessageId) = strongSelf.chatLocation {
-                    pinnedMessageId = replyThreadMessageId.messageId
+                    pinnedMessageId = replyThreadMessageId.effectiveTopId
                 }
                 
-                var pinnedMessage: Message?
+                var pinnedMessage: ChatPinnedMessage?
                 if let pinnedMessageId = pinnedMessageId {
                     if let cachedDataMessages = combinedInitialData.cachedDataMessages {
-                        pinnedMessage = cachedDataMessages[pinnedMessageId]
+                        if let message = cachedDataMessages[pinnedMessageId] {
+                            pinnedMessage = ChatPinnedMessage(message: message, isLatest: true)
+                        }
                     }
                 }
                 
@@ -3372,7 +3402,62 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let isTopReplyThreadMessageShown: Signal<Bool, NoError> = self.chatDisplayNode.historyNode.isTopReplyThreadMessageShown.get()
         |> distinctUntilChanged
         
-        self.cachedDataDisposable = combineLatest(queue: .mainQueue(), self.chatDisplayNode.historyNode.cachedPeerDataAndMessages, hasPendingMessages, isTopReplyThreadMessageShown).start(next: { [weak self] cachedDataAndMessages, hasPendingMessages, isTopReplyThreadMessageShown in
+        let topPinnedMessage: Signal<ChatPinnedMessage?, NoError>
+        switch self.chatLocation {
+        case let .peer(peerId):
+            let replyHistory: Signal<ChatHistoryViewUpdate, NoError> = (chatHistoryViewForLocation(ChatHistoryLocationInput(content: .Initial(count: 100), id: 0), context: self.context, chatLocation: .peer(peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), scheduled: false, fixedCombinedReadStates: nil, tagMask: MessageTags.photoOrVideo, additionalData: [])
+            |> castError(Bool.self)
+            |> mapToSignal { update -> Signal<ChatHistoryViewUpdate, Bool> in
+                switch update {
+                case let .Loading(_, type):
+                    if case .Generic(.FillHole) = type {
+                        return .fail(true)
+                    }
+                case let .HistoryView(_, type, _, _, _, _, _):
+                    if case .Generic(.FillHole) = type {
+                        return .fail(true)
+                    }
+                }
+                return .single(update)
+            })
+            |> restartIfError
+            
+            topPinnedMessage = combineLatest(
+                replyHistory,
+                self.chatDisplayNode.historyNode.topVisibleMessage.get()
+            )
+            |> map { update, topVisibleMessage -> ChatPinnedMessage? in
+                var message: ChatPinnedMessage?
+                switch update {
+                case .Loading:
+                    break
+                case let .HistoryView(view, _, _, _, _, _, _):
+                    for i in 0 ..< view.entries.count {
+                        let entry = view.entries[i]
+                        var matches = false
+                        if message == nil {
+                            matches = true
+                        } else if let topVisibleMessage = topVisibleMessage {
+                            if entry.message.id < topVisibleMessage.id {
+                                matches = true
+                            }
+                        } else {
+                            matches = true
+                        }
+                        if matches {
+                            message = ChatPinnedMessage(message: entry.message, isLatest: i == view.entries.count - 1)
+                        }
+                    }
+                    break
+                }
+                return message
+            }
+            |> distinctUntilChanged
+        case .replyThread:
+            topPinnedMessage = .single(nil)
+        }
+        
+        self.cachedDataDisposable = combineLatest(queue: .mainQueue(), self.chatDisplayNode.historyNode.cachedPeerDataAndMessages, hasPendingMessages, isTopReplyThreadMessageShown, topPinnedMessage).start(next: { [weak self] cachedDataAndMessages, hasPendingMessages, isTopReplyThreadMessageShown, topPinnedMessage in
             if let strongSelf = self {
                 let (cachedData, messages) = cachedDataAndMessages
                 
@@ -3400,22 +3485,31 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 } else if let _ = cachedData as? CachedSecretChatData {
                 }
                 
+                var pinnedMessage: ChatPinnedMessage?
                 if case let .replyThread(replyThreadMessage) = strongSelf.chatLocation {
                     if isTopReplyThreadMessageShown {
                         pinnedMessageId = nil
                     } else {
-                        pinnedMessageId = replyThreadMessage.messageId
+                        pinnedMessageId = replyThreadMessage.effectiveTopId
                     }
-                }
-                
-                var pinnedMessage: Message?
-                if let pinnedMessageId = pinnedMessageId {
-                    pinnedMessage = messages?[pinnedMessageId]
+                    if let pinnedMessageId = pinnedMessageId {
+                        if let message = messages?[pinnedMessageId] {
+                            pinnedMessage = ChatPinnedMessage(message: message, isLatest: true)
+                        }
+                    }
+                } else {
+                    if let pinnedMessageId = pinnedMessageId {
+                        if let message = messages?[pinnedMessageId] {
+                            pinnedMessage = ChatPinnedMessage(message: message, isLatest: true)
+                        }
+                    }
+                    //pinnedMessageId = topPinnedMessage?.message.id
+                    //pinnedMessage = topPinnedMessage
                 }
                 
                 var pinnedMessageUpdated = false
                 if let current = strongSelf.presentationInterfaceState.pinnedMessage, let updated = pinnedMessage {
-                    if current.id != updated.id || current.stableVersion != updated.stableVersion {
+                    if current != updated {
                         pinnedMessageUpdated = true
                     }
                 } else if (strongSelf.presentationInterfaceState.pinnedMessage != nil) != (pinnedMessage != nil) {
@@ -3424,7 +3518,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let callsDataUpdated = strongSelf.presentationInterfaceState.callsAvailable != callsAvailable || strongSelf.presentationInterfaceState.callsPrivate != callsPrivate
                 
-                if strongSelf.presentationInterfaceState.pinnedMessageId != pinnedMessageId || strongSelf.presentationInterfaceState.pinnedMessage?.stableVersion != pinnedMessage?.stableVersion || strongSelf.presentationInterfaceState.peerIsBlocked != peerIsBlocked || pinnedMessageUpdated || callsDataUpdated || strongSelf.presentationInterfaceState.slowmodeState != slowmodeState {
+                if strongSelf.presentationInterfaceState.pinnedMessageId != pinnedMessageId || strongSelf.presentationInterfaceState.pinnedMessage != pinnedMessage || strongSelf.presentationInterfaceState.peerIsBlocked != peerIsBlocked || pinnedMessageUpdated || callsDataUpdated || strongSelf.presentationInterfaceState.slowmodeState != slowmodeState {
                     strongSelf.updateChatPresentationInterfaceState(animated: strongSelf.willAppear, interactive: strongSelf.willAppear, { state in
                         return state
                         .updatedPinnedMessageId(pinnedMessageId)
@@ -4721,7 +4815,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             })]), in: .window(.root))
                         }
                     } else {
-                        if let pinnedMessageId = strongSelf.presentationInterfaceState.pinnedMessage?.id {
+                        if let pinnedMessageId = strongSelf.presentationInterfaceState.pinnedMessage?.message.id {
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                                 return $0.updatedInterfaceState({ $0.withUpdatedMessageActionsState({ value in
                                     var value = value
@@ -4773,7 +4867,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                                 return $0.updatedInterfaceState({ $0.withUpdatedMessageActionsState({ value in
                                     var value = value
-                                    value.closedPinnedMessageId = pinnedMessage.id
+                                    value.closedPinnedMessageId = pinnedMessage.message.id
                                     return value
                                 }) })
                             })
@@ -6945,6 +7039,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if let strongSelf = self {
                                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                                     
+                                    var groupingKey: Int64?
+                                    var allItemsAreAudio = true
+                                    for item in results {
+                                        if let item = item {
+                                            let pathExtension = (item.fileName as NSString).pathExtension.lowercased()
+                                            if !["mp3", "m4a"].contains(pathExtension) {
+                                                allItemsAreAudio = false
+                                            }
+                                        }
+                                    }
+                                    
+                                    if allItemsAreAudio {
+                                        groupingKey = arc4random64()
+                                    }
+                                    
                                     var messages: [EnqueueMessage] = []
                                     for item in results {
                                         if let item = item {
@@ -6954,8 +7063,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             if mimeType == "application/pdf" {
                                                 previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 320, height: 320), resource: ICloudFileResource(urlData: item.urlData, thumbnail: true), progressiveSizes: []))
                                             }
-                                            let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: fileId), partialReference: nil, resource: ICloudFileResource(urlData: item.urlData, thumbnail: false), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: item.fileSize, attributes: [.FileName(fileName: item.fileName)])
-                                            let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: replyMessageId, localGroupingKey: nil)
+                                            var attributes: [TelegramMediaFileAttribute] = []
+                                            attributes.append(.FileName(fileName: item.fileName))
+                                            if let audioMetadata = item.audioMetadata {
+                                                attributes.append(.Audio(isVoice: false, duration: audioMetadata.duration, title: audioMetadata.title, performer: audioMetadata.performer, waveform: nil))
+                                            }
+                                            
+                                            let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: fileId), partialReference: nil, resource: ICloudFileResource(urlData: item.urlData, thumbnail: false), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: item.fileSize, attributes: attributes)
+                                            let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: replyMessageId, localGroupingKey: groupingKey)
                                             messages.append(message)
                                         }
                                     }
@@ -6963,9 +7078,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     if !messages.isEmpty {
                                         if editingMessage {
                                             strongSelf.editMessageMediaWithMessages(messages)
-                                            
                                         } else {
-                                        strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                                            strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                                                 if let strongSelf = self {
                                                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                                                         $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
@@ -8461,7 +8575,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }, error: { _ in
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 
-                present(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                present(textAlertController(context: context, title: nil, text: presentationData.strings.Channel_DiscussionMessageUnavailable, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             })
             
             cancelImpl = { [weak statusController] in

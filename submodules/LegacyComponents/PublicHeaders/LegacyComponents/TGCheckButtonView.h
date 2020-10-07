@@ -8,7 +8,8 @@ typedef enum
     TGCheckButtonStyleMedia,
     TGCheckButtonStyleGallery,
     TGCheckButtonStyleShare,
-    TGCheckButtonStyleChat
+    TGCheckButtonStyleChat,
+    TGCheckButtonStyleCompact
 } TGCheckButtonStyle;
 
 @interface TGCheckButtonPallete : NSObject

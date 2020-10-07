@@ -14,6 +14,7 @@ import TelegramNotices
 import ReactionSelectionNode
 import TelegramUniversalVideoContent
 import ChatInterfaceState
+import FastBlur
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -309,6 +310,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let backgroundNode: WallpaperBackgroundNode
     let backgroundImageDisposable = MetaDisposable()
     let historyNode: ChatHistoryListNode
+    var blurredHistoryNode: ASImageNode?
     let reactionContainerNode: ReactionSelectionParentNode
     let historyNodeContainer: ASDisplayNode
     let loadingNode: ChatLoadingNode
@@ -995,7 +997,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        if let pinnedMessage = self.chatPresentationInterfaceState.pinnedMessage, self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding, self.context.sharedContext.immediateExperimentalUISettings.playlistPlayback, self.embeddedTitleContentNode == nil, let url = extractExperimentalPlaylistUrl(pinnedMessage.text), self.didProcessExperimentalEmbedUrl != url {
+        if let pinnedMessage = self.chatPresentationInterfaceState.pinnedMessage, self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding, self.context.sharedContext.immediateExperimentalUISettings.playlistPlayback, self.embeddedTitleContentNode == nil, let url = extractExperimentalPlaylistUrl(pinnedMessage.message.text), self.didProcessExperimentalEmbedUrl != url {
             self.didProcessExperimentalEmbedUrl = url
             let context = self.context
             let baseNavigationController = self.controller?.navigationController as? NavigationController
@@ -1220,6 +1222,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         transition.updateFrame(node: self.historyNodeContainer, frame: contentBounds)
         transition.updateBounds(node: self.historyNode, bounds: CGRect(origin: CGPoint(), size: contentBounds.size))
         transition.updatePosition(node: self.historyNode, position: CGPoint(x: contentBounds.size.width / 2.0, y: contentBounds.size.height / 2.0))
+        if let blurredHistoryNode = self.blurredHistoryNode {
+            transition.updateFrame(node: blurredHistoryNode, frame: contentBounds)
+        }
         
         transition.updateFrame(node: self.loadingNode, frame: contentBounds)
         
@@ -2932,5 +2937,40 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.requestLayout(.animated(duration: 0.25, curve: .spring))
             self.updateHasEmbeddedTitleContent?()
         }
+    }
+    
+    func updateIsBlurred(_ isBlurred: Bool) {
+        if isBlurred {
+            if self.blurredHistoryNode == nil {
+                let unscaledSize = self.historyNode.frame.size
+                let image = generateImage(CGSize(width: floor(unscaledSize.width), height: floor(unscaledSize.height)), opaque: true, scale: 1.0, rotatedContext: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    
+                    UIGraphicsPushContext(context)
+                    
+                    let backgroundFrame = self.backgroundNode.view.convert(self.backgroundNode.bounds, to: self.historyNode.supernode?.view)
+                    self.backgroundNode.view.drawHierarchy(in: backgroundFrame, afterScreenUpdates: false)
+                    
+                    context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                    context.scaleBy(x: -1.0, y: -1.0)
+                    context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                    
+                    self.historyNode.view.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: false)
+                    
+                    UIGraphicsPopContext()
+                }).flatMap(applyScreenshotEffectToImage)
+                let blurredHistoryNode = ASImageNode()
+                blurredHistoryNode.image = image
+                blurredHistoryNode.frame = self.historyNode.frame
+                self.blurredHistoryNode = blurredHistoryNode
+                self.historyNode.supernode?.insertSubnode(blurredHistoryNode, aboveSubnode: self.historyNode)
+            }
+        } else {
+            if let blurredHistoryNode = self.blurredHistoryNode {
+                self.blurredHistoryNode = nil
+                blurredHistoryNode.removeFromSupernode()
+            }
+        }
+        self.historyNode.isHidden = isBlurred
     }
 }

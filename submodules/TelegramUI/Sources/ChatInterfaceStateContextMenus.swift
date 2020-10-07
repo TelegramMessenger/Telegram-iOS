@@ -457,7 +457,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         
         var isReplyThreadHead = false
         if case let .replyThread(replyThreadMessage) = chatPresentationInterfaceState.chatLocation {
-            isReplyThreadHead = messages[0].id == replyThreadMessage.messageId
+            isReplyThreadHead = messages[0].id == replyThreadMessage.effectiveTopId
         }
         
         if !isReplyThreadHead, data.canReply {
@@ -605,7 +605,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 })
             })))
         }
-        
+                
         if data.canEdit {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
@@ -643,7 +643,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         if data.canPin, case .peer = chatPresentationInterfaceState.chatLocation {
-            if chatPresentationInterfaceState.pinnedMessage?.id != messages[0].id {
+            if chatPresentationInterfaceState.pinnedMessage?.message.id != messages[0].id {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_Pin, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Pin"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
@@ -808,9 +808,26 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         var clearCacheAsDelete = false
-        if let _ = message.peers[message.id.peerId] as? TelegramChannel {
+        if message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
+            var views: Int = 0
+            for attribute in message.attributes {
+                if let attribute = attribute as? ViewCountMessageAttribute {
+                    views = attribute.count
+                }
+            }
+            if views >= 100 {
+                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextViewStats, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.actionSheet.primaryTextColor)
+                }, action: { c, _ in
+                    c.dismiss(completion: {
+                        controllerInteraction.openMessageStats(messages[0].id)
+                    })
+                })))
+            }
+            
             clearCacheAsDelete = true
         }
+        
         if !isReplyThreadHead, (!data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty || clearCacheAsDelete) && !isAction {
             let title: String
             var isSending = false

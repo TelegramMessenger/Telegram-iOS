@@ -19,6 +19,7 @@ objc_library(
         "tgcalls/tgcalls/platform/darwin/VideoCameraCapturerMac.*",
         "tgcalls/tgcalls/platform/darwin/VideoMetalViewMac.*",
         "tgcalls/tgcalls/platform/darwin/GLVideoViewMac.*",
+        "tgcalls/tgcalls/platform/darwin/ScreenCapturer.*",
     ]),
     hdrs = glob([
         "PublicHeaders/**/*.h",

@@ -6,6 +6,7 @@ import TelegramApi
 
 private struct DiscussionMessage {
     public var messageId: MessageId
+    public var channelMessageId: MessageId?
     public var isChannelPost: Bool
     public var maxMessage: MessageId?
     public var maxReadIncomingMessageId: MessageId?
@@ -143,6 +144,16 @@ private class ReplyThreadHistoryContextImpl {
                             return .fail(.generic)
                         }
                         
+                        var channelMessageId: MessageId?
+                        var replyThreadAttribute: ReplyThreadMessageAttribute?
+                        for attribute in topMessage.attributes {
+                            if let attribute = attribute as? SourceReferenceMessageAttribute {
+                                channelMessageId = attribute.messageId
+                            } else if let attribute = attribute as? ReplyThreadMessageAttribute {
+                                replyThreadAttribute = attribute
+                            }
+                        }
+                        
                         var peers: [Peer] = []
                         var peerPresences: [PeerId: PeerPresence] = [:]
                         
@@ -186,13 +197,41 @@ private class ReplyThreadHistoryContextImpl {
                             }
                         }
                         
+                        let maxReadIncomingMessageId = readInboxMaxId.flatMap { readMaxId in
+                            MessageId(peerId: parsedIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: readMaxId)
+                        }
+                        
+                        if let channelMessageId = channelMessageId, let replyThreadAttribute = replyThreadAttribute {
+                            account.viewTracker.updateReplyInfoForMessageId(channelMessageId, info: AccountViewTracker.UpdatedMessageReplyInfo(
+                                timestamp: Int32(CFAbsoluteTimeGetCurrent()),
+                                commentsPeerId: parsedIndex.id.peerId,
+                                maxReadIncomingMessageId: maxReadIncomingMessageId,
+                                maxMessageId: resolvedMaxMessage
+                            ))
+                            
+                            transaction.updateMessage(channelMessageId, update: { currentMessage in
+                                var attributes = currentMessage.attributes
+                                loop: for j in 0 ..< attributes.count {
+                                    if let attribute = attributes[j] as? ReplyThreadMessageAttribute {
+                                        attributes[j] = ReplyThreadMessageAttribute(
+                                            count: replyThreadAttribute.count,
+                                            latestUsers: attribute.latestUsers,
+                                            commentsPeerId: attribute.commentsPeerId,
+                                            maxMessageId: replyThreadAttribute.maxMessageId,
+                                            maxReadMessageId: replyThreadAttribute.maxReadMessageId
+                                        )
+                                    }
+                                }
+                                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                            })
+                        }
+                        
                         return .single(DiscussionMessage(
                             messageId: parsedIndex.id,
+                            channelMessageId: channelMessageId,
                             isChannelPost: isChannelPost,
                             maxMessage: resolvedMaxMessage,
-                            maxReadIncomingMessageId: readInboxMaxId.flatMap { readMaxId in
-                                MessageId(peerId: parsedIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: readMaxId)
-                            },
+                            maxReadIncomingMessageId: maxReadIncomingMessageId,
                             maxReadOutgoingMessageId: readOutboxMaxId.flatMap { readMaxId in
                                 MessageId(peerId: parsedIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: readMaxId)
                             }
@@ -388,6 +427,7 @@ public struct ChatReplyThreadMessage: Equatable {
     }
     
     public var messageId: MessageId
+    public var channelMessageId: MessageId?
     public var isChannelPost: Bool
     public var maxMessage: MessageId?
     public var maxReadIncomingMessageId: MessageId?
@@ -396,8 +436,9 @@ public struct ChatReplyThreadMessage: Equatable {
     public var initialAnchor: Anchor
     public var isNotAvailable: Bool
     
-    fileprivate init(messageId: MessageId, isChannelPost: Bool, maxMessage: MessageId?, maxReadIncomingMessageId: MessageId?, maxReadOutgoingMessageId: MessageId?, initialFilledHoles: IndexSet, initialAnchor: Anchor, isNotAvailable: Bool) {
+    fileprivate init(messageId: MessageId, channelMessageId: MessageId?, isChannelPost: Bool, maxMessage: MessageId?, maxReadIncomingMessageId: MessageId?, maxReadOutgoingMessageId: MessageId?, initialFilledHoles: IndexSet, initialAnchor: Anchor, isNotAvailable: Bool) {
         self.messageId = messageId
+        self.channelMessageId = channelMessageId
         self.isChannelPost = isChannelPost
         self.maxMessage = maxMessage
         self.maxReadIncomingMessageId = maxReadIncomingMessageId
@@ -445,6 +486,14 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
                         return nil
                     }
                     
+                    var channelMessageId: MessageId?
+                    for attribute in topMessage.attributes {
+                        if let attribute = attribute as? SourceReferenceMessageAttribute {
+                            channelMessageId = attribute.messageId
+                            break
+                        }
+                    }
+                    
                     var peers: [Peer] = []
                     var peerPresences: [PeerId: PeerPresence] = [:]
                     
@@ -490,6 +539,7 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
                     
                     return DiscussionMessage(
                         messageId: parsedIndex.id,
+                        channelMessageId: channelMessageId,
                         isChannelPost: isChannelPost,
                         maxMessage: resolvedMaxMessage,
                         maxReadIncomingMessageId: readInboxMaxId.flatMap { readMaxId in
@@ -530,6 +580,7 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
                 
                 return DiscussionMessage(
                     messageId: discussionMessageId,
+                    channelMessageId: messageId,
                     isChannelPost: true,
                     maxMessage: replyInfo.maxMessageId,
                     maxReadIncomingMessageId: replyInfo.maxReadIncomingMessageId,
@@ -730,6 +781,7 @@ public func fetchChannelReplyThreadMessage(account: Account, messageId: MessageI
                 
                 return .single(ChatReplyThreadMessage(
                     messageId: discussionMessage.messageId,
+                    channelMessageId: discussionMessage.channelMessageId,
                     isChannelPost: discussionMessage.isChannelPost,
                     maxMessage: discussionMessage.maxMessage,
                     maxReadIncomingMessageId: discussionMessage.maxReadIncomingMessageId,

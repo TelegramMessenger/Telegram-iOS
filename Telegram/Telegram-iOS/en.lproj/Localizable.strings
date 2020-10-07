@@ -1921,6 +1921,7 @@
 "Conversation.Unpin" = "Unpin";
 "Conversation.Report" = "Report Spam";
 "Conversation.PinnedMessage" = "Pinned Message";
+"Conversation.PinnedPreviousMessage" = "Previous Message";
 
 "Conversation.Moderate.Delete" = "Delete Message";
 "Conversation.Moderate.Ban" = "Ban User";
@@ -4098,7 +4099,7 @@ Unused sets are archived when you add more.";
 
 "GroupPermission.PermissionGloballyDisabled" = "This permission is disabled in this group.";
 
-"ChannelInfo.Stats" = "Statistics";
+"ChannelInfo.Stats" = "View Statistics";
 
 "Conversation.PressVolumeButtonForSound" = "Press volume button\nto unmute the video";
 
@@ -5813,3 +5814,10 @@ Any member of this group will be able to see messages in the channel.";
 "Channel.CommentsGroup.HeaderGroupSet" = "%@ is linking the group as it's discussion board.";
 
 "RepliesChat.DescriptionText" = "This chat helps you keep track of replies to your comments in Channels.";
+
+"Channel.DiscussionMessageUnavailable" = "Sorry, this post has been removed from the discussion group.";
+
+"Conversation.ContextViewStats" = "View Statistics";
+
+"ChatList.MessageMusic_1" = "1 Music File";
+"ChatList.MessageMusic_any" = "%@ Music Files";
