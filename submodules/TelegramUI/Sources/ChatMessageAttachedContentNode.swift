@@ -531,7 +531,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 var additionalImageBadgeContent: ChatMessageInteractiveMediaBadgeContent?
                 
                 switch position {
-                    case .linear(_, .None), .linear(_, .Neighbour(true, _)):
+                    case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
                         let imageMode = !((refineContentImageLayout == nil && refineContentFileLayout == nil && contentInstantVideoSizeAndApply == nil) || preferMediaBeforeText)
                         statusInText = !imageMode
                         

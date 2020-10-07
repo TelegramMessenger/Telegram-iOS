@@ -106,7 +106,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
             
             let displaySeparator: Bool
             let topOffset: CGFloat
-            if case let .linear(top, _) = preparePosition, case .Neighbour(_, .media) = top {
+            if case let .linear(top, _) = preparePosition, case .Neighbour(_, .media, _) = top {
                 displaySeparator = false
                 topOffset = 2.0
             } else {
