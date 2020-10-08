@@ -3068,6 +3068,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         })
         
+        var wasInForeground = true
         self.applicationInForegroundDisposable = (context.sharedContext.applicationBindings.applicationInForeground
         |> distinctUntilChanged
         |> deliverOn(Queue.mainQueue())).start(next: { [weak self] value in
@@ -3077,7 +3078,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.raiseToListen?.applicationResignedActive()
                     
                     strongSelf.stopMediaRecorder()
+                } else {
+                    if !wasInForeground {
+                        strongSelf.chatDisplayNode.recursivelyEnsureDisplaySynchronously(true)
+                    }
                 }
+                wasInForeground = value
             }
         })
         

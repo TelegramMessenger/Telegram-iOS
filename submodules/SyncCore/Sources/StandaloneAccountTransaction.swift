@@ -1,3 +1,4 @@
+import Foundation
 import SwiftSignalKit
 import Postbox
 
@@ -67,7 +68,7 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
 
 public func accountTransaction<T>(rootPath: String, id: AccountRecordId, encryptionParameters: ValueBoxEncryptionParameters, transaction: @escaping (Transaction) -> T) -> Signal<T, NoError> {
     let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters)
+    let postbox = openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970))
     return postbox
     |> mapToSignal { value -> Signal<T, NoError> in
         switch value {

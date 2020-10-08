@@ -514,6 +514,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let messageReactionsProcessingManager = ChatMessageThrottledProcessingManager()
     private let seenLiveLocationProcessingManager = ChatMessageThrottledProcessingManager()
     private let unsupportedMessageProcessingManager = ChatMessageThrottledProcessingManager()
+    private let refreshMediaProcessingManager = ChatMessageThrottledProcessingManager()
     private let messageMentionProcessingManager = ChatMessageThrottledProcessingManager(delay: 0.2)
     let prefetchManager: InChatPrefetchManager
     private var currentEarlierPrefetchMessages: [(Message, Media)] = []
@@ -604,6 +605,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         self.unsupportedMessageProcessingManager.process = { [weak context] messageIds in
             context?.account.viewTracker.updateUnsupportedMediaForMessageIds(messageIds: messageIds)
+        }
+        self.refreshMediaProcessingManager.process = { [weak context] messageIds in
+            context?.account.viewTracker.refreshSecretMediaMediaForMessageIds(messageIds: messageIds)
         }
         self.messageMentionProcessingManager.process = { [weak context] messageIds in
             context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
@@ -1174,6 +1178,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             var messageIdsWithUpdateableReactions: [MessageId] = []
             var messageIdsWithLiveLocation: [MessageId] = []
             var messageIdsWithUnsupportedMedia: [MessageId] = []
+            var messageIdsWithRefreshMedia: [MessageId] = []
             var messageIdsWithUnseenPersonalMention: [MessageId] = []
             var messagesWithPreloadableMediaToEarlier: [(Message, Media)] = []
             var messagesWithPreloadableMediaToLater: [(Message, Media)] = []
@@ -1192,6 +1197,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             }
                         }
                         var contentRequiredValidation = false
+                        var mediaRequiredValidation = false
                         for attribute in message.attributes {
                             if attribute is ViewCountMessageAttribute {
                                 if message.id.namespace == Namespaces.Message.Cloud {
@@ -1218,6 +1224,24 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 }
                             } else if let _ = media as? TelegramMediaAction {
                                 isAction = true
+                            } else if let telegramFile = media as? TelegramMediaFile {
+                                if telegramFile.isAnimatedSticker, (message.id.peerId.namespace == Namespaces.Peer.SecretChat || !telegramFile.previewRepresentations.isEmpty), let size = telegramFile.size, size > 0 && size <= 128 * 1024 {
+                                    if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                                        if telegramFile.fileId.namespace == Namespaces.Media.CloudFile {
+                                            var isValidated = false
+                                            attributes: for attribute in telegramFile.attributes {
+                                                if case .hintIsValidated = attribute {
+                                                    isValidated = true
+                                                    break attributes
+                                                }
+                                            }
+                                            
+                                            if !isValidated {
+                                                mediaRequiredValidation = true
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                         if !isAction && message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
@@ -1225,6 +1249,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         }
                         if contentRequiredValidation {
                             messageIdsWithUnsupportedMedia.append(message.id)
+                        }
+                        if mediaRequiredValidation {
+                            messageIdsWithRefreshMedia.append(message.id)
                         }
                         if hasUnconsumedMention && !hasUnconsumedContent {
                             messageIdsWithUnseenPersonalMention.append(message.id)
@@ -1345,6 +1372,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
             if !messageIdsWithUnsupportedMedia.isEmpty {
                 self.unsupportedMessageProcessingManager.add(messageIdsWithUnsupportedMedia)
+            }
+            if !messageIdsWithRefreshMedia.isEmpty {
+                self.refreshMediaProcessingManager.add(messageIdsWithRefreshMedia)
             }
             if !messageIdsWithUnseenPersonalMention.isEmpty {
                 self.messageMentionProcessingManager.add(messageIdsWithUnseenPersonalMention)

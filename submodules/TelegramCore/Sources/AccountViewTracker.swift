@@ -291,6 +291,7 @@ public final class AccountViewTracker {
     private var seenLiveLocationDisposables = DisposableDict<Int32>()
     
     private var updatedUnsupportedMediaMessageIdsAndTimestamps: [MessageId: Int32] = [:]
+    private var refreshSecretChatMediaMessageIdsAndTimestamps: [MessageId: Int32] = [:]
     private var nextUpdatedUnsupportedMediaDisposableId: Int32 = 0
     private var updatedUnsupportedMediaDisposables = DisposableDict<Int32>()
     
@@ -629,6 +630,18 @@ public final class AccountViewTracker {
             return EmptyDisposable
         }
         |> runOn(self.queue)
+    }
+    
+    public func updateReplyInfoForMessageId(_ id: MessageId, info: UpdatedMessageReplyInfo) {
+        self.queue.async { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            guard let current = strongSelf.updatedViewCountMessageIdsAndTimestamps[id] else {
+                return
+            }
+            strongSelf.updatedViewCountMessageIdsAndTimestamps[id] = ViewCountContextState(timestamp: Int32(CFAbsoluteTimeGetCurrent()), clientId: current.clientId, result: ViewCountContextState.ReplyInfo(commentsPeerId: info.commentsPeerId, maxReadIncomingMessageId: info.maxReadIncomingMessageId, maxMessageId: info.maxMessageId))
+        }
     }
     
     public func updateViewCountForMessageIds(messageIds: Set<MessageId>, clientId: Int32) {
@@ -1021,6 +1034,98 @@ public final class AccountViewTracker {
                                         transaction.updateMessage(id, update: { _ in
                                             return .update(storeMessage)
                                         })
+                                    }
+                                }
+                            }
+                        }
+                        |> afterDisposed { [weak self] in
+                            self?.queue.async {
+                                self?.updatedUnsupportedMediaDisposables.set(nil, forKey: disposableId)
+                            }
+                        }
+                        self.updatedUnsupportedMediaDisposables.set(signal.start(), forKey: disposableId)
+                    }
+                }
+            }
+        }
+    }
+    
+    public func refreshSecretMediaMediaForMessageIds(messageIds: Set<MessageId>) {
+        self.queue.async {
+            var addedMessageIds: [MessageId] = []
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+            for messageId in messageIds {
+                let messageTimestamp = self.refreshSecretChatMediaMessageIdsAndTimestamps[messageId]
+                if messageTimestamp == nil {
+                    self.refreshSecretChatMediaMessageIdsAndTimestamps[messageId] = timestamp
+                    addedMessageIds.append(messageId)
+                }
+            }
+            if !addedMessageIds.isEmpty {
+                for (_, messageIds) in messagesIdsGroupedByPeerId(Set(addedMessageIds)) {
+                    let disposableId = self.nextUpdatedUnsupportedMediaDisposableId
+                    self.nextUpdatedUnsupportedMediaDisposableId += 1
+                    
+                    if let account = self.account {
+                        let signal = account.postbox.transaction { transaction -> [TelegramMediaFile] in
+                            var result: [TelegramMediaFile] = []
+                            for id in messageIds {
+                                if let message = transaction.getMessage(id) {
+                                    for media in message.media {
+                                        if let file = media as? TelegramMediaFile, file.isAnimatedSticker {
+                                            result.append(file)
+                                        }
+                                    }
+                                }
+                            }
+                            return result
+                        }
+                        |> mapToSignal { files -> Signal<Void, NoError> in
+                            guard !files.isEmpty else {
+                                return .complete()
+                            }
+                            
+                            var stickerPacks = Set<StickerPackReference>()
+                            for file in files {
+                                for attribute in file.attributes {
+                                    if case let .Sticker(_, packReferenceValue, _) = attribute, let packReference = packReferenceValue {
+                                        if case .id = packReference {
+                                            stickerPacks.insert(packReference)
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            var requests: [Signal<Api.messages.StickerSet?, NoError>] = []
+                            for reference in stickerPacks {
+                                if case let .id(id, accessHash) = reference {
+                                    requests.append(account.network.request(Api.functions.messages.getStickerSet(stickerset: .inputStickerSetID(id: id, accessHash: accessHash)))
+                                    |> map(Optional.init)
+                                    |> `catch` { _ -> Signal<Api.messages.StickerSet?, NoError> in
+                                        return .single(nil)
+                                    })
+                                }
+                            }
+                            if requests.isEmpty {
+                                return .complete()
+                            }
+                            
+                            return combineLatest(requests)
+                            |> mapToSignal { results -> Signal<Void, NoError> in
+                                return account.postbox.transaction { transaction -> Void in
+                                    for result in results {
+                                        switch result {
+                                        case let .stickerSet(_, _, documents):
+                                            for document in documents {
+                                                if let file = telegramMediaFileFromApiDocument(document) {
+                                                    if transaction.getMedia(file.fileId) != nil {
+                                                        let _ = transaction.updateMedia(file.fileId, update: file)
+                                                    }
+                                                }
+                                            }
+                                        default:
+                                            break
+                                        }
                                     }
                                 }
                             }
