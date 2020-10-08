@@ -7038,22 +7038,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             |> deliverOnMainQueue).start(next: { results in
                                 if let strongSelf = self {
                                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
-                                    
-                                    var groupingKey: Int64?
-                                    var allItemsAreAudio = true
-                                    for item in results {
-                                        if let item = item {
-                                            let pathExtension = (item.fileName as NSString).pathExtension.lowercased()
-                                            if !["mp3", "m4a"].contains(pathExtension) {
-                                                allItemsAreAudio = false
-                                            }
-                                        }
-                                    }
-                                    
-                                    if allItemsAreAudio {
-                                        groupingKey = arc4random64()
-                                    }
-                                    
+                                                           
                                     var messages: [EnqueueMessage] = []
                                     for item in results {
                                         if let item = item {
@@ -7070,7 +7055,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             }
                                             
                                             let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: fileId), partialReference: nil, resource: ICloudFileResource(urlData: item.urlData, thumbnail: false), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: item.fileSize, attributes: attributes)
-                                            let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: replyMessageId, localGroupingKey: groupingKey)
+                                            let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: replyMessageId, localGroupingKey: nil)
                                             messages.append(message)
                                         }
                                     }
