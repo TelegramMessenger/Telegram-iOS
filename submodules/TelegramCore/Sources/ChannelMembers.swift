@@ -34,8 +34,7 @@ public func channelMembers(postbox: Postbox, network: Network, accountPeerId: Pe
                             apiFilter = .channelParticipantsSearch(q: query)
                     }
                 case let .mentions(threadId, filter):
-                    return .single([])
-                    /*switch filter {
+                    switch filter {
                         case .all:
                             var flags: Int32 = 0
                             if threadId != nil {
@@ -51,7 +50,7 @@ public func channelMembers(postbox: Postbox, network: Network, accountPeerId: Pe
                                 flags |= 1 << 0
                             }
                             apiFilter = .channelParticipantsMentions(flags: flags, q: query.isEmpty ? nil : query, topMsgId: threadId?.id)
-                    }*/
+                    }
                 case .admins:
                     apiFilter = .channelParticipantsAdmins
                 case let .contacts(filter):

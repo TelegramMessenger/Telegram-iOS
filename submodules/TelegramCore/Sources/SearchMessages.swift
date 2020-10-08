@@ -221,10 +221,10 @@ public func searchMessages(account: Account, location: SearchMessagesLocation, q
                 guard let inputPeer = apiInputPeer(peer) else {
                     return .single((nil, nil))
                 }
-                var fromInputPeer: Api.InputUser? = nil
+                var fromInputPeer: Api.InputPeer? = nil
                 var flags: Int32 = 0
                 if let from = values.from {
-                    fromInputPeer = apiInputUser(from)
+                    fromInputPeer = apiInputPeer(from)
                     if let _ = fromInputPeer {
                         flags |= (1 << 0)
                     }
