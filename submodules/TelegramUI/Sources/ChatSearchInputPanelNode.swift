@@ -189,6 +189,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
                 canSearchMembers = false
             }
         }
+        
         if case .replyThread = interfaceState.chatLocation {
             canSearchMembers = false
         }
