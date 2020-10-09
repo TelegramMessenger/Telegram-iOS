@@ -145,10 +145,12 @@ private class ReplyThreadHistoryContextImpl {
                         }
                         
                         var channelMessageId: MessageId?
+                        var replyThreadAttribute: ReplyThreadMessageAttribute?
                         for attribute in topMessage.attributes {
                             if let attribute = attribute as? SourceReferenceMessageAttribute {
                                 channelMessageId = attribute.messageId
-                                break
+                            } else if let attribute = attribute as? ReplyThreadMessageAttribute {
+                                replyThreadAttribute = attribute
                             }
                         }
                         
@@ -195,14 +197,41 @@ private class ReplyThreadHistoryContextImpl {
                             }
                         }
                         
+                        let maxReadIncomingMessageId = readInboxMaxId.flatMap { readMaxId in
+                            MessageId(peerId: parsedIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: readMaxId)
+                        }
+                        
+                        if let channelMessageId = channelMessageId, let replyThreadAttribute = replyThreadAttribute {
+                            account.viewTracker.updateReplyInfoForMessageId(channelMessageId, info: AccountViewTracker.UpdatedMessageReplyInfo(
+                                timestamp: Int32(CFAbsoluteTimeGetCurrent()),
+                                commentsPeerId: parsedIndex.id.peerId,
+                                maxReadIncomingMessageId: maxReadIncomingMessageId,
+                                maxMessageId: resolvedMaxMessage
+                            ))
+                            
+                            transaction.updateMessage(channelMessageId, update: { currentMessage in
+                                var attributes = currentMessage.attributes
+                                loop: for j in 0 ..< attributes.count {
+                                    if let attribute = attributes[j] as? ReplyThreadMessageAttribute {
+                                        attributes[j] = ReplyThreadMessageAttribute(
+                                            count: replyThreadAttribute.count,
+                                            latestUsers: attribute.latestUsers,
+                                            commentsPeerId: attribute.commentsPeerId,
+                                            maxMessageId: replyThreadAttribute.maxMessageId,
+                                            maxReadMessageId: replyThreadAttribute.maxReadMessageId
+                                        )
+                                    }
+                                }
+                                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                            })
+                        }
+                        
                         return .single(DiscussionMessage(
                             messageId: parsedIndex.id,
                             channelMessageId: channelMessageId,
                             isChannelPost: isChannelPost,
                             maxMessage: resolvedMaxMessage,
-                            maxReadIncomingMessageId: readInboxMaxId.flatMap { readMaxId in
-                                MessageId(peerId: parsedIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: readMaxId)
-                            },
+                            maxReadIncomingMessageId: maxReadIncomingMessageId,
                             maxReadOutgoingMessageId: readOutboxMaxId.flatMap { readMaxId in
                                 MessageId(peerId: parsedIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: readMaxId)
                             }

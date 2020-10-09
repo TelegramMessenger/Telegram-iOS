@@ -1250,7 +1250,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                                     }))
                                 }
                             }
-                            if !isPublic && cachedData.linkedDiscussionPeerId == nil {
+                            if !isPublic, case .known(nil) = cachedData.linkedDiscussionPeerId {
                                 items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(cachedData.flags.contains(.preHistoryEnabled) ? presentationData.strings.GroupInfo_GroupHistoryVisible : presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistory, action: {
                                     interaction.editingOpenPreHistorySetup()
                                 }))
