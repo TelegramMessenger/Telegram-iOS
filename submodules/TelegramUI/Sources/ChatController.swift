@@ -2221,10 +2221,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
         }, openMessageStats: { [weak self] id in
-            let _ = (context.account.postbox.transaction { transaction -> CachedPeerData? in
-                return transaction.getPeerCachedData(peerId: id.peerId)
-            } |> deliverOnMainQueue).start(next: { [weak self] cachedPeerData in
-                guard let strongSelf = self, let cachedPeerData = cachedPeerData else {
+            let _ = (context.account.postbox.transaction { transaction -> (MessageId, CachedPeerData?)? in
+                if let message = transaction.getMessage(id), let sourceMessageId = message.forwardInfo?.sourceMessageId {
+                    return (sourceMessageId, transaction.getPeerCachedData(peerId: sourceMessageId.peerId))
+                } else {
+                    return (id, transaction.getPeerCachedData(peerId: id.peerId))
+                }
+            } |> deliverOnMainQueue).start(next: { [weak self] messageIdAndCachedPeerData in
+                guard let strongSelf = self, let (id, cachedPeerDataValue) = messageIdAndCachedPeerData, let cachedPeerData = cachedPeerDataValue else {
                     return
                 }
                 strongSelf.push(messageStatsController(context: context, messageId: id, cachedPeerData: cachedPeerData))
@@ -6522,7 +6526,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     let peerId = peer.id
                     
-                    let cacheUsageStats = (collectCacheUsageStats(account: strongSelf.context.account, peerId: peer.id)
+                    let _ = (collectCacheUsageStats(account: strongSelf.context.account, peerId: peer.id)
                     |> deliverOnMainQueue).start(next: { [weak self, weak controller] result in
                         controller?.dismiss()
                         
