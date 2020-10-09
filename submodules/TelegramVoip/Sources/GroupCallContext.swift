@@ -100,10 +100,11 @@ private func convertSDPToColibri(conferenceId: String, audioChannelId: String, a
         }
     }
     audioChannel["sources"] = audioSources
-    audioChannel["ssrc-groups"] = [
+    let ssrcGroup = [
         "semantics": "SIM",
         "sources": audioSources
     ] as [String: Any]
+    audioChannel["ssrc-groups"] = [ssrcGroup]
     audioChannel["rtp-level-relay-type"] = "translator"
     
     audioChannel["payload-types"] = [
@@ -216,7 +217,7 @@ private enum HttpMethod {
     case patch([String: Any])
 }
 
-private func httpJsonRequest(url: String, method: HttpMethod) -> Signal<[String: Any], HttpError> {
+private func httpJsonRequest<T>(url: String, method: HttpMethod, resultType: T.Type) -> Signal<T, HttpError> {
     return Signal { subscriber in
         guard let url = URL(string: url) else {
             subscriber.putError(.generic)
@@ -259,7 +260,7 @@ private func httpJsonRequest(url: String, method: HttpMethod) -> Signal<[String:
             }
             
             let _ = completed.swap(true)
-            if let data = data, let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+            if let data = data, let json = try? JSONSerialization.jsonObject(with: data, options: []) as? T {
                 subscriber.putNext(json)
                 subscriber.putCompletion()
             } else {
@@ -320,15 +321,26 @@ public final class GroupCallContext {
         }
         
         func requestConference() {
-            self.disposable.set((httpJsonRequest(url: "http://localhost:8080/colibri/conferences/", method: .post([:]))
+            self.disposable.set((httpJsonRequest(url: "http://localhost:8080/colibri/conferences/", method: .get, resultType: [Any].self)
             |> deliverOn(self.queue)).start(next: { [weak self] result in
                 guard let strongSelf = self else {
                     return
                 }
-                guard let conferenceId = result["id"] as? String else {
-                    return
+                
+                if let conference = result.first as? [String: Any], let conferenceId = conference["id"] as? String {
+                    strongSelf.allocateChannels(conferenceId: conferenceId)
+                } else {
+                    strongSelf.disposable.set((httpJsonRequest(url: "http://localhost:8080/colibri/conferences/", method: .post([:]), resultType: [String: Any].self)
+                    |> deliverOn(strongSelf.queue)).start(next: { result in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        guard let conferenceId = result["id"] as? String else {
+                            return
+                        }
+                        strongSelf.allocateChannels(conferenceId: conferenceId)
+                    }))
                 }
-                strongSelf.allocateChannels(conferenceId: conferenceId)
             }))
         }
         
@@ -367,7 +379,7 @@ public final class GroupCallContext {
                 ] as [Any]
             ]
             
-            self.disposable.set((httpJsonRequest(url: "http://localhost:8080/colibri/conferences/\(conferenceId)", method: .patch(payload))
+            self.disposable.set((httpJsonRequest(url: "http://localhost:8080/colibri/conferences/\(conferenceId)", method: .patch(payload), resultType: [String: Any].self)
             |> deliverOn(self.queue)).start(next: { [weak self] result in
                 guard let strongSelf = self else {
                     return
@@ -549,7 +561,7 @@ public final class GroupCallContext {
             ) else {
                 return
             }
-            self.disposable.set((httpJsonRequest(url: "http://localhost:8080/colibri/conferences/\(conferenceId!)", method: .patch(payload))
+            self.disposable.set((httpJsonRequest(url: "http://localhost:8080/colibri/conferences/\(conferenceId!)", method: .patch(payload), resultType: [String: Any].self)
             |> deliverOn(self.queue)).start(next: { [weak self] result in
                 guard let strongSelf = self else {
                     return
