@@ -1138,6 +1138,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         updatedState.updateMessagesPinned(ids: messages.map { id in
                             MessageId(peerId: channelPeerId, namespace: Namespaces.Message.Cloud, id: id)
                         }, pinned: (flags & (1 << 0)) != 0)
+                        updatedState.updateChannelState(peerId, pts: pts)
                     } else {
                         if !channelsToPoll.contains(peerId) {
                             Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) pinned messages pts hole")
