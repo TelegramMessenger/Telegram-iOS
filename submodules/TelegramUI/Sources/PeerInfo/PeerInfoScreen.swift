@@ -52,6 +52,7 @@ import PeerInfoUI
 import ListMessageItem
 import GalleryData
 import ChatInterfaceState
+import TelegramVoip
 
 protocol PeerInfoScreenItem: class {
     var id: AnyHashable { get }
@@ -3153,7 +3154,14 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.controller?.present(shareController, in: .window(.root))
     }
     
+    private var groupCall: GroupCallContext?
+    
     private func requestCall(isVideo: Bool) {
+        #if DEBUG
+        self.groupCall = GroupCallContext()
+        return;
+        #endif
+        
         guard let peer = self.data?.peer as? TelegramUser, let cachedUserData = self.data?.cachedData as? CachedUserData else {
             return
         }
