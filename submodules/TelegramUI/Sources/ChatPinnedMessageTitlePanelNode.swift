@@ -98,7 +98,6 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         }
         
         self.closeButton.addTarget(self, action: #selector(self.closePressed), forControlEvents: [.touchUpInside])
-        self.addSubnode(self.closeButton)
         
         self.addSubnode(self.clippingContainer)
         self.clippingContainer.addSubnode(self.contentContainer)
@@ -106,6 +105,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.contentContainer.addSubnode(self.titleNode)
         self.contentContainer.addSubnode(self.textNode)
         self.contentContainer.addSubnode(self.imageNode)
+        
+        self.addSubnode(self.closeButton)
         
         self.tapButton.addTarget(self, action: #selector(self.tapped), forControlEvents: [.touchUpInside])
         self.addSubnode(self.tapButton)
