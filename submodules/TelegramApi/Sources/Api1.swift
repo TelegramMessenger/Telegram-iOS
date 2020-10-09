@@ -6178,6 +6178,7 @@ public extension Api {
         case updateReadChannelDiscussionOutbox(channelId: Int32, topMsgId: Int32, readMaxId: Int32)
         case updatePeerBlocked(peerId: Api.Peer, blocked: Api.Bool)
         case updateChannelUserTyping(flags: Int32, channelId: Int32, topMsgId: Int32?, userId: Int32, action: Api.SendMessageAction)
+        case updatePinnedChannelMessages(flags: Int32, channelId: Int32, messages: [Int32], pts: Int32, ptsCount: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -6907,6 +6908,20 @@ public extension Api {
                     serializeInt32(userId, buffer: buffer, boxed: false)
                     action.serialize(buffer, true)
                     break
+                case .updatePinnedChannelMessages(let flags, let channelId, let messages, let pts, let ptsCount):
+                    if boxed {
+                        buffer.appendInt32(-2054649973)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(channelId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(messages.count))
+                    for item in messages {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    serializeInt32(pts, buffer: buffer, boxed: false)
+                    serializeInt32(ptsCount, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -7084,6 +7099,8 @@ public extension Api {
                 return ("updatePeerBlocked", [("peerId", peerId), ("blocked", blocked)])
                 case .updateChannelUserTyping(let flags, let channelId, let topMsgId, let userId, let action):
                 return ("updateChannelUserTyping", [("flags", flags), ("channelId", channelId), ("topMsgId", topMsgId), ("userId", userId), ("action", action)])
+                case .updatePinnedChannelMessages(let flags, let channelId, let messages, let pts, let ptsCount):
+                return ("updatePinnedChannelMessages", [("flags", flags), ("channelId", channelId), ("messages", messages), ("pts", pts), ("ptsCount", ptsCount)])
     }
     }
     
@@ -8549,6 +8566,31 @@ public extension Api {
                 return nil
             }
         }
+        public static func parse_updatePinnedChannelMessages(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: [Int32]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            _5 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.Update.updatePinnedChannelMessages(flags: _1!, channelId: _2!, messages: _3!, pts: _4!, ptsCount: _5!)
+            }
+            else {
+                return nil
+            }
+        }
     
     }
     public enum PopularContact: TypeConstructorDescription {
@@ -8635,6 +8677,7 @@ public extension Api {
         case channelParticipantBanned(flags: Int32, userId: Int32, kickedBy: Int32, date: Int32, bannedRights: Api.ChatBannedRights)
         case channelParticipantAdmin(flags: Int32, userId: Int32, inviterId: Int32?, promotedBy: Int32, date: Int32, adminRights: Api.ChatAdminRights, rank: String?)
         case channelParticipantCreator(flags: Int32, userId: Int32, adminRights: Api.ChatAdminRights, rank: String?)
+        case channelParticipantLeft(userId: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -8684,6 +8727,12 @@ public extension Api {
                     adminRights.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(rank!, buffer: buffer, boxed: false)}
                     break
+                case .channelParticipantLeft(let userId):
+                    if boxed {
+                        buffer.appendInt32(-1010402965)
+                    }
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -8699,6 +8748,8 @@ public extension Api {
                 return ("channelParticipantAdmin", [("flags", flags), ("userId", userId), ("inviterId", inviterId), ("promotedBy", promotedBy), ("date", date), ("adminRights", adminRights), ("rank", rank)])
                 case .channelParticipantCreator(let flags, let userId, let adminRights, let rank):
                 return ("channelParticipantCreator", [("flags", flags), ("userId", userId), ("adminRights", adminRights), ("rank", rank)])
+                case .channelParticipantLeft(let userId):
+                return ("channelParticipantLeft", [("userId", userId)])
     }
     }
     
@@ -8806,6 +8857,17 @@ public extension Api {
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.ChannelParticipant.channelParticipantCreator(flags: _1!, userId: _2!, adminRights: _3!, rank: _4)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelParticipantLeft(_ reader: BufferReader) -> ChannelParticipant? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelParticipant.channelParticipantLeft(userId: _1!)
             }
             else {
                 return nil
@@ -19590,6 +19652,7 @@ public extension Api {
         case inputMessagesFilterMyMentionsUnread
         case inputMessagesFilterGeo
         case inputMessagesFilterContacts
+        case inputMessagesFilterPinned
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -19701,6 +19764,12 @@ public extension Api {
                     }
                     
                     break
+                case .inputMessagesFilterPinned:
+                    if boxed {
+                        buffer.appendInt32(464520273)
+                    }
+                    
+                    break
     }
     }
     
@@ -19742,6 +19811,8 @@ public extension Api {
                 return ("inputMessagesFilterGeo", [])
                 case .inputMessagesFilterContacts:
                 return ("inputMessagesFilterContacts", [])
+                case .inputMessagesFilterPinned:
+                return ("inputMessagesFilterPinned", [])
     }
     }
     
@@ -19806,6 +19877,9 @@ public extension Api {
         }
         public static func parse_inputMessagesFilterContacts(_ reader: BufferReader) -> MessagesFilter? {
             return Api.MessagesFilter.inputMessagesFilterContacts
+        }
+        public static func parse_inputMessagesFilterPinned(_ reader: BufferReader) -> MessagesFilter? {
+            return Api.MessagesFilter.inputMessagesFilterPinned
         }
     
     }

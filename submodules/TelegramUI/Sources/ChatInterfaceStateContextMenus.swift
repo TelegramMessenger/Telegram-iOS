@@ -643,7 +643,14 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         if data.canPin, case .peer = chatPresentationInterfaceState.chatLocation {
-            if chatPresentationInterfaceState.pinnedMessage?.message.id != messages[0].id {
+            let isPinned: Bool
+            if let _ = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
+                isPinned = messages[0].tags.contains(.pinned)
+            } else {
+                isPinned = chatPresentationInterfaceState.pinnedMessage?.message.id == messages[0].id
+            }
+            
+            if !isPinned {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_Pin, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Pin"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
@@ -654,7 +661,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_Unpin, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unpin"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
-                    interfaceInteraction.unpinMessage()
+                    interfaceInteraction.unpinMessage(messages[0].id)
                     f(.default)
                 })))
             }

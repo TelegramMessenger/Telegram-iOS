@@ -12,7 +12,7 @@ public enum UpdatePinnedMessageError {
 
 public enum PinnedMessageUpdate {
     case pin(id: MessageId, silent: Bool)
-    case clear
+    case clear(id: MessageId)
 }
 
 public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update: PinnedMessageUpdate) -> Signal<Void, UpdatePinnedMessageError> {
@@ -20,7 +20,6 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
         return (transaction.getPeer(peerId), transaction.getPeerCachedData(peerId: peerId))
     }
     |> mapError { _ -> UpdatePinnedMessageError in
-        return .generic
     }
     |> mapToSignal { peer, cachedPeerData -> Signal<Void, UpdatePinnedMessageError> in
         guard let peer = peer, let inputPeer = apiInputPeer(peer) else {
@@ -38,8 +37,9 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
                         if silent {
                             flags |= (1 << 0)
                         }
-                    case .clear:
-                        messageId = 0
+                    case let .clear(id):
+                        messageId = id.id
+                        flags |= 1 << 1
                 }
                 
                 let request = Api.functions.messages.updatePinnedMessage(flags: flags, peer: inputPeer, id: messageId)
@@ -50,8 +50,8 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
                 }
                 |> mapToSignal { updates -> Signal<Void, UpdatePinnedMessageError> in
                     account.stateManager.addUpdates(updates)
-                    return account.postbox.transaction { transaction in
-                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                    return account.postbox.transaction { _ in
+                        /*transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                             if let current = current as? CachedChannelData {
                                 let pinnedMessageId: MessageId?
                                 switch update {
@@ -64,9 +64,9 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
                             } else {
                                 return current
                             }
-                        })
+                        })*/
                     }
-                    |> mapError { _ -> UpdatePinnedMessageError in return .generic
+                    |> mapError { _ -> UpdatePinnedMessageError in
                     }
                 }
             } else {
@@ -97,8 +97,9 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
                         if silent {
                             flags |= (1 << 0)
                         }
-                    case .clear:
-                        messageId = 0
+                    case let .clear(id):
+                        messageId = id.id
+                        flags |= 1 << 1
                 }
                 
                 let request = Api.functions.messages.updatePinnedMessage(flags: flags, peer: inputPeer, id: messageId)
@@ -138,7 +139,6 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
                         })
                     }
                     |> mapError { _ -> UpdatePinnedMessageError in
-                        return .generic
                     }
                 }
             } else {

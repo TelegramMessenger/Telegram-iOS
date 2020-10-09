@@ -98,8 +98,9 @@ public extension MessageTags {
     static let gif = MessageTags(rawValue: 1 << 7)
     static let photo = MessageTags(rawValue: 1 << 8)
     static let video = MessageTags(rawValue: 1 << 9)
+    static let pinned = MessageTags(rawValue: 1 << 10)
     
-    static let all: MessageTags = [.photoOrVideo, .file, .music, .webPage, .voiceOrInstantVideo, .unseenPersonalMessage, .liveLocation, .gif, .photo, .video]
+    static let all: MessageTags = [.photoOrVideo, .file, .music, .webPage, .voiceOrInstantVideo, .unseenPersonalMessage, .liveLocation, .gif, .photo, .video, .pinned]
 }
 
 public extension GlobalMessageTags {

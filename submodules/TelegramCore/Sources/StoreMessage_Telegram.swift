@@ -4,7 +4,7 @@ import TelegramApi
 
 import SyncCore
 
-public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], media: [Media], textEntities: [MessageTextEntity]?) -> (MessageTags, GlobalMessageTags) {
+public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], media: [Media], textEntities: [MessageTextEntity]?, isPinned: Bool) -> (MessageTags, GlobalMessageTags) {
     var isSecret = false
     var isUnconsumedPersonalMention = false
     for attribute in attributes {
@@ -24,6 +24,10 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
     
     if isUnconsumedPersonalMention {
         tags.insert(.unseenPersonalMessage)
+    }
+    
+    if isPinned {
+        tags.insert(.pinned)
     }
     
     for attachment in media {
@@ -582,7 +586,9 @@ extension StoreMessage {
                     attributes.append(NotificationInfoMessageAttribute(flags: notificationFlags))
                 }
                 
-                let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: medias, textEntities: entitiesAttribute?.entities)
+                let isPinned = (flags & (1 << 24)) != 0
+                
+                let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: medias, textEntities: entitiesAttribute?.entities, isPinned: isPinned)
                 
                 storeFlags.insert(.CanBeGroupedIntoFeed)
                 
@@ -643,7 +649,7 @@ extension StoreMessage {
                     media.append(action)
                 }
                 
-                let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: media, textEntities: nil)
+                let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: media, textEntities: nil, isPinned: false)
                 
                 storeFlags.insert(.CanBeGroupedIntoFeed)
                 
