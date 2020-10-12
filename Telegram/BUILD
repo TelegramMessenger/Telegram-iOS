@@ -542,6 +542,7 @@ ios_framework(
         ":MtProtoKitInfoPlist",
     ],
     minimum_os_version = "9.0",
+    ipa_post_processor = ":StripFramework",
     deps = [
         "//submodules/MtProtoKit:MtProtoKit",
     ],
@@ -582,6 +583,7 @@ ios_framework(
         ":SwiftSignalKitInfoPlist",
     ],
     minimum_os_version = "9.0",
+    ipa_post_processor = ":StripFramework",
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
     ],
@@ -625,6 +627,7 @@ ios_framework(
         ":SwiftSignalKitFramework",
     ],
     minimum_os_version = "9.0",
+    ipa_post_processor = ":StripFramework",
     deps = [
         "//submodules/Postbox:Postbox",
     ],
@@ -665,6 +668,7 @@ ios_framework(
         ":TelegramApiInfoPlist",
     ],
     minimum_os_version = "9.0",
+    ipa_post_processor = ":StripFramework",
     deps = [
         "//submodules/TelegramApi:TelegramApi",
     ],
@@ -709,6 +713,7 @@ ios_framework(
         ":PostboxFramework",
     ],
     minimum_os_version = "9.0",
+    ipa_post_processor = ":StripFramework",
     deps = [
         "//submodules/SyncCore:SyncCore",
     ],
@@ -756,6 +761,7 @@ ios_framework(
         ":TelegramApiFramework",
     ],
     minimum_os_version = "9.0",
+    ipa_post_processor = ":StripFramework",
     deps = [
         "//submodules/TelegramCore:TelegramCore",
     ],
@@ -796,6 +802,7 @@ ios_framework(
         ":AsyncDisplayKitInfoPlist",
     ],
     minimum_os_version = "9.0",
+    ipa_post_processor = ":StripFramework",
     deps = [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
     ],
@@ -823,6 +830,22 @@ plist_fragment(
     )
 )
 
+genrule(
+    name = "StripFramework",
+    cmd_bash =
+"""
+    echo 'for f in $$1/*.framework; do binary_name=`echo $$(basename $$f) | sed -e "s/\\\\.framework//"`; strip -ST $$f/$$binary_name; done;' > $(location StripFramework.sh)
+    echo '' >> $(location StripFramework.sh)
+""",
+    outs = [
+        "StripFramework.sh",
+    ],
+    executable = True,
+    visibility = [
+        "//visibility:public",
+    ]
+)
+
 ios_framework(
     name = "DisplayFramework",
     bundle_id = "{telegram_bundle_id}.Display".format(
@@ -840,6 +863,7 @@ ios_framework(
         ":AsyncDisplayKitFramework",
     ],
     minimum_os_version = "9.0",
+    ipa_post_processor = ":StripFramework",
     deps = [
         "//submodules/Display:Display",
     ],
@@ -890,6 +914,7 @@ ios_framework(
         ":DisplayFramework",
     ],
     minimum_os_version = "9.0",
+    ipa_post_processor = ":StripFramework",
     deps = [
         "//submodules/TelegramUI:TelegramUI",
     ] + debug_deps,

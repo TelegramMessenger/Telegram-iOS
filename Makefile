@@ -63,11 +63,6 @@ BAZEL_OPT_FLAGS=\
 	--swiftcopt=-whole-module-optimization \
 	--swiftcopt='-num-threads' --swiftcopt='16' \
     --objc_enable_binary_stripping \
-    --strip=always \
-    --stripopt -S \
-    --stripopt -T \
-    --stripopt -X \
-    --stripopt -p \
     -s \
 
 
