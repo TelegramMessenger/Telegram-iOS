@@ -8,7 +8,7 @@ export BUCK_DEBUG_OPTIONS=\
 export BUCK_RELEASE_OPTIONS=\
 	--config custom.other_cflags="-Os" \
   	--config custom.other_cxxflags="-Os" \
-  	--config custom.optimization="-O" \
+  	--config custom.optimization="-Osize" \
   	--config custom.config_swift_compiler_flags="-whole-module-optimization"
 
 export BUCK_THREADS_OPTIONS=--config build.threads=$(shell sysctl -n hw.logicalcpu)

@@ -60,7 +60,8 @@ BAZEL_DEBUG_FLAGS=\
 	--swiftcopt=-j${CORE_COUNT_MINUS_ONE} \
 
 BAZEL_OPT_FLAGS=\
-	--swiftcopt=-whole-module-optimization \
+	--features=swift.opt_uses_wmo \
+	--features=swift.opt_uses_osize \
 	--swiftcopt='-num-threads' --swiftcopt='16' \
     --objc_enable_binary_stripping \
     -s \
