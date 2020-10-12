@@ -14,6 +14,7 @@ swift_library(
         "//submodules/Markdown:Markdown",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
     ],
+    alwayslink = True,
     visibility = [
         "//visibility:public",
     ],

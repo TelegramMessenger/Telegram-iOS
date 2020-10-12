@@ -4360,6 +4360,7 @@ Sorry for the inconvenience.";
 "Channel.DiscussionGroup.HeaderLabel" = "Discuss";
 "Channel.DiscussionGroup.Create" = "Create New Group";
 "Channel.DiscussionGroup.PrivateGroup" = "private group";
+"Channel.DiscussionGroup.PrivateChannel" = "private channel";
 "Channel.DiscussionGroup.Info" = "Everything you post in the channel will be forwarded to this group.";
 "Channel.DiscussionGroup.LinkGroup" = "Link Group";
 "Channel.DiscussionGroup.UnlinkGroup" = "Unlink Group";

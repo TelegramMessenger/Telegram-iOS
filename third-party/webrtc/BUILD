@@ -1,4 +1,4 @@
-use_gn_build = False
+use_gn_build = True
 
 webrtc_libs = [
     "libwebrtc.a",
