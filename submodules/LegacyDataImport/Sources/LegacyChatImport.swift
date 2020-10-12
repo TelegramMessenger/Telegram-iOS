@@ -569,7 +569,7 @@ private func loadLegacyMessages(account: TemporaryAccount, basePath: String, acc
                 parsedAttributes.append(AutoremoveTimeoutMessageAttribute(timeout: autoremoveTimeout, countdownBeginTime: countdownBeginTime))
             }
             
-            let (parsedTags, parsedGlobalTags) = tagsForStoreMessage(incoming: parsedFlags.contains(.Incoming), attributes: parsedAttributes, media: parsedMedia, textEntities: nil)
+            let (parsedTags, parsedGlobalTags) = tagsForStoreMessage(incoming: parsedFlags.contains(.Incoming), attributes: parsedAttributes, media: parsedMedia, textEntities: nil, isPinned: false)
             messages.append(StoreMessage(id: parsedId, globallyUniqueId: globallyUniqueId, groupingKey: parsedGroupingKey, threadId: nil, timestamp: timestamp, flags: parsedFlags, tags: parsedTags, globalTags: parsedGlobalTags, localTags: [], forwardInfo: nil, authorId: parsedAuthorId, text: text, attributes: parsedAttributes, media: parsedMedia))
             
             //Logger.shared.log("loadLegacyMessages", "message \(messageId) completed")

@@ -15,7 +15,7 @@ func updateMessageMedia(transaction: Transaction, id: MediaId, media: Media?) {
                     break
                 }
             }
-            let (tags, _) = tagsForStoreMessage(incoming: currentMessage.flags.contains(.Incoming), attributes: currentMessage.attributes, media: currentMessage.media, textEntities: textEntities)
+            let (tags, _) = tagsForStoreMessage(incoming: currentMessage.flags.contains(.Incoming), attributes: currentMessage.attributes, media: currentMessage.media, textEntities: textEntities, isPinned: currentMessage.tags.contains(.pinned))
             if tags == currentMessage.tags {
                 return .skip
             }

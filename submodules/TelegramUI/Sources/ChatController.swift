@@ -3404,8 +3404,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let topPinnedMessage: Signal<ChatPinnedMessage?, NoError>
         switch self.chatLocation {
-        case let .peer(peerId):
-            let replyHistory: Signal<ChatHistoryViewUpdate, NoError> = (chatHistoryViewForLocation(ChatHistoryLocationInput(content: .Initial(count: 100), id: 0), context: self.context, chatLocation: .peer(peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), scheduled: false, fixedCombinedReadStates: nil, tagMask: MessageTags.photoOrVideo, additionalData: [])
+        case let .peer(peerId) where peerId.namespace == Namespaces.Peer.CloudChannel:
+            let replyHistory: Signal<ChatHistoryViewUpdate, NoError> = (chatHistoryViewForLocation(ChatHistoryLocationInput(content: .Initial(count: 100), id: 0), context: self.context, chatLocation: .peer(peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), scheduled: false, fixedCombinedReadStates: nil, tagMask: MessageTags.pinned, additionalData: [])
             |> castError(Bool.self)
             |> mapToSignal { update -> Signal<ChatHistoryViewUpdate, Bool> in
                 switch update {
@@ -3424,9 +3424,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             topPinnedMessage = combineLatest(
                 replyHistory,
-                self.chatDisplayNode.historyNode.topVisibleMessage.get()
+                self.chatDisplayNode.historyNode.topVisibleMessageRange.get()
             )
-            |> map { update, topVisibleMessage -> ChatPinnedMessage? in
+            |> map { update, topVisibleMessageRange -> ChatPinnedMessage? in
                 var message: ChatPinnedMessage?
                 switch update {
                 case .Loading:
@@ -3437,8 +3437,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         var matches = false
                         if message == nil {
                             matches = true
-                        } else if let topVisibleMessage = topVisibleMessage {
-                            if entry.message.id < topVisibleMessage.id {
+                        } else if let topVisibleMessageRange = topVisibleMessageRange {
+                            if entry.message.id < topVisibleMessageRange.lowerBound {
                                 matches = true
                             }
                         } else {
@@ -3453,7 +3453,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return message
             }
             |> distinctUntilChanged
-        case .replyThread:
+        default:
             topPinnedMessage = .single(nil)
         }
         
@@ -3486,7 +3486,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 var pinnedMessage: ChatPinnedMessage?
-                if case let .replyThread(replyThreadMessage) = strongSelf.chatLocation {
+                switch strongSelf.chatLocation {
+                case let .replyThread(replyThreadMessage):
                     if isTopReplyThreadMessageShown {
                         pinnedMessageId = nil
                     } else {
@@ -3497,14 +3498,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             pinnedMessage = ChatPinnedMessage(message: message, isLatest: true)
                         }
                     }
-                } else {
-                    if let pinnedMessageId = pinnedMessageId {
-                        if let message = messages?[pinnedMessageId] {
-                            pinnedMessage = ChatPinnedMessage(message: message, isLatest: true)
+                case let .peer(peerId):
+                    if peerId.namespace == Namespaces.Peer.CloudChannel {
+                        pinnedMessageId = topPinnedMessage?.message.id
+                        pinnedMessage = topPinnedMessage
+                    } else {
+                        if let pinnedMessageId = pinnedMessageId {
+                            if let message = messages?[pinnedMessageId] {
+                                pinnedMessage = ChatPinnedMessage(message: message, isLatest: true)
+                            }
                         }
                     }
-                    //pinnedMessageId = topPinnedMessage?.message.id
-                    //pinnedMessage = topPinnedMessage
                 }
                 
                 var pinnedMessageUpdated = false
@@ -4828,7 +4832,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
             }
-        }, unpinMessage: { [weak self] in
+        }, unpinMessage: { [weak self] id in
             if let strongSelf = self {
                 if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                     var canManagePin = false
@@ -4859,7 +4863,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     disposable = MetaDisposable()
                                     strongSelf.unpinMessageDisposable = disposable
                                 }
-                                disposable.set(requestUpdatePinnedMessage(account: strongSelf.context.account, peerId: peer.id, update: .clear).start())
+                                disposable.set(requestUpdatePinnedMessage(account: strongSelf.context.account, peerId: peer.id, update: .clear(id: id)).start())
                             }
                         })]), in: .window(.root))
                     } else {
