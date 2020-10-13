@@ -3154,11 +3154,25 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.controller?.present(shareController, in: .window(.root))
     }
     
+    private let groupCallDisposable = MetaDisposable()
     private var groupCall: GroupCallContext?
     
     private func requestCall(isVideo: Bool) {
         #if DEBUG
-        self.groupCall = GroupCallContext()
+        
+        let audioSessionActive = Promise<Bool>(false)
+        self.groupCallDisposable.set(self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .voiceCall, manualActivate: { [weak self] audioSessionControl in
+            audioSessionControl.activate({ _ in })
+            audioSessionActive.set(.single(true))
+        }, deactivate: {
+            return Signal { subscriber in
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
+        }, availableOutputsChanged: { _, _ in
+        }))
+        
+        self.groupCall = GroupCallContext(audioSessionActive: audioSessionActive.get())
         return;
         #endif
         
