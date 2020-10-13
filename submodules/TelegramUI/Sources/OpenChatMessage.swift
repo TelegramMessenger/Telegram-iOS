@@ -66,25 +66,30 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
             case let .map(mapMedia):
                 params.dismissInput()
                 
-//                let controllerParams = LocationViewParams(sendLiveLocation: { location in
-//                    let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: location), replyToMessageId: nil, localGroupingKey: nil)
-//                    params.enqueueMessage(outMessage)
-//                }, stopLiveLocation: {
-//                    params.context.liveLocationManager?.cancelLiveLocation(peerId: params.message.id.peerId)
-//                }, openUrl: params.openUrl, openPeer: { peer in
-//                    params.openPeer(peer, .info)
-//                })
-//                let controller = LocationViewController(context: params.context, mapMedia: mapMedia, params: controllerParams)
-                let controller = legacyLocationController(message: params.message, mapMedia: mapMedia, context: params.context, openPeer: { peer in
-                    params.openPeer(peer, .info)
-                }, sendLiveLocation: { coordinate, period in
-                    let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period)), replyToMessageId: nil, localGroupingKey: nil)
-                    params.enqueueMessage(outMessage)
-                }, stopLiveLocation: {
-                    params.context.liveLocationManager?.cancelLiveLocation(peerId: params.message.id.peerId)
-                }, openUrl: params.openUrl)
-                controller.navigationPresentation = .modal
-                params.navigationController?.pushViewController(controller)
+                if mapMedia.liveBroadcastingTimeout == nil {
+                    let controllerParams = LocationViewParams(sendLiveLocation: { location in
+                        let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: location), replyToMessageId: nil, localGroupingKey: nil)
+                        params.enqueueMessage(outMessage)
+                    }, stopLiveLocation: {
+                        params.context.liveLocationManager?.cancelLiveLocation(peerId: params.message.id.peerId)
+                    }, openUrl: params.openUrl, openPeer: { peer in
+                        params.openPeer(peer, .info)
+                    })
+                    let controller = LocationViewController(context: params.context, mapMedia: mapMedia, params: controllerParams)
+                    controller.navigationPresentation = .modal
+                    params.navigationController?.pushViewController(controller)
+                } else {
+                    let controller = legacyLocationController(message: params.message, mapMedia: mapMedia, context: params.context, openPeer: { peer in
+                        params.openPeer(peer, .info)
+                    }, sendLiveLocation: { coordinate, period in
+                        let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period)), replyToMessageId: nil, localGroupingKey: nil)
+                        params.enqueueMessage(outMessage)
+                    }, stopLiveLocation: {
+                        params.context.liveLocationManager?.cancelLiveLocation(peerId: params.message.id.peerId)
+                    }, openUrl: params.openUrl)
+                    controller.navigationPresentation = .modal
+                    params.navigationController?.pushViewController(controller)
+                }
                 return true
             case let .stickerPack(reference):
                 let controller = StickerPackScreen(context: params.context, mainStickerPack: reference, stickerPacks: [reference], parentNavigationController: params.navigationController, sendSticker: params.sendSticker, actionPerformed: { info, items, action in

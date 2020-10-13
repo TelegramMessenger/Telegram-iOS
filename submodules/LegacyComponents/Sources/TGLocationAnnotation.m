@@ -82,6 +82,13 @@
     }
 }
 
+- (void)setHeading:(NSNumber *)heading
+{
+    [self willChangeValueForKey:@"heading"];
+    _heading = heading;
+    [self didChangeValueForKey:@"heading"];
+}
+
 - (void)setHasSession:(bool)hasSession
 {
     if (hasSession != _hasSession)

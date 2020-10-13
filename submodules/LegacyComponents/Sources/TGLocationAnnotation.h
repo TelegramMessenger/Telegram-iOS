@@ -25,6 +25,7 @@
 @property (nonatomic, assign) bool isOwn;
 @property (nonatomic, assign) bool hasSession;
 @property (nonatomic, assign) bool isExpired;
+@property (nonatomic, strong) NSNumber *heading;
 
 - (instancetype)initWithLocation:(TGLocationMediaAttachment *)location;
 - (instancetype)initWithLocation:(TGLocationMediaAttachment *)location color:(UIColor *)color;

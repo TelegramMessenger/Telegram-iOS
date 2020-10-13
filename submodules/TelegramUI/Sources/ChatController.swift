@@ -669,7 +669,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let _ = ApplicationSpecificNotice.incrementChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager).start()
                     }
                     
-                    let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message)), items: .single(actions), reactionItems: reactionItems, recognizer: recognizer, gesture: gesture, displayTextSelectionTip: displayTextSelectionTip)
+                    let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message, selectAll: selectAll)), items: .single(actions), reactionItems: reactionItems, recognizer: recognizer, gesture: gesture, displayTextSelectionTip: displayTextSelectionTip)
                     strongSelf.currentContextController = controller
                     controller.reactionSelected = { [weak controller] value in
                         guard let strongSelf = self, let message = updatedMessages.first else {
@@ -882,7 +882,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     strongSelf.effectiveNavigationController?.pushViewController(GameController(context: strongSelf.context, url: url, message: message))
                                 } else {
                                     strongSelf.openUrl(url, concealed: false)
-                            }
+                                }
                         }
                     }
                     
@@ -1686,7 +1686,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     })))
                     
-                    let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message)), items: .single(actions), reactionItems: [], recognizer: nil)
+                    let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message, selectAll: true)), items: .single(actions), reactionItems: [], recognizer: nil)
                     strongSelf.currentContextController = controller
                     strongSelf.forEachController({ controller in
                         if let controller = controller as? TooltipScreen {
@@ -1763,7 +1763,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         f(.dismissWithoutContent)
                     })))
                     
-                    let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: topMessage)), items: .single(actions), reactionItems: [], recognizer: nil)
+                    let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: topMessage, selectAll: true)), items: .single(actions), reactionItems: [], recognizer: nil)
                     strongSelf.currentContextController = controller
                     strongSelf.forEachController({ controller in
                         if let controller = controller as? TooltipScreen {
@@ -7044,17 +7044,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                                     
                                     var groupingKey: Int64?
-                                    var allItemsAreAudio = true
+                                    var allItemsAreSame = true
                                     for item in results {
                                         if let item = item {
                                             let pathExtension = (item.fileName as NSString).pathExtension.lowercased()
                                             if !["mp3", "m4a"].contains(pathExtension) {
-                                                allItemsAreAudio = false
+                                                allItemsAreSame = false
                                             }
                                         }
                                     }
-                                    
-                                    if allItemsAreAudio {
+                                    allItemsAreSame = true
+                                    if allItemsAreSame {
                                         groupingKey = arc4random64()
                                     }
                                     
@@ -7727,6 +7727,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 value = self.presentationData.strings.Conversation_Dice_u1F3C0
             case "⚽":
                 value = self.presentationData.strings.Conversation_Dice_u26BD
+            case "🎰":
+                value = self.presentationData.strings.Conversation_Dice_u1F3B0
             default:
                 let emojiHex = emoji.unicodeScalars.map({ String(format:"%02x", $0.value) }).joined().uppercased()
                 let key = "Conversation.Dice.u\(emojiHex)"

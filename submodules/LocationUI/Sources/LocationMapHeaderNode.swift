@@ -6,7 +6,7 @@ import TelegramPresentationData
 import AppBundle
 
 private let panelInset: CGFloat = 4.0
-private let panelSize = CGSize(width: 46.0, height: 90.0)
+private let panelButtonSize = CGSize(width: 46.0, height: 46.0)
 
 private func generateBackgroundImage(theme: PresentationTheme) -> UIImage? {
     let cornerRadius: CGFloat = 9.0
@@ -38,24 +38,29 @@ final class LocationMapHeaderNode: ASDisplayNode {
     private let toggleMapModeSelection: () -> Void
     private let goToUserLocation: () -> Void
     private let showPlacesInThisArea: () -> Void
+    private let setupProximityNotification: () -> Void
     
     private var displayingPlacesButton = false
+    private var proximityNotification: Bool?
     
     let mapNode: LocationMapNode
     private let optionsBackgroundNode: ASImageNode
     private let optionsSeparatorNode: ASDisplayNode
+    private let optionsSecondSeparatorNode: ASDisplayNode
     private let infoButtonNode: HighlightableButtonNode
     private let locationButtonNode: HighlightableButtonNode
+    private let notificationButtonNode: HighlightableButtonNode
     private let placesBackgroundNode: ASImageNode
     private let placesButtonNode: HighlightableButtonNode
     private let shadowNode: ASImageNode
     
     private var validLayout: (ContainerViewLayout, CGFloat, CGFloat, CGFloat, CGSize)?
     
-    init(presentationData: PresentationData, toggleMapModeSelection: @escaping () -> Void, goToUserLocation: @escaping () -> Void, showPlacesInThisArea: @escaping () -> Void = {}) {
+    init(presentationData: PresentationData, toggleMapModeSelection: @escaping () -> Void, goToUserLocation: @escaping () -> Void, setupProximityNotification: @escaping () -> Void = {}, showPlacesInThisArea: @escaping () -> Void = {}) {
         self.presentationData = presentationData
         self.toggleMapModeSelection = toggleMapModeSelection
         self.goToUserLocation = goToUserLocation
+        self.setupProximityNotification = setupProximityNotification
         self.showPlacesInThisArea = showPlacesInThisArea
         
         self.mapNode = LocationMapNode()
@@ -70,6 +75,9 @@ final class LocationMapHeaderNode: ASDisplayNode {
         self.optionsSeparatorNode = ASDisplayNode()
         self.optionsSeparatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
         
+        self.optionsSecondSeparatorNode = ASDisplayNode()
+        self.optionsSecondSeparatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
+        
         self.infoButtonNode = HighlightableButtonNode()
         self.infoButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .normal)
         self.infoButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoActiveIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .selected)
@@ -77,6 +85,9 @@ final class LocationMapHeaderNode: ASDisplayNode {
         
         self.locationButtonNode = HighlightableButtonNode()
         self.locationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/TrackIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .normal)
+        
+        self.notificationButtonNode = HighlightableButtonNode()
+        self.notificationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/NotificationIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .normal)
         
         self.placesBackgroundNode = ASImageNode()
         self.placesBackgroundNode.contentMode = .scaleToFill
@@ -101,23 +112,27 @@ final class LocationMapHeaderNode: ASDisplayNode {
         self.addSubnode(self.mapNode)
         self.addSubnode(self.optionsBackgroundNode)
         self.optionsBackgroundNode.addSubnode(self.optionsSeparatorNode)
+        self.optionsBackgroundNode.addSubnode(self.optionsSecondSeparatorNode)
         self.optionsBackgroundNode.addSubnode(self.infoButtonNode)
         self.optionsBackgroundNode.addSubnode(self.locationButtonNode)
+        self.optionsBackgroundNode.addSubnode(self.notificationButtonNode)
         self.addSubnode(self.placesBackgroundNode)
         self.placesBackgroundNode.addSubnode(self.placesButtonNode)
         self.addSubnode(self.shadowNode)
         
         self.infoButtonNode.addTarget(self, action: #selector(self.infoPressed), forControlEvents: .touchUpInside)
         self.locationButtonNode.addTarget(self, action: #selector(self.locationPressed), forControlEvents: .touchUpInside)
+        self.notificationButtonNode.addTarget(self, action: #selector(self.notificationPressed), forControlEvents: .touchUpInside)
         self.placesButtonNode.addTarget(self, action: #selector(self.placesPressed), forControlEvents: .touchUpInside)
     }
     
-    func updateState(mapMode: LocationMapMode, displayingMapModeOptions: Bool, displayingPlacesButton: Bool, animated: Bool) {
+    func updateState(mapMode: LocationMapMode, displayingMapModeOptions: Bool, displayingPlacesButton: Bool, proximityNotification: Bool?, animated: Bool) {
         self.mapNode.mapMode = mapMode
         self.infoButtonNode.isSelected = displayingMapModeOptions
         
-        let updateLayout = self.displayingPlacesButton != displayingPlacesButton
+        let updateLayout = self.displayingPlacesButton != displayingPlacesButton || self.proximityNotification != proximityNotification
         self.displayingPlacesButton = displayingPlacesButton
+        self.proximityNotification = proximityNotification
         
         if updateLayout, let (layout, navigationBarHeight, topPadding, offset, size) = self.validLayout {
             let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .spring) : .immediate
@@ -130,10 +145,14 @@ final class LocationMapHeaderNode: ASDisplayNode {
         
         self.optionsBackgroundNode.image = generateBackgroundImage(theme: presentationData.theme)
         self.optionsSeparatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
+        self.optionsSecondSeparatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
         self.infoButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .normal)
         self.infoButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoActiveIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .selected)
         self.infoButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoActiveIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: [.selected, .highlighted])
         self.locationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/TrackIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .normal)
+        self.notificationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .normal)
+        self.notificationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoActiveIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .selected)
+        self.notificationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoActiveIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: [.selected, .highlighted])
         self.placesBackgroundNode.image = generateBackgroundImage(theme: presentationData.theme)
         self.shadowNode.image = generateShadowImage(theme: presentationData.theme, highlighted: false)
     }
@@ -155,10 +174,20 @@ final class LocationMapHeaderNode: ASDisplayNode {
         
         transition.updateFrame(node: self.shadowNode, frame: CGRect(x: 0.0, y: size.height - 14.0, width: size.width, height: 14.0))
         
-        transition.updateFrame(node: self.optionsBackgroundNode, frame: CGRect(x: size.width - inset - panelSize.width - panelInset * 2.0, y: navigationBarHeight + topPadding + inset, width: panelSize.width + panelInset * 2.0, height: panelSize.height + panelInset * 2.0))
-        transition.updateFrame(node: self.infoButtonNode, frame: CGRect(x: panelInset, y: panelInset, width: panelSize.width, height: panelSize.height / 2.0))
-        transition.updateFrame(node: self.locationButtonNode, frame: CGRect(x: panelInset, y: panelInset + panelSize.height / 2.0, width: panelSize.width, height: panelSize.height / 2.0))
-        transition.updateFrame(node: self.optionsSeparatorNode, frame: CGRect(x: panelInset, y: panelInset + panelSize.height / 2.0, width: panelSize.width, height: UIScreenPixel))
+        transition.updateFrame(node: self.infoButtonNode, frame: CGRect(x: panelInset, y: panelInset, width: panelButtonSize.width, height: panelButtonSize.height))
+        transition.updateFrame(node: self.locationButtonNode, frame: CGRect(x: panelInset, y: panelInset + panelButtonSize.height, width: panelButtonSize.width, height: panelButtonSize.height))
+        transition.updateFrame(node: self.notificationButtonNode, frame: CGRect(x: panelInset, y: panelInset + panelButtonSize.height * 2.0, width: panelButtonSize.width, height: panelButtonSize.height))
+        transition.updateFrame(node: self.optionsSeparatorNode, frame: CGRect(x: panelInset, y: panelInset + panelButtonSize.height, width: panelButtonSize.width, height: UIScreenPixel))
+        transition.updateFrame(node: self.optionsSecondSeparatorNode, frame: CGRect(x: panelInset, y: panelInset + panelButtonSize.height * 2.0, width: panelButtonSize.width, height: UIScreenPixel))
+        
+        var panelHeight: CGFloat = panelButtonSize.height * 2.0
+        if self.proximityNotification != nil {
+            panelHeight += panelButtonSize.height
+        }
+        transition.updateAlpha(node: self.notificationButtonNode, alpha: self.proximityNotification != nil ? 1.0 : 0.0)
+        transition.updateAlpha(node: self.optionsSecondSeparatorNode, alpha: self.proximityNotification != nil ? 1.0 : 0.0)
+        
+        transition.updateFrame(node: self.optionsBackgroundNode, frame: CGRect(x: size.width - inset - panelButtonSize.width - panelInset * 2.0, y: navigationBarHeight + topPadding + inset, width: panelButtonSize.width + panelInset * 2.0, height: panelHeight + panelInset * 2.0))
         
         let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
         let optionsAlpha: CGFloat = size.height > 160.0 + navigationBarHeight ? 1.0 : 0.0
@@ -175,6 +204,10 @@ final class LocationMapHeaderNode: ASDisplayNode {
     
     @objc private func locationPressed() {
         self.goToUserLocation()
+    }
+    
+    @objc private func notificationPressed() {
+        self.setupProximityNotification()
     }
     
     @objc private func placesPressed() {

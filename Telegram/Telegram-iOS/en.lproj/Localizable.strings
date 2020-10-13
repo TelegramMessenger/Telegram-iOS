@@ -5821,3 +5821,14 @@ Any member of this group will be able to see messages in the channel.";
 
 "ChatList.MessageMusic_1" = "1 Music File";
 "ChatList.MessageMusic_any" = "%@ Music Files";
+
+"Conversation.ContextMenuSelect" = "Select";
+
+"Conversation.ContextMenuSelectAll_0" = "Select All %@ Items";
+"Conversation.ContextMenuSelectAll_1" = "Select All %@ Items";
+"Conversation.ContextMenuSelectAll_2" = "Select All %@ Items";
+"Conversation.ContextMenuSelectAll_3_10" = "Select All %@ Items";
+"Conversation.ContextMenuSelectAll_many" = "Select All %@ Items";
+"Conversation.ContextMenuSelectAll_any" = "Select All %@ Items";
+
+"Conversation.Dice.u1F3B0" = "Send a slot machine emoji to try your luck.";

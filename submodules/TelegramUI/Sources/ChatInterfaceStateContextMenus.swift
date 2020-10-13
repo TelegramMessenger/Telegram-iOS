@@ -797,7 +797,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuReport, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.actionSheet.primaryTextColor)
             }, action: { controller, f in
-                interfaceInteraction.reportMessages(selectAll ? messages : [message], controller)
+                interfaceInteraction.reportMessages(messages, controller)
             })))
         } else if message.id.peerId.isReplies {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuBlock, textColor: .destructive, icon: { theme in
@@ -858,13 +858,25 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             if !actions.isEmpty {
                 actions.append(.separator)
             }
-            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuMore, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/More"), color: theme.actionSheet.primaryTextColor)
-            }, action: { _, f in
-                interfaceInteraction.beginMessageSelection(selectAll ? messages.map { $0.id } : [message.id], { transition in
-                    f(.custom(transition))
-                })
-            })))
+            if !selectAll || messages.count == 1 {
+                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuSelect, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    interfaceInteraction.beginMessageSelection(selectAll ? messages.map { $0.id } : [message.id], { transition in
+                        f(.custom(transition))
+                    })
+                })))
+            }
+            
+            if messages.count > 1 {
+                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuSelectAll(Int32(messages.count)), icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/SelectAll"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    interfaceInteraction.beginMessageSelection(messages.map { $0.id }, { transition in
+                        f(.custom(transition))
+                    })
+                })))
+            }
         }
         
         return actions
