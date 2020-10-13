@@ -69,6 +69,11 @@ debug_deps = select({
     "//conditions:default": [],
 })
 
+strip_framework = select({
+    ":debug": None,
+    "//conditions:default": ":StripFramework",
+})
+
 filegroup(
     name = "AppResources",
     srcs = glob([
@@ -542,7 +547,7 @@ ios_framework(
         ":MtProtoKitInfoPlist",
     ],
     minimum_os_version = "9.0",
-    ipa_post_processor = ":StripFramework",
+    ipa_post_processor = strip_framework,
     deps = [
         "//submodules/MtProtoKit:MtProtoKit",
     ],
@@ -583,7 +588,7 @@ ios_framework(
         ":SwiftSignalKitInfoPlist",
     ],
     minimum_os_version = "9.0",
-    ipa_post_processor = ":StripFramework",
+    ipa_post_processor = strip_framework,
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
     ],
@@ -627,7 +632,7 @@ ios_framework(
         ":SwiftSignalKitFramework",
     ],
     minimum_os_version = "9.0",
-    ipa_post_processor = ":StripFramework",
+    ipa_post_processor = strip_framework,
     deps = [
         "//submodules/Postbox:Postbox",
     ],
@@ -668,7 +673,7 @@ ios_framework(
         ":TelegramApiInfoPlist",
     ],
     minimum_os_version = "9.0",
-    ipa_post_processor = ":StripFramework",
+    ipa_post_processor = strip_framework,
     deps = [
         "//submodules/TelegramApi:TelegramApi",
     ],
@@ -713,7 +718,7 @@ ios_framework(
         ":PostboxFramework",
     ],
     minimum_os_version = "9.0",
-    ipa_post_processor = ":StripFramework",
+    ipa_post_processor = strip_framework,
     deps = [
         "//submodules/SyncCore:SyncCore",
     ],
@@ -761,7 +766,7 @@ ios_framework(
         ":TelegramApiFramework",
     ],
     minimum_os_version = "9.0",
-    ipa_post_processor = ":StripFramework",
+    ipa_post_processor = strip_framework,
     deps = [
         "//submodules/TelegramCore:TelegramCore",
     ],
@@ -802,7 +807,7 @@ ios_framework(
         ":AsyncDisplayKitInfoPlist",
     ],
     minimum_os_version = "9.0",
-    ipa_post_processor = ":StripFramework",
+    ipa_post_processor = strip_framework,
     deps = [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
     ],
@@ -863,7 +868,7 @@ ios_framework(
         ":AsyncDisplayKitFramework",
     ],
     minimum_os_version = "9.0",
-    ipa_post_processor = ":StripFramework",
+    ipa_post_processor = strip_framework,
     deps = [
         "//submodules/Display:Display",
     ],
@@ -914,7 +919,7 @@ ios_framework(
         ":DisplayFramework",
     ],
     minimum_os_version = "9.0",
-    ipa_post_processor = ":StripFramework",
+    ipa_post_processor = strip_framework,
     deps = [
         "//submodules/TelegramUI:TelegramUI",
     ] + debug_deps,

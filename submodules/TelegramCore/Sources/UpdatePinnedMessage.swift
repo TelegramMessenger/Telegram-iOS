@@ -50,7 +50,37 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
                 }
                 |> mapToSignal { updates -> Signal<Void, UpdatePinnedMessageError> in
                     account.stateManager.addUpdates(updates)
-                    return account.postbox.transaction { _ in
+                    return account.postbox.transaction { transaction in
+                        switch updates {
+                        case let .updates(updates, _, _, _, _):
+                            if updates.isEmpty {
+                                if peerId.namespace == Namespaces.Peer.CloudChannel {
+                                    let messageId: MessageId
+                                    switch update {
+                                    case let .pin(id, _):
+                                        messageId = id
+                                    case let .clear(id):
+                                        messageId = id
+                                    }
+                                    transaction.updateMessage(messageId, update: { currentMessage in
+                                        let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+                                        var updatedTags = currentMessage.tags
+                                        switch update {
+                                        case .pin:
+                                            updatedTags.insert(.pinned)
+                                        case .clear:
+                                            updatedTags.remove(.pinned)
+                                        }
+                                        if updatedTags == currentMessage.tags {
+                                            return .skip
+                                        }
+                                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: updatedTags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
+                                    })
+                                }
+                            }
+                        default:
+                            break
+                        }
                         /*transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                             if let current = current as? CachedChannelData {
                                 let pinnedMessageId: MessageId?
@@ -111,6 +141,37 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
                 |> mapToSignal { updates -> Signal<Void, UpdatePinnedMessageError> in
                     account.stateManager.addUpdates(updates)
                     return account.postbox.transaction { transaction in
+                        switch updates {
+                        case let .updates(updates, _, _, _, _):
+                            if updates.isEmpty {
+                                if peerId.namespace == Namespaces.Peer.CloudChannel {
+                                    let messageId: MessageId
+                                    switch update {
+                                    case let .pin(id, _):
+                                        messageId = id
+                                    case let .clear(id):
+                                        messageId = id
+                                    }
+                                    transaction.updateMessage(messageId, update: { currentMessage in
+                                        let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+                                        var updatedTags = currentMessage.tags
+                                        switch update {
+                                        case .pin:
+                                            updatedTags.insert(.pinned)
+                                        case .clear:
+                                            updatedTags.remove(.pinned)
+                                        }
+                                        if updatedTags == currentMessage.tags {
+                                            return .skip
+                                        }
+                                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: updatedTags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
+                                    })
+                                }
+                            }
+                        default:
+                            break
+                        }
+                        
                         transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
                             if let _ = peer as? TelegramGroup {
                                 let current = current as? CachedGroupData ?? CachedGroupData()

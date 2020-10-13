@@ -643,26 +643,36 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         if data.canPin, case .peer = chatPresentationInterfaceState.chatLocation {
-            let isPinned: Bool
+            var pinnedSelectedMessageId: MessageId?
             if let _ = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
-                isPinned = messages[0].tags.contains(.pinned)
+                for message in messages {
+                    if message.tags.contains(.pinned) {
+                        pinnedSelectedMessageId = message.id
+                        break
+                    }
+                }
             } else {
-                isPinned = chatPresentationInterfaceState.pinnedMessage?.message.id == messages[0].id
+                for message in messages {
+                    if chatPresentationInterfaceState.pinnedMessage?.message.id == message.id {
+                        pinnedSelectedMessageId = message.id
+                        break
+                    }
+                }
             }
             
-            if !isPinned {
+            if let pinnedSelectedMessageId = pinnedSelectedMessageId {
+                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_Unpin, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unpin"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    interfaceInteraction.unpinMessage(pinnedSelectedMessageId)
+                    f(.default)
+                })))
+            } else {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_Pin, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Pin"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
                     interfaceInteraction.pinMessage(messages[0].id)
                     f(.dismissWithoutContent)
-                })))
-            } else {
-                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_Unpin, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unpin"), color: theme.actionSheet.primaryTextColor)
-                }, action: { _, f in
-                    interfaceInteraction.unpinMessage(messages[0].id)
-                    f(.default)
                 })))
             }
         }
