@@ -100,7 +100,7 @@ final class ChatRecentActionsController: TelegramBaseController {
             return false
         }, unblockPeer: {
         }, pinMessage: { _ in
-        }, unpinMessage: {
+        }, unpinMessage: { _ in
         }, shareAccountContact: {
         }, reportPeer: {
         }, presentPeerContact: {

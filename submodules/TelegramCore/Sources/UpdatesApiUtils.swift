@@ -268,6 +268,8 @@ extension Api.Update {
                 }
             case let .updateDeleteChannelMessages(channelId, _, _, _):
                 return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)]
+            case let .updatePinnedChannelMessages(_, channelId, _, _, _):
+                return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)]
             case let .updateNewChannelMessage(message, _, _):
                 return apiMessagePeerIds(message)
             case let .updateEditChannelMessage(message, _, _):

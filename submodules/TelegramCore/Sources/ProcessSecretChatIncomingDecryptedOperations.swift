@@ -820,7 +820,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                 }
             }
             
-            let (tags, globalTags) = tagsForStoreMessage(incoming: true, attributes: attributes, media: parsedMedia, textEntities: entitiesAttribute?.entities)
+            let (tags, globalTags) = tagsForStoreMessage(incoming: true, attributes: attributes, media: parsedMedia, textEntities: entitiesAttribute?.entities, isPinned: false)
 
             return (StoreMessage(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, groupingKey: nil, threadId: nil, timestamp: timestamp, flags: [.Incoming], tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: parsedMedia), resources)
         case let .decryptedMessageService(randomId, action):
@@ -1052,7 +1052,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                 }
             }
             
-            let (tags, globalTags) = tagsForStoreMessage(incoming: true, attributes: attributes, media: parsedMedia, textEntities: entitiesAttribute?.entities)
+            let (tags, globalTags) = tagsForStoreMessage(incoming: true, attributes: attributes, media: parsedMedia, textEntities: entitiesAttribute?.entities, isPinned: false)
             
             return (StoreMessage(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, groupingKey: groupingKey, threadId: nil, timestamp: timestamp, flags: [.Incoming], tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: parsedMedia), resources)
         case let .decryptedMessageService(randomId, action):
@@ -1290,7 +1290,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                 }
             }
             
-            let (tags, globalTags) = tagsForStoreMessage(incoming: true, attributes: attributes, media: parsedMedia, textEntities: entitiesAttribute?.entities)
+            let (tags, globalTags) = tagsForStoreMessage(incoming: true, attributes: attributes, media: parsedMedia, textEntities: entitiesAttribute?.entities, isPinned: false)
             
             return (StoreMessage(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, groupingKey: groupingKey, threadId: nil, timestamp: timestamp, flags: [.Incoming], tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: parsedMedia), resources)
         case let .decryptedMessageService(randomId, action):

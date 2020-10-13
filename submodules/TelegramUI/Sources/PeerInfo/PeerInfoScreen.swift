@@ -405,7 +405,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
             return false
         }, unblockPeer: {
         }, pinMessage: { _ in
-        }, unpinMessage: {
+        }, unpinMessage: { _ in
         }, shareAccountContact: {
         }, reportPeer: {
         }, presentPeerContact: {
