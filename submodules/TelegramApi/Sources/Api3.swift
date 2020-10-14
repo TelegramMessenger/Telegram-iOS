@@ -2963,6 +2963,22 @@ public extension Api {
                     })
                 }
             
+                public static func updatePinnedMessage(flags: Int32, peer: Api.InputPeer, id: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-760547348)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.updatePinnedMessage", parameters: [("flags", flags), ("peer", peer), ("id", id)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
                 public static func sendVote(peer: Api.InputPeer, msgId: Int32, options: [Buffer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
                     buffer.appendInt32(283795844)
@@ -3765,17 +3781,19 @@ public extension Api {
                     })
                 }
             
-                public static func updatePinnedMessage(flags: Int32, peer: Api.InputPeer, id: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                public static func requestProximityNotification(flags: Int32, peer: Api.InputPeer, msgId: Int32, ownLocation: Api.InputGeoPoint?, maxDistance: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-760547348)
+                    buffer.appendInt32(-699657935)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.updatePinnedMessage", parameters: [("flags", flags), ("peer", peer), ("id", id)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {ownLocation!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(maxDistance!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "messages.requestProximityNotification", parameters: [("flags", flags), ("peer", peer), ("msgId", msgId), ("ownLocation", ownLocation), ("maxDistance", maxDistance)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
-                        var result: Api.Updates?
+                        var result: Api.Bool?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
                         }
                         return result
                     })

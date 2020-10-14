@@ -3279,7 +3279,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if message == nil {
                             matches = true
                         } else if let topVisibleMessageRange = topVisibleMessageRange {
-                            if entry.message.id < topVisibleMessageRange.upperBound {
+                            if entry.message.id <= topVisibleMessageRange.upperBound {
                                 matches = true
                             }
                         } else {

@@ -1115,19 +1115,6 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         return peer
                     }
                 })
-            case let .updateChannelPinnedMessage(channelId, id):
-                let channelPeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                updatedState.updateMessagesPinned(ids: [MessageId(peerId: channelPeerId, namespace: Namespaces.Message.Cloud, id: id)], pinned: true)
-                
-                /*updatedState.updateCachedPeerData(channelPeerId, { current in
-                    let previous: CachedChannelData
-                    if let current = current as? CachedChannelData {
-                        previous = current
-                    } else {
-                        previous = CachedChannelData()
-                    }
-                    return previous.withUpdatedPinnedMessageId(id == 0 ? nil : MessageId(peerId: channelPeerId, namespace: Namespaces.Message.Cloud, id: id))
-                })*/
             case let .updatePinnedChannelMessages(flags, channelId, messages, pts, ptsCount):
                 let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                 if let previousState = updatedState.channelStates[peerId] {
@@ -1934,16 +1921,6 @@ private func pollChannel(network: Network, peer: Peer, state: AccountMutableStat
                                     } else {
                                         Logger.shared.log("State", "Invalid updateEditChannelMessage")
                                     }
-                                case let .updateChannelPinnedMessage(_, id):
-                                    updatedState.updateCachedPeerData(peer.id, { current in
-                                        let previous: CachedChannelData
-                                        if let current = current as? CachedChannelData {
-                                            previous = current
-                                        } else {
-                                            previous = CachedChannelData()
-                                        }
-                                        return previous.withUpdatedPinnedMessageId(id == 0 ? nil : MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id))
-                                    })
                                 case let .updatePinnedChannelMessages(flags, channelId, messages, _, _):
                                     let channelPeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                                     updatedState.updateMessagesPinned(ids: messages.map { id in

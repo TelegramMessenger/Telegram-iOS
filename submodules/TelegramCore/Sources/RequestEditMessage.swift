@@ -273,9 +273,9 @@ public func requestEditLiveLocation(postbox: Postbox, network: Network, stateMan
         }
         let inputMedia: Api.InputMedia
         if let coordinate = coordinate, let liveBroadcastingTimeout = media.liveBroadcastingTimeout {
-            inputMedia = .inputMediaGeoLive(flags: 1 << 1, geoPoint: .inputGeoPoint(lat: coordinate.latitude, long: coordinate.longitude), period: liveBroadcastingTimeout)
+            inputMedia = .inputMediaGeoLive(flags: 1 << 1, geoPoint: .inputGeoPoint(flags: 0, lat: coordinate.latitude, long: coordinate.longitude, accuracyRadius: nil), heading: 0, period: liveBroadcastingTimeout)
         } else {
-            inputMedia = .inputMediaGeoLive(flags: 1 << 0, geoPoint: .inputGeoPoint(lat: media.latitude, long: media.longitude), period: nil)
+            inputMedia = .inputMediaGeoLive(flags: 1 << 0, geoPoint: .inputGeoPoint(flags: 0, lat: media.latitude, long: media.longitude, accuracyRadius: nil), heading: 0, period: nil)
         }
         return network.request(Api.functions.messages.editMessage(flags: 1 << 14, peer: inputPeer, id: messageId.id, message: nil, media: inputMedia, replyMarkup: nil, entities: nil, scheduleDate: nil))
         |> map(Optional.init)
