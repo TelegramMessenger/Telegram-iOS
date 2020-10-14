@@ -370,6 +370,26 @@
     }]];
 }
 
+double DegreesToRadians(double degrees) {return degrees * M_PI / 180.0;};
+double RadiansToDegrees(double radians) {return radians * 180.0/M_PI;};
+
+- (double)bearingFromLocation:(CLLocationCoordinate2D)fromLocation toLocation:(CLLocationCoordinate2D)toLocation
+{
+    double lat1 = DegreesToRadians(fromLocation.latitude);
+    double lon1 = DegreesToRadians(fromLocation.longitude);
+
+    double lat2 = DegreesToRadians(toLocation.latitude);
+    double lon2 = DegreesToRadians(toLocation.longitude);
+
+    double dLon = lon2 - lon1;
+
+    double y = sin(dLon) * cos(lat2);
+    double x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon);
+    double radiansBearing = atan2(y, x);
+
+    return radiansBearing;
+}
+
 - (void)updateAnnotations
 {
     NSMutableDictionary *liveLocations = [[NSMutableDictionary alloc] init];
@@ -388,7 +408,20 @@
         
         if (liveLocations[@(annotation.messageId)] != nil)
         {
-            annotation.coordinate = [(TGLiveLocation *)liveLocations[@(annotation.messageId)] location].coordinate;
+            [UIView animateWithDuration:0.3 animations:^{
+                CLLocationCoordinate2D previousCoordinate = annotation.coordinate;
+                annotation.coordinate = [(TGLiveLocation *)liveLocations[@(annotation.messageId)] location].coordinate;
+                
+                
+                CLLocation *previous = [[CLLocation alloc] initWithLatitude:previousCoordinate.latitude longitude:previousCoordinate.longitude];
+                CLLocation *new = [[CLLocation alloc] initWithLatitude:annotation.coordinate.latitude longitude:annotation.coordinate.longitude];
+//                if ([new distanceFromLocation:previous] > 20) {
+                CGFloat hdg = [self bearingFromLocation:previousCoordinate toLocation:annotation.coordinate];
+                if (hdg != 0.0) {
+                    annotation.heading = @(hdg);
+                }
+//                }
+            }];
             annotation.isExpired = [(TGLiveLocation *)liveLocations[@(annotation.messageId)] isExpired];
             [liveLocations removeObjectForKey:@(annotation.messageId)];
             

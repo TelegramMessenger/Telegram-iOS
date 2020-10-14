@@ -103,7 +103,11 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     if case let .linear(_, bottom) = position {
                         if case .Neighbour(_, _, .condensed) = bottom {
-                            bottomInset -= 24.0
+                            if selectedFile?.isMusic ?? false {
+                                bottomInset -= 14.0
+                            } else {
+                                bottomInset -= 10.0
+                            }
                         }
                     }
                     

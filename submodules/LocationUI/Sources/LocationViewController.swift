@@ -35,14 +35,16 @@ class LocationViewInteraction {
     let goToCoordinate: (CLLocationCoordinate2D) -> Void
     let requestDirections: () -> Void
     let share: () -> Void
+    let setupProximityNotification: () -> Void
         
-    init(toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, requestDirections: @escaping () -> Void, share: @escaping () -> Void) {
+    init(toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, requestDirections: @escaping () -> Void, share: @escaping () -> Void, setupProximityNotification: @escaping () -> Void) {
         self.toggleMapModeSelection = toggleMapModeSelection
         self.updateMapMode = updateMapMode
         self.goToUserLocation = goToUserLocation
         self.goToCoordinate = goToCoordinate
         self.requestDirections = requestDirections
         self.share = share
+        self.setupProximityNotification = setupProximityNotification
     }
 }
 
@@ -140,6 +142,11 @@ public final class LocationViewController: ViewController {
                 strongSelf.present(ShareController(context: context, subject: .mapMedia(mapMedia), externalShare: true), in: .window(.root), with: nil)
             })
             strongSelf.present(OpenInActionSheetController(context: context, item: .location(location: mapMedia, withDirections: false), additionalAction: shareAction, openUrl: params.openUrl), in: .window(.root), with: nil)
+        }, setupProximityNotification: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+                
         })
         
         self.scrollToTop = { [weak self] in

@@ -944,7 +944,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         return self.interactiveVideoNode.playMediaWithSound()
     }
     
-    override func getMessageContextSourceNode() -> ContextExtractedContentContainingNode? {
+    override func getMessageContextSourceNode(stableId: UInt32?) -> ContextExtractedContentContainingNode? {
         return self.contextSourceNode
     }
     
