@@ -241,7 +241,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             var imageDimensions: CGSize?
             
             var titleString: String
-            if pinnedMessage.isLatest {
+            if pinnedMessage.topMessageId == pinnedMessage.message.id {
                 titleString = strings.Conversation_PinnedMessage
             } else {
                 titleString = strings.Conversation_PinnedPreviousMessage

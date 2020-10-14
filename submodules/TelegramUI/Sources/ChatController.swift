@@ -3268,6 +3268,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 case .Loading:
                     break
                 case let .HistoryView(view, _, _, _, _, _, _):
+                    let topMessageId: MessageId
+                    if view.entries.isEmpty {
+                        return nil
+                    }
+                    topMessageId = view.entries[view.entries.count - 1].message.id
                     for i in 0 ..< view.entries.count {
                         let entry = view.entries[i]
                         var matches = false
@@ -3281,7 +3286,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             matches = true
                         }
                         if matches {
-                            message = ChatPinnedMessage(message: entry.message, isLatest: i == view.entries.count - 1)
+                            message = ChatPinnedMessage(message: entry.message, topMessageId: topMessageId)
                         }
                     }
                     break
@@ -3352,7 +3357,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let pinnedMessageId = pinnedMessageId {
                     if let cachedDataMessages = combinedInitialData.cachedDataMessages {
                         if let message = cachedDataMessages[pinnedMessageId] {
-                            pinnedMessage = ChatPinnedMessage(message: message, isLatest: true)
+                            pinnedMessage = ChatPinnedMessage(message: message, topMessageId: message.id)
                         }
                     }
                 }
@@ -3504,7 +3509,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     if let pinnedMessageId = pinnedMessageId {
                         if let message = messages?[pinnedMessageId] {
-                            pinnedMessage = ChatPinnedMessage(message: message, isLatest: true)
+                            pinnedMessage = ChatPinnedMessage(message: message, topMessageId: message.id)
                         }
                     }
                 case let .peer(peerId):
@@ -3514,7 +3519,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         if let pinnedMessageId = pinnedMessageId {
                             if let message = messages?[pinnedMessageId] {
-                                pinnedMessage = ChatPinnedMessage(message: message, isLatest: true)
+                                pinnedMessage = ChatPinnedMessage(message: message, topMessageId: message.id)
                             }
                         }
                     }
@@ -4864,11 +4869,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             })
                         }
                     } else {
-                        if let pinnedMessageId = strongSelf.presentationInterfaceState.pinnedMessage?.message.id {
+                        if let topPinnedMessageId = strongSelf.presentationInterfaceState.pinnedMessage?.topMessageId {
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                                 return $0.updatedInterfaceState({ $0.withUpdatedMessageActionsState({ value in
                                     var value = value
-                                    value.closedPinnedMessageId = pinnedMessageId
+                                    value.closedPinnedMessageId = topPinnedMessageId
                                     return value
                                     })
                                 })
@@ -4916,7 +4921,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                                 return $0.updatedInterfaceState({ $0.withUpdatedMessageActionsState({ value in
                                     var value = value
-                                    value.closedPinnedMessageId = pinnedMessage.message.id
+                                    value.closedPinnedMessageId = pinnedMessage.topMessageId
                                     return value
                                 }) })
                             })
