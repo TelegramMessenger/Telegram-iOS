@@ -25,6 +25,8 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
     TGImageView *_iconView;
     UIImageView *_dotView;
     TGLetteredAvatarView *_avatarView;
+    UIImageView *_smallArrowView;
+    UIImageView *_arrowView;
     
     bool _liveLocation;
     SMetaDisposable *_userDisposable;
@@ -56,7 +58,10 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
         [_backgroundView addSubview:_iconView];
         
         static dispatch_once_t onceToken;
-        static UIImage *dotImage;
+        static UIImage *smallDotImage;
+        static UIImage *largeDotImage;
+        static UIImage *smallHeadingArrowImage;
+        static UIImage *largeHeadingArrowImage;
         dispatch_once(&onceToken, ^
         {
             UIGraphicsBeginImageContextWithOptions(CGSizeMake(6.0f, 6.0f), false, 0.0f);
@@ -64,16 +69,90 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
             CGContextSetFillColorWithColor(context, UIColorRGB(0x008df2).CGColor);
             CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, 6.0f, 6.0f));
             
-            dotImage = UIGraphicsGetImageFromCurrentImageContext();
+            smallDotImage = UIGraphicsGetImageFromCurrentImageContext();
+            UIGraphicsEndImageContext();
+            
+            
+            UIGraphicsBeginImageContextWithOptions(CGSizeMake(16.0f, 16.0f), false, 0.0f);
+            context = UIGraphicsGetCurrentContext();
+            
+            CGContextSaveGState(context);
+            CGContextSetShadowWithColor(context, CGSizeMake(0, 1), 1.0f, [UIColor colorWithWhite:0.0f alpha:0.22f].CGColor);
+            CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
+            CGContextFillEllipseInRect(context, CGRectMake(2, 2, 12.0, 12.0));
+            
+            CGContextRestoreGState(context);
+            
+            CGContextSetFillColorWithColor(context, UIColorRGB(0x008df2).CGColor);
+            CGContextFillEllipseInRect(context, CGRectMake(4.0f, 4.0f, 8.0f, 8.0f));
+            
+            largeDotImage = UIGraphicsGetImageFromCurrentImageContext();
+            UIGraphicsEndImageContext();
+            
+            
+            UIGraphicsBeginImageContextWithOptions(CGSizeMake(16.0f, 16.0f), false, 0.0f);
+            context = UIGraphicsGetCurrentContext();
+            
+            CGContextClearRect(context, CGRectMake(0, 0, 18.0f, 18.0f));
+            
+            CGContextSetFillColorWithColor(context, UIColorRGB(0x3393fe).CGColor);
+        
+            CGContextMoveToPoint(context, 9, 0);
+            CGContextAddLineToPoint(context, 13, 7);
+            CGContextAddLineToPoint(context, 5, 7);
+            CGContextClosePath(context);
+            CGContextFillPath(context);
+            
+            CGContextSetBlendMode(context, kCGBlendModeClear);
+            CGContextFillEllipseInRect(context, CGRectMake(3.0, 3.0, 12.0, 12.0));
+
+            smallHeadingArrowImage = UIGraphicsGetImageFromCurrentImageContext();
+            UIGraphicsEndImageContext();
+            
+            
+            UIGraphicsBeginImageContextWithOptions(CGSizeMake(33.0f, 33.0f), false, 0.0f);
+            context = UIGraphicsGetCurrentContext();
+            
+            CGContextClearRect(context, CGRectMake(0, 0, 16.0f, 16.0f));
+            
+            CGContextSetFillColorWithColor(context, UIColorRGB(0x3393fe).CGColor);
+        
+            CGContextMoveToPoint(context, 16.5, 0);
+            CGContextAddLineToPoint(context, 21.5, 6);
+            CGContextAddLineToPoint(context, 11.5, 6);
+            CGContextClosePath(context);
+            CGContextFillPath(context);
+            
+            CGContextSetBlendMode(context, kCGBlendModeClear);
+            CGContextFillEllipseInRect(context, CGRectMake(3.0, 3.0, 27.0, 27.0));
+
+            largeHeadingArrowImage = UIGraphicsGetImageFromCurrentImageContext();
             UIGraphicsEndImageContext();
         });
-        
+                
         _smallView = [[UIImageView alloc] initWithImage:TGComponentsImageNamed(@"LocationSmallCircle")];
         _smallView.hidden = true;
         [self addSubview:_smallView];
         
+        UIImage *dotImage = smallDotImage;
+        if ([annotation isKindOfClass:[TGLocationAnnotation class]])
+        {
+            TGLocationAnnotation *locationAnnotation = (TGLocationAnnotation *)annotation;
+            if (locationAnnotation.location.period > 0) {
+                dotImage = largeDotImage;
+            }
+        }
+        
         _dotView = [[UIImageView alloc] initWithImage:dotImage];
         [self addSubview:_dotView];
+        
+        _smallArrowView = [[UIImageView alloc] initWithImage:smallHeadingArrowImage];
+        _smallArrowView.hidden = true;
+        [self addSubview:_smallArrowView];
+        
+        _arrowView = [[UIImageView alloc] initWithImage:largeHeadingArrowImage];
+        _arrowView.hidden = true;
+        [self addSubview:_arrowView];
         
         [self setAnnotation:annotation];
     }
@@ -99,6 +178,7 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
         return;
     _observingExpiration = true;
     [self addObserver:self forKeyPath:@"annotation.isExpired" options:NSKeyValueObservingOptionNew context:NULL];
+    [self addObserver:self forKeyPath:@"annotation.heading" options:NSKeyValueObservingOptionNew context:NULL];
 }
 
 - (void)unsubscribeFromExpiration
@@ -107,6 +187,7 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
         return;
     _observingExpiration = false;
     [self removeObserver:self forKeyPath:@"annotation.isExpired"];
+    [self removeObserver:self forKeyPath:@"annotation.heading"];
 }
 
 - (void)setSelected:(BOOL)selected animated:(BOOL)animated
@@ -214,6 +295,8 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
         _smallView.alpha = 1.0f;
         [self layoutSubviews];
     }
+    
+    [self updateHeading];
 }
 
 - (void)setPallete:(TGLocationPallete *)pallete
@@ -223,13 +306,38 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
     
     _pallete = pallete;
     
-    UIGraphicsBeginImageContextWithOptions(CGSizeMake(6.0f, 6.0f), false, 0.0f);
-    CGContextRef context = UIGraphicsGetCurrentContext();
-    CGContextSetFillColorWithColor(context, pallete.locationColor.CGColor);
-    CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, 6.0f, 6.0f));
+    UIImage *dotImage;
+    if ([self.annotation isKindOfClass:[TGLocationAnnotation class]])
+    {
+        TGLocationAnnotation *locationAnnotation = (TGLocationAnnotation *)self.annotation;
+        if (locationAnnotation.location.period > 0) {
+            UIGraphicsBeginImageContextWithOptions(CGSizeMake(16.0f, 16.0f), false, 0.0f);
+            CGContextRef context = UIGraphicsGetCurrentContext();
+            
+            CGContextSaveGState(context);
+            CGContextSetShadowWithColor(context, CGSizeMake(0, 1), 1.0f, [UIColor colorWithWhite:0.0f alpha:0.22f].CGColor);
+            CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
+            CGContextFillEllipseInRect(context, CGRectMake(2, 2, 12.0, 12.0));
+            
+            CGContextRestoreGState(context);
+            
+            CGContextSetFillColorWithColor(context, pallete.locationColor.CGColor);
+            CGContextFillEllipseInRect(context, CGRectMake(4.0f, 4.0f, 8.0f, 8.0f));
+            
+            dotImage = UIGraphicsGetImageFromCurrentImageContext();
+            UIGraphicsEndImageContext();
+        }
+    }
     
-    UIImage *dotImage = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
+    if (dotImage == nil) {
+        UIGraphicsBeginImageContextWithOptions(CGSizeMake(6.0f, 6.0f), false, 0.0f);
+        CGContextRef context = UIGraphicsGetCurrentContext();
+        CGContextSetFillColorWithColor(context, pallete.locationColor.CGColor);
+        CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, 6.0f, 6.0f));
+        
+        dotImage = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+    }
     
     _dotView.image = dotImage;
     
@@ -324,6 +432,26 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
     }
 }
 
+- (void)updateHeading
+{
+    if ([self.annotation isKindOfClass:[TGLocationAnnotation class]]) {
+        NSNumber *heading = ((TGLocationAnnotation *)self.annotation).heading;
+        
+        if (heading != nil) {
+            _arrowView.hidden = self.isSelected;
+            _smallArrowView.hidden = !self.isSelected;
+            _arrowView.transform = CGAffineTransformMakeRotation(heading.floatValue);
+            _smallArrowView.transform = CGAffineTransformMakeRotation(heading.floatValue);
+        } else {
+            _arrowView.hidden = true;
+            _smallArrowView.hidden = true;
+        }
+    } else {
+        _arrowView.hidden = true;
+        _smallArrowView.hidden = true;
+    }
+}
+
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context
 {
     if ([keyPath isEqualToString:@"annotation.isExpired"])
@@ -338,6 +466,10 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
             [_pulseView start];
             _avatarView.alpha = 1.0f;
         }
+    }
+    else if ([keyPath isEqual:@"annotation.heading"])
+    {
+        [self updateHeading];
     }
     else
     {
@@ -410,6 +542,8 @@ NSString *const TGLocationPinAnnotationKind = @"TGLocationPinAnnotation";
     
     _dotView.center = CGPointZero;
     _smallView.center = CGPointZero;
+    _arrowView.center = CGPointZero;
+    _smallArrowView.center = CGPointZero;
     _shadowView.center = CGPointMake(TGScreenPixel, -36.0f);
     _backgroundView.center = CGPointMake(_shadowView.frame.size.width / 2.0f, _shadowView.frame.size.height / 2.0f);
     _iconView.center = CGPointMake(_shadowView.frame.size.width / 2.0f, _shadowView.frame.size.height / 2.0f - 5.0f);

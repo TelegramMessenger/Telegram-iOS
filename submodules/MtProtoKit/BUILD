@@ -20,6 +20,10 @@ objc_library(
         "Foundation",
         "Security",
         "SystemConfiguration",
+        "CFNetwork",
+    ],
+    sdk_dylibs = [
+        "libz",
     ],
     visibility = [
         "//visibility:public",

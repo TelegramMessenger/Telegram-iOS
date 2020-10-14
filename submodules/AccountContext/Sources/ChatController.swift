@@ -465,7 +465,7 @@ public protocol ChatController: ViewController {
     func displayPromoAnnouncement(text: String)
 }
 
-public protocol ChatMessagePrevewItemNode: class {
+public protocol ChatMessagePreviewItemNode: class {
     var forwardInfoReferenceNode: ASDisplayNode? { get }
 }
 

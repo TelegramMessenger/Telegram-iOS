@@ -4360,6 +4360,7 @@ Sorry for the inconvenience.";
 "Channel.DiscussionGroup.HeaderLabel" = "Discuss";
 "Channel.DiscussionGroup.Create" = "Create New Group";
 "Channel.DiscussionGroup.PrivateGroup" = "private group";
+"Channel.DiscussionGroup.PrivateChannel" = "private channel";
 "Channel.DiscussionGroup.Info" = "Everything you post in the channel will be forwarded to this group.";
 "Channel.DiscussionGroup.LinkGroup" = "Link Group";
 "Channel.DiscussionGroup.UnlinkGroup" = "Unlink Group";
@@ -5821,3 +5822,18 @@ Any member of this group will be able to see messages in the channel.";
 
 "ChatList.MessageMusic_1" = "1 Music File";
 "ChatList.MessageMusic_any" = "%@ Music Files";
+
+"Conversation.PinOlderMessageAlertTitle" = "Pin Message";
+"Conversation.PinOlderMessageAlertText" = "Do you want to pin an older message while leaving a more recent one pinned?";
+"Conversation.PinMessageAlertPin" = "Pin";
+
+"Conversation.ContextMenuSelect" = "Select";
+
+"Conversation.ContextMenuSelectAll_0" = "Select All %@ Items";
+"Conversation.ContextMenuSelectAll_1" = "Select All %@ Items";
+"Conversation.ContextMenuSelectAll_2" = "Select All %@ Items";
+"Conversation.ContextMenuSelectAll_3_10" = "Select All %@ Items";
+"Conversation.ContextMenuSelectAll_many" = "Select All %@ Items";
+"Conversation.ContextMenuSelectAll_any" = "Select All %@ Items";
+
+"Conversation.Dice.u1F3B0" = "Send a slot machine emoji to try your luck.";

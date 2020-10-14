@@ -327,10 +327,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         if let telegramDice = self.telegramDice {
-//            if telegramDice.emoji == "🎲" {
-//                let animationNode = SlotMachineAnimationNode(context: item.context)
-//                self.animationNode = animationNode
-//            } else {
+            if telegramDice.emoji == "🎰" {
+                let animationNode = SlotMachineAnimationNode(context: item.context)
+                self.animationNode = animationNode
+            } else {
                 let animationNode = ManagedDiceAnimationNode(context: item.context, emoji: telegramDice.emoji.strippedEmoji)
                 if !item.message.effectivelyIncoming(item.context.account.peerId) {
                     animationNode.success = { [weak self] in
@@ -340,7 +340,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
                 self.animationNode = animationNode
-//            }
+            }
         } else {
             let animationNode: AnimatedStickerNode
             if let (node, parentNode, listNode, greetingCompletion)  = item.controllerInteraction.greetingStickerNode(), let greetingStickerNode = node as? AnimatedStickerNode {
@@ -1478,7 +1478,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func getMessageContextSourceNode() -> ContextExtractedContentContainingNode? {
+    override func getMessageContextSourceNode(stableId: UInt32?) -> ContextExtractedContentContainingNode? {
         return self.contextSourceNode
     }
     

@@ -147,7 +147,7 @@ public func requestMessageActionCallback(account: Account, messageId: MessageId,
                         return .none
                     }
                     switch result {
-                        case let .botCallbackAnswer(flags, message, url, cacheTime):
+                        case let .botCallbackAnswer(flags, message, url, _):
                             if let message = message {
                                 if (flags & (1 << 1)) != 0 {
                                     return .alert(message)

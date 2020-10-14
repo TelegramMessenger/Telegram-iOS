@@ -643,26 +643,36 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         if data.canPin, case .peer = chatPresentationInterfaceState.chatLocation {
-            let isPinned: Bool
+            var pinnedSelectedMessageId: MessageId?
             if let _ = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
-                isPinned = messages[0].tags.contains(.pinned)
+                for message in messages {
+                    if message.tags.contains(.pinned) {
+                        pinnedSelectedMessageId = message.id
+                        break
+                    }
+                }
             } else {
-                isPinned = chatPresentationInterfaceState.pinnedMessage?.message.id == messages[0].id
+                for message in messages {
+                    if chatPresentationInterfaceState.pinnedMessage?.message.id == message.id {
+                        pinnedSelectedMessageId = message.id
+                        break
+                    }
+                }
             }
             
-            if !isPinned {
+            if let pinnedSelectedMessageId = pinnedSelectedMessageId {
+                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_Unpin, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unpin"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    interfaceInteraction.unpinMessage(pinnedSelectedMessageId)
+                    f(.default)
+                })))
+            } else {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_Pin, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Pin"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
                     interfaceInteraction.pinMessage(messages[0].id)
                     f(.dismissWithoutContent)
-                })))
-            } else {
-                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_Unpin, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unpin"), color: theme.actionSheet.primaryTextColor)
-                }, action: { _, f in
-                    interfaceInteraction.unpinMessage(messages[0].id)
-                    f(.default)
                 })))
             }
         }
@@ -804,7 +814,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuReport, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.actionSheet.primaryTextColor)
             }, action: { controller, f in
-                interfaceInteraction.reportMessages(selectAll ? messages : [message], controller)
+                interfaceInteraction.reportMessages(messages, controller)
             })))
         } else if message.id.peerId.isReplies {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuBlock, textColor: .destructive, icon: { theme in
@@ -865,13 +875,25 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             if !actions.isEmpty {
                 actions.append(.separator)
             }
-            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuMore, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/More"), color: theme.actionSheet.primaryTextColor)
-            }, action: { _, f in
-                interfaceInteraction.beginMessageSelection(selectAll ? messages.map { $0.id } : [message.id], { transition in
-                    f(.custom(transition))
-                })
-            })))
+            if !selectAll || messages.count == 1 {
+                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuSelect, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    interfaceInteraction.beginMessageSelection(selectAll ? messages.map { $0.id } : [message.id], { transition in
+                        f(.custom(transition))
+                    })
+                })))
+            }
+            
+            if messages.count > 1 {
+                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuSelectAll(Int32(messages.count)), icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/SelectAll"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    interfaceInteraction.beginMessageSelection(messages.map { $0.id }, { transition in
+                        f(.custom(transition))
+                    })
+                })))
+            }
         }
         
         return actions

@@ -6,6 +6,53 @@ import TelegramPresentationData
 
 private let maskInset: CGFloat = 1.0
 
+func bubbleMaskForType(_ type: ChatMessageBackgroundType, graphics: PrincipalThemeEssentialGraphics) -> UIImage? {
+    let image: UIImage?
+    switch type {
+    case .none:
+        image = nil
+    case let .incoming(mergeType):
+        switch mergeType {
+        case .None:
+            image = graphics.chatMessageBackgroundIncomingMaskImage
+        case let .Top(side):
+            if side {
+                image = graphics.chatMessageBackgroundIncomingMergedTopSideMaskImage
+            } else {
+                image = graphics.chatMessageBackgroundIncomingMergedTopMaskImage
+            }
+        case .Bottom:
+            image = graphics.chatMessageBackgroundIncomingMergedBottomMaskImage
+        case .Both:
+            image = graphics.chatMessageBackgroundIncomingMergedBothMaskImage
+        case .Side:
+            image = graphics.chatMessageBackgroundIncomingMergedSideMaskImage
+        case .Extracted:
+            image = nil
+        }
+    case let .outgoing(mergeType):
+        switch mergeType {
+        case .None:
+            image = graphics.chatMessageBackgroundOutgoingMaskImage
+        case let .Top(side):
+            if side {
+                image = graphics.chatMessageBackgroundOutgoingMergedTopSideMaskImage
+            } else {
+                image = graphics.chatMessageBackgroundOutgoingMergedTopMaskImage
+            }
+        case .Bottom:
+            image = graphics.chatMessageBackgroundOutgoingMergedBottomMaskImage
+        case .Both:
+            image = graphics.chatMessageBackgroundOutgoingMergedBothMaskImage
+        case .Side:
+            image = graphics.chatMessageBackgroundOutgoingMergedSideMaskImage
+        case .Extracted:
+            image = nil
+        }
+    }
+    return image
+}
+
 final class ChatMessageBubbleBackdrop: ASDisplayNode {
     private let backgroundContent: ASDisplayNode
     
@@ -39,49 +86,6 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
         self.clipsToBounds = true
         
         self.addSubnode(self.backgroundContent)
-    }
-    
-    private func maskForType(_ type: ChatMessageBackgroundType, graphics: PrincipalThemeEssentialGraphics) -> UIImage? {
-        let image: UIImage?
-        switch type {
-        case .none:
-            image = nil
-        case let .incoming(mergeType):
-            switch mergeType {
-            case .None:
-                image = graphics.chatMessageBackgroundIncomingMaskImage
-            case let .Top(side):
-                if side {
-                    image = graphics.chatMessageBackgroundIncomingMergedTopSideMaskImage
-                } else {
-                    image = graphics.chatMessageBackgroundIncomingMergedTopMaskImage
-                }
-            case .Bottom:
-                image = graphics.chatMessageBackgroundIncomingMergedBottomMaskImage
-            case .Both:
-                image = graphics.chatMessageBackgroundIncomingMergedBothMaskImage
-            case .Side:
-                image = graphics.chatMessageBackgroundIncomingMergedSideMaskImage
-            }
-        case let .outgoing(mergeType):
-            switch mergeType {
-            case .None:
-                image = graphics.chatMessageBackgroundOutgoingMaskImage
-            case let .Top(side):
-                if side {
-                    image = graphics.chatMessageBackgroundOutgoingMergedTopSideMaskImage
-                } else {
-                    image = graphics.chatMessageBackgroundOutgoingMergedTopMaskImage
-                }
-            case .Bottom:
-                image = graphics.chatMessageBackgroundOutgoingMergedBottomMaskImage
-            case .Both:
-                image = graphics.chatMessageBackgroundOutgoingMergedBothMaskImage
-            case .Side:
-                image = graphics.chatMessageBackgroundOutgoingMergedSideMaskImage
-            }
-        }
-        return image
     }
     
     func setMaskMode(_ maskMode: Bool, mediaBox: MediaBox) {
@@ -127,7 +131,7 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
             }
             
             if let maskView = self.maskView {
-                maskView.image = self.maskForType(type, graphics: essentialGraphics)
+                maskView.image = bubbleMaskForType(type, graphics: essentialGraphics)
             }
         }
     }
