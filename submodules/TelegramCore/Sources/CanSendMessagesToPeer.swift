@@ -3,6 +3,10 @@ import Postbox
 
 import SyncCore
 
+// Incuding at least one Objective-C class in a swift file ensures that it doesn't get stripped by the linker
+private final class LinkHelperClass: NSObject {
+}
+
 public func canSendMessagesToPeer(_ peer: Peer) -> Bool {
     if peer is TelegramUser || peer is TelegramGroup {
         return !peer.isDeleted
