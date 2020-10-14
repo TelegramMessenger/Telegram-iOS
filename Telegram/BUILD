@@ -1253,7 +1253,7 @@ ios_application(
         ":ShareExtension",
         #":NotificationServiceExtension",
     ],
-    #watch_application = ":TelegramWatchApp",
+    watch_application = ":TelegramWatchApp",
     deps = [
         ":Main",
         ":Lib",
