@@ -46,7 +46,10 @@ BUCK_OPTIONS=\
 
 BAZEL=$(shell which bazel)
 
-ifneq ($(BAZEL_CACHE_DIR),)
+ifneq ($(BAZEL_HTTP_CACHE_URL),)
+	export BAZEL_CACHE_FLAGS=\
+		--remote_cache="$(BAZEL_HTTP_CACHE_URL)"
+else ifneq ($(BAZEL_CACHE_DIR),)
 	export BAZEL_CACHE_FLAGS=\
 		--disk_cache="${BAZEL_CACHE_DIR}"
 endif
