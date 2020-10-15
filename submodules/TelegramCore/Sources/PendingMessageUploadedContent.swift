@@ -142,12 +142,16 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(input, text), reuploadInfo: nil)))
     } else if let map = media as? TelegramMediaMap {
         let input: Api.InputMedia
+        var geoFlags: Int32 = 0
+        if let _ = map.accuracyRadius {
+            geoFlags |= 1 << 0
+        }
         if let liveBroadcastingTimeout = map.liveBroadcastingTimeout {
-            input = .inputMediaGeoLive(flags: 1 << 1, geoPoint: Api.InputGeoPoint.inputGeoPoint(flags: 0, lat: map.latitude, long: map.longitude, accuracyRadius: nil), heading: 0, period: liveBroadcastingTimeout)
+            input = .inputMediaGeoLive(flags: 1 << 1, geoPoint: Api.InputGeoPoint.inputGeoPoint(flags: geoFlags, lat: map.latitude, long: map.longitude, accuracyRadius: map.accuracyRadius.flatMap({ Int32($0) })), heading: 0, period: liveBroadcastingTimeout)
         } else if let venue = map.venue {
-            input = .inputMediaVenue(geoPoint: Api.InputGeoPoint.inputGeoPoint(flags: 0, lat: map.latitude, long: map.longitude, accuracyRadius: nil), title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "", venueType: venue.type ?? "")
+            input = .inputMediaVenue(geoPoint: Api.InputGeoPoint.inputGeoPoint(flags: geoFlags, lat: map.latitude, long: map.longitude, accuracyRadius: map.accuracyRadius.flatMap({ Int32($0) })), title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "", venueType: venue.type ?? "")
         } else {
-            input = .inputMediaGeoPoint(geoPoint: Api.InputGeoPoint.inputGeoPoint(flags: 0, lat: map.latitude, long: map.longitude, accuracyRadius: nil))
+            input = .inputMediaGeoPoint(geoPoint: Api.InputGeoPoint.inputGeoPoint(flags: geoFlags, lat: map.latitude, long: map.longitude, accuracyRadius: map.accuracyRadius.flatMap({ Int32($0) })))
         }
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(input, text), reuploadInfo: nil)))
     } else if let poll = media as? TelegramMediaPoll {

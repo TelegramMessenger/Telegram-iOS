@@ -553,7 +553,7 @@ private func loadLegacyMessages(account: TemporaryAccount, basePath: String, acc
                         if let v = item.venue {
                             venue = MapVenue(title: v.title ?? "", address: v.address ?? "", provider: v.provider == "" ? nil : v.provider, id: v.venueId == "" ? nil : v.venueId, type: v.type == "" ? nil : v.type)
                         }
-                        parsedMedia.append(TelegramMediaMap(latitude: item.latitude, longitude: item.longitude, geoPlace: nil, venue: venue, liveBroadcastingTimeout: nil))
+                        parsedMedia.append(TelegramMediaMap(latitude: item.latitude, longitude: item.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: venue, liveBroadcastingTimeout: nil))
                     }
                 }
             }

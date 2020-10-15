@@ -442,6 +442,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 attributedString = addAttributesToStringWithRanges(strings.Notification_Joined(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
             case .phoneNumberRequest:
                 attributedString = nil
+            case .geoProximityReached:
+                attributedString = nil
             case .unknown:
                 attributedString = nil
             }
