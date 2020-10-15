@@ -18085,7 +18085,7 @@ public extension Api {
     }
     public enum GeoPoint: TypeConstructorDescription {
         case geoPointEmpty
-        case geoPoint(flags: Int32, long: Double, lat: Double, accuracyRadius: Int32?)
+        case geoPoint(flags: Int32, long: Double, lat: Double, accessHash: Int64, accuracyRadius: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -18095,13 +18095,14 @@ public extension Api {
                     }
                     
                     break
-                case .geoPoint(let flags, let long, let lat, let accuracyRadius):
+                case .geoPoint(let flags, let long, let lat, let accessHash, let accuracyRadius):
                     if boxed {
-                        buffer.appendInt32(-955487525)
+                        buffer.appendInt32(-1297942941)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeDouble(long, buffer: buffer, boxed: false)
                     serializeDouble(lat, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(accuracyRadius!, buffer: buffer, boxed: false)}
                     break
     }
@@ -18111,8 +18112,8 @@ public extension Api {
         switch self {
                 case .geoPointEmpty:
                 return ("geoPointEmpty", [])
-                case .geoPoint(let flags, let long, let lat, let accuracyRadius):
-                return ("geoPoint", [("flags", flags), ("long", long), ("lat", lat), ("accuracyRadius", accuracyRadius)])
+                case .geoPoint(let flags, let long, let lat, let accessHash, let accuracyRadius):
+                return ("geoPoint", [("flags", flags), ("long", long), ("lat", lat), ("accessHash", accessHash), ("accuracyRadius", accuracyRadius)])
     }
     }
     
@@ -18126,14 +18127,17 @@ public extension Api {
             _2 = reader.readDouble()
             var _3: Double?
             _3 = reader.readDouble()
-            var _4: Int32?
-            if Int(_1!) & Int(1 << 0) != 0 {_4 = reader.readInt32() }
+            var _4: Int64?
+            _4 = reader.readInt64()
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_5 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.GeoPoint.geoPoint(flags: _1!, long: _2!, lat: _3!, accuracyRadius: _4)
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.GeoPoint.geoPoint(flags: _1!, long: _2!, lat: _3!, accessHash: _4!, accuracyRadius: _5)
             }
             else {
                 return nil
