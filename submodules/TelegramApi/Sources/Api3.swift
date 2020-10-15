@@ -3780,6 +3780,24 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func requestProximityNotification(flags: Int32, peer: Api.InputPeer, msgId: Int32, ownLocation: Api.InputGeoPoint?, maxDistance: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-699657935)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {ownLocation!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(maxDistance!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "messages.requestProximityNotification", parameters: [("flags", flags), ("peer", peer), ("msgId", msgId), ("ownLocation", ownLocation), ("maxDistance", maxDistance)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
             }
             public struct channels {
                 public static func readHistory(channel: Api.InputChannel, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {

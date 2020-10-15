@@ -2602,7 +2602,7 @@ private func drawAlbumArtPlaceholder(into c: CGContext, arguments: TransformImag
     }
 }
 
-public func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?, albumArt: SharedMediaPlaybackAlbumArt?, thumbnail: Bool, overlayColor: UIColor? = nil, emptyColor: UIColor? = nil) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?, albumArt: SharedMediaPlaybackAlbumArt?, thumbnail: Bool, overlayColor: UIColor? = nil, emptyColor: UIColor? = nil, drawPlaceholderWhenEmpty: Bool = true) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     var fileArtworkData: Signal<Data?, NoError> = .single(nil)
     if let fileReference = fileReference {
         let size = thumbnail ? CGSize(width: 48.0, height: 48.0) : CGSize(width: 320.0, height: 320.0)
@@ -2685,10 +2685,12 @@ public func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?,
                         c.setFillColor(emptyColor.cgColor)
                         c.fill(rect)
                     }
-                } else {
+                } else if drawPlaceholderWhenEmpty {
                     context.withFlippedContext { c in
                         drawAlbumArtPlaceholder(into: c, arguments: arguments, thumbnail: thumbnail)
                     }
+                } else {
+                    return nil
                 }
             }
             

@@ -10,10 +10,12 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
     
     private weak var chatNode: ChatControllerNode?
     private let message: Message
+    private let selectAll: Bool
     
-    init(chatNode: ChatControllerNode, message: Message) {
+    init(chatNode: ChatControllerNode, message: Message, selectAll: Bool) {
         self.chatNode = chatNode
         self.message = message
+        self.selectAll = selectAll
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {
@@ -29,7 +31,7 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
             guard let item = itemNode.item else {
                 return
             }
-            if item.content.contains(where: { $0.0.stableId == self.message.stableId }), let contentNode = itemNode.getMessageContextSourceNode() {
+            if item.content.contains(where: { $0.0.stableId == self.message.stableId }), let contentNode = itemNode.getMessageContextSourceNode(stableId: self.selectAll ? nil : self.message.stableId) {
                 result = ContextControllerTakeViewInfo(contentContainingNode: contentNode, contentAreaInScreenSpace: chatNode.convert(chatNode.frameForVisibleArea(), to: nil))
             }
         }

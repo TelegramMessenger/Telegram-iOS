@@ -69,6 +69,11 @@ debug_deps = select({
     "//conditions:default": [],
 })
 
+strip_framework = select({
+    ":debug": None,
+    "//conditions:default": ":StripFramework",
+})
+
 filegroup(
     name = "AppResources",
     srcs = glob([
@@ -508,6 +513,368 @@ swift_library(
 )
 
 plist_fragment(
+    name = "MtProtoKitInfoPlist",
+    extension = "plist",
+    template =
+    """
+    <key>CFBundleIdentifier</key>
+    <string>{telegram_bundle_id}.MtProtoKit</string>
+    <key>CFBundleVersion</key>
+    <string>{telegram_build_number}</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleName</key>
+    <string>MtProtoKit</string>
+    <key>CFBundleShortVersionString</key>
+    <string>{telegram_version}</string>
+    """.format(
+        telegram_bundle_id = telegram_bundle_id,
+        telegram_version = telegram_version,
+        telegram_build_number = telegram_build_number,
+    )
+)
+
+ios_framework(
+    name = "MtProtoKitFramework",
+    bundle_id = "{telegram_bundle_id}.MtProtoKit".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = [
+        ":MtProtoKitInfoPlist",
+    ],
+    minimum_os_version = "9.0",
+    ipa_post_processor = strip_framework,
+    deps = [
+        "//submodules/MtProtoKit:MtProtoKit",
+    ],
+)
+
+plist_fragment(
+    name = "SwiftSignalKitInfoPlist",
+    extension = "plist",
+    template =
+    """
+    <key>CFBundleIdentifier</key>
+    <string>{telegram_bundle_id}.SwiftSignalKit</string>
+    <key>CFBundleVersion</key>
+    <string>{telegram_build_number}</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleName</key>
+    <string>SwiftSignalKit</string>
+    <key>CFBundleShortVersionString</key>
+    <string>{telegram_version}</string>
+    """.format(
+        telegram_bundle_id = telegram_bundle_id,
+        telegram_version = telegram_version,
+        telegram_build_number = telegram_build_number,
+    )
+)
+
+ios_framework(
+    name = "SwiftSignalKitFramework",
+    bundle_id = "{telegram_bundle_id}.SwiftSignalKit".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = [
+        ":SwiftSignalKitInfoPlist",
+    ],
+    minimum_os_version = "9.0",
+    ipa_post_processor = strip_framework,
+    deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+    ],
+)
+
+plist_fragment(
+    name = "PostboxInfoPlist",
+    extension = "plist",
+    template =
+    """
+    <key>CFBundleIdentifier</key>
+    <string>{telegram_bundle_id}.Postbox</string>
+    <key>CFBundleVersion</key>
+    <string>{telegram_build_number}</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleName</key>
+    <string>Postbox</string>
+    <key>CFBundleShortVersionString</key>
+    <string>{telegram_version}</string>
+    """.format(
+        telegram_bundle_id = telegram_bundle_id,
+        telegram_version = telegram_version,
+        telegram_build_number = telegram_build_number,
+    )
+)
+
+ios_framework(
+    name = "PostboxFramework",
+    bundle_id = "{telegram_bundle_id}.Postbox".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = [
+        ":PostboxInfoPlist",
+    ],
+    frameworks = [
+        ":SwiftSignalKitFramework",
+    ],
+    minimum_os_version = "9.0",
+    ipa_post_processor = strip_framework,
+    deps = [
+        "//submodules/Postbox:Postbox",
+    ],
+)
+
+plist_fragment(
+    name = "TelegramApiInfoPlist",
+    extension = "plist",
+    template =
+    """
+    <key>CFBundleIdentifier</key>
+    <string>{telegram_bundle_id}.TelegramApi</string>
+    <key>CFBundleVersion</key>
+    <string>{telegram_build_number}</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleName</key>
+    <string>TelegramApi</string>
+    <key>CFBundleShortVersionString</key>
+    <string>{telegram_version}</string>
+    """.format(
+        telegram_bundle_id = telegram_bundle_id,
+        telegram_version = telegram_version,
+        telegram_build_number = telegram_build_number,
+    )
+)
+
+ios_framework(
+    name = "TelegramApiFramework",
+    bundle_id = "{telegram_bundle_id}.TelegramApi".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = [
+        ":TelegramApiInfoPlist",
+    ],
+    minimum_os_version = "9.0",
+    ipa_post_processor = strip_framework,
+    deps = [
+        "//submodules/TelegramApi:TelegramApi",
+    ],
+)
+
+plist_fragment(
+    name = "SyncCoreInfoPlist",
+    extension = "plist",
+    template =
+    """
+    <key>CFBundleIdentifier</key>
+    <string>{telegram_bundle_id}.SyncCore</string>
+    <key>CFBundleVersion</key>
+    <string>{telegram_build_number}</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleName</key>
+    <string>SyncCore</string>
+    <key>CFBundleShortVersionString</key>
+    <string>{telegram_version}</string>
+    """.format(
+        telegram_bundle_id = telegram_bundle_id,
+        telegram_version = telegram_version,
+        telegram_build_number = telegram_build_number,
+    )
+)
+
+ios_framework(
+    name = "SyncCoreFramework",
+    bundle_id = "{telegram_bundle_id}.SyncCore".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = [
+        ":SyncCoreInfoPlist",
+    ],
+    frameworks = [
+        ":SwiftSignalKitFramework",
+        ":PostboxFramework",
+    ],
+    minimum_os_version = "9.0",
+    ipa_post_processor = strip_framework,
+    deps = [
+        "//submodules/SyncCore:SyncCore",
+    ],
+)
+
+plist_fragment(
+    name = "TelegramCoreInfoPlist",
+    extension = "plist",
+    template =
+    """
+    <key>CFBundleIdentifier</key>
+    <string>{telegram_bundle_id}.TelegramCore</string>
+    <key>CFBundleVersion</key>
+    <string>{telegram_build_number}</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleName</key>
+    <string>TelegramCore</string>
+    <key>CFBundleShortVersionString</key>
+    <string>{telegram_version}</string>
+    """.format(
+        telegram_bundle_id = telegram_bundle_id,
+        telegram_version = telegram_version,
+        telegram_build_number = telegram_build_number,
+    )
+)
+
+ios_framework(
+    name = "TelegramCoreFramework",
+    bundle_id = "{telegram_bundle_id}.TelegramCore".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = [
+        ":TelegramCoreInfoPlist",
+    ],
+    frameworks = [
+        ":MtProtoKitFramework",
+        ":SwiftSignalKitFramework",
+        ":PostboxFramework",
+        ":SyncCoreFramework",
+        ":TelegramApiFramework",
+    ],
+    minimum_os_version = "9.0",
+    ipa_post_processor = strip_framework,
+    deps = [
+        "//submodules/TelegramCore:TelegramCore",
+    ],
+)
+
+plist_fragment(
+    name = "AsyncDisplayKitInfoPlist",
+    extension = "plist",
+    template =
+    """
+    <key>CFBundleIdentifier</key>
+    <string>{telegram_bundle_id}.AsyncDisplayKit</string>
+    <key>CFBundleVersion</key>
+    <string>{telegram_build_number}</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleName</key>
+    <string>AsyncDisplayKit</string>
+    <key>CFBundleShortVersionString</key>
+    <string>{telegram_version}</string>
+    """.format(
+        telegram_bundle_id = telegram_bundle_id,
+        telegram_version = telegram_version,
+        telegram_build_number = telegram_build_number,
+    )
+)
+
+ios_framework(
+    name = "AsyncDisplayKitFramework",
+    bundle_id = "{telegram_bundle_id}.AsyncDisplayKit".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = [
+        ":AsyncDisplayKitInfoPlist",
+    ],
+    minimum_os_version = "9.0",
+    ipa_post_processor = strip_framework,
+    deps = [
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
+    ],
+)
+
+plist_fragment(
+    name = "DisplayInfoPlist",
+    extension = "plist",
+    template =
+    """
+    <key>CFBundleIdentifier</key>
+    <string>{telegram_bundle_id}.Display</string>
+    <key>CFBundleVersion</key>
+    <string>{telegram_build_number}</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleName</key>
+    <string>Display</string>
+    <key>CFBundleShortVersionString</key>
+    <string>{telegram_version}</string>
+    """.format(
+        telegram_bundle_id = telegram_bundle_id,
+        telegram_version = telegram_version,
+        telegram_build_number = telegram_build_number,
+    )
+)
+
+genrule(
+    name = "StripFramework",
+    cmd_bash =
+"""
+    echo 'for f in $$1/*.framework; do binary_name=`echo $$(basename $$f) | sed -e "s/\\\\.framework//"`; strip -ST $$f/$$binary_name; done;' > $(location StripFramework.sh)
+    echo '' >> $(location StripFramework.sh)
+""",
+    outs = [
+        "StripFramework.sh",
+    ],
+    executable = True,
+    visibility = [
+        "//visibility:public",
+    ]
+)
+
+ios_framework(
+    name = "DisplayFramework",
+    bundle_id = "{telegram_bundle_id}.Display".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = [
+        ":DisplayInfoPlist",
+    ],
+    frameworks = [
+        ":SwiftSignalKitFramework",
+        ":AsyncDisplayKitFramework",
+    ],
+    minimum_os_version = "9.0",
+    ipa_post_processor = strip_framework,
+    deps = [
+        "//submodules/Display:Display",
+    ],
+)
+
+plist_fragment(
     name = "TelegramUIInfoPlist",
     extension = "plist",
     template =
@@ -541,7 +908,18 @@ ios_framework(
     infoplists = [
         ":TelegramUIInfoPlist",
     ],
+    frameworks = [
+        ":MtProtoKitFramework",
+        ":SwiftSignalKitFramework",
+        ":PostboxFramework",
+        ":TelegramApiFramework",
+        ":SyncCoreFramework",
+        ":TelegramCoreFramework",
+        ":AsyncDisplayKitFramework",
+        ":DisplayFramework",
+    ],
     minimum_os_version = "9.0",
+    ipa_post_processor = strip_framework,
     deps = [
         "//submodules/TelegramUI:TelegramUI",
     ] + debug_deps,
@@ -858,16 +1236,24 @@ ios_application(
         ":DefaultAppIcon",
     ],
     frameworks = [
+        ":MtProtoKitFramework",
+        ":SwiftSignalKitFramework",
+        ":PostboxFramework",
+        ":TelegramApiFramework",
+        ":SyncCoreFramework",
+        ":TelegramCoreFramework",
+        ":AsyncDisplayKitFramework",
+        ":DisplayFramework",
         ":TelegramUIFramework",
     ],
     strings = [
         ":AppStringResources",
     ],
     extensions = [
-        #":ShareExtension",
+        ":ShareExtension",
         #":NotificationServiceExtension",
     ],
-    #watch_application = ":TelegramWatchApp",
+    watch_application = ":TelegramWatchApp",
     deps = [
         ":Main",
         ":Lib",

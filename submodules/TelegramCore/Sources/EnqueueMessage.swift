@@ -378,7 +378,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         authorId = account.peerId
                     }
                     
-                    let (tags, globalTags) = tagsForStoreMessage(incoming: false, attributes: attributes, media: mediaList, textEntities: entitiesAttribute?.entities)
+                    let (tags, globalTags) = tagsForStoreMessage(incoming: false, attributes: attributes, media: mediaList, textEntities: entitiesAttribute?.entities, isPinned: false)
                     
                     var localTags: LocalMessageTags = []
                     for media in mediaList {
@@ -571,7 +571,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             attributes.removeAll(where: { $0 is OutgoingScheduleInfoMessageAttribute })
                         }
                         
-                        let (tags, globalTags) = tagsForStoreMessage(incoming: false, attributes: attributes, media: sourceMessage.media, textEntities: entitiesAttribute?.entities)
+                        let (tags, globalTags) = tagsForStoreMessage(incoming: false, attributes: attributes, media: sourceMessage.media, textEntities: entitiesAttribute?.entities, isPinned: false)
                         
                         let localGroupingKey: Int64?
                         switch grouping {

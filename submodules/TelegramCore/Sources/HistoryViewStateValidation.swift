@@ -140,7 +140,7 @@ final class HistoryViewStateValidationContexts {
     
     func updateView(id: Int32, view: MessageHistoryView?, location: ChatLocationInput? = nil) {
         assert(self.queue.isCurrent())
-        guard let view = view, view.tagMask == nil || view.tagMask == MessageTags.unseenPersonalMessage || view.tagMask == MessageTags.music else {
+        guard let view = view, view.tagMask == nil || view.tagMask == MessageTags.unseenPersonalMessage || view.tagMask == MessageTags.music || view.tagMask == MessageTags.pinned else {
             if self.contexts[id] != nil {
                 self.contexts.removeValue(forKey: id)
             }

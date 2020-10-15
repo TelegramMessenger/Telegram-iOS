@@ -98,7 +98,6 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         }
         
         self.closeButton.addTarget(self, action: #selector(self.closePressed), forControlEvents: [.touchUpInside])
-        self.addSubnode(self.closeButton)
         
         self.addSubnode(self.clippingContainer)
         self.clippingContainer.addSubnode(self.contentContainer)
@@ -106,6 +105,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.contentContainer.addSubnode(self.titleNode)
         self.contentContainer.addSubnode(self.textNode)
         self.contentContainer.addSubnode(self.imageNode)
+        
+        self.addSubnode(self.closeButton)
         
         self.tapButton.addTarget(self, action: #selector(self.tapped), forControlEvents: [.touchUpInside])
         self.addSubnode(self.tapButton)
@@ -240,7 +241,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             var imageDimensions: CGSize?
             
             var titleString: String
-            if pinnedMessage.isLatest {
+            if pinnedMessage.topMessageId == pinnedMessage.message.id {
                 titleString = strings.Conversation_PinnedMessage
             } else {
                 titleString = strings.Conversation_PinnedPreviousMessage
@@ -360,6 +361,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     }
     
     @objc func closePressed() {
-        self.interfaceInteraction?.unpinMessage()
+        if let interfaceInteraction = self.interfaceInteraction, let message = self.currentMessage {
+            interfaceInteraction.unpinMessage(message.message.id)
+        }
     }
 }

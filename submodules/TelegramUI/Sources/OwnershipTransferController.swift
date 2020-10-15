@@ -22,8 +22,6 @@ private func commitOwnershipTransferController(context: AccountContext, present:
     var dismissImpl: (() -> Void)?
     var proceedImpl: (() -> Void)?
     
-    var pushControllerImpl: ((ViewController) -> Void)?
-    
     let disposable = MetaDisposable()
     
     let contentNode = ChannelOwnershipTransferAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: presentationData.strings, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
@@ -56,6 +54,7 @@ private func commitOwnershipTransferController(context: AccountContext, present:
         contentNode.updateIsChecking(true)
         
         disposable.set((commit(contentNode.password) |> deliverOnMainQueue).start(next: { result in
+            completion(result)
             dismissImpl?()
         }, error: { [weak contentNode] error in
             var errorTextAndActions: (String, [TextAlertAction])?
@@ -76,10 +75,6 @@ private func commitOwnershipTransferController(context: AccountContext, present:
                 present(textAlertController(context: context, title: nil, text: text, actions: actions), nil)
             }
         }))
-    }
-    
-    pushControllerImpl = { [weak controller] c in
-        controller?.push(c)
     }
     
     return controller

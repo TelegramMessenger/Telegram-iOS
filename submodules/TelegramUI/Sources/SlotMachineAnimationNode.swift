@@ -9,16 +9,81 @@ import AccountContext
 import StickerResources
 import ManagedAnimationNode
 
-enum ReelValue {
-    case rolling
-    case bar
-    case berries
-    case lemon
-    case seven
-    case sevenWin
+private struct SlotMachineValue {
+    enum ReelValue {
+        case rolling
+        case bar
+        case berries
+        case lemon
+        case seven
+        case sevenWin
+        
+        var isResult: Bool {
+            if case .rolling = self {
+                return false
+            } else {
+                return true
+            }
+        }
+    }
+    
+    let left: ReelValue
+    let center: ReelValue
+    let right: ReelValue
+    
+    init(rawValue: Int32?) {
+        if let rawValue = rawValue, rawValue > 0 {
+            let rawValue = rawValue - 1
+            
+            let leftRawValue = rawValue & 3
+            let centerRawValue = rawValue >> 2 & 3
+            let rightRawValue = rawValue >> 4
+            
+            func reelValue(for rawValue: Int32) -> ReelValue {
+                switch rawValue {
+                    case 0:
+                        return .bar
+                    case 1:
+                        return .berries
+                    case 2:
+                        return .lemon
+                    case 3:
+                        return .seven
+                    default:
+                        return .rolling
+                }
+            }
+            
+            var leftReelValue = reelValue(for: leftRawValue)
+            var centerReelValue = reelValue(for: centerRawValue)
+            var rightReelValue = reelValue(for: rightRawValue)
+            
+            if leftReelValue == .seven && centerReelValue == .seven && rightReelValue == .seven {
+                leftReelValue = .sevenWin
+                centerReelValue = .sevenWin
+                rightReelValue = .sevenWin
+            }
+            
+            self.left = leftReelValue
+            self.center = centerReelValue
+            self.right = rightReelValue
+        } else {
+            self.left = .rolling
+            self.center = .rolling
+            self.right = .rolling
+        }
+    }
+    
+    var isThreeOfSame: Bool {
+        return self.left == self.center && self.center == self.right && self.left.isResult
+    }
+    
+    var is777: Bool {
+        return self.left == .sevenWin && self.center == .sevenWin && self.right == .sevenWin
+    }
 }
 
-private func leftReelAnimationItem(value: ReelValue, immediate: Bool = false) -> ManagedAnimationItem {
+private func leftReelAnimationItem(value: SlotMachineValue.ReelValue, immediate: Bool = false) -> ManagedAnimationItem {
     let frames: ManagedAnimationFrameRange? = immediate ? .still(.end) : nil
     switch value {
         case .rolling:
@@ -36,7 +101,7 @@ private func leftReelAnimationItem(value: ReelValue, immediate: Bool = false) ->
     }
 }
 
-private func centerReelAnimationItem(value: ReelValue, immediate: Bool = false) -> ManagedAnimationItem {
+private func centerReelAnimationItem(value: SlotMachineValue.ReelValue, immediate: Bool = false) -> ManagedAnimationItem {
     let frames: ManagedAnimationFrameRange? = immediate ? .still(.end) : nil
     switch value {
         case .rolling:
@@ -54,7 +119,7 @@ private func centerReelAnimationItem(value: ReelValue, immediate: Bool = false) 
     }
 }
 
-private func rightReelAnimationItem(value: ReelValue, immediate: Bool = false) -> ManagedAnimationItem {
+private func rightReelAnimationItem(value: SlotMachineValue.ReelValue, immediate: Bool = false) -> ManagedAnimationItem {
     let frames: ManagedAnimationFrameRange? = immediate ? .still(.end) : nil
     switch value {
         case .rolling:
@@ -126,49 +191,17 @@ final class SlotMachineAnimationNode: ASDisplayNode, GenericAnimatedStickerNode 
                 case .rolling:
                     switch diceState {
                         case let .value(value, _):
-                            let l: ReelValue
-                            let c: ReelValue
-                            let r: ReelValue
-                            switch value {
-                                case 1:
-                                    l = .seven
-                                    c = .berries
-                                    r = .bar
-                                case 2:
-                                    l = .berries
-                                    c = .berries
-                                    r = .bar
-                                case 3:
-                                    l = .seven
-                                    c = .berries
-                                    r = .seven
-                                case 4:
-                                    l = .bar
-                                    c = .lemon
-                                    r = .seven
-                                case 5:
-                                    l = .berries
-                                    c = .berries
-                                    r = .berries
-                                case 6:
-                                    l = .sevenWin
-                                    c = .sevenWin
-                                    r = .sevenWin
-                                default:
-                                    l = .sevenWin
-                                    c = .sevenWin
-                                    r = .sevenWin
-                            }
-                            if value == 6 {
+                            let slotValue = SlotMachineValue(rawValue: value)
+                            if slotValue.isThreeOfSame {
                                 Queue.mainQueue().after(1.5) {
                                     self.backNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Back_Win"), loop: false))
                                 }
                             } else {
-                                self.backNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Back_Idle"), loop: false))
+                                self.backNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Back_Win"), frames: .still(.start), loop: false))
                             }
-                            self.leftReelNode.trackTo(item: leftReelAnimationItem(value: l))
-                            self.centerReelNode.trackTo(item: centerReelAnimationItem(value: c))
-                            self.rightReelNode.trackTo(item: rightReelAnimationItem(value: r))
+                            self.leftReelNode.trackTo(item: leftReelAnimationItem(value: slotValue.left))
+                            self.centerReelNode.trackTo(item: centerReelAnimationItem(value: slotValue.center))
+                            self.rightReelNode.trackTo(item: rightReelAnimationItem(value: slotValue.right))
                             self.frontNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Front_Pull"), frames: .still(.end), loop: false))
                         case .rolling:
                             break
@@ -176,7 +209,7 @@ final class SlotMachineAnimationNode: ASDisplayNode, GenericAnimatedStickerNode 
                 case .value:
                     switch diceState {
                         case .rolling:
-                            self.backNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Back_Idle"), loop: false))
+                            self.backNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Back_Win"), frames: .still(.start), loop: false))
                             self.leftReelNode.trackTo(item: leftReelAnimationItem(value: .rolling))
                             self.centerReelNode.trackTo(item: centerReelAnimationItem(value: .rolling))
                             self.rightReelNode.trackTo(item: rightReelAnimationItem(value: .rolling))
@@ -188,49 +221,17 @@ final class SlotMachineAnimationNode: ASDisplayNode, GenericAnimatedStickerNode 
         } else {
             switch diceState {
                 case let .value(value, immediate):
-                    self.backNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Back_Idle"), loop: false))
+                    self.backNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Back_Win"), frames: .still(.start), loop: false))
                     
-                    let l: ReelValue
-                    let c: ReelValue
-                    let r: ReelValue
-                    switch value {
-                        case 1:
-                            l = .seven
-                            c = .berries
-                            r = .bar
-                        case 2:
-                            l = .berries
-                            c = .berries
-                            r = .bar
-                        case 3:
-                            l = .seven
-                            c = .berries
-                            r = .seven
-                        case 4:
-                            l = .bar
-                            c = .lemon
-                            r = .seven
-                        case 5:
-                            l = .berries
-                            c = .berries
-                            r = .berries
-                        case 6:
-                            l = .sevenWin
-                            c = .sevenWin
-                            r = .sevenWin
-                        default:
-                            l = .sevenWin
-                            c = .sevenWin
-                            r = .sevenWin
-                    }
-                    self.leftReelNode.trackTo(item: leftReelAnimationItem(value: l, immediate: immediate))
-                    self.centerReelNode.trackTo(item: centerReelAnimationItem(value: c, immediate: immediate))
-                    self.rightReelNode.trackTo(item: rightReelAnimationItem(value: r, immediate: immediate))
+                    let slotValue = SlotMachineValue(rawValue: value)
+                    self.leftReelNode.trackTo(item: leftReelAnimationItem(value: slotValue.left, immediate: immediate))
+                    self.centerReelNode.trackTo(item: centerReelAnimationItem(value: slotValue.center, immediate: immediate))
+                    self.rightReelNode.trackTo(item: rightReelAnimationItem(value: slotValue.right, immediate: immediate))
                     
                     let frames: ManagedAnimationFrameRange? = immediate ? .still(.end) : nil
                     self.frontNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Front_Pull"), frames: frames, loop: false))
                 case .rolling:
-                    self.backNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Back_Idle"), loop: false))
+                    self.backNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Back_Win"), frames: .still(.start), loop: false))
                     self.leftReelNode.trackTo(item: leftReelAnimationItem(value: .rolling))
                     self.centerReelNode.trackTo(item: centerReelAnimationItem(value: .rolling))
                     self.rightReelNode.trackTo(item: rightReelAnimationItem(value: .rolling))

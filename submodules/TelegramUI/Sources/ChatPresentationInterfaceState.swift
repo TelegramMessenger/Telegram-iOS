@@ -259,11 +259,11 @@ struct ChatSlowmodeState: Equatable {
 
 final class ChatPinnedMessage: Equatable {
     let message: Message
-    let isLatest: Bool
+    let topMessageId: MessageId
     
-    init(message: Message, isLatest: Bool) {
+    init(message: Message, topMessageId: MessageId) {
         self.message = message
-        self.isLatest = isLatest
+        self.topMessageId = topMessageId
     }
     
     static func ==(lhs: ChatPinnedMessage, rhs: ChatPinnedMessage) -> Bool {
@@ -276,7 +276,7 @@ final class ChatPinnedMessage: Equatable {
         if lhs.message.stableVersion != rhs.message.stableVersion {
             return false
         }
-        if lhs.isLatest != rhs.isLatest {
+        if lhs.topMessageId != rhs.topMessageId {
             return false
         }
         return true

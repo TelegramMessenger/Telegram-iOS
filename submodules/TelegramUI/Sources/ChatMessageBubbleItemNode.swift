@@ -35,7 +35,7 @@ private struct BubbleItemAttributes {
     var neighborSpacing: ChatMessageBubbleRelativePosition.NeighbourSpacing
 }
 
-private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)] {
+private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([(Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)], Bool) {
     var result: [(Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)] = []
     var skipText = false
     var messageWithCaptionToAdd: (Message, ChatMessageEntryAttributes)?
@@ -43,6 +43,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
     var isAction = false
     
     var previousItemIsMusic = false
+    var hasFiles = false
     
     outer: for (message, itemAttributes) in item.content {
         for attribute in message.attributes {
@@ -52,8 +53,9 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
             }
         }
         
+        var isMusic = false
+        var isFile = false
         inner: for media in message.media {
-            var isMusic = false
             if let _ = media as? TelegramMediaImage {
                 result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
             } else if let file = media as? TelegramMediaFile {
@@ -66,6 +68,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
                         neighborSpacing = .condensed
                     }
                     isMusic = file.isMusic
+                    isFile = true
+                    hasFiles = true
                     result.append((message, ChatMessageFileBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: neighborSpacing)))
                 }
             } else if let action = media as? TelegramMediaAction {
@@ -90,7 +94,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
             } else if let _ = media as? TelegramMediaExpiredContent {
                 result.removeAll()
                 result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
-                return result
+                return (result, false)
             } else if let _ = media as? TelegramMediaPoll {
                 result.append((message, ChatMessagePollBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
             } else if let _ = media as? TelegramMediaUnsupported {
@@ -106,11 +110,11 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
         
         if !messageText.isEmpty || isUnsupportedMedia {
             if !skipText {
-                if case .group = item.content {
+                if case .group = item.content, !isFile {
                     messageWithCaptionToAdd = (message, itemAttributes)
                     skipText = true
                 } else {
-                    result.append((message, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                    result.append((message, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: isFile ? .condensed : .default)))
                 }
             } else {
                 if case .group = item.content {
@@ -184,7 +188,12 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
         }
     }
     
-    return result
+    var needSeparateContainers = false
+    if case .group = item.content, hasFiles {
+        needSeparateContainers = true
+    }
+    
+    return (result, needSeparateContainers)
 }
 
 private let chatMessagePeerIdColors: [UIColor] = [
@@ -202,9 +211,86 @@ private enum ContentNodeOperation {
     case insert(index: Int, node: ChatMessageBubbleContentNode)
 }
 
-class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode {
-    private let contextSourceNode: ContextExtractedContentContainingNode
-    private let containerNode: ContextControllerSourceNode
+class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode {
+    class ContentContainer {
+        let contentMessageStableId: UInt32
+        let sourceNode: ContextExtractedContentContainingNode
+        let containerNode: ContextControllerSourceNode
+        var backgroundNode: ChatMessageBackground?
+        var selectionBackgroundNode: ASDisplayNode?
+        
+        var currentParams: (size: CGSize, contentOrigin: CGPoint, presentationData: ChatPresentationData, graphics: PrincipalThemeEssentialGraphics, backgroundType: ChatMessageBackgroundType, Bool?)?
+        
+        init(contentMessageStableId: UInt32) {
+            self.contentMessageStableId = contentMessageStableId
+            
+            self.sourceNode = ContextExtractedContentContainingNode()
+            self.containerNode = ContextControllerSourceNode()
+        }
+        
+        func willUpdateIsExtractedToContextPreview(isExtractedToContextPreview: Bool, transition: ContainedViewLayoutTransition) {
+            if isExtractedToContextPreview {
+                if let _ = self.backgroundNode {
+                } else if let currentParams = self.currentParams {
+                    let backgroundNode = ChatMessageBackground()
+                    backgroundNode.alpha = 0.0
+                    
+                    var type: ChatMessageBackgroundType
+                    if case .incoming = currentParams.backgroundType {
+                        type = .incoming(.Extracted)
+                    } else {
+                        type = .outgoing(.Extracted)
+                    }
+                    
+                    backgroundNode.setType(type: type, highlighted: false, graphics: currentParams.graphics, maskMode: false, hasWallpaper: currentParams.presentationData.theme.wallpaper.hasWallpaper, transition: .immediate)
+                    self.sourceNode.contentNode.insertSubnode(backgroundNode, at: 0)
+                    self.backgroundNode = backgroundNode
+                    
+                    transition.updateAlpha(node: backgroundNode, alpha: 1.0)
+                }
+                
+                if let currentParams = self.currentParams {
+                    self.backgroundNode?.updateLayout(size: currentParams.size, transition: .immediate)
+                    self.backgroundNode?.frame = CGRect(origin: currentParams.contentOrigin, size: currentParams.size)
+                }
+            } else if let backgroundNode = self.backgroundNode {
+                self.backgroundNode = nil
+                transition.updateAlpha(node: backgroundNode, alpha: 0.0, completion: { [weak backgroundNode] _ in
+                    backgroundNode?.removeFromSupernode()
+                })
+            }
+        }
+        
+        func update(size: CGSize, contentOrigin: CGPoint, presentationData: ChatPresentationData, graphics: PrincipalThemeEssentialGraphics, backgroundType: ChatMessageBackgroundType, messageSelection: Bool?) {
+            self.currentParams = (size, contentOrigin, presentationData, graphics, backgroundType, messageSelection)
+            let bounds = CGRect(origin: CGPoint(), size: size)
+            
+            var incoming: Bool = false
+            if case .incoming = backgroundType {
+                incoming = true
+            }
+            
+            let messageTheme = incoming ? presentationData.theme.theme.chat.message.incoming : presentationData.theme.theme.chat.message.outgoing
+            
+            if let messageSelection = messageSelection, messageSelection {
+                if let _ = self.selectionBackgroundNode {
+                } else {
+                    let selectionBackgroundNode = ASDisplayNode()
+                    self.sourceNode.contentNode.insertSubnode(selectionBackgroundNode, at: 0)
+                    self.selectionBackgroundNode = selectionBackgroundNode
+                }
+                
+                self.selectionBackgroundNode?.backgroundColor = messageTheme.accentTextColor.withAlphaComponent(0.08)
+                self.selectionBackgroundNode?.frame = bounds.offsetBy(dx: contentOrigin.x, dy: contentOrigin.y)
+            } else if let selectionBackgroundNode = self.selectionBackgroundNode {
+                self.selectionBackgroundNode = nil
+                selectionBackgroundNode.removeFromSupernode()
+            }
+        }
+    }
+     
+    private let mainContextSourceNode: ContextExtractedContentContainingNode
+    private let mainContainerNode: ContextControllerSourceNode
     private let backgroundWallpaperNode: ChatMessageBubbleBackdrop
     private let backgroundNode: ChatMessageBackground
     private let shadowNode: ChatMessageShadowNode
@@ -228,6 +314,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     }
     private var replyInfoNode: ChatMessageReplyInfoNode?
     
+    private var contentContainersMaskView: UIImageView?
+    private var contentContainersWrapperNode: ASDisplayNode
+    private var contentContainers: [ContentContainer] = []
     private(set) var contentNodes: [ChatMessageBubbleContentNode] = []
     private var mosaicStatusNode: ChatMessageDateAndStatusNode?
     private var actionButtonsNode: ChatMessageActionButtonsNode?
@@ -262,9 +351,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     }
     
     required init() {
-        self.contextSourceNode = ContextExtractedContentContainingNode()
-        self.containerNode = ContextControllerSourceNode()
+        self.mainContextSourceNode = ContextExtractedContentContainingNode()
+        self.mainContainerNode = ContextControllerSourceNode()
         self.backgroundWallpaperNode = ChatMessageBubbleBackdrop()
+        self.contentContainersWrapperNode = ASDisplayNode()
         
         self.backgroundNode = ChatMessageBackground()
         self.shadowNode = ChatMessageShadowNode()
@@ -272,11 +362,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         super.init(layerBacked: false)
         
-        self.containerNode.shouldBegin = { [weak self] location in
+        self.mainContainerNode.shouldBegin = { [weak self] location in
             guard let strongSelf = self else {
                 return false
             }
             if !strongSelf.backgroundNode.frame.contains(location) {
+                return false
+            }
+            if strongSelf.selectionNode != nil {
                 return false
             }
             if let action = strongSelf.gestureRecognized(gesture: .tap, location: location, recognizer: nil) {
@@ -288,14 +381,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 switch action {
                 case .action, .optionalAction:
                     return false
-                case .openContextMenu:
-                    return true
+                case let .openContextMenu(_, selectAll, _):
+                    return selectAll || strongSelf.contentContainers.isEmpty
                 }
             }
             return true
         }
         
-        self.containerNode.activated = { [weak self] gesture, location in
+        self.mainContainerNode.activated = { [weak self] gesture, location in
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
@@ -310,12 +403,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             }
         }
         
-        self.containerNode.addSubnode(self.contextSourceNode)
-        self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
-        self.addSubnode(self.containerNode)
+        self.mainContainerNode.addSubnode(self.mainContextSourceNode)
+        self.mainContainerNode.targetNodeForActivationProgress = self.mainContextSourceNode.contentNode
+        self.addSubnode(self.mainContainerNode)
         
-        self.contextSourceNode.contentNode.addSubnode(self.backgroundWallpaperNode)
-        self.contextSourceNode.contentNode.addSubnode(self.backgroundNode)
+        self.mainContextSourceNode.contentNode.addSubnode(self.backgroundWallpaperNode)
+        self.mainContextSourceNode.contentNode.addSubnode(self.backgroundNode)
+        self.mainContextSourceNode.contentNode.addSubnode(self.contentContainersWrapperNode)
         self.addSubnode(self.messageAccessibilityArea)
         
         self.messageAccessibilityArea.activate = { [weak self] in
@@ -332,15 +426,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             self?.accessibilityElementDidBecomeFocused()
         }
         
-        self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtractedToContextPreview, _ in
-            guard let strongSelf = self, let item = strongSelf.item else {
+        self.mainContextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtractedToContextPreview, _ in
+            guard let strongSelf = self, let _ = strongSelf.item else {
                 return
             }
             for contentNode in strongSelf.contentNodes {
                 contentNode.willUpdateIsExtractedToContextPreview(isExtractedToContextPreview)
             }
         }
-        self.contextSourceNode.isExtractedToContextPreviewUpdated = { [weak self] isExtractedToContextPreview in
+        self.mainContextSourceNode.isExtractedToContextPreviewUpdated = { [weak self] isExtractedToContextPreview in
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
@@ -355,20 +449,20 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             }
         }
         
-        self.contextSourceNode.updateAbsoluteRect = { [weak self] rect, size in
-            guard let strongSelf = self, strongSelf.contextSourceNode.isExtractedToContextPreview else {
+        self.mainContextSourceNode.updateAbsoluteRect = { [weak self] rect, size in
+            guard let strongSelf = self, strongSelf.mainContextSourceNode.isExtractedToContextPreview else {
                 return
             }
             strongSelf.updateAbsoluteRectInternal(rect, within: size)
         }
-        self.contextSourceNode.applyAbsoluteOffset = { [weak self] value, animationCurve, duration in
-            guard let strongSelf = self, strongSelf.contextSourceNode.isExtractedToContextPreview else {
+        self.mainContextSourceNode.applyAbsoluteOffset = { [weak self] value, animationCurve, duration in
+            guard let strongSelf = self, strongSelf.mainContextSourceNode.isExtractedToContextPreview else {
                 return
             }
             strongSelf.applyAbsoluteOffsetInternal(value: value, animationCurve: animationCurve, duration: duration)
         }
-        self.contextSourceNode.applyAbsoluteOffsetSpring = { [weak self] value, duration, damping in
-            guard let strongSelf = self, strongSelf.contextSourceNode.isExtractedToContextPreview else {
+        self.mainContextSourceNode.applyAbsoluteOffsetSpring = { [weak self] value, duration, damping in
+            guard let strongSelf = self, strongSelf.mainContextSourceNode.isExtractedToContextPreview else {
                 return
             }
             strongSelf.applyAbsoluteOffsetSpringInternal(value: value, duration: duration, damping: damping)
@@ -510,8 +604,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             if let strongSelf = self {
                 for contentNode in strongSelf.contentNodes {
                     var translatedPoint: CGPoint?
-                    if let point = point, contentNode.frame.insetBy(dx: -4.0, dy: -4.0).contains(point) {
-                        translatedPoint = CGPoint(x: point.x - contentNode.frame.minX, y: point.y - contentNode.frame.minY)
+                    let convertedNodeFrame = contentNode.convert(contentNode.bounds, to: strongSelf)
+                    if let point = point, convertedNodeFrame.insetBy(dx: -4.0, dy: -4.0).contains(point) {
+                        translatedPoint = strongSelf.convert(point, to: contentNode)
                     }
                     contentNode.updateTouchesAtPoint(translatedPoint)
                 }
@@ -1003,7 +1098,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         var contentPropertiesAndPrepareLayouts: [(Message, Bool, ChatMessageEntryAttributes, BubbleItemAttributes, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))))] = []
         var addedContentNodes: [(Message, ChatMessageBubbleContentNode)]?
         
-        let contentNodeMessagesAndClasses = contentNodeMessagesAndClassesForItem(item)
+        let (contentNodeMessagesAndClasses, needSeparateContainers) = contentNodeMessagesAndClassesForItem(item)
         for (contentNodeMessage, contentNodeClass, attributes, bubbleAttributes) in contentNodeMessagesAndClasses {
             var found = false
             for (currentMessage, currentClass, supportsMosaic, currentLayout) in currentContentClassesPropertiesAndLayouts {
@@ -1076,7 +1171,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             inlineBotNameString = nil
         }
         
-        var contentPropertiesAndLayouts: [(CGSize?, ChatMessageBubbleContentProperties, ChatMessageBubblePreparePosition, BubbleItemAttributes, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void)))] = []
+        var contentPropertiesAndLayouts: [(CGSize?, ChatMessageBubbleContentProperties, ChatMessageBubblePreparePosition, BubbleItemAttributes, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void)), UInt32?, Bool?)] = []
         
         let topNodeMergeStatus: ChatMessageBubbleMergeStatus = mergedTop.merged ? (incoming ? .Left : .Right) : .None(incoming ? .Incoming : .Outgoing)
         let bottomNodeMergeStatus: ChatMessageBubbleMergeStatus = mergedBottom.merged ? (incoming ? .Left : .Right) : .None(incoming ? .Incoming : .Outgoing)
@@ -1178,7 +1273,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             let (properties, unboundSize, maxNodeWidth, nodeLayout) = prepareLayout(contentItem, layoutConstants, prepareContentPosition, itemSelection, CGSize(width: maximumContentWidth, height: CGFloat.greatestFiniteMagnitude))
             maximumNodeWidth = min(maximumNodeWidth, maxNodeWidth)
             
-            contentPropertiesAndLayouts.append((unboundSize, properties, prepareContentPosition, bubbleAttributes, nodeLayout))
+            contentPropertiesAndLayouts.append((unboundSize, properties, prepareContentPosition, bubbleAttributes, nodeLayout, needSeparateContainers ? message.stableId : nil, itemSelection))
             
             switch properties.hidesBackground {
                 case .never:
@@ -1503,7 +1598,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             }
         }
         
-        var contentNodePropertiesAndFinalize: [(ChatMessageBubbleContentProperties, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))] = []
+        var contentNodePropertiesAndFinalize: [(ChatMessageBubbleContentProperties, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void), UInt32?, Bool?)] = []
         
         var maxContentWidth: CGFloat = headerSize.width
         
@@ -1515,7 +1610,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         }
         
         for i in 0 ..< contentPropertiesAndLayouts.count {
-            let (_, contentNodeProperties, preparePosition, isAttachment, contentNodeLayout) = contentPropertiesAndLayouts[i]
+            let (_, contentNodeProperties, preparePosition, _, contentNodeLayout, contentGroupId, itemSelection) = contentPropertiesAndLayouts[i]
             
             if let mosaicRange = mosaicRange, mosaicRange.contains(i), let (framesAndPositions, size) = calculatedGroupFramesAndSize {
                 let mosaicIndex = i - mosaicRange.lowerBound
@@ -1619,7 +1714,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 
                 let (_, contentNodeFinalize) = contentNodeLayout(framesAndPositions[mosaicIndex].0.size, .mosaic(position: ChatMessageBubbleContentMosaicPosition(topLeft: topLeft, topRight: topRight, bottomLeft: bottomLeft, bottomRight: bottomRight), wide: position.isWide))
                 
-                contentNodePropertiesAndFinalize.append((contentNodeProperties, contentNodeFinalize))
+                contentNodePropertiesAndFinalize.append((contentNodeProperties, contentNodeFinalize, contentGroupId, itemSelection))
                 
                 maxContentWidth = max(maxContentWidth, size.width)
             } else {
@@ -1663,16 +1758,22 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 #endif
                 maxContentWidth = max(maxContentWidth, contentNodeWidth)
                 
-                contentNodePropertiesAndFinalize.append((contentNodeProperties, contentNodeFinalize))
+                contentNodePropertiesAndFinalize.append((contentNodeProperties, contentNodeFinalize, contentGroupId, itemSelection))
             }
         }
         
         var contentSize = CGSize(width: maxContentWidth, height: 0.0)
         var contentNodeFramesPropertiesAndApply: [(CGRect, ChatMessageBubbleContentProperties, (ListViewItemUpdateAnimation, Bool) -> Void)] = []
+        var contentContainerNodeFrames: [(UInt32, CGRect, Bool?)] = []
+        var currentContainerGroupId: UInt32?
+        var currentItemSelection: Bool?
+        
         var contentNodesHeight: CGFloat = 0.0
+        var totalContentNodesHeight: CGFloat = 0.0
+        
         var mosaicStatusOrigin: CGPoint?
         for i in 0 ..< contentNodePropertiesAndFinalize.count {
-            let (properties, finalize) = contentNodePropertiesAndFinalize[i]
+            let (properties, finalize, contentGroupId, itemSelection) = contentNodePropertiesAndFinalize[i]
             
             if let mosaicRange = mosaicRange, mosaicRange.contains(i), let (framesAndPositions, size) = calculatedGroupFramesAndSize {
                 let mosaicIndex = i - mosaicRange.lowerBound
@@ -1689,21 +1790,37 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 
                 if mosaicIndex == mosaicRange.upperBound - 1 {
                     contentNodesHeight += size.height
+                    totalContentNodesHeight += size.height
                     
                     mosaicStatusOrigin = contentNodeFrame.bottomRight
                 }
             } else {
                 if i == 0 && !headerSize.height.isZero {
                     contentNodesHeight += properties.headerSpacing
+                    totalContentNodesHeight += contentNodesHeight
+                }
+                
+                if currentContainerGroupId != contentGroupId {
+                    if let containerGroupId = currentContainerGroupId {
+                        contentContainerNodeFrames.append((containerGroupId, CGRect(x: 0.0, y: totalContentNodesHeight - contentNodesHeight, width: maxContentWidth, height: contentNodesHeight), currentItemSelection))
+                    }
+                    contentNodesHeight = 0.0
+                    currentContainerGroupId = contentGroupId
+                    currentItemSelection = itemSelection
                 }
                 
                 let (size, apply) = finalize(maxContentWidth)
                 contentNodeFramesPropertiesAndApply.append((CGRect(origin: CGPoint(x: 0.0, y: contentNodesHeight), size: size), properties, apply))
                 
                 contentNodesHeight += size.height
+                totalContentNodesHeight += size.height
             }
         }
-        contentSize.height += contentNodesHeight
+        contentSize.height += totalContentNodesHeight
+        
+        if let containerGroupId = currentContainerGroupId {
+            contentContainerNodeFrames.append((containerGroupId, CGRect(x: 0.0, y: totalContentNodesHeight - contentNodesHeight, width: maxContentWidth, height: contentNodesHeight), currentItemSelection))
+        }
         
         var actionButtonsSizeAndApply: (CGSize, (Bool) -> ChatMessageActionButtonsNode)?
         if let actionButtonsFinalize = actionButtonsFinalize {
@@ -1829,6 +1946,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 addedContentNodes: addedContentNodes,
                 contentNodeMessagesAndClasses: contentNodeMessagesAndClasses,
                 contentNodeFramesPropertiesAndApply: contentNodeFramesPropertiesAndApply,
+                contentContainerNodeFrames: contentContainerNodeFrames,
                 mosaicStatusOrigin: mosaicStatusOrigin,
                 mosaicStatusSizeAndApply: mosaicStatusSizeAndApply,
                 updatedShareButtonNode: updatedShareButtonNode,
@@ -1868,6 +1986,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         addedContentNodes: [(Message, ChatMessageBubbleContentNode)]?,
         contentNodeMessagesAndClasses: [(Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)],
         contentNodeFramesPropertiesAndApply: [(CGRect, ChatMessageBubbleContentProperties, (ListViewItemUpdateAnimation, Bool) -> Void)],
+        contentContainerNodeFrames: [(UInt32, CGRect, Bool?)],
         mosaicStatusOrigin: CGPoint?,
         mosaicStatusSizeAndApply: (CGSize, (Bool) -> ChatMessageDateAndStatusNode)?,
         updatedShareButtonNode: HighlightableButtonNode?,
@@ -1876,10 +1995,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         guard let strongSelf = selfReference.value else {
             return
         }
-        let previousContextFrame = strongSelf.containerNode.frame
-        strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
-        strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
-        strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+        let previousContextFrame = strongSelf.mainContainerNode.frame
+        strongSelf.mainContainerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+        strongSelf.mainContextSourceNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+        strongSelf.mainContextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+        strongSelf.contentContainersWrapperNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
         
         strongSelf.appliedItem = item
         strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
@@ -1922,7 +2042,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 isAppearing = true
                 deliveryFailedNode = ChatMessageDeliveryFailedNode(tapped: { [weak strongSelf] in
                     if let item = strongSelf?.item {
-                    item.controllerInteraction.requestRedeliveryOfFailedMessages(item.content.firstMessage.id)
+                        item.controllerInteraction.requestRedeliveryOfFailedMessages(item.content.firstMessage.id)
                     }
                 })
                 strongSelf.deliveryFailedNode = deliveryFailedNode
@@ -1950,7 +2070,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 if !nameNode.isNodeLoaded {
                     nameNode.isUserInteractionEnabled = false
                 }
-                strongSelf.contextSourceNode.contentNode.addSubnode(nameNode)
+                strongSelf.mainContextSourceNode.contentNode.addSubnode(nameNode)
             }
             nameNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + nameNodeOriginY), size: nameNodeSizeApply.0)
             nameNode.displaysAsynchronously = !item.presentationData.isPreview
@@ -1962,7 +2082,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 } else {
                     credibilityIconNode = ASImageNode()
                     strongSelf.credibilityIconNode = credibilityIconNode
-                    strongSelf.contextSourceNode.contentNode.addSubnode(credibilityIconNode)
+                    strongSelf.mainContextSourceNode.contentNode.addSubnode(credibilityIconNode)
                 }
                 credibilityIconNode.frame = CGRect(origin: CGPoint(x: nameNode.frame.maxX + 4.0, y: nameNode.frame.minY), size: credibilityIconImage.size)
                 credibilityIconNode.image = credibilityIconImage
@@ -1978,7 +2098,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     if !adminBadgeNode.isNodeLoaded {
                         adminBadgeNode.isUserInteractionEnabled = false
                     }
-                    strongSelf.contextSourceNode.contentNode.addSubnode(adminBadgeNode)
+                    strongSelf.mainContextSourceNode.contentNode.addSubnode(adminBadgeNode)
                     adminBadgeNode.frame = adminBadgeFrame
                 } else {
                     let previousAdminBadgeFrame = adminBadgeNode.frame
@@ -2000,7 +2120,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             strongSelf.forwardInfoNode = forwardInfoNode
             var animateFrame = true
             if forwardInfoNode.supernode == nil {
-                strongSelf.contextSourceNode.contentNode.addSubnode(forwardInfoNode)
+                strongSelf.mainContextSourceNode.contentNode.addSubnode(forwardInfoNode)
                 animateFrame = false
                 forwardInfoNode.openPsa = { [weak strongSelf] type, sourceNode in
                     guard let strongSelf = strongSelf, let item = strongSelf.item else {
@@ -2025,7 +2145,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             strongSelf.replyInfoNode = replyInfoNode
             var animateFrame = true
             if replyInfoNode.supernode == nil {
-                strongSelf.contextSourceNode.contentNode.addSubnode(replyInfoNode)
+                strongSelf.mainContextSourceNode.contentNode.addSubnode(replyInfoNode)
                 animateFrame = false
             }
             let previousReplyInfoNodeFrame = replyInfoNode.frame
@@ -2038,6 +2158,148 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         } else {
             strongSelf.replyInfoNode?.removeFromSupernode()
             strongSelf.replyInfoNode = nil
+        }
+        
+        var incomingOffset: CGFloat = 0.0
+        switch backgroundType {
+        case .incoming:
+            incomingOffset = 5.0
+        default:
+            break
+        }
+        
+        var hasSelection = false
+        for (stableId, relativeFrame, itemSelection) in contentContainerNodeFrames {
+            if let itemSelection = itemSelection, itemSelection {
+                hasSelection = true
+            }
+            var contentContainer: ContentContainer? = strongSelf.contentContainers.first(where: { $0.contentMessageStableId == stableId })
+            
+            let previousContextFrame = contentContainer?.containerNode.frame
+            let previousContextContentFrame = contentContainer?.sourceNode.contentRect
+            
+            if contentContainer == nil {
+                let container = ContentContainer(contentMessageStableId: stableId)
+                let contextSourceNode = container.sourceNode
+                let containerNode = container.containerNode
+                
+                container.containerNode.shouldBegin = { [weak strongSelf, weak containerNode] location in
+                    guard let strongSelf = strongSelf, let strongContainerNode = containerNode else {
+                        return false
+                    }
+                    
+                    let location = location.offsetBy(dx: 0.0, dy: strongContainerNode.frame.minY)
+                    if !strongSelf.backgroundNode.frame.contains(location) {
+                        return false
+                    }
+                    if strongSelf.selectionNode != nil {
+                        return false
+                    }
+                    if let action = strongSelf.gestureRecognized(gesture: .tap, location: location, recognizer: nil) {
+                        if case .action = action {
+                            return false
+                        }
+                    }
+                    if let action = strongSelf.gestureRecognized(gesture: .longTap, location: location, recognizer: nil) {
+                        switch action {
+                        case .action, .optionalAction:
+                            return false
+                        case let .openContextMenu(_, selectAll, _):
+                            return !selectAll
+                        }
+                    }
+                    return true
+                }
+                containerNode.activated = { [weak strongSelf, weak containerNode] gesture, location in
+                    guard let strongSelf = strongSelf, let strongContainerNode = containerNode else {
+                        return
+                    }
+                    
+                    let location = location.offsetBy(dx: 0.0, dy: strongContainerNode.frame.minY)
+                    strongSelf.mainContainerNode.activated?(gesture, location)
+                }
+            
+                containerNode.addSubnode(contextSourceNode)
+                containerNode.targetNodeForActivationProgress = contextSourceNode.contentNode
+                strongSelf.contentContainersWrapperNode.addSubnode(containerNode)
+                
+                contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak strongSelf, weak container, weak contextSourceNode] isExtractedToContextPreview, transition in
+                    guard let strongSelf = strongSelf, let strongContextSourceNode = contextSourceNode else {
+                        return
+                    }
+                    container?.willUpdateIsExtractedToContextPreview(isExtractedToContextPreview: isExtractedToContextPreview, transition: transition)
+                    for contentNode in strongSelf.contentNodes {
+                        if contentNode.supernode === strongContextSourceNode.contentNode {
+                            contentNode.willUpdateIsExtractedToContextPreview(isExtractedToContextPreview)
+                        }
+                    }
+                }
+                contextSourceNode.isExtractedToContextPreviewUpdated = { [weak strongSelf, weak contextSourceNode] isExtractedToContextPreview in
+                    guard let strongSelf = strongSelf, let strongContextSourceNode = contextSourceNode else {
+                        return
+                    }
+
+//                    if !isExtractedToContextPreview, let (rect, size) = strongSelf.absoluteRect {
+//                        strongSelf.updateAbsoluteRect(rect, within: size)
+//                    }
+                    
+                    for contentNode in strongSelf.contentNodes {
+                        if contentNode.supernode === strongContextSourceNode.contentNode {
+                            contentNode.updateIsExtractedToContextPreview(isExtractedToContextPreview)
+                        }
+                    }
+                }
+                
+                contextSourceNode.updateAbsoluteRect = { [weak strongSelf] rect, size in
+                    guard let strongSelf = strongSelf, strongSelf.mainContextSourceNode.isExtractedToContextPreview else {
+                        return
+                    }
+//                    strongSelf.updateAbsoluteRectInternal(rect, within: size)
+                }
+                contextSourceNode.applyAbsoluteOffset = { [weak strongSelf] value, animationCurve, duration in
+                    guard let strongSelf = strongSelf, strongSelf.mainContextSourceNode.isExtractedToContextPreview else {
+                        return
+                    }
+//                    strongSelf.applyAbsoluteOffsetInternal(value: value, animationCurve: animationCurve, duration: duration)
+                }
+                contextSourceNode.applyAbsoluteOffsetSpring = { [weak strongSelf] value, duration, damping in
+                    guard let strongSelf = strongSelf, strongSelf.mainContextSourceNode.isExtractedToContextPreview else {
+                        return
+                    }
+//                    strongSelf.applyAbsoluteOffsetSpringInternal(value: value, duration: duration, damping: damping)
+                }
+                
+                strongSelf.contentContainers.append(container)
+                contentContainer = container
+            }
+            
+            contentContainer?.sourceNode.frame = CGRect(origin: CGPoint(), size: relativeFrame.size)
+            contentContainer?.sourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: relativeFrame.size)
+            contentContainer?.containerNode.frame = relativeFrame
+            
+            contentContainer?.sourceNode.contentRect = CGRect(origin: CGPoint(x: backgroundFrame.minX + incomingOffset, y: 0.0), size: relativeFrame.size)
+            contentContainer?.containerNode.targetNodeForActivationProgressContentRect = relativeFrame.offsetBy(dx: backgroundFrame.minX + incomingOffset, dy: 0.0)
+            
+            if previousContextFrame?.size != contentContainer?.containerNode.bounds.size || previousContextContentFrame != contentContainer?.sourceNode.contentRect {
+                contentContainer?.sourceNode.layoutUpdated?(relativeFrame.size)
+            }
+            
+            contentContainer?.update(size: relativeFrame.size, contentOrigin: contentOrigin, presentationData: item.presentationData, graphics: graphics, backgroundType: backgroundType, messageSelection: itemSelection)
+        }
+        
+        if hasSelection {
+            var currentMaskView: UIImageView?
+            if let maskView = strongSelf.contentContainersWrapperNode.view.mask as? UIImageView {
+                currentMaskView = maskView
+            } else {
+                currentMaskView = UIImageView()
+                strongSelf.contentContainersWrapperNode.view.mask = currentMaskView
+            }
+            
+            currentMaskView?.frame = CGRect(origin: contentOrigin, size: backgroundFrame.size).insetBy(dx: -1.0, dy: -1.0)
+            currentMaskView?.image = bubbleMaskForType(backgroundType, graphics: graphics)
+        } else {
+            strongSelf.contentContainersWrapperNode.view.mask = nil
         }
         
         if removedContentNodeIndices?.count ?? 0 != 0 || addedContentNodes?.count ?? 0 != 0 {
@@ -2060,15 +2322,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             }
             
             if let addedContentNodes = addedContentNodes {
-                for (_, contentNode) in addedContentNodes {
+                for (contentNodeMessage, contentNode) in addedContentNodes {
                     updatedContentNodes.append(contentNode)
-                    strongSelf.contextSourceNode.contentNode.addSubnode(contentNode)
+                    
+                    let contextSourceNode: ContextExtractedContentContainingNode = strongSelf.contentContainers.first(where: { $0.contentMessageStableId == contentNodeMessage.stableId })?.sourceNode ?? strongSelf.mainContextSourceNode
+                    
+                    contextSourceNode.contentNode.addSubnode(contentNode)
                     
                     contentNode.visibility = strongSelf.visibility
-                    contentNode.updateIsTextSelectionActive = { [weak strongSelf] value in
-                        strongSelf?.contextSourceNode.updateDistractionFreeMode?(value)
+                    contentNode.updateIsTextSelectionActive = { [weak contextSourceNode] value in
+                        contextSourceNode?.updateDistractionFreeMode?(value)
                     }
-                    contentNode.updateIsExtractedToContextPreview(strongSelf.contextSourceNode.isExtractedToContextPreview)
+                    contentNode.updateIsExtractedToContextPreview(contextSourceNode.isExtractedToContextPreview)
                 }
             }
             
@@ -2138,7 +2403,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             if mosaicStatusNode !== strongSelf.mosaicStatusNode {
                 strongSelf.mosaicStatusNode?.removeFromSupernode()
                 strongSelf.mosaicStatusNode = mosaicStatusNode
-                strongSelf.contextSourceNode.contentNode.addSubnode(mosaicStatusNode)
+                strongSelf.mainContextSourceNode.contentNode.addSubnode(mosaicStatusNode)
             }
             let absoluteOrigin = mosaicStatusOrigin.offsetBy(dx: contentOrigin.x, dy: contentOrigin.y)
             mosaicStatusNode.frame = CGRect(origin: CGPoint(x: absoluteOrigin.x - layoutConstants.image.statusInsets.right - size.width, y: absoluteOrigin.y - layoutConstants.image.statusInsets.bottom - size.height), size: size)
@@ -2164,7 +2429,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             strongSelf.shareButtonNode = nil
         }
         
-        if case .System = animation, !strongSelf.contextSourceNode.isExtractedToContextPreview {
+        if case .System = animation, !strongSelf.mainContextSourceNode.isExtractedToContextPreview {
             if !strongSelf.backgroundNode.frame.equalTo(backgroundFrame) {
                 strongSelf.backgroundFrameTransition = (strongSelf.backgroundNode.frame, backgroundFrame)
                 strongSelf.enableTransitionClippingNode()
@@ -2184,7 +2449,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             }
             strongSelf.disableTransitionClippingNode()
             
-            if case .System = animation, strongSelf.contextSourceNode.isExtractedToContextPreview {
+            if case .System = animation, strongSelf.mainContextSourceNode.isExtractedToContextPreview {
                 transition.updateFrame(node: strongSelf.backgroundNode, frame: backgroundFrame)
                 strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: transition)
                 strongSelf.backgroundWallpaperNode.updateFrame(backgroundFrame, transition: transition)
@@ -2238,20 +2503,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             strongSelf.actionButtonsNode = nil
         }
         
-        var incomingOffset: CGFloat = 0.0
-        switch backgroundType {
-        case .incoming:
-            incomingOffset = 5.0
-        default:
-            break
-        }
+        let previousContextContentFrame = strongSelf.mainContextSourceNode.contentRect
+        strongSelf.mainContextSourceNode.contentRect = backgroundFrame.offsetBy(dx: incomingOffset, dy: 0.0)
+        strongSelf.mainContainerNode.targetNodeForActivationProgressContentRect = strongSelf.mainContextSourceNode.contentRect
         
-        let previousContextContentFrame = strongSelf.contextSourceNode.contentRect
-        strongSelf.contextSourceNode.contentRect = backgroundFrame.offsetBy(dx: incomingOffset, dy: 0.0)
-        strongSelf.containerNode.targetNodeForActivationProgressContentRect = strongSelf.contextSourceNode.contentRect
-        
-        if previousContextFrame.size != strongSelf.contextSourceNode.bounds.size || previousContextContentFrame != strongSelf.contextSourceNode.contentRect {
-            strongSelf.contextSourceNode.layoutUpdated?(strongSelf.contextSourceNode.bounds.size)
+        if previousContextFrame.size != strongSelf.mainContextSourceNode.bounds.size || previousContextContentFrame != strongSelf.mainContextSourceNode.contentRect {
+            strongSelf.mainContextSourceNode.layoutUpdated?(strongSelf.mainContextSourceNode.bounds.size)
         }
         
         strongSelf.updateSearchTextHighlightState()
@@ -2336,14 +2593,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         }
     }
     
-    private func addContentNode(node: ChatMessageBubbleContentNode) {
-        if let transitionClippingNode = self.transitionClippingNode {
-            transitionClippingNode.addSubnode(node)
-        } else {
-            self.contextSourceNode.contentNode.addSubnode(node)
-        }
-    }
-    
     private func enableTransitionClippingNode() {
         if self.transitionClippingNode == nil {
             let node = ASDisplayNode()
@@ -2361,7 +2610,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             for contentNode in self.contentNodes {
                 node.addSubnode(contentNode)
             }
-            self.contextSourceNode.contentNode.addSubnode(node)
+            self.mainContextSourceNode.contentNode.addSubnode(node)
             self.transitionClippingNode = node
         }
     }
@@ -2369,13 +2618,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     private func disableTransitionClippingNode() {
         if let transitionClippingNode = self.transitionClippingNode {
             if let forwardInfoNode = self.forwardInfoNode {
-                self.contextSourceNode.contentNode.addSubnode(forwardInfoNode)
+                self.mainContextSourceNode.contentNode.addSubnode(forwardInfoNode)
             }
             if let replyInfoNode = self.replyInfoNode {
-                self.contextSourceNode.contentNode.addSubnode(replyInfoNode)
+                self.mainContextSourceNode.contentNode.addSubnode(replyInfoNode)
             }
             for contentNode in self.contentNodes {
-                self.contextSourceNode.contentNode.addSubnode(contentNode)
+                self.mainContextSourceNode.contentNode.addSubnode(contentNode)
             }
             transitionClippingNode.removeFromSupernode()
             self.transitionClippingNode = nil
@@ -2408,9 +2657,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 default:
                     break
                 }
-                self.contextSourceNode.contentRect = backgroundFrame.offsetBy(dx: incomingOffset, dy: 0.0)
-                self.containerNode.targetNodeForActivationProgressContentRect = self.contextSourceNode.contentRect
-                if !self.contextSourceNode.isExtractedToContextPreview {
+                self.mainContextSourceNode.contentRect = backgroundFrame.offsetBy(dx: incomingOffset, dy: 0.0)
+                self.mainContainerNode.targetNodeForActivationProgressContentRect = self.mainContextSourceNode.contentRect
+                if !self.mainContextSourceNode.isExtractedToContextPreview {
                     if let (rect, size) = self.absoluteRect {
                         self.updateAbsoluteRect(rect, within: size)
                     }
@@ -2446,7 +2695,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                 if let action = self.gestureRecognized(gesture: gesture, location: location, recognizer: nil) {
                     if case .doubleTap = gesture {
-                        self.containerNode.cancelGesture()
+                        self.mainContainerNode.cancelGesture()
                     }
                     switch action {
                     case let .action(f):
@@ -2602,7 +2851,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     }
                 }
                 loop: for contentNode in self.contentNodes {
-                    let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY), gesture: gesture, isEstimating: false)
+                    let convertedLocation = self.convert(location, to: contentNode)
+
+                    let tapAction = contentNode.tapActionAtPoint(convertedLocation, gesture: gesture, isEstimating: false)
                     switch tapAction {
                     case .none:
                         if let item = self.item, self.backgroundNode.frame.contains(CGPoint(x: self.frame.width - location.x, y: location.y)), let tapMessage = self.item?.controllerInteraction.tapMessage {
@@ -2709,13 +2960,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     var tapMessage: Message? = item.content.firstMessage
                     var selectAll = true
                     loop: for contentNode in self.contentNodes {
-                        if !contentNode.frame.contains(location) {
+                        let convertedLocation = self.convert(location, to: contentNode)
+                        
+                        let convertedNodeFrame = contentNode.convert(contentNode.bounds, to: self)
+                        if !convertedNodeFrame.contains(location) {
                             continue loop
                         } else if contentNode is ChatMessageMediaBubbleContentNode {
                             selectAll = false
+                        } else if contentNode is ChatMessageFileBubbleContentNode {
+                            selectAll = false
                         }
                         tapMessage = contentNode.item?.message
-                        let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY), gesture: gesture, isEstimating: false)
+                        let tapAction = contentNode.tapActionAtPoint(convertedLocation, gesture: gesture, isEstimating: false)
                         switch tapAction {
                         case .none, .ignore:
                             break
@@ -2807,7 +3063,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             return nil
         }
         
-        if self.contextSourceNode.isExtractedToContextPreview {
+        if self.mainContextSourceNode.isExtractedToContextPreview {
             if let result = super.hitTest(point, with: event) as? TextSelectionNodeView {
                 return result
             }
@@ -3090,7 +3346,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 let graphics = PresentationResourcesChat.principalGraphics(mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
                 
                 let hasWallpaper = item.presentationData.theme.wallpaper.hasWallpaper
-                self.backgroundNode.setType(type: backgroundType, highlighted: highlighted, graphics: graphics, maskMode: self.contextSourceNode.isExtractedToContextPreview, hasWallpaper: hasWallpaper, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
+                self.backgroundNode.setType(type: backgroundType, highlighted: highlighted, graphics: graphics, maskMode: self.mainContextSourceNode.isExtractedToContextPreview, hasWallpaper: hasWallpaper, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate)
             }
         }
     }
@@ -3196,7 +3452,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     
     override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absoluteRect = (rect, containerSize)
-        if !self.contextSourceNode.isExtractedToContextPreview {
+        if !self.mainContextSourceNode.isExtractedToContextPreview {
             var rect = rect
             rect.origin.y = containerSize.height - rect.maxY + self.insets.top
             self.updateAbsoluteRectInternal(rect, within: containerSize)
@@ -3209,7 +3465,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     }
     
     override func applyAbsoluteOffset(value: CGFloat, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
-        if !self.contextSourceNode.isExtractedToContextPreview {
+        if !self.mainContextSourceNode.isExtractedToContextPreview {
             self.applyAbsoluteOffsetInternal(value: -value, animationCurve: animationCurve, duration: duration)
         }
     }
@@ -3222,12 +3478,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         self.backgroundWallpaperNode.offsetSpring(value: value, duration: duration, damping: damping)
     }
     
-    override func getMessageContextSourceNode() -> ContextExtractedContentContainingNode? {
-        return self.contextSourceNode
+    override func getMessageContextSourceNode(stableId: UInt32?) -> ContextExtractedContentContainingNode? {
+        return self.contentContainers.first(where: { $0.contentMessageStableId == stableId })?.sourceNode ?? self.mainContextSourceNode
     }
     
     override func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
-        self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
+        self.mainContextSourceNode.contentNode.addSubnode(accessoryItemNode)
     }
     
     override func targetReactionNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
@@ -3242,7 +3498,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     private var backgroundMaskMode: Bool {
         let hasWallpaper = self.item?.presentationData.theme.wallpaper.hasWallpaper ?? false
         let isPreview = self.item?.presentationData.isPreview ?? false
-        return self.contextSourceNode.isExtractedToContextPreview || hasWallpaper || isPreview
+        return self.mainContextSourceNode.isExtractedToContextPreview || hasWallpaper || isPreview
     }
     
     func animateQuizInvalidOptionSelected() {
