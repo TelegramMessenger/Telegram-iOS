@@ -691,7 +691,7 @@ private extension ConferenceDescription {
             appendSdp("a=ice-lite")
             
             for ssrc in bundleSsrcs {
-                appendSdp("m=audio \(ssrc.isMain ? "1" : "0") RTP/SAVPF 111 103 104 126")
+                appendSdp("m=audio \(ssrc.isMain ? "1" : "0") RTP/SAVPF 111 126")
                 if ssrc.isMain {
                     appendSdp("c=IN IP4 0.0.0.0")
                 }
@@ -722,7 +722,9 @@ private extension ConferenceDescription {
                         candidateString.append("\(candidate.priority) ")
                         
                         var ip = candidate.ip
-                        ip = bridgeHost
+                        if ip.hasPrefix("192.") {
+                            ip = bridgeHost
+                        }
                         candidateString.append("\(ip) ")
                         candidateString.append("\(candidate.port) ")
                         
@@ -752,10 +754,10 @@ private extension ConferenceDescription {
                 }
                 
                 appendSdp("a=rtpmap:111 opus/48000/2")
-                appendSdp("a=rtpmap:103 ISAC/16000")
-                appendSdp("a=rtpmap:104 ISAC/32000")
+                //appendSdp("a=rtpmap:103 ISAC/16000")
+                //appendSdp("a=rtpmap:104 ISAC/32000")
                 appendSdp("a=rtpmap:126 telephone-event/8000")
-                appendSdp("a=fmtp:111 minptime=10; useinbandfec=1")
+                appendSdp("a=fmtp:111 minptime=10; useinbandfec=1; usedtx=1")
                 appendSdp("a=rtcp:1 IN IP4 0.0.0.0")
                 appendSdp("a=rtcp-mux")
                 appendSdp("a=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level")
@@ -930,7 +932,7 @@ private extension ConferenceDescription {
                     ] as [String: Any]] as [Any]
                 ]
             ),
-            ConferenceDescription.Content.Channel.PayloadType(
+            /*ConferenceDescription.Content.Channel.PayloadType(
                 id: 103,
                 name: "ISAC",
                 clockrate: 16000,
@@ -941,7 +943,7 @@ private extension ConferenceDescription {
                 name: "ISAC",
                 clockrate: 32000,
                 channels: 1
-            ),
+            ),*/
             ConferenceDescription.Content.Channel.PayloadType(
                 id: 126,
                 name: "telephone-event",
@@ -996,8 +998,30 @@ private extension ConferenceDescription {
             }
         }
         
+        var candidates: [ConferenceDescription.Transport.Candidate] = []
+        /*for line in getLines(prefix: "a=candidate:") {
+            let scanner = Scanner(string: line)
+            if #available(iOS 13.0, *) {
+                candidates.append(ConferenceDescription.Transport.Candidate(
+                    id: "",
+                    generation: 0,
+                    component: "",
+                    protocol: "",
+                    tcpType: nil,
+                    ip: "",
+                    port: 0,
+                    foundation: "",
+                    priority: 0,
+                    type: "",
+                    network: 0,
+                    relAddr: nil,
+                    relPort: nil
+                ))
+            }
+        }*/
+        
         let transport = ConferenceDescription.Transport(
-            candidates: [],
+            candidates: candidates,
             fingerprints: fingerprints,
             ufrag: ufrag,
             pwd: pwd
@@ -1110,11 +1134,14 @@ public final class GroupCallContext {
         
         let memberCount = ValuePromise<Int>(0, ignoreRepeated: true)
         
+        private var isMutedValue: Bool = false
+        let isMuted = ValuePromise<Bool>(false, ignoreRepeated: true)
+        
         init(queue: Queue, audioSessionActive: Signal<Bool, NoError>) {
             self.queue = queue
             
             self.sessionId = UInt32.random(in: 0 ..< UInt32(Int32.max))
-            self.colibriHost = "192.168.8.118"
+            self.colibriHost = "51.11.141.27"
             //self.colibriHost = "192.168.93.24"
             //self.colibriHost = "51.104.206.109"
             
@@ -1392,6 +1419,12 @@ public final class GroupCallContext {
                 strongSelf.pollOnceDelayed()
             }))
         }
+        
+        func toggleIsMuted() {
+            self.isMutedValue = !self.isMutedValue
+            self.isMuted.set(self.isMutedValue)
+            self.context.setIsMuted(self.isMutedValue)
+        }
     }
     
     private let queue = Queue()
@@ -1413,6 +1446,24 @@ public final class GroupCallContext {
                 }))
             }
             return disposable
+        }
+    }
+    
+    public var isMuted: Signal<Bool, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.isMuted.get().start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public func toggleIsMuted() {
+        self.impl.with { impl in
+            impl.toggleIsMuted()
         }
     }
 }

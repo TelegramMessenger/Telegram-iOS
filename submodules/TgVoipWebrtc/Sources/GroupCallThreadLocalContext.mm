@@ -48,4 +48,10 @@
     }
 }
 
+- (void)setIsMuted:(bool)isMuted {
+    if (_instance) {
+        _instance->setIsMuted(isMuted);
+    }
+}
+
 @end

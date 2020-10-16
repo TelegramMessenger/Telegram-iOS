@@ -17,10 +17,15 @@ public final class GroupCallController: ViewController {
         private var callContext: GroupCallContext?
         private var callDisposable: Disposable?
         private var memberCountDisposable: Disposable?
+        private var isMutedDisposable: Disposable?
         private let audioSessionActive = Promise<Bool>(false)
         
         private var memberCount: Int = 0
         private let memberCountNode: ImmediateTextNode
+        
+        private var isMuted: Bool = false
+        private let isMutedNode: ImmediateTextNode
+        private let muteButton: HighlightableButtonNode
         
         private var validLayout: ContainerViewLayout?
         
@@ -29,12 +34,18 @@ public final class GroupCallController: ViewController {
             self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             self.memberCountNode = ImmediateTextNode()
+            self.isMutedNode = ImmediateTextNode()
+            
+            self.muteButton = HighlightableButtonNode()
             
             super.init()
             
             self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             
             self.addSubnode(self.memberCountNode)
+            
+            self.muteButton.addSubnode(self.isMutedNode)
+            self.addSubnode(self.muteButton)
             
             let audioSessionActive = self.audioSessionActive
             self.callDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .voiceCall, manualActivate: { audioSessionControl in
@@ -51,7 +62,7 @@ public final class GroupCallController: ViewController {
             let callContext = GroupCallContext(audioSessionActive: self.audioSessionActive.get())
             self.callContext = callContext
             
-            memberCountDisposable = (callContext.memberCount
+            self.memberCountDisposable = (callContext.memberCount
             |> deliverOnMainQueue).start(next: { [weak self] value in
                 guard let strongSelf = self else {
                     return
@@ -61,6 +72,19 @@ public final class GroupCallController: ViewController {
                     strongSelf.containerLayoutUpdated(layout, transition: .immediate)
                 }
             })
+            
+            self.isMutedDisposable = (callContext.isMuted
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.isMuted = value
+                if let layout = strongSelf.validLayout {
+                    strongSelf.containerLayoutUpdated(layout, transition: .immediate)
+                }
+            })
+            
+            self.muteButton.addTarget(self, action: #selector(self.muteButtonPressed), forControlEvents: .touchUpInside)
         }
         
         deinit {
@@ -68,12 +92,26 @@ public final class GroupCallController: ViewController {
             self.memberCountDisposable?.dispose()
         }
         
+        @objc private func muteButtonPressed() {
+            self.callContext?.toggleIsMuted()
+        }
+        
         func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
             self.validLayout = layout
             
             self.memberCountNode.attributedText = NSAttributedString(string: "Members: \(self.memberCount)", font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+            
+            self.isMutedNode.attributedText = NSAttributedString(string: self.isMuted ? "Unmute" : "Mute", font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemAccentColor)
+            
             let textSize = self.memberCountNode.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: 100.0))
-            transition.updateFrameAdditiveToCenter(node: self.memberCountNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: floor((layout.size.width - textSize.width) / 2.0)), size: textSize))
+            let isMutedSize = self.isMutedNode.updateLayout(CGSize(width: layout.size.width - 16.0 * 2.0, height: 100.0))
+            
+            let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: floor((layout.size.height - textSize.width) / 2.0)), size: textSize)
+            transition.updateFrameAdditiveToCenter(node: self.memberCountNode, frame: textFrame)
+            
+            let isMutedFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - isMutedSize.width) / 2.0), y: textFrame.maxY + 12.0), size: isMutedSize)
+            transition.updateFrame(node: self.muteButton, frame: isMutedFrame)
+            self.isMutedNode.frame = CGRect(origin: CGPoint(), size: isMutedFrame.size)
         }
     }
     

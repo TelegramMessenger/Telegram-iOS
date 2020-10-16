@@ -11,6 +11,7 @@
 
 - (void)emitOffer;
 - (void)setOfferSdp:(NSString * _Nonnull)offerSdp isPartial:(bool)isPartial;
+- (void)setIsMuted:(bool)isMuted;
 
 @end
 

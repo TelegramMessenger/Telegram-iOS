@@ -3158,24 +3158,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     private var groupCall: GroupCallContext?
     
     private func requestCall(isVideo: Bool) {
-        #if DEBUG
-        
-        let audioSessionActive = Promise<Bool>(false)
-        self.groupCallDisposable.set(self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .voiceCall, manualActivate: { [weak self] audioSessionControl in
-            audioSessionControl.activate({ _ in })
-            audioSessionActive.set(.single(true))
-        }, deactivate: {
-            return Signal { subscriber in
-                subscriber.putCompletion()
-                return EmptyDisposable
-            }
-        }, availableOutputsChanged: { _, _ in
-        }))
-        
-        self.groupCall = GroupCallContext(audioSessionActive: audioSessionActive.get())
-        return;
-        #endif
-        
         guard let peer = self.data?.peer as? TelegramUser, let cachedUserData = self.data?.cachedData as? CachedUserData else {
             return
         }
