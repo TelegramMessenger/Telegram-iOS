@@ -497,6 +497,9 @@ private extension ConferenceDescription.Content.Channel.PayloadType {
         result["name"] = self.name
         result["channels"] = self.channels
         result["clockrate"] = self.clockrate
+        result["rtcp-fbs"] = [[
+            "type": "transport-cc"
+        ] as [String: Any]] as [Any]
         if let parameters = self.parameters {
             result["parameters"] = parameters
         }
@@ -544,6 +547,7 @@ private extension ConferenceDescription.Content.Channel {
         if !self.rtpHdrExts.isEmpty {
             result["rtp-hdrexts"] = self.rtpHdrExts.map { $0.outgoingColibriDescription() }
         }
+        result["rtcp-mux"] = true
         
         return result
     }
@@ -635,6 +639,21 @@ private extension ConferenceDescription.ChannelBundle {
     }
 }
 
+private struct RemoteOffer {
+    struct State: Equatable {
+        struct Item: Equatable {
+            var ssrc: Int
+            var isRemoved: Bool
+        }
+        
+        var items: [Item]
+    }
+    
+    var sdpList: [String]
+    var isPartial: Bool
+    var state: State
+}
+
 private extension ConferenceDescription {
     func outgoingColibriDescription() -> [String: Any] {
         var result: [String: Any] = [:]
@@ -646,283 +665,205 @@ private extension ConferenceDescription {
         return result
     }
     
-    func offerSdp(sessionId: UInt32, bundleId: String, bridgeHost: String, transport: ConferenceDescription.Transport, currentSsrcOrder: [Int]) -> (String, [Int])? {
-        var otherSsrc: [(Bool, Int, String)] = []
+    func offerSdp(sessionId: UInt32, bundleId: String, bridgeHost: String, transport: ConferenceDescription.Transport, currentState: RemoteOffer.State?) -> RemoteOffer? {
+        struct Ssrc {
+            var isMain: Bool
+            var value: Int
+            var streamId: String
+            var isRemoved: Bool
+        }
+        
+        func createSdp(sessionId: UInt32, bundleSsrcs: [Ssrc], isPartial: Bool) -> String {
+            var sdp = ""
+            func appendSdp(_ string: String) {
+                if !sdp.isEmpty {
+                    sdp.append("\n")
+                }
+                sdp.append(string)
+            }
+            
+            appendSdp("v=0")
+            appendSdp("o=- \(sessionId) 2 IN IP4 0.0.0.0")
+            appendSdp("s=-")
+            appendSdp("t=0 0")
+            
+            appendSdp("a=group:BUNDLE \(bundleSsrcs.map({ "audio\($0.value)" }).joined(separator: " "))")
+            appendSdp("a=ice-lite")
+            
+            for ssrc in bundleSsrcs {
+                appendSdp("m=audio \(ssrc.isMain ? "1" : "0") RTP/SAVPF 111 103 104 126")
+                if ssrc.isMain {
+                    appendSdp("c=IN IP4 0.0.0.0")
+                }
+                appendSdp("a=mid:audio\(ssrc.value)")
+                if ssrc.isRemoved {
+                    appendSdp("a=inactive")
+                    continue
+                }
+                
+                if ssrc.isMain {
+                    appendSdp("a=ice-ufrag:\(transport.ufrag)")
+                    appendSdp("a=ice-pwd:\(transport.pwd)")
+                    
+                    for fingerprint in transport.fingerprints {
+                        appendSdp("a=fingerprint:\(fingerprint.hashType) \(fingerprint.fingerprint)")
+                        appendSdp("a=setup:\(fingerprint.setup)")
+                    }
+                    
+                    for candidate in transport.candidates {
+                        var candidateString = "a=candidate:"
+                        candidateString.append("\(candidate.foundation) ")
+                        candidateString.append("\(candidate.component) ")
+                        var protocolValue = candidate.protocol
+                        if protocolValue == "ssltcp" {
+                            protocolValue = "tcp"
+                        }
+                        candidateString.append("\(protocolValue) ")
+                        candidateString.append("\(candidate.priority) ")
+                        
+                        var ip = candidate.ip
+                        ip = bridgeHost
+                        candidateString.append("\(ip) ")
+                        candidateString.append("\(candidate.port) ")
+                        
+                        candidateString.append("typ \(candidate.type) ")
+                        
+                        switch candidate.type {
+                        case "srflx", "prflx", "relay":
+                            if let relAddr = candidate.relAddr, let relPort = candidate.relPort {
+                                candidateString.append("raddr \(relAddr) rport \(relPort) ")
+                            }
+                            break
+                        default:
+                            break
+                        }
+                        
+                        if protocolValue == "tcp" {
+                            guard let tcpType = candidate.tcpType else {
+                                continue
+                            }
+                            candidateString.append("tcptype \(tcpType) ")
+                        }
+                        
+                        candidateString.append("generation \(candidate.generation)")
+                        
+                        appendSdp(candidateString)
+                    }
+                }
+                
+                appendSdp("a=rtpmap:111 opus/48000/2")
+                appendSdp("a=rtpmap:103 ISAC/16000")
+                appendSdp("a=rtpmap:104 ISAC/32000")
+                appendSdp("a=rtpmap:126 telephone-event/8000")
+                appendSdp("a=fmtp:111 minptime=10; useinbandfec=1")
+                appendSdp("a=rtcp:1 IN IP4 0.0.0.0")
+                appendSdp("a=rtcp-mux")
+                appendSdp("a=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level")
+                appendSdp("a=extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time")
+                appendSdp("a=extmap:5 http://www.webrtc.org/experiments/rtp-hdrext/transport-wide-cc-02")
+                appendSdp("a=rtcp-fb:111 transport-cc")
+                //appendSdp("a=rtcp-fb:111 ccm fir")
+                //appendSdp("a=rtcp-fb:111 nack")
+                
+                if ssrc.isMain {
+                    appendSdp("a=sendrecv")
+                } else {
+                    appendSdp("a=sendonly")
+                    appendSdp("a=bundle-only")
+                }
+                
+                appendSdp("a=ssrc-group:FID \(ssrc.value)")
+                appendSdp("a=ssrc:\(ssrc.value) cname:stream\(ssrc.value)")
+                appendSdp("a=ssrc:\(ssrc.value) msid:stream\(ssrc.value) audio\(ssrc.value)")
+                appendSdp("a=ssrc:\(ssrc.value) mslabel:audio\(ssrc.value)")
+                appendSdp("a=ssrc:\(ssrc.value) label:audio\(ssrc.value)")
+            }
+            
+            appendSdp("")
+            
+            return sdp
+        }
+        
+        var ssrcList: [Ssrc] = []
+        var maybeMainSsrcId: Int?
         for content in self.contents {
             for channel in content.channels {
                 if channel.endpoint == bundleId {
-                    otherSsrc.append(contentsOf: channel.sources.map { ssrc in
-                        return (true, ssrc, "stream0")
+                    precondition(channel.sources.count == 1)
+                    ssrcList.append(contentsOf: channel.sources.map { ssrc in
+                        return Ssrc(
+                            isMain: true,
+                            value: ssrc,
+                            streamId: "stream0",
+                            isRemoved: false
+                        )
                     })
+                    maybeMainSsrcId = channel.sources[0]
                 } else {
-                    otherSsrc.append(contentsOf: channel.ssrcs.map { ssrc in
-                        return (false, ssrc, channel.channelBundleId)
+                    precondition(channel.ssrcs.count <= 1)
+                    ssrcList.append(contentsOf: channel.ssrcs.map { ssrc in
+                        return Ssrc(
+                            isMain: false,
+                            value: ssrc,
+                            streamId: "stream\(ssrc)",
+                            isRemoved: false
+                        )
                     })
                 }
             }
         }
-        otherSsrc.sort(by: { lhs, rhs in
-            /*if let previousLhsIndex = currentSsrcOrder.firstIndex(of: lhs.1), let previousRhsIndex = currentSsrcOrder.firstIndex(of: rhs.1) {
-                return previousLhsIndex < previousRhsIndex
-            }
-            if currentSsrcOrder.contains(lhs.1) != currentSsrcOrder.contains(rhs.1) {
-                return currentSsrcOrder.contains(lhs.1)
-            }*/
-            if lhs.0 != rhs.0 {
-                return lhs.0
-            } else {
-                return lhs.1 < rhs.1
-            }
-        })
         
-        var sdp = ""
-        func appendSdp(_ string: String) {
-            if !sdp.isEmpty {
-                sdp.append("\n")
-            }
-            sdp.append(string)
+        guard let mainSsrcId = maybeMainSsrcId else {
+            preconditionFailure()
         }
         
-        appendSdp("v=0")
-        appendSdp("o=- \(sessionId) 2 IN IP4 0.0.0.0")
-        appendSdp("s=-")
-        appendSdp("t=0 0")
-        
-        /*appendSdp("a=group:BUNDLE audio0")
-        do {
-            appendSdp("m=audio 1 RTP/SAVPF 111 103 104 126")
-            appendSdp("c=IN IP4 0.0.0.0")
-            appendSdp("a=rtpmap:111 opus/48000/2")
-            appendSdp("a=rtpmap:103 ISAC/16000")
-            appendSdp("a=rtpmap:104 ISAC/32000")
-            appendSdp("a=rtpmap:126 telephone-event/8000")
-            appendSdp("a=fmtp:111 minptime=10; useinbandfec=1")
-            appendSdp("a=rtcp:1 IN IP4 0.0.0.0")
-            appendSdp("a=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level")
-            appendSdp("a=extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time")
-            appendSdp("a=mid:audio0")
-            appendSdp("a=sendrecv")
-            appendSdp("a=ice-ufrag:\(transport.ufrag)")
-            appendSdp("a=ice-pwd:\(transport.pwd)")
-            for fingerprint in transport.fingerprints {
-                appendSdp("a=fingerprint:\(fingerprint.hashType) \(fingerprint.fingerprint)")
-                appendSdp("a=setup:\(fingerprint.setup)")
+        var bundleSsrcs: [Ssrc] = []
+        if let currentState = currentState {
+            for item in currentState.items {
+                let isRemoved = !ssrcList.contains(where: { $0.value == item.ssrc })
+                bundleSsrcs.append(Ssrc(
+                    isMain: item.ssrc == mainSsrcId,
+                    value: item.ssrc,
+                    streamId: item.ssrc == mainSsrcId ? "audio0" : "stream\(item.ssrc)",
+                    isRemoved: isRemoved
+                ))
             }
-            
-            for candidate in transport.candidates {
-                var candidateString = "a=candidate:"
-                candidateString.append("\(candidate.foundation) ")
-                candidateString.append("\(candidate.component) ")
-                var protocolValue = candidate.protocol
-                if protocolValue == "ssltcp" {
-                    protocolValue = "tcp"
-                }
-                candidateString.append("\(protocolValue) ")
-                candidateString.append("\(candidate.priority) ")
-                
-                var ip = candidate.ip
-                ip = bridgeHost
-                candidateString.append("\(ip) ")
-                candidateString.append("\(candidate.port) ")
-                
-                candidateString.append("typ \(candidate.type) ")
-                
-                switch candidate.type {
-                case "srflx", "prflx", "relay":
-                    if let relAddr = candidate.relAddr, let relPort = candidate.relPort {
-                        candidateString.append("raddr \(relAddr) rport \(relPort) ")
-                    }
-                    break
-                default:
-                    break
-                }
-                
-                if protocolValue == "tcp" {
-                    guard let tcpType = candidate.tcpType else {
-                        continue
-                    }
-                    candidateString.append("tcptype \(tcpType) ")
-                }
-                
-                candidateString.append("generation \(candidate.generation)")
-                
-                appendSdp(candidateString)
-            }
-            
-            for ssrc in bridgeSources {
-                appendSdp("a=ssrc:\(ssrc) cname:cname\(ssrc)")
-                appendSdp("a=ssrc:\(ssrc) msid:stream0 audio0")
-                appendSdp("a=ssrc:\(ssrc) mslabel:stream0")
-                appendSdp("a=ssrc:\(ssrc) label:audio0")
-            }
-            
-            /*for (ssrc, streamId) in otherSsrc {
-                appendSdp("a=ssrc:\(ssrc) cname:cname\(ssrc)")
-                appendSdp("a=ssrc:\(ssrc) msid:\(streamId) audio0")
-                //appendSdp("a=ssrc:\(ssrc) mslabel:\(streamId)")
-                //appendSdp("a=ssrc:\(ssrc) label:\(streamId)")
-            }*/
-            
-            appendSdp("a=rtcp-mux")
-        }*/
-        
-        appendSdp("a=group:BUNDLE audio")
-        appendSdp("a=ice-lite")
-        
-        appendSdp("a=msid-semantic:WMS *")
-        
-        appendSdp("m=audio 1 RTP/SAVPF 111 103 104 126")
-        
-        appendSdp("c=IN IP4 0.0.0.0")
-        
-        appendSdp("a=ice-ufrag:\(transport.ufrag)")
-        appendSdp("a=ice-pwd:\(transport.pwd)")
-        for fingerprint in transport.fingerprints {
-            appendSdp("a=fingerprint:\(fingerprint.hashType) \(fingerprint.fingerprint)")
-            appendSdp("a=setup:\(fingerprint.setup)")
         }
         
-        for candidate in transport.candidates {
-            var candidateString = "a=candidate:"
-            candidateString.append("\(candidate.foundation) ")
-            candidateString.append("\(candidate.component) ")
-            var protocolValue = candidate.protocol
-            if protocolValue == "ssltcp" {
-                protocolValue = "tcp"
+        for ssrc in ssrcList {
+            if bundleSsrcs.contains(where: { $0.value == ssrc.value }) {
+                continue
             }
-            candidateString.append("\(protocolValue) ")
-            candidateString.append("\(candidate.priority) ")
-            
-            var ip = candidate.ip
-            ip = bridgeHost
-            candidateString.append("\(ip) ")
-            candidateString.append("\(candidate.port) ")
-            
-            candidateString.append("typ \(candidate.type) ")
-            
-            switch candidate.type {
-            case "srflx", "prflx", "relay":
-                if let relAddr = candidate.relAddr, let relPort = candidate.relPort {
-                    candidateString.append("raddr \(relAddr) rport \(relPort) ")
-                }
-                break
-            default:
-                break
-            }
-            
-            if protocolValue == "tcp" {
-                guard let tcpType = candidate.tcpType else {
+            bundleSsrcs.append(ssrc)
+        }
+        
+        var sdpList: [String] = []
+        
+        sdpList.append(createSdp(sessionId: sessionId, bundleSsrcs: bundleSsrcs, isPartial: false))
+        
+        /*if currentState == nil {
+            sdpList.append(createSdp(sessionId: sessionId, bundleSsrcs: bundleSsrcs, isPartial: false))
+        } else {
+            for ssrc in bundleSsrcs {
+                if ssrc.isMain {
                     continue
                 }
-                candidateString.append("tcptype \(tcpType) ")
+                sdpList.append(createSdp(sessionId: sessionId, bundleSsrcs: [ssrc], isPartial: true))
             }
-            
-            candidateString.append("generation \(candidate.generation)")
-            
-            appendSdp(candidateString)
-        }
-        
-        appendSdp("a=rtpmap:111 opus/48000/2")
-        appendSdp("a=rtpmap:103 ISAC/16000")
-        appendSdp("a=rtpmap:104 ISAC/32000")
-        appendSdp("a=rtpmap:126 telephone-event/8000")
-        appendSdp("a=fmtp:111 minptime=10; useinbandfec=1")
-        appendSdp("a=rtcp:1 IN IP4 0.0.0.0")
-        appendSdp("a=rtcp-mux")
-        appendSdp("a=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level")
-        appendSdp("a=extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time")
-        
-        appendSdp("a=mid:audio")
-        appendSdp("a=sendrecv")
-        
-        for (_, ssrc, streamId) in otherSsrc {
-            appendSdp("a=ssrc-group:FID \(ssrc)")
-            appendSdp("a=ssrc:\(ssrc) cname:stream\(streamId)")
-            appendSdp("a=ssrc:\(ssrc) msid:stream\(streamId) audio\(streamId)")
-            //appendSdp("a=ssrc:\(ssrc) mslabel:stream\(streamId)")
-            //appendSdp("a=ssrc:\(ssrc) label:audio\(streamId)")
-        }
-        
-        /*for (isBridge, ssrc, streamId) in otherSsrc {
-            let mPort: Int
-            if isBridge {
-                mPort = 1
-            } else {
-                mPort = 0
-            }
-            appendSdp("m=audio \(mPort) RTP/SAVPF 111 103 104 126")
-            appendSdp("c=IN IP4 0.0.0.0")
-            
-            if isBridge {
-                appendSdp("a=sendrecv")
-            } else {
-                appendSdp("a=bundle-only")
-                appendSdp("a=sendonly")
-            }
-            
-            appendSdp("a=rtpmap:111 opus/48000/2")
-            appendSdp("a=rtpmap:103 ISAC/16000")
-            appendSdp("a=rtpmap:104 ISAC/32000")
-            appendSdp("a=rtpmap:126 telephone-event/8000")
-            appendSdp("a=fmtp:111 minptime=10; useinbandfec=1")
-            appendSdp("a=rtcp:1 IN IP4 0.0.0.0")
-            appendSdp("a=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level")
-            appendSdp("a=extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time")
-            appendSdp("a=mid:audio\(ssrc)")
-            
-            if isBridge {
-                for candidate in transport.candidates {
-                    var candidateString = "a=candidate:"
-                    candidateString.append("\(candidate.foundation) ")
-                    candidateString.append("\(candidate.component) ")
-                    var protocolValue = candidate.protocol
-                    if protocolValue == "ssltcp" {
-                        protocolValue = "tcp"
-                    }
-                    candidateString.append("\(protocolValue) ")
-                    candidateString.append("\(candidate.priority) ")
-                    
-                    var ip = candidate.ip
-                    ip = bridgeHost
-                    candidateString.append("\(ip) ")
-                    candidateString.append("\(candidate.port) ")
-                    
-                    candidateString.append("typ \(candidate.type) ")
-                    
-                    switch candidate.type {
-                    case "srflx", "prflx", "relay":
-                        if let relAddr = candidate.relAddr, let relPort = candidate.relPort {
-                            candidateString.append("raddr \(relAddr) rport \(relPort) ")
-                        }
-                        break
-                    default:
-                        break
-                    }
-                    
-                    if protocolValue == "tcp" {
-                        guard let tcpType = candidate.tcpType else {
-                            continue
-                        }
-                        candidateString.append("tcptype \(tcpType) ")
-                    }
-                    
-                    candidateString.append("generation \(candidate.generation)")
-                    
-                    appendSdp(candidateString)
-                }
-            }
-            
-            appendSdp("a=ssrc:\(ssrc) cname:stream\(streamId)")
-            appendSdp("a=ssrc:\(ssrc) msid:stream\(streamId) audio\(streamId)")
-            //appendSdp("a=ssrc:\(ssrc) mslabel:stream\(streamId)")
-            //appendSdp("a=ssrc:\(ssrc) label:audio\(streamId)")
-            
-            appendSdp("a=rtcp-mux")
         }*/
         
-        appendSdp("")
-        
-        return (sdp, otherSsrc.map(\.1))
+        return RemoteOffer(
+            sdpList: sdpList,
+            isPartial: false,
+            state: RemoteOffer.State(
+                items: bundleSsrcs.map { ssrc in
+                    RemoteOffer.State.Item(
+                        ssrc: ssrc.value,
+                        isRemoved: ssrc.isRemoved
+                    )
+                }
+            )
+        )
     }
     
     mutating func updateLocalChannelFromSdpAnswer(bundleId: String, sdpAnswer: String) {
@@ -956,36 +897,6 @@ private extension ConferenceDescription {
             return result
         }
         
-        /*
-         v=0
-         o=- 3432551037272164134 2 IN IP4 127.0.0.1
-         s=-
-         t=0 0
-         a=group:BUNDLE audio
-         a=msid-semantic: WMS stream0
-         m=audio 9 RTP/SAVPF 103 104 126
-         c=IN IP4 0.0.0.0
-         a=rtcp:9 IN IP4 0.0.0.0
-         a=ice-ufrag:XTZl
-         a=ice-pwd:GS+K9fcajkZ96gy5hCIyx1BV
-         a=ice-options:trickle
-         a=fingerprint:sha-256 88:A3:3E:2C:E3:3C:DF:E8:31:1B:59:AA:73:60:D8:EF:E7:FE:0D:F5:B8:F1:79:26:58:A3:D2:93:D9:8C:49:29
-         a=setup:active
-         a=mid:audio
-         a=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level
-         a=extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time
-         a=sendrecv
-         a=msid:stream0 audio0
-         a=rtcp-mux
-         a=rtpmap:103 ISAC/16000
-         a=rtpmap:104 ISAC/32000
-         a=rtpmap:126 telephone-event/8000
-         a=ssrc:666769703 cname:g5ORSLYV5oOfoEBX
-         a=ssrc:666769703 msid:stream0 audio0
-         a=ssrc:666769703 mslabel:stream0
-         a=ssrc:666769703 label:audio0
-         */
-        
         var audioSources: [Int] = []
         for line in getLines(prefix: "a=ssrc:") {
             let scanner = Scanner(string: line)
@@ -1013,7 +924,10 @@ private extension ConferenceDescription {
                 parameters: [
                     "fmtp": [
                         "minptime=10;useinbandfec=1"
-                    ] as [Any]
+                    ] as [Any],
+                    "rtcp-fbs": [[
+                        "type": "transport-cc"
+                    ] as [String: Any]] as [Any]
                 ]
             ),
             ConferenceDescription.Content.Channel.PayloadType(
@@ -1044,6 +958,10 @@ private extension ConferenceDescription {
             ConferenceDescription.Content.Channel.RtpHdrExt(
                 id: 3,
                 uri: "http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time"
+            ),
+            ConferenceDescription.Content.Channel.RtpHdrExt(
+                id: 5,
+                uri: "http://www.webrtc.org/experiments/rtp-hdrext/transport-wide-cc-02"
             ),
         ]
         
@@ -1190,12 +1108,14 @@ public final class GroupCallContext {
         private var localBundleId: String?
         private var localTransport: ConferenceDescription.Transport?
         
+        let memberCount = ValuePromise<Int>(0, ignoreRepeated: true)
+        
         init(queue: Queue, audioSessionActive: Signal<Bool, NoError>) {
             self.queue = queue
             
             self.sessionId = UInt32.random(in: 0 ..< UInt32(Int32.max))
-            //self.colibriHost = "192.168.8.118"
-            self.colibriHost = "192.168.93.24"
+            self.colibriHost = "192.168.8.118"
+            //self.colibriHost = "192.168.93.24"
             //self.colibriHost = "51.104.206.109"
             
             var relaySdpAnswerImpl: ((String) -> Void)?
@@ -1264,7 +1184,7 @@ public final class GroupCallContext {
             }))
         }
         
-        private var currentSsrcOrder: [Int] = []
+        private var currentOfferState: RemoteOffer.State?
         
         func allocateChannels(conference: ConferenceDescription) {
             let bundleId = UUID().uuidString
@@ -1368,16 +1288,22 @@ public final class GroupCallContext {
                     return
                 }
                 
-                guard let (offerSdp, updatedOrder) = conference.offerSdp(sessionId: strongSelf.sessionId, bundleId: bundleId, bridgeHost: strongSelf.colibriHost, transport: transport, currentSsrcOrder: strongSelf.currentSsrcOrder) else {
-                    return
-                }
-                strongSelf.currentSsrcOrder = updatedOrder
-                
                 strongSelf.conferenceId = conference.id
                 strongSelf.localBundleId = bundleId
                 strongSelf.localTransport = transport
                 
-                strongSelf.context.setOfferSdp(offerSdp)
+                //strongSelf.context.emitOffer()
+                
+                guard let offer = conference.offerSdp(sessionId: strongSelf.sessionId, bundleId: bundleId, bridgeHost: strongSelf.colibriHost, transport: transport, currentState: strongSelf.currentOfferState) else {
+                    return
+                }
+                strongSelf.currentOfferState = offer.state
+                
+                strongSelf.memberCount.set(offer.state.items.filter({ !$0.isRemoved }).count)
+                
+                for sdp in offer.sdpList {
+                    strongSelf.context.setOfferSdp(sdp, isPartial: offer.isPartial)
+                }
             }))
         }
         
@@ -1453,9 +1379,14 @@ public final class GroupCallContext {
                     return
                 }
                 
-                if let (offerSdp, updatedOrder) = conference.offerSdp(sessionId: strongSelf.sessionId, bundleId: localBundleId, bridgeHost: strongSelf.colibriHost, transport: localTransport, currentSsrcOrder: strongSelf.currentSsrcOrder) {
-                    strongSelf.currentSsrcOrder = updatedOrder
-                    strongSelf.context.setOfferSdp(offerSdp)
+                if let offer = conference.offerSdp(sessionId: strongSelf.sessionId, bundleId: localBundleId, bridgeHost: strongSelf.colibriHost, transport: localTransport, currentState: strongSelf.currentOfferState) {
+                    strongSelf.currentOfferState = offer.state
+                    
+                    strongSelf.memberCount.set(offer.state.items.filter({ !$0.isRemoved }).count)
+                    
+                    for sdp in offer.sdpList {
+                        strongSelf.context.setOfferSdp(sdp, isPartial: offer.isPartial)
+                    }
                 }
                 
                 strongSelf.pollOnceDelayed()
@@ -1471,5 +1402,17 @@ public final class GroupCallContext {
         self.impl = QueueLocalObject(queue: queue, generate: {
             return Impl(queue: queue, audioSessionActive: audioSessionActive)
         })
+    }
+    
+    public var memberCount: Signal<Int, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.memberCount.get().start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
     }
 }

@@ -36,9 +36,15 @@
     return self;
 }
 
-- (void)setOfferSdp:(NSString * _Nonnull)offerSdp {
+- (void)emitOffer {
     if (_instance) {
-        _instance->setOfferSdp([offerSdp UTF8String]);
+        _instance->emitOffer();
+    }
+}
+
+- (void)setOfferSdp:(NSString * _Nonnull)offerSdp isPartial:(bool)isPartial {
+    if (_instance) {
+        _instance->setOfferSdp([offerSdp UTF8String], isPartial);
     }
 }
 

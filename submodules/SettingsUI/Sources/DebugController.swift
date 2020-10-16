@@ -13,6 +13,7 @@ import ItemListUI
 import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
+import TelegramCallsUI
 
 @objc private final class DebugControllerMailComposeDelegate: NSObject, MFMailComposeViewControllerDelegate {
     public func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
@@ -74,6 +75,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case alternativeFolderTabs(Bool)
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
+    case voiceConference
     case preferredVideoCodec(Int, String, String?, Bool)
     case disableVideoAspectScaling(Bool)
     case enableVoipTcp(Bool)
@@ -90,7 +92,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .reimport, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .alternativeFolderTabs, .playerEmbedding, .playlistPlayback:
+        case .clearTips, .reimport, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .alternativeFolderTabs, .playerEmbedding, .playlistPlayback, .voiceConference:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -155,8 +157,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 24
         case .playlistPlayback:
             return 25
+        case .voiceConference:
+            return 26
         case let .preferredVideoCodec(index, _, _, _):
-            return 26 + index
+            return 27 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableVoipTcp:
@@ -648,6 +652,15 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case .voiceConference:
+            return ItemListDisclosureItem(presentationData: presentationData, title: "Voice Conference (Test)", label: "", sectionId: self.section, style: .blocks, action: {
+                guard let context = arguments.context else {
+                    return
+                }
+                let controller = GroupCallController(context: context)
+                controller.navigationPresentation = .modal
+                arguments.pushController(controller)
+            })
         case let .preferredVideoCodec(_, title, value, isSelected):
             return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .right, checked: isSelected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -724,6 +737,8 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.alternativeFolderTabs(experimentalSettings.foldersTabAtBottom))
     entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
     entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
+    
+    entries.append(.voiceConference)
     
     let codecs: [(String, String?)] = [
         ("No Preference", nil),
