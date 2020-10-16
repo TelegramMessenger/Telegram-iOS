@@ -1093,8 +1093,8 @@ public struct messages {
     public enum Messages: TypeConstructorDescription {
         case messages(messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
         case messagesNotModified(count: Int32)
-        case channelMessages(flags: Int32, pts: Int32, count: Int32, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
-        case messagesSlice(flags: Int32, count: Int32, nextRate: Int32?, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
+        case channelMessages(flags: Int32, pts: Int32, count: Int32, offsetIdOffset: Int32?, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
+        case messagesSlice(flags: Int32, count: Int32, nextRate: Int32?, offsetIdOffset: Int32?, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -1124,13 +1124,14 @@ public struct messages {
                     }
                     serializeInt32(count, buffer: buffer, boxed: false)
                     break
-                case .channelMessages(let flags, let pts, let count, let messages, let chats, let users):
+                case .channelMessages(let flags, let pts, let count, let offsetIdOffset, let messages, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(-1725551049)
+                        buffer.appendInt32(1682413576)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(pts, buffer: buffer, boxed: false)
                     serializeInt32(count, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(offsetIdOffset!, buffer: buffer, boxed: false)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(messages.count))
                     for item in messages {
@@ -1147,13 +1148,14 @@ public struct messages {
                         item.serialize(buffer, true)
                     }
                     break
-                case .messagesSlice(let flags, let count, let nextRate, let messages, let chats, let users):
+                case .messagesSlice(let flags, let count, let nextRate, let offsetIdOffset, let messages, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(-923939298)
+                        buffer.appendInt32(978610270)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(count, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(nextRate!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(offsetIdOffset!, buffer: buffer, boxed: false)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(messages.count))
                     for item in messages {
@@ -1179,10 +1181,10 @@ public struct messages {
                 return ("messages", [("messages", messages), ("chats", chats), ("users", users)])
                 case .messagesNotModified(let count):
                 return ("messagesNotModified", [("count", count)])
-                case .channelMessages(let flags, let pts, let count, let messages, let chats, let users):
-                return ("channelMessages", [("flags", flags), ("pts", pts), ("count", count), ("messages", messages), ("chats", chats), ("users", users)])
-                case .messagesSlice(let flags, let count, let nextRate, let messages, let chats, let users):
-                return ("messagesSlice", [("flags", flags), ("count", count), ("nextRate", nextRate), ("messages", messages), ("chats", chats), ("users", users)])
+                case .channelMessages(let flags, let pts, let count, let offsetIdOffset, let messages, let chats, let users):
+                return ("channelMessages", [("flags", flags), ("pts", pts), ("count", count), ("offsetIdOffset", offsetIdOffset), ("messages", messages), ("chats", chats), ("users", users)])
+                case .messagesSlice(let flags, let count, let nextRate, let offsetIdOffset, let messages, let chats, let users):
+                return ("messagesSlice", [("flags", flags), ("count", count), ("nextRate", nextRate), ("offsetIdOffset", offsetIdOffset), ("messages", messages), ("chats", chats), ("users", users)])
     }
     }
     
@@ -1227,26 +1229,29 @@ public struct messages {
             _2 = reader.readInt32()
             var _3: Int32?
             _3 = reader.readInt32()
-            var _4: [Api.Message]?
+            var _4: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_4 = reader.readInt32() }
+            var _5: [Api.Message]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
             }
-            var _5: [Api.Chat]?
+            var _6: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
             }
-            var _6: [Api.User]?
+            var _7: [Api.User]?
             if let _ = reader.readInt32() {
-                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = _4 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.messages.Messages.channelMessages(flags: _1!, pts: _2!, count: _3!, messages: _4!, chats: _5!, users: _6!)
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.messages.Messages.channelMessages(flags: _1!, pts: _2!, count: _3!, offsetIdOffset: _4, messages: _5!, chats: _6!, users: _7!)
             }
             else {
                 return nil
@@ -1259,26 +1264,29 @@ public struct messages {
             _2 = reader.readInt32()
             var _3: Int32?
             if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt32() }
-            var _4: [Api.Message]?
+            var _4: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_4 = reader.readInt32() }
+            var _5: [Api.Message]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
             }
-            var _5: [Api.Chat]?
+            var _6: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
             }
-            var _6: [Api.User]?
+            var _7: [Api.User]?
             if let _ = reader.readInt32() {
-                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            let _c4 = _4 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.messages.Messages.messagesSlice(flags: _1!, count: _2!, nextRate: _3, messages: _4!, chats: _5!, users: _6!)
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.messages.Messages.messagesSlice(flags: _1!, count: _2!, nextRate: _3, offsetIdOffset: _4, messages: _5!, chats: _6!, users: _7!)
             }
             else {
                 return nil

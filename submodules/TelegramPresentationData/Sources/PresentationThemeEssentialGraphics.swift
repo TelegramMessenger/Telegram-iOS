@@ -170,6 +170,10 @@ public final class PrincipalThemeEssentialGraphics {
     public let outgoingDateAndStatusRepliesIcon: UIImage
     public let mediaRepliesIcon: UIImage
     public let freeRepliesIcon: UIImage
+    public let incomingDateAndStatusPinnedIcon: UIImage
+    public let outgoingDateAndStatusPinnedIcon: UIImage
+    public let mediaPinnedIcon: UIImage
+    public let freePinnedIcon: UIImage
     
     public let dateStaticBackground: UIImage
     public let dateFloatingBackground: UIImage
@@ -333,6 +337,12 @@ public final class PrincipalThemeEssentialGraphics {
             self.mediaRepliesIcon = generateTintedImage(image: repliesImage, color: .white)!
             self.freeRepliesIcon = generateTintedImage(image: repliesImage, color: serviceColor.primaryText)!
             
+            let pinnedImage = UIImage(bundleImageName: "Chat/Message/Pinned")!
+            self.incomingDateAndStatusPinnedIcon = generateTintedImage(image: pinnedImage, color: theme.message.incoming.secondaryTextColor)!
+            self.outgoingDateAndStatusPinnedIcon = generateTintedImage(image: pinnedImage, color: theme.message.outgoing.secondaryTextColor)!
+            self.mediaPinnedIcon = generateTintedImage(image: pinnedImage, color: .white)!
+            self.freePinnedIcon = generateTintedImage(image: pinnedImage, color: serviceColor.primaryText)!
+            
             self.radialIndicatorFileIconIncoming = emptyImage
             self.radialIndicatorFileIconOutgoing = emptyImage
         } else {
@@ -437,6 +447,12 @@ public final class PrincipalThemeEssentialGraphics {
             self.outgoingDateAndStatusRepliesIcon = generateTintedImage(image: repliesImage, color: theme.message.outgoing.secondaryTextColor)!
             self.mediaRepliesIcon = generateTintedImage(image: repliesImage, color: .white)!
             self.freeRepliesIcon = generateTintedImage(image: repliesImage, color: serviceColor.primaryText)!
+            
+            let pinnedImage = UIImage(bundleImageName: "Chat/Message/Pinned")!
+            self.incomingDateAndStatusPinnedIcon = generateTintedImage(image: pinnedImage, color: theme.message.incoming.secondaryTextColor)!
+            self.outgoingDateAndStatusPinnedIcon = generateTintedImage(image: pinnedImage, color: theme.message.outgoing.secondaryTextColor)!
+            self.mediaPinnedIcon = generateTintedImage(image: pinnedImage, color: .white)!
+            self.freePinnedIcon = generateTintedImage(image: pinnedImage, color: serviceColor.primaryText)!
             
             self.radialIndicatorFileIconIncoming = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: .black)!
             self.radialIndicatorFileIconOutgoing = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: .black)!

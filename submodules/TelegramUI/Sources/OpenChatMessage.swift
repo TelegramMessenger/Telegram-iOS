@@ -143,7 +143,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     } else if params.standalone {
                         location = .recentActions(params.message)
                     } else {
-                        location = .messages(peerId: params.message.id.peerId, tagMask: .voiceOrInstantVideo, at: params.message.id)
+                        location = .messages(chatLocation: params.chatLocation ?? .peer(params.message.id.peerId), tagMask: .voiceOrInstantVideo, at: params.message.id)
                     }
                     playerType = .voice
                 } else if file.isMusic && params.message.tags.contains(.music) {
@@ -152,7 +152,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     } else if params.standalone {
                         location = .recentActions(params.message)
                     } else {
-                        location = .messages(peerId: params.message.id.peerId, tagMask: .music, at: params.message.id)
+                        location = .messages(chatLocation: params.chatLocation ?? .peer(params.message.id.peerId), tagMask: .music, at: params.message.id)
                     }
                     playerType = .music
                 } else {
@@ -163,7 +163,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     }
                     playerType = (file.isVoice || file.isInstantVideo) ? .voice : .music
                 }
-                params.context.sharedContext.mediaManager.setPlaylist((params.context.account, PeerMessagesMediaPlaylist(postbox: params.context.account.postbox, network: params.context.account.network, location: location)), type: playerType, control: control)
+                params.context.sharedContext.mediaManager.setPlaylist((params.context.account, PeerMessagesMediaPlaylist(context: params.context, location: location, chatLocationContextHolder: params.chatLocationContextHolder)), type: playerType, control: control)
                 return true
             case let .gallery(gallery):
                 params.dismissInput()

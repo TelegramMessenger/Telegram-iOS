@@ -4882,7 +4882,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
             }
-        }, unpinMessage: { [weak self] id in
+        }, unpinMessage: { [weak self] id, askForConfirmation in
             if let strongSelf = self {
                 if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                     var canManagePin = false
@@ -4904,7 +4904,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                         
                     if canManagePin {
-                        strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Conversation_UnpinMessageAlert, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Conversation_Unpin, action: {
+                        let action: () -> Void = {
+                            guard let strongSelf = self else {
+                                return
+                            }
                             if let strongSelf = self {
                                 let disposable: MetaDisposable
                                 if let current = strongSelf.unpinMessageDisposable {
@@ -4915,7 +4918,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                                 disposable.set(requestUpdatePinnedMessage(account: strongSelf.context.account, peerId: peer.id, update: .clear(id: id)).start())
                             }
-                        }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})], actionLayout: .vertical), in: .window(.root))
+                        }
+                        if askForConfirmation {
+                            strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Conversation_UnpinMessageAlert, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Conversation_Unpin, action: {
+                                action()
+                            }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})], actionLayout: .vertical), in: .window(.root))
+                        } else {
+                            action()
+                        }
                     } else {
                         if let pinnedMessage = strongSelf.presentationInterfaceState.pinnedMessage {
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {

@@ -95,7 +95,7 @@ final class ChatPanelInterfaceInteraction {
     let sendSticker: (FileMediaReference, ASDisplayNode, CGRect) -> Bool
     let unblockPeer: () -> Void
     let pinMessage: (MessageId) -> Void
-    let unpinMessage: (MessageId) -> Void
+    let unpinMessage: (MessageId, Bool) -> Void
     let shareAccountContact: () -> Void
     let reportPeer: () -> Void
     let presentPeerContact: () -> Void
@@ -171,7 +171,7 @@ final class ChatPanelInterfaceInteraction {
         sendSticker: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Bool,
         unblockPeer: @escaping () -> Void,
         pinMessage: @escaping (MessageId) -> Void,
-        unpinMessage: @escaping (MessageId) -> Void,
+        unpinMessage: @escaping (MessageId, Bool) -> Void,
         shareAccountContact: @escaping () -> Void,
         reportPeer: @escaping () -> Void,
         presentPeerContact: @escaping () -> Void,

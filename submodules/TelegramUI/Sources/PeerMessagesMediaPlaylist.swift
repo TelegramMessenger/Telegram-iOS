@@ -307,9 +307,9 @@ private struct PlaybackStack {
 }
 
 final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
-    private let postbox: Postbox
-    private let network: Network
+    private let context: AccountContext
     private let messagesLocation: PeerMessagesPlaylistLocation
+    private let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>?
     
     var location: SharedMediaPlaylistLocation {
         return self.messagesLocation
@@ -338,13 +338,13 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
         return self.stateValue.get()
     }
     
-    init(postbox: Postbox, network: Network, location: PeerMessagesPlaylistLocation) {
+    init(context: AccountContext, location: PeerMessagesPlaylistLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>?) {
         assert(Queue.mainQueue().isCurrent())
         
         self.id = location.playlistId
         
-        self.postbox = postbox
-        self.network = network
+        self.context = context
+        self.chatLocationContextHolder = chatLocationContextHolder
         self.messagesLocation = location
         
         switch self.messagesLocation {
@@ -446,7 +446,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
             self.currentlyObservedMessageId = item?.message.id
             if let id = item?.message.id {
                 let key: PostboxViewKey = .messages(Set([id]))
-                self.currentlyObservedMessageDisposable.set((self.postbox.combinedView(keys: [key])
+                self.currentlyObservedMessageDisposable.set((self.context.account.postbox.combinedView(keys: [key])
                 |> filter { views in
                     if let view = views.views[key] as? MessagesView {
                         if !view.messages.isEmpty {
@@ -479,15 +479,15 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
         switch anchor {
             case let .messageId(messageId):
                 switch self.messagesLocation {
-                    case let .messages(peerId, tagMask, _):
-                        let historySignal = self.postbox.messageAtId(messageId)
+                    case let .messages(chatLocation, tagMask, _):
+                        let historySignal = self.context.account.postbox.messageAtId(messageId)
                         |> take(1)
                         |> mapToSignal { message -> Signal<(Message, [Message])?, NoError> in
                             guard let message = message else {
                                 return .single(nil)
                             }
                             
-                            return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .index(message.index), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [])
+                            return self.context.account.postbox.aroundMessageHistoryViewForLocation(self.context.chatLocationInput(for: chatLocation, contextHolder: self.chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), anchor: .index(message.index), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [])
                             |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
                                 if let (message, aroundMessages, _) = navigatedMessageFromView(view.0, anchorIndex: message.index, position: .exact) {
                                     return .single((message, aroundMessages))
@@ -539,7 +539,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                             }
                         }))
                     default:
-                        self.navigationDisposable.set((self.postbox.messageAtId(messageId)
+                        self.navigationDisposable.set((self.context.account.postbox.messageAtId(messageId)
                         |> take(1)
                         |> deliverOnMainQueue).start(next: { [weak self] message in
                             if let strongSelf = self {
@@ -559,7 +559,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                 }
             case let .index(index):
                 switch self.messagesLocation {
-                    case let .messages(peerId, tagMask, _):
+                    case let .messages(chatLocation, tagMask, _):
                         let inputIndex: Signal<MessageIndex, NoError>
                         let looping = self.looping
                         switch self.order {
@@ -567,7 +567,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                 inputIndex = .single(index)
                             case .random:
                                 var playbackStack = self.playbackStack
-                                inputIndex = self.postbox.transaction { transaction -> MessageIndex in
+                                inputIndex = self.context.account.postbox.transaction { transaction -> MessageIndex in
                                     if case let .random(previous) = navigation, previous {
                                         let _ = playbackStack.pop()
                                         while true {
@@ -580,12 +580,12 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                             }
                                         }
                                     }
-                                    return transaction.findRandomMessage(peerId: peerId, namespace: Namespaces.Message.Cloud, tag: tagMask, ignoreIds: (playbackStack.ids, playbackStack.set)) ?? index
+                                    return transaction.findRandomMessage(peerId: chatLocation.peerId, namespace: Namespaces.Message.Cloud, tag: tagMask, ignoreIds: (playbackStack.ids, playbackStack.set)) ?? index
                                 }
                         }
                         let historySignal = inputIndex
                         |> mapToSignal { inputIndex -> Signal<(Message, [Message])?, NoError> in
-                            return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .index(inputIndex), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [])
+                            return self.context.account.postbox.aroundMessageHistoryViewForLocation(self.context.chatLocationInput(for: chatLocation, contextHolder: self.chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), anchor: .index(inputIndex), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [])
                             |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
                                 let position: NavigatedMessageFromViewPosition
                                 switch navigation {
@@ -615,7 +615,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                     } else {
                                         viewIndex = .lowerBound
                                     }
-                                    return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: viewIndex, count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [])
+                                    return self.context.account.postbox.aroundMessageHistoryViewForLocation(self.context.chatLocationInput(for: chatLocation, contextHolder: self.chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), anchor: viewIndex, count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [])
                                     |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
                                         let position: NavigatedMessageFromViewPosition
                                         switch navigation {
@@ -657,7 +657,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                             }
                         }))
                     case .singleMessage:
-                        self.navigationDisposable.set((self.postbox.messageAtId(index.id)
+                        self.navigationDisposable.set((self.context.account.postbox.messageAtId(index.id)
                         |> take(1)
                         |> deliverOnMainQueue).start(next: { [weak self] message in
                             if let strongSelf = self {
@@ -815,7 +815,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                 default:
                     break
             }
-            let _ = markMessageContentAsConsumedInteractively(postbox: self.postbox, messageId: item.message.id).start()
+            let _ = markMessageContentAsConsumedInteractively(postbox: self.context.account.postbox, messageId: item.message.id).start()
         }
     }
 }

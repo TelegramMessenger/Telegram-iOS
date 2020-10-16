@@ -231,7 +231,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     var statusApply: ((Bool) -> Void)?
                     
                     if let statusType = statusType {
-                        let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: imageSize.width - 30.0, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies)
+                        let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: imageSize.width - 30.0, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned))
                         statusSize = size
                         statusApply = apply
                     }
