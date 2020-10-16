@@ -358,6 +358,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     public var purposefulAction: (() -> Void)?
     
+    private let scrolledToMessageId = ValuePromise<MessageId?>(nil, ignoreRepeated: true)
+    
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil) {
         let _ = ChatControllerCount.modify { value in
             return value + 1
@@ -3258,11 +3260,36 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
             |> restartIfError
             
+            struct ReferenceMessage {
+                var id: MessageId
+                var isScrolled: Bool
+            }
+            
+            let referenceMessage: Signal<ReferenceMessage?, NoError>
+            if latest {
+                referenceMessage = .single(nil)
+            } else {
+                referenceMessage = combineLatest(
+                    queue: Queue.mainQueue(),
+                    self.scrolledToMessageId.get(),
+                    self.chatDisplayNode.historyNode.topVisibleMessageRange.get()
+                )
+                |> map { scrolledToMessageId, topVisibleMessageRange -> ReferenceMessage? in
+                    if let scrolledToMessageId = scrolledToMessageId {
+                        return ReferenceMessage(id: scrolledToMessageId, isScrolled: true)
+                    } else if let topVisibleMessageRange = topVisibleMessageRange {
+                        return ReferenceMessage(id: topVisibleMessageRange.upperBound, isScrolled: false)
+                    } else {
+                        return nil
+                    }
+                }
+            }
+            
             topPinnedMessage = combineLatest(
                 replyHistory,
-                latest ? .single(nil) : self.chatDisplayNode.historyNode.topVisibleMessageRange.get()
+                referenceMessage
             )
-            |> map { update, topVisibleMessageRange -> ChatPinnedMessage? in
+            |> map { update, referenceMessage -> ChatPinnedMessage? in
                 var message: ChatPinnedMessage?
                 switch update {
                 case .Loading:
@@ -3278,9 +3305,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         var matches = false
                         if message == nil {
                             matches = true
-                        } else if let topVisibleMessageRange = topVisibleMessageRange {
-                            if entry.message.id <= topVisibleMessageRange.upperBound {
-                                matches = true
+                        } else if let referenceMessage = referenceMessage {
+                            if referenceMessage.isScrolled {
+                                if entry.message.id < referenceMessage.id {
+                                    matches = true
+                                }
+                            } else {
+                                if entry.message.id <= referenceMessage.id {
+                                    matches = true
+                                }
                             }
                         } else {
                             matches = true
@@ -3316,6 +3349,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     tooltipScreen.addRelativeScrollingOffset(-offset, transition: transition)
                 }
             }
+        }
+        
+        self.chatDisplayNode.historyNode.beganDragging = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            strongSelf.scrolledToMessageId.set(nil)
         }
         
         self.chatDisplayNode.peerView = self.peerView
@@ -3653,6 +3694,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let highlightedState = ChatInterfaceHighlightedState(messageStableId: message.stableId)
                         controllerInteraction.highlightedState = highlightedState
                         strongSelf.updateItemNodesHighlightedStates(animated: false)
+                        strongSelf.scrolledToMessageId.set(index.id)
                         
                         strongSelf.messageContextDisposable.set((Signal<Void, NoError>.complete() |> delay(0.7, queue: Queue.mainQueue())).start(completed: {
                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
