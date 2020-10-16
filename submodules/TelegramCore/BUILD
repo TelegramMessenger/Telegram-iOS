@@ -18,7 +18,6 @@ swift_library(
         "//submodules/NetworkLogging:NetworkLogging",
         "//submodules/Reachability:Reachability",
     ],
-    alwayslink = True,
     visibility = [
         "//visibility:public",
     ],

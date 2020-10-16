@@ -82,7 +82,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     let controller = legacyLocationController(message: params.message, mapMedia: mapMedia, context: params.context, openPeer: { peer in
                         params.openPeer(peer, .info)
                     }, sendLiveLocation: { coordinate, period in
-                        let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period)), replyToMessageId: nil, localGroupingKey: nil)
+                        let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period)), replyToMessageId: nil, localGroupingKey: nil)
                         params.enqueueMessage(outMessage)
                     }, stopLiveLocation: {
                         params.context.liveLocationManager?.cancelLiveLocation(peerId: params.message.id.peerId)

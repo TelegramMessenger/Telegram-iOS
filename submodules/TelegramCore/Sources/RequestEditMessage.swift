@@ -252,7 +252,7 @@ private func requestEditMessageInternal(postbox: Postbox, network: Network, stat
     }
 }
 
-public func requestEditLiveLocation(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId, coordinate: (latitude: Double, longitude: Double)?) -> Signal<Void, NoError> {
+public func requestEditLiveLocation(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId, coordinate: (latitude: Double, longitude: Double, accuracyRadius: Int32?)?, heading: Int32?) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> (Api.InputPeer, TelegramMediaMap)? in
         guard let inputPeer = transaction.getPeer(messageId.peerId).flatMap(apiInputPeer) else {
             return nil
@@ -273,9 +273,13 @@ public func requestEditLiveLocation(postbox: Postbox, network: Network, stateMan
         }
         let inputMedia: Api.InputMedia
         if let coordinate = coordinate, let liveBroadcastingTimeout = media.liveBroadcastingTimeout {
-            inputMedia = .inputMediaGeoLive(flags: 1 << 1, geoPoint: .inputGeoPoint(lat: coordinate.latitude, long: coordinate.longitude), period: liveBroadcastingTimeout)
+            var geoFlags: Int32 = 0
+            if let _ = coordinate.accuracyRadius {
+                geoFlags |= 1 << 0
+            }
+            inputMedia = .inputMediaGeoLive(flags: 1 << 1, geoPoint: .inputGeoPoint(flags: geoFlags, lat: coordinate.latitude, long: coordinate.longitude, accuracyRadius: coordinate.accuracyRadius.flatMap({ Int32($0) })), heading: heading ?? 0, period: liveBroadcastingTimeout)
         } else {
-            inputMedia = .inputMediaGeoLive(flags: 1 << 0, geoPoint: .inputGeoPoint(lat: media.latitude, long: media.longitude), period: nil)
+            inputMedia = .inputMediaGeoLive(flags: 1 << 0, geoPoint: .inputGeoPoint(flags: 0, lat: media.latitude, long: media.longitude, accuracyRadius: nil), heading: 0, period: nil)
         }
         return network.request(Api.functions.messages.editMessage(flags: 1 << 14, peer: inputPeer, id: messageId.id, message: nil, media: inputMedia, replyMarkup: nil, entities: nil, scheduleDate: nil))
         |> map(Optional.init)
@@ -305,3 +309,45 @@ public func requestEditLiveLocation(postbox: Postbox, network: Network, stateMan
     }
 }
 
+public func requestProximityNotification(postbox: Postbox, network: Network, messageId: MessageId, distance: Int32, coordinate: (latitude: Double, longitude: Double, accuracyRadius: Int32?)) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
+    }
+    |> mapToSignal { inputPeer -> Signal<Void, NoError> in
+        guard let inputPeer = inputPeer else {
+            return .complete()
+        }
+        let flags: Int32 = 1 << 0
+        var geoFlags: Int32 = 0
+        if let _ = coordinate.accuracyRadius {
+            geoFlags |= 1 << 0
+        }
+        return network.request(Api.functions.messages.requestProximityNotification(flags: flags, peer: inputPeer, msgId: messageId.id, ownLocation: .inputGeoPoint(flags: geoFlags, lat: coordinate.latitude, long: coordinate.longitude, accuracyRadius: coordinate.accuracyRadius), maxDistance: distance))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Bool?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { _ -> Signal<Void, NoError> in
+            return .complete()
+        }
+    }
+}
+
+public func cancelProximityNotification(postbox: Postbox, network: Network, messageId: MessageId) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
+    }
+    |> mapToSignal { inputPeer -> Signal<Void, NoError> in
+        guard let inputPeer = inputPeer else {
+            return .complete()
+        }
+        return network.request(Api.functions.messages.requestProximityNotification(flags: 1 << 1, peer: inputPeer, msgId: messageId.id, ownLocation: nil, maxDistance: nil))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Bool?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { _ -> Signal<Void, NoError> in
+            return .complete()
+        }
+    }
+}

@@ -9,9 +9,9 @@ public enum DeviceLocationMode: Int32 {
 private final class DeviceLocationSubscriber {
     let id: Int32
     let mode: DeviceLocationMode
-    let update: (CLLocationCoordinate2D) -> Void
+    let update: (CLLocationCoordinate2D, Double, Double?) -> Void
     
-    init(id: Int32, mode: DeviceLocationMode, update: @escaping (CLLocationCoordinate2D) -> Void) {
+    init(id: Int32, mode: DeviceLocationMode, update: @escaping (CLLocationCoordinate2D, Double, Double?) -> Void) {
         self.id = id
         self.mode = mode
         self.update = update
@@ -39,7 +39,8 @@ public final class DeviceLocationManager: NSObject {
     private var subscribers: [DeviceLocationSubscriber] = []
     private var currentTopMode: DeviceLocationMode?
     
-    private var currentLocation: CLLocationCoordinate2D?
+    private var currentLocation: (CLLocationCoordinate2D, Double)?
+    private var currentHeading: CLHeading?
     
     public init(queue: Queue, log: ((String) -> Void)? = nil) {
         assert(queue.isCurrent())
@@ -60,7 +61,7 @@ public final class DeviceLocationManager: NSObject {
         self.manager.pausesLocationUpdatesAutomatically = false
     }
     
-    public func push(mode: DeviceLocationMode, updated: @escaping (CLLocationCoordinate2D) -> Void) -> Disposable {
+    public func push(mode: DeviceLocationMode, updated: @escaping (CLLocationCoordinate2D, Double, Double?) -> Void) -> Disposable {
         assert(self.queue.isCurrent())
         
         let id = self.nextSubscriberId
@@ -68,7 +69,7 @@ public final class DeviceLocationManager: NSObject {
         self.subscribers.append(DeviceLocationSubscriber(id: id, mode: mode, update: updated))
         
         if let currentLocation = self.currentLocation {
-            updated(currentLocation)
+            updated(currentLocation.0, currentLocation.1, self.currentHeading?.magneticHeading)
         }
         
         self.updateTopMode()
@@ -107,6 +108,7 @@ public final class DeviceLocationManager: NSObject {
                         self.manager.requestAlwaysAuthorization()
                     }
                     self.manager.startUpdatingLocation()
+                    self.manager.startUpdatingHeading()
                 }
             } else {
                 self.currentLocation = nil
@@ -123,9 +125,22 @@ extension DeviceLocationManager: CLLocationManagerDelegate {
         
         if let location = locations.first {
             if self.currentTopMode != nil {
-                self.currentLocation = location.coordinate
+                self.currentLocation = (location.coordinate, location.horizontalAccuracy)
                 for subscriber in self.subscribers {
-                    subscriber.update(location.coordinate)
+                    subscriber.update(location.coordinate, location.horizontalAccuracy, self.currentHeading?.magneticHeading)
+                }
+            }
+        }
+    }
+    
+    public func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
+        assert(self.queue.isCurrent())
+        
+        if self.currentTopMode != nil {
+            self.currentHeading = newHeading
+            if let currentLocation = self.currentLocation {
+                for subscriber in self.subscribers {
+                    subscriber.update(currentLocation.0, currentLocation.1, newHeading.magneticHeading)
                 }
             }
         }
@@ -135,7 +150,7 @@ extension DeviceLocationManager: CLLocationManagerDelegate {
 public func currentLocationManagerCoordinate(manager: DeviceLocationManager, timeout timeoutValue: Double) -> Signal<CLLocationCoordinate2D?, NoError> {
     return (
         Signal { subscriber in
-            let disposable = manager.push(mode: .precise, updated: { coordinate in
+            let disposable = manager.push(mode: .precise, updated: { coordinate, _, _ in
                 subscriber.putNext(coordinate)
                 subscriber.putCompletion()
             })
