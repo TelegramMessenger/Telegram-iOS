@@ -80,6 +80,8 @@ func apiUpdatePtsRange(_ update: Api.Update) -> (Int32, Int32)? {
             } else {
                 return nil
             }
+        case let .updatePinnedMessages(_, _, _, pts, ptsCount):
+            return (pts, ptsCount)
         default:
             return nil
     }

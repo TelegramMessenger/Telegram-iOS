@@ -72,7 +72,7 @@ public func requestPeerPhotos(postbox: Postbox, network: Network, peerId: PeerId
                     let chats: [Api.Chat]
                     let users: [Api.User]
                     switch result {
-                        case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
+                        case let .channelMessages(_, _, _, _, apiMessages, apiChats, apiUsers):
                             messages = apiMessages
                             chats = apiChats
                             users = apiUsers
@@ -80,7 +80,7 @@ public func requestPeerPhotos(postbox: Postbox, network: Network, peerId: PeerId
                             messages = apiMessages
                             chats = apiChats
                             users = apiUsers
-                        case let .messagesSlice(_, _, _, apiMessages, apiChats, apiUsers):
+                        case let .messagesSlice(_, _, _, _, apiMessages, apiChats, apiUsers):
                             messages = apiMessages
                             chats = apiChats
                             users = apiUsers

@@ -3240,7 +3240,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private func topPinnedMessageSignal(latest: Bool) -> Signal<ChatPinnedMessage?, NoError> {
         let topPinnedMessage: Signal<ChatPinnedMessage?, NoError>
         switch self.chatLocation {
-        case let .peer(peerId) where peerId.namespace == Namespaces.Peer.CloudChannel:
+        case let .peer(peerId):
             let replyHistory: Signal<ChatHistoryViewUpdate, NoError> = (chatHistoryViewForLocation(ChatHistoryLocationInput(content: .Initial(count: 100), id: 0), context: self.context, chatLocation: .peer(peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), scheduled: false, fixedCombinedReadStates: nil, tagMask: MessageTags.pinned, additionalData: [])
             |> castError(Bool.self)
             |> mapToSignal { update -> Signal<ChatHistoryViewUpdate, Bool> in
@@ -3513,16 +3513,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                 case let .peer(peerId):
-                    if peerId.namespace == Namespaces.Peer.CloudChannel {
-                        pinnedMessageId = topPinnedMessage?.message.id
-                        pinnedMessage = topPinnedMessage
-                    } else {
-                        if let pinnedMessageId = pinnedMessageId {
-                            if let message = messages?[pinnedMessageId] {
-                                pinnedMessage = ChatPinnedMessage(message: message, topMessageId: message.id)
-                            }
-                        }
-                    }
+                    pinnedMessageId = topPinnedMessage?.message.id
+                    pinnedMessage = topPinnedMessage
                 }
                 
                 var pinnedMessageUpdated = false

@@ -873,6 +873,11 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.updateMinAvailableMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: minId))
             case let .updateDeleteMessages(messages, _, _):
                 updatedState.deleteMessagesWithGlobalIds(messages)
+            case let .updatePinnedMessages(flags, peer, messages, _, _):
+                let peerId = peer.peerId
+                updatedState.updateMessagesPinned(ids: messages.map { id in
+                    MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id)
+                }, pinned: (flags & (1 << 0)) != 0)
             case let .updateEditMessage(apiMessage, _, _):
                 if let message = StoreMessage(apiMessage: apiMessage), case let .Id(messageId) = message.id {
                     if let preCachedResources = apiMessage.preCachedResources {
@@ -1139,28 +1144,6 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         channelsToPoll.insert(peerId)
                     }
                 }
-            case let .updateUserPinnedMessage(userId, id):
-                let userPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                updatedState.updateCachedPeerData(userPeerId, { current in
-                    let previous: CachedUserData
-                    if let current = current as? CachedUserData {
-                        previous = current
-                    } else {
-                        previous = CachedUserData()
-                    }
-                    return previous.withUpdatedPinnedMessageId(id == 0 ? nil : MessageId(peerId: userPeerId, namespace: Namespaces.Message.Cloud, id: id))
-                })
-            case let .updateChatPinnedMessage(groupId, id, _):
-                let groupPeerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: groupId)
-                updatedState.updateCachedPeerData(groupPeerId, { current in
-                    let previous: CachedGroupData
-                    if let current = current as? CachedGroupData {
-                        previous = current
-                    } else {
-                        previous = CachedGroupData()
-                    }
-                    return previous.withUpdatedPinnedMessageId(id == 0 ? nil : MessageId(peerId: groupPeerId, namespace: Namespaces.Message.Cloud, id: id))
-                })
             case let .updatePeerBlocked(peerId, blocked):
                 let userPeerId = peerId.peerId
                 updatedState.updateCachedPeerData(userPeerId, { current in
@@ -1461,9 +1444,9 @@ private func resolveAssociatedMessages(network: Network, state: AccountMutableSt
                         switch result {
                             case let .messages(messages, chats, users):
                                 return (messages, chats, users)
-                            case let .messagesSlice(_, _, _, messages, chats, users):
+                            case let .messagesSlice(_, _, _, _, messages, chats, users):
                                 return (messages, chats, users)
-                            case let .channelMessages(_, _, _, messages, chats, users):
+                            case let .channelMessages(_, _, _, _, messages, chats, users):
                                 return (messages, chats, users)
                             case .messagesNotModified:
                                 return ([], [], [])
