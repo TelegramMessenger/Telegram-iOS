@@ -501,17 +501,6 @@ watchos_application(
     ],
 )
 
-swift_library(
-    name = "ShareExtensionLib",
-    module_name = "ShareExtensionLib",
-    srcs = glob([
-        "Share/**/*.swift",
-    ]),
-    deps = [
-        "//submodules/TelegramUI:TelegramUI"
-    ],
-)
-
 plist_fragment(
     name = "MtProtoKitInfoPlist",
     extension = "plist",
@@ -975,6 +964,17 @@ plist_fragment(
     )
 )
 
+swift_library(
+    name = "ShareExtensionLib",
+    module_name = "ShareExtensionLib",
+    srcs = glob([
+        "Share/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/TelegramUI:TelegramUI"
+    ],
+)
+
 ios_extension(
     name = "ShareExtension",
     bundle_id = "{telegram_bundle_id}.Share".format(
@@ -995,6 +995,63 @@ ios_extension(
     frameworks = [
         ":TelegramUIFramework"
     ],
+)
+
+plist_fragment(
+    name = "WidgetInfoPlist",
+    extension = "plist",
+    template = 
+    """
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleIdentifier</key>
+    <string>{telegram_bundle_id}.Widget</string>
+    <key>CFBundleName</key>
+    <string>Telegram</string>
+    <key>CFBundlePackageType</key>
+    <string>XPC!</string>
+    <key>NSExtension</key>
+    <dict>
+        <key>NSExtensionPointIdentifier</key>
+        <string>com.apple.widgetkit-extension</string>
+    </dict>
+    """.format(
+        telegram_bundle_id = telegram_bundle_id,
+    )
+)
+
+swift_library(
+    name = "WidgetExtensionLib",
+    module_name = "WidgetExtensionLib",
+    srcs = glob([
+        "Widget/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/BuildConfig:BuildConfig",
+        "//submodules/WidgetItems:WidgetItems",
+        "//submodules/AppLockState:AppLockState",
+    ],
+)
+
+ios_extension(
+    name = "WidgetExtension",
+    bundle_id = "{telegram_bundle_id}.Widget".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = [
+        ":WidgetInfoPlist",
+        ":VersionInfoPlist",
+        ":AppNameInfoPlist",
+    ],
+    minimum_os_version = "14.0",
+    provides_main = True,
+    provisioning_profile = "//build-input/data/provisioning-profiles:Widget.mobileprovision",
+    deps = [":WidgetExtensionLib"],
+    frameworks = [],
 )
 
 swift_library(
@@ -1251,7 +1308,10 @@ ios_application(
     ],
     extensions = [
         ":ShareExtension",
+        ":WidgetExtension",
+        #":NotificationContentExtension",
         #":NotificationServiceExtension",
+        #":IntentsExtension",
     ],
     watch_application = ":TelegramWatchApp",
     deps = [

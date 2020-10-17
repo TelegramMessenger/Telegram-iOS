@@ -39,7 +39,7 @@ private func avatarRoundImage(size: CGSize, source: UIImage) -> UIImage? {
 }
 
 private let deviceColorSpace: CGColorSpace = {
-    if #available(iOSApplicationExtension 9.3, *) {
+    if #available(iOSApplicationExtension 9.3, iOS 9.3, *) {
         if let colorSpace = CGColorSpace(name: CGColorSpace.displayP3) {
             return colorSpace
         } else {
@@ -133,7 +133,7 @@ final class PeerView: UIView {
         let fontSize = floor(systemFontSize * 11.0 / 17.0)
         
         self.titleLabel.text = title
-        if #available(iOSApplicationExtension 13.0, *) {
+        if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
             self.titleLabel.textColor = UIColor.label
         } else {
             self.titleLabel.textColor = primaryColor

@@ -3,9 +3,135 @@ import NotificationCenter
 import BuildConfig
 import WidgetItems
 import AppLockState
+import SwiftUI
+import WidgetKit
 
 private func rootPathForBasePath(_ appGroupPath: String) -> String {
     return appGroupPath + "/telegram-data"
+}
+
+struct Provider: TimelineProvider {
+    public typealias Entry = SimpleEntry
+    
+    func placeholder(in context: Context) -> SimpleEntry {
+        return SimpleEntry(date: Date())
+    }
+    
+    func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> Void) {
+        let entry = SimpleEntry(date: Date())
+        completion(entry)
+    }
+    
+    func getTimeline(in context: Context, completion: @escaping (Timeline<SimpleEntry>) -> Void) {
+        var entries: [SimpleEntry] = []
+        
+        let currentDate = Date()
+        for hourOffset in 0 ..< 5 {
+            let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
+            let entry = SimpleEntry(date: entryDate)
+            entries.append(entry)
+        }
+
+        let timeline = Timeline(entries: entries, policy: .atEnd)
+        completion(timeline)
+    }
+}
+
+struct SimpleEntry: TimelineEntry {
+    public let date: Date
+}
+
+struct Static_WidgetEntryView: View {
+    var entry: Provider.Entry
+
+    var body: some View {
+        Text(entry.date, style: .time)
+    }
+}
+
+enum PeersWidgetData {
+    case placeholder
+}
+
+extension PeersWidgetData {
+    static let previewData = PeersWidgetData.placeholder
+}
+
+struct WidgetView: View {
+    let data: PeersWidgetData
+    @Environment(\.widgetFamily) var widgetFamily
+    
+    func peerViews(geometry: GeometryProxy) -> some View {
+        print("geometry: \(geometry.safeAreaInsets) frame \(geometry.frame(in: .local))")
+        
+        let defaultItemSize: CGFloat = 60.0
+        
+        let rowCount = Int(round(geometry.size.width / defaultItemSize))
+        let itemSize = floor(geometry.size.width / CGFloat(rowCount))
+        
+        switch data {
+        case .placeholder:
+            return ZStack {
+                ForEach(0 ..< rowCount, content: { i in
+                    Circle().frame(width: itemSize, height: itemSize).position(x: CGFloat(i) * itemSize, y: 0.0).foregroundColor(.gray)
+                })
+            }
+        }
+    }
+    
+    var body: some View {
+        ZStack {
+            Color(.white)
+            GeometryReader { geometry in
+                peerViews(geometry: geometry)
+            }
+        }
+        .padding(.all)
+    }
+}
+
+private let presentationData: WidgetPresentationData = {
+    let appBundleIdentifier = Bundle.main.bundleIdentifier!
+    guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
+        return WidgetPresentationData(applicationLockedString: "Unlock the app to use the widget", applicationStartRequiredString: "Open the app to use the widget")
+    }
+    let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
+    
+    let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
+    //self.buildConfig = buildConfig
+    
+    let appGroupName = "group.\(baseAppBundleId)"
+    let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
+    
+    guard let appGroupUrl = maybeAppGroupUrl else {
+        return WidgetPresentationData(applicationLockedString: "Unlock the app to use the widget", applicationStartRequiredString: "Open the app to use the widget")
+    }
+    
+    let rootPath = rootPathForBasePath(appGroupUrl.path)
+    
+    if let data = try? Data(contentsOf: URL(fileURLWithPath: widgetPresentationDataPath(rootPath: rootPath))), let value = try? JSONDecoder().decode(WidgetPresentationData.self, from: data) {
+        return value
+    } else {
+        return WidgetPresentationData(applicationLockedString: "Unlock the app to use the widget", applicationStartRequiredString: "Open the app to use the widget")
+    }
+}()
+
+@main
+struct Static_Widget: Widget {
+    private let kind: String = "Static_Widget"
+
+    public var body: some WidgetConfiguration {
+        StaticConfiguration(
+            kind: kind,
+            provider: Provider(),
+            content: { entry in
+                WidgetView(data: .previewData)
+            }
+        )
+        .supportedFamilies([.systemMedium])
+        .configurationDisplayName(presentationData.applicationLockedString)
+        .description(presentationData.applicationStartRequiredString)
+    }
 }
 
 @objc(TodayViewController)
@@ -65,7 +191,7 @@ class TodayViewController: UIViewController, NCWidgetProviding {
     private func setPlaceholderText(_ text: String) {
         let fontSize = UIFont.preferredFont(forTextStyle: .body).pointSize
         let placeholderLabel = UILabel()
-        if #available(iOSApplicationExtension 13.0, *) {
+        if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
             placeholderLabel.textColor = UIColor.label
         } else {
             placeholderLabel.textColor = self.primaryColor
@@ -81,7 +207,7 @@ class TodayViewController: UIViewController, NCWidgetProviding {
         completionHandler(.newData)
     }
     
-    @available(iOSApplicationExtension 10.0, *)
+    @available(iOSApplicationExtension 10.0, iOS 10.0, *)
     func widgetActiveDisplayModeDidChange(_ activeDisplayMode: NCWidgetDisplayMode, withMaximumSize maxSize: CGSize) {
         
     }
