@@ -35,6 +35,7 @@ static_library(
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
         "//submodules/PersistentStringHash:PersistentStringHash",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
+        "//submodules/LiveLocationTimerNode:LiveLocationTimerNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

@@ -36,6 +36,7 @@ swift_library(
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
         "//submodules/PersistentStringHash:PersistentStringHash",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
+        "//submodules/LiveLocationTimerNode:LiveLocationTimerNode",    
     ],
     visibility = [
         "//visibility:public",

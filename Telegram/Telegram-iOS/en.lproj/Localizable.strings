@@ -5837,3 +5837,9 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.ContextMenuSelectAll_any" = "Select All %@ Items";
 
 "Conversation.Dice.u1F3B0" = "Send a slot machine emoji to try your luck.";
+
+"Notification.ProximityReached" = "%2$@ is now within %2$@ from you";
+
+"Location.ProximityNotification.Title" = "Notification";
+"Location.ProximityNotification.Notify" = "Notify me within %@";
+"Location.ProximityNotification.AlreadyClose" = "You are already closer than %@";

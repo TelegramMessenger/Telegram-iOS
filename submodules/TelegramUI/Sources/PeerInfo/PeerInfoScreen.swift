@@ -3645,7 +3645,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         let context = self.context
         let presentationData = self.presentationData
-        let mapMedia = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, geoPlace: nil, venue: MapVenue(title: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), address: location.address, provider: nil, id: nil, type: nil), liveBroadcastingTimeout: nil)
+        let mapMedia = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: MapVenue(title: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), address: location.address, provider: nil, id: nil, type: nil), liveBroadcastingTimeout: nil)
         let locationController = legacyLocationController(message: nil, mapMedia: mapMedia, context: context, openPeer: { _ in }, sendLiveLocation: { _, _ in }, stopLiveLocation: {}, openUrl: { url in
             context.sharedContext.applicationBindings.openUrl(url)
         })

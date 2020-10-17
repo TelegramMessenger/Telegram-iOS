@@ -816,7 +816,7 @@ func layoutInstantPageBlock(webpage: TelegramMediaWebpage, rtl: Bool, block: Ins
                 }
             }
             
-            let map = TelegramMediaMap(latitude: latitude, longitude: longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil)
+            let map = TelegramMediaMap(latitude: latitude, longitude: longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil)
             let attributes: [InstantPageImageAttribute] = [InstantPageMapAttribute(zoom: zoom, dimensions: dimensions.cgSize)]
             
             var contentSize = CGSize(width: boundingWidth - safeInset * 2.0, height: 0.0)

@@ -83,7 +83,7 @@ private func mergedState(transaction: Transaction, state: SearchMessagesPeerStat
             users = apiUsers
             totalCount = Int32(messages.count)
             nextRate = nil
-        case let .messagesSlice(_, count, _, apiNextRate, apiMessages, apiChats, apiUsers):
+        case let .messagesSlice(_, count, apiNextRate, _, apiMessages, apiChats, apiUsers):
             messages = apiMessages
             chats = apiChats
             users = apiUsers

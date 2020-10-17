@@ -68,22 +68,33 @@ private class LocationMapView: MKMapView, UIGestureRecognizerDelegate {
     }
 }
 
-private func generateHeadingArrowImage() -> UIImage? {
-    return generateImage(CGSize(width: 28.0, height: 28.0), contextGenerator: { size, context in
+func generateHeadingArrowImage() -> UIImage? {
+    return generateImage(CGSize(width: 88.0, height: 88.0), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
+    
+        context.move(to: CGPoint(x: 44.0, y: 44.0))
+        context.addArc(center: CGPoint(x: 44.0, y: 44.0), radius: 44.0, startAngle: CGFloat.pi / 2.0 + CGFloat.pi / 6.0, endAngle: CGFloat.pi / 2.0 - CGFloat.pi / 6.0, clockwise: true)
+        context.clip()
         
-        context.setFillColor(UIColor(rgb: 0x3393fe).cgColor)
+        var locations: [CGFloat] = [0.0, 0.5, 1.0]
+        let colors: [CGColor] = [UIColor(rgb: 0x007ee5, alpha: 0.0).cgColor, UIColor(rgb: 0x007ee5, alpha: 0.75).cgColor, UIColor(rgb: 0x007ee5, alpha: 0.0).cgColor]
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
         
-        context.move(to: CGPoint(x: 14.0, y: 0.0))
-        context.addLine(to: CGPoint(x: 19.0, y: 7.0))
-        context.addLine(to: CGPoint(x: 9.0, y: 7.0))
-        context.closePath()
-        context.fillPath()
+        context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: bounds.size.height), options: CGGradientDrawingOptions())
+    })
+}
+
+private func generateProximityDim(size: CGSize, rect: CGRect) -> UIImage {
+    return generateImage(size, rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setFillColor(UIColor(rgb: 0x000000, alpha: 0.4).cgColor)
+        context.fill(CGRect(origin: CGPoint(), size: size))
         
         context.setBlendMode(.clear)
-        context.fillEllipse(in: bounds.insetBy(dx: 5.0, dy: 5.0))
-    })
+        context.fillEllipse(in: rect)
+    })!
 }
 
 final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
@@ -107,6 +118,37 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     
     var annotationSelected: ((LocationPinAnnotation?) -> Void)?
     var userLocationAnnotationSelected: (() -> Void)?
+        
+    var proximityDimView = UIImageView()
+    var proximityRadius: Double? {
+        didSet {
+            if let radius = self.proximityRadius, let mapView = self.mapView {
+                let region = MKCoordinateRegion(center: mapView.userLocation.coordinate, latitudinalMeters: radius * 2.0, longitudinalMeters: radius * 2.0)
+                let rect = mapView.convert(region, toRectTo: mapView)
+                if proximityDimView.image == nil {
+                    proximityDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
+                
+                if oldValue == 0 {
+                    UIView.transition(with: proximityDimView, duration: 0.2, options: .transitionCrossDissolve) {
+                        self.proximityDimView.image = generateProximityDim(size: mapView.bounds.size, rect: rect)
+                    } completion: { _ in
+                        
+                    }
+                } else {
+                    proximityDimView.image = generateProximityDim(size: mapView.bounds.size, rect: rect)
+                }
+            } else {
+                if proximityDimView.image != nil {
+                    UIView.transition(with: proximityDimView, duration: 0.2, options: .transitionCrossDissolve) {
+                        self.proximityDimView.image = nil
+                    } completion: { _ in
+                        
+                    }
+                }
+            }
+        }
+    }
     
     override init() {
         self.pickerAnnotationContainerView = PickerAnnotationContainerView()
@@ -123,7 +165,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         super.didLoad()
         
         self.headingArrowView = UIImageView()
-        self.headingArrowView?.frame = CGRect(origin: CGPoint(), size: CGSize(width: 28.0, height: 28.0))
+        self.headingArrowView?.frame = CGRect(origin: CGPoint(), size: CGSize(width: 88.0, height: 88.0))
         self.headingArrowView?.image = generateHeadingArrowImage()
         
         self.mapView?.interactiveTransitionGestureRecognizerTest = { p in
@@ -151,6 +193,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
             return false
         }
         
+        self.mapView?.addSubview(self.proximityDimView)
         self.view.addSubview(self.pickerAnnotationContainerView)
     }
     
@@ -303,6 +346,52 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         }
     }
     
+    var circleOverlay: MKCircle?
+    var activeProximityRadius: Double? {
+        didSet {
+            if let activeProximityRadius = self.activeProximityRadius {
+                if let circleOverlay = self.circleOverlay {
+                    self.circleOverlay = nil
+                    self.mapView?.removeOverlay(circleOverlay)
+                }
+                if let location = self.currentUserLocation {
+                    let overlay = MKCircle(center: location.coordinate, radius: activeProximityRadius)
+                    self.circleOverlay = overlay
+                    self.mapView?.addOverlay(overlay)
+                }
+            } else {
+                if let circleOverlay = self.circleOverlay {
+                    self.circleOverlay = nil
+                    self.mapView?.removeOverlay(circleOverlay)
+                }
+            }
+        }
+    }
+    
+    func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+        if let circle = overlay as? MKCircle {
+            let renderer = MKCircleRenderer(circle: circle)
+            renderer.fillColor = .clear
+            renderer.strokeColor = UIColor(rgb: 0xc3baaf)
+            renderer.lineWidth = 1.0
+            renderer.lineDashPattern = [5, 3]
+            return renderer
+        } else {
+            return MKOverlayRenderer()
+        }
+    }
+    
+    var distance: Double? {
+        if let annotation = self.annotations.first, let location = self.currentUserLocation {
+            return location.distance(from: CLLocation(latitude: annotation.coordinate.latitude, longitude: annotation.coordinate.longitude))
+        }
+        return nil
+    }
+    
+    var currentUserLocation: CLLocation? {
+        return self.mapView?.userLocation.location
+    }
+    
     var userLocation: Signal<CLLocation?, NoError> {
         return self.locationPromise.get()
     }
@@ -312,6 +401,13 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
             return nil
         }
         return mapView.convert(CGPoint(x: (mapView.frame.width + pinOffset.x) / 2.0, y: (mapView.frame.height + pinOffset.y) / 2.0), toCoordinateFrom: mapView)
+    }
+    
+    var mapSpan: MKCoordinateSpan? {
+        guard let mapView = self.mapView else {
+            return nil
+        }
+        return mapView.region.span
     }
     
     func resetAnnotationSelection() {
@@ -359,6 +455,8 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     var userLocationAnnotation: LocationPinAnnotation? = nil {
         didSet {
             if let annotation = self.userLocationAnnotation {
+                self.customUserLocationAnnotationView?.removeFromSuperview()
+                
                 let annotationView = LocationPinAnnotationView(annotation: annotation)
                 annotationView.frame = annotationView.frame.offsetBy(dx: 21.0, dy: 22.0)
                 if let parentView = self.userLocationAnnotationView {
@@ -448,6 +546,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     }
     
     func updateLayout(size: CGSize) {
+        self.proximityDimView.frame = CGRect(origin: CGPoint(), size: size)
         self.pickerAnnotationContainerView.frame = CGRect(x: 0.0, y: floorToScreenPixels((size.height - size.width) / 2.0), width: size.width, height: size.width)
         if let pickerAnnotationView = self.pickerAnnotationView {
             pickerAnnotationView.center = CGPoint(x: self.pickerAnnotationContainerView.frame.width / 2.0, y: self.pickerAnnotationContainerView.frame.height / 2.0)

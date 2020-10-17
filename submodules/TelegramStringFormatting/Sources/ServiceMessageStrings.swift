@@ -442,6 +442,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 attributedString = addAttributesToStringWithRanges(strings.Notification_Joined(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
             case .phoneNumberRequest:
                 attributedString = nil
+            case let .geoProximityReached(distance):
+                attributedString = NSAttributedString(string: "\(message.peers[message.id.peerId]?.compactDisplayTitle ?? "") is now within \(distance) m from you", font: titleFont, textColor: primaryTextColor)
             case .unknown:
                 attributedString = nil
             }
