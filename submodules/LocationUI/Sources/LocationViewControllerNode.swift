@@ -14,6 +14,11 @@ import AccountContext
 import AppBundle
 import CoreLocation
 import Geocoding
+import TelegramStringFormatting
+
+func getLocation(from message: Message) -> TelegramMediaMap? {
+    return message.media.first(where: { $0 is TelegramMediaMap } ) as? TelegramMediaMap
+}
 
 private func areMessagesEqual(_ lhsMessage: Message, _ rhsMessage: Message) -> Bool {
     if lhsMessage.stableVersion != rhsMessage.stableVersion {
@@ -39,8 +44,8 @@ private enum LocationViewEntryId: Hashable {
 
 private enum LocationViewEntry: Comparable, Identifiable {
     case info(PresentationTheme, TelegramMediaMap, String?, Double?, Double?)
-    case toggleLiveLocation(PresentationTheme, String, String)
-    case liveLocation(PresentationTheme, Message, Int)
+    case toggleLiveLocation(PresentationTheme, String, String, CLLocationCoordinate2D?, Double?, Double?)
+    case liveLocation(PresentationTheme, Message, Double?, Int)
     
     var stableId: LocationViewEntryId {
         switch self {
@@ -48,8 +53,12 @@ private enum LocationViewEntry: Comparable, Identifiable {
                 return .info
             case .toggleLiveLocation:
                 return .toggleLiveLocation
-            case let .liveLocation(_, message, _):
-                return .liveLocation(message.id.peerId)
+            case let .liveLocation(_, message, _, _):
+                if let author = message.author {
+                    return .liveLocation(author.id)
+                } else {
+                    return .liveLocation(message.id.peerId)
+                }
         }
     }
     
@@ -61,14 +70,14 @@ private enum LocationViewEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .toggleLiveLocation(lhsTheme, lhsTitle, lhsSubtitle):
-                if case let .toggleLiveLocation(rhsTheme, rhsTitle, rhsSubtitle) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle {
+            case let .toggleLiveLocation(lhsTheme, lhsTitle, lhsSubtitle, lhsCoordinate, lhsBeginTimestamp, lhsTimeout):
+                if case let .toggleLiveLocation(rhsTheme, rhsTitle, rhsSubtitle, rhsCoordinate, rhsBeginTimestamp, rhsTimeout) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsCoordinate == rhsCoordinate, lhsBeginTimestamp == rhsBeginTimestamp, lhsTimeout == rhsTimeout {
                     return true
                 } else {
                     return false
                 }
-            case let .liveLocation(lhsTheme, lhsMessage, lhsIndex):
-                if case let .liveLocation(rhsTheme, rhsMessage, rhsIndex) = rhs, lhsTheme === rhsTheme, areMessagesEqual(lhsMessage, rhsMessage), lhsIndex == rhsIndex {
+            case let .liveLocation(lhsTheme, lhsMessage, lhsDistance, lhsIndex):
+                if case let .liveLocation(rhsTheme, rhsMessage, rhsDistance, rhsIndex) = rhs, lhsTheme === rhsTheme, areMessagesEqual(lhsMessage, rhsMessage), lhsDistance == rhsDistance, lhsIndex == rhsIndex {
                     return true
                 } else {
                     return false
@@ -92,11 +101,11 @@ private enum LocationViewEntry: Comparable, Identifiable {
                     case .liveLocation:
                         return true
             }
-            case let .liveLocation(_, _, lhsIndex):
+            case let .liveLocation(_, _, _, lhsIndex):
                 switch rhs {
                     case .info, .toggleLiveLocation:
                         return false
-                    case let .liveLocation(_, _, rhsIndex):
+                    case let .liveLocation(_, _, _, rhsIndex):
                         return lhsIndex < rhsIndex
                 }
         }
@@ -123,13 +132,29 @@ private enum LocationViewEntry: Comparable, Identifiable {
                 }, getDirections: {
                     interaction?.requestDirections()
                 })
-            case let .toggleLiveLocation(theme, title, subtitle):
-                return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: account, title: title, subtitle: subtitle, icon: .liveLocation, action: {
-//                    if let coordinate = coordinate {
-//                        interaction?.sendLiveLocation(coordinate)
-//                    }
+            case let .toggleLiveLocation(theme, title, subtitle, coordinate, beginTimstamp, timeout):
+                let beginTimeAndTimeout: (Double, Double)?
+                if let beginTimstamp = beginTimstamp, let timeout = timeout {
+                    beginTimeAndTimeout = (beginTimstamp, timeout)
+                } else {
+                    beginTimeAndTimeout = nil
+                }
+                return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: account, title: title, subtitle: subtitle, icon: beginTimeAndTimeout != nil ? .stopLiveLocation : .liveLocation, beginTimeAndTimeout: beginTimeAndTimeout, action: {
+                    if beginTimeAndTimeout != nil {
+                        interaction?.stopLiveLocation()
+                    } else if let coordinate = coordinate {
+                        interaction?.sendLiveLocation(coordinate)
+                    }
+                }, highlighted: { highlight in
+                    interaction?.updateSendActionHighlight(highlight)
                 })
-            case let .liveLocation(theme, message, _):
+            case let .liveLocation(theme, message, distance, _):
+                let distanceString: String?
+                if let distance = distance {
+                    distanceString = distance < 10 ? presentationData.strings.Map_YouAreHere : presentationData.strings.Map_DistanceAway(stringForDistance(strings: presentationData.strings, distance: distance)).0
+                } else {
+                    distanceString = nil
+                }
                 return ItemListTextItem(presentationData: ItemListPresentationData(presentationData), text: .plain(""), sectionId: 0)
         }
     }
@@ -148,7 +173,7 @@ private func preparedTransition(from fromEntries: [LocationViewEntry], to toEntr
 enum LocationViewLocation: Equatable {
     case initial
     case user
-    case coordinate(CLLocationCoordinate2D)
+    case coordinate(CLLocationCoordinate2D, Bool)
     case custom
 }
 
@@ -156,11 +181,13 @@ struct LocationViewState {
     var mapMode: LocationMapMode
     var displayingMapModeOptions: Bool
     var selectedLocation: LocationViewLocation
+    var proximityRadius: Double?
     
     init() {
         self.mapMode = .map
         self.displayingMapModeOptions = false
         self.selectedLocation = .initial
+        self.proximityRadius = nil
     }
 }
 
@@ -168,11 +195,11 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
     private let context: AccountContext
     private var presentationData: PresentationData
     private let presentationDataPromise: Promise<PresentationData>
-    private var mapMedia: TelegramMediaMap
+    private var subject: Message
     private let interaction: LocationViewInteraction
     
     private let listNode: ListView
-    private let headerNode: LocationMapHeaderNode
+    let headerNode: LocationMapHeaderNode
     private let optionsNode: LocationOptionsNode
     
     private var enqueuedTransitions: [LocationViewTransaction] = []
@@ -185,11 +212,11 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     private var listOffset: CGFloat?
 
-    init(context: AccountContext, presentationData: PresentationData, mapMedia: TelegramMediaMap, interaction: LocationViewInteraction) {
+    init(context: AccountContext, presentationData: PresentationData, subject: Message, interaction: LocationViewInteraction) {
         self.context = context
         self.presentationData = presentationData
         self.presentationDataPromise = Promise(presentationData)
-        self.mapMedia = mapMedia
+        self.subject = subject
         self.interaction = interaction
         
         self.state = LocationViewState()
@@ -213,44 +240,131 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
         self.addSubnode(self.headerNode)
         self.addSubnode(self.optionsNode)
         
-        let distance: Signal<Double?, NoError> = .single(nil)
+        let userLocation: Signal<CLLocation?, NoError> = .single(nil)
         |> then(
             throttledUserLocation(self.headerNode.mapNode.userLocation)
-            |> map { userLocation -> Double? in
-                let location = CLLocation(latitude: mapMedia.latitude, longitude: mapMedia.longitude)
-                return userLocation.flatMap { location.distance(from: $0) }
-            }
         )
-        let address: Signal<String?, NoError>
+        
         var eta: Signal<Double?, NoError> = .single(nil)
-        |> then(
-            driveEta(coordinate: mapMedia.coordinate)
-        )
-        if let venue = mapMedia.venue, let venueAddress = venue.address, !venueAddress.isEmpty {
-            address = .single(venueAddress)
-        } else if mapMedia.liveBroadcastingTimeout == nil {
-            address = .single(nil)
-            |> then(
-                reverseGeocodeLocation(latitude: mapMedia.latitude, longitude: mapMedia.longitude)
-                |> map { placemark -> String? in
-                    return placemark?.compactDisplayAddress ?? ""
-                }
-            )
-        } else {
-            address = .single(nil)
+        var address: Signal<String?, NoError> = .single(nil)
+        
+        if let location = getLocation(from: subject), location.liveBroadcastingTimeout == nil {
             eta = .single(nil)
+            |> then(driveEta(coordinate: location.coordinate))
+            
+            if let venue = location.venue, let venueAddress = venue.address, !venueAddress.isEmpty {
+                address = .single(venueAddress)
+            } else {
+                address = .single(nil)
+                |> then(
+                    reverseGeocodeLocation(latitude: location.latitude, longitude: location.longitude)
+                    |> map { placemark -> String? in
+                        return placemark?.compactDisplayAddress ?? ""
+                    }
+                )
+            }
+        }
+        
+        let liveLocations = topPeerActiveLiveLocationMessages(viewTracker: context.account.viewTracker, accountPeerId: context.account.peerId, peerId: subject.id.peerId)
+        |> map { _, messages -> [Message] in
+            return messages
         }
         
         let previousState = Atomic<LocationViewState?>(value: nil)
+        let previousUserAnnotation = Atomic<LocationPinAnnotation?>(value: nil)
         let previousAnnotations = Atomic<[LocationPinAnnotation]>(value: [])
         let previousEntries = Atomic<[LocationViewEntry]?>(value: nil)
         
-        self.disposable = (combineLatest(self.presentationDataPromise.get(), self.statePromise.get(), self.headerNode.mapNode.userLocation, distance, address, eta)
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, userLocation, distance, address, eta in
-            if let strongSelf = self {
+        let selfPeer = context.account.postbox.transaction { transaction -> Peer? in
+            return transaction.getPeer(context.account.peerId)
+        }
+        
+        self.disposable = (combineLatest(self.presentationDataPromise.get(), self.statePromise.get(), selfPeer, liveLocations, self.headerNode.mapNode.userLocation, userLocation, address, eta)
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, selfPeer, liveLocations, userLocation, distance, address, eta in
+            if let strongSelf = self, let location = getLocation(from: subject) {
                 var entries: [LocationViewEntry] = []
-
-                entries.append(.info(presentationData.theme, mapMedia, address, distance, eta))
+                var annotations: [LocationPinAnnotation] = []
+                var userAnnotation: LocationPinAnnotation? = nil
+                var effectiveLiveLocations: [Message] = liveLocations
+                
+                let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                
+                var proximityNotification: Bool? = nil
+                var index: Int = 0
+                
+                if location.liveBroadcastingTimeout == nil {
+                    let subjectLocation = CLLocation(latitude: location.latitude, longitude: location.longitude)
+                    let distance = userLocation.flatMap { subjectLocation.distance(from: $0) }
+                    
+                    entries.append(.info(presentationData.theme, location, address, distance, eta))
+                    
+                    annotations.append(LocationPinAnnotation(context: context, theme: presentationData.theme, location: location, forcedSelection: true))
+                } else {
+                    var activeOwnLiveLocation: Message?
+                    for message in effectiveLiveLocations {
+                        if message.localTags.contains(.OutgoingLiveLocation) {
+                            activeOwnLiveLocation = message
+                            break
+                        }
+                    }
+                    
+                    let title: String
+                    let subtitle: String
+                    let beginTime: Double?
+                    let timeout: Double?
+                    
+                    if let message = activeOwnLiveLocation {
+                        var liveBroadcastingTimeout: Int32 = 0
+                        if let location = getLocation(from: message), let timeout = location.liveBroadcastingTimeout {
+                            liveBroadcastingTimeout = timeout
+                        }
+                        title = presentationData.strings.Map_StopLiveLocation
+                        
+                        var updateTimestamp = message.timestamp
+                        for attribute in message.attributes {
+                            if let attribute = attribute as? EditedMessageAttribute {
+                                updateTimestamp = attribute.date
+                                break
+                            }
+                        }
+                        
+                        subtitle = stringForRelativeLiveLocationTimestamp(strings: presentationData.strings, relativeTimestamp: updateTimestamp, relativeTo: currentTime, dateTimeFormat: presentationData.dateTimeFormat)
+                        beginTime = Double(message.timestamp)
+                        timeout = Double(liveBroadcastingTimeout)
+                    } else {
+                        title = presentationData.strings.Map_ShareLiveLocation
+                        subtitle = presentationData.strings.Map_ShareLiveLocation
+                        beginTime = nil
+                        timeout = nil
+                    }
+                    
+                    entries.append(.toggleLiveLocation(presentationData.theme, title, subtitle, userLocation?.coordinate, beginTime, timeout))
+                    if effectiveLiveLocations.isEmpty {
+                        effectiveLiveLocations = [subject]
+                    }
+                }
+                                
+                for message in effectiveLiveLocations {
+                    var liveBroadcastingTimeout: Int32 = 0
+                    if let location = getLocation(from: message), let timeout = location.liveBroadcastingTimeout {
+                        liveBroadcastingTimeout = timeout
+                    }
+                    let remainingTime = max(0, message.timestamp + liveBroadcastingTimeout - currentTime)
+                    if message.flags.contains(.Incoming) && remainingTime != 0 {
+                        proximityNotification = state.proximityRadius != nil
+                    }
+                    
+                    let subjectLocation = CLLocation(latitude: location.latitude, longitude: location.longitude)
+                    let distance = userLocation.flatMap { subjectLocation.distance(from: $0) }
+                    entries.append(.liveLocation(presentationData.theme, message, distance, index))
+                    
+                    if message.localTags.contains(.OutgoingLiveLocation), let selfPeer = selfPeer {
+                        userAnnotation = LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer, heading: nil)
+                    } else {
+                        annotations.append(LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: nil, heading: nil))
+                    }
+                    index += 1
+                }
                 
                 let previousEntries = previousEntries.swap(entries)
                 let previousState = previousState.swap(state)
@@ -258,17 +372,17 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
                 let transition = preparedTransition(from: previousEntries ?? [], to: entries, account: context.account, presentationData: presentationData, interaction: strongSelf.interaction)
                 strongSelf.enqueueTransition(transition)
                 
-                strongSelf.headerNode.updateState(mapMode: state.mapMode, displayingMapModeOptions: state.displayingMapModeOptions, displayingPlacesButton: false, proximityNotification: false, animated: false)
+                strongSelf.headerNode.updateState(mapMode: state.mapMode, displayingMapModeOptions: state.displayingMapModeOptions, displayingPlacesButton: false, proximityNotification: proximityNotification, animated: false)
                 
                 switch state.selectedLocation {
                     case .initial:
                         if previousState?.selectedLocation != .initial {
-                            strongSelf.headerNode.mapNode.setMapCenter(coordinate: mapMedia.coordinate, span: viewMapSpan, animated: previousState != nil)
+                            strongSelf.headerNode.mapNode.setMapCenter(coordinate: location.coordinate, span: viewMapSpan, animated: previousState != nil)
                         }
-                    case let .coordinate(coordinate):
-                        if let previousState = previousState, case let .coordinate(previousCoordinate) = previousState.selectedLocation, previousCoordinate == coordinate {
+                    case let .coordinate(coordinate, defaultSpan):
+                        if let previousState = previousState, case let .coordinate(previousCoordinate, _) = previousState.selectedLocation, previousCoordinate == coordinate {
                         } else {
-                            strongSelf.headerNode.mapNode.setMapCenter(coordinate: coordinate, span: viewMapSpan, animated: true)
+                            strongSelf.headerNode.mapNode.setMapCenter(coordinate: coordinate, span: defaultSpan ? defaultMapSpan : viewMapSpan, animated: true)
                         }
                     case .user:
                         if previousState?.selectedLocation != .user, let userLocation = userLocation {
@@ -277,18 +391,21 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
                     case .custom:
                         break
                 }
-                
-                let annotations: [LocationPinAnnotation] = [LocationPinAnnotation(context: context, theme: presentationData.theme, location: mapMedia, forcedSelection: true)]
 
                 let previousAnnotations = previousAnnotations.swap(annotations)
+                let previousUserAnnotation = previousUserAnnotation.swap(userAnnotation)
+                if (userAnnotation == nil) != (previousUserAnnotation == nil) {
+                    strongSelf.headerNode.mapNode.userLocationAnnotation = userAnnotation
+                }
                 if annotations != previousAnnotations {
                     strongSelf.headerNode.mapNode.annotations = annotations
                 }
                 
+                strongSelf.headerNode.mapNode.activeProximityRadius = state.proximityRadius
+                
                 if let (layout, navigationBarHeight) = strongSelf.validLayout {
                     var updateLayout = false
-                    var transition: ContainedViewLayoutTransition = .animated(duration: 0.45, curve: .spring)
-                    
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.45, curve: .spring)
                     if previousState?.displayingMapModeOptions != state.displayingMapModeOptions {
                         updateLayout = true
                     }
@@ -355,6 +472,10 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
         self.statePromise.set(.single(self.state))
     }
     
+    func updateSendActionHighlight(_ highlighted: Bool) {
+        self.headerNode.updateHighlight(highlighted)
+    }
+    
     private func enqueueTransition(_ transition: LocationViewTransaction) {
         self.enqueuedTransitions.append(transition)
         
@@ -371,15 +492,46 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
         }
         self.enqueuedTransitions.remove(at: 0)
         
-        var options = ListViewDeleteAndInsertOptions()
-
-        
+        let options = ListViewDeleteAndInsertOptions()
         self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
         })
     }
     
     func scrollToTop() {
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+    }
+    
+    func setProximityIndicator(radius: Int32?) {
+        if let radius = radius {
+            self.headerNode.forceIsHidden = true
+            
+            if var coordinate = self.headerNode.mapNode.currentUserLocation?.coordinate, let span = self.headerNode.mapNode.mapSpan {
+                coordinate.latitude -= span.latitudeDelta * 0.11
+                self.updateState { state in
+                    var state = state
+                    state.selectedLocation = .coordinate(coordinate, true)
+                    return state
+                }
+            }
+            
+            self.headerNode.mapNode.proximityRadius = Double(radius)
+        } else {
+            self.headerNode.forceIsHidden = false
+            self.headerNode.mapNode.proximityRadius = nil
+            self.updateState { state in
+                var state = state
+                state.selectedLocation = .user
+                return state
+            }
+        }
+    }
+    
+    func setProximityRadius(radius: Int32?) {
+        self.updateState { state in
+            var state = state
+            state.proximityRadius = radius.flatMap { Double($0) }
+            return state
+        }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -397,7 +549,11 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
         }
         
         let overlap: CGFloat = 6.0
-        let topInset: CGFloat = layout.size.height - layout.intrinsicInsets.bottom - 126.0 - overlap
+        var topInset: CGFloat = layout.size.height - layout.intrinsicInsets.bottom - 126.0 - overlap
+        if let location = getLocation(from: self.subject), location.liveBroadcastingTimeout != nil {
+            topInset += 66.0
+        }
+        
         let headerHeight: CGFloat
         if let listOffset = self.listOffset {
             headerHeight = max(0.0, listOffset + overlap)

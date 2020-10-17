@@ -139,7 +139,7 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                 } else {
                     icon = .location
                 }
-                return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: account, title: title, subtitle: subtitle, icon: icon, action: {
+                return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: account, title: title, subtitle: subtitle, icon: icon, beginTimeAndTimeout: nil, action: {
                     if let venue = venue {
                         interaction?.sendVenue(venue)
                     } else if let coordinate = coordinate {
@@ -149,7 +149,7 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                     interaction?.updateSendActionHighlight(highlighted)
                 })
             case let .liveLocation(_, title, subtitle, coordinate):
-                return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: account, title: title, subtitle: subtitle, icon: .liveLocation, action: {
+                return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: account, title: title, subtitle: subtitle, icon: .liveLocation, beginTimeAndTimeout: nil, action: {
                     if let coordinate = coordinate {
                         interaction?.sendLiveLocation(coordinate)
                     }

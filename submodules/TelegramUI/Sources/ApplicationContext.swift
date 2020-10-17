@@ -320,7 +320,7 @@ final class AuthorizedApplicationContext {
                                 }
                             }
                             
-                            if chatIsVisible {
+                            if false, chatIsVisible {
                                 return
                             }
                             

@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 import AppBundle
+import CoreLocation
 
 private let panelInset: CGFloat = 4.0
 private let panelButtonSize = CGSize(width: 46.0, height: 46.0)
@@ -38,7 +39,7 @@ final class LocationMapHeaderNode: ASDisplayNode {
     private let toggleMapModeSelection: () -> Void
     private let goToUserLocation: () -> Void
     private let showPlacesInThisArea: () -> Void
-    private let setupProximityNotification: () -> Void
+    private let setupProximityNotification: (CLLocationCoordinate2D, Bool) -> Void
     
     private var displayingPlacesButton = false
     private var proximityNotification: Bool?
@@ -56,7 +57,7 @@ final class LocationMapHeaderNode: ASDisplayNode {
     
     private var validLayout: (ContainerViewLayout, CGFloat, CGFloat, CGFloat, CGSize)?
     
-    init(presentationData: PresentationData, toggleMapModeSelection: @escaping () -> Void, goToUserLocation: @escaping () -> Void, setupProximityNotification: @escaping () -> Void = {}, showPlacesInThisArea: @escaping () -> Void = {}) {
+    init(presentationData: PresentationData, toggleMapModeSelection: @escaping () -> Void, goToUserLocation: @escaping () -> Void, setupProximityNotification: @escaping (CLLocationCoordinate2D, Bool) -> Void = { _, _ in }, showPlacesInThisArea: @escaping () -> Void = {}) {
         self.presentationData = presentationData
         self.toggleMapModeSelection = toggleMapModeSelection
         self.goToUserLocation = goToUserLocation
@@ -88,6 +89,8 @@ final class LocationMapHeaderNode: ASDisplayNode {
         
         self.notificationButtonNode = HighlightableButtonNode()
         self.notificationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/NotificationIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .normal)
+        self.notificationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/MuteIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .selected)
+        self.notificationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/MuteIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: [.selected, .highlighted])
         
         self.placesBackgroundNode = ASImageNode()
         self.placesBackgroundNode.contentMode = .scaleToFill
@@ -129,6 +132,7 @@ final class LocationMapHeaderNode: ASDisplayNode {
     func updateState(mapMode: LocationMapMode, displayingMapModeOptions: Bool, displayingPlacesButton: Bool, proximityNotification: Bool?, animated: Bool) {
         self.mapNode.mapMode = mapMode
         self.infoButtonNode.isSelected = displayingMapModeOptions
+        self.notificationButtonNode.isSelected = proximityNotification ?? false
         
         let updateLayout = self.displayingPlacesButton != displayingPlacesButton || self.proximityNotification != proximityNotification
         self.displayingPlacesButton = displayingPlacesButton
@@ -190,8 +194,16 @@ final class LocationMapHeaderNode: ASDisplayNode {
         transition.updateFrame(node: self.optionsBackgroundNode, frame: CGRect(x: size.width - inset - panelButtonSize.width - panelInset * 2.0, y: navigationBarHeight + topPadding + inset, width: panelButtonSize.width + panelInset * 2.0, height: panelHeight + panelInset * 2.0))
         
         let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-        let optionsAlpha: CGFloat = size.height > 160.0 + navigationBarHeight ? 1.0 : 0.0
+        let optionsAlpha: CGFloat = size.height > 160.0 + navigationBarHeight && !self.forceIsHidden ? 1.0 : 0.0
         alphaTransition.updateAlpha(node: self.optionsBackgroundNode, alpha: optionsAlpha)
+    }
+    
+    var forceIsHidden: Bool = false {
+        didSet {
+            if let (layout, navigationBarHeight, topPadding, offset, size) = self.validLayout {
+                self.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, topPadding: topPadding, offset: offset, size: size, transition: .immediate)
+            }
+        }
     }
     
     func updateHighlight(_ highlighted: Bool) {
@@ -207,7 +219,9 @@ final class LocationMapHeaderNode: ASDisplayNode {
     }
     
     @objc private func notificationPressed() {
-        self.setupProximityNotification()
+        if let proximityNotification = self.proximityNotification, let location = self.mapNode.currentUserLocation {
+            self.setupProximityNotification(location.coordinate, proximityNotification)
+        }
     }
     
     @objc private func placesPressed() {
