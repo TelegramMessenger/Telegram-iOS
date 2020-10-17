@@ -59,6 +59,10 @@ final class WidgetDataContext {
             } else {
                 let _ = try? FileManager.default.removeItem(atPath: path)
             }
+            
+            if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
+                WidgetCenter.shared.reloadAllTimelines()
+            }
         })
         
         self.widgetPresentationDataDisposable = (presentationData
