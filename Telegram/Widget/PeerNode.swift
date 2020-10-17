@@ -94,6 +94,14 @@ private func avatarViewLettersImage(size: CGSize, peerId: Int64, accountPeerId: 
 
 private let avatarSize = CGSize(width: 50.0, height: 50.0)
 
+func avatarImage(accountPeerId: Int64, peer: WidgetDataPeer, size: CGSize) -> UIImage {
+    if let path = peer.avatarPath, let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image) {
+        return roundImage
+    } else {
+        return avatarViewLettersImage(size: size, peerId: peer.id, accountPeerId: accountPeerId, letters: peer.letters)!
+    }
+}
+
 private final class AvatarView: UIImageView {
     init(accountPeerId: Int64, peer: WidgetDataPeer, size: CGSize) {
         super.init(frame: CGRect())
