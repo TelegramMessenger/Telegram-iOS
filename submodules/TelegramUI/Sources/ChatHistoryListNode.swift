@@ -526,6 +526,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     var maxVisibleMessageIndexUpdated: ((MessageIndex) -> Void)?
     
     var scrolledToIndex: ((MessageHistoryAnchorIndex) -> Void)?
+    var beganDragging: (() -> Void)?
     
     private let hasVisiblePlayableItemNodesPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     var hasVisiblePlayableItemNodes: Signal<Bool, NoError> {
@@ -1121,6 +1122,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.beganInteractiveDragging = { [weak self] in
             self?.isInteractivelyScrollingValue = true
             self?.isInteractivelyScrollingPromise.set(true)
+            self?.beganDragging?()
         }
         
         self.didEndScrolling = { [weak self] in

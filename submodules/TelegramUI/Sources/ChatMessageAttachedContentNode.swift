@@ -572,7 +572,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 }
                             }
                         
-                            statusSizeAndApply = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions, dateReplies)
+                            statusSizeAndApply = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions, dateReplies, message.tags.contains(.pinned))
                         }
                     default:
                         break

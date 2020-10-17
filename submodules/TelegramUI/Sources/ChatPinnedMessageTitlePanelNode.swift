@@ -362,7 +362,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     
     @objc func closePressed() {
         if let interfaceInteraction = self.interfaceInteraction, let message = self.currentMessage {
-            interfaceInteraction.unpinMessage(message.message.id)
+            interfaceInteraction.unpinMessage(message.message.id, true)
         }
     }
 }

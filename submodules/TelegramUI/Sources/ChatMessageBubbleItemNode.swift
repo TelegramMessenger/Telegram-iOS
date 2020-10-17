@@ -609,9 +609,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             if let strongSelf = self {
                 for contentNode in strongSelf.contentNodes {
                     var translatedPoint: CGPoint?
-                    let convertedNodeFrame = contentNode.convert(contentNode.bounds, to: strongSelf)
+                    let convertedNodeFrame = contentNode.view.convert(contentNode.bounds, to: strongSelf.view)
                     if let point = point, convertedNodeFrame.insetBy(dx: -4.0, dy: -4.0).contains(point) {
-                        translatedPoint = strongSelf.convert(point, to: contentNode)
+                        translatedPoint = strongSelf.view.convert(point, to: contentNode.view)
                     }
                     contentNode.updateTouchesAtPoint(translatedPoint)
                 }
@@ -905,7 +905,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         forwardInfoLayout: (ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, String?, CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode),
         replyInfoLayout: (ChatPresentationData, PresentationStrings, AccountContext, ChatMessageReplyInfoType, Message, CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode),
         actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (Bool) -> ChatMessageActionButtonsNode)),
-        mosaicStatusLayout: (AccountContext, ChatPresentationData, Bool, Int?, String, ChatMessageDateAndStatusType, CGSize, [MessageReaction], Int) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode),
+        mosaicStatusLayout: (AccountContext, ChatPresentationData, Bool, Int?, String, ChatMessageDateAndStatusType, CGSize, [MessageReaction], Int, Bool) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode),
         currentShareButtonNode: HighlightableButtonNode?,
         layoutConstants: ChatMessageItemLayoutConstants,
         currentItem: ChatMessageItem?,
@@ -1442,7 +1442,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                 }
                 
-                mosaicStatusSizeAndApply = mosaicStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies)
+                mosaicStatusSizeAndApply = mosaicStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, message.tags.contains(.pinned))
             }
         }
         
@@ -2873,7 +2873,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                 }
                 loop: for contentNode in self.contentNodes {
-                    let convertedLocation = self.convert(location, to: contentNode)
+                    let convertedLocation = self.view.convert(location, to: contentNode.view)
 
                     let tapAction = contentNode.tapActionAtPoint(convertedLocation, gesture: gesture, isEstimating: false)
                     switch tapAction {
@@ -2982,9 +2982,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     var tapMessage: Message? = item.content.firstMessage
                     var selectAll = true
                     loop: for contentNode in self.contentNodes {
-                        let convertedLocation = self.convert(location, to: contentNode)
+                        let convertedLocation = self.view.convert(location, to: contentNode.view)
                         
-                        let convertedNodeFrame = contentNode.convert(contentNode.bounds, to: self)
+                        let convertedNodeFrame = contentNode.view.convert(contentNode.bounds, to: self.view)
                         if !convertedNodeFrame.contains(location) {
                             continue loop
                         } else if contentNode is ChatMessageMediaBubbleContentNode {

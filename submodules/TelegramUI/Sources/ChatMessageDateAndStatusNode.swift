@@ -180,7 +180,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         self.addSubnode(self.dateNode)
     }
     
-    func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize, _ reactions: [MessageReaction], _ replies: Int) -> (CGSize, (Bool) -> Void) {
+    func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize, _ reactions: [MessageReaction], _ replies: Int, _ isPinned: Bool) -> (CGSize, (Bool) -> Void) {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
         
         var checkReadNode = self.checkReadNode
@@ -200,7 +200,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         
         let previousLayoutSize = self.layoutSize
         
-        return { context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replyCount in
+        return { context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replyCount, isPinned in
             let dateColor: UIColor
             var backgroundImage: UIImage?
             var outgoingStatus: ChatMessageDateAndStatusOutgoingType?
@@ -234,6 +234,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     }
                     if replyCount != 0 {
                         repliesImage = graphics.incomingDateAndStatusRepliesIcon
+                    } else if isPinned {
+                        repliesImage = graphics.incomingDateAndStatusPinnedIcon
                     }
                 case let .BubbleOutgoing(status):
                     dateColor = presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
@@ -248,6 +250,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     }
                     if replyCount != 0 {
                         repliesImage = graphics.outgoingDateAndStatusRepliesIcon
+                    } else if isPinned {
+                        repliesImage = graphics.outgoingDateAndStatusPinnedIcon
                     }
                 case .ImageIncoming:
                     dateColor = presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor
@@ -262,6 +266,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     }
                     if replyCount != 0 {
                         repliesImage = graphics.mediaRepliesIcon
+                    } else if isPinned {
+                        repliesImage = graphics.mediaPinnedIcon
                     }
                 case let .ImageOutgoing(status):
                     dateColor = presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor
@@ -277,6 +283,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     }
                     if replyCount != 0 {
                         repliesImage = graphics.mediaRepliesIcon
+                    } else if isPinned {
+                        repliesImage = graphics.mediaPinnedIcon
                     }
                 case .FreeIncoming:
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
@@ -292,6 +300,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     }
                     if replyCount != 0 {
                         repliesImage = graphics.freeRepliesIcon
+                    } else if isPinned {
+                        repliesImage = graphics.freePinnedIcon
                     }
                 case let .FreeOutgoing(status):
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
@@ -308,6 +318,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     }
                     if replyCount != 0 {
                         repliesImage = graphics.freeRepliesIcon
+                    } else if isPinned {
+                        repliesImage = graphics.freePinnedIcon
                     }
             }
             
@@ -511,6 +523,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                 let layoutAndApply = makeReplyCountLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: countString, font: dateFont, textColor: dateColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0)))
                 reactionInset += 14.0 + layoutAndApply.0.size.width + 4.0
                 replyCountLayoutAndApply = layoutAndApply
+            } else if isPinned {
+                reactionInset += 12.0
             }
             
             leftInset += reactionInset
@@ -817,17 +831,17 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageDateAndStatusNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize, _ reactions: [MessageReaction], _ replies: Int) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode) {
+    static func asyncLayout(_ node: ChatMessageDateAndStatusNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ edited: Bool, _ impressionCount: Int?, _ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize, _ reactions: [MessageReaction], _ replies: Int, _ isPinned: Bool) -> (CGSize, (Bool) -> ChatMessageDateAndStatusNode) {
         let currentLayout = node?.asyncLayout()
-        return { context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replies in
+        return { context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replies, isPinned in
             let resultNode: ChatMessageDateAndStatusNode
             let resultSizeAndApply: (CGSize, (Bool) -> Void)
             if let node = node, let currentLayout = currentLayout {
                 resultNode = node
-                resultSizeAndApply = currentLayout(context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replies)
+                resultSizeAndApply = currentLayout(context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replies, isPinned)
             } else {
                 resultNode = ChatMessageDateAndStatusNode()
-                resultSizeAndApply = resultNode.asyncLayout()(context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replies)
+                resultSizeAndApply = resultNode.asyncLayout()(context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions, replies, isPinned)
             }
             
             return (resultSizeAndApply.0, { animated in
