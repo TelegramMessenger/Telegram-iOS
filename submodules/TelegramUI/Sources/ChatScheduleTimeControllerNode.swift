@@ -180,7 +180,6 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         
         let pickerView = UIDatePicker()
         pickerView.timeZone = TimeZone(secondsFromGMT: 0)
-        pickerView.setValue(textColor, forKey: "textColor")
         pickerView.datePickerMode = .countDownTimer
         pickerView.datePickerMode = .dateAndTime
         pickerView.locale = Locale.current
@@ -191,6 +190,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         if #available(iOS 13.4, *) {
             pickerView.preferredDatePickerStyle = .wheels
         }
+        pickerView.setValue(textColor, forKey: "textColor")
         self.pickerView = pickerView
         
         self.updateMinimumDate(currentTime: currentTime)
