@@ -113,7 +113,7 @@ private enum LocationViewEntry: Comparable, Identifiable {
     
     func item(account: Account, presentationData: PresentationData, interaction: LocationViewInteraction?) -> ListViewItem {
         switch self {
-            case let .info(theme, location, address, distance, time):
+            case let .info(_, location, address, distance, time):
                 let addressString: String?
                 if let address = address {
                     addressString = address
@@ -132,7 +132,7 @@ private enum LocationViewEntry: Comparable, Identifiable {
                 }, getDirections: {
                     interaction?.requestDirections()
                 })
-            case let .toggleLiveLocation(theme, title, subtitle, coordinate, beginTimstamp, timeout):
+            case let .toggleLiveLocation(_, title, subtitle, coordinate, beginTimstamp, timeout):
                 let beginTimeAndTimeout: (Double, Double)?
                 if let beginTimstamp = beginTimstamp, let timeout = timeout {
                     beginTimeAndTimeout = (beginTimstamp, timeout)
@@ -403,6 +403,18 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
                 
                 strongSelf.headerNode.mapNode.activeProximityRadius = state.proximityRadius
                 
+                let rightBarButtonAction: LocationViewRightBarButton
+                if location.liveBroadcastingTimeout != nil {
+                    if liveLocations.count > 1 {
+                        rightBarButtonAction = .showAll
+                    } else {
+                        rightBarButtonAction = .none
+                    }
+                } else {
+                    rightBarButtonAction = .share
+                }
+                strongSelf.interaction.updateRightBarButton(rightBarButtonAction)
+                
                 if let (layout, navigationBarHeight) = strongSelf.validLayout {
                     var updateLayout = false
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.45, curve: .spring)
@@ -532,6 +544,10 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
             state.proximityRadius = radius.flatMap { Double($0) }
             return state
         }
+    }
+    
+    func showAll() {
+        self.headerNode.mapNode.showAll()
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {

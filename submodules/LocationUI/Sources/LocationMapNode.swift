@@ -545,6 +545,27 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         self.pinDisposable.set(nil)
     }
     
+    func showAll(animated: Bool = true) {
+        guard let mapView = self.mapView else {
+            return
+        }
+        var annotations: [MKAnnotation] = []
+        if let userAnnotation = self.userLocationAnnotation {
+            annotations.append(userAnnotation)
+        }
+        annotations.append(contentsOf: self.annotations)
+        
+        var zoomRect: MKMapRect = MKMapRect()
+        for annotation in annotations {
+            let pointRegionRect = MKMapRect(region: MKCoordinateRegion(center: annotation.coordinate, latitudinalMeters: 100, longitudinalMeters: 100))
+            zoomRect = zoomRect.union(pointRegionRect)
+        }
+        
+        let insets = UIEdgeInsets()
+        zoomRect = mapView.mapRectThatFits(zoomRect, edgePadding: insets)
+        mapView.setVisibleMapRect(zoomRect, animated: animated)
+    }
+    
     func updateLayout(size: CGSize) {
         self.proximityDimView.frame = CGRect(origin: CGPoint(), size: size)
         self.pickerAnnotationContainerView.frame = CGRect(x: 0.0, y: floorToScreenPixels((size.height - size.width) / 2.0), width: size.width, height: size.width)

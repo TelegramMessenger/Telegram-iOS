@@ -7171,6 +7171,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: replyMessageId, localGroupingKey: groupingKey)
                                             messages.append(message)
                                         }
+                                        if let _ = groupingKey, results.count % 10 == 0 {
+                                            groupingKey = arc4random64()
+                                        }
                                     }
                                     
                                     if !messages.isEmpty {

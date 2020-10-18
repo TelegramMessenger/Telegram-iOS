@@ -29,6 +29,12 @@ public class LocationViewParams {
     }
 }
 
+enum LocationViewRightBarButton {
+    case none
+    case share
+    case showAll
+}
+
 class LocationViewInteraction {
     let toggleMapModeSelection: () -> Void
     let updateMapMode: (LocationMapMode) -> Void
@@ -40,8 +46,9 @@ class LocationViewInteraction {
     let updateSendActionHighlight: (Bool) -> Void
     let sendLiveLocation: (CLLocationCoordinate2D) -> Void
     let stopLiveLocation: () -> Void
+    let updateRightBarButton: (LocationViewRightBarButton) -> Void
     
-    init(toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, requestDirections: @escaping () -> Void, share: @escaping () -> Void, setupProximityNotification: @escaping (CLLocationCoordinate2D, Bool) -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D) -> Void, stopLiveLocation: @escaping () -> Void) {
+    init(toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, requestDirections: @escaping () -> Void, share: @escaping () -> Void, setupProximityNotification: @escaping (CLLocationCoordinate2D, Bool) -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D) -> Void, stopLiveLocation: @escaping () -> Void, updateRightBarButton: @escaping (LocationViewRightBarButton) -> Void) {
         self.toggleMapModeSelection = toggleMapModeSelection
         self.updateMapMode = updateMapMode
         self.goToUserLocation = goToUserLocation
@@ -52,6 +59,7 @@ class LocationViewInteraction {
         self.updateSendActionHighlight = updateSendActionHighlight
         self.sendLiveLocation = sendLiveLocation
         self.stopLiveLocation = stopLiveLocation
+        self.updateRightBarButton = updateRightBarButton
     }
 }
 
@@ -70,6 +78,8 @@ public final class LocationViewController: ViewController {
     private var permissionDisposable: Disposable?
     
     private var interaction: LocationViewInteraction?
+    
+    private var rightBarButtonAction: LocationViewRightBarButton = .none
 
     public init(context: AccountContext, subject: Message, params: LocationViewParams) {
         self.context = context
@@ -83,8 +93,6 @@ public final class LocationViewController: ViewController {
         
         self.title = self.presentationData.strings.Map_LocationTitle
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Close, style: .plain, target: self, action: #selector(self.cancelPressed))
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationShareIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.sharePressed))
-        self.navigationItem.rightBarButtonItem?.accessibilityLabel = self.presentationData.strings.VoiceOver_MessageContextShare
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
@@ -95,7 +103,7 @@ public final class LocationViewController: ViewController {
             
             strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: strongSelf.presentationData.theme).withUpdatedSeparatorColor(.clear), strings: NavigationBarStrings(presentationStrings: strongSelf.presentationData.strings)))
             
-            strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationShareIcon(strongSelf.presentationData.theme), style: .plain, target: strongSelf, action: #selector(strongSelf.sharePressed))
+            strongSelf.updateRightBarButton()
             
             if strongSelf.isNodeLoaded {
                 strongSelf.controllerNode.updatePresentationData(presentationData)
@@ -247,6 +255,15 @@ public final class LocationViewController: ViewController {
         }, stopLiveLocation: { [weak self] in
             params.stopLiveLocation()
             self?.dismiss()
+        }, updateRightBarButton: { [weak self] action in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            if action != strongSelf.rightBarButtonAction {
+                strongSelf.rightBarButtonAction = action
+                strongSelf.updateRightBarButton()
+            }
         })
         
         self.scrollToTop = { [weak self] in
@@ -280,6 +297,18 @@ public final class LocationViewController: ViewController {
         }
     }
     
+    private func updateRightBarButton() {
+        switch self.rightBarButtonAction {
+            case .none:
+                self.navigationItem.rightBarButtonItem = nil
+            case .share:
+                self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationShareIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.sharePressed))
+                self.navigationItem.rightBarButtonItem?.accessibilityLabel = self.presentationData.strings.VoiceOver_MessageContextShare
+            case .showAll:
+                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Map_LiveLocationShowAll, style: .plain, target: self, action: #selector(self.showAllPressed))
+        }
+    }
+    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
     
@@ -295,7 +324,7 @@ public final class LocationViewController: ViewController {
     }
     
     @objc private func showAllPressed() {
-        self.dismiss()
+        self.controllerNode.showAll()
     }
 }
 
