@@ -54,7 +54,7 @@ private func cleanPhoneNumber(_ text: String) -> String {
     return result
 }
 
-@available(iOSApplicationExtension 10.0, *)
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
 func matchingDeviceContacts(stableIds: [String]) -> Signal<[MatchingDeviceContact], IntentContactsError> {
     guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else {
         return .fail(.generic)
@@ -128,7 +128,7 @@ func matchingCloudContact(postbox: Postbox, peerId: PeerId) -> Signal<TelegramUs
     }
 }
 
-@available(iOSApplicationExtension 10.0, *)
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
 func personWithUser(stableId: String, user: TelegramUser) -> INPerson {
     var nameComponents = PersonNameComponents()
     nameComponents.givenName = user.firstName

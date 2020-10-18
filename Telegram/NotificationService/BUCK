@@ -1,0 +1,2 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+

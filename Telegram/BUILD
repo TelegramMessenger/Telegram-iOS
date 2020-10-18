@@ -998,6 +998,74 @@ ios_extension(
 )
 
 plist_fragment(
+    name = "NotificationContentInfoPlist",
+    extension = "plist",
+    template = 
+    """
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleIdentifier</key>
+    <string>{telegram_bundle_id}.NotificationContent</string>
+    <key>CFBundleName</key>
+    <string>Telegram</string>
+    <key>CFBundlePackageType</key>
+    <string>XPC!</string>
+    <key>NSExtension</key>
+    <dict>
+        <key>NSExtensionAttributes</key>
+        <dict>
+            <key>UNNotificationExtensionCategory</key>
+            <array>
+                <string>withReplyMedia</string>
+                <string>withMuteMedia</string>
+            </array>
+            <key>UNNotificationExtensionInitialContentSizeRatio</key>
+            <real>0.0001</real>
+        </dict>
+        <key>NSExtensionPointIdentifier</key>
+        <string>com.apple.usernotifications.content-extension</string>
+        <key>NSExtensionPrincipalClass</key>
+        <string>NotificationViewController</string>
+    </dict>
+    """.format(
+        telegram_bundle_id = telegram_bundle_id,
+    )
+)
+
+swift_library(
+    name = "NotificationContentExtensionLib",
+    module_name = "NotificationContentExtensionLib",
+    srcs = glob([
+        "NotificationContent/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/TelegramUI:TelegramUI"
+    ],
+)
+
+ios_extension(
+    name = "NotificationContentExtension",
+    bundle_id = "{telegram_bundle_id}.NotificationContent".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = [
+        ":NotificationContentInfoPlist",
+        ":VersionInfoPlist",
+        ":AppNameInfoPlist",
+    ],
+    minimum_os_version = "9.0",
+    provisioning_profile = "//build-input/data/provisioning-profiles:NotificationContent.mobileprovision",
+    deps = [":NotificationContentExtensionLib"],
+    frameworks = [
+        ":TelegramUIFramework"
+    ],
+)
+
+plist_fragment(
     name = "WidgetInfoPlist",
     extension = "plist",
     template = 
@@ -1054,13 +1122,86 @@ ios_extension(
     frameworks = [],
 )
 
+plist_fragment(
+    name = "IntentsInfoPlist",
+    extension = "plist",
+    template = 
+    """
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleIdentifier</key>
+    <string>{telegram_bundle_id}.SiriIntents</string>
+    <key>CFBundleName</key>
+    <string>Telegram</string>
+    <key>CFBundlePackageType</key>
+    <string>XPC!</string>
+    <key>NSExtension</key>
+    <dict>
+        <key>NSExtensionAttributes</key>
+        <dict>
+            <key>IntentsRestrictedWhileLocked</key>
+            <array/>
+            <key>IntentsRestrictedWhileProtectedDataUnavailable</key>
+            <array/>
+            <key>IntentsSupported</key>
+            <array>
+                <string>INSendMessageIntent</string>
+                <string>INStartAudioCallIntent</string>
+                <string>INSearchForMessagesIntent</string>
+                <string>INSetMessageAttributeIntent</string>
+                <string>INSearchCallHistoryIntent</string>
+            </array>
+        </dict>
+        <key>NSExtensionPointIdentifier</key>
+        <string>com.apple.intents-service</string>
+        <key>NSExtensionPrincipalClass</key>
+        <string>IntentHandler</string>
+    </dict>
+    """.format(
+        telegram_bundle_id = telegram_bundle_id,
+    )
+)
+
 swift_library(
-    name = "NotificationServiceExtensionLib",
-    module_name = "NotificationServiceExtensionLib",
+    name = "IntentsExtensionLib",
+    module_name = "IntentsExtensionLib",
     srcs = glob([
-        "NotificationServiceNext/**/*.swift",
+        "SiriIntents/**/*.swift",
     ]),
     deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/Postbox:Postbox",
+        "//submodules/TelegramApi:TelegramApi",
+        "//submodules/SyncCore:SyncCore",
+        "//submodules/TelegramCore:TelegramCore",
+        "//submodules/BuildConfig:BuildConfig",
+        "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
+        "//submodules/AppLockState:AppLockState",
+    ],
+)
+
+ios_extension(
+    name = "IntentsExtension",
+    bundle_id = "{telegram_bundle_id}.SiriIntents".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = [
+        ":IntentsInfoPlist",
+        ":VersionInfoPlist",
+        ":AppNameInfoPlist",
+    ],
+    minimum_os_version = "9.0",
+    provisioning_profile = "//build-input/data/provisioning-profiles:Intents.mobileprovision",
+    deps = [":IntentsExtensionLib"],
+    frameworks = [
+        ":SwiftSignalKitFramework",
+        ":PostboxFramework",
+        ":TelegramApiFramework",
+        ":SyncCoreFramework",
     ],
 )
 
@@ -1105,8 +1246,13 @@ ios_extension(
     ],
     minimum_os_version = "10.0",
     provisioning_profile = "//build-input/data/provisioning-profiles:NotificationService.mobileprovision",
-    deps = [":NotificationServiceExtensionLib"],
+    deps = ["//Telegram/NotificationService:NotificationServiceExtensionLib"],
     frameworks = [
+        ":MtProtoKitFramework",
+        ":SwiftSignalKitFramework",
+        ":PostboxFramework",
+        ":TelegramApiFramework",
+        ":SyncCoreFramework",
     ],
 )
 
@@ -1309,9 +1455,9 @@ ios_application(
     extensions = [
         ":ShareExtension",
         ":WidgetExtension",
-        #":NotificationContentExtension",
-        #":NotificationServiceExtension",
-        #":IntentsExtension",
+        ":NotificationContentExtension",
+        ":NotificationServiceExtension",
+        ":IntentsExtension",
     ],
     watch_application = ":TelegramWatchApp",
     deps = [

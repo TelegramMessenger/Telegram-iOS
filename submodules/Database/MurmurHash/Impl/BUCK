@@ -1,21 +1,18 @@
 load("//Config:buck_rule_macros.bzl", "static_library")
 
 static_library(
-    name = "MurmurHash",
+    name = "MurMurHashObjC",
     srcs = glob([
-        "Sources/**/*.swift",
-        "Sources/**/*.m",
+        "Sources/*.m",
     ]),
     headers = glob([
-        "Sources/**/*.h",
+        "Sources/*.h",
     ]),
     exported_headers = glob([
-        "Sources/**/*.h",
+        "PublicHeaders/**/*.h",
     ]),
-    deps = [
-        "submodules/Database/MurmurHash/Impl:MurMurHashObjC",
-    ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
     ],
 )
