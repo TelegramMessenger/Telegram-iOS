@@ -3701,6 +3701,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
+        self.chatDisplayNode.historyNode.scrolledToSomeIndex = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.scrolledToMessageId.set(nil)
+        }
+        
         self.chatDisplayNode.historyNode.maxVisibleMessageIndexUpdated = { [weak self] index in
             if let strongSelf = self, !strongSelf.historyNavigationStack.isEmpty {
                 strongSelf.historyNavigationStack.filterOutIndicesLessThan(index)
@@ -3754,7 +3761,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             stationaryItemRange = (maxInsertedItem + 1, Int.max)
                         }
                         
-                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, peerType: transition.peerType, networkType: transition.networkType, animateIn: false, reason: transition.reason, flashIndicators: transition.flashIndicators), updateSizeAndInsets)
+                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, scrolledToSomeIndex: transition.scrolledToSomeIndex, peerType: transition.peerType, networkType: transition.networkType, animateIn: false, reason: transition.reason, flashIndicators: transition.flashIndicators), updateSizeAndInsets)
                     })
                     
                     if let mappedTransition = mappedTransition {

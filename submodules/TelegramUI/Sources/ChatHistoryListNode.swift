@@ -165,6 +165,7 @@ struct ChatHistoryViewTransition {
     let cachedDataMessages: [MessageId: Message]?
     let readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?
     let scrolledToIndex: MessageHistoryAnchorIndex?
+    let scrolledToSomeIndex: Bool
     let animateIn: Bool
     let reason: ChatHistoryViewTransitionReason
     let flashIndicators: Bool
@@ -184,6 +185,7 @@ struct ChatHistoryListViewTransition {
     let cachedDataMessages: [MessageId: Message]?
     let readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?
     let scrolledToIndex: MessageHistoryAnchorIndex?
+    let scrolledToSomeIndex: Bool
     let peerType: MediaAutoDownloadPeerType
     let networkType: MediaAutoDownloadNetworkType
     let animateIn: Bool
@@ -345,7 +347,7 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
 }
 
 private func mappedChatHistoryViewListTransition(context: AccountContext, chatLocation: ChatLocation, associatedData: ChatMessageItemAssociatedData, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode, lastHeaderId: Int64, transition: ChatHistoryViewTransition) -> ChatHistoryListViewTransition {
-    return ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, lastHeaderId: lastHeaderId, entries: transition.insertEntries), updateItems: mappedUpdateEntries(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, lastHeaderId: lastHeaderId, entries: transition.updateEntries), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, animateIn: transition.animateIn, reason: transition.reason, flashIndicators: transition.flashIndicators)
+    return ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, lastHeaderId: lastHeaderId, entries: transition.insertEntries), updateItems: mappedUpdateEntries(context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, mode: mode, lastHeaderId: lastHeaderId, entries: transition.updateEntries), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, scrolledToSomeIndex: transition.scrolledToSomeIndex, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, animateIn: transition.animateIn, reason: transition.reason, flashIndicators: transition.flashIndicators)
 }
 
 private final class ChatHistoryTransactionOpaqueState {
@@ -526,6 +528,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     var maxVisibleMessageIndexUpdated: ((MessageIndex) -> Void)?
     
     var scrolledToIndex: ((MessageHistoryAnchorIndex) -> Void)?
+    var scrolledToSomeIndex: (() -> Void)?
     var beganDragging: (() -> Void)?
     
     private let hasVisiblePlayableItemNodesPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -1499,10 +1502,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     }
     
     public func scrollToStartOfHistory() {
+        self.beganDragging?()
         self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Scroll(index: .lowerBound, anchorIndex: .lowerBound, sourceIndex: .upperBound, scrollPosition: .bottom(0.0), animated: true, highlight: false), id: self.takeNextHistoryLocationId())
     }
     
     public func scrollToEndOfHistory() {
+        self.beganDragging?()
         switch self.visibleContentOffset() {
             case .known(0.0):
                 break
@@ -1775,6 +1780,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     if let strongSelf = self {
                         strongSelf.scrolledToIndex?(scrolledToIndex)
                     }
+                } else if transition.scrolledToSomeIndex {
+                    self?.scrolledToSomeIndex?()
                 }
                 
                 strongSelf.hasActiveTransition = false
