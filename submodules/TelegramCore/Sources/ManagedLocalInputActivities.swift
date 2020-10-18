@@ -133,8 +133,10 @@ private func requestActivity(postbox: Postbox, network: Network, accountPeerId: 
             if let _ = peer as? TelegramUser {
                 if let presence = transaction.getPeerPresence(peerId: peerId) as? TelegramUserPresence {
                     switch presence.status {
-                    case .none, .recently, .lastWeek, .lastMonth:
+                    case .none, .lastWeek, .lastMonth:
                         return .complete()
+                    case .recently:
+                        break
                     case let .present(statusTimestamp):
                         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
                         if statusTimestamp < timestamp {
