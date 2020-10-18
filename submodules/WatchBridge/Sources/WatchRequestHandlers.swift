@@ -203,7 +203,7 @@ final class WatchSendMessageHandler: WatchRequestHandler {
                         messageSignal = .single((.message(text: args.text, attributes: [], mediaReference: nil, replyToMessageId: replyMessageId, localGroupingKey: nil), peerId))
                     } else if let args = subscription as? TGBridgeSendLocationMessageSubscription, let location = args.location {
                         let peerId = makePeerIdFromBridgeIdentifier(args.peerId)
-                        let map = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, geoPlace: nil, venue: makeVenue(from: location.venue), liveBroadcastingTimeout: nil)
+                        let map = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: makeVenue(from: location.venue), liveBroadcastingTimeout: nil)
                         messageSignal = .single((.message(text: "", attributes: [], mediaReference: .standalone(media: map), replyToMessageId: nil, localGroupingKey: nil), peerId))
                     } else if let args = subscription as? TGBridgeSendStickerMessageSubscription {
                         let peerId = makePeerIdFromBridgeIdentifier(args.peerId)

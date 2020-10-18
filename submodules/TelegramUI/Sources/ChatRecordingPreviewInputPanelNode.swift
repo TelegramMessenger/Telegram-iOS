@@ -291,7 +291,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     }
     
     @objc func sendPressed() {
-        self.interfaceInteraction?.sendRecordedMedia()
+        self.interfaceInteraction?.sendRecordedMedia(false)
     }
     
     @objc func waveformPressed() {

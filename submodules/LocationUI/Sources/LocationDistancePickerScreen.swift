@@ -5,19 +5,167 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SyncCore
-import TelegramPresentationData
-import TelegramStringFormatting
+import SwiftSignalKit
 import AccountContext
 import SolidRoundedButtonNode
+import TelegramPresentationData
 import PresentationDataUtils
+import CoreLocation
 
-class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
+enum LocationDistancePickerScreenStyle {
+    case `default`
+    case media
+}
+
+final class LocationDistancePickerScreen: ViewController {
+    private var controllerNode: LocationDistancePickerScreenNode {
+        return self.displayNode as! LocationDistancePickerScreenNode
+    }
+    
+    private var animatedIn = false
+    
     private let context: AccountContext
-    private let mode: ChatScheduleTimeControllerMode
-    private let controllerStyle: ChatScheduleTimeControllerStyle
+    private let style: LocationDistancePickerScreenStyle
+    private let currentDistance: Double?
+    private let updated: (Int32?) -> Void
+    private let completion: (Int32?) -> Void
+    
+    private var presentationDataDisposable: Disposable?
+    
+    init(context: AccountContext, style: LocationDistancePickerScreenStyle, currentDistance: Double?, updated: @escaping (Int32?) -> Void, completion: @escaping (Int32?) -> Void) {
+        self.context = context
+        self.style = style
+        self.currentDistance = currentDistance
+        self.updated = updated
+        self.completion = completion
+        
+        super.init(navigationBarPresentationData: nil)
+        
+        self.statusBar.statusBarStyle = .Ignore
+        
+        self.blocksBackgroundWhenInOverlay = true
+        
+        self.presentationDataDisposable = (context.sharedContext.presentationData
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                strongSelf.controllerNode.updatePresentationData(presentationData)
+            }
+        })
+        
+        self.statusBar.statusBarStyle = .Ignore
+    }
+    
+    required init(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.presentationDataDisposable?.dispose()
+    }
+    
+    override public func loadDisplayNode() {
+        self.displayNode = LocationDistancePickerScreenNode(context: self.context, style: self.style, currentDistance: self.currentDistance)
+        self.controllerNode.updated = { [weak self] distance in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.updated(distance)
+        }
+        self.controllerNode.completion = { [weak self] distance in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.completion(distance)
+            strongSelf.dismiss()
+        }
+        self.controllerNode.dismiss = { [weak self] in
+            self?.updated(nil)
+            self?.presentingViewController?.dismiss(animated: false, completion: nil)
+        }
+        self.controllerNode.cancel = { [weak self] in
+            self?.dismiss()
+        }
+    }
+    
+    override public func loadView() {
+        super.loadView()
+    }
+    
+    override public func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        if !self.animatedIn {
+            self.animatedIn = true
+            self.controllerNode.animateIn()
+        }
+    }
+    
+    override public func dismiss(completion: (() -> Void)? = nil) {
+        self.controllerNode.animateOut(completion: completion)
+    }
+    
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        super.containerLayoutUpdated(layout, transition: transition)
+        
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+    }
+}
+
+private class TimerPickerView: UIPickerView {
+    var selectorColor: UIColor? = nil {
+        didSet {
+            for subview in self.subviews {
+                if subview.bounds.height <= 1.0 {
+                    subview.backgroundColor = self.selectorColor
+                }
+            }
+        }
+    }
+    
+    override func didAddSubview(_ subview: UIView) {
+        super.didAddSubview(subview)
+        
+        if let selectorColor = self.selectorColor {
+            if subview.bounds.height <= 1.0 {
+                subview.backgroundColor = selectorColor
+            }
+        }
+    }
+    
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        
+        if let selectorColor = self.selectorColor {
+            for subview in self.subviews {
+                if subview.bounds.height <= 1.0 {
+                    subview.backgroundColor = selectorColor
+                }
+            }
+        }
+    }
+}
+
+private var timerValues: [Int32] = {
+    var values: [Int32] = []
+    for i in 0 ..< 99 {
+        values.append(Int32(i))
+    }
+    return values
+}()
+
+private var smallerTimerValues: [Int32] = {
+    var values: [Int32] = []
+    for i in 0 ..< 100 {
+        values.append(Int32(i))
+    }
+    return values
+}()
+
+class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPickerViewDataSource, UIPickerViewDelegate {
+    private let context: AccountContext
+    private let controllerStyle: LocationDistancePickerScreenStyle
     private var presentationData: PresentationData
-    private let dismissByTapOutside: Bool
-    private let minimalTime: Int32?
+    private let currentDistance: Double?
     
     private let dimNode: ASDisplayNode
     private let wrappingScrollNode: ASScrollNode
@@ -26,26 +174,24 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
     private let backgroundNode: ASDisplayNode
     private let contentBackgroundNode: ASDisplayNode
     private let titleNode: ASTextNode
+    private let textNode: ImmediateTextNode
     private let cancelButton: HighlightableButtonNode
     private let doneButton: SolidRoundedButtonNode
-    private let onlineButton: SolidRoundedButtonNode
     
-    private var pickerView: UIDatePicker?
-    private let dateFormatter: DateFormatter
+    private var pickerView: TimerPickerView?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
+    var updated: ((Int32) -> Void)?
     var completion: ((Int32) -> Void)?
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(context: AccountContext, mode: ChatScheduleTimeControllerMode, style: ChatScheduleTimeControllerStyle, currentTime: Int32?, minimalTime: Int32?, dismissByTapOutside: Bool) {
+    init(context: AccountContext, style: LocationDistancePickerScreenStyle, currentDistance: Double?) {
         self.context = context
-        self.mode = mode
         self.controllerStyle = style
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        self.dismissByTapOutside = dismissByTapOutside
-        self.minimalTime = minimalTime
+        self.currentDistance = currentDistance
         
         self.wrappingScrollNode = ASScrollNode()
         self.wrappingScrollNode.view.alwaysBounceVertical = true
@@ -53,7 +199,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.wrappingScrollNode.view.canCancelContentTouches = true
         
         self.dimNode = ASDisplayNode()
-        self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
+//        self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
         
         self.contentContainerNode = ASDisplayNode()
         self.contentContainerNode.isOpaque = false
@@ -65,23 +211,17 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         let backgroundColor: UIColor
         let textColor: UIColor
         let accentColor: UIColor
-        let buttonColor: UIColor
-        let buttonTextColor: UIColor
         let blurStyle: UIBlurEffect.Style
         switch style {
             case .default:
                 backgroundColor = self.presentationData.theme.actionSheet.itemBackgroundColor
                 textColor = self.presentationData.theme.actionSheet.primaryTextColor
                 accentColor = self.presentationData.theme.actionSheet.controlAccentColor
-                buttonColor = self.presentationData.theme.actionSheet.opaqueItemBackgroundColor
-                buttonTextColor = accentColor
                 blurStyle = self.presentationData.theme.actionSheet.backgroundType == .light ? .light : .dark
             case .media:
                 backgroundColor = UIColor(rgb: 0x1c1c1e)
                 textColor = .white
                 accentColor = self.presentationData.theme.actionSheet.controlAccentColor
-                buttonColor = UIColor(rgb: 0x2b2b2f)
-                buttonTextColor = .white
                 blurStyle = .dark
         }
         
@@ -92,29 +232,17 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.contentBackgroundNode = ASDisplayNode()
         self.contentBackgroundNode.backgroundColor = backgroundColor
         
-        let title: String
-        switch mode {
-            case .scheduledMessages:
-                title = self.presentationData.strings.Conversation_ScheduleMessage_Title
-            case .reminders:
-                title = self.presentationData.strings.Conversation_SetReminder_Title
-        }
-        
+        let title = "Notification"
         self.titleNode = ASTextNode()
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: textColor)
+        
+        self.textNode = ImmediateTextNode()
         
         self.cancelButton = HighlightableButtonNode()
         self.cancelButton.setTitle(self.presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: accentColor, for: .normal)
         
         self.doneButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 52.0, cornerRadius: 11.0, gloss: false)
-        
-        self.onlineButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: buttonColor, foregroundColor: buttonTextColor), font: .regular, height: 52.0, cornerRadius: 11.0, gloss: false)
-        self.onlineButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendWhenOnline
-
-        self.dateFormatter = DateFormatter()
-        self.dateFormatter.timeStyle = .none
-        self.dateFormatter.dateStyle = .short
-        self.dateFormatter.timeZone = TimeZone.current
+        self.doneButton.title = self.presentationData.strings.Conversation_Timer_Send
         
         super.init()
         
@@ -133,69 +261,97 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.backgroundNode.addSubnode(self.effectNode)
         self.backgroundNode.addSubnode(self.contentBackgroundNode)
         self.contentContainerNode.addSubnode(self.titleNode)
+        self.contentContainerNode.addSubnode(self.textNode)
         self.contentContainerNode.addSubnode(self.cancelButton)
         self.contentContainerNode.addSubnode(self.doneButton)
-        if case .scheduledMessages(true) = self.mode {
-            self.contentContainerNode.addSubnode(self.onlineButton)
-        }
         
         self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
         self.doneButton.pressed = { [weak self] in
             if let strongSelf = self, let pickerView = strongSelf.pickerView {
-                if pickerView.date < Date() {
-                    strongSelf.updateMinimumDate()
-                    strongSelf.updateButtonTitle()
-                    pickerView.layer.addShakeAnimation()
-                } else {
-                    strongSelf.doneButton.isUserInteractionEnabled = false
-                    strongSelf.completion?(Int32(pickerView.date.timeIntervalSince1970))
-                }
-            }
-        }
-        self.onlineButton.pressed = { [weak self] in
-            if let strongSelf = self {
-                strongSelf.onlineButton.isUserInteractionEnabled = false
-                strongSelf.completion?(scheduleWhenOnlineTimestamp)
+                strongSelf.doneButton.isUserInteractionEnabled = false
+                
+                let largeValue = timerValues[pickerView.selectedRow(inComponent: 0)]
+                let smallValue = smallerTimerValues[pickerView.selectedRow(inComponent: 1)]
+                var value = largeValue * 1000 + smallValue * 10
+                value = Int32(Double(value) * 1.60934)
+                strongSelf.completion?(value)
             }
         }
         
-        self.setupPickerView(currentTime: currentTime)
-        self.updateButtonTitle()
+        self.setupPickerView()
+    
+        Queue.mainQueue().after(0.5) {
+            self.updateDoneButtonTitle()
+        }
     }
     
-    func setupPickerView(currentTime: Int32? = nil) {
-        var currentDate: Date?
+    func setupPickerView() {
         if let pickerView = self.pickerView {
-            currentDate = pickerView.date
             pickerView.removeFromSuperview()
         }
         
-        let textColor: UIColor
-        switch self.controllerStyle {
-            case .default:
-                textColor = self.presentationData.theme.actionSheet.primaryTextColor
-            case .media:
-                textColor = UIColor.white
-        }
+        let pickerView = TimerPickerView()
+        pickerView.selectorColor = UIColor(rgb: 0xffffff, alpha: 0.18)
+        pickerView.dataSource = self
+        pickerView.delegate = self
+        pickerView.selectRow(0, inComponent: 0, animated: false)
+        pickerView.selectRow(30, inComponent: 1, animated: false)
         
-        let pickerView = UIDatePicker()
-        pickerView.timeZone = TimeZone(secondsFromGMT: 0)
-        pickerView.datePickerMode = .countDownTimer
-        pickerView.datePickerMode = .dateAndTime
-        pickerView.locale = Locale.current
-        pickerView.timeZone = TimeZone.current
-        pickerView.minuteInterval = 1
         self.contentContainerNode.view.addSubview(pickerView)
-        pickerView.addTarget(self, action: #selector(self.datePickerUpdated), for: .valueChanged)
-        if #available(iOS 13.4, *) {
-            pickerView.preferredDatePickerStyle = .wheels
-        }
-        pickerView.setValue(textColor, forKey: "textColor")
         self.pickerView = pickerView
         
-        self.updateMinimumDate(currentTime: currentTime)
-        if let currentDate = currentDate {
-            pickerView.date = currentDate
+        self.updateDoneButtonTitle()
+    }
+    
+    func numberOfComponents(in pickerView: UIPickerView) -> Int {
+        return 2
+    }
+    
+    private func updateDoneButtonTitle() {
+        if let pickerView = self.pickerView {
+            let largeValue = timerValues[pickerView.selectedRow(inComponent: 0)]
+            let smallValue = smallerTimerValues[pickerView.selectedRow(inComponent: 1)]
+            
+            var value = largeValue * 1000 + smallValue * 10
+            value = Int32(Double(value) * 1.60934)
+            let distance = stringForDistance(strings: context.sharedContext.currentPresentationData.with { $0 }.strings, distance: CLLocationDistance(value))
+            
+            self.updated?(value)
+            self.doneButton.title = "Notify me within \(distance)"
+            
+            if let currentDistance = self.currentDistance, value > Int32(currentDistance) {
+                self.doneButton.alpha = 0.4
+                self.doneButton.isUserInteractionEnabled = false
+            } else {
+                self.doneButton.alpha = 1.0
+                self.doneButton.isUserInteractionEnabled = true
+            }
+        }
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+        self.updateDoneButtonTitle()
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
+        if component == 0 {
+            return timerValues.count
+        } else if component == 1 {
+            return smallerTimerValues.count
+        } else {
+            return 1
+        }
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
+        if component == 0 {
+            let value = timerValues[row]
+            return "\(value)"
+        } else if component == 1 {
+            let value = String(format: "%.2d", smallerTimerValues[row])
+            return ".\(value)"
+        } else {
+            return "MI"
         }
     }
     
@@ -221,36 +377,8 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         
         self.cancelButton.setTitle(self.presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
         self.doneButton.updateTheme(SolidRoundedButtonTheme(theme: self.presentationData.theme))
-        self.onlineButton.updateTheme(SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor, foregroundColor: self.presentationData.theme.actionSheet.controlAccentColor))
     }
-    
-    private func updateMinimumDate(currentTime: Int32? = nil) {
-        let timeZone = TimeZone(secondsFromGMT: 0)!
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = timeZone
-        let currentDate = Date()
-        var components = calendar.dateComponents(Set([.era, .year, .month, .day, .hour, .minute, .second]), from: currentDate)
-        components.second = 0
-        let minute = (components.minute ?? 0) % 5
         
-        let next1MinDate = calendar.date(byAdding: .minute, value: 1, to: calendar.date(from: components)!)
-        let next5MinDate = calendar.date(byAdding: .minute, value: 5 - minute, to: calendar.date(from: components)!)
-        
-        if let date = calendar.date(byAdding: .day, value: 365, to: currentDate) {
-            self.pickerView?.maximumDate = date
-        }
-        
-        if let next1MinDate = next1MinDate, let next5MinDate = next5MinDate {
-            let minimalTime = self.minimalTime.flatMap(Double.init) ?? 0.0
-            self.pickerView?.minimumDate = max(next1MinDate, Date(timeIntervalSince1970: minimalTime))
-            if let currentTime = currentTime, Double(currentTime) > max(currentDate.timeIntervalSince1970, minimalTime) {
-                self.pickerView?.date = Date(timeIntervalSince1970: Double(currentTime))
-            } else {
-                self.pickerView?.date = next5MinDate
-            }
-        }
-    }
-    
     override func didLoad() {
         super.didLoad()
         
@@ -259,50 +387,12 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         }
     }
     
-    private func updateButtonTitle() {
-        guard let date = self.pickerView?.date else {
-            return
-        }
-        
-        let calendar = Calendar(identifier: .gregorian)
-        let time = stringForMessageTimestamp(timestamp: Int32(date.timeIntervalSince1970), dateTimeFormat: self.presentationData.dateTimeFormat)
-        switch mode {
-            case .scheduledMessages:
-                if calendar.isDateInToday(date) {
-                    self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendToday(time).0
-                } else if calendar.isDateInTomorrow(date) {
-                    self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendTomorrow(time).0
-                } else {
-                    self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendOn(self.dateFormatter.string(from: date), time).0
-                }
-            case .reminders:
-                if calendar.isDateInToday(date) {
-                    self.doneButton.title = self.presentationData.strings.Conversation_SetReminder_RemindToday(time).0
-                } else if calendar.isDateInTomorrow(date) {
-                    self.doneButton.title = self.presentationData.strings.Conversation_SetReminder_RemindTomorrow(time).0
-                } else {
-                    self.doneButton.title = self.presentationData.strings.Conversation_SetReminder_RemindOn(self.dateFormatter.string(from: date), time).0
-                }
-        }
-    }
-    
-    @objc private func datePickerUpdated() {
-        self.updateButtonTitle()
-        if let date = self.pickerView?.date, date < Date() {
-            self.doneButton.alpha = 0.4
-            self.doneButton.isUserInteractionEnabled = false
-        } else {
-            self.doneButton.alpha = 1.0
-            self.doneButton.isUserInteractionEnabled = true
-        }
-    }
-    
     @objc func cancelButtonPressed() {
         self.cancel?()
     }
     
     @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
-        if self.dismissByTapOutside, case .ended = recognizer.state {
+        if case .ended = recognizer.state {
             self.cancelButtonPressed()
         }
     }
@@ -367,11 +457,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         let cleanInsets = layout.insets(options: [.statusBar])
         insets.top = max(10.0, insets.top)
         
-        var buttonOffset: CGFloat = 0.0
-        if case .scheduledMessages(true) = self.mode {
-            buttonOffset += 64.0
-        }
-        
+        let buttonOffset: CGFloat = 0.0
         let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
         let titleHeight: CGFloat = 54.0
         var contentHeight = titleHeight + bottomInset + 52.0 + 17.0
@@ -405,9 +491,6 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         let buttonInset: CGFloat = 16.0
         let doneButtonHeight = self.doneButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
         transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: contentHeight - doneButtonHeight - insets.bottom - 16.0 - buttonOffset, width: contentFrame.width, height: doneButtonHeight))
-        
-        let onlineButtonHeight = self.onlineButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-        transition.updateFrame(node: self.onlineButton, frame: CGRect(x: buttonInset, y: contentHeight - onlineButtonHeight - insets.bottom - 16.0, width: contentFrame.width, height: onlineButtonHeight))
         
         self.pickerView?.frame = CGRect(origin: CGPoint(x: 0.0, y: 54.0), size: CGSize(width: contentFrame.width, height: pickerHeight))
         

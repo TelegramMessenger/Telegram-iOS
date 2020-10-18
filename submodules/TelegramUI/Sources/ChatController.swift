@@ -746,7 +746,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, sendCurrentMessage: { [weak self] silentPosting in
             if let strongSelf = self {
-                strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting)
+                if let _ = strongSelf.presentationInterfaceState.recordedMediaPreview {
+                    strongSelf.sendMediaRecording(silently: silentPosting)
+                } else {
+                    strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting)
+                }
             }
         }, sendMessage: { [weak self] text in
             guard let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) else {
@@ -1090,7 +1094,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         |> deliverOnMainQueue).start(next: { coordinate in
                             if let strongSelf = self {
                                 if let coordinate = coordinate {
-                                    strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil)), replyToMessageId: nil, localGroupingKey: nil)])
+                                    strongSelf.sendMessages([.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil)), replyToMessageId: nil, localGroupingKey: nil)])
                                 } else {
                                     strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})]), in: .window(.root))
                                 }
@@ -3701,6 +3705,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
+        self.chatDisplayNode.historyNode.scrolledToSomeIndex = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.scrolledToMessageId.set(nil)
+        }
+        
         self.chatDisplayNode.historyNode.maxVisibleMessageIndexUpdated = { [weak self] index in
             if let strongSelf = self, !strongSelf.historyNavigationStack.isEmpty {
                 strongSelf.historyNavigationStack.filterOutIndicesLessThan(index)
@@ -3754,7 +3765,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             stationaryItemRange = (maxInsertedItem + 1, Int.max)
                         }
                         
-                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, peerType: transition.peerType, networkType: transition.networkType, animateIn: false, reason: transition.reason, flashIndicators: transition.flashIndicators), updateSizeAndInsets)
+                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData, keyboardButtonsMessage: transition.keyboardButtonsMessage, cachedData: transition.cachedData, cachedDataMessages: transition.cachedDataMessages, readStateData: transition.readStateData, scrolledToIndex: transition.scrolledToIndex, scrolledToSomeIndex: transition.scrolledToSomeIndex, peerType: transition.peerType, networkType: transition.networkType, animateIn: false, reason: transition.reason, flashIndicators: transition.flashIndicators), updateSizeAndInsets)
                     })
                     
                     if let mappedTransition = mappedTransition {
@@ -4639,8 +4650,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.lockMediaRecorder()
         }, deleteRecordedMedia: { [weak self] in
             self?.deleteMediaRecording()
-        }, sendRecordedMedia: { [weak self] in
-            self?.sendMediaRecording()
+        }, sendRecordedMedia: { [weak self] silently in
+            self?.sendMediaRecording(silently: silently)
         }, displayRestrictedInfo: { [weak self] subject, displayType in
             guard let strongSelf = self else {
                 return
@@ -7171,6 +7182,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: replyMessageId, localGroupingKey: groupingKey)
                                             messages.append(message)
                                         }
+                                        if let _ = groupingKey, results.count % 10 == 0 {
+                                            groupingKey = arc4random64()
+                                        }
                                     }
                                     
                                     if !messages.isEmpty {
@@ -8268,7 +8282,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
     }
     
-    private func sendMediaRecording() {
+    private func sendMediaRecording(silently: Bool) {
         self.chatDisplayNode.updateRecordedMediaDeleted(false)
         if let recordedMediaPreview = self.presentationInterfaceState.recordedMediaPreview {
             if let _ = self.presentationInterfaceState.slowmodeState, !self.presentationInterfaceState.isScheduledMessages {
@@ -8288,7 +8302,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             })
             
-            self.sendMessages([.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: recordedMediaPreview.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int(recordedMediaPreview.fileSize), attributes: [.Audio(isVoice: true, duration: Int(recordedMediaPreview.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: self.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
+            var attributes: [MessageAttribute] = []
+            if silently {
+                attributes.append(NotificationInfoMessageAttribute(flags: .muted))
+            }
+            
+            self.sendMessages([.message(text: "", attributes: attributes, mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: recordedMediaPreview.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int(recordedMediaPreview.fileSize), attributes: [.Audio(isVoice: true, duration: Int(recordedMediaPreview.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: self.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
         }
     }
     

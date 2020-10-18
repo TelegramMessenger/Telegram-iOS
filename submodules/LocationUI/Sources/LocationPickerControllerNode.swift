@@ -139,7 +139,7 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                 } else {
                     icon = .location
                 }
-                return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: account, title: title, subtitle: subtitle, icon: icon, action: {
+                return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: account, title: title, subtitle: subtitle, icon: icon, beginTimeAndTimeout: nil, action: {
                     if let venue = venue {
                         interaction?.sendVenue(venue)
                     } else if let coordinate = coordinate {
@@ -149,7 +149,7 @@ private enum LocationPickerEntry: Comparable, Identifiable {
                     interaction?.updateSendActionHighlight(highlighted)
                 })
             case let .liveLocation(_, title, subtitle, coordinate):
-                return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: account, title: title, subtitle: subtitle, icon: .liveLocation, action: {
+                return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: account, title: title, subtitle: subtitle, icon: .liveLocation, beginTimeAndTimeout: nil, action: {
                     if let coordinate = coordinate {
                         interaction?.sendLiveLocation(coordinate)
                     }
@@ -386,10 +386,10 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                     |> map { homeCoordinate, workCoordinate -> [TelegramMediaMap]? in
                         var venues: [TelegramMediaMap] = []
                         if let (latitude, longitude) = homeCoordinate, let address = homeAddress {
-                            venues.append(TelegramMediaMap(latitude: latitude, longitude: longitude, geoPlace: nil, venue: MapVenue(title: presentationData.strings.Map_Home, address: address.displayString, provider: nil, id: "home", type: "home"), liveBroadcastingTimeout: nil))
+                            venues.append(TelegramMediaMap(latitude: latitude, longitude: longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: MapVenue(title: presentationData.strings.Map_Home, address: address.displayString, provider: nil, id: "home", type: "home"), liveBroadcastingTimeout: nil))
                         }
                         if let (latitude, longitude) = workCoordinate, let address = workAddress {
-                            venues.append(TelegramMediaMap(latitude: latitude, longitude: longitude, geoPlace: nil, venue: MapVenue(title: presentationData.strings.Map_Work, address: address.displayString, provider: nil, id: "work", type: "work"), liveBroadcastingTimeout: nil))
+                            venues.append(TelegramMediaMap(latitude: latitude, longitude: longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: MapVenue(title: presentationData.strings.Map_Work, address: address.displayString, provider: nil, id: "work", type: "work"), liveBroadcastingTimeout: nil))
                         }
                         return venues
                     }

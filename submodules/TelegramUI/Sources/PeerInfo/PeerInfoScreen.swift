@@ -397,7 +397,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, stopMediaRecording: {
         }, lockMediaRecording: {
         }, deleteRecordedMedia: {
-        }, sendRecordedMedia: {
+        }, sendRecordedMedia: { _ in
         }, displayRestrictedInfo: { _, _ in
         }, displayVideoUnmuteTip: { _ in
         }, switchMediaRecordingMode: {
@@ -3087,7 +3087,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             guard let strongSelf = self else {
                 return
             }
-            if let currentPeerId = currentPeerId {
+            if false, let currentPeerId = currentPeerId {
                 if let navigationController = (strongSelf.controller?.navigationController as? NavigationController) {
                     strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(currentPeerId)))
                 }
@@ -3645,7 +3645,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         let context = self.context
         let presentationData = self.presentationData
-        let mapMedia = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, geoPlace: nil, venue: MapVenue(title: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), address: location.address, provider: nil, id: nil, type: nil), liveBroadcastingTimeout: nil)
+        let mapMedia = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: MapVenue(title: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), address: location.address, provider: nil, id: nil, type: nil), liveBroadcastingTimeout: nil)
         let locationController = legacyLocationController(message: nil, mapMedia: mapMedia, context: context, openPeer: { _ in }, sendLiveLocation: { _, _ in }, stopLiveLocation: {}, openUrl: { url in
             context.sharedContext.applicationBindings.openUrl(url)
         })

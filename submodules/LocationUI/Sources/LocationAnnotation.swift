@@ -34,8 +34,11 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
     var coordinate: CLLocationCoordinate2D
     let location: TelegramMediaMap?
     let peer: Peer?
+    let message: Message?
     let forcedSelection: Bool
+    var heading: Int32?
     
+    var selfPeer: Peer?
     var title: String? = ""
     var subtitle: String? = ""
     
@@ -44,6 +47,7 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
         self.theme = theme
         self.location = nil
         self.peer = peer
+        self.message = nil
         self.coordinate = kCLLocationCoordinate2DInvalid
         self.forcedSelection = false
         super.init()
@@ -54,8 +58,26 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
         self.theme = theme
         self.location = location
         self.peer = nil
+        self.message = nil
         self.coordinate = location.coordinate
         self.forcedSelection = forcedSelection
+        super.init()
+    }
+    
+    init(context: AccountContext, theme: PresentationTheme, message: Message, selfPeer: Peer?, heading: Int32?) {
+        self.context = context
+        self.theme = theme
+        self.location = nil
+        self.peer = nil
+        self.message = message
+        if let location = getLocation(from: message) {
+            self.coordinate = location.coordinate
+        } else {
+            self.coordinate = kCLLocationCoordinate2DInvalid
+        }
+        self.selfPeer = selfPeer
+        self.forcedSelection = false
+        self.heading = heading
         super.init()
     }
     
@@ -89,6 +111,7 @@ class LocationPinAnnotationLayer: CALayer {
 class LocationPinAnnotationView: MKAnnotationView {
     let shadowNode: ASImageNode
     let backgroundNode: ASImageNode
+    let arrowNode: ASImageNode
     let smallNode: ASImageNode
     let iconNode: TransformImageNode
     let smallIconNode: TransformImageNode
@@ -117,6 +140,11 @@ class LocationPinAnnotationView: MKAnnotationView {
         if let image = self.shadowNode.image {
             self.shadowNode.bounds = CGRect(origin: CGPoint(), size: image.size)
         }
+        
+        self.arrowNode = ASImageNode()
+        self.arrowNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 88.0, height: 88.0))
+        self.arrowNode.image = generateHeadingArrowImage()
+        self.arrowNode.isHidden = true
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.image = UIImage(bundleImageName: "Location/PinBackground")
@@ -147,6 +175,7 @@ class LocationPinAnnotationView: MKAnnotationView {
         self.addSubnode(self.dotNode)
         
         self.addSubnode(self.shadowNode)
+        self.addSubnode(self.arrowNode)
         self.shadowNode.addSubnode(self.backgroundNode)
         self.backgroundNode.addSubnode(self.iconNode)
         
@@ -177,7 +206,24 @@ class LocationPinAnnotationView: MKAnnotationView {
     override var annotation: MKAnnotation? {
         didSet {
             if let annotation = self.annotation as? LocationPinAnnotation {
-                if let peer = annotation.peer {
+                if let message = annotation.message {
+                    self.iconNode.isHidden = true
+                    self.dotNode.isHidden = false
+                    self.backgroundNode.image = UIImage(bundleImageName: "Location/PinBackground")
+                    
+                    if let author = message.author, let peer = message.peers[author.id] {
+                        self.setPeer(context: annotation.context, theme: annotation.theme, peer: peer)
+                    } else if let selfPeer = annotation.selfPeer {
+                        self.setPeer(context: annotation.context, theme: annotation.theme, peer: selfPeer)
+                    }
+                    
+                    if !self.isSelected {
+                        self.dotNode.alpha = 0.0
+                        self.shadowNode.isHidden = true
+                        self.smallNode.isHidden = false
+                    }
+                }
+                else if let peer = annotation.peer {
                     self.iconNode.isHidden = true
                     self.dotNode.isHidden = true
                     self.backgroundNode.image = UIImage(bundleImageName: "Location/PinBackground")
@@ -396,6 +442,7 @@ class LocationPinAnnotationView: MKAnnotationView {
         }
     }
     
+    var previousPeerId: PeerId?
     func setPeer(context: AccountContext, theme: PresentationTheme, peer: Peer) {
         let avatarNode: AvatarNode
         if let currentAvatarNode = self.avatarNode {
@@ -409,7 +456,10 @@ class LocationPinAnnotationView: MKAnnotationView {
             self.addSubnode(avatarNode)
         }
         
-        avatarNode.setPeer(context: context, theme: theme, peer: peer)
+        if self.previousPeerId != peer.id {
+            self.previousPeerId = peer.id
+            avatarNode.setPeer(context: context, theme: theme, peer: peer)
+        }
     }
     
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {

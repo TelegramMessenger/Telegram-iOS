@@ -87,7 +87,7 @@ final class ChatPanelInterfaceInteraction {
     let stopMediaRecording: () -> Void
     let lockMediaRecording: () -> Void
     let deleteRecordedMedia: () -> Void
-    let sendRecordedMedia: () -> Void
+    let sendRecordedMedia: (Bool) -> Void
     let displayRestrictedInfo: (ChatPanelRestrictionInfoSubject, ChatPanelRestrictionInfoDisplayType) -> Void
     let displayVideoUnmuteTip: (CGPoint?) -> Void
     let switchMediaRecordingMode: () -> Void
@@ -163,7 +163,7 @@ final class ChatPanelInterfaceInteraction {
         stopMediaRecording: @escaping () -> Void,
         lockMediaRecording: @escaping () -> Void,
         deleteRecordedMedia: @escaping () -> Void,
-        sendRecordedMedia: @escaping () -> Void,
+        sendRecordedMedia: @escaping (Bool) -> Void,
         displayRestrictedInfo: @escaping (ChatPanelRestrictionInfoSubject, ChatPanelRestrictionInfoDisplayType) -> Void,
         displayVideoUnmuteTip: @escaping (CGPoint?) -> Void,
         switchMediaRecordingMode: @escaping () -> Void,

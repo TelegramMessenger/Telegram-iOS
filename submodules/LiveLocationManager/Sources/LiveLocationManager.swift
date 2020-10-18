@@ -107,9 +107,9 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
             if let strongSelf = self {
                 if value {
                     let queue = strongSelf.queue
-                    strongSelf.deviceLocationDisposable.set(strongSelf.locationManager.push(mode: .precise, updated: { coordinate in
+                    strongSelf.deviceLocationDisposable.set(strongSelf.locationManager.push(mode: .precise, updated: { coordinate, accuracyRadius, heading in
                         queue.async {
-                            self?.updateDeviceCoordinate(coordinate)
+                            self?.updateDeviceCoordinate(coordinate, accuracyRadius: accuracyRadius, heading: heading)
                         }
                     }))
                 } else {
@@ -158,7 +158,7 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         let addedStopped = stopMessageIds.subtracting(self.stopMessageIds)
         self.stopMessageIds = stopMessageIds
         for id in addedStopped {
-            self.editMessageDisposables.set((requestEditLiveLocation(postbox: self.postbox, network: self.network, stateManager: self.stateManager, messageId: id, coordinate: nil)
+            self.editMessageDisposables.set((requestEditLiveLocation(postbox: self.postbox, network: self.network, stateManager: self.stateManager, messageId: id, coordinate: nil, heading: nil)
                 |> deliverOn(self.queue)).start(completed: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.editMessageDisposables.set(nil, forKey: id)
@@ -207,13 +207,13 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         self.update(broadcastToMessageIds: updatedBroadcastToMessageIds, stopMessageIds: updatedStopMessageIds)
     }
     
-    private func updateDeviceCoordinate(_ coordinate: CLLocationCoordinate2D) {
+    private func updateDeviceCoordinate(_ coordinate: CLLocationCoordinate2D, accuracyRadius: Double, heading: Double?) {
         assert(self.queue.isCurrent())
         
         let ids = self.broadcastToMessageIds
         let remainingIds = Atomic<Set<MessageId>>(value: Set(ids.keys))
         for id in ids.keys {
-            self.editMessageDisposables.set((requestEditLiveLocation(postbox: self.postbox, network: self.network, stateManager: self.stateManager, messageId: id, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude))
+            self.editMessageDisposables.set((requestEditLiveLocation(postbox: self.postbox, network: self.network, stateManager: self.stateManager, messageId: id, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude, accuracyRadius: Int32(accuracyRadius)), heading: Int32(heading ?? 0))
             |> deliverOn(self.queue)).start(completed: { [weak self] in
                 if let strongSelf = self {
                     strongSelf.editMessageDisposables.set(nil, forKey: id)
@@ -247,7 +247,7 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
                         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                         for i in 0 ..< updatedMedia.count {
                             if let media = updatedMedia[i] as? TelegramMediaMap, let _ = media.liveBroadcastingTimeout {
-                                updatedMedia[i] = TelegramMediaMap(latitude: media.latitude, longitude: media.longitude, geoPlace: media.geoPlace, venue: media.venue, liveBroadcastingTimeout: max(0, timestamp - currentMessage.timestamp - 1))
+                                updatedMedia[i] = TelegramMediaMap(latitude: media.latitude, longitude: media.longitude, heading: media.heading, accuracyRadius: media.accuracyRadius, geoPlace: media.geoPlace, venue: media.venue, liveBroadcastingTimeout: max(0, timestamp - currentMessage.timestamp - 1))
                             }
                         }
                         return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: updatedMedia))
