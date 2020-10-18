@@ -131,6 +131,13 @@ filegroup(
 )
 
 filegroup(
+    name = "DefaultIcon",
+    srcs = glob([
+        "Telegram-iOS/AppIcons.xcassets/BlueIcon.appiconset/*.png",
+    ]),
+)
+
+filegroup(
     name = "AdditionalIcons",
     srcs = glob([
         "Telegram-iOS/*.png",
@@ -1422,6 +1429,191 @@ plist_fragment(
     )
 )
 
+plist_fragment(
+    name = "TelegramInfoIconsPlist",
+    extension = "plist",
+    template = 
+    """
+    <key>CFBundleIcons</key>
+    <dict>
+        <key>CFBundleAlternateIcons</key>
+        <dict>
+            <key>Black</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>BlackIcon</string>
+                    <string>BlackNotificationIcon</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <true/>
+            </dict>
+            <key>BlackClassic</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>BlackClassicIcon</string>
+                    <string>BlackClassicNotificationIcon</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <true/>
+            </dict>
+            <key>BlackFilled</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>BlackFilledIcon</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <true/>
+            </dict>
+            <key>Blue</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>BlueIcon</string>
+                    <string>BlueNotificationIcon</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <true/>
+            </dict>
+            <key>BlueClassic</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>BlueClassicIcon</string>
+                    <string>BlueClassicNotificationIcon</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <true/>
+            </dict>
+            <key>BlueFilled</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>BlueFilledIcon</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <true/>
+            </dict>
+            <key>WhiteFilled</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>WhiteFilledIcon</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <true/>
+            </dict>
+        </dict>
+        <key>CFBundlePrimaryIcon</key>
+        <dict>
+            <key>CFBundleIconFiles</key>
+            <array>
+                <string>IconDefault-60</string>
+                <string>IconDefault-76</string>
+                <string>IconDefault-83.5</string>
+                <string>IconDefault-Small-40</string>
+                <string>IconDefault-Small</string>
+            </array>
+            <key>UIPrerenderedIcon</key>
+            <true/>
+        </dict>
+    </dict>
+    <key>CFBundleIcons~ipad</key>
+    <dict>
+        <key>CFBundleAlternateIcons</key>
+        <dict>
+            <key>Black</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>BlackIconIpad</string>
+                    <string>BlackIconLargeIpad</string>
+                    <string>BlackNotificationIcon</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <true/>
+            </dict>
+            <key>BlackClassic</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>BlackClassicIconIpad</string>
+                    <string>BlackClassicIconLargeIpad</string>
+                    <string>BlackClassicNotificationIcon</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <true/>
+            </dict>
+            <key>BlackFilled</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>BlackFilledIconIpad</string>
+                    <string>BlackFilledIconLargeIpad</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <true/>
+            </dict>
+            <key>Blue</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>BlueIconIpad</string>
+                    <string>BlueIconLargeIpad</string>
+                    <string>BlueNotificationIcon</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <true/>
+            </dict>
+            <key>BlueClassic</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>BlueClassicIconIpad</string>
+                    <string>BlueClassicIconLargeIpad</string>
+                    <string>BlueClassicNotificationIcon</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <true/>
+            </dict>
+            <key>BlueFilled</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>BlueFilledIconIpad</string>
+                    <string>BlueFilledIconLargeIpad</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <true/>
+            </dict>
+            <key>WhiteFilled</key>
+            <dict>
+                <key>CFBundleIconFiles</key>
+                <array>
+                    <string>WhiteFilledIcon</string>
+                </array>
+                <key>UIPrerenderedIcon</key>
+                <true/>
+            </dict>
+        </dict>
+        <key>CFBundlePrimaryIcon</key>
+        <dict>
+            <key>CFBundleIconFiles</key>
+            <array>
+                <string>IconDefault-60</string>
+                <string>IconDefault-76</string>
+                <string>IconDefault-83.5</string>
+                <string>IconDefault-Small-40</string>
+                <string>IconDefault-Small</string>
+            </array>
+            <key>UIPrerenderedIcon</key>
+            <true/>
+        </dict>
+    </dict>
+""")
+
 ios_application(
     name = "Telegram",
     bundle_id = "{telegram_bundle_id}".format(
@@ -1434,9 +1626,15 @@ ios_application(
     infoplists = [
         ":TelegramInfoPlist",
         ":AdditionalInfoPlist",
+        ":TelegramInfoIconsPlist",
     ],
-    app_icons = [
-        ":DefaultAppIcon",
+    #app_icons = [
+    #    ":DefaultAppIcon",
+    #],
+    resources = [
+        ":AdditionalIcons",
+        #":DefaultAppIcon",
+        #":AppIcons",
     ],
     frameworks = [
         ":MtProtoKitFramework",
