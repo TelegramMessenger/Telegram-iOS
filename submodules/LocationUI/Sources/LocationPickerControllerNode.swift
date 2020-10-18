@@ -12,6 +12,7 @@ import ItemListUI
 import ItemListVenueItem
 import ActivityIndicator
 import TelegramPresentationData
+import TelegramStringFormatting
 import AccountContext
 import AppBundle
 import CoreLocation

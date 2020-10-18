@@ -42,7 +42,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     var isUnsupportedMedia = false
     var isAction = false
     
-    var previousItemIsMusic = false
+    var previousItemIsFile = false
     var hasFiles = false
     
     outer: for (message, itemAttributes) in item.content {
@@ -53,7 +53,6 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             }
         }
         
-        var isMusic = false
         var isFile = false
         inner: for media in message.media {
             if let _ = media as? TelegramMediaImage {
@@ -64,10 +63,9 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                     result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
                 } else {
                     var neighborSpacing: ChatMessageBubbleRelativePosition.NeighbourSpacing = .default
-                    if previousItemIsMusic {
-                        neighborSpacing = .condensed
+                    if previousItemIsFile {
+                        neighborSpacing = .overlap
                     }
-                    isMusic = file.isMusic
                     isFile = true
                     hasFiles = true
                     result.append((message, ChatMessageFileBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: neighborSpacing)))
@@ -100,7 +98,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             } else if let _ = media as? TelegramMediaUnsupported {
                 isUnsupportedMedia = true
             }
-            previousItemIsMusic = isMusic
+            previousItemIsFile = isFile
         }
         
         var messageText = message.text
@@ -230,17 +228,19 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         func willUpdateIsExtractedToContextPreview(isExtractedToContextPreview: Bool, transition: ContainedViewLayoutTransition) {
             if isExtractedToContextPreview {
+                var offset: CGFloat = 0.0
+                var type: ChatMessageBackgroundType
+                if let currentParams = self.currentParams, case .incoming = currentParams.backgroundType {
+                    type = .incoming(.Extracted)
+                    offset += 5.0
+                } else {
+                    type = .outgoing(.Extracted)
+                }
+                
                 if let _ = self.backgroundNode {
                 } else if let currentParams = self.currentParams {
                     let backgroundNode = ChatMessageBackground()
                     backgroundNode.alpha = 0.0
-                    
-                    var type: ChatMessageBackgroundType
-                    if case .incoming = currentParams.backgroundType {
-                        type = .incoming(.Extracted)
-                    } else {
-                        type = .outgoing(.Extracted)
-                    }
                     
                     backgroundNode.setType(type: type, highlighted: false, graphics: currentParams.graphics, maskMode: false, hasWallpaper: currentParams.presentationData.theme.wallpaper.hasWallpaper, transition: .immediate)
                     self.sourceNode.contentNode.insertSubnode(backgroundNode, at: 0)
@@ -250,8 +250,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
                 
                 if let currentParams = self.currentParams {
-                    self.backgroundNode?.updateLayout(size: currentParams.size, transition: .immediate)
-                    self.backgroundNode?.frame = CGRect(origin: currentParams.contentOrigin, size: currentParams.size)
+                    var backgroundFrame = CGRect(x: currentParams.contentOrigin.x - offset, y: currentParams.contentOrigin.y, width: currentParams.size.width + offset, height: currentParams.size.height)
+                    self.backgroundNode?.updateLayout(size: backgroundFrame.size, transition: .immediate)
+                    self.backgroundNode?.frame = backgroundFrame
                 }
             } else if let backgroundNode = self.backgroundNode {
                 self.backgroundNode = nil
@@ -1603,7 +1604,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
         }
         
-        var contentNodePropertiesAndFinalize: [(ChatMessageBubbleContentProperties, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void), UInt32?, Bool?)] = []
+        var contentNodePropertiesAndFinalize: [(ChatMessageBubbleContentProperties, ChatMessageBubbleContentPosition?, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void), UInt32?, Bool?)] = []
         
         var maxContentWidth: CGFloat = headerSize.width
         
@@ -1719,7 +1720,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 
                 let (_, contentNodeFinalize) = contentNodeLayout(framesAndPositions[mosaicIndex].0.size, .mosaic(position: ChatMessageBubbleContentMosaicPosition(topLeft: topLeft, topRight: topRight, bottomLeft: bottomLeft, bottomRight: bottomRight), wide: position.isWide))
                 
-                contentNodePropertiesAndFinalize.append((contentNodeProperties, contentNodeFinalize, contentGroupId, itemSelection))
+                contentNodePropertiesAndFinalize.append((contentNodeProperties, nil, contentNodeFinalize, contentGroupId, itemSelection))
                 
                 maxContentWidth = max(maxContentWidth, size.width)
             } else {
@@ -1763,7 +1764,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 #endif
                 maxContentWidth = max(maxContentWidth, contentNodeWidth)
                 
-                contentNodePropertiesAndFinalize.append((contentNodeProperties, contentNodeFinalize, contentGroupId, itemSelection))
+                contentNodePropertiesAndFinalize.append((contentNodeProperties, contentPosition, contentNodeFinalize, contentGroupId, itemSelection))
             }
         }
         
@@ -1776,9 +1777,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var contentNodesHeight: CGFloat = 0.0
         var totalContentNodesHeight: CGFloat = 0.0
         
+        let smallContainerGroupOverlap: CGFloat = 5.0
+        let largeContainerGroupOverlap: CGFloat = 14.0
+        var nextContainerGroupOverlap = smallContainerGroupOverlap
+        
         var mosaicStatusOrigin: CGPoint?
         for i in 0 ..< contentNodePropertiesAndFinalize.count {
-            let (properties, finalize, contentGroupId, itemSelection) = contentNodePropertiesAndFinalize[i]
+            let (properties, _, finalize, contentGroupId, itemSelection) = contentNodePropertiesAndFinalize[i]
             
             if let mosaicRange = mosaicRange, mosaicRange.contains(i), let (framesAndPositions, size) = calculatedGroupFramesAndSize {
                 let mosaicIndex = i - mosaicRange.lowerBound
@@ -1808,7 +1813,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 
                 if currentContainerGroupId != contentGroupId {
                     if let containerGroupId = currentContainerGroupId {
-                        contentContainerNodeFrames.append((containerGroupId, CGRect(x: 0.0, y: totalContentNodesHeight - contentNodesHeight, width: maxContentWidth, height: contentNodesHeight), currentItemSelection))
+                        var overlapOffset: CGFloat = 0.0
+                        if !contentContainerNodeFrames.isEmpty {
+                            overlapOffset = smallContainerGroupOverlap
+                            totalContentNodesHeight -= smallContainerGroupOverlap
+                        }
+                        contentContainerNodeFrames.append((containerGroupId, CGRect(x: 0.0, y: totalContentNodesHeight - contentNodesHeight - overlapOffset, width: maxContentWidth, height: contentNodesHeight), currentItemSelection))
                     }
                     contentNodesHeight = 0.0
                     currentContainerGroupId = contentGroupId
@@ -1822,11 +1832,19 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 totalContentNodesHeight += size.height
             }
         }
-        contentSize.height += totalContentNodesHeight
         
         if let containerGroupId = currentContainerGroupId {
-            contentContainerNodeFrames.append((containerGroupId, CGRect(x: 0.0, y: totalContentNodesHeight - contentNodesHeight, width: maxContentWidth, height: contentNodesHeight), currentItemSelection))
+            var overlapOffset: CGFloat = 0.0
+            if !contentContainerNodeFrames.isEmpty {
+                overlapOffset = smallContainerGroupOverlap
+            }
+            contentContainerNodeFrames.append((containerGroupId, CGRect(x: 0.0, y: totalContentNodesHeight - contentNodesHeight - overlapOffset, width: maxContentWidth, height: contentNodesHeight), currentItemSelection))
+            if !overlapOffset.isZero {
+                totalContentNodesHeight -= smallContainerGroupOverlap
+            }
         }
+        
+        contentSize.height += totalContentNodesHeight
         
         var actionButtonsSizeAndApply: (CGSize, (Bool) -> ChatMessageActionButtonsNode)?
         if let actionButtonsFinalize = actionButtonsFinalize {

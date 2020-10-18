@@ -9,6 +9,7 @@ import SwiftSignalKit
 import AccountContext
 import SolidRoundedButtonNode
 import TelegramPresentationData
+import TelegramStringFormatting
 import PresentationDataUtils
 import CoreLocation
 
@@ -26,18 +27,20 @@ final class LocationDistancePickerScreen: ViewController {
     
     private let context: AccountContext
     private let style: LocationDistancePickerScreenStyle
-    private let currentDistance: Double?
+    private let distances: Signal<[Double], NoError>
     private let updated: (Int32?) -> Void
     private let completion: (Int32?) -> Void
+    private let willDismiss: () -> Void
     
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, style: LocationDistancePickerScreenStyle, currentDistance: Double?, updated: @escaping (Int32?) -> Void, completion: @escaping (Int32?) -> Void) {
+    init(context: AccountContext, style: LocationDistancePickerScreenStyle, distances: Signal<[Double], NoError>, updated: @escaping (Int32?) -> Void, completion: @escaping (Int32?) -> Void, willDismiss: @escaping () -> Void) {
         self.context = context
         self.style = style
-        self.currentDistance = currentDistance
+        self.distances = distances
         self.updated = updated
         self.completion = completion
+        self.willDismiss = willDismiss
         
         super.init(navigationBarPresentationData: nil)
         
@@ -64,7 +67,7 @@ final class LocationDistancePickerScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = LocationDistancePickerScreenNode(context: self.context, style: self.style, currentDistance: self.currentDistance)
+        self.displayNode = LocationDistancePickerScreenNode(context: self.context, style: self.style, distances: self.distances)
         self.controllerNode.updated = { [weak self] distance in
             guard let strongSelf = self else {
                 return
@@ -79,12 +82,13 @@ final class LocationDistancePickerScreen: ViewController {
             strongSelf.dismiss()
         }
         self.controllerNode.dismiss = { [weak self] in
-            self?.updated(nil)
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         self.controllerNode.cancel = { [weak self] in
             self?.dismiss()
         }
+        
+        self.controllerNode.update()
     }
     
     override public func loadView() {
@@ -101,6 +105,7 @@ final class LocationDistancePickerScreen: ViewController {
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
+        self.willDismiss()
         self.controllerNode.animateOut(completion: completion)
     }
     
@@ -145,7 +150,7 @@ private class TimerPickerView: UIPickerView {
     }
 }
 
-private var timerValues: [Int32] = {
+private var unitValues: [Int32] = {
     var values: [Int32] = []
     for i in 0 ..< 99 {
         values.append(Int32(i))
@@ -153,7 +158,7 @@ private var timerValues: [Int32] = {
     return values
 }()
 
-private var smallerTimerValues: [Int32] = {
+private var smallUnitValues: [Int32] = {
     var values: [Int32] = []
     for i in 0 ..< 100 {
         values.append(Int32(i))
@@ -165,7 +170,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     private let context: AccountContext
     private let controllerStyle: LocationDistancePickerScreenStyle
     private var presentationData: PresentationData
-    private let currentDistance: Double?
+    private var distances: [Double] = []
     
     private let dimNode: ASDisplayNode
     private let wrappingScrollNode: ASScrollNode
@@ -182,17 +187,18 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
+    private var distancesDisposable: Disposable?
+    
     var updated: ((Int32) -> Void)?
     var completion: ((Int32) -> Void)?
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(context: AccountContext, style: LocationDistancePickerScreenStyle, currentDistance: Double?) {
+    init(context: AccountContext, style: LocationDistancePickerScreenStyle, distances: Signal<[Double], NoError>) {
         self.context = context
         self.controllerStyle = style
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        self.currentDistance = currentDistance
-        
+                
         self.wrappingScrollNode = ASScrollNode()
         self.wrappingScrollNode.view.alwaysBounceVertical = true
         self.wrappingScrollNode.view.delaysContentTouches = false
@@ -232,11 +238,11 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.contentBackgroundNode = ASDisplayNode()
         self.contentBackgroundNode.backgroundColor = backgroundColor
         
-        let title = "Notification"
         self.titleNode = ASTextNode()
-        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: textColor)
+        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.Location_ProximityNotification_Title, font: Font.bold(17.0), textColor: textColor)
         
         self.textNode = ImmediateTextNode()
+        self.textNode.alpha = 0.0
         
         self.cancelButton = HighlightableButtonNode()
         self.cancelButton.setTitle(self.presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: accentColor, for: .normal)
@@ -270,19 +276,29 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
             if let strongSelf = self, let pickerView = strongSelf.pickerView {
                 strongSelf.doneButton.isUserInteractionEnabled = false
                 
-                let largeValue = timerValues[pickerView.selectedRow(inComponent: 0)]
-                let smallValue = smallerTimerValues[pickerView.selectedRow(inComponent: 1)]
+                let largeValue = unitValues[pickerView.selectedRow(inComponent: 0)]
+                let smallValue = smallUnitValues[pickerView.selectedRow(inComponent: 1)]
                 var value = largeValue * 1000 + smallValue * 10
-                value = Int32(Double(value) * 1.60934)
+                if !strongSelf.usesMetricSystem() {
+                    value = Int32(Double(value) * 1.60934)
+                }
                 strongSelf.completion?(value)
             }
         }
         
         self.setupPickerView()
     
-        Queue.mainQueue().after(0.5) {
-            self.updateDoneButtonTitle()
-        }
+        self.distancesDisposable = (distances
+        |> deliverOnMainQueue).start(next: { [weak self] distances in
+            if let strongSelf = self {
+                strongSelf.distances = distances
+                strongSelf.updateDoneButtonTitle()
+            }
+        })
+    }
+    
+    deinit {
+        self.distancesDisposable?.dispose()
     }
     
     func setupPickerView() {
@@ -295,49 +311,78 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
         pickerView.dataSource = self
         pickerView.delegate = self
         pickerView.selectRow(0, inComponent: 0, animated: false)
-        pickerView.selectRow(30, inComponent: 1, animated: false)
         
+        if self.usesMetricSystem() {
+            pickerView.selectRow(30, inComponent: 1, animated: false)
+        } else {
+            pickerView.selectRow(20, inComponent: 1, animated: false)
+        }
         self.contentContainerNode.view.addSubview(pickerView)
         self.pickerView = pickerView
         
         self.updateDoneButtonTitle()
     }
     
+    private func usesMetricSystem() -> Bool {
+        return localeWithStrings(self.presentationData.strings).usesMetricSystem
+    }
+    
     func numberOfComponents(in pickerView: UIPickerView) -> Int {
-        return 2
+        return 3
     }
     
     private func updateDoneButtonTitle() {
         if let pickerView = self.pickerView {
-            let largeValue = timerValues[pickerView.selectedRow(inComponent: 0)]
-            let smallValue = smallerTimerValues[pickerView.selectedRow(inComponent: 1)]
+            let largeValue = unitValues[pickerView.selectedRow(inComponent: 0)]
+            let smallValue = smallUnitValues[pickerView.selectedRow(inComponent: 1)]
             
             var value = largeValue * 1000 + smallValue * 10
-            value = Int32(Double(value) * 1.60934)
-            let distance = stringForDistance(strings: context.sharedContext.currentPresentationData.with { $0 }.strings, distance: CLLocationDistance(value))
+            if !self.usesMetricSystem() {
+                value = Int32(Double(value) * 1.60934)
+            }
+            let distance = stringForDistance(strings: self.presentationData.strings, distance: CLLocationDistance(value))
+            self.doneButton.title = self.presentationData.strings.Location_ProximityNotification_Notify(distance).0
+    
+            self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Location_ProximityNotification_AlreadyClose(distance).0, font: Font.regular(14.0), textColor: self.presentationData.theme.actionSheet.secondaryTextColor)
+            if let (layout, navigationBarHeight) = self.containerLayout {
+                self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+            }
             
-            self.updated?(value)
-            self.doneButton.title = "Notify me within \(distance)"
-            
-            if let currentDistance = self.currentDistance, value > Int32(currentDistance) {
-                self.doneButton.alpha = 0.4
+            if let distance = self.distances.first, Double(value) > distance {
+                self.doneButton.alpha = 0.0
                 self.doneButton.isUserInteractionEnabled = false
+                self.textNode.alpha = 1.0
             } else {
                 self.doneButton.alpha = 1.0
                 self.doneButton.isUserInteractionEnabled = true
+                self.textNode.alpha = 0.0
             }
+        }
+    }
+    
+    fileprivate func update() {
+        if let pickerView = self.pickerView {
+            let largeValue = unitValues[pickerView.selectedRow(inComponent: 0)]
+            let smallValue = smallUnitValues[pickerView.selectedRow(inComponent: 1)]
+            
+            var value = largeValue * 1000 + smallValue * 10
+            if !self.usesMetricSystem() {
+                value = Int32(Double(value) * 1.60934)
+            }
+            self.updated?(value)
         }
     }
     
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
         self.updateDoneButtonTitle()
+        self.update()
     }
     
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
         if component == 0 {
-            return timerValues.count
+            return unitValues.count
         } else if component == 1 {
-            return smallerTimerValues.count
+            return smallUnitValues.count
         } else {
             return 1
         }
@@ -345,13 +390,13 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
         if component == 0 {
-            let value = timerValues[row]
+            let value = unitValues[row]
             return "\(value)"
         } else if component == 1 {
-            let value = String(format: "%.2d", smallerTimerValues[row])
+            let value = String(format: "%.2d", smallUnitValues[row])
             return ".\(value)"
         } else {
-            return "MI"
+            return self.usesMetricSystem() ? self.presentationData.strings.Location_ProximityNotification_DistanceKM : self.presentationData.strings.Location_ProximityNotification_DistanceMI
         }
     }
     
@@ -490,7 +535,11 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         let buttonInset: CGFloat = 16.0
         let doneButtonHeight = self.doneButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-        transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: contentHeight - doneButtonHeight - insets.bottom - 16.0 - buttonOffset, width: contentFrame.width, height: doneButtonHeight))
+        let doneButtonFrame = CGRect(x: buttonInset, y: contentHeight - doneButtonHeight - insets.bottom - 16.0 - buttonOffset, width: contentFrame.width, height: doneButtonHeight)
+        transition.updateFrame(node: self.doneButton, frame: doneButtonFrame)
+        
+        let textSize = self.textNode.updateLayout(CGSize(width: width, height: titleHeight))
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((width - textSize.width) / 2.0), y: floor(doneButtonFrame.center.y - textSize.height / 2.0)), size: textSize))
         
         self.pickerView?.frame = CGRect(origin: CGPoint(x: 0.0, y: 54.0), size: CGSize(width: contentFrame.width, height: pickerHeight))
         

@@ -236,18 +236,7 @@ public func legacyLocationController(message: Message?, mapMedia: TelegramMediaM
         legacyController?.dismiss()
     }
     controller.liveLocationStopped = { [weak legacyController] in
-        if let message = message, let locationManager = context.sharedContext.locationManager {
-            let _ = (currentLocationManagerCoordinate(manager: locationManager, timeout: 5.0)
-            |> deliverOnMainQueue).start(next: { coordinate in
-                if let coordinate = coordinate {
-                    let _ = requestProximityNotification(postbox: context.account.postbox, network: context.account.network, messageId: message.id, distance: 500, coordinate: (coordinate.latitude, longitude: coordinate.longitude, accuracyRadius: nil)).start()
-                } else {
-
-                }
-            })
-           
-        }
-//        stopLiveLocation()
+        stopLiveLocation()
         legacyController?.dismiss()
     }
     

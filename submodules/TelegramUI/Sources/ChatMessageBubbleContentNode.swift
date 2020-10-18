@@ -49,6 +49,7 @@ enum ChatMessageBubbleRelativePosition {
     enum NeighbourSpacing {
         case `default`
         case condensed
+        case overlap
     }
     
     case None(ChatMessageBubbleMergeStatus)

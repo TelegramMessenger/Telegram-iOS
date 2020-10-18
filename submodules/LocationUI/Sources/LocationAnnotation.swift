@@ -231,7 +231,7 @@ class LocationPinAnnotationView: MKAnnotationView {
                     self.setPeer(context: annotation.context, theme: annotation.theme, peer: peer)
                     self.setSelected(true, animated: false)
                 } else if let location = annotation.location {
-                    let venueType = annotation.location?.venue?.type ?? ""
+                    let venueType = location.venue?.type ?? ""
                     let color = venueType.isEmpty ? annotation.theme.list.itemAccentColor : venueIconColor(type: venueType)
                     self.backgroundNode.image = generateTintedImage(image: UIImage(bundleImageName: "Location/PinBackground"), color: color)
                     self.iconNode.setSignal(venueIcon(postbox: annotation.context.account.postbox, type: venueType, background: false))

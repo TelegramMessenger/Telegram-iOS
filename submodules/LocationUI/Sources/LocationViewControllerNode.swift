@@ -10,11 +10,11 @@ import MergeLists
 import ItemListUI
 import ItemListVenueItem
 import TelegramPresentationData
+import TelegramStringFormatting
 import AccountContext
 import AppBundle
 import CoreLocation
 import Geocoding
-import TelegramStringFormatting
 
 func getLocation(from message: Message) -> TelegramMediaMap? {
     return message.media.first(where: { $0 is TelegramMediaMap } ) as? TelegramMediaMap
@@ -143,12 +143,12 @@ private enum LocationViewEntry: Comparable, Identifiable {
                     if beginTimeAndTimeout != nil {
                         interaction?.stopLiveLocation()
                     } else if let coordinate = coordinate {
-                        interaction?.sendLiveLocation(coordinate)
+                        interaction?.sendLiveLocation(coordinate, nil)
                     }
                 }, highlighted: { highlight in
                     interaction?.updateSendActionHighlight(highlight)
                 })
-            case let .liveLocation(theme, message, distance, _):
+            case let .liveLocation(_, message, distance, _):
                 let distanceString: String?
                 if let distance = distance {
                     distanceString = distance < 10 ? presentationData.strings.Map_YouAreHere : presentationData.strings.Map_DistanceAway(stringForDistance(strings: presentationData.strings, distance: distance)).0
@@ -227,7 +227,10 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
         self.listNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
         self.listNode.verticalScrollIndicatorFollowsOverscroll = true
         
-        self.headerNode = LocationMapHeaderNode(presentationData: presentationData, toggleMapModeSelection: interaction.toggleMapModeSelection, goToUserLocation: interaction.goToUserLocation, setupProximityNotification: interaction.setupProximityNotification)
+        var setupProximityNotificationImpl: ((Bool) -> Void)?
+        self.headerNode = LocationMapHeaderNode(presentationData: presentationData, toggleMapModeSelection: interaction.toggleMapModeSelection, goToUserLocation: interaction.goToUserLocation, setupProximityNotification: { reset in
+            setupProximityNotificationImpl?(reset)
+        })
         self.headerNode.mapNode.isRotateEnabled = false
         
         self.optionsNode = LocationOptionsNode(presentationData: presentationData, updateMapMode: interaction.updateMapMode)
@@ -268,6 +271,21 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
         let liveLocations = topPeerActiveLiveLocationMessages(viewTracker: context.account.viewTracker, accountPeerId: context.account.peerId, peerId: subject.id.peerId)
         |> map { _, messages -> [Message] in
             return messages
+        }
+        
+        setupProximityNotificationImpl = { reset in
+            let _ = (liveLocations
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { messages in
+                var ownMessageId: MessageId?
+                for message in messages {
+                    if message.localTags.contains(.OutgoingLiveLocation) {
+                        ownMessageId = message.id
+                        break
+                    }
+                }
+                interaction.setupProximityNotification(reset, ownMessageId)
+            })
         }
         
         let previousState = Atomic<LocationViewState?>(value: nil)
@@ -499,13 +517,13 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
     }
     
     private func dequeueTransition() {
-        guard let layout = self.validLayout, let transition = self.enqueuedTransitions.first else {
+        guard let _ = self.validLayout, let transition = self.enqueuedTransitions.first else {
             return
         }
         self.enqueuedTransitions.remove(at: 0)
         
         let options = ListViewDeleteAndInsertOptions()
-        self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
+        self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
         })
     }
     
@@ -526,10 +544,10 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
                 }
             }
             
-            self.headerNode.mapNode.proximityRadius = Double(radius)
+            self.headerNode.mapNode.proximityIndicatorRadius = Double(radius)
         } else {
             self.headerNode.forceIsHidden = false
-            self.headerNode.mapNode.proximityRadius = nil
+            self.headerNode.mapNode.proximityIndicatorRadius = nil
             self.updateState { state in
                 var state = state
                 state.selectedLocation = .user
@@ -537,15 +555,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
             }
         }
     }
-    
-    func setProximityRadius(radius: Int32?) {
-        self.updateState { state in
-            var state = state
-            state.proximityRadius = radius.flatMap { Double($0) }
-            return state
-        }
-    }
-    
+
     func showAll() {
         self.headerNode.mapNode.showAll()
     }

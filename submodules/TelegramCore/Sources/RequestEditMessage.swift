@@ -309,7 +309,7 @@ public func requestEditLiveLocation(postbox: Postbox, network: Network, stateMan
     }
 }
 
-public func requestProximityNotification(postbox: Postbox, network: Network, messageId: MessageId, distance: Int32, coordinate: (latitude: Double, longitude: Double, accuracyRadius: Int32?)) -> Signal<Void, NoError> {
+public func requestProximityNotification(postbox: Postbox, network: Network, messageId: MessageId, distance: Int32) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
     }

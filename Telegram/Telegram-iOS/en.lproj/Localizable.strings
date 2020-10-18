@@ -5838,8 +5838,14 @@ Any member of this group will be able to see messages in the channel.";
 
 "Conversation.Dice.u1F3B0" = "Send a slot machine emoji to try your luck.";
 
-"Notification.ProximityReached" = "%2$@ is now within %2$@ from you";
+"Notification.ProximityReached" = "%1$@ is now within %2$@ from you";
 
 "Location.ProximityNotification.Title" = "Notification";
 "Location.ProximityNotification.Notify" = "Notify me within %@";
 "Location.ProximityNotification.AlreadyClose" = "You are already closer than %@";
+"Location.ProximityNotification.DistanceKM" = "KM";
+"Location.ProximityNotification.DistanceMI" = "MI";
+
+"Location.LiveLocationRequired.Title" = "Share Location";
+"Location.LiveLocationRequired.Description" = "For the alert to work, please share your live location in this chat.";
+"Location.LiveLocationRequired.ShareLocation" = "Share Location";

@@ -42,13 +42,13 @@ class LocationViewInteraction {
     let goToCoordinate: (CLLocationCoordinate2D) -> Void
     let requestDirections: () -> Void
     let share: () -> Void
-    let setupProximityNotification: (CLLocationCoordinate2D, Bool) -> Void
+    let setupProximityNotification: (Bool, MessageId?) -> Void
     let updateSendActionHighlight: (Bool) -> Void
-    let sendLiveLocation: (CLLocationCoordinate2D) -> Void
+    let sendLiveLocation: (CLLocationCoordinate2D, Int32?) -> Void
     let stopLiveLocation: () -> Void
     let updateRightBarButton: (LocationViewRightBarButton) -> Void
     
-    init(toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, requestDirections: @escaping () -> Void, share: @escaping () -> Void, setupProximityNotification: @escaping (CLLocationCoordinate2D, Bool) -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D) -> Void, stopLiveLocation: @escaping () -> Void, updateRightBarButton: @escaping (LocationViewRightBarButton) -> Void) {
+    init(toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, requestDirections: @escaping () -> Void, share: @escaping () -> Void, setupProximityNotification: @escaping (Bool, MessageId?) -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32?) -> Void, stopLiveLocation: @escaping () -> Void, updateRightBarButton: @escaping (LocationViewRightBarButton) -> Void) {
         self.toggleMapModeSelection = toggleMapModeSelection
         self.updateMapMode = updateMapMode
         self.goToUserLocation = goToUserLocation
@@ -166,18 +166,23 @@ public final class LocationViewController: ViewController {
                 })
                 strongSelf.present(OpenInActionSheetController(context: context, item: .location(location: location, withDirections: false), additionalAction: shareAction, openUrl: params.openUrl), in: .window(.root), with: nil)
             }
-        }, setupProximityNotification: { [weak self] coordinate, reset in
+        }, setupProximityNotification: { [weak self] reset, messageId in
             guard let strongSelf = self else {
                 return
             }
             
             if reset {
-                strongSelf.controllerNode.setProximityRadius(radius: nil)
+                strongSelf.controllerNode.updateState { state -> LocationViewState in
+                    var state = state
+                    state.proximityRadius = nil
+                    return state
+                }
+                
                 CURRENT_DISTANCE = nil
             } else {
                 strongSelf.controllerNode.setProximityIndicator(radius: 0)
                 
-                let controller = LocationDistancePickerScreen(context: context, style: .default, currentDistance: strongSelf.controllerNode.headerNode.mapNode.distance, updated: { [weak self] distance in
+                let controller = LocationDistancePickerScreen(context: context, style: .default, distances: strongSelf.controllerNode.headerNode.mapNode.distancesToAllAnnotations, updated: { [weak self] distance in
                     guard let strongSelf = self else {
                         return
                     }
@@ -186,13 +191,25 @@ public final class LocationViewController: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.controllerNode.setProximityIndicator(radius: nil)
-                    if let distance = distance {
-                        strongSelf.controllerNode.setProximityRadius(radius: distance)
+                    
+                    if let messageId = messageId {
+                        if let distance = distance {
+                            strongSelf.controllerNode.updateState { state -> LocationViewState in
+                                var state = state
+                                state.proximityRadius = Double(distance)
+                                return state
+                            }
+                            
+                            let _ = requestProximityNotification(postbox: context.account.postbox, network: context.account.network, messageId: messageId, distance: distance).start()
+                            
+                            CURRENT_DISTANCE = Double(distance)
+                        }
+                    } else {
                         
-                        let _ = requestProximityNotification(postbox: context.account.postbox, network: context.account.network, messageId: subject.id, distance: distance, coordinate: (coordinate.latitude, longitude: coordinate.longitude, accuracyRadius: nil)).start()
-                        
-                        CURRENT_DISTANCE = Double(distance)
+                    }
+                }, willDismiss: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.controllerNode.setProximityIndicator(radius: nil)
                     }
                 })
                 strongSelf.present(controller, in: .window(.root))
@@ -202,7 +219,7 @@ public final class LocationViewController: ViewController {
                 return
             }
             strongSelf.controllerNode.updateSendActionHighlight(highlighted)
-        }, sendLiveLocation: { [weak self] coordinate in
+        }, sendLiveLocation: { [weak self] coordinate, distance in
             guard let strongSelf = self else {
                 return
             }

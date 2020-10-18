@@ -39,7 +39,7 @@ final class LocationMapHeaderNode: ASDisplayNode {
     private let toggleMapModeSelection: () -> Void
     private let goToUserLocation: () -> Void
     private let showPlacesInThisArea: () -> Void
-    private let setupProximityNotification: (CLLocationCoordinate2D, Bool) -> Void
+    private let setupProximityNotification: (Bool) -> Void
     
     private var displayingPlacesButton = false
     private var proximityNotification: Bool?
@@ -57,7 +57,7 @@ final class LocationMapHeaderNode: ASDisplayNode {
     
     private var validLayout: (ContainerViewLayout, CGFloat, CGFloat, CGFloat, CGSize)?
     
-    init(presentationData: PresentationData, toggleMapModeSelection: @escaping () -> Void, goToUserLocation: @escaping () -> Void, setupProximityNotification: @escaping (CLLocationCoordinate2D, Bool) -> Void = { _, _ in }, showPlacesInThisArea: @escaping () -> Void = {}) {
+    init(presentationData: PresentationData, toggleMapModeSelection: @escaping () -> Void, goToUserLocation: @escaping () -> Void, setupProximityNotification: @escaping (Bool) -> Void = { _ in }, showPlacesInThisArea: @escaping () -> Void = {}) {
         self.presentationData = presentationData
         self.toggleMapModeSelection = toggleMapModeSelection
         self.goToUserLocation = goToUserLocation
@@ -219,8 +219,8 @@ final class LocationMapHeaderNode: ASDisplayNode {
     }
     
     @objc private func notificationPressed() {
-        if let proximityNotification = self.proximityNotification, let location = self.mapNode.currentUserLocation {
-            self.setupProximityNotification(location.coordinate, proximityNotification)
+        if let proximityNotification = self.proximityNotification {
+            self.setupProximityNotification(proximityNotification)
         }
     }
     
