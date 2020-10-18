@@ -746,7 +746,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, sendCurrentMessage: { [weak self] silentPosting in
             if let strongSelf = self {
-                strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting)
+                if let _ = strongSelf.presentationInterfaceState.recordedMediaPreview {
+                    strongSelf.sendMediaRecording(silently: silentPosting)
+                } else {
+                    strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting)
+                }
             }
         }, sendMessage: { [weak self] text in
             guard let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) else {
@@ -4646,8 +4650,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.lockMediaRecorder()
         }, deleteRecordedMedia: { [weak self] in
             self?.deleteMediaRecording()
-        }, sendRecordedMedia: { [weak self] in
-            self?.sendMediaRecording()
+        }, sendRecordedMedia: { [weak self] silently in
+            self?.sendMediaRecording(silently: silently)
         }, displayRestrictedInfo: { [weak self] subject, displayType in
             guard let strongSelf = self else {
                 return
@@ -8278,7 +8282,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
     }
     
-    private func sendMediaRecording() {
+    private func sendMediaRecording(silently: Bool) {
         self.chatDisplayNode.updateRecordedMediaDeleted(false)
         if let recordedMediaPreview = self.presentationInterfaceState.recordedMediaPreview {
             if let _ = self.presentationInterfaceState.slowmodeState, !self.presentationInterfaceState.isScheduledMessages {
@@ -8298,7 +8302,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             })
             
-            self.sendMessages([.message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: recordedMediaPreview.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int(recordedMediaPreview.fileSize), attributes: [.Audio(isVoice: true, duration: Int(recordedMediaPreview.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: self.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
+            var attributes: [MessageAttribute] = []
+            if silently {
+                attributes.append(NotificationInfoMessageAttribute(flags: .muted))
+            }
+            
+            self.sendMessages([.message(text: "", attributes: attributes, mediaReference: .standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: arc4random64()), partialReference: nil, resource: recordedMediaPreview.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: Int(recordedMediaPreview.fileSize), attributes: [.Audio(isVoice: true, duration: Int(recordedMediaPreview.duration), title: nil, performer: nil, waveform: waveformBuffer)])), replyToMessageId: self.presentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil)])
         }
     }
     

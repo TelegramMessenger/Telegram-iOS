@@ -397,7 +397,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, stopMediaRecording: {
         }, lockMediaRecording: {
         }, deleteRecordedMedia: {
-        }, sendRecordedMedia: {
+        }, sendRecordedMedia: { _ in
         }, displayRestrictedInfo: { _, _ in
         }, displayVideoUnmuteTip: { _ in
         }, switchMediaRecordingMode: {
