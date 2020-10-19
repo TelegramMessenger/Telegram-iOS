@@ -64,7 +64,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 } else {
                     var neighborSpacing: ChatMessageBubbleRelativePosition.NeighbourSpacing = .default
                     if previousItemIsFile {
-                        neighborSpacing = .overlap
+                        neighborSpacing = .overlap(file.isMusic ? 14.0 : 5.0)
                     }
                     isFile = true
                     hasFiles = true
@@ -229,12 +229,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         func willUpdateIsExtractedToContextPreview(isExtractedToContextPreview: Bool, transition: ContainedViewLayoutTransition) {
             if isExtractedToContextPreview {
                 var offset: CGFloat = 0.0
+                var inset: CGFloat = 0.0
                 var type: ChatMessageBackgroundType
                 if let currentParams = self.currentParams, case .incoming = currentParams.backgroundType {
                     type = .incoming(.Extracted)
-                    offset += 5.0
+                    offset = -5.0
+                    inset = 5.0
                 } else {
                     type = .outgoing(.Extracted)
+                    inset = 5.0
                 }
                 
                 if let _ = self.backgroundNode {
@@ -250,7 +253,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
                 
                 if let currentParams = self.currentParams {
-                    let backgroundFrame = CGRect(x: currentParams.contentOrigin.x - offset, y: 0.0, width: currentParams.size.width + offset, height: currentParams.size.height)
+                    let backgroundFrame = CGRect(x: currentParams.contentOrigin.x + offset, y: 0.0, width: currentParams.size.width + inset, height: currentParams.size.height)
                     self.backgroundNode?.updateLayout(size: backgroundFrame.size, transition: .immediate)
                     self.backgroundNode?.frame = backgroundFrame
                 }
@@ -1783,13 +1786,20 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var contentNodesHeight: CGFloat = 0.0
         var totalContentNodesHeight: CGFloat = 0.0
         
-        let smallContainerGroupOverlap: CGFloat = 5.0
-        let largeContainerGroupOverlap: CGFloat = 14.0
-        var nextContainerGroupOverlap = smallContainerGroupOverlap
+        var currentContainerGroupOverlap: CGFloat = 0.0
         
         var mosaicStatusOrigin: CGPoint?
         for i in 0 ..< contentNodePropertiesAndFinalize.count {
-            let (properties, _, finalize, contentGroupId, itemSelection) = contentNodePropertiesAndFinalize[i]
+            let (properties, position, finalize, contentGroupId, itemSelection) = contentNodePropertiesAndFinalize[i]
+            
+            if let position = position, case let .linear(top, bottom) = position {
+                if case let .Neighbour(_, _, spacing) = top, case let .overlap(overlap) = spacing {
+                    currentContainerGroupOverlap = overlap
+                }
+                if case let .Neighbour(_, _, spacing) = bottom, case let .overlap(overlap) = spacing {
+                    currentContainerGroupOverlap = overlap
+                }
+            }
             
             if let mosaicRange = mosaicRange, mosaicRange.contains(i), let (framesAndPositions, size) = calculatedGroupFramesAndSize {
                 let mosaicIndex = i - mosaicRange.lowerBound
@@ -1823,11 +1833,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     if let containerGroupId = currentContainerGroupId {
                         var overlapOffset: CGFloat = 0.0
                         if !contentContainerNodeFrames.isEmpty {
-                            overlapOffset = smallContainerGroupOverlap
+                            overlapOffset = currentContainerGroupOverlap
                         }
                         contentContainerNodeFrames.append((containerGroupId, CGRect(x: 0.0, y: headerSize.height + totalContentNodesHeight - contentNodesHeight - overlapOffset, width: maxContentWidth, height: contentNodesHeight), currentItemSelection))
                         if !overlapOffset.isZero {
-                            totalContentNodesHeight -= smallContainerGroupOverlap
+                            totalContentNodesHeight -= currentContainerGroupOverlap
                         }
                         if contentGroupId == nil {
                             totalContentNodesHeight += 3.0
@@ -1849,11 +1859,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         if let containerGroupId = currentContainerGroupId {
             var overlapOffset: CGFloat = 0.0
             if !contentContainerNodeFrames.isEmpty {
-                overlapOffset = smallContainerGroupOverlap
+                overlapOffset = currentContainerGroupOverlap
             }
             contentContainerNodeFrames.append((containerGroupId, CGRect(x: 0.0, y: headerSize.height + totalContentNodesHeight - contentNodesHeight - overlapOffset, width: maxContentWidth, height: contentNodesHeight), currentItemSelection))
             if !overlapOffset.isZero {
-                totalContentNodesHeight -= smallContainerGroupOverlap
+                totalContentNodesHeight -= currentContainerGroupOverlap
             }
         }
         

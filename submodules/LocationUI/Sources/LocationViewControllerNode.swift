@@ -411,6 +411,10 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     index += 1
                 }
                 
+                if subject.id.peerId.namespace != Namespaces.Peer.CloudUser {
+                    proximityNotification = state.proximityRadius != nil
+                }
+                
                 let previousEntries = previousEntries.swap(entries)
                 let previousState = previousState.swap(state)
                         

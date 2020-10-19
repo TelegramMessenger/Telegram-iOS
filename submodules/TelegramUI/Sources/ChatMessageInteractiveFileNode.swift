@@ -993,7 +993,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 self.cutoutNode = cutoutNode
                 self.insertSubnode(cutoutNode, aboveSubnode: statusNode)
              
-                cutoutNode.frame = streamingCacheStatusFrame.insetBy(dx: -1.5, dy: -1.5)
+                cutoutNode.frame = streamingCacheStatusFrame.insetBy(dx: -(1.0 + UIScreenPixel), dy: -(1.0 + UIScreenPixel))
                 
                 if animated {
                     cutoutNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)

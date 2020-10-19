@@ -64,6 +64,16 @@
     return self.backingAsset.representsBurst;
 }
 
+- (NSInteger)fileSize {
+    if (self.backingAsset != nil) {
+        PHAssetResource *resource = [PHAssetResource assetResourcesForAsset:self.backingAsset].firstObject;
+        if (resource != nil) {
+            return [[resource valueForKey:@"fileSize"] integerValue];
+        }
+    }
+    return 0;
+}
+
 - (NSString *)uniformTypeIdentifier
 {
     if (self.backingAsset != nil)

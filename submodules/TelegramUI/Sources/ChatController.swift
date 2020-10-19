@@ -7170,7 +7170,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             let fileId = arc4random64()
                                             let mimeType = guessMimeTypeByFileExtension((item.fileName as NSString).pathExtension)
                                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
-                                            if mimeType == "application/pdf" {
+                                            if mimeType.hasPrefix("image/") || mimeType == "application/pdf" {
                                                 previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 320, height: 320), resource: ICloudFileResource(urlData: item.urlData, thumbnail: true), progressiveSizes: []))
                                             }
                                             var attributes: [TelegramMediaFileAttribute] = []
@@ -7183,7 +7183,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: replyMessageId, localGroupingKey: groupingKey)
                                             messages.append(message)
                                         }
-                                        if let _ = groupingKey, results.count % 10 == 0 {
+                                        if let _ = groupingKey, messages.count % 10 == 0 {
                                             groupingKey = arc4random64()
                                         }
                                     }
