@@ -49,10 +49,9 @@ final class ChatListSearchInteraction {
     let peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?
     let present: (ViewController, Any?) -> Void
     let dismissInput: () -> Void
-    let updateSuggestedPeers: ([Peer], ChatListSearchPaneKey) -> Void
     let getSelectedMessageIds: () -> Set<MessageId>?
     
-    init(openPeer: @escaping (Peer, Bool) -> Void, openDisabledPeer: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId, Bool) -> Void, openUrl: @escaping (String) -> Void, clearRecentSearch: @escaping () -> Void, addContact: @escaping (String) -> Void, toggleMessageSelection: @escaping (MessageId, Bool) -> Void, messageContextAction: @escaping ((Message, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), mediaMessageContextAction: @escaping ((Message, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, updateSuggestedPeers: @escaping ([Peer], ChatListSearchPaneKey) -> Void, getSelectedMessageIds: @escaping () -> Set<MessageId>?) {
+    init(openPeer: @escaping (Peer, Bool) -> Void, openDisabledPeer: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId, Bool) -> Void, openUrl: @escaping (String) -> Void, clearRecentSearch: @escaping () -> Void, addContact: @escaping (String) -> Void, toggleMessageSelection: @escaping (MessageId, Bool) -> Void, messageContextAction: @escaping ((Message, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), mediaMessageContextAction: @escaping ((Message, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, getSelectedMessageIds: @escaping () -> Set<MessageId>?) {
         self.openPeer = openPeer
         self.openDisabledPeer = openDisabledPeer
         self.openMessage = openMessage
@@ -65,7 +64,6 @@ final class ChatListSearchInteraction {
         self.peerContextAction = peerContextAction
         self.present = present
         self.dismissInput = dismissInput
-        self.updateSuggestedPeers = updateSuggestedPeers
         self.getSelectedMessageIds = getSelectedMessageIds
     }
 }
@@ -105,7 +103,6 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private var presentationDataDisposable: Disposable?
     
     private let suggestedDates = Promise<[(Date?, Date, String?)]>([])
-    private let suggestedPeers = Promise<[Peer]>([])
     private var suggestedFilters: [ChatListSearchFilter]?
     private let suggestedFiltersDisposable = MetaDisposable()
     
@@ -219,10 +216,6 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             present(c, a)
         }, dismissInput: { [weak self] in
             self?.dismissInput()
-        }, updateSuggestedPeers: { [weak self] peers, key in
-            if let strongSelf = self, key == .chats {
-                strongSelf.suggestedPeers.set(.single(peers))
-            }
         }, getSelectedMessageIds: { [weak self] () -> Set<MessageId>? in
             if let strongSelf = self {
                 return strongSelf.stateValue.selectedMessageIds
@@ -337,7 +330,9 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             if !peers.isEmpty && selectedFilter != .filter(ChatListSearchFilter.chats.id) {
                 for peer in peers {
                     let isGroup: Bool
-                    if let channel = peer as? TelegramChannel, case .group = channel.info {
+                    if peer.id.namespace == Namespaces.Peer.SecretChat {
+                        continue
+                    } else if let channel = peer as? TelegramChannel, case .group = channel.info {
                         isGroup = true
                     } else if peer.id.namespace == Namespaces.Peer.CloudGroup {
                         isGroup = true
