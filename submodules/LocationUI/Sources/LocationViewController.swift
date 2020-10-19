@@ -189,27 +189,27 @@ public final class LocationViewController: ViewController {
                         return
                     }
                     strongSelf.controllerNode.setProximityIndicator(radius: distance)
-                }, completion: { [weak self] distance in
+                }, completion: { [weak self] distance, completion in
                     guard let strongSelf = self else {
                         return
                     }
                     
                     if let messageId = messageId {
-                        if let distance = distance {
-                            strongSelf.controllerNode.updateState { state -> LocationViewState in
-                                var state = state
-                                state.proximityRadius = Double(distance)
-                                return state
-                            }
-                            
-                            let _ = requestProximityNotification(postbox: context.account.postbox, network: context.account.network, messageId: messageId, distance: distance).start()
-                            
-                            CURRENT_DISTANCE = Double(distance)
+                        completion()
+                        strongSelf.controllerNode.updateState { state -> LocationViewState in
+                            var state = state
+                            state.proximityRadius = Double(distance)
+                            return state
                         }
+                        
+                        let _ = requestProximityNotification(postbox: context.account.postbox, network: context.account.network, messageId: messageId, distance: distance).start()
+                        
+                        CURRENT_DISTANCE = Double(distance)
                     } else if let coordinate = coordinate {
                         strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_Title, text: strongSelf.presentationData.strings.Location_LiveLocationRequired_Description, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_ShareLocation, action: { [weak self] in
+                            completion()
                             self?.interaction?.sendLiveLocation(coordinate, distance)
-                        }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})]), in: .window(.root))
+                        }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})], actionLayout: .vertical), in: .window(.root))
                     }
                 }, willDismiss: { [weak self] in
                     if let strongSelf = self {

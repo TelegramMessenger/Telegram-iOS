@@ -29,12 +29,12 @@ final class LocationDistancePickerScreen: ViewController {
     private let style: LocationDistancePickerScreenStyle
     private let distances: Signal<[Double], NoError>
     private let updated: (Int32?) -> Void
-    private let completion: (Int32?) -> Void
+    private let completion: (Int32, @escaping () -> Void) -> Void
     private let willDismiss: () -> Void
     
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, style: LocationDistancePickerScreenStyle, distances: Signal<[Double], NoError>, updated: @escaping (Int32?) -> Void, completion: @escaping (Int32?) -> Void, willDismiss: @escaping () -> Void) {
+    init(context: AccountContext, style: LocationDistancePickerScreenStyle, distances: Signal<[Double], NoError>, updated: @escaping (Int32?) -> Void, completion: @escaping (Int32, @escaping () -> Void) -> Void, willDismiss: @escaping () -> Void) {
         self.context = context
         self.style = style
         self.distances = distances
@@ -78,8 +78,9 @@ final class LocationDistancePickerScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.completion(distance)
-            strongSelf.dismiss()
+            strongSelf.completion(distance, {
+                strongSelf.dismiss()
+            })
         }
         self.controllerNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
