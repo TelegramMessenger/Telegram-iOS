@@ -210,6 +210,14 @@ final class LocationMapHeaderNode: ASDisplayNode {
         self.shadowNode.image = generateShadowImage(theme: self.presentationData.theme, highlighted: highlighted)
     }
     
+    func proximityButtonFrame() -> CGRect? {
+        if self.notificationButtonNode.alpha > 0.0 {
+            return self.optionsBackgroundNode.view.convert(self.notificationButtonNode.frame, to: self.view)
+        } else {
+            return nil
+        }
+    }
+    
     @objc private func infoPressed() {
         self.toggleMapModeSelection()
     }

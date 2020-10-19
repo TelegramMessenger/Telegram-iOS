@@ -136,6 +136,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case themeChangeTip = 17
     case callsTabTip = 18
     case chatFolderTips = 19
+    case locationProximityAlertTip = 20
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -257,6 +258,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func themeChangeTip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.themeChangeTip.key)
+    }
+    
+    static func locationProximityAlertTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.locationProximityAlertTip.key)
     }
 }
 
@@ -660,6 +665,28 @@ public struct ApplicationSpecificNotice {
         let _ = accountManager.transaction { transaction -> Void in
             transaction.setNotice(ApplicationSpecificNoticeKeys.themeChangeTip(), ApplicationSpecificBoolNotice())
         }.start()
+    }
+    
+    public static func getLocationProximityAlertTip(accountManager: AccountManager) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatMessageOptionsTip()) as? ApplicationSpecificCounterNotice {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementLocationProximityAlertTip(accountManager: AccountManager, count: Int32 = 1) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatMessageOptionsTip()) as? ApplicationSpecificCounterNotice {
+                currentValue = value.value
+            }
+            currentValue += count
+            
+            transaction.setNotice(ApplicationSpecificNoticeKeys.chatMessageOptionsTip(), ApplicationSpecificCounterNotice(value: currentValue))
+        }
     }
     
     public static func reset(accountManager: AccountManager) -> Signal<Void, NoError> {

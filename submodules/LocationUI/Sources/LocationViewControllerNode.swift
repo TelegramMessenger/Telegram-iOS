@@ -11,11 +11,13 @@ import ItemListUI
 import ItemListVenueItem
 import TelegramPresentationData
 import TelegramStringFormatting
+import TelegramNotices
 import AccountContext
 import AppBundle
 import CoreLocation
 import Geocoding
 import DeviceAccess
+import TooltipUI
 
 func getLocation(from message: Message) -> TelegramMediaMap? {
     return message.media.first(where: { $0 is TelegramMediaMap } ) as? TelegramMediaMap
@@ -213,6 +215,8 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
     
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     private var listOffset: CGFloat?
+    
+    private var displayedProximityAlertTooltip = false
 
     init(context: AccountContext, presentationData: PresentationData, subject: Message, interaction: LocationViewInteraction, locationManager: LocationManager) {
         self.context = context
@@ -291,6 +295,8 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     }
                 }
                 interaction.setupProximityNotification(reset, strongSelf.headerNode.mapNode.currentUserLocation?.coordinate, ownMessageId)
+                
+                let _ = ApplicationSpecificNotice.incrementLocationProximityAlertTip(accountManager: context.sharedContext.accountManager, count: 4).start()
             })
         }
         
@@ -411,6 +417,18 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 strongSelf.enqueueTransition(transition)
                 
                 strongSelf.headerNode.updateState(mapMode: state.mapMode, displayingMapModeOptions: state.displayingMapModeOptions, displayingPlacesButton: false, proximityNotification: proximityNotification, animated: false)
+                
+                if let proximityNotification = proximityNotification, !proximityNotification && !strongSelf.displayedProximityAlertTooltip {
+                    strongSelf.displayedProximityAlertTooltip = true
+                    
+                    let _ = (ApplicationSpecificNotice.getLocationProximityAlertTip(accountManager: context.sharedContext.accountManager)
+                    |> deliverOnMainQueue).start(next: { [weak self] counter in
+                        if let strongSelf = self, counter < 3 {
+                            let _ = ApplicationSpecificNotice.incrementLocationProximityAlertTip(accountManager: context.sharedContext.accountManager).start()
+                            strongSelf.displayProximityAlertTooltip()
+                        }
+                    })
+                }
                 
                 switch state.selectedLocation {
                     case .initial:
@@ -587,6 +605,30 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
 
     func showAll() {
         self.headerNode.mapNode.showAll()
+    }
+    
+    private func displayProximityAlertTooltip() {
+        guard let location = self.headerNode.proximityButtonFrame().flatMap({ frame -> CGRect in
+            return self.headerNode.view.convert(frame, to: nil)
+        }) else {
+            return
+        }
+        
+        let _ = (self.context.account.postbox.loadedPeerWithId(self.subject.id.peerId)
+        |> deliverOnMainQueue).start(next: { [weak self] peer in
+            guard let strongSelf = self else {
+                return
+            }
+          
+            var text: String = strongSelf.presentationData.strings.Location_ProximityGroupTip
+            if peer.id.namespace == Namespaces.Peer.CloudUser {
+                text = strongSelf.presentationData.strings.Location_ProximityTip(peer.compactDisplayTitle).0
+            }
+            
+            strongSelf.interaction.present(TooltipScreen(text: text, icon: nil, location: .point(location.offsetBy(dx: -9.0, dy: 0.0), .right), displayDuration: .custom(3.0), shouldDismissOnTouch: { _ in
+                return .dismiss(consume: false)
+            }))
+        })
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {

@@ -5774,7 +5774,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let inputText = self.presentationInterfaceState.interfaceState.effectiveInputState.inputText.string
                 if !inputText.isEmpty {
                     if inputText.count > 4 {
-                        let _ = (ApplicationSpecificNotice.getChatMessageOptionsTip(accountManager: context.sharedContext.accountManager)
+                        let _ = (ApplicationSpecificNotice.getChatMessageOptionsTip(accountManager: self.context.sharedContext.accountManager)
                         |> deliverOnMainQueue).start(next: { [weak self] counter in
                             if let strongSelf = self, counter < 3 {
                                 let _ = ApplicationSpecificNotice.incrementChatMessageOptionsTip(accountManager: strongSelf.context.sharedContext.accountManager).start()
