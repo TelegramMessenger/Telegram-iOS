@@ -444,7 +444,7 @@ final class SharedApplicationContext {
         
         let logsPath = rootPath + "/logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
-        Logger.setSharedLogger(Logger(basePath: logsPath))
+        Logger.setSharedLogger(Logger(rootPath: rootPath, basePath: logsPath))
         
         if let contents = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: rootPath + "/accounts-metadata"), includingPropertiesForKeys: nil, options: [.skipsSubdirectoryDescendants]) {
             for url in contents {
