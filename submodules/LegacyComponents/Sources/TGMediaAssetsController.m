@@ -762,6 +762,8 @@
                             return generatedItem;
                         }];
                     }]];
+                    
+                    i++;
                 }
                 else
                 {
@@ -863,6 +865,8 @@
                                 return generatedItem;
                             }];
                         }]];
+                        
+                        i++;
                     }
                     else
                     {
@@ -983,6 +987,8 @@
                         id generatedItem = descriptionGenerator(dict, caption, entities, nil);
                         return generatedItem;
                     }]];
+                    
+                    i++;
                 }
                 else
                 {
