@@ -3019,8 +3019,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     
                     var tapMessage: Message? = item.content.firstMessage
                     var selectAll = true
+                    var hasFiles = false
                     loop: for contentNode in self.contentNodes {
                         let convertedLocation = self.view.convert(location, to: contentNode.view)
+                        
+                        if contentNode is ChatMessageFileBubbleContentNode {
+                            hasFiles = true
+                        }
                         
                         let convertedNodeFrame = contentNode.view.convert(contentNode.bounds, to: self.view)
                         if !convertedNodeFrame.contains(location) {
@@ -3028,6 +3033,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         } else if contentNode is ChatMessageMediaBubbleContentNode {
                             selectAll = false
                         } else if contentNode is ChatMessageFileBubbleContentNode {
+                            selectAll = false
+                        } else if contentNode is ChatMessageTextBubbleContentNode, hasFiles {
                             selectAll = false
                         }
                         tapMessage = contentNode.item?.message

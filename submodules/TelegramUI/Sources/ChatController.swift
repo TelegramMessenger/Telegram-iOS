@@ -5824,7 +5824,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let text: String
                 switch error {
-                case .generic, .textTooLong:
+                case .generic, .textTooLong, .invalidGrouping:
                     text = strongSelf.presentationData.strings.Channel_EditMessageErrorGeneric
                 case .restricted:
                     text = strongSelf.presentationData.strings.Group_ErrorSendRestrictedMedia
@@ -7149,17 +7149,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                                     
                                     var groupingKey: Int64?
-                                    var allItemsAreSame = true
+                                    var fileTypes: (music: Bool, other: Bool) = (false, false)
                                     for item in results {
                                         if let item = item {
                                             let pathExtension = (item.fileName as NSString).pathExtension.lowercased()
-                                            if !["mp3", "m4a"].contains(pathExtension) {
-                                                allItemsAreSame = false
+                                            if ["mp3", "m4a"].contains(pathExtension) {
+                                                fileTypes.music = true
+                                            } else {
+                                                fileTypes.other = true
                                             }
                                         }
                                     }
-                                    allItemsAreSame = true
-                                    if allItemsAreSame {
+                                    if fileTypes.music != fileTypes.other {
                                         groupingKey = arc4random64()
                                     }
                                     

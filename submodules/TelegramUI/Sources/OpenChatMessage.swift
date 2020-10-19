@@ -69,8 +69,8 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 let controllerParams = LocationViewParams(sendLiveLocation: { location in
                     let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: location), replyToMessageId: nil, localGroupingKey: nil)
                     params.enqueueMessage(outMessage)
-                }, stopLiveLocation: {
-                    params.context.liveLocationManager?.cancelLiveLocation(peerId: params.message.id.peerId)
+                }, stopLiveLocation: { messageId in
+                    params.context.liveLocationManager?.cancelLiveLocation(peerId: messageId?.peerId ?? params.message.id.peerId)
                 }, openUrl: params.openUrl, openPeer: { peer in
                     params.openPeer(peer, .info)
                 })

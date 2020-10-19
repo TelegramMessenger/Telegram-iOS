@@ -43,7 +43,7 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
     let peer: Peer?
     let message: Message?
     let forcedSelection: Bool
-    var heading: Int32? {
+    var heading: Double? {
         willSet {
             self.willChangeValue(forKey: "heading")
         }
@@ -78,7 +78,7 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
         super.init()
     }
     
-    init(context: AccountContext, theme: PresentationTheme, message: Message, selfPeer: Peer?, heading: Int32?) {
+    init(context: AccountContext, theme: PresentationTheme, message: Message, selfPeer: Peer?, heading: Double?) {
         self.context = context
         self.theme = theme
         self.location = nil

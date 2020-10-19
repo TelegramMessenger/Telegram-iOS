@@ -42,7 +42,7 @@ private struct LocationViewTransaction {
 private enum LocationViewEntryId: Hashable {
     case info
     case toggleLiveLocation
-    case liveLocation(PeerId)
+    case liveLocation(UInt32)
 }
 
 private enum LocationViewEntry: Comparable, Identifiable {
@@ -57,11 +57,7 @@ private enum LocationViewEntry: Comparable, Identifiable {
             case .toggleLiveLocation:
                 return .toggleLiveLocation
             case let .liveLocation(_, message, _, _):
-                if let author = message.author {
-                    return .liveLocation(author.id)
-                } else {
-                    return .liveLocation(message.id.peerId)
-                }
+                return .liveLocation(message.stableId)
         }
     }
     
@@ -379,7 +375,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     
                     var effectiveSubject: Message?
                     for message in effectiveLiveLocations {
-                        if message.id.peerId == subject.id.peerId {
+                        if message.id == subject.id {
                             effectiveSubject = message
                         } else {
                             sortedLiveLocations.append(message)
@@ -408,9 +404,9 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     entries.append(.liveLocation(presentationData.theme, message, distance, index))
                     
                     if message.localTags.contains(.OutgoingLiveLocation), let selfPeer = selfPeer {
-                        userAnnotation = LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer, heading: nil)
+                        userAnnotation = LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer, heading: location.heading)
                     } else {
-                        annotations.append(LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: nil, heading: nil))
+                        annotations.append(LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer, heading: location.heading))
                     }
                     index += 1
                 }

@@ -223,7 +223,11 @@ func messageMediaEditingOptions(message: Message) -> MessageMediaEditingOptions 
                         if audio.isVoice {
                             return []
                         } else {
-                            options.formUnion([.imageOrVideo, .file])
+                            if let _ = message.groupingKey {
+                                return []
+                            } else {
+                                options.formUnion([.imageOrVideo, .file])
+                            }
                         }
                     default:
                         break

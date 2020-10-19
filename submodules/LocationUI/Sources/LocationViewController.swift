@@ -17,11 +17,11 @@ import DeviceAccess
 
 public class LocationViewParams {
     let sendLiveLocation: (TelegramMediaMap) -> Void
-    let stopLiveLocation: () -> Void
+    let stopLiveLocation: (MessageId?) -> Void
     let openUrl: (String) -> Void
     let openPeer: (Peer) -> Void
         
-    public init(sendLiveLocation: @escaping (TelegramMediaMap) -> Void, stopLiveLocation: @escaping () -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer) -> Void) {
+    public init(sendLiveLocation: @escaping (TelegramMediaMap) -> Void, stopLiveLocation: @escaping (MessageId?) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer) -> Void) {
         self.sendLiveLocation = sendLiveLocation
         self.stopLiveLocation = stopLiveLocation
         self.openUrl = openUrl
@@ -72,7 +72,7 @@ public final class LocationViewController: ViewController {
         return self.displayNode as! LocationViewControllerNode
     }
     private let context: AccountContext
-    private var subject: Message
+    public var subject: Message
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
@@ -286,7 +286,7 @@ public final class LocationViewController: ViewController {
                 })
             }
         }, stopLiveLocation: { [weak self] in
-            params.stopLiveLocation()
+            params.stopLiveLocation(nil)
             self?.dismiss()
         }, updateRightBarButton: { [weak self] action in
             guard let strongSelf = self else {
@@ -316,6 +316,10 @@ public final class LocationViewController: ViewController {
     
     deinit {
         self.presentationDataDisposable?.dispose()
+    }
+    
+    public func goToUserLocation(visibleRadius: Double? = nil) {
+        
     }
     
     override public func loadDisplayNode() {

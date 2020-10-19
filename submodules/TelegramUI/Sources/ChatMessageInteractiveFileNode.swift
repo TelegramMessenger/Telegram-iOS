@@ -982,7 +982,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     cutoutNode.removeFromSupernode()
                 }
             }
-        } else if let statusNode = self.statusNode {
+        } else if let statusNode = self.statusNode, (self.iconNode?.isHidden ?? true) {
             if let _ = self.cutoutNode {
             } else {
                 let cutoutNode = ASImageNode()
