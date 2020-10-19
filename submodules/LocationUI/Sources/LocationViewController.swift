@@ -230,45 +230,60 @@ public final class LocationViewController: ViewController {
             DeviceAccess.authorizeAccess(to: .location(.live), locationManager: strongSelf.locationManager, presentationData: strongSelf.presentationData, present: { c, a in
                 strongSelf.present(c, in: .window(.root), with: a)
             }, openSettings: {
-                strongSelf.context.sharedContext.applicationBindings.openSettings()
+                context.sharedContext.applicationBindings.openSettings()
             }) { [weak self] authorized in
                 guard let strongSelf = self, authorized else {
                     return
                 }
-                let controller = ActionSheetController(presentationData: strongSelf.presentationData)
-                var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
-                if subject.id.peerId.namespace == Namespaces.Peer.CloudUser {
-//                    title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(receiver.compactDisplayTitle).0
-                }
-                controller.setItemGroups([
-                    ActionSheetItemGroup(items: [
-                        ActionSheetTextItem(title: title),
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor15Minutes, color: .accent, action: { [weak self, weak controller] in
-                            controller?.dismissAnimated()
-                            if let strongSelf = self {
-                                params.sendLiveLocation(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: 15 * 60))
+                
+                let _  = (context.account.postbox.loadedPeerWithId(subject.id.peerId)
+                |> deliverOnMainQueue).start(next: { [weak self] peer in
+                    let controller = ActionSheetController(presentationData: strongSelf.presentationData)
+                    var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
+                    if let user = peer as? TelegramUser {
+                        title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(user.compactDisplayTitle).0
+                    }
+                    
+                    let sendLiveLocationImpl: (Int32) -> Void = { [weak self, weak controller] period in
+                        controller?.dismissAnimated()
+                        if let strongSelf = self {
+                            params.sendLiveLocation(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: period))
+                            
+                            if let distance = distance {
+                                strongSelf.controllerNode.updateState { state -> LocationViewState in
+                                    var state = state
+                                    state.proximityRadius = Double(distance)
+                                    return state
+                                }
+                                
+                                strongSelf.controllerNode.ownLiveLocationStartedAction = { messageId in
+                                    let _ = requestProximityNotification(postbox: context.account.postbox, network: context.account.network, messageId: messageId, distance: distance).start()
+                                }
                             }
-                        }),
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor1Hour, color: .accent, action: { [weak self, weak controller] in
-                            controller?.dismissAnimated()
-                            if let strongSelf = self {
-                                params.sendLiveLocation(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: 60 * 60 - 1))
-                            }
-                        }),
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor8Hours, color: .accent, action: { [weak self, weak controller] in
-                            controller?.dismissAnimated()
-                            if let strongSelf = self {
-                                params.sendLiveLocation(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: 8 * 60 * 60))
-                            }
-                        })
-                    ]),
-                    ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak controller] in
-                            controller?.dismissAnimated()
-                        })
+                        }
+                    }
+                    
+                    controller.setItemGroups([
+                        ActionSheetItemGroup(items: [
+                            ActionSheetTextItem(title: title),
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor15Minutes, color: .accent, action: {
+                                sendLiveLocationImpl(15 * 60)
+                            }),
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor1Hour, color: .accent, action: {
+                                sendLiveLocationImpl(60 * 60 - 1)
+                            }),
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor8Hours, color: .accent, action: {
+                                sendLiveLocationImpl(8 * 60 * 60)
+                            })
+                        ]),
+                        ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak controller] in
+                                controller?.dismissAnimated()
+                            })
+                        ])
                     ])
-                ])
-                strongSelf.present(controller, in: .window(.root))
+                    strongSelf.present(controller, in: .window(.root))
+                })
             }
         }, stopLiveLocation: { [weak self] in
             params.stopLiveLocation()

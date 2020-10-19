@@ -338,6 +338,11 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                         }
                     }
                     
+                    if let activeOwnLiveLocation = activeOwnLiveLocation, let ownLiveLocationStartedAction = strongSelf.ownLiveLocationStartedAction {
+                        strongSelf.ownLiveLocationStartedAction = nil
+                        ownLiveLocationStartedAction(activeOwnLiveLocation.id)
+                    }
+                    
                     let title: String
                     let subtitle: String
                     let beginTime: Double?
@@ -602,6 +607,8 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
             }
         }
     }
+    
+    var ownLiveLocationStartedAction: ((MessageId) -> Void)?
 
     func showAll() {
         self.headerNode.mapNode.showAll()
