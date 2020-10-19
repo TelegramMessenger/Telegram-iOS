@@ -74,6 +74,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case photoPreview(PresentationTheme, Bool)
     case knockoutWallpaper(PresentationTheme, Bool)
     case alternativeFolderTabs(Bool)
+    case snapPinListToTop(Bool)
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
     case voiceConference
@@ -93,7 +94,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .reimport, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .alternativeFolderTabs, .playerEmbedding, .playlistPlayback, .voiceConference:
+        case .clearTips, .reimport, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .alternativeFolderTabs, .snapPinListToTop, .playerEmbedding, .playlistPlayback, .voiceConference:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -156,14 +157,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 23
         case .alternativeFolderTabs:
             return 24
-        case .playerEmbedding:
+        case .snapPinListToTop:
             return 25
-        case .playlistPlayback:
+        case .playerEmbedding:
             return 26
-        case .voiceConference:
+        case .playlistPlayback:
             return 27
+        case .voiceConference:
+            return 28
         case let .preferredVideoCodec(index, _, _, _):
-            return 28 + index
+            return 29 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableVoipTcp:
@@ -703,6 +706,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .snapPinListToTop(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Pin List Top Edge", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        settings.snapPinListToTop = value
+                        return settings
+                    })
+                }).start()
+            })
         case let .playerEmbedding(value):
             return ItemListSwitchItem(presentationData: presentationData, title: "Player Embedding", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -807,6 +820,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     //entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
     entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
     entries.append(.alternativeFolderTabs(experimentalSettings.foldersTabAtBottom))
+    entries.append(.snapPinListToTop(experimentalSettings.snapPinListToTop))
     entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
     entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
     
