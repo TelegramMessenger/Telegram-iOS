@@ -15,6 +15,7 @@ import AccountContext
 import AppBundle
 import CoreLocation
 import Geocoding
+import DeviceAccess
 
 func getLocation(from message: Message) -> TelegramMediaMap? {
     return message.media.first(where: { $0 is TelegramMediaMap } ) as? TelegramMediaMap
@@ -191,12 +192,13 @@ struct LocationViewState {
     }
 }
 
-final class LocationViewControllerNode: ViewControllerTracingNode {
+final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationManagerDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
     private let presentationDataPromise: Promise<PresentationData>
     private var subject: Message
     private let interaction: LocationViewInteraction
+    private let locationManager: LocationManager
     
     private let listNode: ListView
     let headerNode: LocationMapHeaderNode
@@ -212,12 +214,13 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     private var listOffset: CGFloat?
 
-    init(context: AccountContext, presentationData: PresentationData, subject: Message, interaction: LocationViewInteraction) {
+    init(context: AccountContext, presentationData: PresentationData, subject: Message, interaction: LocationViewInteraction, locationManager: LocationManager) {
         self.context = context
         self.presentationData = presentationData
         self.presentationDataPromise = Promise(presentationData)
         self.subject = subject
         self.interaction = interaction
+        self.locationManager = locationManager
         
         self.state = LocationViewState()
         self.statePromise = Promise(self.state)
@@ -276,7 +279,10 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
         setupProximityNotificationImpl = { reset in
             let _ = (liveLocations
             |> take(1)
-            |> deliverOnMainQueue).start(next: { messages in
+            |> deliverOnMainQueue).start(next: { [weak self] messages in
+                guard let strongSelf = self else {
+                    return
+                }
                 var ownMessageId: MessageId?
                 for message in messages {
                     if message.localTags.contains(.OutgoingLiveLocation) {
@@ -284,7 +290,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
                         break
                     }
                 }
-                interaction.setupProximityNotification(reset, ownMessageId)
+                interaction.setupProximityNotification(reset, strongSelf.headerNode.mapNode.currentUserLocation?.coordinate, ownMessageId)
             })
         }
         
@@ -351,15 +357,29 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
                         timeout = Double(liveBroadcastingTimeout)
                     } else {
                         title = presentationData.strings.Map_ShareLiveLocation
-                        subtitle = presentationData.strings.Map_ShareLiveLocation
+                        subtitle = presentationData.strings.Map_ShareLiveLocationHelp
                         beginTime = nil
                         timeout = nil
                     }
                     
                     entries.append(.toggleLiveLocation(presentationData.theme, title, subtitle, userLocation?.coordinate, beginTime, timeout))
-                    if effectiveLiveLocations.isEmpty {
-                        effectiveLiveLocations = [subject]
+                    
+                    var sortedLiveLocations: [Message] = []
+                    
+                    var effectiveSubject: Message?
+                    for message in effectiveLiveLocations {
+                        if message.id.peerId == subject.id.peerId {
+                            effectiveSubject = message
+                        } else {
+                            sortedLiveLocations.append(message)
+                        }
                     }
+                    if let effectiveSubject = effectiveSubject {
+                        sortedLiveLocations.insert(effectiveSubject, at: 0)
+                    } else {
+                        sortedLiveLocations.insert(subject, at: 0)
+                    }
+                    effectiveLiveLocations = sortedLiveLocations
                 }
                                 
                 for message in effectiveLiveLocations {
@@ -480,11 +500,20 @@ final class LocationViewControllerNode: ViewControllerTracingNode {
                 return state
             }
         }
+        
+        self.locationManager.manager.startUpdatingHeading()
+        self.locationManager.manager.delegate = self
     }
     
     deinit {
         self.disposable?.dispose()
         self.geocodingDisposable.dispose()
+        
+        self.locationManager.manager.stopUpdatingHeading()
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
+        self.headerNode.mapNode.userHeading = CGFloat(newHeading.magneticHeading)
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {

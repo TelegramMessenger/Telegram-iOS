@@ -74,7 +74,7 @@ private func generateLiveLocationIcon(theme: PresentationTheme, stop: Bool) -> U
         context.scaleBy(x: 1.0, y: -1.0)
         context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
         
-        if let image = generateTintedImage(image: UIImage(bundleImageName: "Location/SendLocationIcon"), color: .white) {
+        if let image = generateTintedImage(image: UIImage(bundleImageName: "Location/SendLocationIcon"), color: theme.chat.inputPanel.actionControlForegroundColor) {
             context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
         }
     })!
@@ -148,6 +148,7 @@ final class LocationActionListItemNode: ListViewItemNode {
     private let iconNode: ASImageNode
     private let venueIconNode: TransformImageNode
     private var timerNode: ChatMessageLiveLocationTimerNode?
+    private var wavesNode: LiveLocationWavesNode?
     
     private var item: LocationActionListItem?
     private var layoutParams: ListViewItemLayoutParams?
@@ -278,6 +279,16 @@ final class LocationActionListItemNode: ListViewItemNode {
                                     strongSelf.venueIconNode.isHidden = false
                                     strongSelf.venueIconNode.setSignal(venueIcon(postbox: item.account.postbox, type: venue.venue?.type ?? "", background: true))
                             }
+                            
+                            if updatedIcon == .stopLiveLocation {
+                                let wavesNode = LiveLocationWavesNode(color: item.presentationData.theme.chat.inputPanel.actionControlForegroundColor)
+                                strongSelf.addSubnode(wavesNode)
+                                strongSelf.wavesNode = wavesNode
+                            } else if let wavesNode = strongSelf.wavesNode {
+                                strongSelf.wavesNode = nil
+                                wavesNode.removeFromSupernode()
+                            }
+                            strongSelf.wavesNode?.color = item.presentationData.theme.chat.inputPanel.actionControlForegroundColor
                         }
                         
                         let iconApply = iconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: CGSize(width: iconSize, height: iconSize), boundingSize: CGSize(width: iconSize, height: iconSize), intrinsicInsets: UIEdgeInsets()))
@@ -307,6 +318,8 @@ final class LocationActionListItemNode: ListViewItemNode {
                         let iconNodeFrame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: floorToScreenPixels((contentSize.height - bottomInset - iconSize) / 2.0)), size: CGSize(width: iconSize, height: iconSize))
                         strongSelf.iconNode.frame = iconNodeFrame
                         strongSelf.venueIconNode.frame = iconNodeFrame
+                        
+                        strongSelf.wavesNode?.frame = CGRect(origin: CGPoint(x: params.leftInset + 11.0, y: floorToScreenPixels((contentSize.height - bottomInset - iconSize) / 2.0) - 4.0), size: CGSize(width: 48.0, height: 48.0))
                         
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: contentSize.width, height: contentSize.height))
                         strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: contentSize.width, height: contentSize.height + topHighlightInset))

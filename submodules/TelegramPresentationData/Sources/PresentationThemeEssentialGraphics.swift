@@ -184,9 +184,12 @@ public final class PrincipalThemeEssentialGraphics {
     public let incomingBubbleGradientImage: UIImage?
     public let outgoingBubbleGradientImage: UIImage?
     
+    public let hasWallpaper: Bool
+    
     init(mediaBox: MediaBox, presentationTheme: PresentationTheme, wallpaper initialWallpaper: TelegramWallpaper, preview: Bool = false, knockoutMode: Bool, bubbleCorners: PresentationChatBubbleCorners) {
         let theme = presentationTheme.chat
         var wallpaper = initialWallpaper
+        self.hasWallpaper = !wallpaper.isEmpty
         
         let incoming: PresentationThemeBubbleColorComponents = wallpaper.isEmpty ? theme.message.incoming.bubble.withoutWallpaper : theme.message.incoming.bubble.withWallpaper
         let outgoing: PresentationThemeBubbleColorComponents = wallpaper.isEmpty ? theme.message.outgoing.bubble.withoutWallpaper : theme.message.outgoing.bubble.withWallpaper

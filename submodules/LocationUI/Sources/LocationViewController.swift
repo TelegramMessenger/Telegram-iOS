@@ -42,13 +42,13 @@ class LocationViewInteraction {
     let goToCoordinate: (CLLocationCoordinate2D) -> Void
     let requestDirections: () -> Void
     let share: () -> Void
-    let setupProximityNotification: (Bool, MessageId?) -> Void
+    let setupProximityNotification: (Bool, CLLocationCoordinate2D?, MessageId?) -> Void
     let updateSendActionHighlight: (Bool) -> Void
     let sendLiveLocation: (CLLocationCoordinate2D, Int32?) -> Void
     let stopLiveLocation: () -> Void
     let updateRightBarButton: (LocationViewRightBarButton) -> Void
     
-    init(toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, requestDirections: @escaping () -> Void, share: @escaping () -> Void, setupProximityNotification: @escaping (Bool, MessageId?) -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32?) -> Void, stopLiveLocation: @escaping () -> Void, updateRightBarButton: @escaping (LocationViewRightBarButton) -> Void) {
+    init(toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, requestDirections: @escaping () -> Void, share: @escaping () -> Void, setupProximityNotification: @escaping (Bool, CLLocationCoordinate2D?, MessageId?) -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32?) -> Void, stopLiveLocation: @escaping () -> Void, updateRightBarButton: @escaping (LocationViewRightBarButton) -> Void) {
         self.toggleMapModeSelection = toggleMapModeSelection
         self.updateMapMode = updateMapMode
         self.goToUserLocation = goToUserLocation
@@ -166,7 +166,7 @@ public final class LocationViewController: ViewController {
                 })
                 strongSelf.present(OpenInActionSheetController(context: context, item: .location(location: location, withDirections: false), additionalAction: shareAction, openUrl: params.openUrl), in: .window(.root), with: nil)
             }
-        }, setupProximityNotification: { [weak self] reset, messageId in
+        }, setupProximityNotification: { [weak self] reset, coordinate, messageId in
             guard let strongSelf = self else {
                 return
             }
@@ -204,8 +204,10 @@ public final class LocationViewController: ViewController {
                             
                             CURRENT_DISTANCE = Double(distance)
                         }
-                    } else {
-                        
+                    } else if let coordinate = coordinate {
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_Title, text: strongSelf.presentationData.strings.Location_LiveLocationRequired_Description, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_ShareLocation, action: { [weak self] in
+                            self?.interaction?.sendLiveLocation(coordinate, distance)
+                        }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})]), in: .window(.root))
                     }
                 }, willDismiss: { [weak self] in
                     if let strongSelf = self {
@@ -243,21 +245,18 @@ public final class LocationViewController: ViewController {
                             controller?.dismissAnimated()
                             if let strongSelf = self {
                                 params.sendLiveLocation(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: 15 * 60))
-                                strongSelf.dismiss()
                             }
                         }),
                         ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor1Hour, color: .accent, action: { [weak self, weak controller] in
                             controller?.dismissAnimated()
                             if let strongSelf = self {
                                 params.sendLiveLocation(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: 60 * 60 - 1))
-                                strongSelf.dismiss()
                             }
                         }),
                         ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor8Hours, color: .accent, action: { [weak self, weak controller] in
                             controller?.dismissAnimated()
                             if let strongSelf = self {
                                 params.sendLiveLocation(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: 8 * 60 * 60))
-                                strongSelf.dismiss()
                             }
                         })
                     ]),
@@ -304,7 +303,7 @@ public final class LocationViewController: ViewController {
             return
         }
         
-        self.displayNode = LocationViewControllerNode(context: self.context, presentationData: self.presentationData, subject: self.subject, interaction: interaction)
+        self.displayNode = LocationViewControllerNode(context: self.context, presentationData: self.presentationData, subject: self.subject, interaction: interaction, locationManager: self.locationManager)
         self.displayNodeDidLoad()
         
         self.controllerNode.updateState { state -> LocationViewState in

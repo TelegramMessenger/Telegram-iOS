@@ -74,18 +74,20 @@ func generateHeadingArrowImage() -> UIImage? {
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
     
+        context.saveGState()
         let center = CGPoint(x: arrowImageSize.width / 2.0, y: arrowImageSize.height / 2.0)
         context.move(to: center)
         context.addArc(center: center, radius: arrowImageSize.width / 2.0, startAngle: CGFloat.pi / 2.0 + CGFloat.pi / 8.0, endAngle: CGFloat.pi / 2.0 - CGFloat.pi / 8.0, clockwise: true)
         context.clip()
         
         var locations: [CGFloat] = [0.0, 0.4, 1.0]
-        let colors: [CGColor] = [UIColor(rgb: 0x007ee5, alpha: 0.5).cgColor, UIColor(rgb: 0x007ee5, alpha: 0.3).cgColor, UIColor(rgb: 0x007ee5, alpha: 0.0).cgColor]
+        let colors: [CGColor] = [UIColor(rgb: 0x007aff, alpha: 0.5).cgColor, UIColor(rgb: 0x007aff, alpha: 0.3).cgColor, UIColor(rgb: 0x007aff, alpha: 0.0).cgColor]
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
         
         context.drawRadialGradient(gradient, startCenter: center, startRadius: 11.0, endCenter: center, endRadius: arrowImageSize.width / 2.0, options: .drawsAfterEndLocation)
         
+        context.restoreGState()
         context.setBlendMode(.clear)
         context.fillEllipse(in: CGRect(x: (arrowImageSize.width - 22.0) / 2.0, y: (arrowImageSize.height - 22.0) / 2.0, width: 22.0, height: 22.0))
     })
@@ -218,10 +220,10 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
                     } else {
                         indicatorOverlay = InvertedProximityCircle(center: location.coordinate, radius: activeProximityRadius)
                         self.mapView?.addOverlay(indicatorOverlay)
+                        self.indicatorOverlay = indicatorOverlay
                         indicatorOverlay.alpha = 1.0
                         self.updateAnimations()
                     }
-                    self.indicatorOverlay = indicatorOverlay
                 }
             } else {
                 if let indicatorOverlay = self.indicatorOverlay {
@@ -261,7 +263,6 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
                 animator = ConstantDisplayLinkAnimator(update: { [weak self] in
                     self?.updateAnimations()
                 })
-                animator.frameInterval = 2
                 self.animator = animator
             }
             animator.isPaused = false
@@ -269,7 +270,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
             self.animator?.isPaused = true
         }
         
-        self.currentInvertedCircleRenderer?.setNeedsDisplay()
+        self.currentInvertedCircleRenderer?.setNeedsDisplay(MKMapRect.world)
     }
     
     private var circleOverlay: MKCircle?
@@ -652,15 +653,33 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
                 }
                 
                 if let updatedAnnotation = dict[annotation.id] {
-                    annotation.coordinate = updatedAnnotation.coordinate
+                    UIView.animate(withDuration: 0.2) {
+                        annotation.coordinate = updatedAnnotation.coordinate
+                    }
                     dict[annotation.id] = nil
                 } else {
                     annotationsToRemove.insert(annotation)
                 }
             }
             
-            mapView.removeAnnotations(Array(annotationsToRemove))
-            mapView.addAnnotations(Array(dict.values))
+            let selectedAnnotation = mapView.selectedAnnotations.first
+            var updated = false
+            if !annotationsToRemove.isEmpty {
+                mapView.removeAnnotations(Array(annotationsToRemove))
+                updated = true
+            }
+            if !dict.isEmpty {
+                mapView.addAnnotations(Array(dict.values))
+                updated = true
+            }
+            if let selectedAnnotation = selectedAnnotation as? LocationPinAnnotation, updated {
+                for annotation in self.annotations {
+                    if annotation.id == selectedAnnotation.id {
+                        mapView.selectAnnotation(annotation, animated: false)
+                        break
+                    }
+                }
+            }
         }
     }
     

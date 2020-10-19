@@ -31,12 +31,26 @@ private func generateSmallBackgroundImage(color: UIColor) -> UIImage? {
 class LocationPinAnnotation: NSObject, MKAnnotation {
     let context: AccountContext
     let theme: PresentationTheme
-    var coordinate: CLLocationCoordinate2D
+    var coordinate: CLLocationCoordinate2D {
+        willSet {
+            self.willChangeValue(forKey: "coordinate")
+        }
+        didSet {
+            self.didChangeValue(forKey: "coordinate")
+        }
+    }
     let location: TelegramMediaMap?
     let peer: Peer?
     let message: Message?
     let forcedSelection: Bool
-    var heading: Int32?
+    var heading: Int32? {
+        willSet {
+            self.willChangeValue(forKey: "heading")
+        }
+        didSet {
+            self.didChangeValue(forKey: "heading")
+        }
+    }
     
     var selfPeer: Peer?
     var title: String? = ""
