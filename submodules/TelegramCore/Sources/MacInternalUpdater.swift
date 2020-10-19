@@ -26,7 +26,7 @@ public func requestUpdatesXml(account: Account, source: String) -> Signal<Data, 
                     |> castError(InternalUpdaterError.self)
                     |> mapToSignal { result in
                         switch result {
-                        case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
+                        case let .channelMessages(_, _, _, _, apiMessages, apiChats, apiUsers):
                             if let apiMessage = apiMessages.first, let storeMessage = StoreMessage(apiMessage: apiMessage) {
                                 
                                 var peers: [PeerId: Peer] = [:]
@@ -93,7 +93,7 @@ public func downloadAppUpdate(account: Account, source: String, messageId: Int32
                     |> castError(InternalUpdaterError.self)
                     |> mapToSignal { messages in
                         switch messages {
-                        case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
+                        case let .channelMessages(_, _, _, _, apiMessages, apiChats, apiUsers):
                             
                             var peers: [PeerId: Peer] = [:]
                             for chat in apiChats {

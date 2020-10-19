@@ -564,11 +564,11 @@ private func rightEnabledByDefault(channelPeer: Peer, right: TelegramChatAdminRi
     return false
 }
 
-private func areAllAdminRightsEnabled(_ flags: TelegramChatAdminRightsFlags, group: Bool) -> Bool {
+private func areAllAdminRightsEnabled(_ flags: TelegramChatAdminRightsFlags, group: Bool, except: TelegramChatAdminRightsFlags) -> Bool {
     if group {
-        return TelegramChatAdminRightsFlags.groupSpecific.intersection(flags) == TelegramChatAdminRightsFlags.groupSpecific
+        return TelegramChatAdminRightsFlags.groupSpecific.subtracting(except).intersection(flags) == TelegramChatAdminRightsFlags.groupSpecific.subtracting(except)
     } else {
-        return TelegramChatAdminRightsFlags.broadcastSpecific.intersection(flags) == TelegramChatAdminRightsFlags.broadcastSpecific
+        return TelegramChatAdminRightsFlags.broadcastSpecific.subtracting(except).intersection(flags) == TelegramChatAdminRightsFlags.broadcastSpecific.subtracting(except)
     }
 }
 
@@ -682,7 +682,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                     entries.append(.addAdminsInfo(presentationData.theme, currentRightsFlags.contains(.canAddAdmins) ? presentationData.strings.Channel_EditAdmin_PermissinAddAdminOn : presentationData.strings.Channel_EditAdmin_PermissinAddAdminOff))
                 }
                 
-                if let admin = admin as? TelegramUser, admin.botInfo == nil && !admin.isDeleted && channel.flags.contains(.isCreator) && areAllAdminRightsEnabled(currentRightsFlags, group: isGroup) {
+                if let admin = admin as? TelegramUser, admin.botInfo == nil && !admin.isDeleted && channel.flags.contains(.isCreator) && areAllAdminRightsEnabled(currentRightsFlags, group: isGroup, except: .canBeAnonymous) {
                     canTransfer = true
                 }
             
@@ -794,7 +794,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 entries.append(.addAdminsInfo(presentationData.theme, currentRightsFlags.contains(.canAddAdmins) ? presentationData.strings.Channel_EditAdmin_PermissinAddAdminOn : presentationData.strings.Channel_EditAdmin_PermissinAddAdminOff))
             }
         
-            if let admin = admin as? TelegramUser, case .creator = group.role, admin.botInfo == nil && !admin.isDeleted && areAllAdminRightsEnabled(currentRightsFlags, group: true) {
+            if let admin = admin as? TelegramUser, case .creator = group.role, admin.botInfo == nil && !admin.isDeleted && areAllAdminRightsEnabled(currentRightsFlags, group: true, except: .canBeAnonymous) {
                 entries.append(.transfer(presentationData.theme, presentationData.strings.Group_EditAdmin_TransferOwnership))
             }
             

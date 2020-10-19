@@ -99,7 +99,6 @@ private final class ThemeAutoNightTimeSelectionActionSheetItemNode: ActionSheetI
         self.valueChanged = valueChanged
         
         self.pickerView = UIDatePicker()
-        self.pickerView.setValue(theme.primaryTextColor, forKey: "textColor")
         self.pickerView.datePickerMode = .countDownTimer
         self.pickerView.datePickerMode = .time
         self.pickerView.timeZone = TimeZone(secondsFromGMT: 0)
@@ -108,6 +107,7 @@ private final class ThemeAutoNightTimeSelectionActionSheetItemNode: ActionSheetI
         if #available(iOS 13.4, *) {
             self.pickerView.preferredDatePickerStyle = .wheels
         }
+        self.pickerView.setValue(theme.primaryTextColor, forKey: "textColor")
         
         super.init(theme: theme)
         

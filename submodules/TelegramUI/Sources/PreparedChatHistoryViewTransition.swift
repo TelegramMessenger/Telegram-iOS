@@ -89,6 +89,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
     }
     
     var scrolledToIndex: MessageHistoryAnchorIndex?
+    var scrolledToSomeIndex = false
     
     if let scrollPosition = scrollPosition {
         switch scrollPosition {
@@ -160,6 +161,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                     var index = 0
                     for entry in toView.filteredEntries.reversed() {
                         if !scrollIndex.isLess(than: entry.index) {
+                            scrolledToSomeIndex = true
                             scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: .Default(duration: nil), directionHint: directionHint)
                             break
                         }
@@ -173,5 +175,5 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
         options.insert(.Synchronous)
     }
     
-    return ChatHistoryViewTransition(historyView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: initialData, keyboardButtonsMessage: keyboardButtonsMessage, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData, scrolledToIndex: scrolledToIndex, animateIn: animateIn, reason: reason, flashIndicators: flashIndicators)
+    return ChatHistoryViewTransition(historyView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: initialData, keyboardButtonsMessage: keyboardButtonsMessage, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData, scrolledToIndex: scrolledToIndex, scrolledToSomeIndex: scrolledToSomeIndex || scrolledToIndex != nil, animateIn: animateIn, reason: reason, flashIndicators: flashIndicators)
 }

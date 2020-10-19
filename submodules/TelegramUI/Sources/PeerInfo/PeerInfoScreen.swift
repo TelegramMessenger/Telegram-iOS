@@ -397,7 +397,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, stopMediaRecording: {
         }, lockMediaRecording: {
         }, deleteRecordedMedia: {
-        }, sendRecordedMedia: {
+        }, sendRecordedMedia: { _ in
         }, displayRestrictedInfo: { _, _ in
         }, displayVideoUnmuteTip: { _ in
         }, switchMediaRecordingMode: {
@@ -3087,7 +3087,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             guard let strongSelf = self else {
                 return
             }
-            if let currentPeerId = currentPeerId {
+            if false, let currentPeerId = currentPeerId {
                 if let navigationController = (strongSelf.controller?.navigationController as? NavigationController) {
                     strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(currentPeerId)))
                 }
