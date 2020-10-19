@@ -3358,7 +3358,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         guard case let .HistoryView(viewValue, _, _, _, _, _, _) = view else {
                             subscriber.putNext([])
-                            subscriber.putCompletion()
                             return
                         }
                         
