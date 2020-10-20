@@ -20,6 +20,7 @@ public enum UndoOverlayContent {
     case dice(dice: TelegramMediaDice, account: Account, text: String, action: String?)
     case chatAddedToFolder(chatTitle: String, folderTitle: String)
     case chatRemovedFromFolder(chatTitle: String, folderTitle: String)
+    case messagesUnpinned(title: String, text: String, undo: Bool)
 }
 
 public enum UndoOverlayAction {

@@ -131,9 +131,14 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
     guard let peer = chatPresentationInterfaceState.renderedPeer?.peer else {
         return false
     }
-    guard !chatPresentationInterfaceState.isScheduledMessages else {
+    
+    if case .scheduledMessages = chatPresentationInterfaceState.subject {
         return false
     }
+    if case .pinnedMessages = chatPresentationInterfaceState.subject {
+        return false
+    }
+
     guard !peer.id.isReplies else {
         return false
     }
@@ -394,6 +399,11 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     |> map { data, updatingMessageMedia, cachedData -> [ContextMenuItem] in
         var actions: [ContextMenuItem] = []
         
+        var isPinnedMessages = false
+        if case .pinnedMessages = chatPresentationInterfaceState.subject {
+            isPinnedMessages = true
+        }
+        
         if let starStatus = data.starStatus {
             actions.append(.action(ContextMenuActionItem(text: starStatus ? chatPresentationInterfaceState.strings.Stickers_RemoveFromFavorites : chatPresentationInterfaceState.strings.Stickers_AddToFavorites, icon: { theme in
                 return generateTintedImage(image: starStatus ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.actionSheet.primaryTextColor)
@@ -464,7 +474,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             isReplyThreadHead = messages[0].id == replyThreadMessage.effectiveTopId
         }
         
-        if !isReplyThreadHead, data.canReply {
+        if !isPinnedMessages, !isReplyThreadHead, data.canReply {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuReply, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reply"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
@@ -592,9 +602,16 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                     }
                 }
             }
+        } else {
+            for attribute in messages[0].attributes {
+                if let attribute = attribute as? ReplyThreadMessageAttribute, attribute.count > 0 {
+                    threadId = makeMessageThreadId(messages[0].id)
+                    threadMessageCount = Int(attribute.count)
+                }
+            }
         }
         
-        if let _ = threadId {
+        if let _ = threadId, !isPinnedMessages {
             let text: String
             if threadMessageCount != 0 {
                 text = chatPresentationInterfaceState.strings.Conversation_ContextViewReplies(Int32(threadMessageCount))
@@ -610,7 +627,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             })))
         }
                 
-        if data.canEdit {
+        if data.canEdit && !isPinnedMessages {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
@@ -866,7 +883,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             })))
         }
         
-        if !isReplyThreadHead, data.canSelect {
+        if !isPinnedMessages, !isReplyThreadHead, data.canSelect {
             if !actions.isEmpty {
                 actions.append(.separator)
             }

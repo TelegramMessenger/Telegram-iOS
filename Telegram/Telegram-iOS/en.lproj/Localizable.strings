@@ -5854,3 +5854,16 @@ Any member of this group will be able to see messages in the channel.";
 
 "Location.ProximityTip" = "Alert when %@ is close";
 "Location.ProximityGroupTip" = "Alert when any group member is close";
+
+"Chat.TitlePinnedMessages_1" = "Pinned Message";
+"Chat.TitlePinnedMessages_any" = "%@ Pinned Messages";
+
+"Chat.PanelHidePinnedMessages" = "Don't Show Pinned Messages";
+"Chat.PanelUnpinAllMessages_1" = "Unpin Message";
+"Chat.PanelUnpinAllMessages_any" = "Unpin All %@ Messages";
+
+"Chat.MessagesUnpinned_1" = "Message Unpinned";
+"Chat.MessagesUnpinned_any" = "%@ Messages Unpinned";
+
+"Chat.PinnedMessagesHiddenTitle" = "Pinned Messages Hidden";
+"Chat.PinnedMessagesHiddenText" = "You will see the bar with pinned messages only if a new message is pinned.";

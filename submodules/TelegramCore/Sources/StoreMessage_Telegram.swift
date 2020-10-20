@@ -616,12 +616,6 @@ extension StoreMessage {
                             if replyPeerId == peerId {
                                 threadId = makeMessageThreadId(threadIdValue)
                             }
-                        } else if peerId.namespace == Namespaces.Peer.CloudChannel {
-                            let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
-                            threadMessageId = threadIdValue
-                            if replyPeerId == peerId {
-                                threadId = makeMessageThreadId(threadIdValue)
-                            }
                         }
                         attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
                     }

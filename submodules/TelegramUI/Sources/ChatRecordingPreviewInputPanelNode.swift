@@ -194,7 +194,12 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         transition.updateFrame(node: self.sendButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 43.0 - UIScreenPixel, y: 2 - UIScreenPixel), size: CGSize(width: 44.0, height: 44)))
         self.binNode.frame = self.deleteButton.bounds
         
-        if let slowmodeState = interfaceState.slowmodeState, !interfaceState.isScheduledMessages {
+        var isScheduledMessages = false
+        if case .scheduledMessages = interfaceState.subject {
+            isScheduledMessages = true
+        }
+        
+        if let slowmodeState = interfaceState.slowmodeState, !isScheduledMessages {
             let sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode
             if let current = self.sendButtonRadialStatusNode {
                 sendButtonRadialStatusNode = current
