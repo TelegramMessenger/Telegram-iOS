@@ -95,7 +95,12 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         
         transition.updateFrame(layer: self.sendButton.layer, frame: CGRect(origin: CGPoint(), size: size))
         
-        if let slowmodeState = interfaceState.slowmodeState, !interfaceState.isScheduledMessages && interfaceState.editMessageState == nil {
+        var isScheduledMessages = false
+        if case .scheduledMessages = interfaceState.subject {
+            isScheduledMessages = true
+        }
+        
+        if let slowmodeState = interfaceState.slowmodeState, !isScheduledMessages && interfaceState.editMessageState == nil {
             let sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode
             if let current = self.sendButtonRadialStatusNode {
                 sendButtonRadialStatusNode = current

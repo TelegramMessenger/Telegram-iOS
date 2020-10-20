@@ -78,6 +78,8 @@ public class AnimatedCountLabelNode: ASDisplayNode {
     
     fileprivate var resolvedSegments: [ResolvedSegment.Key: (ResolvedSegment, TextNode)] = [:]
     
+    public var reverseAnimationDirection: Bool = false
+    
     override public init() {
         super.init()
     }
@@ -88,6 +90,7 @@ public class AnimatedCountLabelNode: ASDisplayNode {
         for (segmentKey, segmentAndTextNode) in self.resolvedSegments {
             segmentLayouts[segmentKey] = TextNode.asyncLayout(segmentAndTextNode.1)
         }
+        let reverseAnimationDirection = self.reverseAnimationDirection
         
         return { [weak self] size, initialSegments in
             var segments: [ResolvedSegment] = []
@@ -101,10 +104,12 @@ public class AnimatedCountLabelNode: ASDisplayNode {
                     
                     var remainingValue = value
                     
+                    let insertPosition = segments.count
+                    
                     while true {
                         let digitValue = remainingValue % 10
                         
-                        segments.insert(.number(id: 1000 - segments.count, value: value, string: NSAttributedString(string: "\(digitValue)", attributes: attributes)), at: 0)
+                        segments.insert(.number(id: 1000 - segments.count, value: value, string: NSAttributedString(string: "\(digitValue)", attributes: attributes)), at: insertPosition)
                         remainingValue /= 10
                         if remainingValue == 0 {
                             break
@@ -163,18 +168,25 @@ public class AnimatedCountLabelNode: ASDisplayNode {
                     var animation: (CGFloat, Double)?
                     if let (currentSegment, currentTextNode) = strongSelf.resolvedSegments[segment.key] {
                         if case let .number(_, currentValue, currentString) = currentSegment, case let .number(_, updatedValue, updatedString) = segment, animated, !wasEmpty, currentValue != updatedValue, currentString.string != updatedString.string, let snapshot = currentTextNode.layer.snapshotContentTree() {
-                            let offsetY: CGFloat
+                            var fromAlpha: CGFloat = 1.0
+                            if let presentation = currentTextNode.layer.presentation() {
+                                fromAlpha = CGFloat(presentation.opacity)
+                            }
+                            var offsetY: CGFloat
                             if currentValue > updatedValue {
                                 offsetY = -floor(currentTextNode.bounds.height * 0.6)
                             } else {
                                 offsetY = floor(currentTextNode.bounds.height * 0.6)
+                            }
+                            if reverseAnimationDirection {
+                                offsetY = -offsetY
                             }
                             animation = (-offsetY, 0.2)
                             snapshot.frame = currentTextNode.frame
                             strongSelf.layer.addSublayer(snapshot)
                             snapshot.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: offsetY), duration: 0.2, removeOnCompletion: false, additive: true)
                             snapshot.animateScale(from: 1.0, to: 0.3, duration: 0.2, removeOnCompletion: false)
-                            snapshot.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshot] _ in
+                            snapshot.animateAlpha(from: fromAlpha, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshot] _ in
                                 snapshot?.removeFromSuperlayer()
                             })
                         }

@@ -12,6 +12,7 @@ import AccountContext
 import StickerResources
 import PhotoResources
 import TelegramStringFormatting
+import AnimatedCountLabelNode
 
 private enum PinnedMessageAnimation {
     case slideToTop
@@ -22,13 +23,17 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let context: AccountContext
     private let tapButton: HighlightTrackingButtonNode
     private let closeButton: HighlightableButtonNode
+    private let listButton: HighlightableButtonNode
     
     private let clippingContainer: ASDisplayNode
     private let contentContainer: ASDisplayNode
+    private let contentTextContainer: ASDisplayNode
     private let lineNode: ASImageNode
-    private let titleNode: TextNode
+    private let titleNode: AnimatedCountLabelNode
     private let textNode: TextNode
+    
     private let imageNode: TransformImageNode
+    private let imageNodeContainer: ASDisplayNode
     
     private let separatorNode: ASDisplayNode
 
@@ -51,6 +56,10 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.displaysAsynchronously = false
         
+        self.listButton = HighlightableButtonNode()
+        self.listButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
+        self.listButton.displaysAsynchronously = false
+        
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
@@ -58,22 +67,24 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.clippingContainer.clipsToBounds = true
         
         self.contentContainer = ASDisplayNode()
+        self.contentTextContainer = ASDisplayNode()
         
         self.lineNode = ASImageNode()
         self.lineNode.displayWithoutProcessing = true
         self.lineNode.displaysAsynchronously = false
         
-        self.titleNode = TextNode()
-        self.titleNode.displaysAsynchronously = true
+        self.titleNode = AnimatedCountLabelNode()
         self.titleNode.isUserInteractionEnabled = false
+        self.titleNode.reverseAnimationDirection = true
         
         self.textNode = TextNode()
-        self.textNode.displaysAsynchronously = true
+        self.textNode.displaysAsynchronously = false
         self.textNode.isUserInteractionEnabled = false
         
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.subsequentUpdates]
-        self.imageNode.isHidden = true
+        
+        self.imageNodeContainer = ASDisplayNode()
         
         super.init()
         
@@ -98,15 +109,20 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         }
         
         self.closeButton.addTarget(self, action: #selector(self.closePressed), forControlEvents: [.touchUpInside])
+        self.listButton.addTarget(self, action: #selector(self.listPressed), forControlEvents: [.touchUpInside])
         
         self.addSubnode(self.clippingContainer)
         self.clippingContainer.addSubnode(self.contentContainer)
         self.addSubnode(self.lineNode)
-        self.contentContainer.addSubnode(self.titleNode)
-        self.contentContainer.addSubnode(self.textNode)
-        self.contentContainer.addSubnode(self.imageNode)
+        self.contentTextContainer.addSubnode(self.titleNode)
+        self.contentTextContainer.addSubnode(self.textNode)
+        self.contentContainer.addSubnode(self.contentTextContainer)
+        
+        self.imageNodeContainer.addSubnode(self.imageNode)
+        self.contentContainer.addSubnode(self.imageNodeContainer)
         
         self.addSubnode(self.closeButton)
+        self.addSubnode(self.listButton)
         
         self.tapButton.addTarget(self, action: #selector(self.tapped), forControlEvents: [.touchUpInside])
         self.addSubnode(self.tapButton)
@@ -128,6 +144,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             themeUpdated = true
             self.theme = interfaceState.theme
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(interfaceState.theme), for: [])
+            self.listButton.setImage(PresentationResourcesChat.chatInputPanelPinnedListIconImage(interfaceState.theme), for: [])
             self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(interfaceState.theme)
             self.backgroundColor = interfaceState.theme.chat.historyNavigation.fillColor
             self.separatorNode.backgroundColor = interfaceState.theme.chat.historyNavigation.strokeColor
@@ -140,8 +157,6 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             isReplyThread = false
         }
         self.isReplyThread = isReplyThread
-        
-        self.closeButton.isHidden = isReplyThread
         
         var messageUpdated = false
         var messageUpdatedAnimation: PinnedMessageAnimation?
@@ -164,9 +179,25 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             let previousMessageWasNil = self.currentMessage == nil
             self.currentMessage = interfaceState.pinnedMessage
             
-            if let currentMessage = currentMessage, let currentLayout = self.currentLayout {
+            if let currentMessage = self.currentMessage, let currentLayout = self.currentLayout {
                 self.enqueueTransition(width: currentLayout.0, leftInset: currentLayout.1, rightInset: currentLayout.2, transition: .immediate, animation: messageUpdatedAnimation, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, accountPeerId: self.context.account.peerId, firstTime: previousMessageWasNil, isReplyThread: isReplyThread)
             }
+        }
+        
+        if isReplyThread {
+            self.closeButton.isHidden = true
+            self.listButton.isHidden = true
+        } else if let currentMessage = self.currentMessage {
+            if currentMessage.totalCount > 1 {
+                self.listButton.isHidden = false
+                self.closeButton.isHidden = true
+            } else {
+                self.listButton.isHidden = true
+                self.closeButton.isHidden = false
+            }
+        } else {
+            self.listButton.isHidden = false
+            self.closeButton.isHidden = true
         }
         
         let contentLeftInset: CGFloat = 10.0 + leftInset
@@ -176,6 +207,9 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: width - rightInset - closeButtonSize.width, y: 19.0), size: closeButtonSize))
+        
+        let listButtonSize = self.listButton.measure(CGSize(width: 100.0, height: 100.0))
+        transition.updateFrame(node: self.listButton, frame: CGRect(origin: CGPoint(x: width - rightInset - listButtonSize.width + 4.0, y: 13.0), size: listButtonSize))
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
         self.tapButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: width - rightInset - closeButtonSize.width - 4.0, height: panelHeight))
@@ -197,15 +231,20 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private func enqueueTransition(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, animation: PinnedMessageAnimation?, pinnedMessage: ChatPinnedMessage, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId, firstTime: Bool, isReplyThread: Bool) {
         let message = pinnedMessage.message
         
+        var animationTransition: ContainedViewLayoutTransition = .immediate
+        
         if let animation = animation {
-            let offset: CGFloat
-            switch animation {
-            case .slideToTop:
-                offset = -40.0
-            case .slideToBottom:
-                offset = 40.0
-            }
-            if let copyView = self.contentContainer.view.snapshotView(afterScreenUpdates: false) {
+            animationTransition = .animated(duration: 0.2, curve: .easeInOut)
+            
+            if false, let copyView = self.contentContainer.view.snapshotView(afterScreenUpdates: false) {
+                let offset: CGFloat
+                switch animation {
+                case .slideToTop:
+                    offset = -40.0
+                case .slideToBottom:
+                    offset = 40.0
+                }
+                
                 copyView.frame = self.contentContainer.frame
                 self.clippingContainer.view.addSubview(copyView)
                 copyView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: offset), duration: 0.2, removeOnCompletion: false, additive: true)
@@ -214,10 +253,27 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                 })
                 self.contentContainer.layer.animatePosition(from: CGPoint(x: 0.0, y: -offset), to: CGPoint(), duration: 0.2, additive: true)
                 self.contentContainer.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            } else if let copyView = self.textNode.view.snapshotView(afterScreenUpdates: false) {
+                let offset: CGFloat
+                switch animation {
+                case .slideToTop:
+                    offset = -10.0
+                case .slideToBottom:
+                    offset = 10.0
+                }
+                
+                copyView.frame = self.textNode.frame
+                self.textNode.view.superview?.addSubview(copyView)
+                copyView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: offset), duration: 0.2, removeOnCompletion: false, additive: true)
+                copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak copyView] _ in
+                    copyView?.removeFromSuperview()
+                })
+                self.textNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -offset), to: CGPoint(), duration: 0.2, additive: true)
+                self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             }
         }
         
-        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let makeTitleLayout = self.titleNode.asyncLayout()
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         let imageNodeLayout = self.imageNode.asyncLayout()
         
@@ -240,11 +296,13 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             var updatedMediaReference: AnyMediaReference?
             var imageDimensions: CGSize?
             
-            var titleString: String
-            if pinnedMessage.topMessageId == pinnedMessage.message.id {
-                titleString = strings.Conversation_PinnedMessage
+            var titleStrings: [AnimatedCountLabelNode.Segment] = []
+            if pinnedMessage.totalCount > 1 {
+                titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedMessage)", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
+                titleStrings.append(.text(1, NSAttributedString(string: " #", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
+                titleStrings.append(.number(pinnedMessage.index + 1, NSAttributedString(string: "\(pinnedMessage.index + 1)", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
             } else {
-                titleString = strings.Conversation_PinnedPreviousMessage
+                titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedMessage) ", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
             }
             
             for media in message.media {
@@ -260,22 +318,24 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                         imageDimensions = representation.dimensions.cgSize
                     }
                     break
-                } else if let poll = media as? TelegramMediaPoll {
+                }/* else if let poll = media as? TelegramMediaPoll {
                     switch poll.kind {
                     case .poll:
                         titleString = strings.Conversation_PinnedPoll
                     case .quiz:
                         titleString = strings.Conversation_PinnedQuiz
                     }
-                }
+                }*/
             }
             
             if isReplyThread {
+                let titleString: String
                 if let author = message.effectiveAuthor {
                     titleString = author.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
                 } else {
                     titleString = ""
                 }
+                titleStrings = [.text(0, NSAttributedString(string: titleString, font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor))]
             }
             
             var applyImage: (() -> Void)?
@@ -314,29 +374,33 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                     updateImageSignal = .single({ _ in return nil })
                 }
             }
-            
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleString, font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0)))
+            let (titleLayout, titleApply) = makeTitleLayout(CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), titleStrings)
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: foldLineBreaks(descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: accountPeerId).0), font: Font.regular(15.0), textColor: message.media.isEmpty || message.media.first is TelegramMediaWebpage ? theme.chat.inputPanel.primaryTextColor : theme.chat.inputPanel.secondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0)))
             
             Queue.mainQueue().async {
                 if let strongSelf = self {
-                    let _ = titleApply()
+                    let _ = titleApply(animation != nil)
                     let _ = textApply()
                     
                     strongSelf.previousMediaReference = updatedMediaReference
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: contentLeftInset + textLineInset, y: 5.0), size: titleLayout.size)
+                    animationTransition.updateFrameAdditive(node: strongSelf.contentTextContainer, frame: CGRect(origin: CGPoint(x: contentLeftInset + textLineInset, y: 0.0), size: CGSize()))
                     
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: contentLeftInset + textLineInset, y: 23.0), size: textLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 5.0), size: titleLayout.size)
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 23.0), size: textLayout.size)
                     
-                    strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: contentLeftInset + 9.0, y: 7.0), size: CGSize(width: 35.0, height: 35.0))
+                    strongSelf.imageNodeContainer.frame = CGRect(origin: CGPoint(x: contentLeftInset + 9.0, y: 7.0), size: CGSize(width: 35.0, height: 35.0))
+                    strongSelf.imageNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 35.0, height: 35.0))
                     
                     if let applyImage = applyImage {
                         applyImage()
-                        strongSelf.imageNode.isHidden = false
+                        
+                        animationTransition.updateSublayerTransformScale(node: strongSelf.imageNodeContainer, scale: 1.0)
+                        animationTransition.updateAlpha(node: strongSelf.imageNodeContainer, alpha: 1.0, beginWithCurrentState: true)
                     } else {
-                        strongSelf.imageNode.isHidden = true
+                        animationTransition.updateSublayerTransformScale(node: strongSelf.imageNodeContainer, scale: 0.1)
+                        animationTransition.updateAlpha(node: strongSelf.imageNodeContainer, alpha: 0.0, beginWithCurrentState: true)
                     }
                     
                     if let updateImageSignal = updateImageSignal {
@@ -363,6 +427,12 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     @objc func closePressed() {
         if let interfaceInteraction = self.interfaceInteraction, let message = self.currentMessage {
             interfaceInteraction.unpinMessage(message.message.id, true)
+        }
+    }
+    
+    @objc func listPressed() {
+        if let interfaceInteraction = self.interfaceInteraction, let message = self.currentMessage {
+            interfaceInteraction.openPinnedList(message.message.id)
         }
     }
 }

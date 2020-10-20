@@ -321,7 +321,7 @@ public func requestProximityNotification(postbox: Postbox, network: Network, mes
             return .complete()
         }
         let flags: Int32 = 1 << 0
-        return network.request(Api.functions.messages.requestProximityNotification(flags: flags, peer: inputPeer, msgId: messageId.id, maxDistance: distance))
+        return network.request(Api.functions.messages.requestProximityNotification(flags: flags, peer: inputPeer, msgId: messageId.id, ownLocation: nil, maxDistance: distance))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Bool?, NoError> in
             return .single(nil)
@@ -340,7 +340,7 @@ public func cancelProximityNotification(postbox: Postbox, network: Network, mess
         guard let inputPeer = inputPeer else {
             return .complete()
         }
-        return network.request(Api.functions.messages.requestProximityNotification(flags: 1 << 1, peer: inputPeer, msgId: messageId.id, maxDistance: nil))
+        return network.request(Api.functions.messages.requestProximityNotification(flags: 1 << 1, peer: inputPeer, msgId: messageId.id, ownLocation: nil, maxDistance: nil))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Bool?, NoError> in
             return .single(nil)
