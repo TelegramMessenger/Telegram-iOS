@@ -117,6 +117,10 @@
 "PUSH_MESSAGES_1" = "%1$@|sent you a message";
 "PUSH_MESSAGES_any" = "%1$@|sent you %2$d messages";
 "PUSH_ALBUM" = "%1$@|sent you an album";
+"PUSH_MESSAGE_DOCS" = "%1$@|sent you %2$d files";
+"PUSH_MESSAGE_DOCS_1" = "%1$@|sent you a file";
+"PUSH_MESSAGE_DOCS_any" = "%1$@|sent you %2$d files";
+
 
 "PUSH_CHANNEL_MESSAGE_TEXT" = "%1$@|%2$@";
 "PUSH_CHANNEL_MESSAGE_NOTEXT" = "%1$@|posted a message";
@@ -149,6 +153,9 @@
 "PUSH_CHANNEL_MESSAGES_1" = "%1$@|posted a message";
 "PUSH_CHANNEL_MESSAGES_any" = "%1$@|posted %2$d messages";
 "PUSH_CHANNEL_ALBUM" = "%1$@|posted an album";
+"PUSH_CHANNEL_MESSAGE_DOCS" = "%1$@|posted %2$d files";
+"PUSH_CHANNEL_MESSAGE_DOCS_1" = "%1$@|posted a file";
+"PUSH_CHANNEL_MESSAGE_DOCS_any" = "%1$@|posted %2$d files";
 
 "PUSH_CHAT_MESSAGE_TEXT" = "%2$@|%1$@:%3$@";
 "PUSH_CHAT_MESSAGE_NOTEXT" = "%2$@|%1$@ sent a message to the group";
@@ -191,6 +198,9 @@
 "PUSH_CHAT_MESSAGES_1" = "%2$@|%1$@ sent a message";
 "PUSH_CHAT_MESSAGES_any" = "%2$@|%1$@ sent %3$d messages";
 "PUSH_CHAT_ALBUM" = "%2$@|%1$@ sent an album";
+"PUSH_CHAT_MESSAGE_DOCS" = "%2$@|%1$@ sent %3$d files";
+"PUSH_CHAT_MESSAGE_DOCS_1" = "%2$@|%1$@ sent a file";
+"PUSH_CHAT_MESSAGE_DOCS_any" = "%2$@|%1$@ sent %3$d files";
 
 "PUSH_PINNED_TEXT" = "%1$@|pinned \"%2$@\" ";
 "PUSH_PINNED_NOTEXT" = "%1$@|pinned a message";
@@ -5820,7 +5830,7 @@ Any member of this group will be able to see messages in the channel.";
 
 "Conversation.ContextViewStats" = "View Statistics";
 
-"ChatList.MessageMusic_1" = "1 Music File";
+"ChatList.MessageMusic_1" = "%@ Music File";
 "ChatList.MessageMusic_any" = "%@ Music Files";
 
 "Conversation.PinOlderMessageAlertTitle" = "Pin Message";
@@ -5838,7 +5848,8 @@ Any member of this group will be able to see messages in the channel.";
 
 "Conversation.Dice.u1F3B0" = "Send a slot machine emoji to try your luck.";
 
-"Notification.ProximityReached" = "%1$@ is now within %2$@ from you";
+"Notification.ProximityReached" = "%1$@ is now within %2$@ from %3$@";
+"Notification.ProximityReachedYou" = "%1$@ is now within %2$@ from you";
 
 "Location.ProximityNotification.Title" = "Notification";
 "Location.ProximityNotification.Notify" = "Notify me within %@";
@@ -5852,3 +5863,6 @@ Any member of this group will be able to see messages in the channel.";
 
 "Location.ProximityTip" = "Alert when %@ is close";
 "Location.ProximityGroupTip" = "Alert when any group member is close";
+
+"ChatList.MessageFiles_1" = "%@ File";
+"ChatList.MessageFiles_any" = "%@ Files";

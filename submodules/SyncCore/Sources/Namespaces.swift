@@ -72,6 +72,7 @@ public struct Namespaces {
         public static let cachedThemesConfiguration: Int8 = 8
         public static let cachedPollResults: Int8 = 9
         public static let cachedContextResults: Int8 = 10
+        public static let proximityNotificationStoredState: Int8 = 11
     }
     
     public struct UnorderedItemList {

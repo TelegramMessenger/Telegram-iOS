@@ -58,7 +58,7 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         case .messageActionContactSignUp:
             return TelegramMediaAction(action: .peerJoined)
         case let .messageActionGeoProximityReached(fromId, toId, distance):
-            return TelegramMediaAction(action: .geoProximityReached(distance: distance))
+            return TelegramMediaAction(action: .geoProximityReached(from: fromId.peerId, to: toId.peerId, distance: distance))
     }
 }
 

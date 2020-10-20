@@ -314,9 +314,9 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
         pickerView.selectRow(0, inComponent: 0, animated: false)
         
         if self.usesMetricSystem() {
-            pickerView.selectRow(30, inComponent: 1, animated: false)
+            pickerView.selectRow(50, inComponent: 1, animated: false)
         } else {
-            pickerView.selectRow(20, inComponent: 1, animated: false)
+            pickerView.selectRow(30, inComponent: 1, animated: false)
         }
         self.contentContainerNode.view.addSubview(pickerView)
         self.pickerView = pickerView

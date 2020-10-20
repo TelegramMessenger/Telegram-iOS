@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import Postbox
+import TelegramCore
 import RLottieBinding
 import AppBundle
 import GZip
@@ -72,7 +73,7 @@ public enum ManagedAnimationFrameRange: Equatable {
 
 public enum ManagedAnimationSource: Equatable {
     case local(String)
-    case resource(MediaBox, MediaResource)
+    case resource(Account, MediaResource)
     
     var cacheKey: String {
         switch self {
@@ -87,8 +88,8 @@ public enum ManagedAnimationSource: Equatable {
         switch self {
             case let .local(name):
                 return getAppBundle().path(forResource: name, ofType: "tgs")
-            case let .resource(mediaBox, resource):
-                return mediaBox.completedResourcePath(resource)
+            case let .resource(account, resource):
+                return account.postbox.mediaBox.completedResourcePath(resource)
         }
     }
     
@@ -100,8 +101,8 @@ public enum ManagedAnimationSource: Equatable {
                 } else {
                     return false
                 }
-            case let .resource(lhsMediaBox, lhsResource):
-                if case let .resource(rhsMediaBox, rhsResource) = rhs, lhsMediaBox === rhsMediaBox, lhsResource.isEqual(to: rhsResource) {
+            case let .resource(lhsAccount, lhsResource):
+                if case let .resource(rhsAccount, rhsResource) = rhs, lhsAccount === rhsAccount, lhsResource.isEqual(to: rhsResource) {
                     return true
                 } else {
                     return false
@@ -112,9 +113,9 @@ public enum ManagedAnimationSource: Equatable {
 
 public struct ManagedAnimationItem {
     public let source: ManagedAnimationSource
-    var frames: ManagedAnimationFrameRange?
-    var duration: Double?
-    var loop: Bool
+    public var frames: ManagedAnimationFrameRange?
+    public var duration: Double?
+    public var loop: Bool
     var callbacks: [(Int, () -> Void)]
     
     public init(source: ManagedAnimationSource, frames: ManagedAnimationFrameRange? = nil, duration: Double? = nil, loop: Bool = false, callbacks: [(Int, () -> Void)] = []) {

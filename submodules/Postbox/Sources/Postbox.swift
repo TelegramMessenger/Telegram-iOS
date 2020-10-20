@@ -2250,6 +2250,7 @@ public final class Postbox {
     
     fileprivate func removeItemCacheEntry(id: ItemCacheEntryId) {
         self.itemCacheTable.remove(id: id, metaTable: self.itemCacheMetaTable)
+        self.currentUpdatedCacheEntryKeys.insert(id)
     }
     
     fileprivate func replaceGlobalMessageTagsHole(transaction: Transaction, globalTags: GlobalMessageTags, index: MessageIndex, with updatedIndex: MessageIndex?, messages: [StoreMessage]) {

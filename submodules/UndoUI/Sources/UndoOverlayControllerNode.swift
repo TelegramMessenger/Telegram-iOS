@@ -10,6 +10,7 @@ import RadialStatusNode
 import AppBundle
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import SlotMachineAnimationNode
 import AnimationUI
 import SyncCore
 import Postbox
@@ -24,6 +25,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let iconCheckNode: RadialStatusNode?
     private let animationNode: AnimationNode?
     private var animatedStickerNode: AnimatedStickerNode?
+    private var slotMachineNode: SlotMachineAnimationNode?
     private var stillStickerNode: TransformImageNode?
     private var stickerImageSize: CGSize?
     private var stickerOffset: CGPoint?
@@ -339,23 +341,31 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         break
                 }
                 
-                let animatedStickerNode = AnimatedStickerNode()
-                self.animatedStickerNode = animatedStickerNode
-                
-                let _ = (loadedStickerPack(postbox: account.postbox, network: account.network, reference: .dice(dice.emoji), forceActualized: false)
-                |> deliverOnMainQueue).start(next: { stickerPack in
-                    if let value = dice.value {
-                        switch stickerPack {
-                            case let .result(_, items, _):
-                                let item = items[Int(value)]
-                                if let item = item as? StickerPackItem {
-                                    animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource), width: 120, height: 120, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-                                }
-                            default:
-                                break
+                if dice.emoji == "🎰" {
+                    let slotMachineNode = SlotMachineAnimationNode()
+                    self.slotMachineNode = slotMachineNode
+                    
+//                    slotMachineNode.setState(.rolling)
+//                    slotMachineNode.setState(.value(value, true))
+                } else {
+                    let animatedStickerNode = AnimatedStickerNode()
+                    self.animatedStickerNode = animatedStickerNode
+                    
+                    let _ = (loadedStickerPack(postbox: account.postbox, network: account.network, reference: .dice(dice.emoji), forceActualized: false)
+                    |> deliverOnMainQueue).start(next: { stickerPack in
+                        if let value = dice.value {
+                            switch stickerPack {
+                                case let .result(_, items, _):
+                                    let item = items[Int(value)]
+                                    if let item = item as? StickerPackItem {
+                                        animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource), width: 120, height: 120, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                                    }
+                                default:
+                                    break
+                            }
                         }
-                    }
-                })
+                    })
+                }
         }
         
         self.remainingSeconds = self.originalRemainingSeconds
@@ -397,6 +407,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.animationNode.flatMap(self.panelWrapperNode.addSubnode)
         self.stillStickerNode.flatMap(self.panelWrapperNode.addSubnode)
         self.animatedStickerNode.flatMap(self.panelWrapperNode.addSubnode)
+        self.slotMachineNode.flatMap(self.panelWrapperNode.addSubnode)
         self.panelWrapperNode.addSubnode(self.titleNode)
         self.panelWrapperNode.addSubnode(self.textNode)
         self.panelWrapperNode.addSubnode(self.buttonNode)
@@ -593,6 +604,10 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0)), size: iconSize)
             animatedStickerNode.updateLayout(size: iconFrame.size)
             transition.updateFrame(node: animatedStickerNode, frame: iconFrame)
+        } else if let slotMachineNode = self.slotMachineNode {
+            let iconSize = CGSize(width: 32.0, height: 32.0)
+            let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0)), size: iconSize)
+            transition.updateFrame(node: slotMachineNode, frame: iconFrame)
         }
         
         let timerTextSize = self.timerTextNode.updateLayout(CGSize(width: 100.0, height: 100.0))

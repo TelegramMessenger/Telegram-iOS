@@ -208,6 +208,7 @@ swift_library(
         "//submodules/ChatInterfaceState:ChatInterfaceState",
         "//submodules/AnimatedCountLabelNode:AnimatedCountLabelNode",
         "//submodules/AnimatedAvatarSetNode:AnimatedAvatarSetNode",
+        "//submodules/SlotMachineAnimationNode:SlotMachineAnimationNode",
     ],
     visibility = [
         "//visibility:public",

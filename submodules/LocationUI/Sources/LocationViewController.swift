@@ -65,8 +65,6 @@ class LocationViewInteraction {
     }
 }
 
-var CURRENT_DISTANCE: Double? = nil
-
 public final class LocationViewController: ViewController {
     private var controllerNode: LocationViewControllerNode {
         return self.displayNode as! LocationViewControllerNode
@@ -174,13 +172,9 @@ public final class LocationViewController: ViewController {
             }
             
             if reset {
-                strongSelf.controllerNode.updateState { state -> LocationViewState in
-                    var state = state
-                    state.proximityRadius = nil
-                    return state
+                if let messageId = messageId {
+                    let _ = cancelProximityNotification(postbox: context.account.postbox, network: context.account.network, messageId: messageId).start()
                 }
-                
-                CURRENT_DISTANCE = nil
             } else {
                 strongSelf.controllerNode.setProximityIndicator(radius: 0)
                 
@@ -196,15 +190,8 @@ public final class LocationViewController: ViewController {
                     
                     if let messageId = messageId {
                         completion()
-                        strongSelf.controllerNode.updateState { state -> LocationViewState in
-                            var state = state
-                            state.proximityRadius = Double(distance)
-                            return state
-                        }
-                        
+
                         let _ = requestProximityNotification(postbox: context.account.postbox, network: context.account.network, messageId: messageId, distance: distance).start()
-                        
-                        CURRENT_DISTANCE = Double(distance)
                     } else if let coordinate = coordinate {
                         strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_Title, text: strongSelf.presentationData.strings.Location_LiveLocationRequired_Description, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_ShareLocation, action: { [weak self] in
                             completion()
@@ -250,12 +237,6 @@ public final class LocationViewController: ViewController {
                             params.sendLiveLocation(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: period))
                             
                             if let distance = distance {
-                                strongSelf.controllerNode.updateState { state -> LocationViewState in
-                                    var state = state
-                                    state.proximityRadius = Double(distance)
-                                    return state
-                                }
-                                
                                 strongSelf.controllerNode.ownLiveLocationStartedAction = { messageId in
                                     let _ = requestProximityNotification(postbox: context.account.postbox, network: context.account.network, messageId: messageId, distance: distance).start()
                                 }
@@ -330,12 +311,6 @@ public final class LocationViewController: ViewController {
         
         self.displayNode = LocationViewControllerNode(context: self.context, presentationData: self.presentationData, subject: self.subject, interaction: interaction, locationManager: self.locationManager)
         self.displayNodeDidLoad()
-        
-        self.controllerNode.updateState { state -> LocationViewState in
-            var state = state
-            state.proximityRadius = CURRENT_DISTANCE
-            return state
-        }
     }
     
     private func updateRightBarButton() {

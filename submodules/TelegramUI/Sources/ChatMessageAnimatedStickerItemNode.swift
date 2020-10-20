@@ -19,6 +19,7 @@ import TelegramAnimatedStickerNode
 import Emoji
 import Markdown
 import ManagedAnimationNode
+import SlotMachineAnimationNode
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -29,6 +30,10 @@ protocol GenericAnimatedStickerNode: ASDisplayNode {
 }
 
 extension AnimatedStickerNode: GenericAnimatedStickerNode {
+    
+}
+
+extension SlotMachineAnimationNode: GenericAnimatedStickerNode {
     
 }
 
@@ -328,7 +333,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         if let telegramDice = self.telegramDice {
             if telegramDice.emoji == "🎰" {
-                let animationNode = SlotMachineAnimationNode(context: item.context)
+                let animationNode = SlotMachineAnimationNode()
                 self.animationNode = animationNode
             } else {
                 let animationNode = ManagedDiceAnimationNode(context: item.context, emoji: telegramDice.emoji.strippedEmoji)
@@ -1458,10 +1463,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
-        if let telegramDice = self.telegramDice, let diceNode = self.animationNode as? ManagedDiceAnimationNode, let item = self.item, item.message.effectivelyIncoming(item.context.account.peerId) {
+        if let telegramDice = self.telegramDice, let item = self.item, item.message.effectivelyIncoming(item.context.account.peerId) {
             if let value = telegramDice.value, value != 0 {
-                diceNode.setState(.rolling)
-                diceNode.setState(.value(value, false))
+                if let diceNode = self.animationNode as? ManagedDiceAnimationNode {
+                    diceNode.setState(.rolling)
+                    diceNode.setState(.value(value, false))
+                } else if let diceNode = self.animationNode as? SlotMachineAnimationNode {
+                    diceNode.setState(.rolling)
+                    diceNode.setState(.value(value, false))
+                }
             }
         }
     }
