@@ -36,6 +36,8 @@ static_library(
         "//submodules/PersistentStringHash:PersistentStringHash",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/LiveLocationTimerNode:LiveLocationTimerNode",
+        "//submodules/TelegramNotices:TelegramNotices",
+        "//submodules/TooltipUI:TooltipUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

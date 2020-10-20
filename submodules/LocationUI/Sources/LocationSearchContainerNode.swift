@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import SyncCore
 import TelegramPresentationData
+import TelegramStringFormatting
 import TelegramUIPreferences
 import MergeLists
 import AccountContext

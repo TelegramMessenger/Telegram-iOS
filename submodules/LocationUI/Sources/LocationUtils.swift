@@ -70,24 +70,6 @@ public func nearbyVenues(account: Account, latitude: Double, longitude: Double, 
     }
 }
 
-private var sharedDistanceFormatter: MKDistanceFormatter?
-func stringForDistance(strings: PresentationStrings, distance: CLLocationDistance) -> String {
-    let distanceFormatter: MKDistanceFormatter
-    if let currentDistanceFormatter = sharedDistanceFormatter {
-        distanceFormatter = currentDistanceFormatter
-    } else {
-        distanceFormatter = MKDistanceFormatter()
-        distanceFormatter.unitStyle = .full
-        sharedDistanceFormatter = distanceFormatter
-    }
-    
-    let locale = localeWithStrings(strings)
-    if distanceFormatter.locale != locale {
-        distanceFormatter.locale = locale
-    }
-    return distanceFormatter.string(fromDistance: distance)
-}
-
 func stringForEstimatedDuration(strings: PresentationStrings, eta: Double) -> String? {
     if eta > 0.0 && eta < 60.0 * 60.0 * 10.0 {
         let eta = max(eta, 60.0)

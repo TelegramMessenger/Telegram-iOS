@@ -26,6 +26,7 @@ import LocalMediaResources
 import OverlayStatusController
 import AlertUI
 import PresentationDataUtils
+import LocationUI
 
 private enum CallStatusText: Equatable {
     case none
@@ -1078,6 +1079,41 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func navigateToChatController(_ params: NavigateToChatControllerParams) {
         navigateToChatControllerImpl(params)
+    }
+    
+    public func openLocationScreen(context: AccountContext, messageId: MessageId, navigationController: NavigationController) {
+        var found = false
+        for controller in navigationController.viewControllers.reversed() {
+            if let controller = controller as? LocationViewController, controller.subject.id.peerId == messageId.peerId {
+                controller.goToUserLocation(visibleRadius: nil)
+                found = true
+                break
+            }
+        }
+        
+        if !found {
+            let controllerParams = LocationViewParams(sendLiveLocation: { location in
+                let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: location), replyToMessageId: nil, localGroupingKey: nil)
+//                params.enqueueMessage(outMessage)
+            }, stopLiveLocation: { messageId in
+                if let messageId = messageId {
+                    context.liveLocationManager?.cancelLiveLocation(peerId: messageId.peerId)
+                }
+            }, openUrl: { _ in }, openPeer: { peer in
+//                params.openPeer(peer, .info)
+            })
+            
+            let _ = ((context.account.postbox.transaction { transaction -> Message? in
+                return transaction.getMessage(messageId)
+            }) |> deliverOnMainQueue).start(next: { message in
+                guard let message = message else {
+                    return
+                }
+                let controller = LocationViewController(context: context, subject: message, params: controllerParams)
+                controller.navigationPresentation = .modal
+                navigationController.pushViewController(controller)
+            })
+        }
     }
     
     public func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {

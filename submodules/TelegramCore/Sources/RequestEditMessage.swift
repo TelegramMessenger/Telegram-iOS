@@ -25,6 +25,7 @@ public enum RequestEditMessageError {
     case generic
     case restricted
     case textTooLong
+    case invalidGrouping
 }
 
 public func requestEditMessage(account: Account, messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute? = nil, disableUrlPreview: Bool = false, scheduleTime: Int32? = nil) -> Signal<RequestEditMessageResult, RequestEditMessageError> {
@@ -176,6 +177,8 @@ private func requestEditMessageInternal(postbox: Postbox, network: Network, stat
                         return .invalidReference
                     } else if error.errorDescription.hasSuffix("_TOO_LONG") {
                         return .error(.textTooLong)
+                    } else if error.errorDescription.hasPrefix("MEDIA_GROUPED_INVALID") {
+                        return .error(.invalidGrouping)
                     } else if error.errorDescription.hasPrefix("CHAT_SEND_") && error.errorDescription.hasSuffix("_FORBIDDEN") {
                         return .error(.restricted)
                     }
@@ -309,7 +312,7 @@ public func requestEditLiveLocation(postbox: Postbox, network: Network, stateMan
     }
 }
 
-public func requestProximityNotification(postbox: Postbox, network: Network, messageId: MessageId, distance: Int32, coordinate: (latitude: Double, longitude: Double, accuracyRadius: Int32?)) -> Signal<Void, NoError> {
+public func requestProximityNotification(postbox: Postbox, network: Network, messageId: MessageId, distance: Int32) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
     }

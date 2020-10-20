@@ -3,9 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 
-import LegacyComponents
-
-private final class LocationBroadcastPanelWavesNodeParams: NSObject {
+private final class LiveLocationWavesNodeParams: NSObject {
     let color: UIColor
     let progress: CGFloat
     
@@ -21,8 +19,8 @@ private func degToRad(_ degrees: CGFloat) -> CGFloat {
     return degrees * CGFloat.pi / 180.0
 }
 
-final class LocationBroadcastPanelWavesNode: ASDisplayNode {
-    var color: UIColor {
+public final class LiveLocationWavesNode: ASDisplayNode {
+    public var color: UIColor {
         didSet {
             self.setNeedsDisplay()
         }
@@ -34,7 +32,9 @@ final class LocationBroadcastPanelWavesNode: ASDisplayNode {
         }
     }
     
-    init(color: UIColor) {
+    var animator: ConstantDisplayLinkAnimator?
+    
+    public init(color: UIColor) {
         self.color = color
         
         super.init()
@@ -43,42 +43,72 @@ final class LocationBroadcastPanelWavesNode: ASDisplayNode {
         self.isOpaque = false
     }
     
-    override func willEnterHierarchy() {
+    deinit {
+        self.animator?.invalidate()
+    }
+    
+    private var previousAnimationStart: Double?
+    private func updateAnimations(inHierarchy: Bool) {
+        let timestamp = CACurrentMediaTime()
+        
+        let animating: Bool
+        
+        if inHierarchy {
+            animating = true
+            
+            let animator: ConstantDisplayLinkAnimator
+            if let current = self.animator {
+                animator = current
+            } else {
+                animator = ConstantDisplayLinkAnimator(update: { [weak self] in
+                    self?.updateAnimations(inHierarchy: true)
+                })
+                self.animator = animator
+            }
+            animator.isPaused = false
+        } else {
+            animating = false
+            self.animator?.isPaused = true
+            self.previousAnimationStart = nil
+        }
+        
+        if animating {
+            let animationDuration: Double = 2.5
+            if var startTimestamp = self.previousAnimationStart {
+                if timestamp > startTimestamp + animationDuration {
+                    while timestamp > startTimestamp + animationDuration {
+                        startTimestamp += animationDuration
+                    }
+                    startTimestamp -= animationDuration
+                }
+                
+                let t = min(1.0, max(0.0, (timestamp - startTimestamp) / animationDuration))
+                self.effectiveProgress = CGFloat(t)
+            } else {
+                self.previousAnimationStart = timestamp
+            }
+        }
+    }
+    
+    public override func willEnterHierarchy() {
         super.willEnterHierarchy()
         
-        self.pop_removeAnimation(forKey: "indefiniteProgress")
-        
-        let animation = POPBasicAnimation()
-        animation.property = (POPAnimatableProperty.property(withName: "progress", initializer: { property in
-            property?.readBlock = { node, values in
-                values?.pointee = (node as! LocationBroadcastPanelWavesNode).effectiveProgress
-            }
-            property?.writeBlock = { node, values in
-                (node as! LocationBroadcastPanelWavesNode).effectiveProgress = values!.pointee
-            }
-            property?.threshold = 0.01
-        }) as! POPAnimatableProperty)
-        animation.fromValue = CGFloat(0.0) as NSNumber
-        animation.toValue = CGFloat(1.0) as NSNumber
-        animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
-        animation.duration = 2.5
-        animation.repeatForever = true
-        self.pop_add(animation, forKey: "indefiniteProgress")
+        self.updateAnimations(inHierarchy: true)
     }
     
-    override func didExitHierarchy() {
+    public override func didExitHierarchy() {
         super.didExitHierarchy()
         
-        self.pop_removeAnimation(forKey: "indefiniteProgress")
+        self.updateAnimations(inHierarchy: false)
     }
     
-    override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
+    public override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
         let t = CACurrentMediaTime()
         let value: CGFloat = CGFloat(t.truncatingRemainder(dividingBy: 2.0)) / 2.0
-        return LocationBroadcastPanelWavesNodeParams(color: self.color, progress: value)
+        return LiveLocationWavesNodeParams(color: self.color, progress: value)
     }
     
-    @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
+    @objc public override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
         let context = UIGraphicsGetCurrentContext()!
         
         if !isRasterizing {
@@ -87,7 +117,7 @@ final class LocationBroadcastPanelWavesNode: ASDisplayNode {
             context.fill(bounds)
         }
         
-        if let parameters = parameters as? LocationBroadcastPanelWavesNodeParams {
+        if let parameters = parameters as? LiveLocationWavesNodeParams {
             let center = CGPoint(x: bounds.width / 2.0, y: bounds.height / 2.0)
             let length: CGFloat = 9.0
             

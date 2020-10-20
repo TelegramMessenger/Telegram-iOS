@@ -77,6 +77,7 @@ public final class Logger {
     private let maxShortLength: Int = 1 * 1024 * 1024
     private let maxFiles: Int = 20
     
+    private let rootPath: String
     private let basePath: String
     private var file: (ManagedFile, Int)?
     private var shortFile: (ManagedFile, Int)?
@@ -114,22 +115,30 @@ public final class Logger {
             return sharedLogger
         } else {
             assertionFailure()
-            let tempLogger = Logger(basePath: "")
+            let tempLogger = Logger(rootPath: "", basePath: "")
             tempLogger.logToFile = false
             tempLogger.logToConsole = false
             return tempLogger
         }
     }
     
-    public init(basePath: String) {
+    public init(rootPath: String, basePath: String) {
+        self.rootPath = rootPath
         self.basePath = basePath
     }
     
-    public func collectLogs() -> Signal<[(String, String)], NoError> {
+    public func collectLogs(prefix: String? = nil) -> Signal<[(String, String)], NoError> {
         return Signal { subscriber in
             self.queue.async {
+                let logsPath: String
+                if let prefix = prefix {
+                    logsPath = self.rootPath + prefix
+                } else {
+                    logsPath = self.basePath
+                }
+                
                 var result: [(Date, String, String)] = []
-                if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: self.basePath), includingPropertiesForKeys: [URLResourceKey.creationDateKey], options: []) {
+                if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: logsPath), includingPropertiesForKeys: [URLResourceKey.creationDateKey], options: []) {
                     for url in files {
                         if url.lastPathComponent.hasPrefix("log-") {
                             if let creationDate = (try? url.resourceValues(forKeys: Set([.creationDateKey])))?.creationDate {

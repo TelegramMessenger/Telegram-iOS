@@ -155,6 +155,18 @@ private func calculateSlowmodeActiveUntilTimestamp(account: Account, untilTimest
     }
 }
 
+private struct ScrolledToMessageId: Equatable {
+    struct AllowedReplacementDirections: OptionSet {
+        var rawValue: Int32
+        
+        static let up = AllowedReplacementDirections(rawValue: 1 << 0)
+        static let down = AllowedReplacementDirections(rawValue: 1 << 1)
+    }
+    
+    var id: MessageId
+    var allowedReplacementDirection: AllowedReplacementDirections
+}
+
 public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
     
@@ -358,7 +370,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     public var purposefulAction: (() -> Void)?
     
-    private let scrolledToMessageId = ValuePromise<MessageId?>(nil, ignoreRepeated: true)
+    private let scrolledToMessageId = ValuePromise<ScrolledToMessageId?>(nil, ignoreRepeated: true)
+    private var scrolledToMessageIdValue: ScrolledToMessageId? = nil {
+        didSet {
+            self.scrolledToMessageId.set(self.scrolledToMessageIdValue)
+        }
+    }
     
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil) {
         let _ = ChatControllerCount.modify { value in
@@ -3247,27 +3264,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let topPinnedMessage: Signal<ChatPinnedMessage?, NoError>
         switch self.chatLocation {
         case let .peer(peerId):
-            let replyHistory: Signal<ChatHistoryViewUpdate, NoError> = (chatHistoryViewForLocation(ChatHistoryLocationInput(content: .Initial(count: 100), id: 0), context: self.context, chatLocation: .peer(peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), scheduled: false, fixedCombinedReadStates: nil, tagMask: MessageTags.pinned, additionalData: [])
-            |> castError(Bool.self)
-            |> mapToSignal { update -> Signal<ChatHistoryViewUpdate, Bool> in
-                switch update {
-                case let .Loading(_, type):
-                    if case .Generic(.FillHole) = type {
-                        return .fail(true)
-                    }
-                case let .HistoryView(_, type, _, _, _, _, _):
-                    if case .Generic(.FillHole) = type {
-                        return .fail(true)
-                    }
-                }
-                return .single(update)
-            })
-            |> restartIfError
-            
             struct ReferenceMessage {
                 var id: MessageId
                 var isScrolled: Bool
             }
+            
+            let messageRangeEdge: Signal<Bool, NoError> = self.context.sharedContext.accountManager.sharedData(keys: Set([ApplicationSpecificSharedDataKeys.experimentalUISettings]))
+            |> map { sharedData -> Bool in
+                let experimentalSettings: ExperimentalUISettings = (sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
+                return experimentalSettings.snapPinListToTop
+            }
+            |> distinctUntilChanged
             
             let referenceMessage: Signal<ReferenceMessage?, NoError>
             if latest {
@@ -3276,58 +3283,189 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 referenceMessage = combineLatest(
                     queue: Queue.mainQueue(),
                     self.scrolledToMessageId.get(),
-                    self.chatDisplayNode.historyNode.topVisibleMessageRange.get()
+                    self.chatDisplayNode.historyNode.topVisibleMessageRange.get(),
+                    messageRangeEdge
                 )
-                |> map { scrolledToMessageId, topVisibleMessageRange -> ReferenceMessage? in
+                |> map { scrolledToMessageId, topVisibleMessageRange, messageRangeEdge -> ReferenceMessage? in
+                    let topVisibleMessage: MessageId?
+                    if messageRangeEdge {
+                        topVisibleMessage = topVisibleMessageRange?.lowerBound
+                    } else {
+                        topVisibleMessage = topVisibleMessageRange?.upperBound
+                    }
+                    
                     if let scrolledToMessageId = scrolledToMessageId {
-                        return ReferenceMessage(id: scrolledToMessageId, isScrolled: true)
-                    } else if let topVisibleMessageRange = topVisibleMessageRange {
-                        return ReferenceMessage(id: topVisibleMessageRange.upperBound, isScrolled: false)
+                        if let topVisibleMessage = topVisibleMessage {
+                            if scrolledToMessageId.allowedReplacementDirection.contains(.up) && topVisibleMessage < scrolledToMessageId.id {
+                                return ReferenceMessage(id: topVisibleMessage, isScrolled: false)
+                            }
+                        }
+                        return ReferenceMessage(id: scrolledToMessageId.id, isScrolled: true)
+                    } else if let topVisibleMessage = topVisibleMessage {
+                        return ReferenceMessage(id: topVisibleMessage, isScrolled: false)
                     } else {
                         return nil
                     }
                 }
             }
             
-            topPinnedMessage = combineLatest(
-                replyHistory,
-                referenceMessage
-            )
-            |> map { update, referenceMessage -> ChatPinnedMessage? in
-                var message: ChatPinnedMessage?
+            let context = self.context
+            
+            func replyHistorySignal(anchorMessageId: MessageId?, count: Int) -> Signal<ChatHistoryViewUpdate, NoError> {
+                let location: ChatHistoryLocation
+                if let anchorMessageId = anchorMessageId {
+                    location = .InitialSearch(location: .id(anchorMessageId), count: count, highlight: false)
+                } else {
+                    location = .Initial(count: count)
+                }
+                
+                return (chatHistoryViewForLocation(ChatHistoryLocationInput(content: location, id: 0), context: context, chatLocation: .peer(peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), scheduled: false, fixedCombinedReadStates: nil, tagMask: MessageTags.pinned, additionalData: [])
+                |> castError(Bool.self)
+                |> mapToSignal { update -> Signal<ChatHistoryViewUpdate, Bool> in
+                    switch update {
+                    case let .Loading(_, type):
+                        if case .Generic(.FillHole) = type {
+                            return .fail(true)
+                        }
+                    case let .HistoryView(_, type, _, _, _, _, _):
+                        if case .Generic(.FillHole) = type {
+                            return .fail(true)
+                        }
+                    }
+                    return .single(update)
+                })
+                |> restartIfError
+            }
+            
+            let topMessage = replyHistorySignal(anchorMessageId: nil, count: 3)
+            |> map { update -> Message? in
                 switch update {
                 case .Loading:
-                    break
-                case let .HistoryView(view, _, _, _, _, _, _):
-                    let topMessageId: MessageId
-                    if view.entries.isEmpty {
-                        return nil
+                    return nil
+                case let .HistoryView(viewValue, _, _, _, _, _, _):
+                    return viewValue.entries.last?.message
+                }
+            }
+            
+            let loadCount = 100
+            
+            let adjustedReplyHistory: Signal<[Message], NoError>
+            if latest {
+                adjustedReplyHistory = replyHistorySignal(anchorMessageId: nil, count: loadCount)
+                |> map { view -> [Message] in
+                    switch view {
+                    case .Loading:
+                        return []
+                    case let .HistoryView(viewValue, _, _, _, _, _, _):
+                        return viewValue.entries.map(\.message)
                     }
-                    topMessageId = view.entries[view.entries.count - 1].message.id
-                    for i in 0 ..< view.entries.count {
-                        let entry = view.entries[i]
-                        var matches = false
-                        if message == nil {
-                            matches = true
-                        } else if let referenceMessage = referenceMessage {
-                            if referenceMessage.isScrolled {
-                                if entry.message.id < referenceMessage.id {
-                                    matches = true
+                }
+            } else {
+                adjustedReplyHistory = (Signal<[Message], NoError> { subscriber in
+                    var referenceMessageValue: ReferenceMessage?
+                    var view: ChatHistoryViewUpdate?
+                    
+                    let updateState: () -> Void = {
+                        guard let view = view else {
+                            return
+                        }
+                        guard case let .HistoryView(viewValue, _, _, _, _, _, _) = view else {
+                            subscriber.putNext([])
+                            return
+                        }
+                        
+                        if let referenceId = referenceMessageValue?.id {
+                            if viewValue.entries.count < loadCount {
+                                subscriber.putNext(viewValue.entries.map(\.message))
+                            } else if referenceId < viewValue.entries[1].message.id {
+                                if viewValue.earlierId != nil {
+                                    subscriber.putCompletion()
+                                } else {
+                                    subscriber.putNext(viewValue.entries.map(\.message))
+                                }
+                            } else if referenceId > viewValue.entries[viewValue.entries.count - 2].message.id {
+                                if viewValue.laterId != nil {
+                                    subscriber.putCompletion()
+                                } else {
+                                    subscriber.putNext(viewValue.entries.map(\.message))
                                 }
                             } else {
-                                if entry.message.id <= referenceMessage.id {
-                                    matches = true
-                                }
+                                subscriber.putNext(viewValue.entries.map(\.message))
                             }
                         } else {
-                            matches = true
-                        }
-                        if matches {
-                            message = ChatPinnedMessage(message: entry.message, topMessageId: topMessageId)
+                            if viewValue.holeLater || viewValue.laterId != nil {
+                                subscriber.putCompletion()
+                            } else {
+                                subscriber.putNext(viewValue.entries.map(\.message))
+                            }
                         }
                     }
-                    break
+                    
+                    var initializedView = false
+                    let viewDisposable = MetaDisposable()
+                    
+                    let referenceDisposable = (referenceMessage
+                    |> deliverOnMainQueue).start(next: { referenceMessage in
+                        referenceMessageValue = referenceMessage
+                        if !initializedView {
+                            initializedView = true
+                            //print("reload at \(String(describing: referenceMessage?.id)) disposable \(unsafeBitCast(viewDisposable, to: UInt64.self))")
+                            viewDisposable.set((replyHistorySignal(anchorMessageId: referenceMessage?.id, count: loadCount)
+                            |> deliverOnMainQueue).start(next: { next in
+                                view = next
+                                updateState()
+                            }))
+                        }
+                        updateState()
+                    })
+                    
+                    return ActionDisposable {
+                        //print("dispose \(unsafeBitCast(viewDisposable, to: UInt64.self))")
+                        referenceDisposable.dispose()
+                        viewDisposable.dispose()
+                    }
                 }
+                |> runOn(.mainQueue()))
+                |> restart
+            }
+            
+            topPinnedMessage = combineLatest(queue: .mainQueue(),
+                adjustedReplyHistory,
+                topMessage,
+                referenceMessage
+            )
+            |> map { messages, topMessage, referenceMessage -> ChatPinnedMessage? in
+                var message: ChatPinnedMessage?
+                
+                let topMessageId: MessageId
+                if messages.isEmpty {
+                    return nil
+                }
+                topMessageId = topMessage?.id ?? messages[messages.count - 1].id
+                //print("reference: \(String(describing: referenceMessage?.id.id)) entries: \(view.entries.map(\.index.id.id))")
+                for i in 0 ..< messages.count {
+                    let entry = messages[i]
+                    var matches = false
+                    if message == nil {
+                        matches = true
+                    } else if let referenceMessage = referenceMessage {
+                        if referenceMessage.isScrolled {
+                            if entry.id < referenceMessage.id {
+                                matches = true
+                            }
+                        } else {
+                            if entry.id <= referenceMessage.id {
+                                matches = true
+                            }
+                        }
+                    } else {
+                        matches = true
+                    }
+                    if matches {
+                        message = ChatPinnedMessage(message: entry, topMessageId: topMessageId)
+                    }
+                }
+
                 return message
             }
             |> distinctUntilChanged
@@ -3355,12 +3493,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
-        self.chatDisplayNode.historyNode.beganDragging = { [weak self] in
+        self.chatDisplayNode.historyNode.didScrollWithOffset = { [weak self] offset, _, _ in
             guard let strongSelf = self else {
                 return
             }
             
-            strongSelf.scrolledToMessageId.set(nil)
+            if offset > 0.0 {
+                if var scrolledToMessageIdValue = strongSelf.scrolledToMessageIdValue {
+                    scrolledToMessageIdValue.allowedReplacementDirection.insert(.up)
+                    strongSelf.scrolledToMessageIdValue = scrolledToMessageIdValue
+                }
+            } else if offset < 0.0 {
+                strongSelf.scrolledToMessageIdValue = nil
+            }
         }
         
         self.chatDisplayNode.peerView = self.peerView
@@ -3690,7 +3835,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let highlightedState = ChatInterfaceHighlightedState(messageStableId: message.stableId)
                         controllerInteraction.highlightedState = highlightedState
                         strongSelf.updateItemNodesHighlightedStates(animated: false)
-                        strongSelf.scrolledToMessageId.set(index.id)
+                        strongSelf.scrolledToMessageIdValue = ScrolledToMessageId(id: index.id, allowedReplacementDirection: [])
                         
                         strongSelf.messageContextDisposable.set((Signal<Void, NoError>.complete() |> delay(0.7, queue: Queue.mainQueue())).start(completed: {
                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
@@ -3709,7 +3854,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.scrolledToMessageId.set(nil)
+            strongSelf.scrolledToMessageIdValue = nil
         }
         
         self.chatDisplayNode.historyNode.maxVisibleMessageIndexUpdated = { [weak self] index in
@@ -5774,7 +5919,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let inputText = self.presentationInterfaceState.interfaceState.effectiveInputState.inputText.string
                 if !inputText.isEmpty {
                     if inputText.count > 4 {
-                        let _ = (ApplicationSpecificNotice.getChatMessageOptionsTip(accountManager: context.sharedContext.accountManager)
+                        let _ = (ApplicationSpecificNotice.getChatMessageOptionsTip(accountManager: self.context.sharedContext.accountManager)
                         |> deliverOnMainQueue).start(next: { [weak self] counter in
                             if let strongSelf = self, counter < 3 {
                                 let _ = ApplicationSpecificNotice.incrementChatMessageOptionsTip(accountManager: strongSelf.context.sharedContext.accountManager).start()
@@ -5824,7 +5969,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let text: String
                 switch error {
-                case .generic, .textTooLong:
+                case .generic, .textTooLong, .invalidGrouping:
                     text = strongSelf.presentationData.strings.Channel_EditMessageErrorGeneric
                 case .restricted:
                     text = strongSelf.presentationData.strings.Group_ErrorSendRestrictedMedia
@@ -7149,17 +7294,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                                     
                                     var groupingKey: Int64?
-                                    var allItemsAreSame = true
+                                    var fileTypes: (music: Bool, other: Bool) = (false, false)
                                     for item in results {
                                         if let item = item {
                                             let pathExtension = (item.fileName as NSString).pathExtension.lowercased()
-                                            if !["mp3", "m4a"].contains(pathExtension) {
-                                                allItemsAreSame = false
+                                            if ["mp3", "m4a"].contains(pathExtension) {
+                                                fileTypes.music = true
+                                            } else {
+                                                fileTypes.other = true
                                             }
                                         }
                                     }
-                                    allItemsAreSame = true
-                                    if allItemsAreSame {
+                                    if fileTypes.music != fileTypes.other {
                                         groupingKey = arc4random64()
                                     }
                                     
@@ -7169,7 +7315,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             let fileId = arc4random64()
                                             let mimeType = guessMimeTypeByFileExtension((item.fileName as NSString).pathExtension)
                                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
-                                            if mimeType == "application/pdf" {
+                                            if mimeType.hasPrefix("image/") || mimeType == "application/pdf" {
                                                 previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 320, height: 320), resource: ICloudFileResource(urlData: item.urlData, thumbnail: true), progressiveSizes: []))
                                             }
                                             var attributes: [TelegramMediaFileAttribute] = []
@@ -7182,7 +7328,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: replyMessageId, localGroupingKey: groupingKey)
                                             messages.append(message)
                                         }
-                                        if let _ = groupingKey, results.count % 10 == 0 {
+                                        if let _ = groupingKey, messages.count % 10 == 0 {
                                             groupingKey = arc4random64()
                                         }
                                     }

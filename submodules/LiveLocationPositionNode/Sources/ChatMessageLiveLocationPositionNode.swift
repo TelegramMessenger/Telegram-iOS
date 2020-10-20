@@ -10,6 +10,7 @@ import AvatarNode
 import LocationResources
 import AppBundle
 import AccountContext
+import CoreLocation
 
 private let avatarFont = avatarPlaceholderFont(size: 24.0)
 private let avatarBackgroundImage = UIImage(bundleImageName: "Chat/Message/LocationPin")?.precomposed()
@@ -50,9 +51,34 @@ private func chatBubbleMapPinImage(_ theme: PresentationTheme, color: UIColor) -
     })
 }
 
+private let arrowImageSize = CGSize(width: 70.0, height: 70.0)
+private func generateHeadingArrowImage() -> UIImage? {
+    return generateImage(arrowImageSize, contextGenerator: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+    
+        context.saveGState()
+        let center = CGPoint(x: arrowImageSize.width / 2.0, y: arrowImageSize.height / 2.0)
+        context.move(to: center)
+        context.addArc(center: center, radius: arrowImageSize.width / 2.0, startAngle: CGFloat.pi / 2.0 + CGFloat.pi / 8.0, endAngle: CGFloat.pi / 2.0 - CGFloat.pi / 8.0, clockwise: true)
+        context.clip()
+        
+        var locations: [CGFloat] = [0.0, 0.4, 1.0]
+        let colors: [CGColor] = [UIColor(rgb: 0x007aff, alpha: 0.5).cgColor, UIColor(rgb: 0x007aff, alpha: 0.3).cgColor, UIColor(rgb: 0x007aff, alpha: 0.0).cgColor]
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+        
+        context.drawRadialGradient(gradient, startCenter: center, startRadius: 5.0, endCenter: center, endRadius: arrowImageSize.width / 2.0, options: .drawsAfterEndLocation)
+        
+        context.restoreGState()
+        context.setBlendMode(.clear)
+        context.fillEllipse(in: CGRect(x: (arrowImageSize.width - 10.0) / 2.0, y: (arrowImageSize.height - 10.0) / 2.0, width: 10.0, height: 10.0))
+    })
+}
+
 public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
     public enum Mode {
-        case liveLocation(Peer, Bool)
+        case liveLocation(peer: Peer, active: Bool, latitude: Double, longitude: Double, heading: Double?)
         case location(TelegramMediaMap?)
     }
     
@@ -60,9 +86,12 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
     private let iconNode: TransformImageNode
     private let avatarNode: AvatarNode
     private let pulseNode: ASImageNode
+    private let arrowNode: ASImageNode
     
     private var pulseImage: UIImage?
+    private var arrowImage: UIImage?
     private var venueType: String?
+    private var coordinate: (Double, Double)?
     
     override public init() {
         let isLayerBacked = !smartInvertColorsEnabled()
@@ -84,11 +113,19 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
         self.pulseNode.displayWithoutProcessing = true
         self.pulseNode.isHidden = true
         
+        self.arrowNode = ASImageNode()
+        self.arrowNode.frame = CGRect(origin: CGPoint(), size: arrowImageSize)
+        self.arrowNode.isLayerBacked = true
+        self.arrowNode.displaysAsynchronously = false
+        self.arrowNode.displayWithoutProcessing = true
+        self.arrowNode.isHidden = true
+        
         super.init()
         
         self.isLayerBacked = isLayerBacked
         
         self.addSubnode(self.pulseNode)
+        self.addSubnode(self.arrowNode)
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.iconNode)
         self.addSubnode(self.avatarNode)
@@ -98,17 +135,24 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
         let iconLayout = self.iconNode.asyncLayout()
         
         let currentPulseImage = self.pulseImage
+        let currentArrowImage = self.arrowImage
         let currentVenueType = self.venueType
+        
+        let currentCoordinate = self.coordinate
         
         return { [weak self] context, theme, mode in
             var updatedVenueType: String?
             
             let backgroundImage: UIImage?
             var hasPulse = false
+            var heading: Double?
+            var coordinate: (Double, Double)?
             switch mode {
-                case let .liveLocation(_, active):
+                case let .liveLocation(_, active, latitude, longitude, headingValue):
                     backgroundImage = avatarBackgroundImage
                     hasPulse = active
+                    coordinate = (latitude, longitude)
+                    heading = headingValue
                 case let .location(location):
                     let venueType = location?.venue?.type ?? ""
                     let color = venueType.isEmpty ? theme.list.itemAccentColor : venueIconColor(type: venueType)
@@ -118,27 +162,57 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
                     }
             }
             
+            func degToRad(_ degrees: Double) -> Double {
+                return degrees * Double.pi / 180.0
+            }
+
+            
+            if heading == nil, let currentCoordinate = currentCoordinate, let coordinate = coordinate {
+                let lat1 = degToRad(currentCoordinate.0)
+                let lon1 = degToRad(currentCoordinate.1)
+                let lat2 = degToRad(coordinate.0)
+                let lon2 = degToRad(coordinate.1)
+
+                let dLat = lat2 - lat1
+                let dLon = lon2 - lon1
+                
+                if dLat != 0 && dLon != 0 {
+                    let y = sin(dLon) * cos(lat2)
+                    let x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
+                    heading = atan2(y, x)
+                }
+            }
+            
             let pulseImage: UIImage?
+            let arrowImage: UIImage?
             if hasPulse {
                 pulseImage = currentPulseImage ?? generateFilledCircleImage(diameter: 120.0, color: UIColor(rgb: 0x007aff, alpha: 0.27))
             } else {
                 pulseImage = nil
             }
             
+            if let _ = heading {
+                arrowImage = currentArrowImage ?? generateHeadingArrowImage()
+            } else {
+                arrowImage = nil
+            }
+            
             return (CGSize(width: 62.0, height: 74.0), {
                 if let strongSelf = self {
+                    strongSelf.coordinate = coordinate
+                    
                     if strongSelf.backgroundNode.image !== backgroundImage {
                         strongSelf.backgroundNode.image = backgroundImage
                     }
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 62.0, height: 74.0))
                     strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: 10.0, y: 9.0), size: CGSize(width: 42.0, height: 42.0))
                     switch mode {
-                        case let .liveLocation(peer, active):
+                        case let .liveLocation(peer, active, _, _, _):
                             strongSelf.avatarNode.setPeer(context: context, theme: theme, peer: peer)
                             strongSelf.avatarNode.isHidden = false
                             strongSelf.iconNode.isHidden = true
                             strongSelf.avatarNode.alpha = active ? 1.0 : 0.6
-                        case let .location(location):
+                        case .location:
                             strongSelf.iconNode.isHidden = false
                             strongSelf.avatarNode.isHidden = true
                     }
@@ -147,7 +221,6 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
                         strongSelf.venueType = updatedVenueType
                         strongSelf.iconNode.setSignal(venueIcon(postbox: context.account.postbox, type: updatedVenueType, background: false))
                     }
-
                     
                     let arguments = VenueIconArguments(defaultForegroundColor: theme.chat.inputPanel.actionControlForegroundColor)
                     let iconSize = CGSize(width: 44.0, height: 44.0)
@@ -170,6 +243,13 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
                         strongSelf.pulseNode.isHidden = true
                         removePulseAnimations(layer: strongSelf.pulseNode.layer)
                     }
+                    
+                    strongSelf.arrowImage = arrowImage
+                    strongSelf.arrowNode.image = arrowImage
+                    strongSelf.arrowNode.isHidden = heading == nil || !hasPulse
+                    strongSelf.arrowNode.position = CGPoint(x: 31.0, y: 64.0)
+                    
+                    strongSelf.arrowNode.transform = CATransform3DMakeRotation(CGFloat(heading ?? 0.0 / 180.0 * Double.pi), 0.0, 0.0, 1.0)
                 }
             })
         }

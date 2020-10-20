@@ -223,7 +223,11 @@ func messageMediaEditingOptions(message: Message) -> MessageMediaEditingOptions 
                         if audio.isVoice {
                             return []
                         } else {
-                            options.formUnion([.imageOrVideo, .file])
+                            if let _ = message.groupingKey {
+                                return []
+                            } else {
+                                options.formUnion([.imageOrVideo, .file])
+                            }
                         }
                     default:
                         break
@@ -644,19 +648,10 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         
         if data.canPin, case .peer = chatPresentationInterfaceState.chatLocation {
             var pinnedSelectedMessageId: MessageId?
-            if let _ = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
-                for message in messages {
-                    if message.tags.contains(.pinned) {
-                        pinnedSelectedMessageId = message.id
-                        break
-                    }
-                }
-            } else {
-                for message in messages {
-                    if chatPresentationInterfaceState.pinnedMessage?.message.id == message.id {
-                        pinnedSelectedMessageId = message.id
-                        break
-                    }
+            for message in messages {
+                if message.tags.contains(.pinned) {
+                    pinnedSelectedMessageId = message.id
+                    break
                 }
             }
             

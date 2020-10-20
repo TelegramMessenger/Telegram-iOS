@@ -31,12 +31,26 @@ private func generateSmallBackgroundImage(color: UIColor) -> UIImage? {
 class LocationPinAnnotation: NSObject, MKAnnotation {
     let context: AccountContext
     let theme: PresentationTheme
-    var coordinate: CLLocationCoordinate2D
+    var coordinate: CLLocationCoordinate2D {
+        willSet {
+            self.willChangeValue(forKey: "coordinate")
+        }
+        didSet {
+            self.didChangeValue(forKey: "coordinate")
+        }
+    }
     let location: TelegramMediaMap?
     let peer: Peer?
     let message: Message?
     let forcedSelection: Bool
-    var heading: Int32?
+    var heading: Double? {
+        willSet {
+            self.willChangeValue(forKey: "heading")
+        }
+        didSet {
+            self.didChangeValue(forKey: "heading")
+        }
+    }
     
     var selfPeer: Peer?
     var title: String? = ""
@@ -64,7 +78,7 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
         super.init()
     }
     
-    init(context: AccountContext, theme: PresentationTheme, message: Message, selfPeer: Peer?, heading: Int32?) {
+    init(context: AccountContext, theme: PresentationTheme, message: Message, selfPeer: Peer?, heading: Double?) {
         self.context = context
         self.theme = theme
         self.location = nil
@@ -108,8 +122,33 @@ class LocationPinAnnotationLayer: CALayer {
     }
 }
 
+private func addPulseAnimations(layer: CALayer) {
+    let scaleAnimation = CAKeyframeAnimation(keyPath: "transform.scale")
+    scaleAnimation.values = [0.0 as NSNumber, 0.72 as NSNumber, 1.0 as NSNumber, 1.0 as NSNumber]
+    scaleAnimation.keyTimes = [0.0 as NSNumber, 0.49 as NSNumber, 0.88 as NSNumber, 1.0 as NSNumber]
+    scaleAnimation.duration = 3.0
+    scaleAnimation.repeatCount = Float.infinity
+    scaleAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeOut)
+    scaleAnimation.beginTime = 1.0
+    layer.add(scaleAnimation, forKey: "pulse-scale")
+    
+    let opacityAnimation = CAKeyframeAnimation(keyPath: "opacity")
+    opacityAnimation.values = [1.0 as NSNumber, 0.2 as NSNumber, 0.0 as NSNumber, 0.0 as NSNumber]
+    opacityAnimation.keyTimes = [0.0 as NSNumber, 0.4 as NSNumber, 0.62 as NSNumber, 1.0 as NSNumber]
+    opacityAnimation.duration = 3.0
+    opacityAnimation.repeatCount = Float.infinity
+    opacityAnimation.beginTime = 1.0
+    layer.add(opacityAnimation, forKey: "pulse-opacity")
+}
+
+private func removePulseAnimations(layer: CALayer) {
+    layer.removeAnimation(forKey: "pulse-scale")
+    layer.removeAnimation(forKey: "pulse-opacity")
+}
+
 class LocationPinAnnotationView: MKAnnotationView {
     let shadowNode: ASImageNode
+    let pulseNode: ASImageNode
     let backgroundNode: ASImageNode
     let arrowNode: ASImageNode
     let smallNode: ASImageNode
@@ -123,6 +162,8 @@ class LocationPinAnnotationView: MKAnnotationView {
     var initialized = false
     var appeared = false
     var animating = false
+    
+    var hasPulse = false
     
     override class var layerClass: AnyClass {
         return LocationPinAnnotationLayer.self
@@ -140,6 +181,11 @@ class LocationPinAnnotationView: MKAnnotationView {
         if let image = self.shadowNode.image {
             self.shadowNode.bounds = CGRect(origin: CGPoint(), size: image.size)
         }
+        
+        self.pulseNode = ASImageNode()
+        self.pulseNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 120.0, height: 120.0))
+        self.pulseNode.image = generateFilledCircleImage(diameter: 120.0, color: UIColor(rgb: 0x007aff, alpha: 0.27))
+        self.pulseNode.isHidden = true
         
         self.arrowNode = ASImageNode()
         self.arrowNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 88.0, height: 88.0))
@@ -231,7 +277,7 @@ class LocationPinAnnotationView: MKAnnotationView {
                     self.setPeer(context: annotation.context, theme: annotation.theme, peer: peer)
                     self.setSelected(true, animated: false)
                 } else if let location = annotation.location {
-                    let venueType = annotation.location?.venue?.type ?? ""
+                    let venueType = location.venue?.type ?? ""
                     let color = venueType.isEmpty ? annotation.theme.list.itemAccentColor : venueIconColor(type: venueType)
                     self.backgroundNode.image = generateTintedImage(image: UIImage(bundleImageName: "Location/PinBackground"), color: color)
                     self.iconNode.setSignal(venueIcon(postbox: annotation.context.account.postbox, type: venueType, background: false))
@@ -598,6 +644,8 @@ class LocationPinAnnotationView: MKAnnotationView {
         }
         
         self.dotNode.position = CGPoint()
+        self.pulseNode.position = CGPoint()
+        self.arrowNode.position = CGPoint()
         self.smallNode.position = CGPoint()
         self.shadowNode.position = CGPoint(x: UIScreenPixel, y: self.isRaised ? -66.0 : -36.0)
         self.backgroundNode.position = CGPoint(x: self.shadowNode.frame.width / 2.0, y: self.shadowNode.frame.height / 2.0)

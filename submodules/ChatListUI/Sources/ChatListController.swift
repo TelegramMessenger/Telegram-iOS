@@ -1291,7 +1291,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             
                             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 8.0), size: CGSize())
                             
-                            parentController.present(TooltipScreen(text: text, icon: .chatListPress, location: .point(location), shouldDismissOnTouch: { point in
+                            parentController.present(TooltipScreen(text: text, icon: .chatListPress, location: .point(location, .bottom), shouldDismissOnTouch: { point in
                                 guard let strongSelf = self, let parentController = strongSelf.parent as? TabBarController else {
                                     return .dismiss(consume: false)
                                 }

@@ -36,7 +36,9 @@ swift_library(
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
         "//submodules/PersistentStringHash:PersistentStringHash",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
-        "//submodules/LiveLocationTimerNode:LiveLocationTimerNode",    
+        "//submodules/LiveLocationTimerNode:LiveLocationTimerNode",
+        "//submodules/TelegramNotices:TelegramNotices",
+        "//submodules/TooltipUI:TooltipUI",
     ],
     visibility = [
         "//visibility:public",

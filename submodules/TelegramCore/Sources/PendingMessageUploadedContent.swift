@@ -724,6 +724,10 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                             flags |= 1 << 3
                         }
                         
+                        if !file.isVideo && file.mimeType.hasPrefix("video/") {
+                            flags |= 1 << 4
+                        }
+                        
                         var stickers: [Api.InputDocument]?
                         for attribute in attributes {
                             if let attribute = attribute as? EmbeddedMediaStickersMessageAttribute {
