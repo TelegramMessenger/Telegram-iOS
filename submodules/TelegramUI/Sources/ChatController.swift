@@ -2502,7 +2502,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         if let peer = peerViewMainPeer(peerView) {
                             if case .pinnedMessages = strongSelf.presentationInterfaceState.subject {
-                                strongSelf.chatTitleView?.titleContent = .custom(strongSelf.presentationData.strings.Chat_TitlePinnedMessages(Int32(pinnedCount ?? 1)))
+                                strongSelf.chatTitleView?.titleContent = .custom(strongSelf.presentationData.strings.Chat_TitlePinnedMessages(Int32(pinnedCount ?? 1)), false)
                             } else {
                                 strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, onlineMemberCount: onlineMemberCount, isScheduledMessages: isScheduledMessages)
                                 let imageOverride: AvatarNodeImageOverride?
