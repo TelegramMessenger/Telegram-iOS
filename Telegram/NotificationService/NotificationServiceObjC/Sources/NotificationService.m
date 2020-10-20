@@ -1,4 +1,4 @@
-#import "NotificationService.h"
+#import <NotificationServiceObjC/NotificationServiceObjC.h>
 
 #import <mach/mach.h>
 
@@ -13,8 +13,6 @@
 #import "Attachments.h"
 #import "Api.h"
 #import "FetchImage.h"
-
-#import "NotificationService-Bridging-Header.h"
 
 static NSData * _Nullable parseBase64(NSString *string) {
     string = [string stringByReplacingOccurrencesOfString:@"-" withString:@"+"];

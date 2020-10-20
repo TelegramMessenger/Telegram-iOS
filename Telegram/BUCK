@@ -315,13 +315,8 @@ apple_bundle(
 apple_binary(
     name = "NotificationServiceBinary",
     srcs = glob([
-        "NotificationService/**/*.m",
-        "NotificationService/**/*.swift",
+        "NotificationService/Sources/*.swift",
     ]),
-    headers = glob([
-       "NotificationService/**/*.h", 
-    ]),
-    bridging_header = "NotificationService/NotificationService-Bridging-Header.h",
     configs = notification_service_extension_configs(),
     swift_compiler_flags = [
         "-application-extension",
@@ -339,6 +334,7 @@ apple_binary(
         "@executable_path/../../Frameworks",
     ],
     deps = [
+        "//Telegram/NotificationService/NotificationServiceObjC:NotificationServiceObjC",
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/MtProtoKit:MtProtoKit#shared",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",

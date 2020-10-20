@@ -616,7 +616,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.textInputPanelNode?.sendMessage = { [weak self] in
             if let strongSelf = self {
-                if strongSelf.chatPresentationInterfaceState.isScheduledMessages && strongSelf.chatPresentationInterfaceState.editMessageState == nil {
+                if case .scheduledMessages = strongSelf.chatPresentationInterfaceState.subject, strongSelf.chatPresentationInterfaceState.editMessageState == nil {
                     strongSelf.controllerInteraction.scheduleCurrentMessage()
                 } else {
                     strongSelf.sendCurrentMessage()
@@ -2698,7 +2698,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let _ = effectivePresentationInterfaceState.interfaceState.editMessage {
                 self.interfaceInteraction?.editMessage()
             } else {
-                if let _ = effectivePresentationInterfaceState.slowmodeState, !effectivePresentationInterfaceState.isScheduledMessages && scheduleTime == nil {
+                var isScheduledMessages = false
+                if case .scheduledMessages = effectivePresentationInterfaceState.subject {
+                    isScheduledMessages = true
+                }
+                
+                if let _ = effectivePresentationInterfaceState.slowmodeState, !isScheduledMessages && scheduleTime == nil {
                     if let rect = self.frameForInputActionButton() {
                         self.interfaceInteraction?.displaySlowmodeTooltip(self, rect)
                     }

@@ -474,7 +474,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             }
                         }
                         
-                        let (_, refineLayout) = contentFileLayout(context, presentationData, message, chatLocation, attributes, file, automaticDownload, message.effectivelyIncoming(context.account.peerId), false, associatedData.forcedResourceStatus, statusType, nil, CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height))
+                        let (_, refineLayout) = contentFileLayout(context, presentationData, message, associatedData, chatLocation, attributes, file, automaticDownload, message.effectivelyIncoming(context.account.peerId), false, associatedData.forcedResourceStatus, statusType, nil, CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height))
                         refineContentFileLayout = refineLayout
                     }
                 } else if let image = media as? TelegramMediaImage {
@@ -572,7 +572,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 }
                             }
                         
-                            statusSizeAndApply = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions, dateReplies, message.tags.contains(.pinned))
+                            statusSizeAndApply = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions, dateReplies, message.tags.contains(.pinned) && !associatedData.isInPinnedListMode)
                         }
                     default:
                         break

@@ -2790,6 +2790,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                         }
                         
                         var tags = currentMessage.tags
+                        let attributes = currentMessage.attributes
                         if pinned {
                             tags.insert(.pinned)
                         } else {
@@ -2800,7 +2801,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                             return .skip
                         }
                         
-                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
+                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                     })
                 }
             case let .MergePeerPresences(statuses, explicit):

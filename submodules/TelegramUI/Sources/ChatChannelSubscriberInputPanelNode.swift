@@ -11,11 +11,13 @@ import AlertUI
 import PresentationDataUtils
 import PeerInfoUI
 
-private enum SubscriberAction {
+private enum SubscriberAction: Equatable {
     case join
     case kicked
     case muteNotifications
     case unmuteNotifications
+    case unpinMessages(Int)
+    case hidePinnedMessages
 }
 
 private func titleAndColorForAction(_ action: SubscriberAction, theme: PresentationTheme, strings: PresentationStrings) -> (String, UIColor) {
@@ -28,28 +30,57 @@ private func titleAndColorForAction(_ action: SubscriberAction, theme: Presentat
             return (strings.Conversation_Mute, theme.chat.inputPanel.panelControlAccentColor)
         case .unmuteNotifications:
             return (strings.Conversation_Unmute, theme.chat.inputPanel.panelControlAccentColor)
+        case let .unpinMessages(count):
+            return (strings.Chat_PanelUnpinAllMessages(Int32(count)), theme.chat.inputPanel.panelControlAccentColor)
+        case .hidePinnedMessages:
+            return (strings.Chat_PanelHidePinnedMessages, theme.chat.inputPanel.panelControlAccentColor)
     }
 }
 
-private func actionForPeer(peer: Peer, isMuted: Bool) -> SubscriberAction? {
-    if let channel = peer as? TelegramChannel {
-        switch channel.participationStatus {
-            case .kicked:
-                return .kicked
-            case .left:
-                return .join
-            case .member:
-                if isMuted {
-                    return .unmuteNotifications
-                } else {
-                    return .muteNotifications
-                }
+private func actionForPeer(peer: Peer, interfaceState: ChatPresentationInterfaceState, isMuted: Bool) -> SubscriberAction? {
+    if case .pinnedMessages = interfaceState.subject {
+        var canManagePin = false
+        if let channel = peer as? TelegramChannel {
+            canManagePin = channel.hasPermission(.pinMessages)
+        } else if let group = peer as? TelegramGroup {
+            switch group.role {
+                case .creator, .admin:
+                    canManagePin = true
+                default:
+                    if let defaultBannedRights = group.defaultBannedRights {
+                        canManagePin = !defaultBannedRights.flags.contains(.banPinMessages)
+                    } else {
+                        canManagePin = true
+                    }
+            }
+        } else if let _ = peer as? TelegramUser, interfaceState.explicitelyCanPinMessages {
+            canManagePin = true
+        }
+        if canManagePin {
+            return .unpinMessages(max(1, interfaceState.pinnedMessage?.totalCount ?? 1))
+        } else {
+            return .hidePinnedMessages
         }
     } else {
-        if isMuted {
-            return .unmuteNotifications
+        if let channel = peer as? TelegramChannel {
+            switch channel.participationStatus {
+                case .kicked:
+                    return .kicked
+                case .left:
+                    return .join
+                case .member:
+                    if isMuted {
+                        return .unmuteNotifications
+                    } else {
+                        return .muteNotifications
+                    }
+            }
         } else {
-            return .muteNotifications
+            if isMuted {
+                return .unmuteNotifications
+            } else {
+                return .muteNotifications
+            }
         }
     }
 }
@@ -162,6 +193,8 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             if let context = self.context, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer {
                 self.actionDisposable.set(togglePeerMuted(account: context.account, peerId: peer.id).start())
             }
+        case .hidePinnedMessages, .unpinMessages:
+            self.interfaceInteraction?.unpinAllMessages()
         }
     }
     
@@ -182,54 +215,8 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                 self.badgeBackground.image = PresentationResourcesChatList.badgeBackgroundActive(interfaceState.theme, diameter: 20.0)
             }
             
-            /*if previousState?.peerDiscussionId != interfaceState.peerDiscussionId {
-                let signal: Signal<Int?, NoError>
-                if let peerDiscussionId = interfaceState.peerDiscussionId, let context = self.context {
-                    let key = PostboxViewKey.unreadCounts(items: [.peer(peerDiscussionId)])
-                    let inclusionKey = PostboxViewKey.peerChatInclusion(peerDiscussionId)
-                    signal = context.account.postbox.combinedView(keys: [key, inclusionKey])
-                    |> map { view -> Int? in
-                        guard let inclusionView = view.views[inclusionKey] as? PeerChatInclusionView, let countsView = view.views[key] as? UnreadMessageCountsView else {
-                            return nil
-                        }
-                        if !inclusionView.inclusion {
-                            return nil
-                        }
-                        if let count = countsView.count(for: .peer(peerDiscussionId)), count != 0 {
-                            return Int(count)
-                        } else {
-                            return nil
-                        }
-                    }
-                    |> distinctUntilChanged
-                } else {
-                    signal = .single(nil)
-                }
-                self.badgeDisposable.set((signal
-                |> deliverOnMainQueue).start(next: { [weak self] value in
-                    guard let strongSelf = self, let interfaceState = strongSelf.presentationInterfaceState, let image = strongSelf.badgeBackground.image else {
-                        return
-                    }
-                    let text = compactNumericCountString(value ?? 0, decimalSeparator: interfaceState.dateTimeFormat.decimalSeparator)
-                    
-                    strongSelf.badgeText.attributedText = NSAttributedString(string: text, font: badgeFont, textColor: interfaceState.theme.chatList.unreadBadgeActiveTextColor)
-                    let textSize = strongSelf.badgeText.updateLayout(CGSize(width: 100.0, height: 100.0))
-                    let badgeSize = CGSize(width: max(image.size.width, textSize.width + 10.0), height: image.size.height)
-                    let badgeFrame = CGRect(origin: CGPoint(x: strongSelf.discussButtonText.frame.maxX + 5.0, y: floor((strongSelf.discussButton.bounds.height - badgeSize.height) / 2.0)), size: badgeSize)
-                    strongSelf.badgeBackground.frame = badgeFrame
-                    strongSelf.badgeText.frame = CGRect(origin: CGPoint(x: badgeFrame.minX + floor((badgeSize.width - textSize.width) / 2.0), y: badgeFrame.minY + floor((badgeSize.height - textSize.height) / 2.0)), size: textSize)
-                    if value == nil || value == 0 {
-                        strongSelf.badgeBackground.isHidden = true
-                        strongSelf.badgeText.isHidden = true
-                    } else {
-                        strongSelf.badgeBackground.isHidden = false
-                        strongSelf.badgeText.isHidden = false
-                    }
-                }))
-            }*/
-            
-            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.theme !== interfaceState.theme || previousState?.strings !== interfaceState.strings || previousState?.peerIsMuted != interfaceState.peerIsMuted /*|| previousState?.peerDiscussionId != interfaceState.peerDiscussionId*/ {
-                if let action = actionForPeer(peer: peer, isMuted: interfaceState.peerIsMuted) {
+            if let peer = interfaceState.renderedPeer?.peer, previousState?.renderedPeer?.peer == nil || !peer.isEqual(previousState!.renderedPeer!.peer!) || previousState?.theme !== interfaceState.theme || previousState?.strings !== interfaceState.strings || previousState?.peerIsMuted != interfaceState.peerIsMuted || previousState?.pinnedMessage != interfaceState.pinnedMessage {
+                if let action = actionForPeer(peer: peer, interfaceState: interfaceState, isMuted: interfaceState.peerIsMuted) {
                     self.action = action
                     let (title, color) = titleAndColorForAction(action, theme: interfaceState.theme, strings: interfaceState.strings)
                     self.button.setTitle(title, with: Font.regular(17.0), with: color, for: [])
@@ -237,12 +224,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                     self.action = nil
                 }
                 
-                /*if interfaceState.peerDiscussionId != nil {
-                    self.discussButtonText.attributedText = NSAttributedString(string: interfaceState.strings.Channel_DiscussionGroup_HeaderLabel, font: Font.regular(17.0), textColor: interfaceState.theme.chat.inputPanel.panelControlAccentColor)
-                    self.discussButton.isHidden = false
-                } else {*/
-                    self.discussButton.isHidden = true
-                //}
+                self.discussButton.isHidden = true
             }
         }
         

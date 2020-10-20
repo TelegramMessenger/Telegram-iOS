@@ -9,6 +9,7 @@ import PeerTable
 import PostboxCoding
 import AppLockState
 import NotificationsPresentationData
+import BuildConfig
 
 private let registeredTypes: Void = {
     declareEncodable(InAppNotificationSettings.self, f: InAppNotificationSettings.init(decoder:))

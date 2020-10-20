@@ -2195,6 +2195,8 @@ Unused sets are archived when you add more.";
 
 "Widget.AuthRequired" = "Log in to Telegram";
 "Widget.NoUsers" = "Start messaging to see your friends here";
+"Widget.GalleryTitle" = "Telegram";
+"Widget.GalleryDescription" = "See your friends here";
 
 "ShareMenu.CopyShareLinkGame" = "Copy link to game";
 
@@ -5866,3 +5868,18 @@ Any member of this group will be able to see messages in the channel.";
 
 "ChatList.MessageFiles_1" = "%@ File";
 "ChatList.MessageFiles_any" = "%@ Files";
+
+"Chat.TitlePinnedMessages_1" = "Pinned Message";
+"Chat.TitlePinnedMessages_any" = "%@ Pinned Messages";
+
+"Chat.PanelHidePinnedMessages" = "Don't Show Pinned Messages";
+"Chat.PanelUnpinAllMessages_1" = "Unpin Message";
+"Chat.PanelUnpinAllMessages_any" = "Unpin All %@ Messages";
+"Chat.UnpinAllMessagesConfirmation_1" = "Do you want to unpin 1 message in this chat?";
+"Chat.UnpinAllMessagesConfirmation_any" = "Do you want to unpin all %@ messages in this chat?";
+
+"Chat.MessagesUnpinned_1" = "Message Unpinned";
+"Chat.MessagesUnpinned_any" = "%@ Messages Unpinned";
+
+"Chat.PinnedMessagesHiddenTitle" = "Pinned Messages Hidden";
+"Chat.PinnedMessagesHiddenText" = "You will see the bar with pinned messages only if a new message is pinned.";

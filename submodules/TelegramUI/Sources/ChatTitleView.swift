@@ -26,7 +26,7 @@ enum ChatTitleContent {
     
     case peer(peerView: PeerView, onlineMemberCount: Int32?, isScheduledMessages: Bool)
     case replyThread(type: ReplyThreadType, count: Int)
-    case custom(String)
+    case custom(String, Bool)
 }
 
 private enum ChatTitleIcon {
@@ -203,8 +203,9 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                         }
                         
                         isEnabled = false
-                    case let .custom(text):
+                    case let .custom(text, enabled):
                         segments = [.text(0, NSAttributedString(string: text, font: Font.medium(17.0), textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
+                        isEnabled = enabled
                 }
                 
                 var updated = false

@@ -108,3 +108,97 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
         }
     }
 }
+
+public func requestUnpinAllMessages(account: Account, peerId: PeerId) -> Signal<Never, UpdatePinnedMessageError> {
+    return account.postbox.transaction { transaction -> (Peer?, CachedPeerData?) in
+        return (transaction.getPeer(peerId), transaction.getPeerCachedData(peerId: peerId))
+    }
+    |> mapError { _ -> UpdatePinnedMessageError in
+        return .generic
+    }
+    |> mapToSignal { peer, cachedPeerData -> Signal<Never, UpdatePinnedMessageError> in
+        guard let peer = peer, let inputPeer = apiInputPeer(peer) else {
+            return .fail(.generic)
+        }
+        
+        if let channel = peer as? TelegramChannel {
+            let canManagePin = channel.hasPermission(.pinMessages)
+            if !canManagePin {
+                return .fail(.generic)
+            }
+        } else if let group = peer as? TelegramGroup {
+            switch group.role {
+            case .creator, .admin:
+                break
+            default:
+                if let defaultBannedRights = group.defaultBannedRights {
+                    if defaultBannedRights.flags.contains(.banPinMessages) {
+                        return .fail(.generic)
+                    }
+                }
+            }
+        } else if let _ = peer as? TelegramUser, let cachedPeerData = cachedPeerData as? CachedUserData {
+            if !cachedPeerData.canPinMessages {
+                return .fail(.generic)
+            }
+        }
+        
+        enum InternalError {
+            case error(String)
+            case restart
+        }
+        
+        let request: Signal<Never, InternalError> = account.network.request(Api.functions.messages.unpinAllMessages(peer: inputPeer))
+        |> mapError { error -> InternalError in
+            return .error(error.errorDescription)
+        }
+        |> mapToSignal { result -> Signal<Bool, InternalError> in
+            switch result {
+            case let .affectedHistory(_, _, count):
+                if count != 0 {
+                    return .fail(.restart)
+                }
+            }
+            return .single(true)
+        }
+        |> retry(retryOnError: { error -> Bool in
+            switch error {
+            case .restart:
+                return true
+            default:
+                return false
+            }
+        }, delayIncrement: 0.0, maxDelay: 0.0, maxRetries: 100, onQueue: .concurrentDefaultQueue())
+        |> mapToSignal { _ -> Signal<Never, InternalError> in
+            let signal: Signal<Never, InternalError> = account.postbox.transaction { transaction -> Void in
+                for index in transaction.getMessageIndicesWithTag(peerId: peerId, namespace: Namespaces.Message.Cloud, tag: .pinned) {
+                    transaction.updateMessage(index.id, update: { currentMessage in
+                        var storeForwardInfo: StoreMessageForwardInfo?
+                        if let forwardInfo = currentMessage.forwardInfo {
+                            storeForwardInfo = StoreMessageForwardInfo(forwardInfo)
+                        }
+                        
+                        var tags = currentMessage.tags
+                        tags.remove(.pinned)
+                        
+                        if tags == currentMessage.tags {
+                            return .skip
+                        }
+                        
+                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media))
+                    })
+                }
+            }
+            |> castError(InternalError.self)
+            |> ignoreValues
+            
+            return signal
+        }
+        
+        return request
+        |> mapError { _ -> UpdatePinnedMessageError in
+            return .generic
+        }
+    }
+}
+

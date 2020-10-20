@@ -8,8 +8,18 @@ import Display
 import AccountContext
 import ChatInterfaceState
 
-func preloadedChatHistoryViewForLocation(_ location: ChatHistoryLocationInput, context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, fixedCombinedReadStates: MessageHistoryViewReadState?, tagMask: MessageTags?, additionalData: [AdditionalMessageHistoryViewData], orderStatistics: MessageHistoryViewOrderStatistics = []) -> Signal<ChatHistoryViewUpdate, NoError> {
-    return (chatHistoryViewForLocation(location, context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, scheduled: false, fixedCombinedReadStates: fixedCombinedReadStates, tagMask: tagMask, additionalData: additionalData, orderStatistics: orderStatistics)
+func preloadedChatHistoryViewForLocation(_ location: ChatHistoryLocationInput, context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, fixedCombinedReadStates: MessageHistoryViewReadState?, tagMask: MessageTags?, additionalData: [AdditionalMessageHistoryViewData], orderStatistics: MessageHistoryViewOrderStatistics = []) -> Signal<ChatHistoryViewUpdate, NoError> {
+    var isScheduled = false
+    if case .scheduledMessages = subject {
+        isScheduled = true
+    }
+    
+    var tagMask = tagMask
+    if case .pinnedMessages = subject {
+        tagMask = .pinned
+    }
+    
+    return (chatHistoryViewForLocation(location, context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, scheduled: isScheduled, fixedCombinedReadStates: fixedCombinedReadStates, tagMask: tagMask, additionalData: additionalData, orderStatistics: orderStatistics)
     |> castError(Bool.self)
     |> mapToSignal { update -> Signal<ChatHistoryViewUpdate, Bool> in
         switch update {
@@ -362,6 +372,7 @@ func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThrea
             input,
             context: context,
             chatLocation: .replyThread(replyThreadMessage),
+            subject: nil,
             chatLocationContextHolder: chatLocationContextHolder,
             fixedCombinedReadStates: nil,
             tagMask: nil,

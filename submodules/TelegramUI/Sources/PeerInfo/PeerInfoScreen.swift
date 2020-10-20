@@ -407,6 +407,8 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, unblockPeer: {
         }, pinMessage: { _ in
         }, unpinMessage: { _, _ in
+        }, unpinAllMessages: {
+        }, openPinnedList: { _ in
         }, shareAccountContact: {
         }, reportPeer: {
         }, presentPeerContact: {
@@ -449,7 +451,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         self.backgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.backgroundColor
         self.separatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
         
-        let interfaceState = ChatPresentationInterfaceState(chatWallpaper: .color(0), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, limitsConfiguration: .defaultValue, fontSize: .regular, bubbleCorners: PresentationChatBubbleCorners(mainRadius: 16.0, auxiliaryRadius: 8.0, mergeBubbleCorners: true), accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(self.peerId), isScheduledMessages: false, peerNearbyData: nil)
+        let interfaceState = ChatPresentationInterfaceState(chatWallpaper: .color(0), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, limitsConfiguration: .defaultValue, fontSize: .regular, bubbleCorners: PresentationChatBubbleCorners(mainRadius: 16.0, auxiliaryRadius: 8.0, mergeBubbleCorners: true), accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(self.peerId), subject: nil, peerNearbyData: nil)
         let panelHeight = self.selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, isSecondary: false, transition: transition, interfaceState: interfaceState, metrics: layout.metrics)
         
         transition.updateFrame(node: self.selectionPanel, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: panelHeight)))
@@ -1802,6 +1804,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 }
             })
         }, navigateToMessage: { fromId, id in
+        }, navigateToMessageStandalone: { _ in
         }, tapMessage: nil, clickThroughMessage: {
         }, toggleMessagesSelection: { [weak self] ids, value in
             guard let strongSelf = self else {

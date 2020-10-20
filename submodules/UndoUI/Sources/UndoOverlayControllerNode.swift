@@ -202,6 +202,23 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.attributedText = string
                 displayUndo = false
                 self.originalRemainingSeconds = 5
+            case let .messagesUnpinned(title, text, undo):
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
+                self.animatedStickerNode = nil
+                
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                if !text.isEmpty {
+                    self.textNode.attributedText = attributedText
+                }
+                
+                displayUndo = undo
+                self.originalRemainingSeconds = undo ? 5 : 3
             case let .emoji(path, text):
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -394,7 +411,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         switch content {
         case .removedChat:
             self.panelWrapperNode.addSubnode(self.timerTextNode)
-        case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder:
+        case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned:
             break
         case .dice:
             self.panelWrapperNode.clipsToBounds = true

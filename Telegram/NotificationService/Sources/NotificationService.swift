@@ -1,6 +1,7 @@
 import Foundation
 import UserNotifications
 import SwiftSignalKit
+import NotificationServiceObjC
 
 private let queue = Queue()
 

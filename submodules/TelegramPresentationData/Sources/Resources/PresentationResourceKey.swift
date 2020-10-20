@@ -123,6 +123,7 @@ public enum PresentationResourceKey: Int32 {
     case chatInfoItemBackgroundImageWithoutWallpaper
     
     case chatInputPanelCloseIconImage
+    case chatInputPanelPinnedListIconImage
     case chatInputPanelEncircledCloseIconImage
     case chatInputPanelVerticalSeparatorLineImage
     
