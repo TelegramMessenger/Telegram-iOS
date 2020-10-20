@@ -13,10 +13,10 @@ private var accountCache: Account?
 
 private var installedSharedLogger = false
 
-private func setupSharedLogger(_ path: String) {
+private func setupSharedLogger(rootPath: String, path: String) {
     if !installedSharedLogger {
         installedSharedLogger = true
-        Logger.setSharedLogger(Logger(basePath: path))
+        Logger.setSharedLogger(Logger(rootPath: rootPath, basePath: path))
     }
 }
 
@@ -92,7 +92,7 @@ public class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         let logsPath = rootPath + "/siri-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
         
-        setupSharedLogger(logsPath)
+        setupSharedLogger(rootPath: rootPath, path: logsPath)
         
         let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
         
