@@ -167,20 +167,12 @@ public final class SearchDisplayController {
             contentNavigationBarHeight += 28.0
         }
                 
-        let _ = (self.contentNode.ready()
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self] _ in
-            guard let strongSelf = self else {
-                return
-            }
-
-            if !strongSelf.contentNode.hasDim {
-                strongSelf.backgroundNode.alpha = 1.0
-                strongSelf.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
-                
-                strongSelf.backgroundNode.layer.animateScale(from: 0.85, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-            }
-        })
+        if !self.contentNode.hasDim {
+            self.backgroundNode.alpha = 1.0
+            self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
+            
+            self.backgroundNode.layer.animateScale(from: 0.85, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+        }
         
         if !self.contentNode.hasDim {
             if let placeholder = placeholder {

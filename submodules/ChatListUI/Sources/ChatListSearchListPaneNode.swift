@@ -1378,10 +1378,6 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     }
                 }
                 strongSelf.searchCurrentMessages = messages
-                
-                if strongSelf.didSetReady && tagMask == nil {
-                    interaction.updateSuggestedPeers(Array(peers.prefix(8)), strongSelf.key)
-                }
             }
         }))
         

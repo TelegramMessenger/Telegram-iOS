@@ -753,7 +753,13 @@
                             dict[@"asset"] = asset;
                             dict[@"previewImage"] = image;
                             dict[@"mimeType"] = TGMimeTypeForFileUTI(asset.uniformTypeIdentifier);
-                            dict[@"fileName"] = asset.fileName;
+                            
+                            NSString *fileName = asset.fileName;
+                            NSRange range = [fileName.lowercaseString rangeOfString:@".heic"];
+                            if (range.location != NSNotFound)
+                                fileName = [fileName stringByReplacingCharactersInRange:range withString:@".JPG"];
+                            
+                            dict[@"fileName"] = fileName;
                             
                             if (groupedId != nil)
                                 dict[@"groupedId"] = groupedId;

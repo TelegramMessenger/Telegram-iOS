@@ -300,7 +300,7 @@
                     fileName = asset.fileName;
                 }
                 
-                if (iosMajorVersion() >= 10 && [dataUTI rangeOfString:@"heic"].location != NSNotFound)
+                if (iosMajorVersion() >= 10 && [asset.uniformTypeIdentifier rangeOfString:@"heic"].location != NSNotFound)
                 {
 //#if !DEBUG
                     CIContext *context = [[CIContext alloc] init];
