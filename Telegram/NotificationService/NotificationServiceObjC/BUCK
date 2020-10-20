@@ -11,6 +11,11 @@ static_library(
     exported_headers = glob([
         "PublicHeaders/**/*.h",
     ]),
+    deps = [
+        "//submodules/BuildConfig:BuildConfig",
+        "//submodules/MtProtoKit:MtProtoKit#shared",
+        "//submodules/NotificationsPresentationData:NotificationsPresentationData",
+    ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
         "$SDKROOT/System/Library/Frameworks/UIKit.framework",

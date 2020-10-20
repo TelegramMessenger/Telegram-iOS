@@ -3,219 +3,169 @@ import NotificationCenter
 import BuildConfig
 import WidgetItems
 import AppLockState
-import SwiftUI
-import WidgetKit
 
 private func rootPathForBasePath(_ appGroupPath: String) -> String {
     return appGroupPath + "/telegram-data"
 }
 
-struct Provider: TimelineProvider {
-    public typealias Entry = SimpleEntry
+@objc(TodayViewController)
+class TodayViewController: UIViewController, NCWidgetProviding {
+    private var initializedInterface = false
     
-    func placeholder(in context: Context) -> SimpleEntry {
-        return SimpleEntry(date: Date())
-    }
+    private var buildConfig: BuildConfig?
     
-    func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> Void) {
-        let entry = SimpleEntry(date: Date())
-        completion(entry)
-    }
+    private var primaryColor: UIColor = .black
+    private var placeholderLabel: UILabel?
     
-    func getTimeline(in context: Context, completion: @escaping (Timeline<SimpleEntry>) -> Void) {
-        var entries: [SimpleEntry] = []
+    override func viewDidLoad() {
+        super.viewDidLoad()
         
-        let currentDate = Date()
-        for hourOffset in 0 ..< 1 {
-            let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
-            let entry = SimpleEntry(date: entryDate)
-            entries.append(entry)
+        let appBundleIdentifier = Bundle.main.bundleIdentifier!
+        guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
+            return
         }
-
-        let timeline = Timeline(entries: entries, policy: .atEnd)
-        completion(timeline)
-    }
-}
-
-struct SimpleEntry: TimelineEntry {
-    let date: Date
-}
-
-enum PeersWidgetData {
-    case placeholder
-    case empty
-    case locked
-    case data(WidgetData)
-}
-
-extension PeersWidgetData {
-    static let previewData = PeersWidgetData.placeholder
-}
-
-struct WidgetView: View {
-    let data: PeersWidgetData
-    
-    func placeholder(geometry: GeometryProxy) -> some View {
-        let defaultItemSize: CGFloat = 60.0
-        let defaultPaddingFraction: CGFloat = 0.36
+        let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
         
-        let rowCount = Int(round(geometry.size.width / (defaultItemSize * (1.0 + defaultPaddingFraction))))
-        let itemSize = floor(geometry.size.width / (CGFloat(rowCount) + defaultPaddingFraction * CGFloat(rowCount - 1)))
+        let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
+        self.buildConfig = buildConfig
         
-        let firstRowY = itemSize / 2.0
-        let secondRowY = itemSize / 2.0 + geometry.size.height - itemSize
+        let appGroupName = "group.\(baseAppBundleId)"
+        let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
         
-        return ZStack {
-            ForEach(0 ..< rowCount * 2, content: { i in
-                return Circle().frame(width: itemSize, height: itemSize).position(x: itemSize / 2.0 + floor(CGFloat(i % rowCount) * itemSize * (1.0 + defaultPaddingFraction)), y: i / rowCount == 0 ? firstRowY : secondRowY).foregroundColor(.gray)
-            })
+        guard let appGroupUrl = maybeAppGroupUrl else {
+            return
+        }
+        
+        let rootPath = rootPathForBasePath(appGroupUrl.path)
+        
+        let presentationData: WidgetPresentationData
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: widgetPresentationDataPath(rootPath: rootPath))), let value = try? JSONDecoder().decode(WidgetPresentationData.self, from: data) {
+            presentationData = value
+        } else {
+            presentationData = WidgetPresentationData(applicationLockedString: "Unlock the app to use the widget", applicationStartRequiredString: "Open the app to use the widget", widgetGalleryTitle: "", widgetGalleryDescription: "")
+        }
+        
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
+            self.setPlaceholderText(presentationData.applicationLockedString)
+            return
+        }
+        
+        if self.initializedInterface {
+            return
+        }
+        self.initializedInterface = true
+        
+        let dataPath = rootPath + "/widget-data"
+        
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: dataPath)), let widgetData = try? JSONDecoder().decode(WidgetData.self, from: data) {
+            self.setWidgetData(widgetData: widgetData, presentationData: presentationData)
         }
     }
     
-    func peersView(geometry: GeometryProxy, peers: WidgetDataPeers) -> some View {
-        let defaultItemSize: CGFloat = 60.0
-        let defaultPaddingFraction: CGFloat = 0.36
-        
-        let rowCount = Int(round(geometry.size.width / (defaultItemSize * (1.0 + defaultPaddingFraction))))
-        let itemSize = floor(geometry.size.width / (CGFloat(rowCount) + defaultPaddingFraction * CGFloat(rowCount - 1)))
-        
-        let firstRowY = itemSize / 2.0
-        let secondRowY = itemSize / 2.0 + geometry.size.height - itemSize
-        
-        return ZStack {
-            ForEach(0 ..< min(peers.peers.count, rowCount * 2), content: { i in
-                Link(destination: URL(string: "\(buildConfig.appSpecificUrlScheme)://localpeer?id=\(peers.peers[i].id)")!, label: {
-                    Image(uiImage: avatarImage(accountPeerId: peers.accountPeerId, peer: peers.peers[i], size: CGSize(width: itemSize, height: itemSize)))
-                        .frame(width: itemSize, height: itemSize)
-                }).frame(width: itemSize, height: itemSize)
-                .position(x: itemSize / 2.0 + floor(CGFloat(i % rowCount) * itemSize * (1.0 + defaultPaddingFraction)), y: i / rowCount == 0 ? firstRowY : secondRowY)
-            })
+    private func setPlaceholderText(_ text: String) {
+        let fontSize = UIFont.preferredFont(forTextStyle: .body).pointSize
+        let placeholderLabel = UILabel()
+        if #available(iOSApplicationExtension 13.0, *) {
+            placeholderLabel.textColor = UIColor.label
+        } else {
+            placeholderLabel.textColor = self.primaryColor
         }
+        placeholderLabel.font = UIFont.systemFont(ofSize: fontSize)
+        placeholderLabel.text = text
+        placeholderLabel.sizeToFit()
+        self.placeholderLabel = placeholderLabel
+        self.view.addSubview(placeholderLabel)
     }
     
-    func peerViews() -> AnyView {
-        switch data {
-        case .placeholder:
-            return AnyView(GeometryReader { geometry in
-                placeholder(geometry: geometry)
-            })
-        case .empty:
-            return AnyView(VStack {
-                Text(presentationData.applicationStartRequiredString)
-            })
-        case .locked:
-            return AnyView(VStack {
-                Text(presentationData.applicationLockedString)
-            })
-        case let .data(data):
-            switch data {
-            case let .peers(peers):
-                return AnyView(GeometryReader { geometry in
-                    peersView(geometry: geometry, peers: peers)
+    func widgetPerformUpdate(completionHandler: (@escaping (NCUpdateResult) -> Void)) {
+        completionHandler(.newData)
+    }
+    
+    @available(iOSApplicationExtension 10.0, *)
+    func widgetActiveDisplayModeDidChange(_ activeDisplayMode: NCWidgetDisplayMode, withMaximumSize maxSize: CGSize) {
+        
+    }
+    
+    private var widgetData: WidgetData?
+    
+    private func setWidgetData(widgetData: WidgetData, presentationData: WidgetPresentationData) {
+        self.widgetData = widgetData
+        self.peerViews.forEach {
+            $0.removeFromSuperview()
+        }
+        self.peerViews = []
+        switch widgetData {
+        case .notAuthorized, .disabled:
+            break
+        case let .peers(peers):
+            for peer in peers.peers {
+                let peerView = PeerView(primaryColor: self.primaryColor, accountPeerId: peers.accountPeerId, peer: peer, tapped: { [weak self] in
+                    if let strongSelf = self, let buildConfig = strongSelf.buildConfig {
+                        if let url = URL(string: "\(buildConfig.appSpecificUrlScheme)://localpeer?id=\(peer.id)") {
+                            strongSelf.extensionContext?.open(url, completionHandler: nil)
+                        }
+                    }
                 })
-            default:
-                return AnyView(ZStack {
-                    Circle()
-                })
+                self.view.addSubview(peerView)
+                self.peerViews.append(peerView)
             }
         }
-    }
-    
-    var body: some View {
-        ZStack {
-            Color(.systemBackground)
-            peerViews()
+        
+        if self.peerViews.isEmpty {
+            self.setPlaceholderText(presentationData.applicationStartRequiredString)
+        } else {
+            self.placeholderLabel?.removeFromSuperview()
+            self.placeholderLabel = nil
         }
-        .padding(.all)
-    }
-}
-
-private let buildConfig: BuildConfig = {
-    let appBundleIdentifier = Bundle.main.bundleIdentifier!
-    guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
-        preconditionFailure()
-    }
-    let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
-    
-    let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
-    return buildConfig
-}()
-
-private extension WidgetPresentationData {
-    static var `default` = WidgetPresentationData(
-        applicationLockedString: "Unlock the app to use the widget",
-        applicationStartRequiredString: "Open the app to use the widget",
-        widgetGalleryTitle: "Telegram",
-        widgetGalleryDescription: ""
-    )
-}
-
-private let presentationData: WidgetPresentationData = {
-    let appBundleIdentifier = Bundle.main.bundleIdentifier!
-    guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
-        return WidgetPresentationData.default
-    }
-    let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
-    
-    let appGroupName = "group.\(baseAppBundleId)"
-    let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
-    
-    guard let appGroupUrl = maybeAppGroupUrl else {
-        return WidgetPresentationData.default
+        
+        if let size = self.validLayout {
+            self.updateLayout(size: size)
+        }
     }
     
-    let rootPath = rootPathForBasePath(appGroupUrl.path)
+    private var validLayout: CGSize?
     
-    if let data = try? Data(contentsOf: URL(fileURLWithPath: widgetPresentationDataPath(rootPath: rootPath))), let value = try? JSONDecoder().decode(WidgetPresentationData.self, from: data) {
-        return value
-    } else {
-        return WidgetPresentationData.default
-    }
-}()
-
-func getWidgetData() -> PeersWidgetData {
-    let appBundleIdentifier = Bundle.main.bundleIdentifier!
-    guard let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
-        return .placeholder
-    }
-    let baseAppBundleId = String(appBundleIdentifier[..<lastDotRange.lowerBound])
+    private var peerViews: [PeerView] = []
     
-    let appGroupName = "group.\(baseAppBundleId)"
-    let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
-    
-    guard let appGroupUrl = maybeAppGroupUrl else {
-        return .placeholder
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        
+        self.updateLayout(size: self.view.bounds.size)
     }
     
-    let rootPath = rootPathForBasePath(appGroupUrl.path)
-    
-    if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data), isAppLocked(state: state) {
-        return .locked
-    }
-    
-    let dataPath = rootPath + "/widget-data"
-    
-    if let data = try? Data(contentsOf: URL(fileURLWithPath: dataPath)), let widgetData = try? JSONDecoder().decode(WidgetData.self, from: data) {
-        return .data(widgetData)
-    } else {
-        return .placeholder
-    }
-}
-
-@main
-struct Static_Widget: Widget {
-    private let kind: String = "Static_Widget"
-
-    public var body: some WidgetConfiguration {
-        return StaticConfiguration(
-            kind: kind,
-            provider: Provider(),
-            content: { entry in
-                WidgetView(data: getWidgetData())
+    private func updateLayout(size: CGSize) {
+        self.validLayout = size
+        
+        if let placeholderLabel = self.placeholderLabel {
+            placeholderLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - placeholderLabel.bounds.width) / 2.0), y: floor((size.height - placeholderLabel.bounds.height) / 2.0)), size: placeholderLabel.bounds.size)
+        }
+        
+        let peerSize = CGSize(width: 70.0, height: 100.0)
+        
+        var peerFrames: [CGRect] = []
+        
+        var offset: CGFloat = 0.0
+        for _ in self.peerViews {
+            let peerFrame = CGRect(origin: CGPoint(x: offset, y: 10.0), size: peerSize)
+            offset += peerFrame.size.width
+            if peerFrame.maxX > size.width {
+                break
             }
-        )
-        .supportedFamilies([.systemMedium])
-        .configurationDisplayName(presentationData.widgetGalleryTitle)
-        .description(presentationData.widgetGalleryDescription)
+            peerFrames.append(peerFrame)
+        }
+        
+        var totalSize: CGFloat = 0.0
+        for i in 0 ..< peerFrames.count {
+            totalSize += peerFrames[i].width
+        }
+        
+        let spacing: CGFloat = floor((size.width - totalSize) /   CGFloat(peerFrames.count))
+        offset = floor(spacing / 2.0)
+        for i in 0 ..< peerFrames.count {
+            let peerView = self.peerViews[i]
+            peerView.frame = CGRect(origin: CGPoint(x: offset, y: 16.0), size: peerFrames[i].size)
+            peerView.updateLayout(size: peerFrames[i].size)
+            offset += peerFrames[i].width + spacing
+        }
     }
 }

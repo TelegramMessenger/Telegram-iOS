@@ -1099,7 +1099,7 @@ swift_library(
     name = "WidgetExtensionLib",
     module_name = "WidgetExtensionLib",
     srcs = glob([
-        "Widget/**/*.swift",
+        "WidgetKitWidget/**/*.swift",
     ]),
     deps = [
         "//submodules/BuildConfig:BuildConfig",

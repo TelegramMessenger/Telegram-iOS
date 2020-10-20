@@ -5861,6 +5861,8 @@ Any member of this group will be able to see messages in the channel.";
 "Chat.PanelHidePinnedMessages" = "Don't Show Pinned Messages";
 "Chat.PanelUnpinAllMessages_1" = "Unpin Message";
 "Chat.PanelUnpinAllMessages_any" = "Unpin All %@ Messages";
+"Chat.UnpinAllMessagesConfirmation_1" = "Do you want to unpin 1 message in this chat?";
+"Chat.UnpinAllMessagesConfirmation_any" = "Do you want to unpin all %@ messages in this chat?";
 
 "Chat.MessagesUnpinned_1" = "Message Unpinned";
 "Chat.MessagesUnpinned_any" = "%@ Messages Unpinned";
