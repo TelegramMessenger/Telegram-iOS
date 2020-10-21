@@ -1208,11 +1208,19 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         let contentNodeCount = contentPropertiesAndPrepareLayouts.count
         
         let read: Bool
+        var isItemPinned = false
+        
         switch item.content {
-            case let .message(_, value, _, _):
+            case let .message(message, value, _, _):
                 read = value
+                isItemPinned = message.tags.contains(.pinned)
             case let .group(messages):
                 read = messages[0].1
+                for message in messages {
+                    if message.0.tags.contains(.pinned) {
+                        isItemPinned = true
+                    }
+                }
         }
         
         var mosaicStartIndex: Int?
@@ -1267,7 +1275,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 prepareContentPosition = .linear(top: topPosition, bottom: refinedBottomPosition)
             }
             
-            let contentItem = ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: message, read: read, chatLocation: item.chatLocation, presentationData: item.presentationData, associatedData: item.associatedData, attributes: attributes)
+            let contentItem = ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: message, read: read, chatLocation: item.chatLocation, presentationData: item.presentationData, associatedData: item.associatedData, attributes: attributes, isItemPinned: isItemPinned)
             
             var itemSelection: Bool?
             switch content {

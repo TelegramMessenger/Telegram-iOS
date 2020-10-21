@@ -73,7 +73,7 @@ final class ChatPanelInterfaceInteraction {
     let openSearchResults: () -> Void
     let openCalendarSearch: () -> Void
     let toggleMembersSearch: (Bool) -> Void
-    let navigateToMessage: (MessageId, Bool) -> Void
+    let navigateToMessage: (MessageId, Bool, Bool) -> Void
     let navigateToChat: (PeerId) -> Void
     let navigateToProfile: (PeerId) -> Void
     let openPeerInfo: () -> Void
@@ -151,7 +151,7 @@ final class ChatPanelInterfaceInteraction {
         navigateMessageSearch: @escaping (ChatPanelSearchNavigationAction) -> Void,
         openCalendarSearch: @escaping () -> Void,
         toggleMembersSearch: @escaping (Bool) -> Void,
-        navigateToMessage: @escaping (MessageId, Bool) -> Void,
+        navigateToMessage: @escaping (MessageId, Bool, Bool) -> Void,
         navigateToChat: @escaping (PeerId) -> Void,
         navigateToProfile: @escaping (PeerId) -> Void,
         openPeerInfo: @escaping () -> Void,
