@@ -424,7 +424,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         refineContentImageLayout = refineLayout
                     } else if file.isInstantVideo {
                         let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: file)
-                        let (videoLayout, apply) = contentInstantVideoLayout(ChatMessageBubbleContentItem(context: context, controllerInteraction: controllerInteraction, message: message, read: messageRead, chatLocation: chatLocation, presentationData: presentationData, associatedData: associatedData, attributes: attributes), constrainedSize.width - horizontalInsets.left - horizontalInsets.right, CGSize(width: 212.0, height: 212.0), .bubble, automaticDownload)
+                        let (videoLayout, apply) = contentInstantVideoLayout(ChatMessageBubbleContentItem(context: context, controllerInteraction: controllerInteraction, message: message, read: messageRead, chatLocation: chatLocation, presentationData: presentationData, associatedData: associatedData, attributes: attributes, isItemPinned: message.tags.contains(.pinned)), constrainedSize.width - horizontalInsets.left - horizontalInsets.right, CGSize(width: 212.0, height: 212.0), .bubble, automaticDownload)
                         initialWidth = videoLayout.contentSize.width + videoLayout.overflowLeft + videoLayout.overflowRight
                         contentInstantVideoSizeAndApply = (videoLayout, apply)
                     } else if file.isVideo {
@@ -474,7 +474,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             }
                         }
                         
-                        let (_, refineLayout) = contentFileLayout(context, presentationData, message, associatedData, chatLocation, attributes, file, automaticDownload, message.effectivelyIncoming(context.account.peerId), false, associatedData.forcedResourceStatus, statusType, nil, CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height))
+                        let (_, refineLayout) = contentFileLayout(context, presentationData, message, associatedData, chatLocation, attributes, message.tags.contains(.pinned) && !associatedData.isInPinnedListMode, file, automaticDownload, message.effectivelyIncoming(context.account.peerId), false, associatedData.forcedResourceStatus, statusType, nil, CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height))
                         refineContentFileLayout = refineLayout
                     }
                 } else if let image = media as? TelegramMediaImage {

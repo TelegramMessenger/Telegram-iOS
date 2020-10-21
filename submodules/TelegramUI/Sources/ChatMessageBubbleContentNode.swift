@@ -108,8 +108,9 @@ final class ChatMessageBubbleContentItem {
     let presentationData: ChatPresentationData
     let associatedData: ChatMessageItemAssociatedData
     let attributes: ChatMessageEntryAttributes
+    let isItemPinned: Bool
     
-    init(context: AccountContext, controllerInteraction: ChatControllerInteraction, message: Message, read: Bool, chatLocation: ChatLocation, presentationData: ChatPresentationData, associatedData: ChatMessageItemAssociatedData, attributes: ChatMessageEntryAttributes) {
+    init(context: AccountContext, controllerInteraction: ChatControllerInteraction, message: Message, read: Bool, chatLocation: ChatLocation, presentationData: ChatPresentationData, associatedData: ChatMessageItemAssociatedData, attributes: ChatMessageEntryAttributes, isItemPinned: Bool) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.message = message
@@ -118,6 +119,7 @@ final class ChatMessageBubbleContentItem {
         self.presentationData = presentationData
         self.associatedData = associatedData
         self.attributes = attributes
+        self.isItemPinned = isItemPinned
     }
 }
 

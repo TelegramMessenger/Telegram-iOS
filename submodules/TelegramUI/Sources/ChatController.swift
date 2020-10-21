@@ -4206,8 +4206,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 } else {
                     if case .known = strongSelf.chatDisplayNode.historyNode.visibleContentOffset() {
                         strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
-                    } else if case let .peer(peerId) = strongSelf.chatLocation {
-                        strongSelf.navigateToMessage(messageLocation: .upperBound(peerId), animated: true)
+                    } else if case .peer = strongSelf.chatLocation {
+                        strongSelf.scrollToEndOfHistory()
                      } else if case .replyThread = strongSelf.chatLocation {
                         strongSelf.scrollToEndOfHistory()
                     } else {
@@ -4751,8 +4751,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 })
                 strongSelf.updateItemNodesSearchTextHighlightStates()
             }
-        }, navigateToMessage: { [weak self] messageId, dropStack in
-            self?.navigateToMessage(from: nil, to: .id(messageId), dropStack: dropStack)
+        }, navigateToMessage: { [weak self] messageId, dropStack, forceInCurrentChat in
+            self?.navigateToMessage(from: nil, to: .id(messageId), forceInCurrentChat: forceInCurrentChat, dropStack: dropStack)
         }, navigateToChat: { [weak self] peerId in
             guard let strongSelf = self else {
                 return
@@ -5294,16 +5294,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if canManagePin {
                 let count = strongSelf.presentationInterfaceState.pinnedMessage?.totalCount ?? 1
                 
-                let _ = (requestUnpinAllMessages(account: strongSelf.context.account, peerId: strongSelf.chatLocation.peerId)
-                |> deliverOnMainQueue).start(error: { _ in
-                    
-                }, completed: {
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.dismiss()
-                    strongSelf.updatedUnpinnedAllMessages?(count)
-                })
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Chat_UnpinAllMessagesConfirmation(Int32(count)), actions: [
+                    TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                    }),
+                    TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Conversation_Unpin, action: {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let _ = (requestUnpinAllMessages(account: strongSelf.context.account, peerId: strongSelf.chatLocation.peerId)
+                        |> deliverOnMainQueue).start(error: { _ in
+                            
+                        }, completed: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.dismiss()
+                            strongSelf.updatedUnpinnedAllMessages?(count)
+                        })
+                    })
+                ], parseMarkdown: true), in: .window(.root))
             } else {
                 let topPinnedMessage: Signal<ChatPinnedMessage?, NoError> = strongSelf.topPinnedMessageSignal(latest: true)
                 |> take(1)
@@ -9337,7 +9346,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                  strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(nil) }) })
             }
             
-            if case .peer(peerId) = strongSelf.chatLocation, strongSelf.parentController == nil {
+            var isPinnedMessages = false
+            if case .pinnedMessages = strongSelf.presentationInterfaceState.subject {
+                isPinnedMessages = true
+            }
+            
+            if case .peer(peerId) = strongSelf.chatLocation, strongSelf.parentController == nil, !isPinnedMessages {
                 strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(messages.map { $0.id }).withoutSelectionState() }) })
                 strongController.dismiss()
             } else if peerId == strongSelf.context.account.peerId {
@@ -9375,6 +9389,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
                 strongController.dismiss()
             } else {
+                if let navigationController = strongSelf.navigationController as? NavigationController {
+                    for controller in navigationController.viewControllers {
+                        if let maybeChat = controller as? ChatControllerImpl {
+                            if case .peer(peerId) = maybeChat.chatLocation {
+                                var isChatPinnedMessages = false
+                                if case .pinnedMessages = maybeChat.presentationInterfaceState.subject {
+                                    isChatPinnedMessages = true
+                                }
+                                if !isChatPinnedMessages {
+                                    maybeChat.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(messages.map { $0.id }).withoutSelectionState() }) })
+                                    strongSelf.dismiss()
+                                    strongController.dismiss()
+                                    return
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 let _ = (strongSelf.context.account.postbox.transaction({ transaction -> Void in
                     transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
                         if let currentState = currentState as? ChatInterfaceState {

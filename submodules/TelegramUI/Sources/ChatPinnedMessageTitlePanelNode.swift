@@ -13,6 +13,7 @@ import StickerResources
 import PhotoResources
 import TelegramStringFormatting
 import AnimatedCountLabelNode
+import AnimatedNavigationStripeNode
 
 private enum PinnedMessageAnimation {
     case slideToTop
@@ -28,7 +29,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let clippingContainer: ASDisplayNode
     private let contentContainer: ASDisplayNode
     private let contentTextContainer: ASDisplayNode
-    private let lineNode: ASImageNode
+    private let lineNode: AnimatedNavigationStripeNode
     private let titleNode: AnimatedCountLabelNode
     private let textNode: TextNode
     
@@ -69,9 +70,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.contentContainer = ASDisplayNode()
         self.contentTextContainer = ASDisplayNode()
         
-        self.lineNode = ASImageNode()
-        self.lineNode.displayWithoutProcessing = true
-        self.lineNode.displaysAsynchronously = false
+        self.lineNode = AnimatedNavigationStripeNode()
         
         self.titleNode = AnimatedCountLabelNode()
         self.titleNode.isUserInteractionEnabled = false
@@ -145,7 +144,6 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.theme = interfaceState.theme
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(interfaceState.theme), for: [])
             self.listButton.setImage(PresentationResourcesChat.chatInputPanelPinnedListIconImage(interfaceState.theme), for: [])
-            self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(interfaceState.theme)
             self.backgroundColor = interfaceState.theme.chat.historyNavigation.fillColor
             self.separatorNode.backgroundColor = interfaceState.theme.chat.historyNavigation.strokeColor
         }
@@ -180,7 +178,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.currentMessage = interfaceState.pinnedMessage
             
             if let currentMessage = self.currentMessage, let currentLayout = self.currentLayout {
-                self.enqueueTransition(width: currentLayout.0, leftInset: currentLayout.1, rightInset: currentLayout.2, transition: .immediate, animation: messageUpdatedAnimation, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, accountPeerId: self.context.account.peerId, firstTime: previousMessageWasNil, isReplyThread: isReplyThread)
+                self.enqueueTransition(width: currentLayout.0, panelHeight: panelHeight, leftInset: currentLayout.1, rightInset: currentLayout.2, transition: .immediate, animation: messageUpdatedAnimation, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, accountPeerId: self.context.account.peerId, firstTime: previousMessageWasNil, isReplyThread: isReplyThread)
             }
         }
         
@@ -200,10 +198,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.closeButton.isHidden = true
         }
         
-        let contentLeftInset: CGFloat = 10.0 + leftInset
         let rightInset: CGFloat = 18.0 + rightInset
-        
-        transition.updateFrame(node: self.lineNode, frame: CGRect(origin: CGPoint(x: contentLeftInset, y: 7.0), size: CGSize(width: 2.0, height: panelHeight - 14.0)))
         
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: width - rightInset - closeButtonSize.width, y: 19.0), size: closeButtonSize))
@@ -221,14 +216,14 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.currentLayout = (width, leftInset, rightInset)
             
             if let currentMessage = self.currentMessage {
-                self.enqueueTransition(width: width, leftInset: leftInset, rightInset: rightInset, transition: .immediate, animation: .none, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, accountPeerId: interfaceState.accountPeerId, firstTime: true, isReplyThread: isReplyThread)
+                self.enqueueTransition(width: width, panelHeight: panelHeight, leftInset: leftInset, rightInset: rightInset, transition: .immediate, animation: .none, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, accountPeerId: interfaceState.accountPeerId, firstTime: true, isReplyThread: isReplyThread)
             }
         }
         
         return panelHeight
     }
     
-    private func enqueueTransition(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, animation: PinnedMessageAnimation?, pinnedMessage: ChatPinnedMessage, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId, firstTime: Bool, isReplyThread: Bool) {
+    private func enqueueTransition(width: CGFloat, panelHeight: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, animation: PinnedMessageAnimation?, pinnedMessage: ChatPinnedMessage, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId, firstTime: Bool, isReplyThread: Bool) {
         let message = pinnedMessage.message
         
         var animationTransition: ContainedViewLayoutTransition = .immediate
@@ -390,6 +385,22 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 5.0), size: titleLayout.size)
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 23.0), size: textLayout.size)
                     
+                    let lineFrame = CGRect(origin: CGPoint(x: contentLeftInset, y: 0.0), size: CGSize(width: 2.0, height: panelHeight))
+                    animationTransition.updateFrame(node: strongSelf.lineNode, frame: lineFrame)
+                    strongSelf.lineNode.update(
+                        colors: AnimatedNavigationStripeNode.Colors(
+                            foreground: theme.chat.inputPanel.panelControlAccentColor,
+                            background: theme.chat.inputPanel.panelControlAccentColor.withAlphaComponent(0.5),
+                            clearBackground: theme.chat.inputPanel.panelBackgroundColor
+                        ),
+                        configuration: AnimatedNavigationStripeNode.Configuration(
+                            height: panelHeight,
+                            index: pinnedMessage.index,
+                            count: pinnedMessage.totalCount
+                        ),
+                        transition: animationTransition
+                    )
+                    
                     strongSelf.imageNodeContainer.frame = CGRect(origin: CGPoint(x: contentLeftInset + 9.0, y: 7.0), size: CGSize(width: 35.0, height: 35.0))
                     strongSelf.imageNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 35.0, height: 35.0))
                     
@@ -419,7 +430,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             if self.isReplyThread {
                 interfaceInteraction.scrollToTop()
             } else {
-                interfaceInteraction.navigateToMessage(message.message.id, false)
+                interfaceInteraction.navigateToMessage(message.message.id, false, true)
             }
         }
     }
