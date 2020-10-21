@@ -1815,7 +1815,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 
                 let (_, apply) = finalize(maxContentWidth)
                 let contentNodeFrame = framesAndPositions[mosaicIndex].0.offsetBy(dx: 0.0, dy: contentNodesHeight)
-                contentNodeFramesPropertiesAndApply.append((contentNodeFrame, properties, false, apply))
+                contentNodeFramesPropertiesAndApply.append((contentNodeFrame, properties, true, apply))
                 
                 if mosaicIndex == mosaicRange.upperBound - 1 {
                     contentNodesHeight += size.height
