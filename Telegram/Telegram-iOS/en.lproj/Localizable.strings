@@ -5882,3 +5882,6 @@ Any member of this group will be able to see messages in the channel.";
 "Chat.PinnedListPreview.ShowAllMessages" = "Show All Messages";
 "Chat.PinnedListPreview.UnpinAllMessages" = "Unpin All Messages";
 "Chat.PinnedListPreview.HidePinnedMessages" = "Hide Pinned Messages";
+
+"Conversation.PinMessagesForMe" = "Pin for me";
+"Conversation.PinMessagesFor" = "Pin for me and %@";

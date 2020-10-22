@@ -11,7 +11,7 @@ public enum UpdatePinnedMessageError {
 }
 
 public enum PinnedMessageUpdate {
-    case pin(id: MessageId, silent: Bool)
+    case pin(id: MessageId, silent: Bool, forThisPeerOnlyIfPossible: Bool)
     case clear(id: MessageId)
 }
 
@@ -20,7 +20,6 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
         return (transaction.getPeer(peerId), transaction.getPeerCachedData(peerId: peerId))
     }
     |> mapError { _ -> UpdatePinnedMessageError in
-        return .generic
     }
     |> mapToSignal { peer, cachedPeerData -> Signal<Void, UpdatePinnedMessageError> in
         guard let peer = peer, let inputPeer = apiInputPeer(peer) else {
@@ -52,10 +51,13 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
         var flags: Int32 = 0
         let messageId: Int32
         switch update {
-        case let .pin(id, silent):
+        case let .pin(id, silent, forThisPeerOnlyIfPossible):
             messageId = id.id
             if silent {
                 flags |= (1 << 0)
+            }
+            if forThisPeerOnlyIfPossible {
+                flags |= (1 << 2)
             }
         case let .clear(id):
             messageId = id.id
@@ -77,7 +79,7 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
                         if peerId.namespace == Namespaces.Peer.CloudChannel {
                             let messageId: MessageId
                             switch update {
-                            case let .pin(id, _):
+                            case let .pin(id, _, _):
                                 messageId = id
                             case let .clear(id):
                                 messageId = id
@@ -103,7 +105,6 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
                 }
             }
             |> mapError { _ -> UpdatePinnedMessageError in
-                return .generic
             }
         }
     }
@@ -114,7 +115,6 @@ public func requestUnpinAllMessages(account: Account, peerId: PeerId) -> Signal<
         return (transaction.getPeer(peerId), transaction.getPeerCachedData(peerId: peerId))
     }
     |> mapError { _ -> UpdatePinnedMessageError in
-        return .generic
     }
     |> mapToSignal { peer, cachedPeerData -> Signal<Never, UpdatePinnedMessageError> in
         guard let peer = peer, let inputPeer = apiInputPeer(peer) else {

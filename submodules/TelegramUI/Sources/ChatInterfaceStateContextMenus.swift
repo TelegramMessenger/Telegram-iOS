@@ -682,9 +682,8 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             } else {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_Pin, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Pin"), color: theme.actionSheet.primaryTextColor)
-                }, action: { _, f in
-                    interfaceInteraction.pinMessage(messages[0].id)
-                    f(.dismissWithoutContent)
+                }, action: { c, _ in
+                    interfaceInteraction.pinMessage(messages[0].id, c)
                 })))
             }
         }

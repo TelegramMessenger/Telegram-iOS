@@ -2230,7 +2230,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return items
                 }
                 
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: galleryController, sourceNode: node)), items: items, reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: galleryController, sourceNode: node, passthroughTouches: false)), items: items, reactionItems: [], gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
             })
         }, openMessageReplies: { [weak self] messageId, isChannelPost, displayModalProgress in
@@ -2387,7 +2387,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return items
                     }
                     
-                    let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: galleryController, sourceNode: node)), items: items, reactionItems: [], gesture: gesture)
+                    let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: galleryController, sourceNode: node, passthroughTouches: false)), items: items, reactionItems: [], gesture: gesture)
                     strongSelf.presentInGlobalOverlay(contextController)
                 }
                 chatInfoButtonItem = UIBarButtonItem(customDisplayNode: avatarNode)!
@@ -5080,29 +5080,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, unblockPeer: { [weak self] in
             self?.unblockPeer()
-        }, pinMessage: { [weak self] messageId in
+        }, pinMessage: { [weak self] messageId, contextController in
             if let strongSelf = self, case let .peer(currentPeerId) = strongSelf.chatLocation {
                 if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
-                    var canManagePin = false
-                    if let channel = peer as? TelegramChannel {
-                        canManagePin = channel.hasPermission(.pinMessages)
-                    } else if let group = peer as? TelegramGroup {
-                        switch group.role {
-                            case .creator, .admin:
-                                canManagePin = true
-                            default:
-                                if let defaultBannedRights = group.defaultBannedRights {
-                                    canManagePin = !defaultBannedRights.flags.contains(.banPinMessages)
-                                } else {
-                                    canManagePin = true
-                                }
-                        }
-                    } else if let _ = peer as? TelegramUser, strongSelf.presentationInterfaceState.explicitelyCanPinMessages {
-                        canManagePin = true
-                    }
-                        
-                    if canManagePin {
-                        let pinAction: (Bool) -> Void = { notify in
+                    if strongSelf.canManagePin() {
+                        let pinAction: (Bool, Bool) -> Void = { notify, forThisPeerOnlyIfPossible in
                             if let strongSelf = self {
                                 let disposable: MetaDisposable
                                 if let current = strongSelf.unpinMessageDisposable {
@@ -5111,8 +5093,30 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     disposable = MetaDisposable()
                                     strongSelf.unpinMessageDisposable = disposable
                                 }
-                                disposable.set(requestUpdatePinnedMessage(account: strongSelf.context.account, peerId: currentPeerId, update: .pin(id: messageId, silent: !notify)).start())
+                                disposable.set(requestUpdatePinnedMessage(account: strongSelf.context.account, peerId: currentPeerId, update: .pin(id: messageId, silent: !notify, forThisPeerOnlyIfPossible: forThisPeerOnlyIfPossible)).start())
                             }
+                        }
+                        
+                        if let peer = peer as? TelegramUser, let contextController = contextController {
+                            var contextItems: [ContextMenuItem] = []
+                            
+                            contextItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_PinMessagesFor(peer.compactDisplayTitle).0, textColor: .primary, icon: { _ in nil }, action: { c, _ in
+                                c.dismiss(completion: {
+                                    pinAction(true, true)
+                                })
+                            })))
+                            
+                            contextItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_PinMessagesForMe, textColor: .primary, icon: { _ in nil }, action: { c, _ in
+                                c.dismiss(completion: {
+                                    pinAction(true, false)
+                                })
+                            })))
+                            
+                            contextController.setItems(.single(contextItems))
+                            
+                            return
+                        } else {
+                            contextController?.dismiss(completion: {})
                         }
                         
                         var pinImmediately = false
@@ -5123,7 +5127,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         if pinImmediately {
-                            pinAction(true)
+                            pinAction(true, false)
                         } else {
                             let topPinnedMessage: Signal<ChatPinnedMessage?, NoError> = strongSelf.topPinnedMessageSignal(latest: true)
                             |> take(1)
@@ -5144,7 +5148,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     actionLayout = .vertical
                                     actions = [
                                         TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Conversation_PinMessageAlertPin, action: {
-                                            pinAction(false)
+                                            pinAction(false, false)
                                         }),
                                         TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
                                         })
@@ -5155,10 +5159,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     actionLayout = .horizontal
                                     actions = [
                                         TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Conversation_PinMessageAlert_OnlyPin, action: {
-                                            pinAction(false)
+                                            pinAction(false, false)
                                         }),
                                         TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Yes, action: {
-                                            pinAction(true)
+                                            pinAction(true, false)
                                         })
                                     ]
                                 }
@@ -5758,7 +5762,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peerId), subject: .pinnedMessages(id: nil), botStart: nil, mode: .standard(previewing: true))
             chatController.canReadHistory.set(false)
-            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
+            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, passthroughTouches: true)), items: .single(items), reactionItems: [], gesture: gesture)
             strongSelf.presentInGlobalOverlay(contextController)
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()))
         
@@ -11016,11 +11020,12 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     
     let navigationController: NavigationController? = nil
     
-    let passthroughTouches: Bool = false
+    let passthroughTouches: Bool
     
-    init(controller: ViewController, sourceNode: ASDisplayNode?) {
+    init(controller: ViewController, sourceNode: ASDisplayNode?, passthroughTouches: Bool) {
         self.controller = controller
         self.sourceNode = sourceNode
+        self.passthroughTouches = passthroughTouches
     }
     
     func transitionInfo() -> ContextControllerTakeControllerInfo? {
