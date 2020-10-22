@@ -133,7 +133,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         var radius: Double
         var alpha: CGFloat {
             didSet {
-                self.alphaTransition = (oldValue, CACurrentMediaTime(), 0.3)
+                self.alphaTransition = (oldValue, CACurrentMediaTime(), 0.5)
             }
         }
         var alphaTransition: (from: CGFloat, startTimestamp: Double, duration: Double)?

@@ -5859,10 +5859,6 @@ Any member of this group will be able to see messages in the channel.";
 "Location.ProximityNotification.DistanceKM" = "KM";
 "Location.ProximityNotification.DistanceMI" = "MI";
 
-"Location.LiveLocationRequired.Title" = "Share Location";
-"Location.LiveLocationRequired.Description" = "For the alert to work, please share your live location in this chat.";
-"Location.LiveLocationRequired.ShareLocation" = "Share Location";
-
 "Location.ProximityTip" = "Alert when %@ is close";
 "Location.ProximityGroupTip" = "Alert when any group member is close";
 

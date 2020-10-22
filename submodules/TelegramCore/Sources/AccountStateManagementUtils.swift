@@ -2327,14 +2327,6 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                                     }
                                 }
                             }
-                            for media in message.media {
-                                if let action = media as? TelegramMediaAction, case .geoProximityReached = action.action {
-                                    if id.peerId.namespace == Namespaces.Peer.CloudUser {
-                                        let _ = updateProximityNotificationStoredStateInteractively(postbox: postbox, peerId: id.peerId, state: nil).start()
-                                    }
-                                }
-                                break
-                            }
                         }
                     }
                 }

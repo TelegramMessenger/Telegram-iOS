@@ -122,7 +122,7 @@ private func telegramMap(for location: TGLocationMediaAttachment) -> TelegramMed
     } else {
         mapVenue = nil
     }
-    return TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: mapVenue, liveBroadcastingTimeout: nil)
+    return TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: mapVenue, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil)
 }
 
 func legacyLocationPalette(from theme: PresentationTheme) -> TGLocationPallete {

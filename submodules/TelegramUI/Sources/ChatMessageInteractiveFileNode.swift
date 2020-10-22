@@ -538,7 +538,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         statusFrame = statusFrameValue.offsetBy(dx: 0.0, dy: 15.0)
                     }
                     
-                    if isAudio && !isVoice {
+                    if (isAudio && !isVoice) || file.previewRepresentations.isEmpty {
                         streamingCacheStatusFrame = CGRect(origin: CGPoint(x: progressFrame.maxX - streamingProgressDiameter + 2.0, y: progressFrame.maxY - streamingProgressDiameter + 2.0), size: CGSize(width: streamingProgressDiameter, height: streamingProgressDiameter))
                     } else {
                         streamingCacheStatusFrame = CGRect()
@@ -700,7 +700,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                     selectionNode.frame = selectionFrame
                                     selectionNode.updateSelected(selection, animated: isAnimated)
                                 } else {
-                                    let selectionNode = FileMessageSelectionNode(theme: presentationData.theme.theme, incoming: incoming, isMusic: file.isMusic, toggle: { [weak self] value in
+                                    let selectionNode = FileMessageSelectionNode(theme: presentationData.theme.theme, incoming: incoming, noPreview: file.isMusic || file.previewRepresentations.isEmpty, toggle: { [weak self] value in
                                         self?.toggleSelection(value)
                                     })
                                     strongSelf.selectionNode = selectionNode
@@ -1120,12 +1120,12 @@ final class FileMessageSelectionNode: ASDisplayNode {
     
     private var selected = false
     private let checkNode: CheckNode
-    private let isMusic: Bool
+    private let noPreview: Bool
     
-    public init(theme: PresentationTheme, incoming: Bool, isMusic: Bool, toggle: @escaping (Bool) -> Void) {
-        self.isMusic = isMusic
+    public init(theme: PresentationTheme, incoming: Bool, noPreview: Bool, toggle: @escaping (Bool) -> Void) {
+        self.noPreview = noPreview
         self.toggle = toggle
-        self.checkNode = CheckNode(strokeColor: incoming ? theme.chat.message.incoming.mediaPlaceholderColor : theme.chat.message.outgoing.mediaPlaceholderColor, fillColor: theme.list.itemCheckColors.fillColor, foregroundColor: theme.list.itemCheckColors.foregroundColor, style: isMusic ? .compact : .overlay)
+        self.checkNode = CheckNode(strokeColor: incoming ? theme.chat.message.incoming.mediaPlaceholderColor : theme.chat.message.outgoing.mediaPlaceholderColor, fillColor: theme.list.itemCheckColors.fillColor, foregroundColor: theme.list.itemCheckColors.foregroundColor, style: noPreview ? .compact : .overlay)
         self.checkNode.isUserInteractionEnabled = false
         
         super.init()
@@ -1169,7 +1169,7 @@ final class FileMessageSelectionNode: ASDisplayNode {
         
         let checkSize = CGSize(width: 30.0, height: 30.0)
         let checkOrigin: CGPoint
-        if self.isMusic {
+        if self.noPreview {
             checkOrigin = CGPoint(x: 23.0, y: 20.0)
         } else {
             checkOrigin = CGPoint(x: 39.0, y: -5.0)

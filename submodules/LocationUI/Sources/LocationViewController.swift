@@ -173,7 +173,8 @@ public final class LocationViewController: ViewController {
             
             if reset {
                 if let messageId = messageId {
-                    let _ = cancelProximityNotification(postbox: context.account.postbox, network: context.account.network, messageId: messageId).start()
+                    
+//                    let _ = cancelProximityNotification(postbox: context.account.postbox, network: context.account.network, messageId: messageId).start()
                 }
             } else {
                 strongSelf.controllerNode.setProximityIndicator(radius: 0)
@@ -188,16 +189,10 @@ public final class LocationViewController: ViewController {
                         return
                     }
                     
-                    if let messageId = messageId {
-                        completion()
-
-                        let _ = requestProximityNotification(postbox: context.account.postbox, network: context.account.network, messageId: messageId, distance: distance).start()
-                    } else if let coordinate = coordinate {
-                        strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_Title, text: strongSelf.presentationData.strings.Location_LiveLocationRequired_Description, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_ShareLocation, action: { [weak self] in
-                            completion()
-                            self?.interaction?.sendLiveLocation(coordinate, distance)
-                        }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})], actionLayout: .vertical), in: .window(.root))
+                    if let coordinate = coordinate {
+                        self?.interaction?.sendLiveLocation(coordinate, distance)
                     }
+                    completion()
                 }, willDismiss: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.controllerNode.setProximityIndicator(radius: nil)
@@ -235,12 +230,6 @@ public final class LocationViewController: ViewController {
                         controller?.dismissAnimated()
                         if let strongSelf = self {
                             params.sendLiveLocation(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: period))
-                            
-                            if let distance = distance {
-                                strongSelf.controllerNode.ownLiveLocationStartedAction = { messageId in
-                                    let _ = requestProximityNotification(postbox: context.account.postbox, network: context.account.network, messageId: messageId, distance: distance).start()
-                                }
-                            }
                         }
                     }
                     

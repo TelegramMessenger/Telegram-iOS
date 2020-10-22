@@ -302,11 +302,9 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
         let selfPeer = context.account.postbox.transaction { transaction -> Peer? in
             return transaction.getPeer(context.account.peerId)
         }
-        
-        let proximityNotificationState = proximityNotificationStoredState(account: context.account, peerId: subject.id.peerId)
-        
-        self.disposable = (combineLatest(self.presentationDataPromise.get(), self.statePromise.get(), selfPeer, liveLocations, self.headerNode.mapNode.userLocation, userLocation, address, eta, proximityNotificationState)
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, selfPeer, liveLocations, userLocation, distance, address, eta, proximityNotificationState in
+                
+        self.disposable = (combineLatest(self.presentationDataPromise.get(), self.statePromise.get(), selfPeer, liveLocations, self.headerNode.mapNode.userLocation, userLocation, address, eta)
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, selfPeer, liveLocations, userLocation, distance, address, eta in
             if let strongSelf = self, let location = getLocation(from: subject) {
                 var entries: [LocationViewEntry] = []
                 var annotations: [LocationPinAnnotation] = []
@@ -316,6 +314,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                 
                 var proximityNotification: Bool? = nil
+                var proximityNotificationRadius: Int32?
                 var index: Int = 0
                 
                 if location.liveBroadcastingTimeout == nil {
@@ -330,15 +329,14 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     for message in effectiveLiveLocations {
                         if message.localTags.contains(.OutgoingLiveLocation) {
                             activeOwnLiveLocation = message
+                            if let location = getLocation(from: message), let radius = location.liveProximityNotificationRadius {
+                                proximityNotificationRadius = radius
+                                proximityNotification = true
+                            }
                             break
                         }
                     }
-                    
-                    if let activeOwnLiveLocation = activeOwnLiveLocation, let ownLiveLocationStartedAction = strongSelf.ownLiveLocationStartedAction {
-                        strongSelf.ownLiveLocationStartedAction = nil
-                        ownLiveLocationStartedAction(activeOwnLiveLocation.id)
-                    }
-                    
+                                        
                     let title: String
                     let subtitle: String
                     let beginTime: Double?
@@ -395,8 +393,8 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                         liveBroadcastingTimeout = timeout
                     }
                     let remainingTime = max(0, message.timestamp + liveBroadcastingTimeout - currentTime)
-                    if message.flags.contains(.Incoming) && remainingTime != 0 {
-                        proximityNotification = proximityNotificationState?.distance != nil
+                    if message.flags.contains(.Incoming) && remainingTime != 0 && proximityNotification == nil {
+                        proximityNotification = false
                     }
                     
                     let subjectLocation = CLLocation(latitude: location.latitude, longitude: location.longitude)
@@ -411,8 +409,8 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     index += 1
                 }
                 
-                if subject.id.peerId.namespace != Namespaces.Peer.CloudUser {
-                    proximityNotification = proximityNotificationState?.distance != nil
+                if subject.id.peerId.namespace != Namespaces.Peer.CloudUser, proximityNotification == nil {
+                    proximityNotification = false
                 }
                 
                 let previousEntries = previousEntries.swap(entries)
@@ -428,7 +426,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     
                     let _ = (ApplicationSpecificNotice.getLocationProximityAlertTip(accountManager: context.sharedContext.accountManager)
                     |> deliverOnMainQueue).start(next: { [weak self] counter in
-                        if let strongSelf = self, counter < 3000 {
+                        if let strongSelf = self, counter < 3 {
                             let _ = ApplicationSpecificNotice.incrementLocationProximityAlertTip(accountManager: context.sharedContext.accountManager).start()
                             strongSelf.displayProximityAlertTooltip()
                         }
@@ -463,7 +461,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 }
                 
                 if let _ = proximityNotification {
-                    strongSelf.headerNode.mapNode.activeProximityRadius = (proximityNotificationState?.distance).flatMap { Double($0)  }
+                    strongSelf.headerNode.mapNode.activeProximityRadius = proximityNotificationRadius.flatMap { Double($0)  }
                 } else {
                     strongSelf.headerNode.mapNode.activeProximityRadius = nil
                 }
@@ -611,8 +609,6 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
         }
     }
     
-    var ownLiveLocationStartedAction: ((MessageId) -> Void)?
-
     func showAll() {
         self.headerNode.mapNode.showAll()
     }

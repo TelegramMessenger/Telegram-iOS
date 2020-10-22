@@ -142,12 +142,16 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(input, text), reuploadInfo: nil)))
     } else if let map = media as? TelegramMediaMap {
         let input: Api.InputMedia
+        var flags: Int32 = 1 << 1
+        if let _ = map.heading {
+            flags |= 1 << 2
+        }
         var geoFlags: Int32 = 0
         if let _ = map.accuracyRadius {
             geoFlags |= 1 << 0
         }
         if let liveBroadcastingTimeout = map.liveBroadcastingTimeout {
-            input = .inputMediaGeoLive(flags: 1 << 1, geoPoint: Api.InputGeoPoint.inputGeoPoint(flags: geoFlags, lat: map.latitude, long: map.longitude, accuracyRadius: map.accuracyRadius.flatMap({ Int32($0) })), heading: 0, period: liveBroadcastingTimeout)
+            input = .inputMediaGeoLive(flags: flags, geoPoint: Api.InputGeoPoint.inputGeoPoint(flags: geoFlags, lat: map.latitude, long: map.longitude, accuracyRadius: map.accuracyRadius.flatMap({ Int32($0) })), heading: map.heading, period: liveBroadcastingTimeout, proximityNotificationRadius: nil)
         } else if let venue = map.venue {
             input = .inputMediaVenue(geoPoint: Api.InputGeoPoint.inputGeoPoint(flags: geoFlags, lat: map.latitude, long: map.longitude, accuracyRadius: map.accuracyRadius.flatMap({ Int32($0) })), title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "", venueType: venue.type ?? "")
         } else {

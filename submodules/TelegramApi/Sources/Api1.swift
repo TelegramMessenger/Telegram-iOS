@@ -11177,7 +11177,7 @@ public extension Api {
         case inputMediaContact(phoneNumber: String, firstName: String, lastName: String, vcard: String)
         case inputMediaPoll(flags: Int32, poll: Api.Poll, correctAnswers: [Buffer]?, solution: String?, solutionEntities: [Api.MessageEntity]?)
         case inputMediaDice(emoticon: String)
-        case inputMediaGeoLive(flags: Int32, geoPoint: Api.InputGeoPoint, heading: Int32, period: Int32?)
+        case inputMediaGeoLive(flags: Int32, geoPoint: Api.InputGeoPoint, heading: Int32?, period: Int32?, proximityNotificationRadius: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -11329,14 +11329,15 @@ public extension Api {
                     }
                     serializeString(emoticon, buffer: buffer, boxed: false)
                     break
-                case .inputMediaGeoLive(let flags, let geoPoint, let heading, let period):
+                case .inputMediaGeoLive(let flags, let geoPoint, let heading, let period, let proximityNotificationRadius):
                     if boxed {
-                        buffer.appendInt32(-1574158066)
+                        buffer.appendInt32(-1759532989)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     geoPoint.serialize(buffer, true)
-                    serializeInt32(heading, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(heading!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(period!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(proximityNotificationRadius!, buffer: buffer, boxed: false)}
                     break
     }
     }
@@ -11373,8 +11374,8 @@ public extension Api {
                 return ("inputMediaPoll", [("flags", flags), ("poll", poll), ("correctAnswers", correctAnswers), ("solution", solution), ("solutionEntities", solutionEntities)])
                 case .inputMediaDice(let emoticon):
                 return ("inputMediaDice", [("emoticon", emoticon)])
-                case .inputMediaGeoLive(let flags, let geoPoint, let heading, let period):
-                return ("inputMediaGeoLive", [("flags", flags), ("geoPoint", geoPoint), ("heading", heading), ("period", period)])
+                case .inputMediaGeoLive(let flags, let geoPoint, let heading, let period, let proximityNotificationRadius):
+                return ("inputMediaGeoLive", [("flags", flags), ("geoPoint", geoPoint), ("heading", heading), ("period", period), ("proximityNotificationRadius", proximityNotificationRadius)])
     }
     }
     
@@ -11691,15 +11692,18 @@ public extension Api {
                 _2 = Api.parse(reader, signature: signature) as? Api.InputGeoPoint
             }
             var _3: Int32?
-            _3 = reader.readInt32()
+            if Int(_1!) & Int(1 << 2) != 0 {_3 = reader.readInt32() }
             var _4: Int32?
             if Int(_1!) & Int(1 << 1) != 0 {_4 = reader.readInt32() }
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 3) != 0 {_5 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
+            let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.InputMedia.inputMediaGeoLive(flags: _1!, geoPoint: _2!, heading: _3!, period: _4)
+            let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.InputMedia.inputMediaGeoLive(flags: _1!, geoPoint: _2!, heading: _3, period: _4, proximityNotificationRadius: _5)
             }
             else {
                 return nil
@@ -16442,7 +16446,7 @@ public extension Api {
         case messageMediaContact(phoneNumber: String, firstName: String, lastName: String, vcard: String, userId: Int32)
         case messageMediaPoll(poll: Api.Poll, results: Api.PollResults)
         case messageMediaDice(value: Int32, emoticon: String)
-        case messageMediaGeoLive(geo: Api.GeoPoint, heading: Int32, period: Int32)
+        case messageMediaGeoLive(flags: Int32, geo: Api.GeoPoint, heading: Int32?, period: Int32, proximityNotificationRadius: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -16540,13 +16544,15 @@ public extension Api {
                     serializeInt32(value, buffer: buffer, boxed: false)
                     serializeString(emoticon, buffer: buffer, boxed: false)
                     break
-                case .messageMediaGeoLive(let geo, let heading, let period):
+                case .messageMediaGeoLive(let flags, let geo, let heading, let period, let proximityNotificationRadius):
                     if boxed {
-                        buffer.appendInt32(-967079536)
+                        buffer.appendInt32(-1186937242)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     geo.serialize(buffer, true)
-                    serializeInt32(heading, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(heading!, buffer: buffer, boxed: false)}
                     serializeInt32(period, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(proximityNotificationRadius!, buffer: buffer, boxed: false)}
                     break
     }
     }
@@ -16577,8 +16583,8 @@ public extension Api {
                 return ("messageMediaPoll", [("poll", poll), ("results", results)])
                 case .messageMediaDice(let value, let emoticon):
                 return ("messageMediaDice", [("value", value), ("emoticon", emoticon)])
-                case .messageMediaGeoLive(let geo, let heading, let period):
-                return ("messageMediaGeoLive", [("geo", geo), ("heading", heading), ("period", period)])
+                case .messageMediaGeoLive(let flags, let geo, let heading, let period, let proximityNotificationRadius):
+                return ("messageMediaGeoLive", [("flags", flags), ("geo", geo), ("heading", heading), ("period", period), ("proximityNotificationRadius", proximityNotificationRadius)])
     }
     }
     
@@ -16783,19 +16789,25 @@ public extension Api {
             }
         }
         public static func parse_messageMediaGeoLive(_ reader: BufferReader) -> MessageMedia? {
-            var _1: Api.GeoPoint?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.GeoPoint?
             if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.GeoPoint
+                _2 = Api.parse(reader, signature: signature) as? Api.GeoPoint
             }
-            var _2: Int32?
-            _2 = reader.readInt32()
             var _3: Int32?
-            _3 = reader.readInt32()
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt32() }
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_5 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageMedia.messageMediaGeoLive(geo: _1!, heading: _2!, period: _3!)
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.MessageMedia.messageMediaGeoLive(flags: _1!, geo: _2!, heading: _3, period: _4!, proximityNotificationRadius: _5)
             }
             else {
                 return nil

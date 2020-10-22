@@ -206,7 +206,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.wrappingScrollNode.view.canCancelContentTouches = true
         
         self.dimNode = ASDisplayNode()
-//        self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
+        self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
         
         self.contentContainerNode = ASDisplayNode()
         self.contentContainerNode.isOpaque = false
@@ -444,13 +444,10 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     func animateIn() {
-        self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+        self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         
         let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
-        
-        let dimPosition = self.dimNode.layer.position
-        self.dimNode.layer.animatePosition(from: CGPoint(x: dimPosition.x, y: dimPosition.y - offset), to: dimPosition, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-        self.layer.animateBoundsOriginYAdditive(from: -offset, to: 0.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        self.wrappingScrollNode.layer.animateBoundsOriginYAdditive(from: -offset, to: 0.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
@@ -470,9 +467,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
         })
         
         let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
-        let dimPosition = self.dimNode.layer.position
-        self.dimNode.layer.animatePosition(from: dimPosition, to: CGPoint(x: dimPosition.x, y: dimPosition.y - offset), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-        self.layer.animateBoundsOriginYAdditive(from: 0.0, to: -offset, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+        self.wrappingScrollNode.layer.animateBoundsOriginYAdditive(from: 0.0, to: -offset, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
             offsetCompleted = true
             internalCompletion()
         })
@@ -524,7 +519,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
         transition.updateFrame(node: self.effectNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         transition.updateFrame(node: self.contentBackgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         transition.updateFrame(node: self.wrappingScrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: insets.top + 66.0 + UIScreenPixel)))
         
         let titleSize = self.titleNode.measure(CGSize(width: width, height: titleHeight))
         let titleFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - titleSize.width) / 2.0), y: 16.0), size: titleSize)

@@ -200,7 +200,7 @@ public final class SlotMachineAnimationNode: ASDisplayNode {
                         case let .value(value, _):
                             let slotValue = SlotMachineValue(rawValue: value)
                             if slotValue.isThreeOfSame {
-                                Queue.mainQueue().after(1.2) {
+                                Queue.mainQueue().after(1.5) {
                                     self.backNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Back_Win"), loop: false))
                                     self.success?(!slotValue.is777)
                                 }
