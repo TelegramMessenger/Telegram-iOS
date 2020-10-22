@@ -584,15 +584,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.historyNodeContainer)
+        self.addSubnode(self.navigateButtons)
         self.addSubnode(self.titleAccessoryPanelContainer)
         
         self.addSubnode(self.inputPanelBackgroundNode)
         self.addSubnode(self.inputPanelBackgroundSeparatorNode)
         
         self.addSubnode(self.inputContextPanelContainer)
-        
-        self.addSubnode(self.navigateButtons)
-        
+                
         self.addSubnode(self.navigationBarBackroundNode)
         self.addSubnode(self.navigationBarSeparatorNode)
         if !self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding {

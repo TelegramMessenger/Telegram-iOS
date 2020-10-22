@@ -2159,7 +2159,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self?.displayPsa(type: type, sourceNode: sourceNode, isAutomatic: false)
         }, displayDiceTooltip: { [weak self] dice in
             self?.displayDiceTooltip(dice: dice)
-        }, animateDiceSuccess: { [weak self] in
+        }, animateDiceSuccess: { [weak self] onlyHaptic in
             guard let strongSelf = self else {
                 return
             }
@@ -2167,7 +2167,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.selectPollOptionFeedback = HapticFeedback()
             }
             strongSelf.selectPollOptionFeedback?.success()
-            strongSelf.chatDisplayNode.animateQuizCorrectOptionSelected()
+            if !onlyHaptic {
+                strongSelf.chatDisplayNode.animateQuizCorrectOptionSelected()
+            }
         }, greetingStickerNode: { [weak self] in
             return self?.chatDisplayNode.greetingStickerNode
         }, openPeerContextMenu: { [weak self] peer, node, rect, gesture in

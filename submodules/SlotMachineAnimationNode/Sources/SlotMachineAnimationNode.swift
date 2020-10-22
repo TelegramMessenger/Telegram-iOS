@@ -154,9 +154,12 @@ public final class SlotMachineAnimationNode: ASDisplayNode {
     private var diceState: ManagedSlotMachineAnimationState? = nil
     private let disposables = DisposableSet()
         
-    private let animationSize = CGSize(width: 184.0, height: 184.0)
+    private let animationSize: CGSize
     
-    public override init() {
+    public var success: ((Bool) -> Void)?
+    
+    public init(size: CGSize = CGSize(width: 184.0, height: 184.0)) {
+        self.animationSize = size
         self.backNode = ManagedAnimationNode(size: self.animationSize)
         self.leftReelNode = ManagedAnimationNode(size: self.animationSize)
         self.centerReelNode = ManagedAnimationNode(size: self.animationSize)
@@ -197,8 +200,9 @@ public final class SlotMachineAnimationNode: ASDisplayNode {
                         case let .value(value, _):
                             let slotValue = SlotMachineValue(rawValue: value)
                             if slotValue.isThreeOfSame {
-                                Queue.mainQueue().after(1.5) {
+                                Queue.mainQueue().after(1.2) {
                                     self.backNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Back_Win"), loop: false))
+                                    self.success?(!slotValue.is777)
                                 }
                             } else {
                                 self.backNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Back_Win"), frames: .still(.start), loop: false))

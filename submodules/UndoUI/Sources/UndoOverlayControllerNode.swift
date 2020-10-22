@@ -362,11 +362,13 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 }
                 
                 if dice.emoji == "🎰" {
-                    let slotMachineNode = SlotMachineAnimationNode()
+                    let slotMachineNode = SlotMachineAnimationNode(size: CGSize(width: 42.0, height: 42.0))
                     self.slotMachineNode = slotMachineNode
                     
-//                    slotMachineNode.setState(.rolling)
-//                    slotMachineNode.setState(.value(value, true))
+                    slotMachineNode.setState(.rolling)
+                    if let value = dice.value {
+                        slotMachineNode.setState(.value(value, true))
+                    }
                 } else {
                     let animatedStickerNode = AnimatedStickerNode()
                     self.animatedStickerNode = animatedStickerNode
@@ -628,6 +630,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             if let animatedStickerNode = self.animatedStickerNode {
                 animatedStickerNode.updateLayout(size: iconFrame.size)
                 transition.updateFrame(node: animatedStickerNode, frame: iconFrame)
+            } else if let slotMachineNode = self.slotMachineNode {
+                transition.updateFrame(node: slotMachineNode, frame: iconFrame)
             }
         } else if let animatedStickerNode = self.animatedStickerNode {
             let iconSize = CGSize(width: 32.0, height: 32.0)
