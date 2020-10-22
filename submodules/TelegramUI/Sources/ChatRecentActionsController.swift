@@ -130,7 +130,9 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, displaySearchResultsTooltip: { _, _ in
         }, unarchivePeer: {
         }, scrollToTop: {
-        }, viewReplies: { _, _ in }, statuses: nil)
+        }, viewReplies: { _, _ in
+        }, activatePinnedListPreview: { _, _ in
+        }, statuses: nil)
         
         self.navigationItem.titleView = self.titleView
         

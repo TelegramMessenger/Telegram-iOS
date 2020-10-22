@@ -31,7 +31,7 @@ private func titleAndColorForAction(_ action: SubscriberAction, theme: Presentat
         case .unmuteNotifications:
             return (strings.Conversation_Unmute, theme.chat.inputPanel.panelControlAccentColor)
         case let .unpinMessages(count):
-            return (strings.Chat_PanelUnpinAllMessages(Int32(count)), theme.chat.inputPanel.panelControlAccentColor)
+            return (strings.Chat_PanelUnpinAllMessages, theme.chat.inputPanel.panelControlAccentColor)
         case .hidePinnedMessages:
             return (strings.Chat_PanelHidePinnedMessages, theme.chat.inputPanel.panelControlAccentColor)
     }
