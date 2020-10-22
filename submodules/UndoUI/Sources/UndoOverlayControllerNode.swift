@@ -39,6 +39,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let action: (UndoOverlayAction) -> Bool
     private let dismiss: () -> Void
     
+    private let content: UndoOverlayContent
+    
     private let effectView: UIView
     
     private let animationBackgroundColor: UIColor
@@ -53,6 +55,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     
     init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, action: @escaping (UndoOverlayAction) -> Bool, dismiss: @escaping () -> Void) {
         self.elevatedLayout = elevatedLayout
+        self.content = content
         
         self.action = action
         self.dismiss = dismiss
@@ -202,10 +205,10 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.attributedText = string
                 displayUndo = false
                 self.originalRemainingSeconds = 5
-            case let .messagesUnpinned(title, text, undo):
+            case let .messagesUnpinned(title, text, undo, isHidden):
                 self.iconNode = nil
                 self.iconCheckNode = nil
-                self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
+                self.animationNode = AnimationNode(animation: isHidden ? "anim_message_hidepin" : "anim_message_unpin", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
@@ -519,8 +522,18 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         let firstLayout = self.validLayout == nil
         self.validLayout = layout
         
-        var leftInset: CGFloat = 50.0
+        var preferredSize: CGSize?
         if let animationNode = self.animationNode, let iconSize = animationNode.preferredSize() {
+            if case .messagesUnpinned = self.content {
+                let factor: CGFloat = 0.5
+                preferredSize = CGSize(width: floor(iconSize.width * factor), height: floor(iconSize.height * factor))
+            } else {
+                preferredSize = iconSize
+            }
+        }
+        
+        var leftInset: CGFloat = 50.0
+        if let iconSize = preferredSize {
             if iconSize.width > leftInset {
                 leftInset = iconSize.width - 8.0
             }
@@ -594,7 +607,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             }
         }
         
-        if let animationNode = self.animationNode, let iconSize = animationNode.preferredSize() {
+        if let animationNode = self.animationNode, let iconSize = preferredSize {
             let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0)), size: iconSize)
             transition.updateFrame(node: animationNode, frame: iconFrame)
         }

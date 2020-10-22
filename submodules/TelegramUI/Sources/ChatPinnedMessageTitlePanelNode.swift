@@ -14,6 +14,7 @@ import PhotoResources
 import TelegramStringFormatting
 import AnimatedCountLabelNode
 import AnimatedNavigationStripeNode
+import ContextUI
 
 private enum PinnedMessageAnimation {
     case slideToTop
@@ -26,6 +27,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let closeButton: HighlightableButtonNode
     private let listButton: HighlightableButtonNode
     
+    private let contextContainer: ContextControllerSourceNode
     private let clippingContainer: ASDisplayNode
     private let contentContainer: ASDisplayNode
     private let contentTextContainer: ASDisplayNode
@@ -63,6 +65,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
+        
+        self.contextContainer = ContextControllerSourceNode()
         
         self.clippingContainer = ASDisplayNode()
         self.clippingContainer.clipsToBounds = true
@@ -110,9 +114,11 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.closeButton.addTarget(self, action: #selector(self.closePressed), forControlEvents: [.touchUpInside])
         self.listButton.addTarget(self, action: #selector(self.listPressed), forControlEvents: [.touchUpInside])
         
-        self.addSubnode(self.clippingContainer)
+        self.addSubnode(self.contextContainer)
+        
+        self.contextContainer.addSubnode(self.clippingContainer)
         self.clippingContainer.addSubnode(self.contentContainer)
-        self.addSubnode(self.lineNode)
+        self.contextContainer.addSubnode(self.lineNode)
         self.contentTextContainer.addSubnode(self.titleNode)
         self.contentTextContainer.addSubnode(self.textNode)
         self.contentContainer.addSubnode(self.contentTextContainer)
@@ -120,13 +126,22 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.imageNodeContainer.addSubnode(self.imageNode)
         self.contentContainer.addSubnode(self.imageNodeContainer)
         
-        self.addSubnode(self.closeButton)
-        self.addSubnode(self.listButton)
+        self.contextContainer.addSubnode(self.closeButton)
+        self.contextContainer.addSubnode(self.listButton)
         
         self.tapButton.addTarget(self, action: #selector(self.tapped), forControlEvents: [.touchUpInside])
-        self.addSubnode(self.tapButton)
+        self.contextContainer.addSubnode(self.tapButton)
         
         self.addSubnode(self.separatorNode)
+        
+        self.contextContainer.activated = { [weak self] gesture, _ in
+            guard let strongSelf = self else {
+                return
+            }
+            if let interfaceInteraction = strongSelf.interfaceInteraction, let _ = strongSelf.currentMessage, !strongSelf.isReplyThread {
+                interfaceInteraction.activatePinnedListPreview(strongSelf.contextContainer, gesture)
+            }
+        }
     }
     
     deinit {
@@ -138,6 +153,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         let panelHeight: CGFloat = 50.0
         var themeUpdated = false
+        
+        self.contextContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight))
         
         if self.theme !== interfaceState.theme {
             themeUpdated = true
@@ -155,6 +172,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             isReplyThread = false
         }
         self.isReplyThread = isReplyThread
+        
+        self.contextContainer.isGestureEnabled = !isReplyThread
         
         var messageUpdated = false
         var messageUpdatedAnimation: PinnedMessageAnimation?

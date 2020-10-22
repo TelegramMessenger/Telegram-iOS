@@ -5869,10 +5869,7 @@ Any member of this group will be able to see messages in the channel.";
 "Chat.TitlePinnedMessages_any" = "%@ Pinned Messages";
 
 "Chat.PanelHidePinnedMessages" = "Don't Show Pinned Messages";
-"Chat.PanelUnpinAllMessages_1" = "Unpin Message";
-"Chat.PanelUnpinAllMessages_any" = "Unpin All Messages";
-"Chat.UnpinAllMessagesConfirmation_1" = "Do you want to unpin 1 message in this chat?";
-"Chat.UnpinAllMessagesConfirmation_any" = "Do you want to unpin all %@ messages in this chat?";
+"Chat.PanelUnpinAllMessages" = "Unpin All Messages";
 
 "Chat.MessagesUnpinned_1" = "Message Unpinned";
 "Chat.MessagesUnpinned_any" = "%@ Messages Unpinned";
@@ -5881,3 +5878,7 @@ Any member of this group will be able to see messages in the channel.";
 "Chat.PinnedMessagesHiddenText" = "You will see the bar with pinned messages only if a new message is pinned.";
 
 "OpenFile.PotentiallyDangerousContentAlert" = "Previewing this file can potentially expose your IP address to its sender. Continue?";
+
+"Chat.PinnedListPreview.ShowAllMessages" = "Show All Messages";
+"Chat.PinnedListPreview.UnpinAllMessages" = "Unpin All Messages";
+"Chat.PinnedListPreview.HidePinnedMessages" = "Hide Pinned Messages";

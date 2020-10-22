@@ -125,6 +125,7 @@ final class ChatPanelInterfaceInteraction {
     let unarchivePeer: () -> Void
     let scrollToTop: () -> Void
     let viewReplies: (MessageId?, ChatReplyThreadMessage) -> Void
+    let activatePinnedListPreview: (ASDisplayNode, ContextGesture) -> Void
     let statuses: ChatPanelInterfaceInteractionStatuses?
     
     init(
@@ -203,6 +204,7 @@ final class ChatPanelInterfaceInteraction {
         unarchivePeer: @escaping () -> Void,
         scrollToTop: @escaping () -> Void,
         viewReplies: @escaping (MessageId?, ChatReplyThreadMessage) -> Void,
+        activatePinnedListPreview: @escaping (ASDisplayNode, ContextGesture) -> Void,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
         self.setupReplyMessage = setupReplyMessage
@@ -280,6 +282,7 @@ final class ChatPanelInterfaceInteraction {
         self.unarchivePeer = unarchivePeer
         self.scrollToTop = scrollToTop
         self.viewReplies = viewReplies
+        self.activatePinnedListPreview = activatePinnedListPreview
         self.statuses = statuses
     }
 }
