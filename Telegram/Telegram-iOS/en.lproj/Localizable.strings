@@ -65,22 +65,9 @@
 "PUSH_CHANNEL_MESSAGE_GEOLIVE" = "%1$@|posted a live location";
 "PUSH_CHANNEL_MESSAGE_GIF" = "%1$@|posted a GIF";
 
-"PUSH_PINNED_TEXT" = "%1$@ pinned \"%2$@\" ";
-"PUSH_PINNED_NOTEXT" = "%1$@ pinned a message";
-"PUSH_PINNED_PHOTO" = "%1$@ pinned a photo";
-"PUSH_PINNED_VIDEO" = "%1$@ pinned a video";
-"PUSH_PINNED_ROUND" = "%1$@ pinned a video message";
-"PUSH_PINNED_DOC" = "%1$@ pinned a file";
-"PUSH_PINNED_STICKER" = "%1$@ pinned a %2$@sticker";
-"PUSH_PINNED_AUDIO" = "%1$@ pinned a voice message";
-"PUSH_PINNED_GEO" = "%1$@ pinned a map";
-"PUSH_PINNED_GEOLIVE" = "%1$@ pinned a live location";
-"PUSH_PINNED_GIF" = "%1$@ pinned a GIF";
-
 "PUSH_MESSAGE_GAME" = "%1$@|invited you to play %2$@";
 "PUSH_CHANNEL_MESSAGE_GAME" = "%1$@|invited you to play %2$@";
 "PUSH_CHAT_MESSAGE_GAME" = "%2$@|%1$@ invited the group to play %3$@";
-"PUSH_PINNED_GAME" = "%1$@ pinned a game";
 
 "PUSH_MESSAGE_TEXT" = "%1$@|%2$@";
 "PUSH_MESSAGE_NOTEXT" = "%1$@|sent you a message";
@@ -1964,6 +1951,7 @@
 "Message.PinnedStickerMessage" = "pinned sticker";
 "Message.PinnedLocationMessage" = "pinned location";
 "Message.PinnedContactMessage" = "pinned contact";
+"Message.PinnedGenericMessage" = "%@ pinned a message";
 
 "Notification.PinnedMessage" = "pinned message";
 
@@ -5882,3 +5870,6 @@ Any member of this group will be able to see messages in the channel.";
 "Chat.PinnedListPreview.ShowAllMessages" = "Show All Messages";
 "Chat.PinnedListPreview.UnpinAllMessages" = "Unpin All Messages";
 "Chat.PinnedListPreview.HidePinnedMessages" = "Hide Pinned Messages";
+
+"Conversation.PinMessagesForMe" = "Pin for me";
+"Conversation.PinMessagesFor" = "Pin for me and %@";

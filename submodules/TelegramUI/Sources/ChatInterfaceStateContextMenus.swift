@@ -344,6 +344,16 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         canPin = false
     }
     
+    if let peer = messages[0].peers[messages[0].id.peerId] {
+        if peer.isDeleted {
+            canPin = false
+        }
+        if !(peer is TelegramSecretChat) && messages[0].id.namespace != Namespaces.Message.Cloud {
+            canPin = false
+            canReply = false
+        }
+    }
+    
     var loadStickerSaveStatusSignal: Signal<Bool?, NoError> = .single(nil)
     if loadStickerSaveStatus != nil {
         loadStickerSaveStatusSignal = context.account.postbox.transaction { transaction -> Bool? in
@@ -682,9 +692,8 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             } else {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_Pin, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Pin"), color: theme.actionSheet.primaryTextColor)
-                }, action: { _, f in
-                    interfaceInteraction.pinMessage(messages[0].id)
-                    f(.dismissWithoutContent)
+                }, action: { c, _ in
+                    interfaceInteraction.pinMessage(messages[0].id, c)
                 })))
             }
         }

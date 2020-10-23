@@ -632,7 +632,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                 context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - 3.0, y: 0.0), size: CGSize(width: 3.0, height: 3.0)))
                 context.fill(CGRect(x: 1.5, y: 0.0, width: size.width - 3.0, height: 3.0))
                 context.fill(CGRect(x: 0.0, y: 2.0, width: size.width, height: 2.0))
-            })?.resizableImage(withCapInsets: UIEdgeInsets(top: 3.0, left: 2.5, bottom: 0.0, right: 2.5), resizingMode: .stretch)
+            })?.resizableImage(withCapInsets: UIEdgeInsets(top: 3.0, left: 3.0, bottom: 0.0, right: 3.0), resizingMode: .stretch)
         }
         
         if isReordering {

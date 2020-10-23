@@ -99,7 +99,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, sendSticker: { _, _, _ in
             return false
         }, unblockPeer: {
-        }, pinMessage: { _ in
+        }, pinMessage: { _, _ in
         }, unpinMessage: { _, _ in
         }, unpinAllMessages: {
         }, openPinnedList: { _ in

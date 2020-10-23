@@ -162,7 +162,9 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
         
         if hasDiscussion {
             var canComment = false
-            if firstMessage.id.namespace == Namespaces.Message.Local {
+            if case .pinnedMessages = item.associatedData.subject {
+                canComment = false
+            } else if firstMessage.id.namespace == Namespaces.Message.Local {
                 canComment = true
             } else {
                 for attribute in firstMessage.attributes {
