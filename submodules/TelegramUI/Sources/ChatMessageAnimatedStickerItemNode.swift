@@ -60,7 +60,7 @@ class ChatMessageShareButton: HighlightableButtonNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(presentationData: ChatPresentationData, chatLocation: ChatLocation, message: Message, account: Account) -> CGSize {
+    func update(presentationData: ChatPresentationData, chatLocation: ChatLocation, subject: ChatControllerSubject?, message: Message, account: Account) -> CGSize {
         var isReplies = false
         var replyCount = 0
         if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
@@ -84,7 +84,9 @@ class ChatMessageShareButton: HighlightableButtonNode {
             let graphics = PresentationResourcesChat.additionalGraphics(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
             var updatedShareButtonBackground: UIImage?
             var updatedIconImage: UIImage?
-            if isReplies {
+            if case .pinnedMessages = subject {
+                updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
+            } else if isReplies {
                 updatedShareButtonBackground = PresentationResourcesChat.chatFreeCommentButtonBackground(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                 updatedIconImage = PresentationResourcesChat.chatFreeCommentButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             } else if message.id.peerId.isRepliesOrSavedMessages(accountPeerId: account.peerId) {
@@ -607,7 +609,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
             
             var needShareButton = false
-            if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
+            if case .pinnedMessages = item.associatedData.subject {
+                needShareButton = true
+            } else if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
                 needShareButton = false
             } else if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                 for attribute in item.content.firstMessage.attributes {
@@ -941,7 +945,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             strongSelf.addSubnode(updatedShareButtonNode)
                             updatedShareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
                         }
-                        let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, message: item.message, account: item.context.account)
+                        let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account)
                         updatedShareButtonNode.frame = CGRect(origin: CGPoint(x: updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - buttonSize.height - 4.0), size: buttonSize)
                     } else if let shareButtonNode = strongSelf.shareButtonNode {
                         shareButtonNode.removeFromSupernode()
@@ -1266,6 +1270,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     @objc func shareButtonPressed() {
         if let item = self.item {
+            if case .pinnedMessages = item.associatedData.subject {
+                item.controllerInteraction.navigateToMessageStandalone(item.content.firstMessage.id)
+                return
+            }
+            
             if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
                 for attribute in item.message.attributes {
                     if let _ = attribute as? ReplyThreadMessageAttribute {

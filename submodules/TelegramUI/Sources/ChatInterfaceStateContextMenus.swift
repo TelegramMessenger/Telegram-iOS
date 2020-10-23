@@ -344,6 +344,16 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         canPin = false
     }
     
+    if let peer = messages[0].peers[messages[0].id.peerId] {
+        if peer.isDeleted {
+            canPin = false
+        }
+        if !(peer is TelegramSecretChat) && messages[0].id.namespace != Namespaces.Message.Cloud {
+            canPin = false
+            canReply = false
+        }
+    }
+    
     var loadStickerSaveStatusSignal: Signal<Bool?, NoError> = .single(nil)
     if loadStickerSaveStatus != nil {
         loadStickerSaveStatusSignal = context.account.postbox.transaction { transaction -> Bool? in

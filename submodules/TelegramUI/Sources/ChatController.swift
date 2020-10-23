@@ -3646,7 +3646,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let pinnedMessageId = pinnedMessageId {
                     if let cachedDataMessages = combinedInitialData.cachedDataMessages {
                         if let message = cachedDataMessages[pinnedMessageId] {
-                            pinnedMessage = ChatPinnedMessage(message: message, index: 1, totalCount: 1, topMessageId: message.id)
+                            pinnedMessage = ChatPinnedMessage(message: message, index: 0, totalCount: 1, topMessageId: message.id)
                         }
                     }
                 }
@@ -3798,7 +3798,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     if let pinnedMessageId = pinnedMessageId {
                         if let message = messages?[pinnedMessageId] {
-                            pinnedMessage = ChatPinnedMessage(message: message, index: 1, totalCount: 1, topMessageId: message.id)
+                            pinnedMessage = ChatPinnedMessage(message: message, index: 0, totalCount: 1, topMessageId: message.id)
                         }
                     }
                 case .peer:
@@ -5097,18 +5097,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                         
-                        if let peer = peer as? TelegramUser, let contextController = contextController {
+                        if let peer = peer as? TelegramUser, peer.id != strongSelf.context.account.peerId, let contextController = contextController {
                             var contextItems: [ContextMenuItem] = []
                             
                             contextItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_PinMessagesFor(peer.compactDisplayTitle).0, textColor: .primary, icon: { _ in nil }, action: { c, _ in
                                 c.dismiss(completion: {
-                                    pinAction(true, true)
+                                    pinAction(true, false)
                                 })
                             })))
                             
                             contextItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_PinMessagesForMe, textColor: .primary, icon: { _ in nil }, action: { c, _ in
                                 c.dismiss(completion: {
-                                    pinAction(true, false)
+                                    pinAction(true, true)
                                 })
                             })))
                             
@@ -5116,59 +5116,71 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             
                             return
                         } else {
-                            contextController?.dismiss(completion: {})
-                        }
-                        
-                        var pinImmediately = false
-                        if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                            pinImmediately = true
-                        } else if let _ = peer as? TelegramUser {
-                            pinImmediately = true
-                        }
-                        
-                        if pinImmediately {
-                            pinAction(true, false)
-                        } else {
-                            let topPinnedMessage: Signal<ChatPinnedMessage?, NoError> = strongSelf.topPinnedMessageSignal(latest: true)
-                            |> take(1)
-                            
-                            let _ = (topPinnedMessage
-                            |> deliverOnMainQueue).start(next: { value in
+                            let continueAction: () -> Void = {
                                 guard let strongSelf = self else {
                                     return
                                 }
                                 
-                                let title: String?
-                                let text: String
-                                let actionLayout: TextAlertContentActionLayout
-                                let actions: [TextAlertAction]
-                                if let value = value, value.message.id > messageId {
-                                    title = strongSelf.presentationData.strings.Conversation_PinOlderMessageAlertTitle
-                                    text = strongSelf.presentationData.strings.Conversation_PinOlderMessageAlertText
-                                    actionLayout = .vertical
-                                    actions = [
-                                        TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Conversation_PinMessageAlertPin, action: {
-                                            pinAction(false, false)
-                                        }),
-                                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
-                                        })
-                                    ]
-                                } else {
-                                    title = nil
-                                    text = strongSelf.presentationData.strings.Conversation_PinMessageAlertGroup
-                                    actionLayout = .horizontal
-                                    actions = [
-                                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Conversation_PinMessageAlert_OnlyPin, action: {
-                                            pinAction(false, false)
-                                        }),
-                                        TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Yes, action: {
-                                            pinAction(true, false)
-                                        })
-                                    ]
+                                var pinImmediately = false
+                                if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                                    pinImmediately = true
+                                } else if let _ = peer as? TelegramUser {
+                                    pinImmediately = true
                                 }
                                 
-                                strongSelf.present(textAlertController(context: strongSelf.context, title: title, text: text, actions: actions, actionLayout: actionLayout), in: .window(.root))
-                            })
+                                if pinImmediately {
+                                    pinAction(true, false)
+                                } else {
+                                    let topPinnedMessage: Signal<ChatPinnedMessage?, NoError> = strongSelf.topPinnedMessageSignal(latest: true)
+                                    |> take(1)
+                                    
+                                    let _ = (topPinnedMessage
+                                    |> deliverOnMainQueue).start(next: { value in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        
+                                        let title: String?
+                                        let text: String
+                                        let actionLayout: TextAlertContentActionLayout
+                                        let actions: [TextAlertAction]
+                                        if let value = value, value.message.id > messageId {
+                                            title = strongSelf.presentationData.strings.Conversation_PinOlderMessageAlertTitle
+                                            text = strongSelf.presentationData.strings.Conversation_PinOlderMessageAlertText
+                                            actionLayout = .vertical
+                                            actions = [
+                                                TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Conversation_PinMessageAlertPin, action: {
+                                                    pinAction(false, false)
+                                                }),
+                                                TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                                                })
+                                            ]
+                                        } else {
+                                            title = nil
+                                            text = strongSelf.presentationData.strings.Conversation_PinMessageAlertGroup
+                                            actionLayout = .horizontal
+                                            actions = [
+                                                TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Conversation_PinMessageAlert_OnlyPin, action: {
+                                                    pinAction(false, false)
+                                                }),
+                                                TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Yes, action: {
+                                                    pinAction(true, false)
+                                                })
+                                            ]
+                                        }
+                                        
+                                        strongSelf.present(textAlertController(context: strongSelf.context, title: title, text: text, actions: actions, actionLayout: actionLayout), in: .window(.root))
+                                    })
+                                }
+                            }
+                            
+                            if let contextController = contextController {
+                                contextController.dismiss(completion: {
+                                    continueAction()
+                                })
+                            } else {
+                                continueAction()
+                            }
                         }
                     } else {
                         if let topPinnedMessageId = strongSelf.presentationInterfaceState.pinnedMessage?.topMessageId {
