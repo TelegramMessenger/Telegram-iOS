@@ -569,7 +569,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                         strongSelf.headerNode.mapNode.setMapCenter(coordinate: venue.coordinate, hidePicker: true, animated: true)
                 }
                 
-                strongSelf.headerNode.updateState(mapMode: state.mapMode, displayingMapModeOptions: state.displayingMapModeOptions, displayingPlacesButton: displayingPlacesButton, proximityNotification: nil, animated: true)
+                strongSelf.headerNode.updateState(mapMode: state.mapMode, trackingMode: .none, displayingMapModeOptions: state.displayingMapModeOptions, displayingPlacesButton: displayingPlacesButton, proximityNotification: nil, animated: true)
                 
                 let annotations: [LocationPinAnnotation]
                 if let venues = displayedVenues {
