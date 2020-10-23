@@ -260,7 +260,7 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
         case let .messageMediaVenue(geo, title, address, provider, venueId, venueType):
             let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: title, address: address, provider: provider, venueId: venueId, venueType: venueType, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil, heading: nil)
             return (mediaMap, nil)
-        case let .messageMediaGeoLive(flags, geo, heading, period, proximityNotificationRadius):
+        case let .messageMediaGeoLive(_, geo, heading, period, proximityNotificationRadius):
             let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: period, liveProximityNotificationRadius: proximityNotificationRadius, heading: heading)
             return (mediaMap, nil)
         case let .messageMediaDocument(_, document, ttlSeconds):
