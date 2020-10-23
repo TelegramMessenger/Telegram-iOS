@@ -397,16 +397,19 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
     }
     
-    func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
+    func pickerView(_ pickerView: UIPickerView, attributedTitleForRow row: Int, forComponent component: Int) -> NSAttributedString? {
+        let font = Font.regular(17.0)
+        let string: String
         if component == 0 {
             let value = unitValues[row]
-            return "\(value)"
+            string = "\(value)"
         } else if component == 1 {
             let value = String(format: "%.2d", smallUnitValues[row])
-            return ".\(value)"
+            string = ".\(value)"
         } else {
-            return self.usesMetricSystem() ? self.presentationData.strings.Location_ProximityNotification_DistanceKM : self.presentationData.strings.Location_ProximityNotification_DistanceMI
+            string = self.usesMetricSystem() ? self.presentationData.strings.Location_ProximityNotification_DistanceKM : self.presentationData.strings.Location_ProximityNotification_DistanceMI
         }
+        return NSAttributedString(string: string, font: font, textColor: self.presentationData.theme.actionSheet.primaryTextColor)
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -431,6 +434,8 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         self.cancelButton.setTitle(self.presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
         self.doneButton.updateTheme(SolidRoundedButtonTheme(theme: self.presentationData.theme))
+        
+        self.updateDoneButtonTitle()
     }
         
     override func didLoad() {
