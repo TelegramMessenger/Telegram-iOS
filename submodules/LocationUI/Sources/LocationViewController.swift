@@ -173,8 +173,7 @@ public final class LocationViewController: ViewController {
             
             if reset {
                 if let messageId = messageId {
-                    
-//                    let _ = cancelProximityNotification(postbox: context.account.postbox, network: context.account.network, messageId: messageId).start()
+                    let _ = requestEditLiveLocation(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, messageId: messageId, stop: false, coordinate: nil, heading: nil, proximityNotificationRadius: 0).start()
                 }
             } else {
                 strongSelf.controllerNode.setProximityIndicator(radius: 0)
@@ -189,8 +188,10 @@ public final class LocationViewController: ViewController {
                         return
                     }
                     
-                    if let coordinate = coordinate {
-                        self?.interaction?.sendLiveLocation(coordinate, distance)
+                    if let messageId = messageId {
+                        let _ = requestEditLiveLocation(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, messageId: messageId, stop: false, coordinate: nil, heading: nil, proximityNotificationRadius: distance).start()
+                    } else if let coordinate = coordinate {
+                        strongSelf.interaction?.sendLiveLocation(coordinate, distance)
                     }
                     completion()
                 }, willDismiss: { [weak self] in
@@ -218,42 +219,44 @@ public final class LocationViewController: ViewController {
                     return
                 }
                 
-                let _  = (context.account.postbox.loadedPeerWithId(subject.id.peerId)
-                |> deliverOnMainQueue).start(next: { [weak self] peer in
-                    let controller = ActionSheetController(presentationData: strongSelf.presentationData)
-                    var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
-                    if let user = peer as? TelegramUser {
-                        title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(user.compactDisplayTitle).0
-                    }
-                    
-                    let sendLiveLocationImpl: (Int32) -> Void = { [weak self, weak controller] period in
-                        controller?.dismissAnimated()
-                        if let strongSelf = self {
-                            params.sendLiveLocation(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: period))
+                if let distance = distance {
+                    params.sendLiveLocation(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: 30 * 60, proximityNotificationRadius: distance))
+                } else {
+                    let _  = (context.account.postbox.loadedPeerWithId(subject.id.peerId)
+                    |> deliverOnMainQueue).start(next: { [weak self] peer in
+                        let controller = ActionSheetController(presentationData: strongSelf.presentationData)
+                        var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
+                        if let user = peer as? TelegramUser {
+                            title = strongSelf.presentationData.strings.Map_LiveLocationPrivateDescription(user.compactDisplayTitle).0
                         }
-                    }
-                    
-                    controller.setItemGroups([
-                        ActionSheetItemGroup(items: [
-                            ActionSheetTextItem(title: title),
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor15Minutes, color: .accent, action: {
-                                sendLiveLocationImpl(15 * 60)
-                            }),
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor1Hour, color: .accent, action: {
-                                sendLiveLocationImpl(60 * 60 - 1)
-                            }),
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor8Hours, color: .accent, action: {
-                                sendLiveLocationImpl(8 * 60 * 60)
-                            })
-                        ]),
-                        ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak controller] in
-                                controller?.dismissAnimated()
-                            })
+                        
+                        let sendLiveLocationImpl: (Int32) -> Void = { [weak self, weak controller] period in
+                            controller?.dismissAnimated()
+                                params.sendLiveLocation(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: period))
+                        }
+                        
+                        controller.setItemGroups([
+                            ActionSheetItemGroup(items: [
+                                ActionSheetTextItem(title: title),
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor15Minutes, color: .accent, action: {
+                                    sendLiveLocationImpl(15 * 60)
+                                }),
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor1Hour, color: .accent, action: {
+                                    sendLiveLocationImpl(60 * 60 - 1)
+                                }),
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Map_LiveLocationFor8Hours, color: .accent, action: {
+                                    sendLiveLocationImpl(8 * 60 * 60)
+                                })
+                            ]),
+                            ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak controller] in
+                                    controller?.dismissAnimated()
+                                })
+                            ])
                         ])
-                    ])
-                    strongSelf.present(controller, in: .window(.root))
-                })
+                        strongSelf.present(controller, in: .window(.root))
+                    })
+                }
             }
         }, stopLiveLocation: { [weak self] in
             params.stopLiveLocation(nil)

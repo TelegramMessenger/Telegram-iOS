@@ -133,7 +133,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         var radius: Double
         var alpha: CGFloat {
             didSet {
-                self.alphaTransition = (oldValue, CACurrentMediaTime(), 0.5)
+                self.alphaTransition = (oldValue, CACurrentMediaTime(), 0.3)
             }
         }
         var alphaTransition: (from: CGFloat, startTimestamp: Double, duration: Double)?
@@ -151,7 +151,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     
     class InvertedProximityCircleRenderer: MKOverlayRenderer {
         var radius: Double = 0.0
-        var fillColor: UIColor = UIColor(rgb: 0x000000, alpha: 0.4)
+        var fillColor: UIColor = UIColor(rgb: 0x000000, alpha: 0.5)
         
         override func draw(_ mapRect: MKMapRect, zoomScale: MKZoomScale, in context: CGContext) {
             guard let overlay = self.overlay as? InvertedProximityCircle else {

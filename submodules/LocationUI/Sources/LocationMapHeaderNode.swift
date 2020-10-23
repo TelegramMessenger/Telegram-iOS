@@ -154,9 +154,9 @@ final class LocationMapHeaderNode: ASDisplayNode {
         self.infoButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoActiveIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .selected)
         self.infoButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoActiveIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: [.selected, .highlighted])
         self.locationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/TrackIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .normal)
-        self.notificationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .normal)
-        self.notificationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoActiveIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .selected)
-        self.notificationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoActiveIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: [.selected, .highlighted])
+        self.notificationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/NotificationIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .normal)
+        self.notificationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/MuteIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .selected)
+        self.notificationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/MuteIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: [.selected, .highlighted])
         self.placesBackgroundNode.image = generateBackgroundImage(theme: presentationData.theme)
         self.shadowNode.image = generateShadowImage(theme: presentationData.theme, highlighted: false)
     }

@@ -216,10 +216,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         let contentMessageStableId: UInt32
         let sourceNode: ContextExtractedContentContainingNode
         let containerNode: ContextControllerSourceNode
+        var backgroundWallpaperNode: ChatMessageBubbleBackdrop?
         var backgroundNode: ChatMessageBackground?
         var selectionBackgroundNode: ASDisplayNode?
         
-        var currentParams: (size: CGSize, contentOrigin: CGPoint, presentationData: ChatPresentationData, graphics: PrincipalThemeEssentialGraphics, backgroundType: ChatMessageBackgroundType, Bool?, selectionInsets: UIEdgeInsets)?
+        private var currentParams: (size: CGSize, contentOrigin: CGPoint, presentationData: ChatPresentationData, graphics: PrincipalThemeEssentialGraphics, backgroundType: ChatMessageBackgroundType, mediaBox: MediaBox, messageSelection: Bool?, selectionInsets: UIEdgeInsets)?
         
         init(contentMessageStableId: UInt32) {
             self.contentMessageStableId = contentMessageStableId
@@ -228,7 +229,31 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             self.containerNode = ContextControllerSourceNode()
         }
         
-        func willUpdateIsExtractedToContextPreview(isExtractedToContextPreview: Bool, transition: ContainedViewLayoutTransition) {
+        private var absoluteRect: (CGRect, CGSize)?
+        fileprivate func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+            self.absoluteRect = (rect, containerSize)
+            guard let backgroundWallpaperNode = self.backgroundWallpaperNode else {
+                return
+            }
+            let mappedRect = CGRect(origin: CGPoint(x: rect.minX + backgroundWallpaperNode.frame.minX, y: rect.minY + backgroundWallpaperNode.frame.minY), size: rect.size)
+            backgroundWallpaperNode.update(rect: mappedRect, within: containerSize)
+        }
+        
+        fileprivate func applyAbsoluteOffset(value: CGFloat, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+            guard let backgroundWallpaperNode = self.backgroundWallpaperNode else {
+                return
+            }
+            backgroundWallpaperNode.offset(value: value, animationCurve: animationCurve, duration: duration)
+        }
+        
+        fileprivate func applyAbsoluteOffsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
+            guard let backgroundWallpaperNode = self.backgroundWallpaperNode else {
+                return
+            }
+            backgroundWallpaperNode.offsetSpring(value: value, duration: duration, damping: damping)
+        }
+        
+        fileprivate func willUpdateIsExtractedToContextPreview(isExtractedToContextPreview: Bool, transition: ContainedViewLayoutTransition) {
             if isExtractedToContextPreview {
                 var offset: CGFloat = 0.0
                 var inset: CGFloat = 0.0
@@ -244,34 +269,57 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 
                 if let _ = self.backgroundNode {
                 } else if let currentParams = self.currentParams {
+                    let backgroundWallpaperNode = ChatMessageBubbleBackdrop()
+                    backgroundWallpaperNode.alpha = 0.0
+                    
                     let backgroundNode = ChatMessageBackground()
                     backgroundNode.alpha = 0.0
-                    
-                    backgroundNode.setType(type: type, highlighted: false, graphics: currentParams.graphics, maskMode: false, hasWallpaper: currentParams.presentationData.theme.wallpaper.hasWallpaper, transition: .immediate)
+                                        
                     self.sourceNode.contentNode.insertSubnode(backgroundNode, at: 0)
+                    self.sourceNode.contentNode.insertSubnode(backgroundWallpaperNode, at: 0)
+                    
+                    self.backgroundWallpaperNode = backgroundWallpaperNode
                     self.backgroundNode = backgroundNode
                     
                     transition.updateAlpha(node: backgroundNode, alpha: 1.0)
+                    transition.updateAlpha(node: backgroundWallpaperNode, alpha: 1.0)
+                    
+                    backgroundNode.setType(type: type, highlighted: false, graphics: currentParams.graphics, maskMode: true, hasWallpaper: currentParams.presentationData.theme.wallpaper.hasWallpaper, transition: .immediate)
+                    backgroundWallpaperNode.setType(type: type, theme: currentParams.presentationData.theme, mediaBox: currentParams.mediaBox, essentialGraphics: currentParams.graphics, maskMode: true)
                 }
                 
                 if let currentParams = self.currentParams {
                     let backgroundFrame = CGRect(x: currentParams.contentOrigin.x + offset, y: 0.0, width: currentParams.size.width + inset, height: currentParams.size.height)
                     self.backgroundNode?.updateLayout(size: backgroundFrame.size, transition: .immediate)
                     self.backgroundNode?.frame = backgroundFrame
+                    self.backgroundWallpaperNode?.frame = backgroundFrame
+                    
+                    if let (rect, containerSize) = self.absoluteRect {
+                        let mappedRect = CGRect(origin: CGPoint(x: rect.minX + backgroundFrame.minX, y: rect.minY + backgroundFrame.minY), size: rect.size)
+                        self.backgroundWallpaperNode?.update(rect: mappedRect, within: containerSize)
+                    }
                 }
-            } else if let backgroundNode = self.backgroundNode {
-                self.backgroundNode = nil
-                transition.updateAlpha(node: backgroundNode, alpha: 0.0, completion: { [weak backgroundNode] _ in
-                    backgroundNode?.removeFromSupernode()
-                })
+            } else {
+                if let backgroundNode = self.backgroundNode {
+                    self.backgroundNode = nil
+                    transition.updateAlpha(node: backgroundNode, alpha: 0.0, completion: { [weak backgroundNode] _ in
+                        backgroundNode?.removeFromSupernode()
+                    })
+                }
+                if let backgroundWallpaperNode = self.backgroundWallpaperNode {
+                    self.backgroundWallpaperNode = nil
+                    transition.updateAlpha(node: backgroundWallpaperNode, alpha: 0.0, completion: { [weak backgroundWallpaperNode] _ in
+                        backgroundWallpaperNode?.removeFromSupernode()
+                    })
+                }
             }
         }
         
-        func isExtractedToContextPreviewUpdated(_ isExtractedToContextPreview: Bool) {
+        fileprivate func isExtractedToContextPreviewUpdated(_ isExtractedToContextPreview: Bool) {
         }
         
-        func update(size: CGSize, contentOrigin: CGPoint, selectionInsets: UIEdgeInsets, index: Int, presentationData: ChatPresentationData, graphics: PrincipalThemeEssentialGraphics, backgroundType: ChatMessageBackgroundType, messageSelection: Bool?) {
-            self.currentParams = (size, contentOrigin, presentationData, graphics, backgroundType, messageSelection, selectionInsets)
+        fileprivate func update(size: CGSize, contentOrigin: CGPoint, selectionInsets: UIEdgeInsets, index: Int, presentationData: ChatPresentationData, graphics: PrincipalThemeEssentialGraphics, backgroundType: ChatMessageBackgroundType, mediaBox: MediaBox, messageSelection: Bool?) {
+            self.currentParams = (size, contentOrigin, presentationData, graphics, backgroundType, mediaBox, messageSelection, selectionInsets)
             let bounds = CGRect(origin: CGPoint(), size: size)
             
             var incoming: Bool = false
@@ -2316,9 +2364,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     
                     container?.isExtractedToContextPreviewUpdated(isExtractedToContextPreview)
 
-//                    if !isExtractedToContextPreview, let (rect, size) = strongSelf.absoluteRect {
-//                        strongSelf.updateAbsoluteRect(rect, within: size)
-//                    }
+                    if !isExtractedToContextPreview, let (rect, size) = strongSelf.absoluteRect {
+                        container?.updateAbsoluteRect(relativeFrame.offsetBy(dx: rect.minX, dy: rect.minY), within: size)
+                    }
                     
                     for contentNode in strongSelf.contentNodes {
                         if contentNode.supernode === strongContextSourceNode.contentNode {
@@ -2327,23 +2375,23 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                 }
                 
-                contextSourceNode.updateAbsoluteRect = { [weak strongSelf] rect, size in
-                    guard let strongSelf = strongSelf, strongSelf.mainContextSourceNode.isExtractedToContextPreview else {
+                contextSourceNode.updateAbsoluteRect = { [weak strongSelf, weak container, weak contextSourceNode] rect, size in
+                    guard let strongSelf = strongSelf, let strongContextSourceNode = contextSourceNode, strongContextSourceNode.isExtractedToContextPreview else {
                         return
                     }
-//                    strongSelf.updateAbsoluteRectInternal(rect, within: size)
+                    container?.updateAbsoluteRect(relativeFrame.offsetBy(dx: rect.minX, dy: rect.minY), within: size)
                 }
-                contextSourceNode.applyAbsoluteOffset = { [weak strongSelf] value, animationCurve, duration in
-                    guard let strongSelf = strongSelf, strongSelf.mainContextSourceNode.isExtractedToContextPreview else {
+                contextSourceNode.applyAbsoluteOffset = { [weak strongSelf, weak container, weak contextSourceNode] value, animationCurve, duration in
+                    guard let strongSelf = strongSelf, let strongContextSourceNode = contextSourceNode, strongContextSourceNode.isExtractedToContextPreview else {
                         return
                     }
-//                    strongSelf.applyAbsoluteOffsetInternal(value: value, animationCurve: animationCurve, duration: duration)
+                    container?.applyAbsoluteOffset(value: value, animationCurve: animationCurve, duration: duration)
                 }
-                contextSourceNode.applyAbsoluteOffsetSpring = { [weak strongSelf] value, duration, damping in
-                    guard let strongSelf = strongSelf, strongSelf.mainContextSourceNode.isExtractedToContextPreview else {
+                contextSourceNode.applyAbsoluteOffsetSpring = { [weak strongSelf, weak container, weak contextSourceNode] value, duration, damping in
+                    guard let strongSelf = strongSelf, let strongContextSourceNode = contextSourceNode, strongContextSourceNode.isExtractedToContextPreview else {
                         return
                     }
-//                    strongSelf.applyAbsoluteOffsetSpringInternal(value: value, duration: duration, damping: damping)
+                    container?.applyAbsoluteOffsetSpring(value: value, duration: duration, damping: damping)
                 }
                 
                 strongSelf.contentContainers.append(container)
@@ -2373,7 +2421,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 selectionInsets.bottom = groupOverlap / 2.0
             }
             
-            contentContainer?.update(size: relativeFrame.size, contentOrigin: contentOrigin, selectionInsets: selectionInsets, index: index, presentationData: item.presentationData, graphics: graphics, backgroundType: backgroundType, messageSelection: itemSelection)
+            contentContainer?.update(size: relativeFrame.size, contentOrigin: contentOrigin, selectionInsets: selectionInsets, index: index, presentationData: item.presentationData, graphics: graphics, backgroundType: backgroundType, mediaBox: item.context.account.postbox.mediaBox, messageSelection: itemSelection)
                         
             index += 1
         }

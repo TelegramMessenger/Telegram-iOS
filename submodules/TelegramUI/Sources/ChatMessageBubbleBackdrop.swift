@@ -28,7 +28,7 @@ func bubbleMaskForType(_ type: ChatMessageBackgroundType, graphics: PrincipalThe
         case .Side:
             image = graphics.chatMessageBackgroundIncomingMergedSideMaskImage
         case .Extracted:
-            image = nil
+            image = graphics.chatMessageBackgroundIncomingExtractedMaskImage
         }
     case let .outgoing(mergeType):
         switch mergeType {
@@ -47,7 +47,7 @@ func bubbleMaskForType(_ type: ChatMessageBackgroundType, graphics: PrincipalThe
         case .Side:
             image = graphics.chatMessageBackgroundOutgoingMergedSideMaskImage
         case .Extracted:
-            image = nil
+            image = graphics.chatMessageBackgroundOutgoingExtractedMaskImage
         }
     }
     return image

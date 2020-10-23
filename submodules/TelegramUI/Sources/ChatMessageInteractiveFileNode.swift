@@ -24,7 +24,6 @@ private struct FetchControls {
 
 final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private var selectionNode: FileMessageSelectionNode?
-    private var cutoutNode: ASDisplayNode?
     
     private let titleNode: TextNode
     private let descriptionNode: TextNode
@@ -974,34 +973,13 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             }
         }
         
+        let cutoutFrame = streamingCacheStatusFrame.insetBy(dx: -(1.0 + UIScreenPixel), dy: -(1.0 + UIScreenPixel)).offsetBy(dx: progressFrame.minX - 6.0, dy: progressFrame.minY)
+        
+        
         if streamingState == .none && self.selectionNode == nil {
-            if let cutoutNode = self.cutoutNode {
-                self.cutoutNode = nil
-                if animated {
-                    cutoutNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false) { [weak cutoutNode] _ in
-                        cutoutNode?.removeFromSupernode()
-                    }
-                } else {
-                    cutoutNode.removeFromSupernode()
-                }
-            }
+            self.statusNode?.cutout = nil
         } else if let statusNode = self.statusNode, (self.iconNode?.isHidden ?? true) {
-            if let _ = self.cutoutNode {
-            } else {
-                let cutoutNode = ASImageNode()
-                cutoutNode.displaysAsynchronously = false
-                cutoutNode.displayWithoutProcessing = true
-                cutoutNode.image = generateFilledCircleImage(diameter: 23.0, color: messageTheme.bubble.withWallpaper.fill)
-                
-                self.cutoutNode = cutoutNode
-                self.insertSubnode(cutoutNode, aboveSubnode: statusNode)
-             
-                cutoutNode.frame = streamingCacheStatusFrame.insetBy(dx: -(1.0 + UIScreenPixel), dy: -(1.0 + UIScreenPixel))
-                
-                if animated {
-                    cutoutNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
-                }
-            }
+            self.statusNode?.cutout = cutoutFrame
         }
         
         if let (expandedString, compactString, font) = downloadingStrings {
