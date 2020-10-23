@@ -146,12 +146,15 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
         if let _ = map.heading {
             flags |= 1 << 2
         }
+        if let _ = map.liveProximityNotificationRadius {
+            flags |= 1 << 3
+        }
         var geoFlags: Int32 = 0
         if let _ = map.accuracyRadius {
             geoFlags |= 1 << 0
         }
         if let liveBroadcastingTimeout = map.liveBroadcastingTimeout {
-            input = .inputMediaGeoLive(flags: flags, geoPoint: Api.InputGeoPoint.inputGeoPoint(flags: geoFlags, lat: map.latitude, long: map.longitude, accuracyRadius: map.accuracyRadius.flatMap({ Int32($0) })), heading: map.heading, period: liveBroadcastingTimeout, proximityNotificationRadius: nil)
+            input = .inputMediaGeoLive(flags: flags, geoPoint: Api.InputGeoPoint.inputGeoPoint(flags: geoFlags, lat: map.latitude, long: map.longitude, accuracyRadius: map.accuracyRadius.flatMap({ Int32($0) })), heading: map.heading, period: liveBroadcastingTimeout, proximityNotificationRadius: map.liveProximityNotificationRadius.flatMap({ Int32($0) }))
         } else if let venue = map.venue {
             input = .inputMediaVenue(geoPoint: Api.InputGeoPoint.inputGeoPoint(flags: geoFlags, lat: map.latitude, long: map.longitude, accuracyRadius: map.accuracyRadius.flatMap({ Int32($0) })), title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "", venueType: venue.type ?? "")
         } else {

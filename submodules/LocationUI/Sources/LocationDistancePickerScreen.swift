@@ -325,7 +325,11 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     private func usesMetricSystem() -> Bool {
-        return localeWithStrings(self.presentationData.strings).usesMetricSystem
+        let locale = localeWithStrings(self.presentationData.strings)
+        if locale.identifier.hasSuffix("GB") {
+            return false
+        }
+        return locale.usesMetricSystem
     }
     
     func numberOfComponents(in pickerView: UIPickerView) -> Int {
@@ -375,8 +379,12 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
-        self.updateDoneButtonTitle()
-        self.update()
+        if pickerView.selectedRow(inComponent: 0) == 0 && pickerView.selectedRow(inComponent: 1) == 0 {
+            pickerView.selectRow(1, inComponent: 1, animated: true)
+        } else {
+            self.updateDoneButtonTitle()
+            self.update()
+        }
     }
     
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {

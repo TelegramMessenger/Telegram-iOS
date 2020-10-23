@@ -3387,13 +3387,32 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 |> restartIfError
             }
             
+            struct TopMessage {
+                var message: Message
+                var index: Int
+            }
+            
             let topMessage = pinnedHistorySignal(anchorMessageId: nil, count: 3)
-            |> map { update -> Message? in
+            |> map { update -> TopMessage? in
                 switch update {
                 case .Loading:
                     return nil
                 case let .HistoryView(viewValue, _, _, _, _, _, _):
-                    return viewValue.entries.last?.message
+                    if let entry = viewValue.entries.last {
+                        let index: Int
+                        if let location = entry.location {
+                            index = location.index
+                        } else {
+                            index = viewValue.entries.count - 1
+                        }
+                        
+                        return TopMessage(
+                            message: entry.message,
+                            index: index
+                        )
+                    } else {
+                        return nil
+                    }
                 }
             }
             
@@ -3529,7 +3548,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if pinnedMessages.messages.isEmpty {
                     return nil
                 }
-                topMessageId = topMessage?.id ?? pinnedMessages.messages[pinnedMessages.messages.count - 1].message.id
+                topMessageId = topMessage?.message.id ?? pinnedMessages.messages[pinnedMessages.messages.count - 1].message.id
+                
+                if let referenceMessage = referenceMessage, referenceMessage.isScrolled, !pinnedMessages.messages.isEmpty, referenceMessage.id == pinnedMessages.messages[0].message.id, let topMessage = topMessage {
+                    var index = topMessage.index
+                    for message in pinnedMessages.messages {
+                        if message.message.id == topMessage.message.id {
+                            index = message.index
+                            break
+                        }
+                    }
+                    
+                    return ChatPinnedMessage(message: topMessage.message, index: index, totalCount: pinnedMessages.totalCount, topMessageId: topMessageId)
+                }
+                
                 //print("reference: \(String(describing: referenceMessage?.id.id)) entries: \(view.entries.map(\.index.id.id))")
                 for i in 0 ..< pinnedMessages.messages.count {
                     let entry = pinnedMessages.messages[i]
@@ -3646,7 +3678,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let pinnedMessageId = pinnedMessageId {
                     if let cachedDataMessages = combinedInitialData.cachedDataMessages {
                         if let message = cachedDataMessages[pinnedMessageId] {
-                            pinnedMessage = ChatPinnedMessage(message: message, index: 1, totalCount: 1, topMessageId: message.id)
+                            pinnedMessage = ChatPinnedMessage(message: message, index: 0, totalCount: 1, topMessageId: message.id)
                         }
                     }
                 }
@@ -3798,7 +3830,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     if let pinnedMessageId = pinnedMessageId {
                         if let message = messages?[pinnedMessageId] {
-                            pinnedMessage = ChatPinnedMessage(message: message, index: 1, totalCount: 1, topMessageId: message.id)
+                            pinnedMessage = ChatPinnedMessage(message: message, index: 0, totalCount: 1, topMessageId: message.id)
                         }
                     }
                 case .peer:
@@ -5097,18 +5129,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                         
-                        if let peer = peer as? TelegramUser, let contextController = contextController {
+                        if let peer = peer as? TelegramUser, peer.id != strongSelf.context.account.peerId, let contextController = contextController {
                             var contextItems: [ContextMenuItem] = []
                             
                             contextItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_PinMessagesFor(peer.compactDisplayTitle).0, textColor: .primary, icon: { _ in nil }, action: { c, _ in
                                 c.dismiss(completion: {
-                                    pinAction(true, true)
+                                    pinAction(true, false)
                                 })
                             })))
                             
                             contextItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_PinMessagesForMe, textColor: .primary, icon: { _ in nil }, action: { c, _ in
                                 c.dismiss(completion: {
-                                    pinAction(true, false)
+                                    pinAction(true, true)
                                 })
                             })))
                             
@@ -5116,59 +5148,71 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             
                             return
                         } else {
-                            contextController?.dismiss(completion: {})
-                        }
-                        
-                        var pinImmediately = false
-                        if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                            pinImmediately = true
-                        } else if let _ = peer as? TelegramUser {
-                            pinImmediately = true
-                        }
-                        
-                        if pinImmediately {
-                            pinAction(true, false)
-                        } else {
-                            let topPinnedMessage: Signal<ChatPinnedMessage?, NoError> = strongSelf.topPinnedMessageSignal(latest: true)
-                            |> take(1)
-                            
-                            let _ = (topPinnedMessage
-                            |> deliverOnMainQueue).start(next: { value in
+                            let continueAction: () -> Void = {
                                 guard let strongSelf = self else {
                                     return
                                 }
                                 
-                                let title: String?
-                                let text: String
-                                let actionLayout: TextAlertContentActionLayout
-                                let actions: [TextAlertAction]
-                                if let value = value, value.message.id > messageId {
-                                    title = strongSelf.presentationData.strings.Conversation_PinOlderMessageAlertTitle
-                                    text = strongSelf.presentationData.strings.Conversation_PinOlderMessageAlertText
-                                    actionLayout = .vertical
-                                    actions = [
-                                        TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Conversation_PinMessageAlertPin, action: {
-                                            pinAction(false, false)
-                                        }),
-                                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
-                                        })
-                                    ]
-                                } else {
-                                    title = nil
-                                    text = strongSelf.presentationData.strings.Conversation_PinMessageAlertGroup
-                                    actionLayout = .horizontal
-                                    actions = [
-                                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Conversation_PinMessageAlert_OnlyPin, action: {
-                                            pinAction(false, false)
-                                        }),
-                                        TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Yes, action: {
-                                            pinAction(true, false)
-                                        })
-                                    ]
+                                var pinImmediately = false
+                                if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                                    pinImmediately = true
+                                } else if let _ = peer as? TelegramUser {
+                                    pinImmediately = true
                                 }
                                 
-                                strongSelf.present(textAlertController(context: strongSelf.context, title: title, text: text, actions: actions, actionLayout: actionLayout), in: .window(.root))
-                            })
+                                if pinImmediately {
+                                    pinAction(true, false)
+                                } else {
+                                    let topPinnedMessage: Signal<ChatPinnedMessage?, NoError> = strongSelf.topPinnedMessageSignal(latest: true)
+                                    |> take(1)
+                                    
+                                    let _ = (topPinnedMessage
+                                    |> deliverOnMainQueue).start(next: { value in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        
+                                        let title: String?
+                                        let text: String
+                                        let actionLayout: TextAlertContentActionLayout
+                                        let actions: [TextAlertAction]
+                                        if let value = value, value.message.id > messageId {
+                                            title = strongSelf.presentationData.strings.Conversation_PinOlderMessageAlertTitle
+                                            text = strongSelf.presentationData.strings.Conversation_PinOlderMessageAlertText
+                                            actionLayout = .vertical
+                                            actions = [
+                                                TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Conversation_PinMessageAlertPin, action: {
+                                                    pinAction(false, false)
+                                                }),
+                                                TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                                                })
+                                            ]
+                                        } else {
+                                            title = nil
+                                            text = strongSelf.presentationData.strings.Conversation_PinMessageAlertGroup
+                                            actionLayout = .horizontal
+                                            actions = [
+                                                TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Conversation_PinMessageAlert_OnlyPin, action: {
+                                                    pinAction(false, false)
+                                                }),
+                                                TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Yes, action: {
+                                                    pinAction(true, false)
+                                                })
+                                            ]
+                                        }
+                                        
+                                        strongSelf.present(textAlertController(context: strongSelf.context, title: title, text: text, actions: actions, actionLayout: actionLayout), in: .window(.root))
+                                    })
+                                }
+                            }
+                            
+                            if let contextController = contextController {
+                                contextController.dismiss(completion: {
+                                    continueAction()
+                                })
+                            } else {
+                                continueAction()
+                            }
                         }
                     } else {
                         if let topPinnedMessageId = strongSelf.presentationInterfaceState.pinnedMessage?.topMessageId {

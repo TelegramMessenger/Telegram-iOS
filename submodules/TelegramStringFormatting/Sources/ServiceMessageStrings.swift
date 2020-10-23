@@ -217,7 +217,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                     let textWithRanges: (String, [(Int, NSRange)])
                     if clippedText.isEmpty {
-                        textWithRanges = strings.PUSH_PINNED_NOTEXT(authorName)
+                        textWithRanges = strings.Message_PinnedGenericMessage(authorName)
                     } else {
                         textWithRanges = strings.Notification_PinnedTextMessage(authorName, clippedText)
                     }
@@ -250,7 +250,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = addAttributesToStringWithRanges(strings.Notification_PinnedQuizMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                     }
                 case .deleted:
-                    attributedString = addAttributesToStringWithRanges(strings.PUSH_PINNED_NOTEXT(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                    attributedString = addAttributesToStringWithRanges(strings.Message_PinnedGenericMessage(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                 }
             case .joinedByLink:
                 attributedString = addAttributesToStringWithRanges(strings.Notification_JoinedGroupByLink(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))

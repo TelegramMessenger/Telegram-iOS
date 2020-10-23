@@ -149,6 +149,11 @@ public final class AnimatedNavigationStripeNode: ASDisplayNode {
         }
         
         if self.currentConfiguration != configuration {
+            var isCycledJump = false
+            if let currentConfiguration = self.currentConfiguration, currentConfiguration.count == configuration.count, currentConfiguration.index == 0, currentConfiguration.count > 4, configuration.index == configuration.count - 1 {
+                isCycledJump = true
+            }
+            
             self.currentConfiguration = configuration
             
             let defaultVerticalInset: CGFloat = 7.0
@@ -276,6 +281,19 @@ public final class AnimatedNavigationStripeNode: ASDisplayNode {
             }
             
             transition.updateFrame(node: self.foregroundLineNode, frame: CGRect(origin: CGPoint(x: 0.0, y: itemScreenOffset), size: CGSize(width: 2.0, height: segmentHeight)), beginWithCurrentState: true)
+            
+            if transition.isAnimated && isCycledJump {
+                let duration: Double = 0.18
+                let maxOffset: CGFloat = -8.0
+                let offsetAnimation0 = self.layer.makeAnimation(from: 0.0 as NSNumber, to: maxOffset as NSNumber, keyPath: "bounds.origin.y", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: duration / 2.0, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let offsetAnimation1 = strongSelf.layer.makeAnimation(from: maxOffset as NSNumber, to: 0.0 as NSNumber, keyPath: "bounds.origin.y", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: duration / 2.0, additive: true)
+                    strongSelf.layer.add(offsetAnimation1, forKey: "cycleShake")
+                })
+                self.layer.add(offsetAnimation0, forKey: "cycleShake")
+            }
         }
     }
 }
