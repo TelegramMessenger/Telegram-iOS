@@ -20,6 +20,7 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
         return (transaction.getPeer(peerId), transaction.getPeerCachedData(peerId: peerId))
     }
     |> mapError { _ -> UpdatePinnedMessageError in
+        return .generic
     }
     |> mapToSignal { peer, cachedPeerData -> Signal<Void, UpdatePinnedMessageError> in
         guard let peer = peer, let inputPeer = apiInputPeer(peer) else {
@@ -105,6 +106,7 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
                 }
             }
             |> mapError { _ -> UpdatePinnedMessageError in
+                return .generic
             }
         }
     }
@@ -115,6 +117,7 @@ public func requestUnpinAllMessages(account: Account, peerId: PeerId) -> Signal<
         return (transaction.getPeer(peerId), transaction.getPeerCachedData(peerId: peerId))
     }
     |> mapError { _ -> UpdatePinnedMessageError in
+        return .generic
     }
     |> mapToSignal { peer, cachedPeerData -> Signal<Never, UpdatePinnedMessageError> in
         guard let peer = peer, let inputPeer = apiInputPeer(peer) else {
