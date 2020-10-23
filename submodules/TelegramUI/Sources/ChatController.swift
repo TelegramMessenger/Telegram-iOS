@@ -3387,13 +3387,32 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 |> restartIfError
             }
             
+            struct TopMessage {
+                var message: Message
+                var index: Int
+            }
+            
             let topMessage = pinnedHistorySignal(anchorMessageId: nil, count: 3)
-            |> map { update -> Message? in
+            |> map { update -> TopMessage? in
                 switch update {
                 case .Loading:
                     return nil
                 case let .HistoryView(viewValue, _, _, _, _, _, _):
-                    return viewValue.entries.last?.message
+                    if let entry = viewValue.entries.last {
+                        let index: Int
+                        if let location = entry.location {
+                            index = location.index
+                        } else {
+                            index = viewValue.entries.count - 1
+                        }
+                        
+                        return TopMessage(
+                            message: entry.message,
+                            index: index
+                        )
+                    } else {
+                        return nil
+                    }
                 }
             }
             
@@ -3529,7 +3548,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if pinnedMessages.messages.isEmpty {
                     return nil
                 }
-                topMessageId = topMessage?.id ?? pinnedMessages.messages[pinnedMessages.messages.count - 1].message.id
+                topMessageId = topMessage?.message.id ?? pinnedMessages.messages[pinnedMessages.messages.count - 1].message.id
+                
+                if let referenceMessage = referenceMessage, referenceMessage.isScrolled, !pinnedMessages.messages.isEmpty, referenceMessage.id == pinnedMessages.messages[0].message.id, let topMessage = topMessage {
+                    var index = topMessage.index
+                    for message in pinnedMessages.messages {
+                        if message.message.id == topMessage.message.id {
+                            index = message.index
+                            break
+                        }
+                    }
+                    
+                    return ChatPinnedMessage(message: topMessage.message, index: index, totalCount: pinnedMessages.totalCount, topMessageId: topMessageId)
+                }
+                
                 //print("reference: \(String(describing: referenceMessage?.id.id)) entries: \(view.entries.map(\.index.id.id))")
                 for i in 0 ..< pinnedMessages.messages.count {
                     let entry = pinnedMessages.messages[i]
