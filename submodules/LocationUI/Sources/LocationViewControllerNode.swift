@@ -154,7 +154,7 @@ private enum LocationViewEntry: Comparable, Identifiable {
                 } else {
                     distanceString = nil
                 }
-                return ItemListTextItem(presentationData: ItemListPresentationData(presentationData), text: .plain(""), sectionId: 0)
+                return LocationLiveListItem(presentationData: ItemListPresentationData(presentationData), account: account, message: message, distance: distance, action: {}, longTapAction: {})
         }
     }
 }
@@ -401,7 +401,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     
                     let subjectLocation = CLLocation(latitude: location.latitude, longitude: location.longitude)
                     let distance = userLocation.flatMap { subjectLocation.distance(from: $0) }
-                    entries.append(.liveLocation(presentationData.theme, message, distance, index))
+//                    entries.append(.liveLocation(presentationData.theme, message, distance, index))
                     
                     if message.localTags.contains(.OutgoingLiveLocation), let selfPeer = selfPeer {
                         userAnnotation = LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer, heading: location.heading)

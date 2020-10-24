@@ -198,7 +198,10 @@ public final class LocationViewController: ViewController {
                     if let messageId = messageId {
                         let _ = requestEditLiveLocation(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, messageId: messageId, stop: false, coordinate: nil, heading: nil, proximityNotificationRadius: distance).start()
                     } else if let coordinate = coordinate {
-                        strongSelf.interaction?.sendLiveLocation(coordinate, distance)
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_Title, text: strongSelf.presentationData.strings.Location_LiveLocationRequired_Description, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_ShareLocation, action: {
+                            completion()
+                            strongSelf.interaction?.sendLiveLocation(coordinate, distance)
+                        }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})], actionLayout: .vertical), in: .window(.root))
                     }
                     completion()
                 }, willDismiss: { [weak self] in
