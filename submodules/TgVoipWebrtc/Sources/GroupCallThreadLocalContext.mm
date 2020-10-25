@@ -1,7 +1,7 @@
 
 #import <TgVoipWebrtc/GroupCallThreadLocalContext.h>
 
-#import "group/GroupInstanceImpl.h"
+/*#import "group/GroupInstanceImpl.h"
 
 @interface GroupCallThreadLocalContext () {
     id<OngoingCallThreadLocalContextQueueWebrtc> _queue;
@@ -55,3 +55,4 @@
 }
 
 @end
+*/

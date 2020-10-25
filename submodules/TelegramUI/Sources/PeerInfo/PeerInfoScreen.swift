@@ -3159,9 +3159,6 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.controller?.present(shareController, in: .window(.root))
     }
     
-    private let groupCallDisposable = MetaDisposable()
-    private var groupCall: GroupCallContext?
-    
     private func requestCall(isVideo: Bool) {
         guard let peer = self.data?.peer as? TelegramUser, let cachedUserData = self.data?.cachedData as? CachedUserData else {
             return
