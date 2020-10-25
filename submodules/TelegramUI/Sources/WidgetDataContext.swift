@@ -61,7 +61,7 @@ final class WidgetDataContext {
             }
             
             if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
-                WidgetCenter.shared.reloadAllTimelines()
+                //WidgetCenter.shared.reloadAllTimelines()
             }
         })
         
@@ -78,7 +78,7 @@ final class WidgetDataContext {
             }
             
             if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
-                WidgetCenter.shared.reloadAllTimelines()
+                //WidgetCenter.shared.reloadAllTimelines()
             }
         })
         
