@@ -37,7 +37,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     required init() {
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
-        self.labelNode.displaysAsynchronously = true
+        self.labelNode.displaysAsynchronously = false
         
         self.filledBackgroundNode = LinkHighlightingNode(color: .clear)
         
