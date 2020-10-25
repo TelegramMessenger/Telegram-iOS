@@ -61,7 +61,9 @@ final class WidgetDataContext {
             }
             
             if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
-                //WidgetCenter.shared.reloadAllTimelines()
+                #if arch(arm64) || arch(i386) || arch(x86_64)
+                WidgetCenter.shared.reloadAllTimelines()
+                #endif
             }
         })
         
@@ -78,7 +80,9 @@ final class WidgetDataContext {
             }
             
             if #available(iOSApplicationExtension 14.0, iOS 14.0, *) {
-                //WidgetCenter.shared.reloadAllTimelines()
+                #if arch(arm64) || arch(i386) || arch(x86_64)
+                WidgetCenter.shared.reloadAllTimelines()
+                #endif
             }
         })
         
