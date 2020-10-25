@@ -38,7 +38,7 @@ enum LocationViewRightBarButton {
 class LocationViewInteraction {
     let toggleMapModeSelection: () -> Void
     let updateMapMode: (LocationMapMode) -> Void
-    let goToUserLocation: () -> Void
+    let toggleTrackingMode: () -> Void
     let goToCoordinate: (CLLocationCoordinate2D) -> Void
     let requestDirections: () -> Void
     let share: () -> Void
@@ -49,10 +49,10 @@ class LocationViewInteraction {
     let updateRightBarButton: (LocationViewRightBarButton) -> Void
     let present: (ViewController) -> Void
     
-    init(toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, goToUserLocation: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, requestDirections: @escaping () -> Void, share: @escaping () -> Void, setupProximityNotification: @escaping (Bool, CLLocationCoordinate2D?, MessageId?) -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32?) -> Void, stopLiveLocation: @escaping () -> Void, updateRightBarButton: @escaping (LocationViewRightBarButton) -> Void, present: @escaping (ViewController) -> Void) {
+    init(toggleMapModeSelection: @escaping () -> Void, updateMapMode: @escaping (LocationMapMode) -> Void, toggleTrackingMode: @escaping () -> Void, goToCoordinate: @escaping (CLLocationCoordinate2D) -> Void, requestDirections: @escaping () -> Void, share: @escaping () -> Void, setupProximityNotification: @escaping (Bool, CLLocationCoordinate2D?, MessageId?) -> Void, updateSendActionHighlight: @escaping (Bool) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32?) -> Void, stopLiveLocation: @escaping () -> Void, updateRightBarButton: @escaping (LocationViewRightBarButton) -> Void, present: @escaping (ViewController) -> Void) {
         self.toggleMapModeSelection = toggleMapModeSelection
         self.updateMapMode = updateMapMode
-        self.goToUserLocation = goToUserLocation
+        self.toggleTrackingMode = toggleTrackingMode
         self.goToCoordinate = goToCoordinate
         self.requestDirections = requestDirections
         self.share = share
@@ -129,14 +129,21 @@ public final class LocationViewController: ViewController {
                 state.displayingMapModeOptions = false
                 return state
             }
-        }, goToUserLocation: { [weak self] in
+        }, toggleTrackingMode: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
             strongSelf.controllerNode.updateState { state in
                 var state = state
                 state.displayingMapModeOptions = false
-                state.selectedLocation = .user
+                switch state.trackingMode {
+                    case .none:
+                        state.trackingMode = .follow
+                    case .follow:
+                        state.trackingMode = .followWithHeading
+                    case .followWithHeading:
+                        state.trackingMode = .none
+                }
                 return state
             }
         }, goToCoordinate: { [weak self] coordinate in
@@ -191,7 +198,10 @@ public final class LocationViewController: ViewController {
                     if let messageId = messageId {
                         let _ = requestEditLiveLocation(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, messageId: messageId, stop: false, coordinate: nil, heading: nil, proximityNotificationRadius: distance).start()
                     } else if let coordinate = coordinate {
-                        strongSelf.interaction?.sendLiveLocation(coordinate, distance)
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_Title, text: strongSelf.presentationData.strings.Location_LiveLocationRequired_Description, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_ShareLocation, action: {
+                            completion()
+                            strongSelf.interaction?.sendLiveLocation(coordinate, distance)
+                        }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})], actionLayout: .vertical), in: .window(.root))
                     }
                     completion()
                 }, willDismiss: { [weak self] in

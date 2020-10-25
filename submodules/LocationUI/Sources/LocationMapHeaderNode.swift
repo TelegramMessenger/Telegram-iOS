@@ -45,6 +45,8 @@ final class LocationMapHeaderNode: ASDisplayNode {
     private var proximityNotification: Bool?
     
     let mapNode: LocationMapNode
+    var trackingMode: LocationTrackingMode = .none
+    
     private let optionsBackgroundNode: ASImageNode
     private let optionsSeparatorNode: ASDisplayNode
     private let optionsSecondSeparatorNode: ASDisplayNode
@@ -129,10 +131,13 @@ final class LocationMapHeaderNode: ASDisplayNode {
         self.placesButtonNode.addTarget(self, action: #selector(self.placesPressed), forControlEvents: .touchUpInside)
     }
     
-    func updateState(mapMode: LocationMapMode, displayingMapModeOptions: Bool, displayingPlacesButton: Bool, proximityNotification: Bool?, animated: Bool) {
+    func updateState(mapMode: LocationMapMode, trackingMode: LocationTrackingMode, displayingMapModeOptions: Bool, displayingPlacesButton: Bool, proximityNotification: Bool?, animated: Bool) {
         self.mapNode.mapMode = mapMode
+        self.trackingMode = trackingMode
         self.infoButtonNode.isSelected = displayingMapModeOptions
         self.notificationButtonNode.isSelected = proximityNotification ?? false
+        
+        self.locationButtonNode.setImage(generateTintedImage(image: self.iconForTracking(), color: self.presentationData.theme.rootController.navigationBar.buttonColor), for: .normal)
         
         let updateLayout = self.displayingPlacesButton != displayingPlacesButton || self.proximityNotification != proximityNotification
         self.displayingPlacesButton = displayingPlacesButton
@@ -153,12 +158,23 @@ final class LocationMapHeaderNode: ASDisplayNode {
         self.infoButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .normal)
         self.infoButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoActiveIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .selected)
         self.infoButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/InfoActiveIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: [.selected, .highlighted])
-        self.locationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/TrackIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .normal)
+        self.locationButtonNode.setImage(generateTintedImage(image: self.iconForTracking(), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .normal)
         self.notificationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Location/NotificationIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .normal)
         self.notificationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/MuteIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: .selected)
         self.notificationButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/MuteIcon"), color: presentationData.theme.rootController.navigationBar.buttonColor), for: [.selected, .highlighted])
         self.placesBackgroundNode.image = generateBackgroundImage(theme: presentationData.theme)
         self.shadowNode.image = generateShadowImage(theme: presentationData.theme, highlighted: false)
+    }
+    
+    private func iconForTracking() -> UIImage? {
+        switch self.trackingMode {
+            case .none:
+                return UIImage(bundleImageName: "Location/TrackIcon")
+            case .follow:
+                return UIImage(bundleImageName: "Location/TrackActiveIcon")
+            case .followWithHeading:
+                return UIImage(bundleImageName: "Location/TrackHeadingIcon")
+        }
     }
     
     func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, topPadding: CGFloat, offset: CGFloat, size: CGSize, transition: ContainedViewLayoutTransition) {

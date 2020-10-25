@@ -154,7 +154,7 @@ private enum LocationViewEntry: Comparable, Identifiable {
                 } else {
                     distanceString = nil
                 }
-                return ItemListTextItem(presentationData: ItemListPresentationData(presentationData), text: .plain(""), sectionId: 0)
+                return LocationLiveListItem(presentationData: ItemListPresentationData(presentationData), account: account, message: message, distance: distance, action: {}, longTapAction: {})
         }
     }
 }
@@ -180,11 +180,13 @@ struct LocationViewState {
     var mapMode: LocationMapMode
     var displayingMapModeOptions: Bool
     var selectedLocation: LocationViewLocation
+    var trackingMode: LocationTrackingMode
     
     init() {
         self.mapMode = .map
         self.displayingMapModeOptions = false
         self.selectedLocation = .initial
+        self.trackingMode = .none
     }
 }
 
@@ -229,7 +231,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
         self.listNode.verticalScrollIndicatorFollowsOverscroll = true
         
         var setupProximityNotificationImpl: ((Bool) -> Void)?
-        self.headerNode = LocationMapHeaderNode(presentationData: presentationData, toggleMapModeSelection: interaction.toggleMapModeSelection, goToUserLocation: interaction.goToUserLocation, setupProximityNotification: { reset in
+        self.headerNode = LocationMapHeaderNode(presentationData: presentationData, toggleMapModeSelection: interaction.toggleMapModeSelection, goToUserLocation: interaction.toggleTrackingMode, setupProximityNotification: { reset in
             setupProximityNotificationImpl?(reset)
         })
         self.headerNode.mapNode.isRotateEnabled = false
@@ -399,7 +401,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     
                     let subjectLocation = CLLocation(latitude: location.latitude, longitude: location.longitude)
                     let distance = userLocation.flatMap { subjectLocation.distance(from: $0) }
-                    entries.append(.liveLocation(presentationData.theme, message, distance, index))
+//                    entries.append(.liveLocation(presentationData.theme, message, distance, index))
                     
                     if message.localTags.contains(.OutgoingLiveLocation), let selfPeer = selfPeer {
                         userAnnotation = LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer, heading: location.heading)
@@ -419,7 +421,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 let transition = preparedTransition(from: previousEntries ?? [], to: entries, account: context.account, presentationData: presentationData, interaction: strongSelf.interaction)
                 strongSelf.enqueueTransition(transition)
                 
-                strongSelf.headerNode.updateState(mapMode: state.mapMode, displayingMapModeOptions: state.displayingMapModeOptions, displayingPlacesButton: false, proximityNotification: proximityNotification, animated: false)
+                strongSelf.headerNode.updateState(mapMode: state.mapMode, trackingMode: state.trackingMode, displayingMapModeOptions: state.displayingMapModeOptions, displayingPlacesButton: false, proximityNotification: proximityNotification, animated: false)
                 
                 if let proximityNotification = proximityNotification, !proximityNotification && !strongSelf.displayedProximityAlertTooltip {
                     strongSelf.displayedProximityAlertTooltip = true
@@ -450,7 +452,8 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     case .custom:
                         break
                 }
-
+                strongSelf.headerNode.mapNode.trackingMode = state.trackingMode
+                
                 let previousAnnotations = previousAnnotations.swap(annotations)
                 let previousUserAnnotation = previousUserAnnotation.swap(userAnnotation)
                 if (userAnnotation == nil) != (previousUserAnnotation == nil) {
@@ -521,6 +524,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 var state = state
                 state.displayingMapModeOptions = false
                 state.selectedLocation = .custom
+                state.trackingMode = .none
                 return state
             }
         }
@@ -593,6 +597,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 self.updateState { state in
                     var state = state
                     state.selectedLocation = .coordinate(coordinate, true)
+                    state.trackingMode = .none
                     return state
                 }
             }
@@ -604,6 +609,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
             self.updateState { state in
                 var state = state
                 state.selectedLocation = .user
+                state.trackingMode = .none
                 return state
             }
         }

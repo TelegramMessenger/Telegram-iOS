@@ -5873,3 +5873,7 @@ Any member of this group will be able to see messages in the channel.";
 
 "Conversation.PinMessagesForMe" = "Pin for me";
 "Conversation.PinMessagesFor" = "Pin for me and %@";
+
+"Location.LiveLocationRequired.Title" = "Share Location";
+"Location.LiveLocationRequired.Description" = "For the alert to work, please share your live location in this chat.";
+"Location.LiveLocationRequired.ShareLocation" = "Share Location"; 

@@ -26,6 +26,23 @@ public enum LocationMapMode {
     }
 }
 
+public enum LocationTrackingMode {
+    case none
+    case follow
+    case followWithHeading
+    
+    var userTrackingMode: MKUserTrackingMode {
+        switch self {
+            case .follow:
+                return .follow
+            case .followWithHeading:
+                return .followWithHeading
+            default:
+                return .none
+        }
+    }
+}
+
 private class PickerAnnotationContainerView: UIView {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let result = super.hitTest(point, with: event)
@@ -349,6 +366,12 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     var mapMode: LocationMapMode = .map {
         didSet {
             self.mapView?.mapType = self.mapMode.mapType
+        }
+    }
+    
+    var trackingMode: LocationTrackingMode = .none {
+        didSet {
+            self.mapView?.userTrackingMode = self.trackingMode.userTrackingMode
         }
     }
     

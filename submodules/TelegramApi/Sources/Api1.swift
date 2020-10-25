@@ -19971,10 +19971,10 @@ public extension Api {
     }
     public enum BotInlineMessage: TypeConstructorDescription {
         case botInlineMessageText(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
-        case botInlineMessageMediaGeo(flags: Int32, geo: Api.GeoPoint, period: Int32, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageMediaAuto(flags: Int32, message: String, entities: [Api.MessageEntity]?, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageMediaVenue(flags: Int32, geo: Api.GeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String, replyMarkup: Api.ReplyMarkup?)
         case botInlineMessageMediaContact(flags: Int32, phoneNumber: String, firstName: String, lastName: String, vcard: String, replyMarkup: Api.ReplyMarkup?)
+        case botInlineMessageMediaGeo(flags: Int32, geo: Api.GeoPoint, heading: Int32?, period: Int32?, proximityNotificationRadius: Int32?, replyMarkup: Api.ReplyMarkup?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -19989,15 +19989,6 @@ public extension Api {
                     for item in entities! {
                         item.serialize(buffer, true)
                     }}
-                    if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
-                    break
-                case .botInlineMessageMediaGeo(let flags, let geo, let period, let replyMarkup):
-                    if boxed {
-                        buffer.appendInt32(-1222451611)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    geo.serialize(buffer, true)
-                    serializeInt32(period, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
                     break
                 case .botInlineMessageMediaAuto(let flags, let message, let entities, let replyMarkup):
@@ -20037,6 +20028,17 @@ public extension Api {
                     serializeString(vcard, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
                     break
+                case .botInlineMessageMediaGeo(let flags, let geo, let heading, let period, let proximityNotificationRadius, let replyMarkup):
+                    if boxed {
+                        buffer.appendInt32(85477117)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    geo.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(heading!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(period!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(proximityNotificationRadius!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
+                    break
     }
     }
     
@@ -20044,14 +20046,14 @@ public extension Api {
         switch self {
                 case .botInlineMessageText(let flags, let message, let entities, let replyMarkup):
                 return ("botInlineMessageText", [("flags", flags), ("message", message), ("entities", entities), ("replyMarkup", replyMarkup)])
-                case .botInlineMessageMediaGeo(let flags, let geo, let period, let replyMarkup):
-                return ("botInlineMessageMediaGeo", [("flags", flags), ("geo", geo), ("period", period), ("replyMarkup", replyMarkup)])
                 case .botInlineMessageMediaAuto(let flags, let message, let entities, let replyMarkup):
                 return ("botInlineMessageMediaAuto", [("flags", flags), ("message", message), ("entities", entities), ("replyMarkup", replyMarkup)])
                 case .botInlineMessageMediaVenue(let flags, let geo, let title, let address, let provider, let venueId, let venueType, let replyMarkup):
                 return ("botInlineMessageMediaVenue", [("flags", flags), ("geo", geo), ("title", title), ("address", address), ("provider", provider), ("venueId", venueId), ("venueType", venueType), ("replyMarkup", replyMarkup)])
                 case .botInlineMessageMediaContact(let flags, let phoneNumber, let firstName, let lastName, let vcard, let replyMarkup):
                 return ("botInlineMessageMediaContact", [("flags", flags), ("phoneNumber", phoneNumber), ("firstName", firstName), ("lastName", lastName), ("vcard", vcard), ("replyMarkup", replyMarkup)])
+                case .botInlineMessageMediaGeo(let flags, let geo, let heading, let period, let proximityNotificationRadius, let replyMarkup):
+                return ("botInlineMessageMediaGeo", [("flags", flags), ("geo", geo), ("heading", heading), ("period", period), ("proximityNotificationRadius", proximityNotificationRadius), ("replyMarkup", replyMarkup)])
     }
     }
     
@@ -20074,30 +20076,6 @@ public extension Api {
             let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.BotInlineMessage.botInlineMessageText(flags: _1!, message: _2!, entities: _3, replyMarkup: _4)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_botInlineMessageMediaGeo(_ reader: BufferReader) -> BotInlineMessage? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.GeoPoint?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.GeoPoint
-            }
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Api.ReplyMarkup?
-            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.ReplyMarkup
-            } }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.BotInlineMessage.botInlineMessageMediaGeo(flags: _1!, geo: _2!, period: _3!, replyMarkup: _4)
             }
             else {
                 return nil
@@ -20186,6 +20164,36 @@ public extension Api {
             let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
                 return Api.BotInlineMessage.botInlineMessageMediaContact(flags: _1!, phoneNumber: _2!, firstName: _3!, lastName: _4!, vcard: _5!, replyMarkup: _6)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_botInlineMessageMediaGeo(_ reader: BufferReader) -> BotInlineMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.GeoPoint?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.GeoPoint
+            }
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt32() }
+            var _4: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_4 = reader.readInt32() }
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 3) != 0 {_5 = reader.readInt32() }
+            var _6: Api.ReplyMarkup?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.ReplyMarkup
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.BotInlineMessage.botInlineMessageMediaGeo(flags: _1!, geo: _2!, heading: _3, period: _4, proximityNotificationRadius: _5, replyMarkup: _6)
             }
             else {
                 return nil
