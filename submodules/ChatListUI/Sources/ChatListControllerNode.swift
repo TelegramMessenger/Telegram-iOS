@@ -14,18 +14,6 @@ import SearchBarNode
 import SearchUI
 import ContextUI
 
-private final class ChatListControllerNodeView: UITracingLayerView, PreviewingHostView {
-    var previewingDelegate: PreviewingHostViewDelegate? {
-        return PreviewingHostViewDelegate(controllerForLocation: { [weak self] sourceView, point in
-            return self?.controller?.previewingController(from: sourceView, for: point)
-        }, commitController: { [weak self] controller in
-            self?.controller?.previewingCommit(controller)
-        })
-    }
-    
-    weak var controller: ChatListControllerImpl?
-}
-
 enum ChatListContainerNodeFilter: Equatable {
     case all
     case filter(ChatListFilter)
@@ -1027,7 +1015,7 @@ final class ChatListControllerNode: ASDisplayNode {
         super.init()
         
         self.setViewBlock({
-            return ChatListControllerNodeView()
+            return UITracingLayerView()
         })
         
         self.backgroundColor = presentationData.theme.chatList.backgroundColor
@@ -1055,8 +1043,6 @@ final class ChatListControllerNode: ASDisplayNode {
     
     override func didLoad() {
         super.didLoad()
-        
-        (self.view as? ChatListControllerNodeView)?.controller = self.controller
         
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
         self.tapRecognizer = tapRecognizer

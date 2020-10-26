@@ -548,7 +548,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
             subscriber.putCompletion()
             return EmptyDisposable
         }
-        let annotationsPoll = (poll |> then(.complete() |> delay(3.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+        let annotationsPoll = (poll |> then(.complete() |> delay(1.0, queue: Queue.concurrentDefaultQueue()))) |> restart
         
         return combineLatest(self.userLocation, annotationsPoll)
         |> map { userLocation, annotations -> [Double] in

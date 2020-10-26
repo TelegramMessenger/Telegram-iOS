@@ -359,7 +359,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
             }
             
-            if let distance = self.distances.first, Double(value) > distance {
+            if let distance = self.distances.last, Double(value) > distance {
                 self.doneButton.alpha = 0.0
                 self.doneButton.isUserInteractionEnabled = false
                 self.textNode.alpha = 1.0

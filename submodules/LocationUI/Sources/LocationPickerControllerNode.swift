@@ -884,6 +884,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         let optionsFrame = CGRect(x: 0.0, y: optionsOffset, width: layout.size.width, height: optionsHeight)
         transition.updateFrame(node: self.optionsNode, frame: optionsFrame)
         self.optionsNode.updateLayout(size: optionsFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+        self.optionsNode.isUserInteractionEnabled = self.state.displayingMapModeOptions
         
         if let searchContainerNode = self.searchContainerNode {
             searchContainerNode.frame = CGRect(origin: CGPoint(), size: layout.size)

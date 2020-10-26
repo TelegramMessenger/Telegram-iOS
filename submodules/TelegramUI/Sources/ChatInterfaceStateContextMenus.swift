@@ -1142,7 +1142,7 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                         if canDeleteGlobally {
                             optionsMap[id]!.insert(.deleteGlobally)
                         }
-                        if user.botInfo != nil && !user.id.isReplies {
+                        if user.botInfo != nil && !user.id.isReplies && !isAction {
                             optionsMap[id]!.insert(.report)
                         }
                     } else if let _ = peer as? TelegramSecretChat {

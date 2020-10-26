@@ -2341,7 +2341,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         switch chatLocation {
             case .peer, .replyThread:
                 let avatarNode = ChatAvatarNavigationNode()
-                avatarNode.chatController = self
                 avatarNode.contextAction = { [weak self] node, gesture in
                     guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer, peer.smallProfileImage != nil else {
                         return

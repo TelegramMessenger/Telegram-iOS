@@ -120,6 +120,7 @@ private final class PrefetchManagerImpl {
             
             prefetchItems.append(contentsOf: chatHistoryMediaItems)
             prefetchItems.append(contentsOf: stickerItems)
+            prefetchItems.append(contentsOf: emojiSounds.sounds.values.map { .animatedEmojiSticker($0) })
             
             return prefetchItems
         }

@@ -364,7 +364,10 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                         timeout = nil
                     }
                     
-                    entries.append(.toggleLiveLocation(presentationData.theme, title, subtitle, userLocation?.coordinate, beginTime, timeout))
+                    if let channel = subject.author as? TelegramChannel, case .broadcast = channel.info {
+                    } else {
+                        entries.append(.toggleLiveLocation(presentationData.theme, title, subtitle, userLocation?.coordinate, beginTime, timeout))
+                    }
                     
                     var sortedLiveLocations: [Message] = []
                     
@@ -690,5 +693,6 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
         let optionsFrame = CGRect(x: 0.0, y: optionsOffset, width: layout.size.width, height: optionsHeight)
         transition.updateFrame(node: self.optionsNode, frame: optionsFrame)
         self.optionsNode.updateLayout(size: optionsFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+        self.optionsNode.isUserInteractionEnabled = self.state.displayingMapModeOptions
     }
 }
