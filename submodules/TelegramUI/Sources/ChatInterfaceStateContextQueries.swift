@@ -246,18 +246,20 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             |> castError(ChatContextQueryError.self)
             |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> in
                 if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
-                    let contextResults = requestChatContextResults(account: context.account, botId: user.id, peerId: chatPeer.id, query: query, location: context.sharedContext.locationManager.flatMap { locationManager in
-                        Queue.mainQueue().async {
-                            requestBotLocationStatus(user.id)
-                        }
-                        
-                        return ApplicationSpecificNotice.inlineBotLocationRequestStatus(accountManager: context.sharedContext.accountManager, peerId: user.id)
-                        |> filter { $0 }
-                        |> take(1)
-                        |> mapToSignal { _ -> Signal<(Double, Double)?, NoError> in
-                            return currentLocationManagerCoordinate(manager: locationManager, timeout: 5.0)
-                            |> flatMap { coordinate -> (Double, Double) in
-                                return (coordinate.latitude, coordinate.longitude)
+                    let contextResults = requestChatContextResults(account: context.account, botId: user.id, peerId: chatPeer.id, query: query, location: context.sharedContext.locationManager.flatMap { locationManager -> Signal<(Double, Double)?, NoError> in
+                        return `deferred` {
+                            Queue.mainQueue().async {
+                                requestBotLocationStatus(user.id)
+                            }
+                            
+                            return ApplicationSpecificNotice.inlineBotLocationRequestStatus(accountManager: context.sharedContext.accountManager, peerId: user.id)
+                            |> filter { $0 }
+                            |> take(1)
+                            |> mapToSignal { _ -> Signal<(Double, Double)?, NoError> in
+                                return currentLocationManagerCoordinate(manager: locationManager, timeout: 5.0)
+                                |> flatMap { coordinate -> (Double, Double) in
+                                    return (coordinate.latitude, coordinate.longitude)
+                                }
                             }
                         }
                     } ?? .single(nil), offset: "")
