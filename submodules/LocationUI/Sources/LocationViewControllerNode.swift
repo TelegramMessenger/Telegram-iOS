@@ -11,6 +11,7 @@ import ItemListUI
 import ItemListVenueItem
 import TelegramPresentationData
 import TelegramStringFormatting
+import TelegramUIPreferences
 import TelegramNotices
 import AccountContext
 import AppBundle
@@ -48,7 +49,7 @@ private enum LocationViewEntryId: Hashable {
 private enum LocationViewEntry: Comparable, Identifiable {
     case info(PresentationTheme, TelegramMediaMap, String?, Double?, Double?)
     case toggleLiveLocation(PresentationTheme, String, String, CLLocationCoordinate2D?, Double?, Double?)
-    case liveLocation(PresentationTheme, Message, Double?, Int)
+    case liveLocation(PresentationTheme, PresentationDateTimeFormat, PresentationPersonNameOrder, Message, Double?, Int)
     
     var stableId: LocationViewEntryId {
         switch self {
@@ -56,7 +57,7 @@ private enum LocationViewEntry: Comparable, Identifiable {
                 return .info
             case .toggleLiveLocation:
                 return .toggleLiveLocation
-            case let .liveLocation(_, message, _, _):
+            case let .liveLocation(_, _, _, message, _, _):
                 return .liveLocation(message.stableId)
         }
     }
@@ -75,8 +76,8 @@ private enum LocationViewEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .liveLocation(lhsTheme, lhsMessage, lhsDistance, lhsIndex):
-                if case let .liveLocation(rhsTheme, rhsMessage, rhsDistance, rhsIndex) = rhs, lhsTheme === rhsTheme, areMessagesEqual(lhsMessage, rhsMessage), lhsDistance == rhsDistance, lhsIndex == rhsIndex {
+            case let .liveLocation(lhsTheme, lhsDateTimeFormat, lhsNameDisplayOrder, lhsMessage, lhsDistance, lhsIndex):
+                if case let .liveLocation(rhsTheme, rhsDateTimeFormat, rhsNameDisplayOrder, rhsMessage, rhsDistance, rhsIndex) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsNameDisplayOrder == rhsNameDisplayOrder, areMessagesEqual(lhsMessage, rhsMessage), lhsDistance == rhsDistance, lhsIndex == rhsIndex {
                     return true
                 } else {
                     return false
@@ -100,17 +101,17 @@ private enum LocationViewEntry: Comparable, Identifiable {
                     case .liveLocation:
                         return true
             }
-            case let .liveLocation(_, _, _, lhsIndex):
+            case let .liveLocation(_, _, _, _, _, lhsIndex):
                 switch rhs {
                     case .info, .toggleLiveLocation:
                         return false
-                    case let .liveLocation(_, _, _, rhsIndex):
+                    case let .liveLocation(_, _, _, _, _, rhsIndex):
                         return lhsIndex < rhsIndex
                 }
         }
     }
     
-    func item(account: Account, presentationData: PresentationData, interaction: LocationViewInteraction?) -> ListViewItem {
+    func item(context: AccountContext, presentationData: PresentationData, interaction: LocationViewInteraction?) -> ListViewItem {
         switch self {
             case let .info(_, location, address, distance, time):
                 let addressString: String?
@@ -126,7 +127,7 @@ private enum LocationViewEntry: Comparable, Identifiable {
                     distanceString = nil
                 }
                 let eta = time.flatMap { stringForEstimatedDuration(strings: presentationData.strings, eta: $0) }
-                return LocationInfoListItem(presentationData: ItemListPresentationData(presentationData), account: account, location: location, address: addressString, distance: distanceString, eta: eta, action: {
+                return LocationInfoListItem(presentationData: ItemListPresentationData(presentationData), account: context.account, location: location, address: addressString, distance: distanceString, eta: eta, action: {
                     interaction?.goToCoordinate(location.coordinate)
                 }, getDirections: {
                     interaction?.requestDirections()
@@ -138,7 +139,7 @@ private enum LocationViewEntry: Comparable, Identifiable {
                 } else {
                     beginTimeAndTimeout = nil
                 }
-                return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: account, title: title, subtitle: subtitle, icon: beginTimeAndTimeout != nil ? .stopLiveLocation : .liveLocation, beginTimeAndTimeout: beginTimeAndTimeout, action: {
+                return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: context.account, title: title, subtitle: subtitle, icon: beginTimeAndTimeout != nil ? .stopLiveLocation : .liveLocation, beginTimeAndTimeout: beginTimeAndTimeout, action: {
                     if beginTimeAndTimeout != nil {
                         interaction?.stopLiveLocation()
                     } else if let coordinate = coordinate {
@@ -147,24 +148,18 @@ private enum LocationViewEntry: Comparable, Identifiable {
                 }, highlighted: { highlight in
                     interaction?.updateSendActionHighlight(highlight)
                 })
-            case let .liveLocation(_, message, distance, _):
-                let distanceString: String?
-                if let distance = distance {
-                    distanceString = distance < 10 ? presentationData.strings.Map_YouAreHere : presentationData.strings.Map_DistanceAway(stringForDistance(strings: presentationData.strings, distance: distance)).0
-                } else {
-                    distanceString = nil
-                }
-                return ItemListTextItem(presentationData: ItemListPresentationData(presentationData), text: .plain(""), sectionId: 0)
+            case let .liveLocation(_, dateTimeFormat, nameDisplayOrder, message, distance, _):
+                return LocationLiveListItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: context, message: message, distance: distance, action: {}, longTapAction: {})
         }
     }
 }
 
-private func preparedTransition(from fromEntries: [LocationViewEntry], to toEntries: [LocationViewEntry], account: Account, presentationData: PresentationData, interaction: LocationViewInteraction?) -> LocationViewTransaction {
+private func preparedTransition(from fromEntries: [LocationViewEntry], to toEntries: [LocationViewEntry], context: AccountContext, presentationData: PresentationData, interaction: LocationViewInteraction?) -> LocationViewTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, interaction: interaction), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, interaction: interaction), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, interaction: interaction), directionHint: nil) }
     
     return LocationViewTransaction(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -180,13 +175,13 @@ struct LocationViewState {
     var mapMode: LocationMapMode
     var displayingMapModeOptions: Bool
     var selectedLocation: LocationViewLocation
-    var proximityRadius: Double?
+    var trackingMode: LocationTrackingMode
     
     init() {
         self.mapMode = .map
         self.displayingMapModeOptions = false
         self.selectedLocation = .initial
-        self.proximityRadius = nil
+        self.trackingMode = .none
     }
 }
 
@@ -231,7 +226,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
         self.listNode.verticalScrollIndicatorFollowsOverscroll = true
         
         var setupProximityNotificationImpl: ((Bool) -> Void)?
-        self.headerNode = LocationMapHeaderNode(presentationData: presentationData, toggleMapModeSelection: interaction.toggleMapModeSelection, goToUserLocation: interaction.goToUserLocation, setupProximityNotification: { reset in
+        self.headerNode = LocationMapHeaderNode(presentationData: presentationData, toggleMapModeSelection: interaction.toggleMapModeSelection, goToUserLocation: interaction.toggleTrackingMode, setupProximityNotification: { reset in
             setupProximityNotificationImpl?(reset)
         })
         self.headerNode.mapNode.isRotateEnabled = false
@@ -304,7 +299,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
         let selfPeer = context.account.postbox.transaction { transaction -> Peer? in
             return transaction.getPeer(context.account.peerId)
         }
-        
+                
         self.disposable = (combineLatest(self.presentationDataPromise.get(), self.statePromise.get(), selfPeer, liveLocations, self.headerNode.mapNode.userLocation, userLocation, address, eta)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, selfPeer, liveLocations, userLocation, distance, address, eta in
             if let strongSelf = self, let location = getLocation(from: subject) {
@@ -316,6 +311,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                 
                 var proximityNotification: Bool? = nil
+                var proximityNotificationRadius: Int32?
                 var index: Int = 0
                 
                 if location.liveBroadcastingTimeout == nil {
@@ -330,15 +326,14 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     for message in effectiveLiveLocations {
                         if message.localTags.contains(.OutgoingLiveLocation) {
                             activeOwnLiveLocation = message
+                            if let location = getLocation(from: message), let radius = location.liveProximityNotificationRadius {
+                                proximityNotificationRadius = radius
+                                proximityNotification = true
+                            }
                             break
                         }
                     }
-                    
-                    if let activeOwnLiveLocation = activeOwnLiveLocation, let ownLiveLocationStartedAction = strongSelf.ownLiveLocationStartedAction {
-                        strongSelf.ownLiveLocationStartedAction = nil
-                        ownLiveLocationStartedAction(activeOwnLiveLocation.id)
-                    }
-                    
+                                        
                     let title: String
                     let subtitle: String
                     let beginTime: Double?
@@ -369,7 +364,10 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                         timeout = nil
                     }
                     
-                    entries.append(.toggleLiveLocation(presentationData.theme, title, subtitle, userLocation?.coordinate, beginTime, timeout))
+                    if let channel = subject.author as? TelegramChannel, case .broadcast = channel.info {
+                    } else {
+                        entries.append(.toggleLiveLocation(presentationData.theme, title, subtitle, userLocation?.coordinate, beginTime, timeout))
+                    }
                     
                     var sortedLiveLocations: [Message] = []
                     
@@ -388,40 +386,43 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     }
                     effectiveLiveLocations = sortedLiveLocations
                 }
-                                
+                        
                 for message in effectiveLiveLocations {
                     var liveBroadcastingTimeout: Int32 = 0
                     if let location = getLocation(from: message), let timeout = location.liveBroadcastingTimeout {
                         liveBroadcastingTimeout = timeout
                     }
                     let remainingTime = max(0, message.timestamp + liveBroadcastingTimeout - currentTime)
-                    if message.flags.contains(.Incoming) && remainingTime != 0 {
-                        proximityNotification = state.proximityRadius != nil
+                    if message.flags.contains(.Incoming) && remainingTime != 0 && proximityNotification == nil {
+                        proximityNotification = false
                     }
                     
                     let subjectLocation = CLLocation(latitude: location.latitude, longitude: location.longitude)
                     let distance = userLocation.flatMap { subjectLocation.distance(from: $0) }
-                    entries.append(.liveLocation(presentationData.theme, message, distance, index))
                     
                     if message.localTags.contains(.OutgoingLiveLocation), let selfPeer = selfPeer {
                         userAnnotation = LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer, heading: location.heading)
                     } else {
                         annotations.append(LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer, heading: location.heading))
+                        entries.append(.liveLocation(presentationData.theme, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, message, distance, index))
                     }
                     index += 1
                 }
                 
-                if subject.id.peerId.namespace != Namespaces.Peer.CloudUser {
-                    proximityNotification = state.proximityRadius != nil
+                if subject.id.peerId.namespace != Namespaces.Peer.CloudUser, proximityNotification == nil {
+                    proximityNotification = false
+                }
+                if let channel = subject.author as? TelegramChannel, case .broadcast = channel.info {
+                    proximityNotification = nil
                 }
                 
                 let previousEntries = previousEntries.swap(entries)
                 let previousState = previousState.swap(state)
                         
-                let transition = preparedTransition(from: previousEntries ?? [], to: entries, account: context.account, presentationData: presentationData, interaction: strongSelf.interaction)
+                let transition = preparedTransition(from: previousEntries ?? [], to: entries, context: context, presentationData: presentationData, interaction: strongSelf.interaction)
                 strongSelf.enqueueTransition(transition)
                 
-                strongSelf.headerNode.updateState(mapMode: state.mapMode, displayingMapModeOptions: state.displayingMapModeOptions, displayingPlacesButton: false, proximityNotification: proximityNotification, animated: false)
+                strongSelf.headerNode.updateState(mapMode: state.mapMode, trackingMode: state.trackingMode, displayingMapModeOptions: state.displayingMapModeOptions, displayingPlacesButton: false, proximityNotification: proximityNotification, animated: false)
                 
                 if let proximityNotification = proximityNotification, !proximityNotification && !strongSelf.displayedProximityAlertTooltip {
                     strongSelf.displayedProximityAlertTooltip = true
@@ -452,7 +453,8 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     case .custom:
                         break
                 }
-
+                strongSelf.headerNode.mapNode.trackingMode = state.trackingMode
+                
                 let previousAnnotations = previousAnnotations.swap(annotations)
                 let previousUserAnnotation = previousUserAnnotation.swap(userAnnotation)
                 if (userAnnotation == nil) != (previousUserAnnotation == nil) {
@@ -462,8 +464,11 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     strongSelf.headerNode.mapNode.annotations = annotations
                 }
                 
-                strongSelf.headerNode.mapNode.activeProximityRadius = state.proximityRadius
-                
+                if let _ = proximityNotification {
+                    strongSelf.headerNode.mapNode.activeProximityRadius = proximityNotificationRadius.flatMap { Double($0)  }
+                } else {
+                    strongSelf.headerNode.mapNode.activeProximityRadius = nil
+                }
                 let rightBarButtonAction: LocationViewRightBarButton
                 if location.liveBroadcastingTimeout != nil {
                     if liveLocations.count > 1 {
@@ -520,6 +525,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 var state = state
                 state.displayingMapModeOptions = false
                 state.selectedLocation = .custom
+                state.trackingMode = .none
                 return state
             }
         }
@@ -592,6 +598,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 self.updateState { state in
                     var state = state
                     state.selectedLocation = .coordinate(coordinate, true)
+                    state.trackingMode = .none
                     return state
                 }
             }
@@ -603,13 +610,12 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
             self.updateState { state in
                 var state = state
                 state.selectedLocation = .user
+                state.trackingMode = .none
                 return state
             }
         }
     }
     
-    var ownLiveLocationStartedAction: ((MessageId) -> Void)?
-
     func showAll() {
         self.headerNode.mapNode.showAll()
     }
@@ -687,5 +693,6 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
         let optionsFrame = CGRect(x: 0.0, y: optionsOffset, width: layout.size.width, height: optionsHeight)
         transition.updateFrame(node: self.optionsNode, frame: optionsFrame)
         self.optionsNode.updateLayout(size: optionsFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+        self.optionsNode.isUserInteractionEnabled = self.state.displayingMapModeOptions
     }
 }

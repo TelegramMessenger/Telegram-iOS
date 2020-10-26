@@ -211,6 +211,8 @@ framework(
         "//submodules/ChatInterfaceState:ChatInterfaceState",
         "//submodules/AnimatedCountLabelNode:AnimatedCountLabelNode",
         "//submodules/AnimatedAvatarSetNode:AnimatedAvatarSetNode",
+        "//submodules/SlotMachineAnimationNode:SlotMachineAnimationNode",
+        "//submodules/AnimatedNavigationStripeNode:AnimatedNavigationStripeNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

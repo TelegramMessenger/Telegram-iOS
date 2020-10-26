@@ -20,6 +20,42 @@ public enum PrefetchMediaItem {
     case animatedEmojiSticker(TelegramMediaFile)
 }
 
+private struct AnimatedEmojiSoundsConfiguration {
+    static var defaultValue: AnimatedEmojiSoundsConfiguration {
+        return AnimatedEmojiSoundsConfiguration(sounds: [:])
+    }
+    
+    public let sounds: [String: TelegramMediaFile]
+    
+    fileprivate init(sounds: [String: TelegramMediaFile]) {
+        self.sounds = sounds
+    }
+    
+    static func with(appConfiguration: AppConfiguration) -> AnimatedEmojiSoundsConfiguration {
+        if let data = appConfiguration.data, let values = data["emojies_sounds"] as? [String: Any] {
+            var sounds: [String: TelegramMediaFile] = [:]
+            for (key, value) in values {
+                if let dict = value as? [String: String], var fileReferenceString = dict["file_reference_base64"] {
+                    fileReferenceString = fileReferenceString.replacingOccurrences(of: "-", with: "+")
+                    fileReferenceString = fileReferenceString.replacingOccurrences(of: "_", with: "/")
+                    while fileReferenceString.count % 4 != 0 {
+                        fileReferenceString.append("=")
+                    }
+                    
+                    if let idString = dict["id"], let id = Int64(idString), let accessHashString = dict["access_hash"], let accessHash = Int64(accessHashString), let fileReference = Data(base64Encoded: fileReferenceString) {
+                        let resource = CloudDocumentMediaResource(datacenterId: 0, fileId: id, accessHash: accessHash, size: nil, fileReference: fileReference, fileName: nil)
+                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: nil, attributes: [])
+                        sounds[key] = file
+                    }
+                }
+            }
+            return AnimatedEmojiSoundsConfiguration(sounds: sounds)
+        } else {
+            return .defaultValue
+        }
+    }
+}
+
 private final class PrefetchManagerImpl {
     private let queue: Queue
     private let account: Account
@@ -45,34 +81,48 @@ private final class PrefetchManagerImpl {
         }
         |> distinctUntilChanged
         
-        let orderedPreloadMedia = account.viewTracker.orderedPreloadMedia
-        |> mapToSignal { orderedPreloadMedia in
-            return loadedStickerPack(postbox: account.postbox, network: account.network, reference: .animatedEmoji, forceActualized: false)
-            |> map { result -> [PrefetchMediaItem] in
-                let chatHistoryMediaItems = orderedPreloadMedia.map { PrefetchMediaItem.chatHistory($0) }
-                switch result {
-                    case let .result(_, items, _):
-                        var animatedEmojiStickers: [String: StickerPackItem] = [:]
-                        for case let item as StickerPackItem in items {
-                            if let emoji = item.getStringRepresentationsOfIndexKeys().first {
-                                animatedEmojiStickers[emoji.basicEmoji.0] = item
+        let appConfiguration = account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+        |> take(1)
+        |> map { view in
+            return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+        }
+        
+        let orderedPreloadMedia = combineLatest(account.viewTracker.orderedPreloadMedia, loadedStickerPack(postbox: account.postbox, network: account.network, reference: .animatedEmoji, forceActualized: false), appConfiguration)
+        |> map { orderedPreloadMedia, stickerPack, appConfiguration -> [PrefetchMediaItem] in
+            let emojiSounds = AnimatedEmojiSoundsConfiguration.with(appConfiguration: appConfiguration)
+            let chatHistoryMediaItems = orderedPreloadMedia.map { PrefetchMediaItem.chatHistory($0) }
+            var stickerItems: [PrefetchMediaItem] = []
+            
+            var prefetchItems: [PrefetchMediaItem] = []
+            
+            switch stickerPack {
+                case let .result(_, items, _):
+                    var animatedEmojiStickers: [String: StickerPackItem] = [:]
+                    for case let item as StickerPackItem in items {
+                        if let emoji = item.getStringRepresentationsOfIndexKeys().first {
+                            animatedEmojiStickers[emoji.basicEmoji.0] = item
+                        }
+                    }
+                    
+                    let popularEmoji = ["\u{2764}", "👍", "😳", "😒", "🥳"]
+                    for emoji in popularEmoji {
+                        if let sticker = animatedEmojiStickers[emoji] {
+                            if let _ = account.postbox.mediaBox.completedResourcePath(sticker.file.resource) {
+                            } else {
+                                stickerItems.append(.animatedEmojiSticker(sticker.file))
                             }
                         }
-                        var stickerItems: [PrefetchMediaItem] = []
-                        let popularEmoji = ["\u{2764}", "👍", "😳", "😒", "🥳"]
-                        for emoji in popularEmoji {
-                            if let sticker = animatedEmojiStickers[emoji] {
-                                if let _ = account.postbox.mediaBox.completedResourcePath(sticker.file.resource) {
-                                } else {
-                                    stickerItems.append(.animatedEmojiSticker(sticker.file))
-                                }
-                            }
-                        }
-                        return stickerItems + chatHistoryMediaItems
-                    default:
-                        return chatHistoryMediaItems
-                }
+                    }
+                    return stickerItems
+                default:
+                    break
             }
+            
+            prefetchItems.append(contentsOf: chatHistoryMediaItems)
+            prefetchItems.append(contentsOf: stickerItems)
+            prefetchItems.append(contentsOf: emojiSounds.sounds.values.map { .animatedEmojiSticker($0) })
+            
+            return prefetchItems
         }
         
         self.listDisposable = (combineLatest(orderedPreloadMedia, sharedContext.automaticMediaDownloadSettings, networkType)

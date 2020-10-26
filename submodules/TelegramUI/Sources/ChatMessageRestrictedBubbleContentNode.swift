@@ -22,7 +22,7 @@ class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNode {
         self.textNode.isUserInteractionEnabled = false
         self.textNode.contentMode = .topLeft
         self.textNode.contentsScale = UIScreenScale
-        self.textNode.displaysAsynchronously = true
+        self.textNode.displaysAsynchronously = false
         self.addSubnode(self.textNode)
     }
     

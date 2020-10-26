@@ -344,6 +344,16 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         canPin = false
     }
     
+    if let peer = messages[0].peers[messages[0].id.peerId] {
+        if peer.isDeleted {
+            canPin = false
+        }
+        if !(peer is TelegramSecretChat) && messages[0].id.namespace != Namespaces.Message.Cloud {
+            canPin = false
+            canReply = false
+        }
+    }
+    
     var loadStickerSaveStatusSignal: Signal<Bool?, NoError> = .single(nil)
     if loadStickerSaveStatus != nil {
         loadStickerSaveStatusSignal = context.account.postbox.transaction { transaction -> Bool? in
@@ -591,22 +601,24 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         
         var threadId: Int64?
         var threadMessageCount: Int = 0
-        if case .peer = chatPresentationInterfaceState.chatLocation, let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .group = channel.info, let cachedData = cachedData as? CachedChannelData, case let .known(maybeValue) = cachedData.linkedDiscussionPeerId, let _ = maybeValue {
-            if let value = messages[0].threadId {
-                threadId = value
+        if case .peer = chatPresentationInterfaceState.chatLocation, let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .group = channel.info {
+            if let cachedData = cachedData as? CachedChannelData, case let .known(maybeValue) = cachedData.linkedDiscussionPeerId, let _ = maybeValue {
+                if let value = messages[0].threadId {
+                    threadId = value
+                } else {
+                    for attribute in messages[0].attributes {
+                        if let attribute = attribute as? ReplyThreadMessageAttribute, attribute.count > 0 {
+                            threadId = makeMessageThreadId(messages[0].id)
+                            threadMessageCount = Int(attribute.count)
+                        }
+                    }
+                }
             } else {
                 for attribute in messages[0].attributes {
                     if let attribute = attribute as? ReplyThreadMessageAttribute, attribute.count > 0 {
                         threadId = makeMessageThreadId(messages[0].id)
                         threadMessageCount = Int(attribute.count)
                     }
-                }
-            }
-        } else {
-            for attribute in messages[0].attributes {
-                if let attribute = attribute as? ReplyThreadMessageAttribute, attribute.count > 0 {
-                    threadId = makeMessageThreadId(messages[0].id)
-                    threadMessageCount = Int(attribute.count)
                 }
             }
         }
@@ -682,9 +694,8 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             } else {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_Pin, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Pin"), color: theme.actionSheet.primaryTextColor)
-                }, action: { _, f in
-                    interfaceInteraction.pinMessage(messages[0].id)
-                    f(.dismissWithoutContent)
+                }, action: { c, _ in
+                    interfaceInteraction.pinMessage(messages[0].id, c)
                 })))
             }
         }
@@ -844,7 +855,8 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                     views = attribute.count
                 }
             }
-            if views >= 100 {
+            
+            if let cachedData = cachedData as? CachedChannelData, cachedData.flags.contains(.canViewStats), views >= 100 {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextViewStats, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.actionSheet.primaryTextColor)
                 }, action: { c, _ in
@@ -1130,7 +1142,7 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                         if canDeleteGlobally {
                             optionsMap[id]!.insert(.deleteGlobally)
                         }
-                        if user.botInfo != nil && !user.id.isReplies {
+                        if user.botInfo != nil && !user.id.isReplies && !isAction {
                             optionsMap[id]!.insert(.report)
                         }
                     } else if let _ = peer as? TelegramSecretChat {

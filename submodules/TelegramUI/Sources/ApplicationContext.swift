@@ -361,7 +361,7 @@ final class AuthorizedApplicationContext {
                                         
                                         var processed = false
                                         for media in firstMessage.media {
-                                            if let action = media as? TelegramMediaAction, case let .geoProximityReached(distance) = action.action {
+                                            if let action = media as? TelegramMediaAction, case let .geoProximityReached(fromId, toId, distance) = action.action {
                                                 strongSelf.context.sharedContext.openLocationScreen(context: strongSelf.context, messageId: firstMessage.id, navigationController: strongSelf.rootController)
                                                 processed = true
                                                 break

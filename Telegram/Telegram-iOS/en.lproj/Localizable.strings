@@ -65,22 +65,9 @@
 "PUSH_CHANNEL_MESSAGE_GEOLIVE" = "%1$@|posted a live location";
 "PUSH_CHANNEL_MESSAGE_GIF" = "%1$@|posted a GIF";
 
-"PUSH_PINNED_TEXT" = "%1$@ pinned \"%2$@\" ";
-"PUSH_PINNED_NOTEXT" = "%1$@ pinned a message";
-"PUSH_PINNED_PHOTO" = "%1$@ pinned a photo";
-"PUSH_PINNED_VIDEO" = "%1$@ pinned a video";
-"PUSH_PINNED_ROUND" = "%1$@ pinned a video message";
-"PUSH_PINNED_DOC" = "%1$@ pinned a file";
-"PUSH_PINNED_STICKER" = "%1$@ pinned a %2$@sticker";
-"PUSH_PINNED_AUDIO" = "%1$@ pinned a voice message";
-"PUSH_PINNED_GEO" = "%1$@ pinned a map";
-"PUSH_PINNED_GEOLIVE" = "%1$@ pinned a live location";
-"PUSH_PINNED_GIF" = "%1$@ pinned a GIF";
-
 "PUSH_MESSAGE_GAME" = "%1$@|invited you to play %2$@";
 "PUSH_CHANNEL_MESSAGE_GAME" = "%1$@|invited you to play %2$@";
 "PUSH_CHAT_MESSAGE_GAME" = "%2$@|%1$@ invited the group to play %3$@";
-"PUSH_PINNED_GAME" = "%1$@ pinned a game";
 
 "PUSH_MESSAGE_TEXT" = "%1$@|%2$@";
 "PUSH_MESSAGE_NOTEXT" = "%1$@|sent you a message";
@@ -117,6 +104,10 @@
 "PUSH_MESSAGES_1" = "%1$@|sent you a message";
 "PUSH_MESSAGES_any" = "%1$@|sent you %2$d messages";
 "PUSH_ALBUM" = "%1$@|sent you an album";
+"PUSH_MESSAGE_DOCS" = "%1$@|sent you %2$d files";
+"PUSH_MESSAGE_DOCS_1" = "%1$@|sent you a file";
+"PUSH_MESSAGE_DOCS_any" = "%1$@|sent you %2$d files";
+
 
 "PUSH_CHANNEL_MESSAGE_TEXT" = "%1$@|%2$@";
 "PUSH_CHANNEL_MESSAGE_NOTEXT" = "%1$@|posted a message";
@@ -149,6 +140,9 @@
 "PUSH_CHANNEL_MESSAGES_1" = "%1$@|posted a message";
 "PUSH_CHANNEL_MESSAGES_any" = "%1$@|posted %2$d messages";
 "PUSH_CHANNEL_ALBUM" = "%1$@|posted an album";
+"PUSH_CHANNEL_MESSAGE_DOCS" = "%1$@|posted %2$d files";
+"PUSH_CHANNEL_MESSAGE_DOCS_1" = "%1$@|posted a file";
+"PUSH_CHANNEL_MESSAGE_DOCS_any" = "%1$@|posted %2$d files";
 
 "PUSH_CHAT_MESSAGE_TEXT" = "%2$@|%1$@:%3$@";
 "PUSH_CHAT_MESSAGE_NOTEXT" = "%2$@|%1$@ sent a message to the group";
@@ -191,6 +185,9 @@
 "PUSH_CHAT_MESSAGES_1" = "%2$@|%1$@ sent a message";
 "PUSH_CHAT_MESSAGES_any" = "%2$@|%1$@ sent %3$d messages";
 "PUSH_CHAT_ALBUM" = "%2$@|%1$@ sent an album";
+"PUSH_CHAT_MESSAGE_DOCS" = "%2$@|%1$@ sent %3$d files";
+"PUSH_CHAT_MESSAGE_DOCS_1" = "%2$@|%1$@ sent a file";
+"PUSH_CHAT_MESSAGE_DOCS_any" = "%2$@|%1$@ sent %3$d files";
 
 "PUSH_PINNED_TEXT" = "%1$@|pinned \"%2$@\" ";
 "PUSH_PINNED_NOTEXT" = "%1$@|pinned a message";
@@ -1954,6 +1951,7 @@
 "Message.PinnedStickerMessage" = "pinned sticker";
 "Message.PinnedLocationMessage" = "pinned location";
 "Message.PinnedContactMessage" = "pinned contact";
+"Message.PinnedGenericMessage" = "%@ pinned a message";
 
 "Notification.PinnedMessage" = "pinned message";
 
@@ -5822,7 +5820,7 @@ Any member of this group will be able to see messages in the channel.";
 
 "Conversation.ContextViewStats" = "View Statistics";
 
-"ChatList.MessageMusic_1" = "1 Music File";
+"ChatList.MessageMusic_1" = "%@ Music File";
 "ChatList.MessageMusic_any" = "%@ Music Files";
 
 "Conversation.PinOlderMessageAlertTitle" = "Pin Message";
@@ -5840,7 +5838,8 @@ Any member of this group will be able to see messages in the channel.";
 
 "Conversation.Dice.u1F3B0" = "Send a slot machine emoji to try your luck.";
 
-"Notification.ProximityReached" = "%1$@ is now within %2$@ from you";
+"Notification.ProximityReached" = "%1$@ is now within %2$@ from %3$@";
+"Notification.ProximityReachedYou" = "%1$@ is now within %2$@ from you";
 
 "Location.ProximityNotification.Title" = "Notification";
 "Location.ProximityNotification.Notify" = "Notify me within %@";
@@ -5848,24 +5847,37 @@ Any member of this group will be able to see messages in the channel.";
 "Location.ProximityNotification.DistanceKM" = "KM";
 "Location.ProximityNotification.DistanceMI" = "MI";
 
-"Location.LiveLocationRequired.Title" = "Share Location";
-"Location.LiveLocationRequired.Description" = "For the alert to work, please share your live location in this chat.";
-"Location.LiveLocationRequired.ShareLocation" = "Share Location";
-
 "Location.ProximityTip" = "Alert when %@ is close";
 "Location.ProximityGroupTip" = "Alert when any group member is close";
+
+"ChatList.MessageFiles_1" = "%@ File";
+"ChatList.MessageFiles_any" = "%@ Files";
 
 "Chat.TitlePinnedMessages_1" = "Pinned Message";
 "Chat.TitlePinnedMessages_any" = "%@ Pinned Messages";
 
 "Chat.PanelHidePinnedMessages" = "Don't Show Pinned Messages";
-"Chat.PanelUnpinAllMessages_1" = "Unpin Message";
-"Chat.PanelUnpinAllMessages_any" = "Unpin All %@ Messages";
-"Chat.UnpinAllMessagesConfirmation_1" = "Do you want to unpin 1 message in this chat?";
-"Chat.UnpinAllMessagesConfirmation_any" = "Do you want to unpin all %@ messages in this chat?";
+"Chat.PanelUnpinAllMessages" = "Unpin All Messages";
 
 "Chat.MessagesUnpinned_1" = "Message Unpinned";
 "Chat.MessagesUnpinned_any" = "%@ Messages Unpinned";
 
 "Chat.PinnedMessagesHiddenTitle" = "Pinned Messages Hidden";
 "Chat.PinnedMessagesHiddenText" = "You will see the bar with pinned messages only if a new message is pinned.";
+
+"OpenFile.PotentiallyDangerousContentAlert" = "Previewing this file can potentially expose your IP address to its sender. Continue?";
+
+"Chat.PinnedListPreview.ShowAllMessages" = "Show All Messages";
+"Chat.PinnedListPreview.UnpinAllMessages" = "Unpin All Messages";
+"Chat.PinnedListPreview.HidePinnedMessages" = "Hide Pinned Messages";
+
+"Conversation.PinMessagesForMe" = "Pin for me";
+"Conversation.PinMessagesFor" = "Pin for me and %@";
+
+"Location.LiveLocationRequired.Title" = "Share Location";
+"Location.LiveLocationRequired.Description" = "For the alert to work, please share your live location in this chat.";
+"Location.LiveLocationRequired.ShareLocation" = "Share Location";
+
+"Stats.Message.Views" = "Views";
+"Stats.Message.PublicShares" = "Public Shares";
+"Stats.Message.PrivateShares" = "Private Shares";

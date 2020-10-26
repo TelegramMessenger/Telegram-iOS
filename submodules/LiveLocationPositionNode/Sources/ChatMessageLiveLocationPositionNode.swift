@@ -78,7 +78,7 @@ private func generateHeadingArrowImage() -> UIImage? {
 
 public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
     public enum Mode {
-        case liveLocation(peer: Peer, active: Bool, latitude: Double, longitude: Double, heading: Double?)
+        case liveLocation(peer: Peer, active: Bool, latitude: Double, longitude: Double, heading: Int32?)
         case location(TelegramMediaMap?)
     }
     
@@ -152,7 +152,7 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
                     backgroundImage = avatarBackgroundImage
                     hasPulse = active
                     coordinate = (latitude, longitude)
-                    heading = headingValue
+                    heading = headingValue.flatMap { Double($0) }
                 case let .location(location):
                     let venueType = location?.venue?.type ?? ""
                     let color = venueType.isEmpty ? theme.list.itemAccentColor : venueIconColor(type: venueType)
@@ -166,7 +166,6 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
                 return degrees * Double.pi / 180.0
             }
 
-            
             if heading == nil, let currentCoordinate = currentCoordinate, let coordinate = coordinate {
                 let lat1 = degToRad(currentCoordinate.0)
                 let lon1 = degToRad(currentCoordinate.1)

@@ -5,9 +5,11 @@ import Postbox
 import SyncCore
 import TelegramCore
 import SwiftSignalKit
-import AccountContext
 import StickerResources
 import ManagedAnimationNode
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
+import AppBundle
 
 private struct SlotMachineValue {
     enum ReelValue {
@@ -137,27 +139,32 @@ private func rightReelAnimationItem(value: SlotMachineValue.ReelValue, immediate
     }
 }
 
-final class SlotMachineAnimationNode: ASDisplayNode, GenericAnimatedStickerNode {
-    private let context: AccountContext
+public enum ManagedSlotMachineAnimationState: Equatable {
+    case rolling
+    case value(Int32, Bool)
+}
 
+public final class SlotMachineAnimationNode: ASDisplayNode {
     private let backNode: ManagedAnimationNode
     private let leftReelNode: ManagedAnimationNode
     private let centerReelNode: ManagedAnimationNode
     private let rightReelNode: ManagedAnimationNode
     private let frontNode: ManagedAnimationNode
     
-    private var diceState: ManagedDiceAnimationState? = nil
+    private var diceState: ManagedSlotMachineAnimationState? = nil
     private let disposables = DisposableSet()
-    
-    init(context: AccountContext) {
-        self.context = context
         
-        let size = CGSize(width: 184.0, height: 184.0)
-        self.backNode = ManagedAnimationNode(size: size)
-        self.leftReelNode = ManagedAnimationNode(size: size)
-        self.centerReelNode = ManagedAnimationNode(size: size)
-        self.rightReelNode = ManagedAnimationNode(size: size)
-        self.frontNode = ManagedAnimationNode(size: size)
+    private let animationSize: CGSize
+    
+    public var success: ((Bool) -> Void)?
+    
+    public init(size: CGSize = CGSize(width: 184.0, height: 184.0)) {
+        self.animationSize = size
+        self.backNode = ManagedAnimationNode(size: self.animationSize)
+        self.leftReelNode = ManagedAnimationNode(size: self.animationSize)
+        self.centerReelNode = ManagedAnimationNode(size: self.animationSize)
+        self.rightReelNode = ManagedAnimationNode(size: self.animationSize)
+        self.frontNode = ManagedAnimationNode(size: self.animationSize)
         
         super.init()
         
@@ -172,7 +179,7 @@ final class SlotMachineAnimationNode: ASDisplayNode, GenericAnimatedStickerNode 
         self.disposables.dispose()
     }
     
-    override func layout() {
+    public override func layout() {
         super.layout()
         
         self.backNode.frame = self.bounds
@@ -182,7 +189,7 @@ final class SlotMachineAnimationNode: ASDisplayNode, GenericAnimatedStickerNode 
         self.frontNode.frame = self.bounds
     }
     
-    func setState(_ diceState: ManagedDiceAnimationState) {
+    public func setState(_ diceState: ManagedSlotMachineAnimationState) {
         let previousState = self.diceState
         self.diceState = diceState
                 
@@ -195,6 +202,7 @@ final class SlotMachineAnimationNode: ASDisplayNode, GenericAnimatedStickerNode 
                             if slotValue.isThreeOfSame {
                                 Queue.mainQueue().after(1.5) {
                                     self.backNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Back_Win"), loop: false))
+                                    self.success?(!slotValue.is777)
                                 }
                             } else {
                                 self.backNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Back_Win"), frames: .still(.start), loop: false))
@@ -219,10 +227,10 @@ final class SlotMachineAnimationNode: ASDisplayNode, GenericAnimatedStickerNode 
                     }
             }
         } else {
+            self.backNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Back_Win"), frames: .still(.start), loop: false))
+            
             switch diceState {
                 case let .value(value, immediate):
-                    self.backNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Back_Win"), frames: .still(.start), loop: false))
-                    
                     let slotValue = SlotMachineValue(rawValue: value)
                     self.leftReelNode.trackTo(item: leftReelAnimationItem(value: slotValue.left, immediate: immediate))
                     self.centerReelNode.trackTo(item: centerReelAnimationItem(value: slotValue.center, immediate: immediate))
@@ -231,12 +239,105 @@ final class SlotMachineAnimationNode: ASDisplayNode, GenericAnimatedStickerNode 
                     let frames: ManagedAnimationFrameRange? = immediate ? .still(.end) : nil
                     self.frontNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Front_Pull"), frames: frames, loop: false))
                 case .rolling:
-                    self.backNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Back_Win"), frames: .still(.start), loop: false))
                     self.leftReelNode.trackTo(item: leftReelAnimationItem(value: .rolling))
                     self.centerReelNode.trackTo(item: centerReelAnimationItem(value: .rolling))
                     self.rightReelNode.trackTo(item: rightReelAnimationItem(value: .rolling))
                     self.frontNode.trackTo(item: ManagedAnimationItem(source: .local("Slot_Front_Pull"), loop: false))
             }
         }
+    }
+}
+
+class DiceAnimatedStickerNode: ASDisplayNode {
+    public let intrinsicSize: CGSize
+    
+    private let animationNode: AnimatedStickerNode
+    
+    public var state: ManagedAnimationState?
+    public var trackStack: [ManagedAnimationItem] = []
+    public var didTryAdvancingState = false
+    
+    init(size: CGSize) {
+        self.intrinsicSize = size
+        
+        self.animationNode = AnimatedStickerNode()
+        self.animationNode.visibility = true
+        
+        super.init()
+        
+        self.addSubnode(self.animationNode)
+        
+        self.animationNode.completed = { [weak self] willStop in
+            guard let strongSelf = self, !strongSelf.didTryAdvancingState, let state = strongSelf.state else {
+                return
+            }
+            
+            if state.item.loop && strongSelf.trackStack.isEmpty {
+                
+            } else {
+                strongSelf.didTryAdvancingState = true
+                strongSelf.advanceState()
+            }
+        }
+    }
+    
+    private func advanceState() {
+        guard !self.trackStack.isEmpty else {
+            return
+        }
+        
+        let item = self.trackStack.removeFirst()
+        
+        if let state = self.state, state.item.source == item.source {
+            self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: state)
+        } else {
+            self.state = ManagedAnimationState(displaySize: self.intrinsicSize, item: item, current: nil)
+        }
+        
+        var source: AnimatedStickerNodeSource?
+        switch item.source {
+            case let .local(animationName):
+                if let path = getAppBundle().path(forResource: animationName, ofType: "tgs") {
+                    source = AnimatedStickerNodeLocalFileSource(path: path)
+                }
+            case let .resource(account, resource):
+                source = AnimatedStickerResourceSource(account: account, resource: resource)
+        }
+        
+        let playbackMode: AnimatedStickerPlaybackMode
+        if item.loop {
+            playbackMode = .loop
+        } else if let frames = item.frames, case let .still(position) = frames {
+            playbackMode = .still(position == .start ? .start : .end)
+        } else {
+            playbackMode = .once
+        }
+        
+        if let source = source {
+            self.animationNode.setup(source: source, width: Int(self.intrinsicSize.width), height: Int(self.intrinsicSize.height), playbackMode: playbackMode, mode: .direct(cachePathPrefix: nil))
+        }
+        
+        self.didTryAdvancingState = false
+    }
+    
+    func trackTo(item: ManagedAnimationItem) {
+        if let currentItem = self.state?.item {
+            if currentItem.source == item.source && currentItem.frames == item.frames && currentItem.loop == item.loop {
+                return
+            }
+        }
+        self.trackStack.append(item)
+        self.didTryAdvancingState = false
+        
+        if !self.animationNode.isPlaying {
+            self.advanceState()
+        }
+    }
+    
+    override func layout() {
+        super.layout()
+        
+        self.animationNode.updateLayout(size: self.bounds.size)
+        self.animationNode.frame = self.bounds
     }
 }

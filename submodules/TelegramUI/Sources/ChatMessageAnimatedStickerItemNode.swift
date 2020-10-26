@@ -19,6 +19,7 @@ import TelegramAnimatedStickerNode
 import Emoji
 import Markdown
 import ManagedAnimationNode
+import SlotMachineAnimationNode
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -29,6 +30,10 @@ protocol GenericAnimatedStickerNode: ASDisplayNode {
 }
 
 extension AnimatedStickerNode: GenericAnimatedStickerNode {
+    
+}
+
+extension SlotMachineAnimationNode: GenericAnimatedStickerNode {
     
 }
 
@@ -55,7 +60,7 @@ class ChatMessageShareButton: HighlightableButtonNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(presentationData: ChatPresentationData, chatLocation: ChatLocation, message: Message, account: Account) -> CGSize {
+    func update(presentationData: ChatPresentationData, chatLocation: ChatLocation, subject: ChatControllerSubject?, message: Message, account: Account) -> CGSize {
         var isReplies = false
         var replyCount = 0
         if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
@@ -79,7 +84,9 @@ class ChatMessageShareButton: HighlightableButtonNode {
             let graphics = PresentationResourcesChat.additionalGraphics(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
             var updatedShareButtonBackground: UIImage?
             var updatedIconImage: UIImage?
-            if isReplies {
+            if case .pinnedMessages = subject {
+                updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
+            } else if isReplies {
                 updatedShareButtonBackground = PresentationResourcesChat.chatFreeCommentButtonBackground(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                 updatedIconImage = PresentationResourcesChat.chatFreeCommentButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             } else if message.id.peerId.isRepliesOrSavedMessages(accountPeerId: account.peerId) {
@@ -328,14 +335,21 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         if let telegramDice = self.telegramDice {
             if telegramDice.emoji == "🎰" {
-                let animationNode = SlotMachineAnimationNode(context: item.context)
+                let animationNode = SlotMachineAnimationNode()
+                if !item.message.effectivelyIncoming(item.context.account.peerId) {
+                    animationNode.success = { [weak self] onlyHaptic in
+                        if let strongSelf = self, let item = strongSelf.item {
+                            item.controllerInteraction.animateDiceSuccess(onlyHaptic)
+                        }
+                    }
+                }
                 self.animationNode = animationNode
             } else {
                 let animationNode = ManagedDiceAnimationNode(context: item.context, emoji: telegramDice.emoji.strippedEmoji)
                 if !item.message.effectivelyIncoming(item.context.account.peerId) {
                     animationNode.success = { [weak self] in
                         if let strongSelf = self, let item = strongSelf.item {
-                            item.controllerInteraction.animateDiceSuccess()
+                            item.controllerInteraction.animateDiceSuccess(false)
                         }
                     }
                 }
@@ -431,7 +445,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    func updateVisibility() {
+    private func updateVisibility() {
         guard let item = self.item else {
             return
         }
@@ -595,7 +609,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
             
             var needShareButton = false
-            if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
+            if case .pinnedMessages = item.associatedData.subject {
+                needShareButton = true
+            } else if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
                 needShareButton = false
             } else if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                 for attribute in item.content.firstMessage.attributes {
@@ -929,7 +945,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             strongSelf.addSubnode(updatedShareButtonNode)
                             updatedShareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
                         }
-                        let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, message: item.message, account: item.context.account)
+                        let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account)
                         updatedShareButtonNode.frame = CGRect(origin: CGPoint(x: updatedImageFrame.maxX + 8.0, y: updatedImageFrame.maxY - buttonSize.height - 4.0), size: buttonSize)
                     } else if let shareButtonNode = strongSelf.shareButtonNode {
                         shareButtonNode.removeFromSupernode()
@@ -1088,7 +1104,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+    @objc private func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
         case .ended:
             if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
@@ -1252,8 +1268,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         return nil
     }
     
-    @objc func shareButtonPressed() {
+    @objc private func shareButtonPressed() {
         if let item = self.item {
+            if case .pinnedMessages = item.associatedData.subject {
+                item.controllerInteraction.navigateToMessageStandalone(item.content.firstMessage.id)
+                return
+            }
+            
             if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
                 for attribute in item.message.attributes {
                     if let _ = attribute as? ReplyThreadMessageAttribute {
@@ -1278,7 +1299,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    @objc func swipeToReplyGesture(_ recognizer: ChatSwipeToReplyRecognizer) {
+    @objc private func swipeToReplyGesture(_ recognizer: ChatSwipeToReplyRecognizer) {
         switch recognizer.state {
         case .began:
             self.currentSwipeToReplyTranslation = 0.0
@@ -1458,10 +1479,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
-        if let telegramDice = self.telegramDice, let diceNode = self.animationNode as? ManagedDiceAnimationNode, let item = self.item, item.message.effectivelyIncoming(item.context.account.peerId) {
+        if let telegramDice = self.telegramDice, let item = self.item, item.message.effectivelyIncoming(item.context.account.peerId) {
             if let value = telegramDice.value, value != 0 {
-                diceNode.setState(.rolling)
-                diceNode.setState(.value(value, false))
+                if let diceNode = self.animationNode as? ManagedDiceAnimationNode {
+                    diceNode.setState(.rolling)
+                    diceNode.setState(.value(value, false))
+                } else if let diceNode = self.animationNode as? SlotMachineAnimationNode {
+                    diceNode.setState(.rolling)
+                    diceNode.setState(.value(value, false))
+                }
             }
         }
     }

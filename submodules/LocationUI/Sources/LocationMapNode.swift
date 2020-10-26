@@ -26,6 +26,23 @@ public enum LocationMapMode {
     }
 }
 
+public enum LocationTrackingMode {
+    case none
+    case follow
+    case followWithHeading
+    
+    var userTrackingMode: MKUserTrackingMode {
+        switch self {
+            case .follow:
+                return .follow
+            case .followWithHeading:
+                return .followWithHeading
+            default:
+                return .none
+        }
+    }
+}
+
 private class PickerAnnotationContainerView: UIView {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let result = super.hitTest(point, with: event)
@@ -151,7 +168,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     
     class InvertedProximityCircleRenderer: MKOverlayRenderer {
         var radius: Double = 0.0
-        var fillColor: UIColor = UIColor(rgb: 0x000000, alpha: 0.4)
+        var fillColor: UIColor = UIColor(rgb: 0x000000, alpha: 0.5)
         
         override func draw(_ mapRect: MKMapRect, zoomScale: MKZoomScale, in context: CGContext) {
             guard let overlay = self.overlay as? InvertedProximityCircle else {
@@ -168,7 +185,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
             context.setAlpha(alpha)
             
             let path = UIBezierPath(rect: CGRect(x: mapRect.origin.x, y: mapRect.origin.y, width: mapRect.size.width, height: mapRect.size.height))
-            let radiusInMap = overlay.radius * MKMapPointsPerMeterAtLatitude(overlay.coordinate.latitude)
+            let radiusInMap = overlay.radius * MKMapPointsPerMeterAtLatitude(overlay.coordinate.latitude) * 2.0
             let mapSize: MKMapSize = MKMapSize(width: radiusInMap, height: radiusInMap)
             let regionOrigin = MKMapPoint(overlay.coordinate)
             var regionRect: MKMapRect = MKMapRect(origin: regionOrigin, size: mapSize)
@@ -352,6 +369,12 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         }
     }
     
+    var trackingMode: LocationTrackingMode = .none {
+        didSet {
+            self.mapView?.userTrackingMode = self.trackingMode.userTrackingMode
+        }
+    }
+    
     func setMapCenter(coordinate: CLLocationCoordinate2D, span: MKCoordinateSpan = defaultMapSpan, offset: CGPoint = CGPoint(), isUserLocation: Bool = false, hidePicker: Bool = false, animated: Bool = false) {
         let region = MKCoordinateRegion(center: coordinate, span: span)
         self.ignoreRegionChanges = true
@@ -525,7 +548,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
             subscriber.putCompletion()
             return EmptyDisposable
         }
-        let annotationsPoll = (poll |> then(.complete() |> delay(3.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+        let annotationsPoll = (poll |> then(.complete() |> delay(1.0, queue: Queue.concurrentDefaultQueue()))) |> restart
         
         return combineLatest(self.userLocation, annotationsPoll)
         |> map { userLocation, annotations -> [Double] in
@@ -724,15 +747,21 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         }
         annotations.append(contentsOf: self.annotations)
         
-        var zoomRect: MKMapRect = MKMapRect()
+        var zoomRect: MKMapRect?
         for annotation in annotations {
             let pointRegionRect = MKMapRect(region: MKCoordinateRegion(center: annotation.coordinate, latitudinalMeters: 100, longitudinalMeters: 100))
-            zoomRect = zoomRect.union(pointRegionRect)
+            if let currentZoomRect = zoomRect {
+                zoomRect = currentZoomRect.union(pointRegionRect)
+            } else {
+                zoomRect = pointRegionRect
+            }
         }
         
-        let insets = UIEdgeInsets()
-        zoomRect = mapView.mapRectThatFits(zoomRect, edgePadding: insets)
-        mapView.setVisibleMapRect(zoomRect, animated: animated)
+        if let zoomRect = zoomRect {
+            let insets = UIEdgeInsets(top: 88.0, left: 80.0, bottom: 160.0, right: 80.0)
+            let fittedZoomRect = mapView.mapRectThatFits(zoomRect, edgePadding: insets)
+            mapView.setVisibleMapRect(fittedZoomRect, animated: animated)
+        }
     }
     
     func updateLayout(size: CGSize) {

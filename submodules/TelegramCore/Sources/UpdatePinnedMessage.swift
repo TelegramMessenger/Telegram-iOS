@@ -11,7 +11,7 @@ public enum UpdatePinnedMessageError {
 }
 
 public enum PinnedMessageUpdate {
-    case pin(id: MessageId, silent: Bool)
+    case pin(id: MessageId, silent: Bool, forThisPeerOnlyIfPossible: Bool)
     case clear(id: MessageId)
 }
 
@@ -52,10 +52,13 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
         var flags: Int32 = 0
         let messageId: Int32
         switch update {
-        case let .pin(id, silent):
+        case let .pin(id, silent, forThisPeerOnlyIfPossible):
             messageId = id.id
             if silent {
                 flags |= (1 << 0)
+            }
+            if forThisPeerOnlyIfPossible {
+                flags |= (1 << 2)
             }
         case let .clear(id):
             messageId = id.id
@@ -77,7 +80,7 @@ public func requestUpdatePinnedMessage(account: Account, peerId: PeerId, update:
                         if peerId.namespace == Namespaces.Peer.CloudChannel {
                             let messageId: MessageId
                             switch update {
-                            case let .pin(id, _):
+                            case let .pin(id, _, _):
                                 messageId = id
                             case let .clear(id):
                                 messageId = id

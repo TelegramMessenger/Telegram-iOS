@@ -73,7 +73,7 @@ final class ChatPanelInterfaceInteraction {
     let openSearchResults: () -> Void
     let openCalendarSearch: () -> Void
     let toggleMembersSearch: (Bool) -> Void
-    let navigateToMessage: (MessageId, Bool) -> Void
+    let navigateToMessage: (MessageId, Bool, Bool) -> Void
     let navigateToChat: (PeerId) -> Void
     let navigateToProfile: (PeerId) -> Void
     let openPeerInfo: () -> Void
@@ -94,7 +94,7 @@ final class ChatPanelInterfaceInteraction {
     let setupMessageAutoremoveTimeout: () -> Void
     let sendSticker: (FileMediaReference, ASDisplayNode, CGRect) -> Bool
     let unblockPeer: () -> Void
-    let pinMessage: (MessageId) -> Void
+    let pinMessage: (MessageId, ContextController?) -> Void
     let unpinMessage: (MessageId, Bool) -> Void
     let unpinAllMessages: () -> Void
     let openPinnedList: (MessageId) -> Void
@@ -125,6 +125,7 @@ final class ChatPanelInterfaceInteraction {
     let unarchivePeer: () -> Void
     let scrollToTop: () -> Void
     let viewReplies: (MessageId?, ChatReplyThreadMessage) -> Void
+    let activatePinnedListPreview: (ASDisplayNode, ContextGesture) -> Void
     let statuses: ChatPanelInterfaceInteractionStatuses?
     
     init(
@@ -151,7 +152,7 @@ final class ChatPanelInterfaceInteraction {
         navigateMessageSearch: @escaping (ChatPanelSearchNavigationAction) -> Void,
         openCalendarSearch: @escaping () -> Void,
         toggleMembersSearch: @escaping (Bool) -> Void,
-        navigateToMessage: @escaping (MessageId, Bool) -> Void,
+        navigateToMessage: @escaping (MessageId, Bool, Bool) -> Void,
         navigateToChat: @escaping (PeerId) -> Void,
         navigateToProfile: @escaping (PeerId) -> Void,
         openPeerInfo: @escaping () -> Void,
@@ -172,7 +173,7 @@ final class ChatPanelInterfaceInteraction {
         setupMessageAutoremoveTimeout: @escaping () -> Void,
         sendSticker: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Bool,
         unblockPeer: @escaping () -> Void,
-        pinMessage: @escaping (MessageId) -> Void,
+        pinMessage: @escaping (MessageId, ContextController?) -> Void,
         unpinMessage: @escaping (MessageId, Bool) -> Void,
         unpinAllMessages: @escaping () -> Void,
         openPinnedList: @escaping (MessageId) -> Void,
@@ -203,6 +204,7 @@ final class ChatPanelInterfaceInteraction {
         unarchivePeer: @escaping () -> Void,
         scrollToTop: @escaping () -> Void,
         viewReplies: @escaping (MessageId?, ChatReplyThreadMessage) -> Void,
+        activatePinnedListPreview: @escaping (ASDisplayNode, ContextGesture) -> Void,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
         self.setupReplyMessage = setupReplyMessage
@@ -280,6 +282,7 @@ final class ChatPanelInterfaceInteraction {
         self.unarchivePeer = unarchivePeer
         self.scrollToTop = scrollToTop
         self.viewReplies = viewReplies
+        self.activatePinnedListPreview = activatePinnedListPreview
         self.statuses = statuses
     }
 }

@@ -276,8 +276,8 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
-    func animatePosition(node: ASDisplayNode, to position: CGPoint, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
-        if node.position.equalTo(position) {
+    func animatePosition(node: ASDisplayNode, to position: CGPoint, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        if !additive && node.position.equalTo(position) {
             completion?(true)
         } else {
             switch self {
@@ -286,7 +286,7 @@ public extension ContainedViewLayoutTransition {
                     completion(true)
                 }
             case let .animated(duration, curve):
-                node.layer.animatePosition(from: node.position, to: position, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, completion: { result in
+                node.layer.animatePosition(from: additive ? CGPoint() : node.position, to: position, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: { result in
                     if let completion = completion {
                         completion(result)
                     }

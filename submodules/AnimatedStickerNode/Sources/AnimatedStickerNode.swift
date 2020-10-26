@@ -743,6 +743,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
     public var started: () -> Void = {}
     private var reportedStarted = false
     
+    public var completed: (Bool) -> Void = { _ in }
+    
     private let timer = Atomic<SwiftSignalKit.Timer?>(value: nil)
     private let frameSource = Atomic<QueueLocalObject<AnimatedStickerFrameSourceWrapper>?>(value: nil)
     
@@ -758,6 +760,14 @@ public final class AnimatedStickerNode: ASDisplayNode {
     private let playbackStatus = Promise<AnimatedStickerStatus>()
     public var status: Signal<AnimatedStickerStatus, NoError> {
         return self.playbackStatus.get()
+    }
+    
+    public var autoplay = true {
+        didSet {
+            if self.autoplay != oldValue {
+                self.updateIsPlaying()
+            }
+        }
     }
     
     public var visibility = false {
@@ -825,6 +835,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                     strongSelf.directData = (directData, path, width, height, cachePathPrefix, source.fitzModifier)
                 }
                 if case let .still(position) = playbackMode {
+                    strongSelf.play(firstFrame: true)
                     strongSelf.seekTo(position)
                 } else if strongSelf.isPlaying {
                     strongSelf.play()
@@ -877,7 +888,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
         if self.isPlaying != isPlaying {
             self.isPlaying = isPlaying
             if isPlaying {
-                self.play()
+                self.play(firstFrame: !self.autoplay)
             } else{
                 self.pause()
             }
@@ -950,11 +961,17 @@ public final class AnimatedStickerNode: ASDisplayNode {
                                 }
                             })
                             
-                            if case .once = strongSelf.playbackMode, frame.isLastFrame {
-                                strongSelf.stop()
-                                strongSelf.isPlaying = false
+                            if frame.isLastFrame {
+                                var stopped = false
+                                if case .once = strongSelf.playbackMode {
+                                    strongSelf.stop()
+                                    strongSelf.isPlaying = false
+                                    stopped = true
+                                }
+                                
+                                strongSelf.completed(stopped)
                             }
-                            
+
                             let timestamp: Double = frameRate > 0 ? Double(frame.index) / Double(frameRate) : 0
                             strongSelf.playbackStatus.set(.single(AnimatedStickerStatus(playing: strongSelf.isPlaying, duration: duration, timestamp: timestamp)))
                         }
@@ -1021,11 +1038,17 @@ public final class AnimatedStickerNode: ASDisplayNode {
                                 }
                             })
                             
-                            if case .once = strongSelf.playbackMode, frame.isLastFrame {
-                                strongSelf.stop()
-                                strongSelf.isPlaying = false
+                            if frame.isLastFrame {
+                                var stopped = false
+                                if case .once = strongSelf.playbackMode {
+                                    strongSelf.stop()
+                                    strongSelf.isPlaying = false
+                                    stopped = true
+                                }
+                                
+                                strongSelf.completed(stopped)
                             }
-                            
+                                                        
                             let timestamp: Double = frameRate > 0 ? Double(frame.index) / Double(frameRate) : 0
                             strongSelf.playbackStatus.set(.single(AnimatedStickerStatus(playing: strongSelf.isPlaying, duration: duration, timestamp: timestamp)))
                         }

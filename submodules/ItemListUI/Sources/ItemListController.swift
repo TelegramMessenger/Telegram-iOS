@@ -224,9 +224,6 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         }
     }
     
-    public var previewItemWithTag: ((ItemListItemTag) -> UIViewController?)?
-    public var commitPreview: ((UIViewController) -> Void)?
-    
     public var willDisappear: ((Bool) -> Void)?
     public var didDisappear: ((Bool) -> Void)?
     
@@ -557,50 +554,9 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
     public func afterLayout(_ f: @escaping () -> Void) {
         (self.displayNode as! ItemListControllerNode).afterLayout(f)
     }
-    
-    public func previewingController(from sourceView: UIView, for location: CGPoint) -> (UIViewController, CGRect)? {
-        guard let layout = self.validLayout, case .phone = layout.deviceMetrics.type else {
-            return nil
-        }
         
-        let boundsSize = self.view.bounds.size
-        let contentSize: CGSize
-        if case .unknown = layout.deviceMetrics {
-            contentSize = boundsSize
-        } else {
-            contentSize = layout.deviceMetrics.previewingContentSize(inLandscape: boundsSize.width > boundsSize.height)
-        }
-        
-        var selectedNode: ItemListItemNode?
-        let listLocation = self.view.convert(location, to:  (self.displayNode as! ItemListControllerNode).listNode.view)
-        (self.displayNode as! ItemListControllerNode).listNode.forEachItemNode { itemNode in
-            if itemNode.frame.contains(listLocation), let itemNode = itemNode as? ItemListItemNode {
-                selectedNode = itemNode
-            }
-        }
-        if let selectedNode = selectedNode as? (ItemListItemNode & ListViewItemNode), let tag = selectedNode.tag {
-            var sourceRect = selectedNode.view.superview!.convert(selectedNode.frame, to: sourceView)
-            sourceRect.size.height -= UIScreenPixel
-            
-            if let controller = self.previewItemWithTag?(tag) {
-                if let controller = controller as? ContainableController {
-                    controller.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
-                }
-                return (controller, sourceRect)
-            } else {
-                return nil
-            }
-        } else {
-            return nil
-        }
-    }
-    
     public func clearItemNodesHighlight(animated: Bool = false) {
         (self.displayNode as! ItemListControllerNode).listNode.clearHighlightAnimated(animated)
-    }
-    
-    public func previewingCommit(_ viewControllerToCommit: UIViewController) {
-        self.commitPreview?(viewControllerToCommit)
     }
     
     public var keyShortcuts: [KeyShortcut] {
