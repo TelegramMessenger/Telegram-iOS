@@ -338,8 +338,14 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     private func updateDoneButtonTitle() {
         if let pickerView = self.pickerView {
-            let largeValue = unitValues[pickerView.selectedRow(inComponent: 0)]
-            let smallValue = smallUnitValues[pickerView.selectedRow(inComponent: 1)]
+            let selectedLargeRow = pickerView.selectedRow(inComponent: 0)
+            var selectedSmallRow = pickerView.selectedRow(inComponent: 1)
+            if selectedLargeRow == 0 && selectedSmallRow == 0 {
+                selectedSmallRow = 1
+            }
+            
+            let largeValue = unitValues[selectedLargeRow]
+            let smallValue = smallUnitValues[selectedSmallRow]
             
             var value = largeValue * 1000 + smallValue * 10
             if !self.usesMetricSystem() {
@@ -353,7 +359,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
             }
             
-            if let distance = self.distances.first, Double(value) > distance {
+            if let distance = self.distances.last, Double(value) > distance {
                 self.doneButton.alpha = 0.0
                 self.doneButton.isUserInteractionEnabled = false
                 self.textNode.alpha = 1.0

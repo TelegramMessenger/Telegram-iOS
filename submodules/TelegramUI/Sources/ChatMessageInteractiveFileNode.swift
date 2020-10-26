@@ -829,10 +829,14 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             wasCheck = true
                         }
                         
-                        if adjustedProgress.isEqual(to: 1.0), (message.flags.contains(.Unsent) || wasCheck) {
-                            state = .check(appearance: nil)
+                        if isAudio && !isVoice {
+                            state = .play
                         } else {
-                            state = .progress(value: CGFloat(adjustedProgress), cancelEnabled: true, appearance: nil)
+                            if adjustedProgress.isEqual(to: 1.0), (message.flags.contains(.Unsent) || wasCheck) {
+                                state = .check(appearance: nil)
+                            } else {
+                                state = .progress(value: CGFloat(adjustedProgress), cancelEnabled: true, appearance: nil)
+                            }
                         }
                     case .Local:
                         if isAudio {
@@ -897,7 +901,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                 }
                 
-                image = playerAlbumArt(postbox: context.account.postbox, fileReference: .message(message: MessageReference(message), media: file), albumArt: .init(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: false)), thumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3), drawPlaceholderWhenEmpty: false)
+                image = playerAlbumArt(postbox: context.account.postbox, fileReference: .message(message: MessageReference(message), media: file), albumArt: .init(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: false)), thumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3), drawPlaceholderWhenEmpty: false, attemptSynchronously: !animated)
             }
             let statusNode = SemanticStatusNode(backgroundNodeColor: backgroundNodeColor, foregroundNodeColor: foregroundNodeColor, image: image, overlayForegroundNodeColor:  presentationData.theme.theme.chat.message.mediaOverlayControlColors.foregroundColor)
             self.statusNode = statusNode
@@ -975,11 +979,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         
         let cutoutFrame = streamingCacheStatusFrame.insetBy(dx: -(1.0 + UIScreenPixel), dy: -(1.0 + UIScreenPixel)).offsetBy(dx: progressFrame.minX - 6.0, dy: progressFrame.minY)
         
-        
         if streamingState == .none && self.selectionNode == nil {
-            self.statusNode?.cutout = nil
+            self.statusNode?.setCutout(nil, animated: animated)
         } else if let statusNode = self.statusNode, (self.iconNode?.isHidden ?? true) {
-            self.statusNode?.cutout = cutoutFrame
+            statusNode.setCutout(cutoutFrame, animated: true)
         }
         
         if let (expandedString, compactString, font) = downloadingStrings {

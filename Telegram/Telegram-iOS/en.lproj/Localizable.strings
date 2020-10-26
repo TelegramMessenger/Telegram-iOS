@@ -5876,4 +5876,8 @@ Any member of this group will be able to see messages in the channel.";
 
 "Location.LiveLocationRequired.Title" = "Share Location";
 "Location.LiveLocationRequired.Description" = "For the alert to work, please share your live location in this chat.";
-"Location.LiveLocationRequired.ShareLocation" = "Share Location"; 
+"Location.LiveLocationRequired.ShareLocation" = "Share Location";
+
+"Stats.Message.Views" = "Views";
+"Stats.Message.PublicShares" = "Public Shares";
+"Stats.Message.PrivateShares" = "Private Shares";

@@ -2465,8 +2465,8 @@ public func chatWebFileImage(account: Account, file: TelegramMediaWebFile) -> Si
 
 private let precomposedSmallAlbumArt = Atomic<UIImage?>(value: nil)
 
-private func albumArtThumbnailData(postbox: Postbox, thumbnail: MediaResource) -> Signal<Data?, NoError> {
-    let thumbnailResource = postbox.mediaBox.resourceData(thumbnail)
+private func albumArtThumbnailData(postbox: Postbox, thumbnail: MediaResource, attemptSynchronously: Bool = false) -> Signal<Data?, NoError> {
+    let thumbnailResource = postbox.mediaBox.resourceData(thumbnail, attemptSynchronously: attemptSynchronously)
     
     let signal = thumbnailResource |> take(1) |> mapToSignal { maybeData -> Signal<Data?, NoError> in
         if maybeData.complete {
@@ -2602,7 +2602,7 @@ private func drawAlbumArtPlaceholder(into c: CGContext, arguments: TransformImag
     }
 }
 
-public func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?, albumArt: SharedMediaPlaybackAlbumArt?, thumbnail: Bool, overlayColor: UIColor? = nil, emptyColor: UIColor? = nil, drawPlaceholderWhenEmpty: Bool = true) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?, albumArt: SharedMediaPlaybackAlbumArt?, thumbnail: Bool, overlayColor: UIColor? = nil, emptyColor: UIColor? = nil, drawPlaceholderWhenEmpty: Bool = true, attemptSynchronously: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     var fileArtworkData: Signal<Data?, NoError> = .single(nil)
     if let fileReference = fileReference {
         let size = thumbnail ? CGSize(width: 48.0, height: 48.0) : CGSize(width: 320.0, height: 320.0)
@@ -2628,7 +2628,7 @@ public func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?,
         
         let thumbnail = Signal<Data?, NoError> { subscriber in
             let fetchedDisposable = fetchedThumbnail.start()
-            let thumbnailDisposable = postbox.mediaBox.resourceData(thumbnailResource).start(next: { next in
+            let thumbnailDisposable = postbox.mediaBox.resourceData(thumbnailResource, attemptSynchronously: attemptSynchronously).start(next: { next in
                 subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
             }, error: subscriber.putError, completed: subscriber.putCompletion)
             
@@ -2643,7 +2643,7 @@ public func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?,
         }
     } else if let albumArt = albumArt {
         if thumbnail {
-            immediateArtworkData = albumArtThumbnailData(postbox: postbox, thumbnail: albumArt.thumbnailResource)
+            immediateArtworkData = albumArtThumbnailData(postbox: postbox, thumbnail: albumArt.thumbnailResource, attemptSynchronously: attemptSynchronously)
             |> map { thumbnailData in
                 return Tuple(thumbnailData, nil, false)
             }

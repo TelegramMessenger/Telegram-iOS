@@ -855,7 +855,8 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                     views = attribute.count
                 }
             }
-            if views >= 100 {
+            
+            if let cachedData = cachedData as? CachedChannelData, cachedData.flags.contains(.canViewStats), views >= 100 {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextViewStats, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.actionSheet.primaryTextColor)
                 }, action: { c, _ in
@@ -1141,7 +1142,7 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                         if canDeleteGlobally {
                             optionsMap[id]!.insert(.deleteGlobally)
                         }
-                        if user.botInfo != nil && !user.id.isReplies {
+                        if user.botInfo != nil && !user.id.isReplies && !isAction {
                             optionsMap[id]!.insert(.report)
                         }
                     } else if let _ = peer as? TelegramSecretChat {
