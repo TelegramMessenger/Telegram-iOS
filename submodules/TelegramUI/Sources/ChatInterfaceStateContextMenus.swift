@@ -601,22 +601,24 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         
         var threadId: Int64?
         var threadMessageCount: Int = 0
-        if case .peer = chatPresentationInterfaceState.chatLocation, let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .group = channel.info, let cachedData = cachedData as? CachedChannelData, case let .known(maybeValue) = cachedData.linkedDiscussionPeerId, let _ = maybeValue {
-            if let value = messages[0].threadId {
-                threadId = value
+        if case .peer = chatPresentationInterfaceState.chatLocation, let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .group = channel.info {
+            if let cachedData = cachedData as? CachedChannelData, case let .known(maybeValue) = cachedData.linkedDiscussionPeerId, let _ = maybeValue {
+                if let value = messages[0].threadId {
+                    threadId = value
+                } else {
+                    for attribute in messages[0].attributes {
+                        if let attribute = attribute as? ReplyThreadMessageAttribute, attribute.count > 0 {
+                            threadId = makeMessageThreadId(messages[0].id)
+                            threadMessageCount = Int(attribute.count)
+                        }
+                    }
+                }
             } else {
                 for attribute in messages[0].attributes {
                     if let attribute = attribute as? ReplyThreadMessageAttribute, attribute.count > 0 {
                         threadId = makeMessageThreadId(messages[0].id)
                         threadMessageCount = Int(attribute.count)
                     }
-                }
-            }
-        } else {
-            for attribute in messages[0].attributes {
-                if let attribute = attribute as? ReplyThreadMessageAttribute, attribute.count > 0 {
-                    threadId = makeMessageThreadId(messages[0].id)
-                    threadMessageCount = Int(attribute.count)
                 }
             }
         }

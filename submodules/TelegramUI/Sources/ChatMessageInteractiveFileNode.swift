@@ -94,17 +94,17 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     
     override init() {
         self.titleNode = TextNode()
-        self.titleNode.displaysAsynchronously = true
+        self.titleNode.displaysAsynchronously = false
         self.titleNode.isUserInteractionEnabled = false
         
         self.descriptionNode = TextNode()
-        self.descriptionNode.displaysAsynchronously = true
+        self.descriptionNode.displaysAsynchronously = false
         self.descriptionNode.isUserInteractionEnabled = false
         
         self.descriptionMeasuringNode = TextNode()
         
         self.fetchingTextNode = ImmediateTextNode()
-        self.fetchingTextNode.displaysAsynchronously = true
+        self.fetchingTextNode.displaysAsynchronously = false
         self.fetchingTextNode.isUserInteractionEnabled = false
         self.fetchingTextNode.maximumNumberOfLines = 1
         self.fetchingTextNode.contentMode = .left
@@ -112,7 +112,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.fetchingTextNode.isHidden = true
         
         self.fetchingCompactTextNode = ImmediateTextNode()
-        self.fetchingCompactTextNode.displaysAsynchronously = true
+        self.fetchingCompactTextNode.displaysAsynchronously = false
         self.fetchingCompactTextNode.isUserInteractionEnabled = false
         self.fetchingCompactTextNode.maximumNumberOfLines = 1
         self.fetchingCompactTextNode.contentMode = .left
