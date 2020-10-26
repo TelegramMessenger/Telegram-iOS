@@ -11,6 +11,7 @@ import AccountContext
 import Emoji
 import SearchPeerMembers
 import DeviceLocationManager
+import TelegramNotices
 
 enum ChatContextQueryError {
     case inlineBotLocationRequest(PeerId)
@@ -21,7 +22,7 @@ enum ChatContextQueryUpdate {
     case update(ChatPresentationInputQuery, Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError>)
 }
 
-func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentQueryStates: inout [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)]) -> [ChatPresentationInputQueryKind: ChatContextQueryUpdate] {
+func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentQueryStates: inout [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)], requestBotLocationStatus: @escaping (PeerId) -> Void) -> [ChatPresentationInputQueryKind: ChatContextQueryUpdate] {
     guard let peer = chatPresentationInterfaceState.renderedPeer?.peer else {
         return [:]
     }
@@ -43,7 +44,7 @@ func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentation
     for query in inputQueries {
         let previousQuery = currentQueryStates[query.kind]?.0
         if previousQuery != query {
-            let signal = updatedContextQueryResultStateForQuery(context: context, peer: peer, chatLocation: chatPresentationInterfaceState.chatLocation, inputQuery: query, previousQuery: previousQuery)
+            let signal = updatedContextQueryResultStateForQuery(context: context, peer: peer, chatLocation: chatPresentationInterfaceState.chatLocation, inputQuery: query, previousQuery: previousQuery, requestBotLocationStatus: requestBotLocationStatus)
             updates[query.kind] = .update(query, signal)
         }
     }
@@ -64,7 +65,7 @@ func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentation
     return updates
 }
 
-private func updatedContextQueryResultStateForQuery(context: AccountContext, peer: Peer, chatLocation: ChatLocation, inputQuery: ChatPresentationInputQuery, previousQuery: ChatPresentationInputQuery?) -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> {
+private func updatedContextQueryResultStateForQuery(context: AccountContext, peer: Peer, chatLocation: ChatLocation, inputQuery: ChatPresentationInputQuery, previousQuery: ChatPresentationInputQuery?, requestBotLocationStatus: @escaping (PeerId) -> Void) -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> {
     switch inputQuery {
         case let .emoji(query):
             var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = .complete()
@@ -246,9 +247,18 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> in
                 if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
                     let contextResults = requestChatContextResults(account: context.account, botId: user.id, peerId: chatPeer.id, query: query, location: context.sharedContext.locationManager.flatMap { locationManager in
-                        return currentLocationManagerCoordinate(manager: locationManager, timeout: 5.0)
-                        |> flatMap { coordinate -> (Double, Double) in
-                            return (coordinate.latitude, coordinate.longitude)
+                        Queue.mainQueue().async {
+                            requestBotLocationStatus(user.id)
+                        }
+                        
+                        return ApplicationSpecificNotice.inlineBotLocationRequestStatus(accountManager: context.sharedContext.accountManager, peerId: user.id)
+                        |> filter { $0 }
+                        |> take(1)
+                        |> mapToSignal { _ -> Signal<(Double, Double)?, NoError> in
+                            return currentLocationManagerCoordinate(manager: locationManager, timeout: 5.0)
+                            |> flatMap { coordinate -> (Double, Double) in
+                                return (coordinate.latitude, coordinate.longitude)
+                            }
                         }
                     } ?? .single(nil), offset: "")
                     |> mapError { error -> ChatContextQueryError in
