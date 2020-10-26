@@ -7858,6 +7858,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let selfPeerId: PeerId
         if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
             selfPeerId = peer.id
+        } else if let peer = peer as? TelegramChannel, case .group = peer.info, peer.hasPermission(.canBeAnonymous) {
+            selfPeerId = peer.id
         } else {
             selfPeerId = self.context.account.peerId
         }
@@ -8305,6 +8307,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let controller = controller as? UndoOverlayController {
                 controller.dismissWithCommitAction()
             }
+        })
+        self.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+            return true
         })
         
         let value: String?

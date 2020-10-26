@@ -6,7 +6,10 @@ import Display
 import SwiftSignalKit
 import TelegramCore
 import SyncCore
+import AccountContext
 import TelegramPresentationData
+import TelegramUIPreferences
+import TelegramStringFormatting
 import ItemListUI
 import LocationResources
 import AppBundle
@@ -15,15 +18,19 @@ import LiveLocationTimerNode
 
 final class LocationLiveListItem: ListViewItem {
     let presentationData: ItemListPresentationData
-    let account: Account
+    let dateTimeFormat: PresentationDateTimeFormat
+    let nameDisplayOrder: PresentationPersonNameOrder
+    let context: AccountContext
     let message: Message
     let distance: Double?
     let action: () -> Void
     let longTapAction: () -> Void
     
-    public init(presentationData: ItemListPresentationData, account: Account, message: Message, distance: Double?, action: @escaping () -> Void, longTapAction: @escaping () -> Void = { }) {
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, message: Message, distance: Double?, action: @escaping () -> Void, longTapAction: @escaping () -> Void = { }) {
         self.presentationData = presentationData
-        self.account = account
+        self.dateTimeFormat = dateTimeFormat
+        self.nameDisplayOrder = nameDisplayOrder
+        self.context = context
         self.message = message
         self.distance = distance
         self.action = action
@@ -92,6 +99,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
         self.highlightedBackgroundNode.isLayerBacked = true
         
         self.avatarNode = AvatarNode(font: avatarFont)
+        self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
@@ -146,20 +154,39 @@ final class LocationLiveListItemNode: ListViewItemNode {
             let leftInset: CGFloat = 65.0 + params.leftInset
             let rightInset: CGFloat = params.rightInset
             let verticalInset: CGFloat = 8.0
-            let iconSize: CGFloat = 40.0
             
             let titleFont = Font.medium(item.presentationData.fontSize.itemListBaseFontSize)
             let subtitleFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
             
-            let titleAttributedString = NSAttributedString(string: "title", font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 15.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            var title: String = ""
+            if let author = item.message.author {
+                title = author.displayTitle(strings: item.presentationData.strings, displayOrder: item.nameDisplayOrder)
+            }
+            let titleAttributedString = NSAttributedString(string: title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 54.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let subtitleAttributedString = NSAttributedString(string: "subtitle", font: subtitleFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
-            let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: subtitleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 15.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            var updateTimestamp = item.message.timestamp
+            for attribute in item.message.attributes {
+                if let attribute = attribute as? EditedMessageAttribute {
+                    updateTimestamp = attribute.date
+                    break
+                }
+            }
+            
+            let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+            let timeString = stringForRelativeLiveLocationTimestamp(strings: item.presentationData.strings, relativeTimestamp: Int32(updateTimestamp), relativeTo: Int32(timestamp), dateTimeFormat: item.dateTimeFormat)
+           
+            var subtitle = timeString
+            if let distance = item.distance {
+                let distanceString = item.presentationData.strings.Map_DistanceAway(stringForDistance(strings: item.presentationData.strings, distance: distance)).0
+                subtitle = "\(timeString) • \(distanceString)"
+            }
+            
+            let subtitleAttributedString = NSAttributedString(string: subtitle, font: subtitleFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+            let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: subtitleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 54.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let titleSpacing: CGFloat = 1.0
-            let bottomInset: CGFloat = hasSeparator ? 0.0 : 4.0
-            let contentSize = CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.size.height + titleSpacing + subtitleLayout.size.height + bottomInset)
+            let contentSize = CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.size.height + titleSpacing + subtitleLayout.size.height)
             let nodeLayout = ListViewItemNodeLayout(contentSize: contentSize, insets: UIEdgeInsets())
             
             return (nodeLayout, { [weak self] in
@@ -168,7 +195,7 @@ final class LocationLiveListItemNode: ListViewItemNode {
                     updatedTheme = item.presentationData.theme
                 }
                                 
-                return (nil, { _ in
+                return (self?.avatarNode.ready, { _ in
                     if let strongSelf = self {
                         strongSelf.item = item
                         strongSelf.layoutParams = params
@@ -199,32 +226,41 @@ final class LocationLiveListItemNode: ListViewItemNode {
 
                         let separatorHeight = UIScreenPixel
                         let topHighlightInset: CGFloat = separatorHeight
+                        let avatarSize: CGFloat = 40.0
                         
-//                        let iconNodeFrame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: floorToScreenPixels((contentSize.height - bottomInset - iconSize) / 2.0)), size: CGSize(width: iconSize, height: iconSize))
-//                        strongSelf.iconNode.frame = iconNodeFrame
-//                        strongSelf.venueIconNode.frame = iconNodeFrame
+                        if let peer = item.message.author {
+                            strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: nil, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: false)
+                        }
                         
+                        strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: floorToScreenPixels((contentSize.height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
+
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: contentSize.width, height: contentSize.height))
                         strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: contentSize.width, height: contentSize.height + topHighlightInset))
                         strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: nodeLayout.size.width, height: separatorHeight))
                         strongSelf.separatorNode.isHidden = !hasSeparator
                         
-//                        if let (beginTimestamp, timeout) = item.beginTimeAndTimeout {
-//                            let timerNode: ChatMessageLiveLocationTimerNode
-//                            if let current = strongSelf.timerNode {
-//                                timerNode = current
-//                            } else {
-//                                timerNode = ChatMessageLiveLocationTimerNode()
-//                                strongSelf.addSubnode(timerNode)
-//                                strongSelf.timerNode = timerNode
-//                            }
-//                            let timerSize = CGSize(width: 28.0, height: 28.0)
-//                            timerNode.update(backgroundColor: item.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.4), foregroundColor: item.presentationData.theme.list.itemAccentColor, textColor: item.presentationData.theme.list.itemAccentColor, beginTimestamp: beginTimestamp, timeout: timeout, strings: item.presentationData.strings)
-//                            timerNode.frame = CGRect(origin: CGPoint(x: contentSize.width - 16.0 - timerSize.width, y: floorToScreenPixels((contentSize.height - timerSize.height) / 2.0) - 2.0), size: timerSize)
-//                        } else if let timerNode = strongSelf.timerNode {
-//                            strongSelf.timerNode = nil
-//                            timerNode.removeFromSupernode()
-//                        }
+                        var liveBroadcastingTimeout: Int32 = 0
+                        if let location = getLocation(from: item.message), let timeout = location.liveBroadcastingTimeout {
+                            liveBroadcastingTimeout = timeout
+                        }
+                        
+                        let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                        if currentTimestamp < item.message.timestamp + liveBroadcastingTimeout {
+                            let timerNode: ChatMessageLiveLocationTimerNode
+                            if let current = strongSelf.timerNode {
+                                timerNode = current
+                            } else {
+                                timerNode = ChatMessageLiveLocationTimerNode()
+                                strongSelf.addSubnode(timerNode)
+                                strongSelf.timerNode = timerNode
+                            }
+                            let timerSize = CGSize(width: 28.0, height: 28.0)
+                            timerNode.update(backgroundColor: item.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.4), foregroundColor: item.presentationData.theme.list.itemAccentColor, textColor: item.presentationData.theme.list.itemAccentColor, beginTimestamp: Double(item.message.timestamp), timeout: Double(liveBroadcastingTimeout), strings: item.presentationData.strings)
+                            timerNode.frame = CGRect(origin: CGPoint(x: contentSize.width - 16.0 - timerSize.width, y: floorToScreenPixels((contentSize.height - timerSize.height) / 2.0)), size: timerSize)
+                        } else if let timerNode = strongSelf.timerNode {
+                            strongSelf.timerNode = nil
+                            timerNode.removeFromSupernode()
+                        }
                     }
                 })
             })

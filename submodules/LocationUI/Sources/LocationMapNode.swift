@@ -758,7 +758,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         }
         
         if let zoomRect = zoomRect {
-            let insets = UIEdgeInsets(top: 0.0, left: 80.0, bottom: 0.0, right: 80.0)
+            let insets = UIEdgeInsets(top: 88.0, left: 80.0, bottom: 160.0, right: 80.0)
             let fittedZoomRect = mapView.mapRectThatFits(zoomRect, edgePadding: insets)
             mapView.setVisibleMapRect(fittedZoomRect, animated: animated)
         }

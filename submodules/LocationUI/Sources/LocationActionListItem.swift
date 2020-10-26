@@ -105,7 +105,7 @@ final class LocationActionListItem: ListViewItem {
         async {
             let node = LocationActionListItemNode()
             let makeLayout = node.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(self, params, nextItem is LocationActionListItem)
+            let (nodeLayout, nodeApply) = makeLayout(self, params, nextItem is LocationActionListItem || nextItem is LocationLiveListItem)
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
@@ -118,7 +118,7 @@ final class LocationActionListItem: ListViewItem {
             if let nodeValue = node() as? LocationActionListItemNode {
                 let layout = nodeValue.asyncLayout()
                 async {
-                    let (nodeLayout, apply) = layout(self, params, nextItem is LocationActionListItem)
+                    let (nodeLayout, apply) = layout(self, params, nextItem is LocationActionListItem || nextItem is LocationLiveListItem)
                     Queue.mainQueue().async {
                         completion(nodeLayout, { info in
                             apply().1(info)

@@ -591,8 +591,8 @@ private final class SemanticStatusNodeAppearanceContext {
         self.cutout = cutout
     }
     
-    func drawingState(transitionFraction: CGFloat) -> SemanticStatusNodeAppearanceDrawingState {
-        return SemanticStatusNodeAppearanceDrawingState(transitionFraction: transitionFraction, background: self.background, foreground: self.foreground, backgroundImage: self.backgroundImage, overlayForeground: self.overlayForeground, cutout: self.cutout)
+    func drawingState(backgroundTransitionFraction: CGFloat, foregroundTransitionFraction: CGFloat) -> SemanticStatusNodeAppearanceDrawingState {
+        return SemanticStatusNodeAppearanceDrawingState(backgroundTransitionFraction: backgroundTransitionFraction, foregroundTransitionFraction: foregroundTransitionFraction, background: self.background, foreground: self.foreground, backgroundImage: self.backgroundImage, overlayForeground: self.overlayForeground, cutout: self.cutout)
     }
     
     func withUpdatedBackground(_ background: UIColor) -> SemanticStatusNodeAppearanceContext {
@@ -617,7 +617,8 @@ private final class SemanticStatusNodeAppearanceContext {
 }
 
 private final class SemanticStatusNodeAppearanceDrawingState {
-    let transitionFraction: CGFloat
+    let backgroundTransitionFraction: CGFloat
+    let foregroundTransitionFraction: CGFloat
     let background: UIColor
     let foreground: UIColor
     let backgroundImage: UIImage?
@@ -632,8 +633,9 @@ private final class SemanticStatusNodeAppearanceDrawingState {
         }
     }
     
-    init(transitionFraction: CGFloat, background: UIColor, foreground: UIColor, backgroundImage: UIImage?, overlayForeground: UIColor?, cutout: CGRect?) {
-        self.transitionFraction = transitionFraction
+    init(backgroundTransitionFraction: CGFloat, foregroundTransitionFraction: CGFloat, background: UIColor, foreground: UIColor, backgroundImage: UIImage?, overlayForeground: UIColor?, cutout: CGRect?) {
+        self.backgroundTransitionFraction = backgroundTransitionFraction
+        self.foregroundTransitionFraction = foregroundTransitionFraction
         self.background = background
         self.foreground = foreground
         self.backgroundImage = backgroundImage
@@ -644,11 +646,12 @@ private final class SemanticStatusNodeAppearanceDrawingState {
     func drawBackground(context: CGContext, size: CGSize) {
         let bounds = CGRect(origin: CGPoint(), size: size)
                 
+        context.setBlendMode(.normal)
         if let backgroundImage = self.backgroundImage?.cgImage {
             context.saveGState()
             context.translateBy(x: 0.0, y: bounds.height)
             context.scaleBy(x: 1.0, y: -1.0)
-            context.setAlpha(self.transitionFraction)
+            context.setAlpha(self.backgroundTransitionFraction)
             context.draw(backgroundImage, in: bounds)
             context.restoreGState()
         } else {
@@ -659,7 +662,7 @@ private final class SemanticStatusNodeAppearanceDrawingState {
     
     func drawForeground(context: CGContext, size: CGSize) {
         if let cutout = self.cutout {
-            let size = CGSize(width: cutout.width * self.transitionFraction, height: cutout.height * self.transitionFraction)
+            let size = CGSize(width: cutout.width * self.foregroundTransitionFraction, height: cutout.height * self.foregroundTransitionFraction)
             let rect = CGRect(origin: CGPoint(x: cutout.midX - size.width / 2.0, y: cutout.midY - size.height / 2.0), size: size)
             
             context.setBlendMode(.clear)
@@ -740,13 +743,23 @@ public final class SemanticStatusNode: ASControlNode {
             return self.appearanceContext.cutout
         }
         set {
-            if self.appearanceContext.cutout != newValue {
-                self.transitionContext = SemanticStatusNodeTransitionContext(startTime: CACurrentMediaTime(), duration: 0.18, previousStateContext: nil, previousAppearanceContext: self.appearanceContext, completion: {})
-                self.appearanceContext = self.appearanceContext.withUpdatedCutout(newValue)
-                
-                self.updateAnimations()
-                self.setNeedsDisplay()
-            }
+            self.setCutout(newValue, animated: false)
+        }
+    }
+    
+    public func setCutout(_ cutout: CGRect?, animated: Bool) {
+        guard cutout != self.appearanceContext.cutout else {
+            return
+        }
+        if animated {
+            self.transitionContext = SemanticStatusNodeTransitionContext(startTime: CACurrentMediaTime(), duration: 0.2, previousStateContext: nil, previousAppearanceContext: self.appearanceContext, completion: {})
+            self.appearanceContext = self.appearanceContext.withUpdatedCutout(cutout)
+            
+            self.updateAnimations()
+            self.setNeedsDisplay()
+        } else {
+            self.appearanceContext = self.appearanceContext.withUpdatedCutout(cutout)
+            self.setNeedsDisplay()
         }
     }
     
@@ -783,7 +796,7 @@ public final class SemanticStatusNode: ASControlNode {
                 let previousAppearanceContext = strongSelf.appearanceContext
                 strongSelf.appearanceContext = strongSelf.appearanceContext.withUpdatedBackgroundImage(context?.generateImage())
                 
-                if CACurrentMediaTime() - start > 0.2 {
+                if CACurrentMediaTime() - start > 0.3 {
                     strongSelf.transitionContext = SemanticStatusNodeTransitionContext(startTime: CACurrentMediaTime(), duration: 0.18, previousStateContext: nil, previousAppearanceContext: previousAppearanceContext, completion: {})
                     strongSelf.updateAnimations()
                 }
@@ -858,7 +871,8 @@ public final class SemanticStatusNode: ASControlNode {
     override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
         var transitionState: SemanticStatusNodeTransitionDrawingState?
         var transitionFraction: CGFloat = 1.0
-        var appearanceTransitionFraction: CGFloat = 1.0
+        var appearanceBackgroundTransitionFraction: CGFloat = 1.0
+        var appearanceForegroundTransitionFraction: CGFloat = 1.0
         
         if let transitionContext = self.transitionContext {
             let timestamp = CACurrentMediaTime()
@@ -868,13 +882,20 @@ public final class SemanticStatusNode: ASControlNode {
             if let _ = transitionContext.previousStateContext {
                 transitionFraction = t
             }
-            if let _ = transitionContext.previousAppearanceContext {
-                appearanceTransitionFraction = t
+            var foregroundTransitionFraction: CGFloat = 1.0
+            if let previousContext = transitionContext.previousAppearanceContext {
+                if previousContext.backgroundImage != self.appearanceContext.backgroundImage {
+                    appearanceBackgroundTransitionFraction = t
+                }
+                if previousContext.cutout != self.appearanceContext.cutout {
+                    appearanceForegroundTransitionFraction = t
+                    foregroundTransitionFraction = 1.0 - t
+                }
             }
-            transitionState = SemanticStatusNodeTransitionDrawingState(transition: t, drawingState: transitionContext.previousStateContext?.drawingState(transitionFraction: 1.0 - t), appearanceState: transitionContext.previousAppearanceContext?.drawingState(transitionFraction: 1.0 - t))
+            transitionState = SemanticStatusNodeTransitionDrawingState(transition: t, drawingState: transitionContext.previousStateContext?.drawingState(transitionFraction: 1.0 - t), appearanceState: transitionContext.previousAppearanceContext?.drawingState(backgroundTransitionFraction: 1.0, foregroundTransitionFraction: foregroundTransitionFraction))
         }
         
-        return SemanticStatusNodeDrawingState(transitionState: transitionState, drawingState: self.stateContext.drawingState(transitionFraction: transitionFraction), appearanceState: self.appearanceContext.drawingState(transitionFraction: appearanceTransitionFraction))
+        return SemanticStatusNodeDrawingState(transitionState: transitionState, drawingState: self.stateContext.drawingState(transitionFraction: transitionFraction), appearanceState: self.appearanceContext.drawingState(backgroundTransitionFraction: appearanceBackgroundTransitionFraction, foregroundTransitionFraction: appearanceForegroundTransitionFraction))
     }
     
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
