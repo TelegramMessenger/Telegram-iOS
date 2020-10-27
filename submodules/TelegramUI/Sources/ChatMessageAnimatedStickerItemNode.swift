@@ -1218,7 +1218,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 } else if let _ = self.emojiFile {
                     if let animationNode = self.animationNode as? AnimatedStickerNode {
                         var startTime: Signal<Double, NoError>
-                        if animationNode.playIfNeeded() {
+                        var shouldPlay = false
+                        if !animationNode.isPlaying {
+                            shouldPlay = true
                             startTime = .single(0.0)
                         } else {
                             startTime = animationNode.status
@@ -1238,6 +1240,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                                 
                         if let text = self.item?.message.text, let firstScalar = text.unicodeScalars.first {
                             if beatingHearts.contains(firstScalar.value) || firstScalar.value == peach {
+                                if shouldPlay {
+                                    animationNode.play()
+                                }
                                 return .optionalAction({
                                     let _ = startTime.start(next: { [weak self] time in
                                         guard let strongSelf = self else {
@@ -1263,19 +1268,24 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                 })
                             } else {
                                 return .optionalAction({
-                                    let _ = (appConfiguration
-                                    |> deliverOnMainQueue).start(next: { [weak self] appConfiguration in
-                                        let emojiSounds = AnimatedEmojiSoundsConfiguration.with(appConfiguration: appConfiguration, account: item.context.account)
-                                        for (emoji, file) in emojiSounds.sounds {
-                                            if emoji.unicodeScalars.first == firstScalar {
-                                                let mediaManager = item.context.sharedContext.mediaManager
-                                                let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: item.context.account.postbox, resourceReference: .standalone(resource: file.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true)
-                                                mediaPlayer.togglePlayPause()
-                                                self?.mediaPlayer = mediaPlayer
-                                                break
+                                    if shouldPlay {
+                                        let _ = (appConfiguration
+                                        |> deliverOnMainQueue).start(next: { [weak self] appConfiguration in
+                                            let emojiSounds = AnimatedEmojiSoundsConfiguration.with(appConfiguration: appConfiguration, account: item.context.account)
+                                            for (emoji, file) in emojiSounds.sounds {
+                                                if emoji.unicodeScalars.first == firstScalar {
+                                                    let mediaManager = item.context.sharedContext.mediaManager
+                                                    let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: item.context.account.postbox, resourceReference: .standalone(resource: file.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true)
+                                                    mediaPlayer.togglePlayPause()
+                                                    self?.mediaPlayer = mediaPlayer
+                                                    
+                                                    animationNode.play()
+                                                    
+                                                    break
+                                                }
                                             }
-                                        }
-                                    })
+                                        })
+                                    }
                                 })
                             }
                         }
