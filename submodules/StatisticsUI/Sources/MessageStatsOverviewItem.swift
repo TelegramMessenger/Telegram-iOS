@@ -168,11 +168,11 @@ class MessageStatsOverviewItemNode: ListViewItemNode {
             
             rightValueLabelLayoutAndApply = makeRightValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.publicShares.flatMap { "≈\( compactNumericCountString(item.stats.forwards - Int($0)))" } ?? "–", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                         
-            leftTitleLabelLayoutAndApply = makeLeftTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Views", font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            leftTitleLabelLayoutAndApply = makeLeftTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_Message_Views, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            centerTitleLabelLayoutAndApply = makeCenterTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Public Shares", font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            centerTitleLabelLayoutAndApply = makeCenterTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_Message_PublicShares, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            rightTitleLabelLayoutAndApply = makeRightTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Private Shares", font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            rightTitleLabelLayoutAndApply = makeRightTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_Message_PrivateShares, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             height += rightValueLabelLayoutAndApply!.0.size.height + rightTitleLabelLayoutAndApply!.0.size.height
             
@@ -257,7 +257,7 @@ class MessageStatsOverviewItemNode: ListViewItemNode {
                     
                     let horizontalSpacing = min(60, (params.width - leftInset - rightInset - sideInset * 2.0 - maxLeftWidth - maxCenterWidth - maxRightWidth) / 2.0)
                     
-                    var x: CGFloat = leftInset + (params.width - maxLeftWidth - maxCenterWidth - maxRightWidth - horizontalSpacing * 2.0) / 2.0
+                    var x: CGFloat = leftInset + (params.width - leftInset - rightInset - maxLeftWidth - maxCenterWidth - maxRightWidth - horizontalSpacing * 2.0) / 2.0
                     if let leftValueLabelLayout = leftValueLabelLayoutAndApply?.0, let leftTitleLabelLayout = leftTitleLabelLayoutAndApply?.0 {
                         strongSelf.leftValueLabel.frame = CGRect(origin: CGPoint(x: x, y: topInset), size: leftValueLabelLayout.size)
                         strongSelf.leftTitleLabel.frame = CGRect(origin: CGPoint(x: x, y: strongSelf.leftValueLabel.frame.maxY), size: leftTitleLabelLayout.size)

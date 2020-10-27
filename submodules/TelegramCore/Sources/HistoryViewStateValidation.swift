@@ -416,6 +416,9 @@ private func hashForMessages(_ messages: [Message], withChannelIds: Bool) -> Int
                 break inner
             }
         }
+        if message.tags.contains(.pinned) {
+            acc = (acc &* 20261) &+ UInt32(1)
+        }
         acc = (acc &* 20261) &+ UInt32(timestamp)
     }
     return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))

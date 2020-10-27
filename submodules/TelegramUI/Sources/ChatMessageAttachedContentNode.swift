@@ -252,7 +252,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         
         self.textNode = TextNode()
         self.textNode.isUserInteractionEnabled = false
-        self.textNode.displaysAsynchronously = true
+        self.textNode.displaysAsynchronously = false
         self.textNode.contentsScale = UIScreenScale
         self.textNode.contentMode = .topLeft
         

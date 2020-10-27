@@ -96,7 +96,9 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
     }
     
     var id: String {
-        if let peer = self.peer {
+        if let message = self.message {
+            return "\(message.id.id)"
+        } else if let peer = self.peer {
             return "\(peer.id.toInt64())"
         } else if let venueId = self.location?.venue?.id {
             return venueId
@@ -257,8 +259,8 @@ class LocationPinAnnotationView: MKAnnotationView {
                     self.dotNode.isHidden = false
                     self.backgroundNode.image = UIImage(bundleImageName: "Location/PinBackground")
                     
-                    if let author = message.author, let peer = message.peers[author.id] {
-                        self.setPeer(context: annotation.context, theme: annotation.theme, peer: peer)
+                    if let author = message.author {
+                        self.setPeer(context: annotation.context, theme: annotation.theme, peer: author)
                     } else if let selfPeer = annotation.selfPeer {
                         self.setPeer(context: annotation.context, theme: annotation.theme, peer: selfPeer)
                     }

@@ -107,9 +107,13 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
             if let strongSelf = self {
                 if value {
                     let queue = strongSelf.queue
-                    strongSelf.deviceLocationDisposable.set(strongSelf.locationManager.push(mode: .precise, updated: { coordinate, accuracyRadius, heading in
+                    strongSelf.deviceLocationDisposable.set(strongSelf.locationManager.push(mode: .precise, updated: { location, heading in
                         queue.async {
-                            self?.updateDeviceCoordinate(coordinate, accuracyRadius: accuracyRadius, heading: heading)
+                            var effectiveHeading = heading ?? location.course
+                            if location.speed > 1.0 {
+                                effectiveHeading = location.course
+                            }
+                            self?.updateDeviceCoordinate(location.coordinate, accuracyRadius: location.horizontalAccuracy, heading: effectiveHeading)
                         }
                     }))
                 } else {
@@ -213,7 +217,7 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         let ids = self.broadcastToMessageIds
         let remainingIds = Atomic<Set<MessageId>>(value: Set(ids.keys))
         for id in ids.keys {
-            self.editMessageDisposables.set((requestEditLiveLocation(postbox: self.postbox, network: self.network, stateManager: self.stateManager, messageId: id, stop: false, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude, accuracyRadius: Int32(accuracyRadius)), heading: Int32(heading ?? 0), proximityNotificationRadius: nil)
+            self.editMessageDisposables.set((requestEditLiveLocation(postbox: self.postbox, network: self.network, stateManager: self.stateManager, messageId: id, stop: false, coordinate: (latitude: coordinate.latitude, longitude: coordinate.longitude, accuracyRadius: Int32(accuracyRadius)), heading: heading.flatMap { Int32($0) }, proximityNotificationRadius: nil)
             |> deliverOn(self.queue)).start(completed: { [weak self] in
                 if let strongSelf = self {
                     strongSelf.editMessageDisposables.set(nil, forKey: id)

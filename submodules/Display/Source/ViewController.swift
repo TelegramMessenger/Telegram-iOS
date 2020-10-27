@@ -95,6 +95,9 @@ public enum TabBarItemContextActionType {
                 if !self.lockOrientation {
                     self.lockedOrientation = nil
                 }
+                if let window = self.window {
+                    window.invalidateSupportedOrientations()
+                }
             }
         }
     }

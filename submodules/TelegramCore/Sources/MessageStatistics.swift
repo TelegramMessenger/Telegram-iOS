@@ -9,13 +9,13 @@ public struct MessageStats: Equatable {
     public let views: Int
     public let forwards: Int
     public let interactionsGraph: StatsGraph
-    public let detailedInteractionsGraph: StatsGraph?
+    public let interactionsGraphDelta: Int64
     
-    init(views: Int, forwards: Int, interactionsGraph: StatsGraph, detailedInteractionsGraph: StatsGraph?) {
+    init(views: Int, forwards: Int, interactionsGraph: StatsGraph, interactionsGraphDelta: Int64) {
         self.views = views
         self.forwards = forwards
         self.interactionsGraph = interactionsGraph
-        self.detailedInteractionsGraph = detailedInteractionsGraph
+        self.interactionsGraphDelta = interactionsGraphDelta
     }
     
     public static func == (lhs: MessageStats, rhs: MessageStats) -> Bool {
@@ -28,14 +28,14 @@ public struct MessageStats: Equatable {
         if lhs.interactionsGraph != rhs.interactionsGraph {
             return false
         }
-        if lhs.detailedInteractionsGraph != rhs.detailedInteractionsGraph {
+        if lhs.interactionsGraphDelta != rhs.interactionsGraphDelta {
             return false
         }
         return true
     }
     
     public func withUpdatedInteractionsGraph(_ interactionsGraph: StatsGraph) -> MessageStats {
-        return MessageStats(views: self.views, forwards: self.forwards, interactionsGraph: interactionsGraph, detailedInteractionsGraph: self.detailedInteractionsGraph)
+        return MessageStats(views: self.views, forwards: self.forwards, interactionsGraph: interactionsGraph, interactionsGraphDelta: self.interactionsGraphDelta)
     }
 }
 
@@ -86,16 +86,24 @@ private func requestMessageStats(postbox: Postbox, network: Network, datacenterI
         |> mapToSignal { result -> Signal<MessageStats?, MTRpcError> in
             if case let .messageStats(apiViewsGraph) = result {
                 let interactionsGraph = StatsGraph(apiStatsGraph: apiViewsGraph)
-                let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                if case let .Loaded(tokenValue, _) = interactionsGraph, let token = tokenValue, Int64(message.timestamp + 60 * 60 * 24 * 2) > Int64(timestamp) {
-                    return requestGraph(network: network, datacenterId: datacenterId, token: token, x: 1601596800000)
-                    |> castError(MTRpcError.self)
-                    |> map { detailedGraph -> MessageStats? in
-                        return MessageStats(views: views, forwards: forwards, interactionsGraph: interactionsGraph, detailedInteractionsGraph: detailedGraph)
+                var interactionsGraphDelta: Int64 = 86400
+                if case let .Loaded(_, data) = interactionsGraph {
+                    if let start = data.range(of: "[\"x\",") {
+                        let substring = data.suffix(from: start.upperBound)
+                        if let end = substring.range(of: "],") {
+                            let valuesString = substring.prefix(through: substring.index(before: end.lowerBound))
+                            let values = valuesString.components(separatedBy: ",").compactMap { Int64($0) }
+                            if values.count > 1 {
+                                let first = values[0]
+                                let second = values[1]
+                                let delta = abs(second - first) / 1000
+                                interactionsGraphDelta = delta
+                            }
+                        }
                     }
-                } else {
-                    return .single(MessageStats(views: views, forwards: forwards, interactionsGraph: interactionsGraph, detailedInteractionsGraph: nil))
                 }
+                
+                return .single(MessageStats(views: views, forwards: forwards, interactionsGraph: interactionsGraph, interactionsGraphDelta: interactionsGraphDelta))
             } else {
                 return .single(nil)
             }

@@ -108,7 +108,12 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         self.chatListNode.contentOffsetChanged = { [weak self] offset in
-            self?.contentOffsetChanged?(offset)
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.chatListNode.supernode != nil {
+                strongSelf.contentOffsetChanged?(offset)
+            }
         }
         
         self.chatListNode.contentScrollingEnded = { [weak self] listView in
@@ -293,7 +298,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         if self.chatListNode.supernode != nil {
             self.chatListNode.scrollToPosition(.top)
         } else if let contactListNode = self.contactListNode, contactListNode.supernode != nil {
-            contactListNode.scrollToTop()
+            //contactListNode.scrollToTop()
         }
     }
     
@@ -331,7 +336,12 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         }
                     }
                     contactListNode.contentOffsetChanged = { [weak self] offset in
-                        self?.contentOffsetChanged?(offset)
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if strongSelf.contactListNode?.supernode != nil {
+                            strongSelf.contentOffsetChanged?(offset)
+                        }
                     }
                     
                     contactListNode.contentScrollingEnded = { [weak self] listView in

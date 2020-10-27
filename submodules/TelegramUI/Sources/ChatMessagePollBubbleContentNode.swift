@@ -862,13 +862,13 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         self.textNode.isUserInteractionEnabled = false
         self.textNode.contentMode = .topLeft
         self.textNode.contentsScale = UIScreenScale
-        self.textNode.displaysAsynchronously = true
+        self.textNode.displaysAsynchronously = false
         
         self.typeNode = TextNode()
         self.typeNode.isUserInteractionEnabled = false
         self.typeNode.contentMode = .topLeft
         self.typeNode.contentsScale = UIScreenScale
-        self.typeNode.displaysAsynchronously = true
+        self.typeNode.displaysAsynchronously = false
         
         self.avatarsNode = MergedAvatarsNode()
         
@@ -876,7 +876,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         self.votersNode.isUserInteractionEnabled = false
         self.votersNode.contentMode = .topLeft
         self.votersNode.contentsScale = UIScreenScale
-        self.votersNode.displaysAsynchronously = true
+        self.votersNode.displaysAsynchronously = false
         
         var displaySolution: (() -> Void)?
         self.solutionButtonNode = SolutionButtonNode(pressed: {
@@ -888,19 +888,19 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         self.buttonSubmitInactiveTextNode.isUserInteractionEnabled = false
         self.buttonSubmitInactiveTextNode.contentMode = .topLeft
         self.buttonSubmitInactiveTextNode.contentsScale = UIScreenScale
-        self.buttonSubmitInactiveTextNode.displaysAsynchronously = true
+        self.buttonSubmitInactiveTextNode.displaysAsynchronously = false
         
         self.buttonSubmitActiveTextNode = TextNode()
         self.buttonSubmitActiveTextNode.isUserInteractionEnabled = false
         self.buttonSubmitActiveTextNode.contentMode = .topLeft
         self.buttonSubmitActiveTextNode.contentsScale = UIScreenScale
-        self.buttonSubmitActiveTextNode.displaysAsynchronously = true
+        self.buttonSubmitActiveTextNode.displaysAsynchronously = false
         
         self.buttonViewResultsTextNode = TextNode()
         self.buttonViewResultsTextNode.isUserInteractionEnabled = false
         self.buttonViewResultsTextNode.contentMode = .topLeft
         self.buttonViewResultsTextNode.contentsScale = UIScreenScale
-        self.buttonViewResultsTextNode.displaysAsynchronously = true
+        self.buttonViewResultsTextNode.displaysAsynchronously = false
         
         self.buttonNode = HighlightableButtonNode()
         

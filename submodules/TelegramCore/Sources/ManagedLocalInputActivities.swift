@@ -139,7 +139,7 @@ private func requestActivity(postbox: Postbox, network: Network, accountPeerId: 
                         break
                     case let .present(statusTimestamp):
                         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                        if statusTimestamp < timestamp {
+                        if statusTimestamp < timestamp - 30 {
                             return .complete()
                         }
                     }

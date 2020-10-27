@@ -628,9 +628,9 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             self.selectedLineNode.image = generateImage(CGSize(width: 5.0, height: 3.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 context.setFillColor(presentationData.theme.list.itemAccentColor.cgColor)
-                context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: 3.0, height: 3.0)))
-                context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - 3.0, y: 0.0), size: CGSize(width: 3.0, height: 3.0)))
-                context.fill(CGRect(x: 1.5, y: 0.0, width: size.width - 3.0, height: 3.0))
+                context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: 4.0, height: 4.0)))
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - 4.0, y: 0.0), size: CGSize(width: 4.0, height: 4.0)))
+                context.fill(CGRect(x: 2.0, y: 0.0, width: size.width - 4.0, height: 4.0))
                 context.fill(CGRect(x: 0.0, y: 2.0, width: size.width, height: 2.0))
             })?.resizableImage(withCapInsets: UIEdgeInsets(top: 3.0, left: 3.0, bottom: 0.0, right: 3.0), resizingMode: .stretch)
         }
