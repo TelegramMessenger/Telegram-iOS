@@ -59,6 +59,7 @@ public final class DeviceLocationManager: NSObject {
         self.manager.distanceFilter = 5.0
         self.manager.activityType = .other
         self.manager.pausesLocationUpdatesAutomatically = false
+        self.manager.headingFilter = 2.0
     }
     
     public func push(mode: DeviceLocationMode, updated: @escaping (CLLocation, Double?) -> Void) -> Disposable {

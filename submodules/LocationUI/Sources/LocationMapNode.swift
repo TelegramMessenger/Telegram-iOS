@@ -372,6 +372,11 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     var trackingMode: LocationTrackingMode = .none {
         didSet {
             self.mapView?.userTrackingMode = self.trackingMode.userTrackingMode
+            if self.trackingMode == .followWithHeading && self.headingArrowView?.image != nil {
+                self.headingArrowView?.image = nil
+            } else if self.trackingMode != .followWithHeading && self.headingArrowView?.image == nil {
+                self.headingArrowView?.image = generateHeadingArrowImage()
+            }
         }
     }
     
@@ -676,9 +681,45 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
                 }
                 
                 if let updatedAnnotation = dict[annotation.id] {
+                    func degToRad(_ degrees: Double) -> Double {
+                        return degrees * Double.pi / 180.0
+                    }
+                    
+                    func radToDeg(_ radians: Double) -> Double {
+                        return radians / Double.pi * 180.0
+                    }
+
+                    let currentCoordinate = annotation.coordinate
+                    let coordinate = updatedAnnotation.coordinate
+                    var heading = updatedAnnotation.heading
+                    if heading == nil {
+                        let previous = CLLocation(latitude: currentCoordinate.latitude, longitude: currentCoordinate.longitude)
+                        let new = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                        
+                        if new.distance(from: previous) > 10 {
+                            let lat1 = degToRad(currentCoordinate.latitude)
+                            let lon1 = degToRad(currentCoordinate.longitude)
+                            let lat2 = degToRad(coordinate.latitude)
+                            let lon2 = degToRad(coordinate.longitude)
+
+                            let dLat = lat2 - lat1
+                            let dLon = lon2 - lon1
+                            
+                            if dLat != 0 && dLon != 0 {
+                                let y = sin(dLon) * cos(lat2)
+                                let x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
+                                heading = NSNumber(value: radToDeg(atan2(y, x)))
+                            }
+                        } else {
+                            heading = annotation.heading
+                        }
+                    }
+                    
                     UIView.animate(withDuration: 0.2) {
                         annotation.coordinate = updatedAnnotation.coordinate
                     }
+                    
+                    annotation.heading = heading
                     dict[annotation.id] = nil
                 } else {
                     annotationsToRemove.insert(annotation)
