@@ -20,6 +20,7 @@ import Emoji
 import Markdown
 import ManagedAnimationNode
 import SlotMachineAnimationNode
+import UniversalMediaPlayer
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -175,6 +176,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var highlightedState: Bool = false
     
     private var haptic: EmojiHaptic?
+    private var mediaPlayer: MediaPlayer?
+    private let mediaStatusDisposable = MetaDisposable()
     
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
@@ -245,6 +248,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     deinit {
         self.disposable.dispose()
+        self.mediaStatusDisposable.set(nil)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -1217,7 +1221,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 } else if let _ = self.emojiFile {
                     if let animationNode = self.animationNode as? AnimatedStickerNode {
                         var startTime: Signal<Double, NoError>
-                        if animationNode.playIfNeeded() {
+                        var shouldPlay = false
+                        if !animationNode.isPlaying {
+                            shouldPlay = true
                             startTime = .single(0.0)
                         } else {
                             startTime = animationNode.status
@@ -1228,31 +1234,94 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         
                         let beatingHearts: [UInt32] = [0x2764, 0x1F90E, 0x1F9E1, 0x1F499, 0x1F49A, 0x1F49C, 0x1F49B, 0x1F5A4, 0x1F90D]
                         let peach = 0x1F351
+                        let coffin = 0x26B0
                         
-                        if let text = self.item?.message.text, let firstScalar = text.unicodeScalars.first, beatingHearts.contains(firstScalar.value) || firstScalar.value == peach {
-                            return .optionalAction({
-                                let _ = startTime.start(next: { [weak self] time in
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
-                                    
-                                    var haptic: EmojiHaptic
-                                    if let current = strongSelf.haptic {
-                                        haptic = current
-                                    } else {
-                                        if beatingHearts.contains(firstScalar.value) {
-                                            haptic = HeartbeatHaptic()
-                                        } else {
-                                            haptic = PeachHaptic()
+                        let appConfiguration = item.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+                        |> take(1)
+                        |> map { view in
+                            return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+                        }
+                                                
+                        if let text = self.item?.message.text, let firstScalar = text.unicodeScalars.first {
+                            if beatingHearts.contains(firstScalar.value) || firstScalar.value == peach {
+                                if shouldPlay {
+                                    animationNode.play()
+                                }
+                                return .optionalAction({
+                                    let _ = startTime.start(next: { [weak self] time in
+                                        guard let strongSelf = self else {
+                                            return
                                         }
-                                        haptic.enabled = true
-                                        strongSelf.haptic = haptic
-                                    }
-                                    if !haptic.active {
-                                        haptic.start(time: time)
+                                        
+                                        var haptic: EmojiHaptic
+                                        if let current = strongSelf.haptic {
+                                            haptic = current
+                                        } else {
+                                            if beatingHearts.contains(firstScalar.value) {
+                                                haptic = HeartbeatHaptic()
+                                            } else {
+                                                haptic = PeachHaptic()
+                                            }
+                                            haptic.enabled = true
+                                            strongSelf.haptic = haptic
+                                        }
+                                        if !haptic.active {
+                                            haptic.start(time: time)
+                                        }
+                                    })
+                                })
+                            } else {
+                                return .optionalAction({
+                                    if shouldPlay {
+                                        let _ = (appConfiguration
+                                        |> deliverOnMainQueue).start(next: { [weak self] appConfiguration in
+                                            guard let strongSelf = self else {
+                                                return
+                                            }
+                                            let emojiSounds = AnimatedEmojiSoundsConfiguration.with(appConfiguration: appConfiguration, account: item.context.account)
+                                            for (emoji, file) in emojiSounds.sounds {
+                                                if emoji.unicodeScalars.first == firstScalar {
+                                                    let mediaManager = item.context.sharedContext.mediaManager
+                                                    let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: item.context.account.postbox, resourceReference: .standalone(resource: file.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true)
+                                                    mediaPlayer.togglePlayPause()
+                                                    mediaPlayer.actionAtEnd = .action({ [weak self] in
+                                                        self?.mediaPlayer = nil
+                                                    })
+                                                    strongSelf.mediaPlayer = mediaPlayer
+                                                    
+                                                    strongSelf.mediaStatusDisposable.set((mediaPlayer.status
+                                                    |> deliverOnMainQueue).start(next: { [weak self, weak animationNode] status in
+                                                        if let strongSelf = self {
+                                                            if firstScalar.value == coffin {
+                                                                var haptic: EmojiHaptic
+                                                                if let current = strongSelf.haptic {
+                                                                    haptic = current
+                                                                } else {
+                                                                    haptic = CoffinHaptic()
+                                                                    haptic.enabled = true
+                                                                    strongSelf.haptic = haptic
+                                                                }
+                                                                if !haptic.active {
+                                                                    haptic.start(time: 0.0)
+                                                                }
+                                                            }
+                                                            
+                                                            switch status.status {
+                                                                case .playing:
+                                                                    animationNode?.play()
+                                                                    strongSelf.mediaStatusDisposable.set(nil)
+                                                                default:
+                                                                    break
+                                                            }
+                                                        }
+                                                    }))
+                                                    break
+                                                }
+                                            }
+                                        })
                                     }
                                 })
-                            })
+                            }
                         }
                     }
                 }
@@ -1510,5 +1579,41 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     override func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
         self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
+    }
+}
+
+struct AnimatedEmojiSoundsConfiguration {
+    static var defaultValue: AnimatedEmojiSoundsConfiguration {
+        return AnimatedEmojiSoundsConfiguration(sounds: [:])
+    }
+    
+    public let sounds: [String: TelegramMediaFile]
+    
+    fileprivate init(sounds: [String: TelegramMediaFile]) {
+        self.sounds = sounds
+    }
+    
+    static func with(appConfiguration: AppConfiguration, account: Account) -> AnimatedEmojiSoundsConfiguration {
+        if let data = appConfiguration.data, let values = data["emojies_sounds"] as? [String: Any] {
+            var sounds: [String: TelegramMediaFile] = [:]
+            for (key, value) in values {
+                if let dict = value as? [String: String], var fileReferenceString = dict["file_reference_base64"] {
+                    fileReferenceString = fileReferenceString.replacingOccurrences(of: "-", with: "+")
+                    fileReferenceString = fileReferenceString.replacingOccurrences(of: "_", with: "/")
+                    while fileReferenceString.count % 4 != 0 {
+                        fileReferenceString.append("=")
+                    }
+                    
+                    if let idString = dict["id"], let id = Int64(idString), let accessHashString = dict["access_hash"], let accessHash = Int64(accessHashString), let fileReference = Data(base64Encoded: fileReferenceString) {
+                        let resource = CloudDocumentMediaResource(datacenterId: 1, fileId: id, accessHash: accessHash, size: nil, fileReference: fileReference, fileName: nil)
+                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: nil, attributes: [])
+                        sounds[key] = file
+                    }
+                }
+            }
+            return AnimatedEmojiSoundsConfiguration(sounds: sounds)
+        } else {
+            return .defaultValue
+        }
     }
 }

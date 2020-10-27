@@ -202,7 +202,6 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
     private var disposable: Disposable?
     private var state: LocationViewState
     private let statePromise: Promise<LocationViewState>
-    private var geocodingDisposable = MetaDisposable()
     
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     private var listOffset: CGFloat?
@@ -271,7 +270,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
             return messages
         }
         
-        setupProximityNotificationImpl = { reset in
+        setupProximityNotificationImpl = { [weak self] reset in
             let _ = (liveLocations
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] messages in
@@ -364,7 +363,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                         timeout = nil
                     }
                     
-                    if let channel = subject.author as? TelegramChannel, case .broadcast = channel.info {
+                    if let channel = subject.author as? TelegramChannel, case .broadcast = channel.info, activeOwnLiveLocation == nil {
                     } else {
                         entries.append(.toggleLiveLocation(presentationData.theme, title, subtitle, userLocation?.coordinate, beginTime, timeout))
                     }
@@ -388,6 +387,10 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 }
                         
                 for message in effectiveLiveLocations {
+                    if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info, message.threadId != nil {
+                        continue
+                    }
+                    
                     var liveBroadcastingTimeout: Int32 = 0
                     if let location = getLocation(from: message), let timeout = location.liveBroadcastingTimeout {
                         liveBroadcastingTimeout = timeout
@@ -536,13 +539,19 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
     
     deinit {
         self.disposable?.dispose()
-        self.geocodingDisposable.dispose()
         
         self.locationManager.manager.stopUpdatingHeading()
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
-        self.headerNode.mapNode.userHeading = CGFloat(newHeading.magneticHeading)
+        if newHeading.headingAccuracy < 0.0 {
+            self.headerNode.mapNode.userHeading = nil
+        }
+        if newHeading.trueHeading > 0.0 {
+            self.headerNode.mapNode.userHeading = CGFloat(newHeading.trueHeading)
+        } else {
+            self.headerNode.mapNode.userHeading = CGFloat(newHeading.magneticHeading)
+        }
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {

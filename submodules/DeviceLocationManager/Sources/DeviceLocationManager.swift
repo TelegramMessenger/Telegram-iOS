@@ -9,9 +9,9 @@ public enum DeviceLocationMode: Int32 {
 private final class DeviceLocationSubscriber {
     let id: Int32
     let mode: DeviceLocationMode
-    let update: (CLLocationCoordinate2D, Double, Double?) -> Void
+    let update: (CLLocation, Double?) -> Void
     
-    init(id: Int32, mode: DeviceLocationMode, update: @escaping (CLLocationCoordinate2D, Double, Double?) -> Void) {
+    init(id: Int32, mode: DeviceLocationMode, update: @escaping (CLLocation, Double?) -> Void) {
         self.id = id
         self.mode = mode
         self.update = update
@@ -39,7 +39,7 @@ public final class DeviceLocationManager: NSObject {
     private var subscribers: [DeviceLocationSubscriber] = []
     private var currentTopMode: DeviceLocationMode?
     
-    private var currentLocation: (CLLocationCoordinate2D, Double)?
+    private var currentLocation: CLLocation?
     private var currentHeading: CLHeading?
     
     public init(queue: Queue, log: ((String) -> Void)? = nil) {
@@ -56,12 +56,12 @@ public final class DeviceLocationManager: NSObject {
         }
         self.manager.delegate = self
         self.manager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
-        self.manager.distanceFilter = 10.0
+        self.manager.distanceFilter = 5.0
         self.manager.activityType = .other
         self.manager.pausesLocationUpdatesAutomatically = false
     }
     
-    public func push(mode: DeviceLocationMode, updated: @escaping (CLLocationCoordinate2D, Double, Double?) -> Void) -> Disposable {
+    public func push(mode: DeviceLocationMode, updated: @escaping (CLLocation, Double?) -> Void) -> Disposable {
         assert(self.queue.isCurrent())
         
         let id = self.nextSubscriberId
@@ -69,7 +69,7 @@ public final class DeviceLocationManager: NSObject {
         self.subscribers.append(DeviceLocationSubscriber(id: id, mode: mode, update: updated))
         
         if let currentLocation = self.currentLocation {
-            updated(currentLocation.0, currentLocation.1, self.currentHeading?.magneticHeading)
+            updated(currentLocation, self.currentHeading?.magneticHeading)
         }
         
         self.updateTopMode()
@@ -119,15 +119,28 @@ public final class DeviceLocationManager: NSObject {
     }
 }
 
+extension CLHeading {
+    var effectiveHeading: Double? {
+        if self.headingAccuracy < 0.0 {
+            return nil
+        }
+        if self.trueHeading > 0.0 {
+            return self.trueHeading
+        } else {
+            return self.magneticHeading
+        }
+    }
+}
+
 extension DeviceLocationManager: CLLocationManagerDelegate {
     public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         assert(self.queue.isCurrent())
         
         if let location = locations.first {
             if self.currentTopMode != nil {
-                self.currentLocation = (location.coordinate, location.horizontalAccuracy)
+                self.currentLocation = location
                 for subscriber in self.subscribers {
-                    subscriber.update(location.coordinate, location.horizontalAccuracy, self.currentHeading?.magneticHeading)
+                    subscriber.update(location, self.currentHeading?.effectiveHeading)
                 }
             }
         }
@@ -140,7 +153,7 @@ extension DeviceLocationManager: CLLocationManagerDelegate {
             self.currentHeading = newHeading
             if let currentLocation = self.currentLocation {
                 for subscriber in self.subscribers {
-                    subscriber.update(currentLocation.0, currentLocation.1, newHeading.magneticHeading)
+                    subscriber.update(currentLocation, newHeading.effectiveHeading)
                 }
             }
         }
@@ -150,8 +163,8 @@ extension DeviceLocationManager: CLLocationManagerDelegate {
 public func currentLocationManagerCoordinate(manager: DeviceLocationManager, timeout timeoutValue: Double) -> Signal<CLLocationCoordinate2D?, NoError> {
     return (
         Signal { subscriber in
-            let disposable = manager.push(mode: .precise, updated: { coordinate, _, _ in
-                subscriber.putNext(coordinate)
+            let disposable = manager.push(mode: .precise, updated: { location, _ in
+                subscriber.putNext(location.coordinate)
                 subscriber.putCompletion()
             })
             return disposable

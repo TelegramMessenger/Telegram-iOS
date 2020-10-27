@@ -20,42 +20,6 @@ public enum PrefetchMediaItem {
     case animatedEmojiSticker(TelegramMediaFile)
 }
 
-private struct AnimatedEmojiSoundsConfiguration {
-    static var defaultValue: AnimatedEmojiSoundsConfiguration {
-        return AnimatedEmojiSoundsConfiguration(sounds: [:])
-    }
-    
-    public let sounds: [String: TelegramMediaFile]
-    
-    fileprivate init(sounds: [String: TelegramMediaFile]) {
-        self.sounds = sounds
-    }
-    
-    static func with(appConfiguration: AppConfiguration) -> AnimatedEmojiSoundsConfiguration {
-        if let data = appConfiguration.data, let values = data["emojies_sounds"] as? [String: Any] {
-            var sounds: [String: TelegramMediaFile] = [:]
-            for (key, value) in values {
-                if let dict = value as? [String: String], var fileReferenceString = dict["file_reference_base64"] {
-                    fileReferenceString = fileReferenceString.replacingOccurrences(of: "-", with: "+")
-                    fileReferenceString = fileReferenceString.replacingOccurrences(of: "_", with: "/")
-                    while fileReferenceString.count % 4 != 0 {
-                        fileReferenceString.append("=")
-                    }
-                    
-                    if let idString = dict["id"], let id = Int64(idString), let accessHashString = dict["access_hash"], let accessHash = Int64(accessHashString), let fileReference = Data(base64Encoded: fileReferenceString) {
-                        let resource = CloudDocumentMediaResource(datacenterId: 0, fileId: id, accessHash: accessHash, size: nil, fileReference: fileReference, fileName: nil)
-                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: nil, attributes: [])
-                        sounds[key] = file
-                    }
-                }
-            }
-            return AnimatedEmojiSoundsConfiguration(sounds: sounds)
-        } else {
-            return .defaultValue
-        }
-    }
-}
-
 private final class PrefetchManagerImpl {
     private let queue: Queue
     private let account: Account
@@ -89,12 +53,9 @@ private final class PrefetchManagerImpl {
         
         let orderedPreloadMedia = combineLatest(account.viewTracker.orderedPreloadMedia, loadedStickerPack(postbox: account.postbox, network: account.network, reference: .animatedEmoji, forceActualized: false), appConfiguration)
         |> map { orderedPreloadMedia, stickerPack, appConfiguration -> [PrefetchMediaItem] in
-            let emojiSounds = AnimatedEmojiSoundsConfiguration.with(appConfiguration: appConfiguration)
+            let emojiSounds = AnimatedEmojiSoundsConfiguration.with(appConfiguration: appConfiguration, account: account)
             let chatHistoryMediaItems = orderedPreloadMedia.map { PrefetchMediaItem.chatHistory($0) }
             var stickerItems: [PrefetchMediaItem] = []
-            
-            var prefetchItems: [PrefetchMediaItem] = []
-            
             switch stickerPack {
                 case let .result(_, items, _):
                     var animatedEmojiStickers: [String: StickerPackItem] = [:]
@@ -113,11 +74,11 @@ private final class PrefetchManagerImpl {
                             }
                         }
                     }
-                    return stickerItems
                 default:
                     break
             }
             
+            var prefetchItems: [PrefetchMediaItem] = []
             prefetchItems.append(contentsOf: chatHistoryMediaItems)
             prefetchItems.append(contentsOf: stickerItems)
             prefetchItems.append(contentsOf: emojiSounds.sounds.values.map { .animatedEmojiSticker($0) })
