@@ -176,6 +176,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var highlightedState: Bool = false
     
     private var haptic: EmojiHaptic?
+    private var mediaPlayer: MediaPlayer?
+    private let mediaStatusDisposable = MetaDisposable()
     
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
@@ -246,6 +248,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     deinit {
         self.disposable.dispose()
+        self.mediaStatusDisposable.set(nil)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -1231,6 +1234,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         
                         let beatingHearts: [UInt32] = [0x2764, 0x1F90E, 0x1F9E1, 0x1F499, 0x1F49A, 0x1F49C, 0x1F49B, 0x1F5A4, 0x1F90D]
                         let peach = 0x1F351
+                        let coffin = 0x26B0
                         
                         let appConfiguration = item.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
                         |> take(1)
@@ -1271,16 +1275,46 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                     if shouldPlay {
                                         let _ = (appConfiguration
                                         |> deliverOnMainQueue).start(next: { [weak self] appConfiguration in
+                                            guard let strongSelf = self else {
+                                                return
+                                            }
                                             let emojiSounds = AnimatedEmojiSoundsConfiguration.with(appConfiguration: appConfiguration, account: item.context.account)
                                             for (emoji, file) in emojiSounds.sounds {
                                                 if emoji.unicodeScalars.first == firstScalar {
                                                     let mediaManager = item.context.sharedContext.mediaManager
                                                     let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: item.context.account.postbox, resourceReference: .standalone(resource: file.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true)
                                                     mediaPlayer.togglePlayPause()
-                                                    self?.mediaPlayer = mediaPlayer
+                                                    mediaPlayer.actionAtEnd = .action({ [weak self] in
+                                                        self?.mediaPlayer = nil
+                                                    })
+                                                    strongSelf.mediaPlayer = mediaPlayer
                                                     
-                                                    animationNode.play()
-                                                    
+                                                    strongSelf.mediaStatusDisposable.set((mediaPlayer.status
+                                                    |> deliverOnMainQueue).start(next: { [weak self, weak animationNode] status in
+                                                        if let strongSelf = self {
+                                                            if firstScalar.value == coffin {
+                                                                var haptic: EmojiHaptic
+                                                                if let current = strongSelf.haptic {
+                                                                    haptic = current
+                                                                } else {
+                                                                    haptic = CoffinHaptic()
+                                                                    haptic.enabled = true
+                                                                    strongSelf.haptic = haptic
+                                                                }
+                                                                if !haptic.active {
+                                                                    haptic.start(time: 0.0)
+                                                                }
+                                                            }
+                                                            
+                                                            switch status.status {
+                                                                case .playing:
+                                                                    animationNode?.play()
+                                                                    strongSelf.mediaStatusDisposable.set(nil)
+                                                                default:
+                                                                    break
+                                                            }
+                                                        }
+                                                    }))
                                                     break
                                                 }
                                             }
@@ -1302,8 +1336,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         return nil
     }
-    
-    private var mediaPlayer: MediaPlayer?
     
     @objc private func shareButtonPressed() {
         if let item = self.item {
