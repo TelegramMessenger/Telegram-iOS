@@ -239,6 +239,7 @@ private final class AudioPlayerRendererContext {
     let audioSessionDisposable = MetaDisposable()
     var audioSessionControl: ManagedAudioSessionControl?
     let playAndRecord: Bool
+    let ambient: Bool
     var forceAudioToSpeaker: Bool {
         didSet {
             if self.forceAudioToSpeaker != oldValue {
@@ -249,7 +250,7 @@ private final class AudioPlayerRendererContext {
         }
     }
     
-    init(controlTimebase: CMTimebase, audioSession: MediaPlayerAudioSessionControl, playAndRecord: Bool, forceAudioToSpeaker: Bool, baseRate: Double, audioLevelPipe: ValuePipe<Float>, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
+    init(controlTimebase: CMTimebase, audioSession: MediaPlayerAudioSessionControl, playAndRecord: Bool, ambient: Bool, forceAudioToSpeaker: Bool, baseRate: Double, audioLevelPipe: ValuePipe<Float>, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
         assert(audioPlayerRendererQueue.isCurrent())
         
         self.audioSession = audioSession
@@ -262,6 +263,7 @@ private final class AudioPlayerRendererContext {
         self.audioPaused = audioPaused
         
         self.playAndRecord = playAndRecord
+        self.ambient = ambient
         
         self.audioStreamDescription = audioRendererNativeStreamDescription()
         
@@ -481,7 +483,7 @@ private final class AudioPlayerRendererContext {
         
         switch self.audioSession {
             case let .manager(manager):
-                self.audioSessionDisposable.set(manager.push(audioSessionType: self.playAndRecord ? .playWithPossiblePortOverride : .play, outputMode: self.forceAudioToSpeaker ? .speakerIfNoHeadphones : .system, once: true, manualActivate: { [weak self] control in
+                self.audioSessionDisposable.set(manager.push(audioSessionType: self.ambient ? .ambient : (self.playAndRecord ? .playWithPossiblePortOverride : .play), outputMode: self.forceAudioToSpeaker ? .speakerIfNoHeadphones : .system, once: true, manualActivate: { [weak self] control in
                     audioPlayerRendererQueue.async {
                         if let strongSelf = self {
                             strongSelf.audioSessionControl = control
@@ -751,7 +753,7 @@ public final class MediaPlayerAudioRenderer {
     private let audioClock: CMClock
     public let audioTimebase: CMTimebase
     
-    public init(audioSession: MediaPlayerAudioSessionControl, playAndRecord: Bool, forceAudioToSpeaker: Bool, baseRate: Double, audioLevelPipe: ValuePipe<Float>, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
+    public init(audioSession: MediaPlayerAudioSessionControl, playAndRecord: Bool, ambient: Bool, forceAudioToSpeaker: Bool, baseRate: Double, audioLevelPipe: ValuePipe<Float>, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
         var audioClock: CMClock?
         CMAudioClockCreate(allocator: nil, clockOut: &audioClock)
         if audioClock == nil {
@@ -764,7 +766,7 @@ public final class MediaPlayerAudioRenderer {
         self.audioTimebase = audioTimebase!
         
         audioPlayerRendererQueue.async {
-            let context = AudioPlayerRendererContext(controlTimebase: audioTimebase!, audioSession: audioSession, playAndRecord: playAndRecord, forceAudioToSpeaker: forceAudioToSpeaker, baseRate: baseRate, audioLevelPipe: audioLevelPipe, updatedRate: updatedRate, audioPaused: audioPaused)
+            let context = AudioPlayerRendererContext(controlTimebase: audioTimebase!, audioSession: audioSession, playAndRecord: playAndRecord, ambient: ambient, forceAudioToSpeaker: forceAudioToSpeaker, baseRate: baseRate, audioLevelPipe: audioLevelPipe, updatedRate: updatedRate, audioPaused: audioPaused)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }

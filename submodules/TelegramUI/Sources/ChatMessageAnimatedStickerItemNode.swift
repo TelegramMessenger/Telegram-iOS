@@ -1282,7 +1282,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                             for (emoji, file) in emojiSounds.sounds {
                                                 if emoji.unicodeScalars.first == firstScalar {
                                                     let mediaManager = item.context.sharedContext.mediaManager
-                                                    let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: item.context.account.postbox, resourceReference: .standalone(resource: file.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true)
+                                                    let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: item.context.account.postbox, resourceReference: .standalone(resource: file.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true, ambient: true)
                                                     mediaPlayer.togglePlayPause()
                                                     mediaPlayer.actionAtEnd = .action({ [weak self] in
                                                         self?.mediaPlayer = nil

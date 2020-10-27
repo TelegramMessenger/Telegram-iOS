@@ -34,7 +34,7 @@ private final class PresentationCallToneRenderer {
         
         self.toneRenderer = MediaPlayerAudioRenderer(audioSession: .custom({ control in
             return controlImpl?(control) ?? EmptyDisposable
-        }), playAndRecord: false, forceAudioToSpeaker: false, baseRate: 1.0, audioLevelPipe: self.audioLevelPipe, updatedRate: {}, audioPaused: {})
+        }), playAndRecord: false, ambient: false, forceAudioToSpeaker: false, baseRate: 1.0, audioLevelPipe: self.audioLevelPipe, updatedRate: {}, audioPaused: {})
         
         controlImpl = { [weak self] control in
             queue.async {
