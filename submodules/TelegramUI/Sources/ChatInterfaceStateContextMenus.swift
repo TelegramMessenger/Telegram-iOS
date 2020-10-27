@@ -687,9 +687,8 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             if let pinnedSelectedMessageId = pinnedSelectedMessageId {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_Unpin, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unpin"), color: theme.actionSheet.primaryTextColor)
-                }, action: { _, f in
-                    interfaceInteraction.unpinMessage(pinnedSelectedMessageId, false)
-                    f(.default)
+                }, action: { c, _ in
+                    interfaceInteraction.unpinMessage(pinnedSelectedMessageId, false, c)
                 })))
             } else {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_Pin, icon: { theme in
