@@ -544,7 +544,14 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
-        self.headerNode.mapNode.userHeading = CGFloat(newHeading.magneticHeading)
+        if newHeading.headingAccuracy < 0.0 {
+            self.headerNode.mapNode.userHeading = nil
+        }
+        if newHeading.trueHeading > 0.0 {
+            self.headerNode.mapNode.userHeading = CGFloat(newHeading.trueHeading)
+        } else {
+            self.headerNode.mapNode.userHeading = CGFloat(newHeading.magneticHeading)
+        }
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
