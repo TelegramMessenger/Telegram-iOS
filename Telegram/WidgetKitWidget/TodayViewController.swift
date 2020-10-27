@@ -178,7 +178,6 @@ struct WidgetView: View {
     
     var body: some View {
         ZStack {
-            Color(.systemBackground)
             peerViews()
         }
         .padding(.all)
