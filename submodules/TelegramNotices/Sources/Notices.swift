@@ -302,6 +302,32 @@ public struct ApplicationSpecificNotice {
         }
     }
     
+    public static func inlineBotLocationRequestStatus(accountManager: AccountManager, peerId: PeerId) -> Signal<Bool, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.inlineBotLocationRequestNotice(peerId: peerId))
+        |> map { view -> Bool in
+            guard let value = view.value as? ApplicationSpecificTimestampNotice else {
+                return false
+            }
+            if value.value == 0 {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
+    public static func updateInlineBotLocationRequestState(accountManager: AccountManager, peerId: PeerId, timestamp: Int32) -> Signal<Bool, NoError> {
+        return accountManager.transaction { transaction -> Bool in
+            if let notice = transaction.getNotice(ApplicationSpecificNoticeKeys.inlineBotLocationRequestNotice(peerId: peerId)) as? ApplicationSpecificTimestampNotice, (notice.value == 0 || timestamp <= notice.value + 10 * 60) {
+                return false
+            }
+            
+            transaction.setNotice(ApplicationSpecificNoticeKeys.inlineBotLocationRequestNotice(peerId: peerId), ApplicationSpecificTimestampNotice(value: timestamp))
+            
+            return true
+        }
+    }
+    
     public static func setInlineBotLocationRequest(accountManager: AccountManager, peerId: PeerId, value: Int32) -> Signal<Void, NoError> {
         return accountManager.transaction { transaction -> Void in
             transaction.setNotice(ApplicationSpecificNoticeKeys.inlineBotLocationRequestNotice(peerId: peerId), ApplicationSpecificTimestampNotice(value: value))

@@ -54,9 +54,11 @@ BAZEL_OPTIONS=(\
 	--swiftcopt=-j${CORE_COUNT_MINUS_ONE} \
 )
 
-if [ "$BAZEL_CACHE_DIR" != "" ]; then
+if [ "$BAZEL_HTTP_CACHE_URL" != "" ]; then
+	BAZEL_OPTIONS=("${BAZEL_OPTIONS[@]}" --remote_cache="$(echo $BAZEL_HTTP_CACHE_URL | sed -e 's/[\/&]/\\&/g')")
+elif [ "$BAZEL_CACHE_DIR" != "" ]; then
 	BAZEL_OPTIONS=("${BAZEL_OPTIONS[@]}" --disk_cache="$(echo $BAZEL_CACHE_DIR | sed -e 's/[\/&]/\\&/g')")
-fi 
+fi
 
 "$TULSI" -- \
 	--verbose \
