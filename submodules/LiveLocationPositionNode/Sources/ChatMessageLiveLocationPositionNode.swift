@@ -147,12 +147,17 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
             var hasPulse = false
             var heading: Double?
             var coordinate: (Double, Double)?
+            
+            func degToRad(_ degrees: Double) -> Double {
+                return degrees * Double.pi / 180.0
+            }
+            
             switch mode {
                 case let .liveLocation(_, active, latitude, longitude, headingValue):
                     backgroundImage = avatarBackgroundImage
                     hasPulse = active
                     coordinate = (latitude, longitude)
-                    heading = headingValue.flatMap { Double($0) }
+                    heading = headingValue.flatMap { degToRad(Double($0)) }
                 case let .location(location):
                     let venueType = location?.venue?.type ?? ""
                     let color = venueType.isEmpty ? theme.list.itemAccentColor : venueIconColor(type: venueType)
@@ -162,10 +167,6 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
                     }
             }
             
-            func degToRad(_ degrees: Double) -> Double {
-                return degrees * Double.pi / 180.0
-            }
-
             if heading == nil, let currentCoordinate = currentCoordinate, let coordinate = coordinate {
                 let lat1 = degToRad(currentCoordinate.0)
                 let lon1 = degToRad(currentCoordinate.1)
@@ -248,7 +249,7 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
                     strongSelf.arrowNode.isHidden = heading == nil || !hasPulse
                     strongSelf.arrowNode.position = CGPoint(x: 31.0, y: 64.0)
                     
-                    strongSelf.arrowNode.transform = CATransform3DMakeRotation(CGFloat(heading ?? 0.0 / 180.0 * Double.pi), 0.0, 0.0, 1.0)
+                    strongSelf.arrowNode.transform = CATransform3DMakeRotation(CGFloat(heading ?? 0), 0.0, 0.0, 1.0)
                 }
             })
         }

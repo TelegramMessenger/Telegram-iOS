@@ -544,33 +544,34 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         self.shadowNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
-        if let subnodes = self.subnodes {
-            for node in subnodes {
-                if let contextNode = node as? ContextExtractedContentContainingNode {
-                    if let contextSubnodes = contextNode.contentNode.subnodes {
-                        inner: for contextSubnode in contextSubnodes {
-                            if contextSubnode !== self.accessoryItemNode {
-                                if contextSubnode == self.backgroundNode {
-                                    if self.backgroundNode.hasImage && self.backgroundWallpaperNode.hasImage {
-                                        continue inner
-                                    }
-                                }
-                                contextSubnode.layer.allowsGroupOpacity = true
-                                contextSubnode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak contextSubnode] _ in
-                                    contextSubnode?.layer.allowsGroupOpacity = false
-                                })
-                            }
-                        }
-                    }
-                } else if node !== self.accessoryItemNode {
+        func process(node: ASDisplayNode) {
+            if node === self.accessoryItemNode {
+                return
+            }
+            
+            if node !== self {
+                switch node {
+                case _ as ContextExtractedContentContainingNode, _ as ContextControllerSourceNode, _ as ContextExtractedContentNode:
+                    break
+                default:
                     node.layer.allowsGroupOpacity = true
-                    node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak node] _ in
                         node?.layer.allowsGroupOpacity = false
                     })
+                    return
                 }
             }
+            
+            guard let subnodes = node.subnodes else {
+                return
+            }
+            
+            for subnode in subnodes {
+                process(node: subnode)
+            }
         }
+        
+        process(node: self)
     }
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
@@ -588,10 +589,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     override func animateAdded(_ currentTimestamp: Double, duration: Double) {
         super.animateAdded(currentTimestamp, duration: duration)
         
-        self.allowsGroupOpacity = true
-        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak self] _ in
-            self?.allowsGroupOpacity = false
-        })
+        if let subnodes = self.subnodes {
+            for subnode in subnodes {
+                let layer = subnode.layer
+                layer.allowsGroupOpacity = true
+                layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak layer] _ in
+                    layer?.allowsGroupOpacity = false
+                })
+            }
+        }
     }
     
     override func didLoad() {

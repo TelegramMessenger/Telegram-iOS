@@ -59,6 +59,7 @@ public final class DeviceLocationManager: NSObject {
         self.manager.distanceFilter = 5.0
         self.manager.activityType = .other
         self.manager.pausesLocationUpdatesAutomatically = false
+        self.manager.headingFilter = 2.0
     }
     
     public func push(mode: DeviceLocationMode, updated: @escaping (CLLocation, Double?) -> Void) -> Disposable {
@@ -119,6 +120,19 @@ public final class DeviceLocationManager: NSObject {
     }
 }
 
+extension CLHeading {
+    var effectiveHeading: Double? {
+        if self.headingAccuracy < 0.0 {
+            return nil
+        }
+        if self.trueHeading > 0.0 {
+            return self.trueHeading
+        } else {
+            return self.magneticHeading
+        }
+    }
+}
+
 extension DeviceLocationManager: CLLocationManagerDelegate {
     public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         assert(self.queue.isCurrent())
@@ -127,7 +141,7 @@ extension DeviceLocationManager: CLLocationManagerDelegate {
             if self.currentTopMode != nil {
                 self.currentLocation = location
                 for subscriber in self.subscribers {
-                    subscriber.update(location, self.currentHeading?.magneticHeading)
+                    subscriber.update(location, self.currentHeading?.effectiveHeading)
                 }
             }
         }
@@ -140,7 +154,7 @@ extension DeviceLocationManager: CLLocationManagerDelegate {
             self.currentHeading = newHeading
             if let currentLocation = self.currentLocation {
                 for subscriber in self.subscribers {
-                    subscriber.update(currentLocation, newHeading.magneticHeading)
+                    subscriber.update(currentLocation, newHeading.effectiveHeading)
                 }
             }
         }

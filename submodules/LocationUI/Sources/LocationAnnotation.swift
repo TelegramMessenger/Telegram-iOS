@@ -43,7 +43,7 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
     let peer: Peer?
     let message: Message?
     let forcedSelection: Bool
-    var heading: Int32? {
+    @objc dynamic var heading: NSNumber? {
         willSet {
             self.willChangeValue(forKey: "heading")
         }
@@ -91,7 +91,7 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
         }
         self.selfPeer = selfPeer
         self.forcedSelection = false
-        self.heading = heading
+        self.heading = heading.flatMap { NSNumber(value: $0) }
         super.init()
     }
     
@@ -167,6 +167,8 @@ class LocationPinAnnotationView: MKAnnotationView {
     
     var hasPulse = false
     
+    var headingKvoToken: NSKeyValueObservation?
+    
     override class var layerClass: AnyClass {
         return LocationPinAnnotationLayer.self
     }
@@ -233,6 +235,14 @@ class LocationPinAnnotationView: MKAnnotationView {
         self.annotation = annotation
     }
     
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.headingKvoToken?.invalidate()
+    }
+    
     var defaultZPosition: CGFloat {
         if let annotation = self.annotation as? LocationPinAnnotation {
             if annotation.forcedSelection {
@@ -245,10 +255,6 @@ class LocationPinAnnotationView: MKAnnotationView {
         } else {
             return -1.0
         }
-    }
-    
-    required init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
     }
     
     override var annotation: MKAnnotation? {
@@ -270,6 +276,18 @@ class LocationPinAnnotationView: MKAnnotationView {
                         self.shadowNode.isHidden = true
                         self.smallNode.isHidden = false
                     }
+                    
+                    if let headingKvoToken = self.headingKvoToken {
+                        self.headingKvoToken = nil
+                        headingKvoToken.invalidate()
+                    }
+                    
+                    self.headingKvoToken = annotation.observe(\.heading, options: .new) { [weak self] (_, change) in
+                        guard let heading = change.newValue else {
+                            return
+                        }
+                        self?.updateHeading(heading)
+                    }
                 }
                 else if let peer = annotation.peer {
                     self.iconNode.isHidden = true
@@ -278,6 +296,12 @@ class LocationPinAnnotationView: MKAnnotationView {
                     
                     self.setPeer(context: annotation.context, theme: annotation.theme, peer: peer)
                     self.setSelected(true, animated: false)
+                    
+                    if let headingKvoToken = self.headingKvoToken {
+                        self.headingKvoToken = nil
+                        headingKvoToken.invalidate()
+                    }
+                    self.updateHeading(nil)
                 } else if let location = annotation.location {
                     let venueType = location.venue?.type ?? ""
                     let color = venueType.isEmpty ? annotation.theme.list.itemAccentColor : venueIconColor(type: venueType)
@@ -299,12 +323,33 @@ class LocationPinAnnotationView: MKAnnotationView {
                         self.setSelected(true, animated: false)
                     }
                     
+                    if let avatarNode = self.avatarNode {
+                        self.avatarNode = nil
+                        avatarNode.removeFromSupernode()
+                    }
+                    
                     if self.initialized && !self.appeared {
                         self.appeared = true
                         self.animateAppearance()
                     }
+                    
+                    if let headingKvoToken = self.headingKvoToken {
+                        self.headingKvoToken = nil
+                        headingKvoToken.invalidate()
+                    }
+                    self.updateHeading(nil)
                 }
             }
+        }
+    }
+    
+    private func updateHeading(_ heading: NSNumber?) {
+        if let heading = heading?.int32Value {
+            self.arrowNode.isHidden = false
+            self.arrowNode.transform = CATransform3DMakeRotation(CGFloat(heading) / 180.0 * CGFloat.pi, 0.0, 0.0, 1.0)
+        } else {
+            self.arrowNode.isHidden = true
+            self.arrowNode.transform = CATransform3DIdentity
         }
     }
     
