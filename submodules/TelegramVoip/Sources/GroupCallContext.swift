@@ -2,7 +2,7 @@ import Foundation
 import SwiftSignalKit
 import TgVoipWebrtc
 
-/*private final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueueWebrtc {
+private final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueueWebrtc {
     private let queue: Queue
     
     init(queue: Queue) {
@@ -1467,4 +1467,4 @@ public final class GroupCallContext {
         }
     }
 }
-*/
+
