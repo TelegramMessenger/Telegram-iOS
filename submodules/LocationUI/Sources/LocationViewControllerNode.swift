@@ -364,7 +364,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                         timeout = nil
                     }
                     
-                    if let channel = subject.author as? TelegramChannel, case .broadcast = channel.info {
+                    if let channel = subject.author as? TelegramChannel, case .broadcast = channel.info, activeOwnLiveLocation == nil {
                     } else {
                         entries.append(.toggleLiveLocation(presentationData.theme, title, subtitle, userLocation?.coordinate, beginTime, timeout))
                     }
@@ -388,6 +388,10 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 }
                         
                 for message in effectiveLiveLocations {
+                    if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info, message.threadId != nil {
+                        continue
+                    }
+                    
                     var liveBroadcastingTimeout: Int32 = 0
                     if let location = getLocation(from: message), let timeout = location.liveBroadcastingTimeout {
                         liveBroadcastingTimeout = timeout

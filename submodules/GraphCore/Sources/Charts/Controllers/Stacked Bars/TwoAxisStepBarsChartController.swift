@@ -45,6 +45,9 @@ public class TwoAxisStepBarsChartController: BaseLinesChartController {
     
     private var prevoiusHorizontalStrideInterval: Int = 1
     
+    public var hourly: Bool = false
+    public var min5: Bool = false
+    
     override public init(chartsCollection: ChartsCollection)  {
         self.initialChartCollection = chartsCollection
         graphControllers = chartsCollection.chartValues.map { _ in GraphController() }
@@ -252,8 +255,19 @@ public class TwoAxisStepBarsChartController: BaseLinesChartController {
     }
     
     func updateHorizontalLimits(horizontalRange: ClosedRange<CGFloat>, animated: Bool) {
+        var scaleType: ChartScaleType = .day
+        if isZoomed {
+            scaleType = .minutes5
+        } else {
+            if self.hourly {
+                scaleType = .hour
+            } else if self.min5 {
+                scaleType = .minutes5
+            }
+        }
+        
         if let (stride, labels) = horizontalLimitsLabels(horizontalRange: horizontalRange,
-                                                         scaleType: isZoomed ? .minutes5 : .day,
+                                                         scaleType: scaleType,
                                                          prevoiusHorizontalStrideInterval: prevoiusHorizontalStrideInterval) {
             self.horizontalScalesRenderer.setup(labels: labels, animated: animated)
             self.prevoiusHorizontalStrideInterval = stride
