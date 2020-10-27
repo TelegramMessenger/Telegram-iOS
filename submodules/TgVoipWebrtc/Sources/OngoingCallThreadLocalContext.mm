@@ -555,7 +555,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         InternalVoipLoggingFunction(@"OngoingCallThreadLocalContext: dealloc");
     }
     
-//    assert([_queue isCurrent]);
+    assert([_queue isCurrent]);
     if (_tgVoip != NULL) {
         [self stop:nil];
     }
