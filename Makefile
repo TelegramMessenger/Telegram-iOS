@@ -416,6 +416,34 @@ bazel_app_arm64:
 	--output_groups=+dsyms \
 	--verbose_failures
 
+bazel_app_armv7:
+	APP_VERSION="${APP_VERSION}" \
+	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
+	build-system/prepare-build.sh Telegram distribution
+	"${BAZEL}" build Telegram/Telegram ${BAZEL_CACHE_FLAGS} ${BAZEL_COMMON_FLAGS} ${BAZEL_OPT_FLAGS} \
+	-c opt \
+	--ios_multi_cpus=armv7 \
+	--watchos_cpus=armv7k,arm64_32 \
+	--objc_enable_binary_stripping=true \
+	--features=dead_strip \
+	--apple_generate_dsym \
+	--output_groups=+dsyms \
+	--verbose_failures
+
+bazel_app:
+	APP_VERSION="${APP_VERSION}" \
+	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
+	build-system/prepare-build.sh Telegram distribution
+	"${BAZEL}" build Telegram/Telegram ${BAZEL_CACHE_FLAGS} ${BAZEL_COMMON_FLAGS} ${BAZEL_OPT_FLAGS} \
+	-c opt \
+	--ios_multi_cpus=armv7,arm64 \
+	--watchos_cpus=armv7k,arm64_32 \
+	--objc_enable_binary_stripping=true \
+	--features=dead_strip \
+	--apple_generate_dsym \
+	--output_groups=+dsyms \
+	--verbose_failures
+
 bazel_prepare_development_build:
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \

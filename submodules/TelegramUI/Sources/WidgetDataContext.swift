@@ -23,12 +23,62 @@ final class WidgetDataContext {
             guard let account = account else {
                 return .single(.notAuthorized)
             }
-            return recentPeers(account: account)
+            
+            enum RecentPeers {
+                struct Unread {
+                    var count: Int32
+                    var isMuted: Bool
+                }
+                
+                case disabled
+                case peers(peers: [Peer], unread: [PeerId: Unread])
+            }
+            
+            let recent: Signal<RecentPeers, NoError> = recentPeers(account: account)
+            |> mapToSignal { recent -> Signal<RecentPeers, NoError> in
+                switch recent {
+                    case .disabled:
+                        return .single(.disabled)
+                    case let .peers(peers):
+                        return combineLatest(queue: .mainQueue(), peers.filter { !$0.isDeleted }.map { account.postbox.peerView(id: $0.id)}) |> mapToSignal { peerViews -> Signal<RecentPeers, NoError> in
+                            return account.postbox.unreadMessageCountsView(items: peerViews.map {
+                                .peer($0.peerId)
+                            })
+                            |> map { values -> RecentPeers in
+                                var peers: [Peer] = []
+                                var unread: [PeerId: RecentPeers.Unread] = [:]
+                                for peerView in peerViews {
+                                    if let peer = peerViewMainPeer(peerView) {
+                                        var isMuted: Bool = false
+                                        if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
+                                            switch notificationSettings.muteState {
+                                                case .muted:
+                                                    isMuted = true
+                                                default:
+                                                    break
+                                            }
+                                        }
+                                        
+                                        let unreadCount = values.count(for: .peer(peerView.peerId))
+                                        if let unreadCount = unreadCount, unreadCount > 0 {
+                                            unread[peerView.peerId] = RecentPeers.Unread(count: Int32(unreadCount), isMuted: isMuted)
+                                        }
+                                        
+                                        peers.append(peer)
+                                    }
+                                }
+                                return .peers(peers: peers, unread: unread)
+                            }
+                        }
+                }
+            }
+            
+            return recent
             |> map { result -> WidgetData in
                 switch result {
                 case .disabled:
                     return .disabled
-                case let .peers(peers):
+                case let .peers(peers, unread):
                     return .peers(WidgetDataPeers(accountPeerId: account.peerId.toInt64(), peers: peers.compactMap { peer -> WidgetDataPeer? in
                         guard let user = peer as? TelegramUser else {
                             return nil
@@ -46,12 +96,21 @@ final class WidgetDataContext {
                             name = phone
                         }
                         
+                        var badge: WidgetDataPeer.Badge?
+                        if let unreadValue = unread[peer.id], unreadValue.count > 0 {
+                            badge = WidgetDataPeer.Badge(
+                                count: Int(unreadValue.count),
+                                isMuted: unreadValue.isMuted
+                            )
+                        }
+                        
                         return WidgetDataPeer(id: user.id.toInt64(), name: name, lastName: lastName, letters: user.displayLetters, avatarPath: smallestImageRepresentation(user.photo).flatMap { representation in
                             return account.postbox.mediaBox.resourcePath(representation.resource)
-                        })
+                        }, badge: badge)
                     }))
                 }
             }
+            |> distinctUntilChanged
         }).start(next: { widgetData in
             let path = basePath + "/widget-data"
             if let data = try? JSONEncoder().encode(widgetData) {
