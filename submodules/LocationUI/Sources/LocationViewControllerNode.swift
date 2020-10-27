@@ -202,7 +202,6 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
     private var disposable: Disposable?
     private var state: LocationViewState
     private let statePromise: Promise<LocationViewState>
-    private var geocodingDisposable = MetaDisposable()
     
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     private var listOffset: CGFloat?
@@ -271,7 +270,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
             return messages
         }
         
-        setupProximityNotificationImpl = { reset in
+        setupProximityNotificationImpl = { [weak self] reset in
             let _ = (liveLocations
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] messages in
@@ -540,7 +539,6 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
     
     deinit {
         self.disposable?.dispose()
-        self.geocodingDisposable.dispose()
         
         self.locationManager.manager.stopUpdatingHeading()
     }
