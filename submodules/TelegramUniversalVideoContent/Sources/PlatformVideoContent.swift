@@ -448,4 +448,7 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
     
     func fetchControl(_ control: UniversalVideoNodeFetchControl) {
     }
+    
+    func notifyPlaybackControlsHidden(_ hidden: Bool) {
+    }
 }

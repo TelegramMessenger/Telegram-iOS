@@ -211,4 +211,10 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
             }
         }
     }
+    
+    func notifyPlaybackControlsHidden(_ hidden: Bool) {
+        if impl is YoutubeEmbedImplementation {
+            self.webView.isUserInteractionEnabled = !hidden
+        }
+    }
 }

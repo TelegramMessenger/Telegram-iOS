@@ -287,5 +287,8 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     func fetchControl(_ control: UniversalVideoNodeFetchControl) {
     }
+    
+    func notifyPlaybackControlsHidden(_ hidden: Bool) {   
+    }
 }
 

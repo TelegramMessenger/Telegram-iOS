@@ -451,4 +451,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
                 self.postbox.mediaBox.cancelInteractiveResourceFetch(self.fileReference.media.resource)
         }
     }
+    
+    func notifyPlaybackControlsHidden(_ hidden: Bool) {
+    }
 }

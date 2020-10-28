@@ -265,6 +265,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let overlayContentNode: UniversalVideoGalleryItemOverlayNode
     
     private var videoNode: UniversalVideoNode?
+    private var videoNodeUserInteractionEnabled: Bool = false
     private var videoFramePreview: FramePreview?
     private var pictureInPictureNode: UniversalVideoGalleryItemPictureInPictureNode?
     private let statusButtonNode: HighlightableButtonNode
@@ -555,6 +556,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
             self.videoNode = videoNode
+            self.videoNodeUserInteractionEnabled = disablePlayerControls || forceEnableUserInteraction
             videoNode.isUserInteractionEnabled = disablePlayerControls || forceEnableUserInteraction
             videoNode.backgroundColor = videoNode.ownsContentNode ? UIColor.black : UIColor(rgb: 0x333335)
             if item.fromPlayingVideo {
@@ -680,6 +682,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     if !content.enableSound {
                                         isPaused = false
                                     }
+                                } else {
+                                    strongSelf.updateControlsVisibility(true)
+                                    strongSelf.controlsTimer?.invalidate()
+                                    strongSelf.controlsTimer = nil
                                 }
                         }
                         seekable = value.duration >= 30.0
@@ -795,6 +801,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     override func controlsVisibilityUpdated(isVisible: Bool) {
         self.controlsTimer?.invalidate()
         self.controlsTimer = nil
+        
+        self.videoNode?.isUserInteractionEnabled = isVisible ? self.videoNodeUserInteractionEnabled : false
+        self.videoNode?.notifyPlaybackControlsHidden(!isVisible)
     }
     
     private func updateDisplayPlaceholder(_ displayPlaceholder: Bool) {
