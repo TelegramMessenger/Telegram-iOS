@@ -211,6 +211,9 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
     private var listOffset: CGFloat?
     
     private var displayedProximityAlertTooltip = false
+    
+    var reportedAnnotationsReady = false
+    var onAnnotationsReady: (() -> Void)?
 
     init(context: AccountContext, presentationData: PresentationData, subject: Message, interaction: LocationViewInteraction, locationManager: LocationManager) {
         self.context = context
@@ -475,6 +478,11 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 }
                 if annotations != previousAnnotations {
                     strongSelf.headerNode.mapNode.annotations = annotations
+                    
+                    if !strongSelf.reportedAnnotationsReady {
+                        strongSelf.reportedAnnotationsReady = true
+                        strongSelf.onAnnotationsReady?()
+                    }
                 }
                 
                 if let _ = proximityNotification {
@@ -593,14 +601,32 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
         }
     }
     
+    var initialized = false
     private func dequeueTransition() {
         guard let _ = self.validLayout, let transition = self.enqueuedTransitions.first else {
             return
         }
         self.enqueuedTransitions.remove(at: 0)
         
+        let scrollToItem: ListViewScrollToItem?
+        if !self.initialized, transition.insertions.count > 0 {
+            var index: Int = 0
+            var offset: CGFloat = 0.0
+            if transition.insertions.count > 2 {
+                index = 2
+                offset = 40.0
+            } else if transition.insertions.count == 2 {
+                index = 1
+            }
+            
+            scrollToItem = ListViewScrollToItem(index: index, position: .bottom(offset), animated: false, curve: .Default(duration: nil), directionHint: .Up)
+            self.initialized = true
+        } else {
+            scrollToItem = nil
+        }
+        
         let options = ListViewDeleteAndInsertOptions()
-        self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
+        self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, scrollToItem: scrollToItem, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
         })
     }
     
@@ -623,6 +649,11 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     return state
                 }
                 
+                var contentOffset: CGFloat = 0.0
+                if case let .known(offset) = self.listNode.visibleContentOffset() {
+                    contentOffset = offset
+                }
+                
                 let panelHeight: CGFloat = 349.0 + layout.intrinsicInsets.bottom
                 let inset = (layout.size.width - 260.0) / 2.0
                 let offset = panelHeight / 2.0 + 60.0 + inset + navigationBarHeight / 2.0
@@ -630,7 +661,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 let point = CGPoint(x: layout.size.width / 2.0, y: navigationBarHeight + (layout.size.height - navigationBarHeight - panelHeight) / 2.0)
                 let convertedPoint = self.view.convert(point, to: self.headerNode.mapNode.view)
                 
-                self.headerNode.mapNode.setMapCenter(coordinate: coordinate, radius: Double(radius), insets: UIEdgeInsets(top: navigationBarHeight, left: inset, bottom: offset, right: inset), offset: convertedPoint.y - self.headerNode.mapNode.frame.height / 2.0, animated: true)
+                self.headerNode.mapNode.setMapCenter(coordinate: coordinate, radius: Double(radius), insets: UIEdgeInsets(top: navigationBarHeight, left: inset, bottom: offset - contentOffset, right: inset), offset: convertedPoint.y - self.headerNode.mapNode.frame.height / 2.0, animated: true)
             }
             
             self.headerNode.mapNode.proximityIndicatorRadius = Double(radius)

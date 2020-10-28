@@ -20,12 +20,14 @@ public class LocationViewParams {
     let stopLiveLocation: (MessageId?) -> Void
     let openUrl: (String) -> Void
     let openPeer: (Peer) -> Void
+    let showAll: Bool
         
-    public init(sendLiveLocation: @escaping (TelegramMediaMap) -> Void, stopLiveLocation: @escaping (MessageId?) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer) -> Void) {
+    public init(sendLiveLocation: @escaping (TelegramMediaMap) -> Void, stopLiveLocation: @escaping (MessageId?) -> Void, openUrl: @escaping (String) -> Void, openPeer: @escaping (Peer) -> Void, showAll: Bool = false) {
         self.sendLiveLocation = sendLiveLocation
         self.stopLiveLocation = stopLiveLocation
         self.openUrl = openUrl
         self.openPeer = openPeer
+        self.showAll = showAll
     }
 }
 
@@ -73,6 +75,7 @@ public final class LocationViewController: ViewController {
     public var subject: Message
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
+    private var showAll: Bool
     
     private let locationManager = LocationManager()
     private var permissionDisposable: Disposable?
@@ -84,6 +87,7 @@ public final class LocationViewController: ViewController {
     public init(context: AccountContext, subject: Message, params: LocationViewParams) {
         self.context = context
         self.subject = subject
+        self.showAll = params.showAll
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
                      
@@ -275,7 +279,7 @@ public final class LocationViewController: ViewController {
                     })
                 } else {
                     let _  = (context.account.postbox.loadedPeerWithId(subject.id.peerId)
-                    |> deliverOnMainQueue).start(next: { [weak self] peer in
+                    |> deliverOnMainQueue).start(next: { peer in
                         let controller = ActionSheetController(presentationData: strongSelf.presentationData)
                         var title = strongSelf.presentationData.strings.Map_LiveLocationGroupDescription
                         if let user = peer as? TelegramUser {
@@ -359,6 +363,13 @@ public final class LocationViewController: ViewController {
         
         self.displayNode = LocationViewControllerNode(context: self.context, presentationData: self.presentationData, subject: self.subject, interaction: interaction, locationManager: self.locationManager)
         self.displayNodeDidLoad()
+        
+        self.controllerNode.onAnnotationsReady = { [weak self] in
+            guard let strongSelf = self, strongSelf.showAll else {
+                return
+            }
+            strongSelf.controllerNode.showAll()
+        }
     }
     
     private func updateRightBarButton() {
