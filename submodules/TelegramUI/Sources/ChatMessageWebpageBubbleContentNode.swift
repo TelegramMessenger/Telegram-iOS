@@ -122,7 +122,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 if let textValue = webpage.text, !textValue.isEmpty {
                     text = textValue
-                    var entityTypes: EnabledEntityTypes = [.url]
+                    var entityTypes: EnabledEntityTypes = [.allUrl]
                     switch type {
                         case .twitter, .instagram:
                             entityTypes.insert(.mention)

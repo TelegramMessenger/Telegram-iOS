@@ -184,4 +184,8 @@ final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
     
     func fetchControl(_ control: UniversalVideoNodeFetchControl) {
     }
+    
+    func notifyPlaybackControlsHidden(_ hidden: Bool) {
+        self.playerNode.notifyPlaybackControlsHidden(hidden)
+    }
 }

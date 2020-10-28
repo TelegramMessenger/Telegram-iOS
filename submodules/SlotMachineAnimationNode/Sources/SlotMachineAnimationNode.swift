@@ -146,9 +146,9 @@ public enum ManagedSlotMachineAnimationState: Equatable {
 
 public final class SlotMachineAnimationNode: ASDisplayNode {
     private let backNode: ManagedAnimationNode
-    private let leftReelNode: ManagedAnimationNode
-    private let centerReelNode: ManagedAnimationNode
-    private let rightReelNode: ManagedAnimationNode
+    private let leftReelNode: DiceAnimatedStickerNode
+    private let centerReelNode: DiceAnimatedStickerNode
+    private let rightReelNode: DiceAnimatedStickerNode
     private let frontNode: ManagedAnimationNode
     
     private var diceState: ManagedSlotMachineAnimationState? = nil
@@ -161,9 +161,10 @@ public final class SlotMachineAnimationNode: ASDisplayNode {
     public init(size: CGSize = CGSize(width: 184.0, height: 184.0)) {
         self.animationSize = size
         self.backNode = ManagedAnimationNode(size: self.animationSize)
-        self.leftReelNode = ManagedAnimationNode(size: self.animationSize)
-        self.centerReelNode = ManagedAnimationNode(size: self.animationSize)
-        self.rightReelNode = ManagedAnimationNode(size: self.animationSize)
+        let reelSize = CGSize(width: 384.0, height: 384.0)
+        self.leftReelNode = DiceAnimatedStickerNode(size: reelSize)
+        self.centerReelNode = DiceAnimatedStickerNode(size: reelSize)
+        self.rightReelNode = DiceAnimatedStickerNode(size: reelSize)
         self.frontNode = ManagedAnimationNode(size: self.animationSize)
         
         super.init()
@@ -261,7 +262,7 @@ class DiceAnimatedStickerNode: ASDisplayNode {
         self.intrinsicSize = size
         
         self.animationNode = AnimatedStickerNode()
-        self.animationNode.visibility = true
+        self.animationNode.autoplay = true
         
         super.init()
         
@@ -280,6 +281,15 @@ class DiceAnimatedStickerNode: ASDisplayNode {
             }
         }
     }
+    
+    var initialized = false
+    override func didLoad() {
+        super.didLoad()
+        
+        self.initialized = true
+        self.advanceState()
+    }
+    
     
     private func advanceState() {
         guard !self.trackStack.isEmpty else {
@@ -329,7 +339,7 @@ class DiceAnimatedStickerNode: ASDisplayNode {
         self.trackStack.append(item)
         self.didTryAdvancingState = false
         
-        if !self.animationNode.isPlaying {
+        if !self.animationNode.isPlaying && self.initialized {
             self.advanceState()
         }
     }

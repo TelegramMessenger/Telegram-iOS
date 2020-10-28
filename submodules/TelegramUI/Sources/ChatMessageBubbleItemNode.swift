@@ -1088,6 +1088,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var needShareButton = false
         if case .pinnedMessages = item.associatedData.subject {
             needShareButton = true
+            for media in item.message.media {
+                if let _ = media as? TelegramMediaExpiredContent {
+                    needShareButton = false
+                    break
+                }
+            }
         } else if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.effectiveTopId == item.message.id {
             needShareButton = false
             allowFullWidth = true
@@ -1285,6 +1291,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         }
                     }
                 }
+        }
+        
+        if case .replyThread = item.chatLocation {
+            isItemPinned = false
         }
         
         var mosaicStartIndex: Int?
@@ -1526,7 +1536,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                 }
                 
-                mosaicStatusSizeAndApply = mosaicStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode)
+                var isReplyThread = false
+                if case .replyThread = item.chatLocation {
+                    isReplyThread = true
+                }
+                
+                mosaicStatusSizeAndApply = mosaicStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread)
             }
         }
         

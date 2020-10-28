@@ -83,6 +83,11 @@ private class LocationMapView: MKMapView, UIGestureRecognizerDelegate {
         
         return pointInside
     }
+    
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+        
+    }
 }
 
 private let arrowImageSize = CGSize(width: 90.0, height: 90.0)
@@ -110,14 +115,16 @@ func generateHeadingArrowImage() -> UIImage? {
     })
 }
 
-private func generateProximityDim(size: CGSize, rect: CGRect) -> UIImage {
+private func generateProximityDim(size: CGSize) -> UIImage {
     return generateImage(size, rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(UIColor(rgb: 0x000000, alpha: 0.4).cgColor)
         context.fill(CGRect(origin: CGPoint(), size: size))
         
         context.setBlendMode(.clear)
-        context.fillEllipse(in: rect)
+        
+        let ellipseSize = CGSize(width: 260.0, height: 260.0)
+        context.fillEllipse(in: CGRect(origin: CGPoint(x: (size.width - ellipseSize.width) / 2.0, y: (size.height - ellipseSize.height) / 2.0), size: ellipseSize))
     })!
 }
 
@@ -144,64 +151,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
             context.restoreGState()
         }
     }
-    
-    class InvertedProximityCircle: NSObject, MKOverlay {
-        var coordinate: CLLocationCoordinate2D
-        var radius: Double
-        var alpha: CGFloat {
-            didSet {
-                self.alphaTransition = (oldValue, CACurrentMediaTime(), 0.3)
-            }
-        }
-        var alphaTransition: (from: CGFloat, startTimestamp: Double, duration: Double)?
         
-        var boundingMapRect: MKMapRect {
-            return MKMapRect.world
-        }
-        
-        init(center coord: CLLocationCoordinate2D, radius: Double, alpha: CGFloat = 0.0) {
-            self.coordinate = coord
-            self.radius = radius
-            self.alpha = alpha
-        }
-    }
-    
-    class InvertedProximityCircleRenderer: MKOverlayRenderer {
-        var radius: Double = 0.0
-        var fillColor: UIColor = UIColor(rgb: 0x000000, alpha: 0.5)
-        
-        override func draw(_ mapRect: MKMapRect, zoomScale: MKZoomScale, in context: CGContext) {
-            guard let overlay = self.overlay as? InvertedProximityCircle else {
-                return
-            }
-            
-            var alpha: CGFloat = overlay.alpha
-            if let transition = overlay.alphaTransition {
-                var t = (CACurrentMediaTime() - transition.startTimestamp) / transition.duration
-                t = min(1.0, max(0.0, t))
-                alpha = transition.from + (alpha - transition.from) * CGFloat(t)
-            }
-            
-            context.setAlpha(alpha)
-            
-            let path = UIBezierPath(rect: CGRect(x: mapRect.origin.x, y: mapRect.origin.y, width: mapRect.size.width, height: mapRect.size.height))
-            let radiusInMap = overlay.radius * MKMapPointsPerMeterAtLatitude(overlay.coordinate.latitude) * 2.0
-            let mapSize: MKMapSize = MKMapSize(width: radiusInMap, height: radiusInMap)
-            let regionOrigin = MKMapPoint(overlay.coordinate)
-            var regionRect: MKMapRect = MKMapRect(origin: regionOrigin, size: mapSize)
-            regionRect = regionRect.offsetBy(dx: -radiusInMap / 2.0, dy: -radiusInMap / 2.0);
-            regionRect = regionRect.intersection(MKMapRect.world);
-            
-            let excludePath: UIBezierPath = UIBezierPath(roundedRect: CGRect(x: regionRect.origin.x, y: regionRect.origin.y, width: regionRect.size.width, height: regionRect.size.height), cornerRadius: CGFloat(regionRect.size.width) / 2.0)
-            path.append(excludePath)
-            
-            context.setFillColor(fillColor.cgColor);
-            context.addPath(path.cgPath);
-            context.fillPath(using: .evenOdd)
-        }
-    }
-    private weak var currentInvertedCircleRenderer: InvertedProximityCircleRenderer?
-    
     private let locationPromise = Promise<CLLocation?>(nil)
     
     private let pickerAnnotationContainerView: PickerAnnotationContainerView
@@ -222,74 +172,34 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     
     var annotationSelected: ((LocationPinAnnotation?) -> Void)?
     var userLocationAnnotationSelected: (() -> Void)?
-        
-    var indicatorOverlay: InvertedProximityCircle?
+            
+    var proximityDimView = UIImageView()
     var proximityIndicatorRadius: Double? {
         didSet {
-            if let activeProximityRadius = self.proximityIndicatorRadius {
-                if let location = self.currentUserLocation, activeProximityRadius != oldValue {
-                    let indicatorOverlay: InvertedProximityCircle
-                    if let current = self.indicatorOverlay {
-                        indicatorOverlay = current
-                        indicatorOverlay.radius = activeProximityRadius
-                        self.mapView?.removeOverlay(indicatorOverlay)
-                        self.mapView?.addOverlay(indicatorOverlay)
-                    } else {
-                        indicatorOverlay = InvertedProximityCircle(center: location.coordinate, radius: activeProximityRadius)
-                        self.mapView?.addOverlay(indicatorOverlay)
-                        self.indicatorOverlay = indicatorOverlay
-                        indicatorOverlay.alpha = 1.0
-                        self.updateAnimations()
+            if let radius = self.proximityIndicatorRadius, let mapView = self.mapView {
+                if self.proximityDimView.image == nil {
+                    proximityDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
+                
+                if oldValue == 0 {
+                    UIView.transition(with: proximityDimView, duration: 0.3, options: .transitionCrossDissolve) {
+                        self.proximityDimView.image = generateProximityDim(size: mapView.bounds.size)
+                    } completion: { _ in
+                        
                     }
                 }
             } else {
-                if let indicatorOverlay = self.indicatorOverlay {
-                    indicatorOverlay.alpha = 0.0
-                    self.updateAnimations()
+                if self.proximityDimView.image != nil {
+                    UIView.transition(with: proximityDimView, duration: 0.3, options: .transitionCrossDissolve) {
+                        self.proximityDimView.image = nil
+                    } completion: { _ in
+                        
+                    }
                 }
             }
         }
     }
-    
-    private var animator: ConstantDisplayLinkAnimator?
-    private func updateAnimations() {
-        guard let mapView = self.mapView else {
-            return
-        }
         
-        var animate = false
-        let timestamp = CACurrentMediaTime()
-        
-        if let indicatorOverlay = self.indicatorOverlay, let transition = indicatorOverlay.alphaTransition {
-            if transition.startTimestamp + transition.duration < timestamp {
-                indicatorOverlay.alphaTransition = nil
-                if indicatorOverlay.alpha.isZero {
-                    self.indicatorOverlay = nil
-                    mapView.removeOverlay(indicatorOverlay)
-                }
-            } else {
-                animate = true
-            }
-        }
-        
-        if animate {
-            let animator: ConstantDisplayLinkAnimator
-            if let current = self.animator {
-                animator = current
-            } else {
-                animator = ConstantDisplayLinkAnimator(update: { [weak self] in
-                    self?.updateAnimations()
-                })
-                self.animator = animator
-            }
-            animator.isPaused = false
-        } else {
-            self.animator?.isPaused = true
-        }
-        
-        self.currentInvertedCircleRenderer?.setNeedsDisplay(MKMapRect.world)
-    }
-    
     private var circleOverlay: MKCircle?
     var activeProximityRadius: Double? {
         didSet {
@@ -372,7 +282,24 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     var trackingMode: LocationTrackingMode = .none {
         didSet {
             self.mapView?.userTrackingMode = self.trackingMode.userTrackingMode
+            if self.trackingMode == .followWithHeading && self.headingArrowView?.image != nil {
+                self.headingArrowView?.image = nil
+            } else if self.trackingMode != .followWithHeading && self.headingArrowView?.image == nil {
+                self.headingArrowView?.image = generateHeadingArrowImage()
+            }
         }
+    }
+    
+    var mapOffset: CGFloat = 0.0
+    func setMapCenter(coordinate: CLLocationCoordinate2D, radius: Double, insets: UIEdgeInsets, offset: CGFloat, animated: Bool = false) {
+        self.mapOffset = offset
+        self.ignoreRegionChanges = true
+        
+        let mapRect = MKMapRect(region: MKCoordinateRegion(center: coordinate, latitudinalMeters: radius * 2.0, longitudinalMeters: radius * 2.0))
+        self.mapView?.setVisibleMapRect(mapRect, edgePadding: insets, animated: animated)
+        self.ignoreRegionChanges = false
+        
+        self.proximityDimView.center = CGPoint(x: self.bounds.midX, y: self.bounds.midY + offset)
     }
     
     func setMapCenter(coordinate: CLLocationCoordinate2D, span: MKCoordinateSpan = defaultMapSpan, offset: CGPoint = CGPoint(), isUserLocation: Bool = false, hidePicker: Bool = false, animated: Bool = false) {
@@ -474,6 +401,10 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
             } else if let view = view as? LocationPinAnnotationView {
                 view.setZPosition(view.defaultZPosition)
             }
+            
+            if let container = view.superview {
+                container.insertSubview(self.proximityDimView, at: 0)
+            }
         }
     }
     
@@ -513,11 +444,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     }
         
     func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
-        if let invertedCircle = overlay as? InvertedProximityCircle {
-            let renderer = InvertedProximityCircleRenderer(overlay: invertedCircle)
-            self.currentInvertedCircleRenderer = renderer
-            return renderer
-        } else if let circle = overlay as? MKCircle {
+        if let circle = overlay as? MKCircle {
             let renderer = ProximityCircleRenderer(circle: circle)
             renderer.fillColor = .clear
             renderer.strokeColor = UIColor(rgb: 0xc3baaf)
@@ -528,18 +455,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
             return MKOverlayRenderer()
         }
     }
-    
-    func mapView(_ mapView: MKMapView, didAdd renderers: [MKOverlayRenderer]) {
-        for renderer in renderers {
-            if let renderer = renderer as? InvertedProximityCircleRenderer {
-                renderer.alpha = 0.0
-                UIView.animate(withDuration: 0.3) {
-                    renderer.alpha = 1.0
-                }
-            }
-        }
-    }
-        
+            
     var distancesToAllAnnotations: Signal<[Double], NoError> {
         let poll = Signal<[LocationPinAnnotation], NoError> { [weak self] subscriber in
             if let strongSelf = self {
@@ -676,9 +592,45 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
                 }
                 
                 if let updatedAnnotation = dict[annotation.id] {
+                    func degToRad(_ degrees: Double) -> Double {
+                        return degrees * Double.pi / 180.0
+                    }
+                    
+                    func radToDeg(_ radians: Double) -> Double {
+                        return radians / Double.pi * 180.0
+                    }
+
+                    let currentCoordinate = annotation.coordinate
+                    let coordinate = updatedAnnotation.coordinate
+                    var heading = updatedAnnotation.heading
+                    if heading == nil {
+                        let previous = CLLocation(latitude: currentCoordinate.latitude, longitude: currentCoordinate.longitude)
+                        let new = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                        
+                        if new.distance(from: previous) > 10 {
+                            let lat1 = degToRad(currentCoordinate.latitude)
+                            let lon1 = degToRad(currentCoordinate.longitude)
+                            let lat2 = degToRad(coordinate.latitude)
+                            let lon2 = degToRad(coordinate.longitude)
+
+                            let dLat = lat2 - lat1
+                            let dLon = lon2 - lon1
+                            
+                            if dLat != 0 && dLon != 0 {
+                                let y = sin(dLon) * cos(lat2)
+                                let x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
+                                heading = NSNumber(value: radToDeg(atan2(y, x)))
+                            }
+                        } else {
+                            heading = annotation.heading
+                        }
+                    }
+                    
                     UIView.animate(withDuration: 0.2) {
                         annotation.coordinate = updatedAnnotation.coordinate
                     }
+                    
+                    annotation.heading = heading
                     dict[annotation.id] = nil
                 } else {
                     annotationsToRemove.insert(annotation)
@@ -765,6 +717,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     }
     
     func updateLayout(size: CGSize) {
+        self.proximityDimView.frame = CGRect(origin: CGPoint(x: 0.0, y: self.mapOffset), size: size)
         self.pickerAnnotationContainerView.frame = CGRect(x: 0.0, y: floorToScreenPixels((size.height - size.width) / 2.0), width: size.width, height: size.width)
         if let pickerAnnotationView = self.pickerAnnotationView {
             pickerAnnotationView.center = CGPoint(x: self.pickerAnnotationContainerView.frame.width / 2.0, y: self.pickerAnnotationContainerView.frame.height / 2.0)

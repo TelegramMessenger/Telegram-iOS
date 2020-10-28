@@ -722,7 +722,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .minimal, reactionCount: dateReactionCount)
             
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode)
+            var isReplyThread = false
+            if case .replyThread = item.chatLocation {
+                isReplyThread = true
+            }
+            
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread)
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
@@ -1274,7 +1279,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                 return .optionalAction({
                                     if shouldPlay {
                                         let _ = (appConfiguration
-                                        |> deliverOnMainQueue).start(next: { [weak self] appConfiguration in
+                                        |> deliverOnMainQueue).start(next: { [weak self, weak animationNode] appConfiguration in
                                             guard let strongSelf = self else {
                                                 return
                                             }
@@ -1282,7 +1287,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                             for (emoji, file) in emojiSounds.sounds {
                                                 if emoji.unicodeScalars.first == firstScalar {
                                                     let mediaManager = item.context.sharedContext.mediaManager
-                                                    let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: item.context.account.postbox, resourceReference: .standalone(resource: file.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true)
+                                                    let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: item.context.account.postbox, resourceReference: .standalone(resource: file.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true, ambient: true)
                                                     mediaPlayer.togglePlayPause()
                                                     mediaPlayer.actionAtEnd = .action({ [weak self] in
                                                         self?.mediaPlayer = nil
@@ -1315,9 +1320,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                                             }
                                                         }
                                                     }))
-                                                    break
+                                                    return
                                                 }
                                             }
+                                            animationNode?.play()
                                         })
                                     }
                                 })

@@ -176,7 +176,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                         |> deliverOnMainQueue).start(next: { [weak self] status in
                         if let strongSelf = self {
                             switch status.status {
-                                case .playing, .buffering(_, true, _):
+                                case .playing, .buffering(_, true, _, _):
                                     strongSelf.playButton.isHidden = true
                                 default:
                                     strongSelf.playButton.isHidden = false

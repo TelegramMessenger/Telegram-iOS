@@ -60,7 +60,7 @@ public func messageFileMediaResourceStatus(context: AccountContext, file: Telegr
                         mediaStatus = .playbackStatus(.playing)
                     case .paused:
                         mediaStatus = .playbackStatus(.paused)
-                    case let .buffering(_, whilePlaying, _):
+                    case let .buffering(_, whilePlaying, _, _):
                         if whilePlaying {
                             mediaStatus = .playbackStatus(.playing)
                         } else {
@@ -84,7 +84,7 @@ public func messageFileMediaResourceStatus(context: AccountContext, file: Telegr
                         mediaStatus = .playbackStatus(.playing)
                     case .paused:
                         mediaStatus = .playbackStatus(.paused)
-                    case let .buffering(_, whilePlaying, _):
+                    case let .buffering(_, whilePlaying, _, _):
                         if whilePlaying {
                             mediaStatus = .playbackStatus(.playing)
                         } else {

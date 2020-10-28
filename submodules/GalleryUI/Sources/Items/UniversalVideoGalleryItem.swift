@@ -265,6 +265,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let overlayContentNode: UniversalVideoGalleryItemOverlayNode
     
     private var videoNode: UniversalVideoNode?
+    private var videoNodeUserInteractionEnabled: Bool = false
     private var videoFramePreview: FramePreview?
     private var pictureInPictureNode: UniversalVideoGalleryItemPictureInPictureNode?
     private let statusButtonNode: HighlightableButtonNode
@@ -555,6 +556,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
             self.videoNode = videoNode
+            self.videoNodeUserInteractionEnabled = disablePlayerControls || forceEnableUserInteraction
             videoNode.isUserInteractionEnabled = disablePlayerControls || forceEnableUserInteraction
             videoNode.backgroundColor = videoNode.ownsContentNode ? UIColor.black : UIColor(rgb: 0x333335)
             if item.fromPlayingVideo {
@@ -634,6 +636,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     var isPaused = true
                     var seekable = false
                     var hasStarted = false
+                    var displayProgress = true
                     if let value = value {
                         hasStarted = value.timestamp > 0
                         
@@ -648,7 +651,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             case .playing:
                                 isPaused = false
                                 playing = true
-                            case let .buffering(_, whilePlaying, _):
+                            case let .buffering(_, whilePlaying, _, display):
+                                displayProgress = display
                                 initialBuffering = true
                                 isPaused = !whilePlaying
                                 var isStreaming = false
@@ -678,6 +682,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     if !content.enableSound {
                                         isPaused = false
                                     }
+                                } else {
+                                    strongSelf.updateControlsVisibility(true)
+                                    strongSelf.controlsTimer?.invalidate()
+                                    strongSelf.controlsTimer = nil
                                 }
                         }
                         seekable = value.duration >= 30.0
@@ -700,7 +708,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     
                     var fetching = false
                     if initialBuffering {
-                        strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false), animated: false, completion: {})
+                        if displayProgress {
+                            strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false), animated: false, completion: {})
+                        } else {
+                            strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
+                        }
                     } else {
                         var state: RadialStatusNodeState = .play(.white)
                         
@@ -789,6 +801,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     override func controlsVisibilityUpdated(isVisible: Bool) {
         self.controlsTimer?.invalidate()
         self.controlsTimer = nil
+        
+        self.videoNode?.isUserInteractionEnabled = isVisible ? self.videoNodeUserInteractionEnabled : false
+        self.videoNode?.notifyPlaybackControlsHidden(!isVisible)
     }
     
     private func updateDisplayPlaceholder(_ displayPlaceholder: Bool) {

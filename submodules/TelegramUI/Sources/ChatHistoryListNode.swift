@@ -565,6 +565,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
     }
     
+    private let pendingRemovedMessagesPromise = ValuePromise<Set<MessageId>>(Set())
+    var pendingRemovedMessages: Set<MessageId> = Set() {
+        didSet {
+            if self.pendingRemovedMessages != oldValue {
+                self.pendingRemovedMessagesPromise.set(self.pendingRemovedMessages)
+            }
+        }
+    }
+    
     private(set) var isScrollAtBottomPosition = false
     public var isScrollAtBottomPositionUpdated: (() -> Void)?
     
@@ -846,10 +855,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             automaticDownloadNetworkType,
             self.historyAppearsClearedPromise.get(),
             self.pendingUnpinnedAllMessagesPromise.get(),
+            self.pendingRemovedMessagesPromise.get(),
             animatedEmojiStickers,
             customChannelDiscussionReadState,
             customThreadOutgoingReadState
-        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, historyAppearsCleared, pendingUnpinnedAllMessages, animatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState in
+        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, animatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState in
             func applyHole() {
                 Queue.mainQueue().async {
                     if let strongSelf = self {
@@ -930,7 +940,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 
                 let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, subject: subject)
                 
-                let filteredEntries = chatHistoryEntriesForView(location: chatLocation, view: view, includeUnreadEntry: mode == .bubbles, includeEmptyEntry: mode == .bubbles && tagMask == nil, includeChatInfoEntry: mode == .bubbles, includeSearchEntry: includeSearchEntry && tagMask != nil, reverse: reverse, groupMessages: mode == .bubbles, selectedMessages: selectedMessages, presentationData: chatPresentationData, historyAppearsCleared: historyAppearsCleared, pendingUnpinnedAllMessages: pendingUnpinnedAllMessages, associatedData: associatedData, updatingMedia: updatingMedia, customChannelDiscussionReadState: customChannelDiscussionReadState, customThreadOutgoingReadState: customThreadOutgoingReadState)
+                let filteredEntries = chatHistoryEntriesForView(location: chatLocation, view: view, includeUnreadEntry: mode == .bubbles, includeEmptyEntry: mode == .bubbles && tagMask == nil, includeChatInfoEntry: mode == .bubbles, includeSearchEntry: includeSearchEntry && tagMask != nil, reverse: reverse, groupMessages: mode == .bubbles, selectedMessages: selectedMessages, presentationData: chatPresentationData, historyAppearsCleared: historyAppearsCleared, pendingUnpinnedAllMessages: pendingUnpinnedAllMessages, pendingRemovedMessages: pendingRemovedMessages, associatedData: associatedData, updatingMedia: updatingMedia, customChannelDiscussionReadState: customChannelDiscussionReadState, customThreadOutgoingReadState: customThreadOutgoingReadState)
                 let lastHeaderId = filteredEntries.last.flatMap { listMessageDateHeaderId(timestamp: $0.index.timestamp) } ?? 0
                 let processedView = ChatHistoryView(originalView: view, filteredEntries: filteredEntries, associatedData: associatedData, lastHeaderId: lastHeaderId, id: id)
                 let previousValueAndVersion = previousView.swap((processedView, update.1, selectedMessages))
@@ -1149,6 +1159,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         
         let selectionRecognizer = ChatHistoryListSelectionRecognizer(target: self, action: #selector(self.selectionPanGesture(_:)))
+        selectionRecognizer.shouldBegin = { [weak self] in
+            guard let strongSelf = self else {
+                return false
+            }
+            if case .pinnedMessages = strongSelf.subject {
+                return false
+            }
+            return true
+        }
         self.view.addGestureRecognizer(selectionRecognizer)
     }
     

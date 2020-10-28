@@ -5232,62 +5232,106 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
             }
-        }, unpinMessage: { [weak self] id, askForConfirmation in
-            if let strongSelf = self {
-                if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
-                    if strongSelf.canManagePin() {
-                        let action: () -> Void = {
-                            if let strongSelf = self {
-                                let disposable: MetaDisposable
-                                if let current = strongSelf.unpinMessageDisposable {
-                                    disposable = current
-                                } else {
-                                    disposable = MetaDisposable()
-                                    strongSelf.unpinMessageDisposable = disposable
-                                }
-                                
-                                if askForConfirmation {
-                                    strongSelf.chatDisplayNode.historyNode.pendingUnpinnedAllMessages = true
-                                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                        return $0.updatedPendingUnpinnedAllMessages(true)
-                                    })
-                                        
+        }, unpinMessage: { [weak self] id, askForConfirmation, contextController in
+            let impl: () -> Void = {
+                guard let strongSelf = self else {
+                    return
+                }
+                guard let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
+                    return
+                }
+                
+                if strongSelf.canManagePin() {
+                    let action: () -> Void = {
+                        if let strongSelf = self {
+                            let disposable: MetaDisposable
+                            if let current = strongSelf.unpinMessageDisposable {
+                                disposable = current
+                            } else {
+                                disposable = MetaDisposable()
+                                strongSelf.unpinMessageDisposable = disposable
+                            }
+                            
+                            if askForConfirmation {
+                                strongSelf.chatDisplayNode.historyNode.pendingUnpinnedAllMessages = true
+                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                    return $0.updatedPendingUnpinnedAllMessages(true)
+                                })
+                                    
+                                strongSelf.present(
+                                    UndoOverlayController(
+                                        presentationData: strongSelf.presentationData,
+                                        content: .messagesUnpinned(
+                                            title: strongSelf.presentationData.strings.Chat_MessagesUnpinned(1),
+                                            text: "",
+                                            undo: askForConfirmation,
+                                            isHidden: false
+                                        ),
+                                        elevatedLayout: false,
+                                        action: { action in
+                                            switch action {
+                                            case .commit:
+                                                disposable.set((requestUpdatePinnedMessage(account: strongSelf.context.account, peerId: peer.id, update: .clear(id: id))
+                                                |> deliverOnMainQueue).start(error: { _ in
+                                                    guard let strongSelf = self else {
+                                                        return
+                                                    }
+                                                    strongSelf.chatDisplayNode.historyNode.pendingUnpinnedAllMessages = false
+                                                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                                        return $0.updatedPendingUnpinnedAllMessages(false)
+                                                    })
+                                                }, completed: {
+                                                    guard let strongSelf = self else {
+                                                        return
+                                                    }
+                                                    strongSelf.chatDisplayNode.historyNode.pendingUnpinnedAllMessages = false
+                                                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                                        return $0.updatedPendingUnpinnedAllMessages(false)
+                                                    })
+                                                }))
+                                            case .undo:
+                                                strongSelf.chatDisplayNode.historyNode.pendingUnpinnedAllMessages = false
+                                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                                    return $0.updatedPendingUnpinnedAllMessages(false)
+                                                })
+                                            default:
+                                                break
+                                            }
+                                            return true
+                                        }
+                                    ),
+                                    in: .current
+                                )
+                            } else {
+                                if case .pinnedMessages = strongSelf.presentationInterfaceState.subject {
+                                    strongSelf.chatDisplayNode.historyNode.pendingRemovedMessages.insert(id)
                                     strongSelf.present(
                                         UndoOverlayController(
                                             presentationData: strongSelf.presentationData,
                                             content: .messagesUnpinned(
                                                 title: strongSelf.presentationData.strings.Chat_MessagesUnpinned(1),
                                                 text: "",
-                                                undo: askForConfirmation,
+                                                undo: true,
                                                 isHidden: false
                                             ),
                                             elevatedLayout: false,
                                             action: { action in
+                                                guard let strongSelf = self else {
+                                                    return true
+                                                }
                                                 switch action {
                                                 case .commit:
-                                                    disposable.set((requestUpdatePinnedMessage(account: strongSelf.context.account, peerId: peer.id, update: .clear(id: id))
-                                                    |> deliverOnMainQueue).start(error: { _ in
-                                                        guard let strongSelf = self else {
-                                                            return
-                                                        }
-                                                        strongSelf.chatDisplayNode.historyNode.pendingUnpinnedAllMessages = false
-                                                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                                            return $0.updatedPendingUnpinnedAllMessages(false)
+                                                    let _ = (requestUpdatePinnedMessage(account: strongSelf.context.account, peerId: peer.id, update: .clear(id: id))
+                                                    |> deliverOnMainQueue).start(completed: {
+                                                        Queue.mainQueue().after(1.0, {
+                                                            guard let strongSelf = self else {
+                                                                return
+                                                            }
+                                                            strongSelf.chatDisplayNode.historyNode.pendingRemovedMessages.remove(id)
                                                         })
-                                                    }, completed: {
-                                                        guard let strongSelf = self else {
-                                                            return
-                                                        }
-                                                        strongSelf.chatDisplayNode.historyNode.pendingUnpinnedAllMessages = false
-                                                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                                            return $0.updatedPendingUnpinnedAllMessages(false)
-                                                        })
-                                                    }))
-                                                case .undo:
-                                                    strongSelf.chatDisplayNode.historyNode.pendingUnpinnedAllMessages = false
-                                                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                                        return $0.updatedPendingUnpinnedAllMessages(false)
                                                     })
+                                                case .undo:
+                                                    strongSelf.chatDisplayNode.historyNode.pendingRemovedMessages.remove(id)
                                                 default:
                                                     break
                                                 }
@@ -5302,61 +5346,69 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                         }
-                        if askForConfirmation {
-                            strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Conversation_UnpinMessageAlert, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Conversation_Unpin, action: {
-                                action()
-                            }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})], actionLayout: .vertical), in: .window(.root))
-                        } else {
+                    }
+                    if askForConfirmation {
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Conversation_UnpinMessageAlert, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Conversation_Unpin, action: {
                             action()
-                        }
+                        }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})], actionLayout: .vertical), in: .window(.root))
                     } else {
-                        if let pinnedMessage = strongSelf.presentationInterfaceState.pinnedMessage {
-                            let previousClosedPinnedMessageId = strongSelf.presentationInterfaceState.interfaceState.messageActionsState.closedPinnedMessageId
-                            
-                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                return $0.updatedInterfaceState({ $0.withUpdatedMessageActionsState({ value in
-                                    var value = value
-                                    value.closedPinnedMessageId = pinnedMessage.topMessageId
-                                    return value
-                                }) })
-                            })
-                            strongSelf.present(
-                                UndoOverlayController(
-                                    presentationData: strongSelf.presentationData,
-                                    content: .messagesUnpinned(
-                                        title: strongSelf.presentationData.strings.Chat_PinnedMessagesHiddenTitle,
-                                        text: strongSelf.presentationData.strings.Chat_PinnedMessagesHiddenText,
-                                        undo: true,
-                                        isHidden: false
-                                    ),
-                                    elevatedLayout: false,
-                                    action: { action in
-                                        guard let strongSelf = self else {
-                                            return true
-                                        }
-                                        switch action {
-                                        case .commit:
-                                            break
-                                        case .undo:
-                                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                                                return $0.updatedInterfaceState({ $0.withUpdatedMessageActionsState({ value in
-                                                    var value = value
-                                                    value.closedPinnedMessageId = previousClosedPinnedMessageId
-                                                    return value
-                                                }) })
-                                            })
-                                        default:
-                                            break
-                                        }
+                        action()
+                    }
+                } else {
+                    if let pinnedMessage = strongSelf.presentationInterfaceState.pinnedMessage {
+                        let previousClosedPinnedMessageId = strongSelf.presentationInterfaceState.interfaceState.messageActionsState.closedPinnedMessageId
+                        
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                            return $0.updatedInterfaceState({ $0.withUpdatedMessageActionsState({ value in
+                                var value = value
+                                value.closedPinnedMessageId = pinnedMessage.topMessageId
+                                return value
+                            }) })
+                        })
+                        strongSelf.present(
+                            UndoOverlayController(
+                                presentationData: strongSelf.presentationData,
+                                content: .messagesUnpinned(
+                                    title: strongSelf.presentationData.strings.Chat_PinnedMessagesHiddenTitle,
+                                    text: strongSelf.presentationData.strings.Chat_PinnedMessagesHiddenText,
+                                    undo: true,
+                                    isHidden: false
+                                ),
+                                elevatedLayout: false,
+                                action: { action in
+                                    guard let strongSelf = self else {
                                         return true
                                     }
-                                ),
-                                in: .current
-                            )
-                            strongSelf.updatedClosedPinnedMessageId?(pinnedMessage.topMessageId)
-                        }
+                                    switch action {
+                                    case .commit:
+                                        break
+                                    case .undo:
+                                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                            return $0.updatedInterfaceState({ $0.withUpdatedMessageActionsState({ value in
+                                                var value = value
+                                                value.closedPinnedMessageId = previousClosedPinnedMessageId
+                                                return value
+                                            }) })
+                                        })
+                                    default:
+                                        break
+                                    }
+                                    return true
+                                }
+                            ),
+                            in: .current
+                        )
+                        strongSelf.updatedClosedPinnedMessageId?(pinnedMessage.topMessageId)
                     }
                 }
+            }
+            
+            if let contextController = contextController {
+                contextController.dismiss(completion: {
+                    impl()
+                })
+            } else {
+                impl()
             }
         }, unpinAllMessages: { [weak self] in
             guard let strongSelf = self else {
@@ -8094,7 +8146,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     public func displayPromoAnnouncement(text: String) {
         let psaText: String = text
-        let psaEntities: [MessageTextEntity] = generateTextEntities(psaText, enabledTypes: .url)
+        let psaEntities: [MessageTextEntity] = generateTextEntities(psaText, enabledTypes: .allUrl)
         
         var found = false
         self.forEachController({ controller in
@@ -8187,7 +8239,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             psaText = string
         }
         
-        let psaEntities: [MessageTextEntity] = generateTextEntities(psaText, enabledTypes: .url)
+        let psaEntities: [MessageTextEntity] = generateTextEntities(psaText, enabledTypes: .allUrl)
         
         let messageId = item.message.id
         
