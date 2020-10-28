@@ -762,13 +762,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
         return self.playbackStatus.get()
     }
     
-    public var autoplay = true {
-        didSet {
-            if self.autoplay != oldValue {
-                self.updateIsPlaying()
-            }
-        }
-    }
+    public var autoplay = false
     
     public var visibility = false {
         didSet {
@@ -835,9 +829,12 @@ public final class AnimatedStickerNode: ASDisplayNode {
                     strongSelf.directData = (directData, path, width, height, cachePathPrefix, source.fitzModifier)
                 }
                 if case let .still(position) = playbackMode {
-                    strongSelf.play(firstFrame: true)
                     strongSelf.seekTo(position)
-                } else if strongSelf.isPlaying {
+                } else if strongSelf.isPlaying || strongSelf.autoplay {
+                    if strongSelf.autoplay {
+                        strongSelf.isSetUpForPlayback = false
+                        strongSelf.isPlaying = true
+                    }
                     strongSelf.play()
                 } else if strongSelf.canDisplayFirstFrame {
                     strongSelf.play(firstFrame: true)
@@ -884,11 +881,14 @@ public final class AnimatedStickerNode: ASDisplayNode {
     }
     
     private func updateIsPlaying() {
+        guard !self.autoplay else {
+            return
+        }
         let isPlaying = self.visibility && self.isDisplaying
         if self.isPlaying != isPlaying {
             self.isPlaying = isPlaying
             if isPlaying {
-                self.play(firstFrame: !self.autoplay)
+                self.play()
             } else{
                 self.pause()
             }
@@ -1091,7 +1091,6 @@ public final class AnimatedStickerNode: ASDisplayNode {
             var maybeFrameSource: AnimatedStickerFrameSource? = frameSourceHolder.with { $0 }?.syncWith { $0 }?.value
             if case .timestamp = position {
             } else {
-                var maybeFrameSource: AnimatedStickerFrameSource?
                 if let directData = directData {
                     maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, fitzModifier: directData.5)
                     if case .end = position {
