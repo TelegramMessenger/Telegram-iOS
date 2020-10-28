@@ -95,7 +95,7 @@ final class ChatPanelInterfaceInteraction {
     let sendSticker: (FileMediaReference, ASDisplayNode, CGRect) -> Bool
     let unblockPeer: () -> Void
     let pinMessage: (MessageId, ContextController?) -> Void
-    let unpinMessage: (MessageId, Bool) -> Void
+    let unpinMessage: (MessageId, Bool, ContextController?) -> Void
     let unpinAllMessages: () -> Void
     let openPinnedList: (MessageId) -> Void
     let shareAccountContact: () -> Void
@@ -174,7 +174,7 @@ final class ChatPanelInterfaceInteraction {
         sendSticker: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Bool,
         unblockPeer: @escaping () -> Void,
         pinMessage: @escaping (MessageId, ContextController?) -> Void,
-        unpinMessage: @escaping (MessageId, Bool) -> Void,
+        unpinMessage: @escaping (MessageId, Bool, ContextController?) -> Void,
         unpinAllMessages: @escaping () -> Void,
         openPinnedList: @escaping (MessageId) -> Void,
         shareAccountContact: @escaping () -> Void,
