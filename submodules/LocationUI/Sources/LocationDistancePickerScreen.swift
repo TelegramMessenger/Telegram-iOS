@@ -161,8 +161,10 @@ private var unitValues: [Int32] = {
 
 private var smallUnitValues: [Int32] = {
     var values: [Int32] = []
-    for i in 0 ..< 100 {
-        values.append(Int32(i))
+    values.append(0)
+    values.append(5)
+    for i in 1 ..< 10 {
+        values.append(Int32(i * 10))
     }
     return values
 }()
@@ -333,7 +335,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     func numberOfComponents(in pickerView: UIPickerView) -> Int {
-        return 3
+        return 2
     }
     
     private func updateDoneButtonTitle() {
@@ -409,11 +411,9 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
         if component == 0 {
             let value = unitValues[row]
             string = "\(value)"
-        } else if component == 1 {
+        } else {
             let value = String(format: "%.2d", smallUnitValues[row])
             string = ".\(value)"
-        } else {
-            string = self.usesMetricSystem() ? self.presentationData.strings.Location_ProximityNotification_DistanceKM : self.presentationData.strings.Location_ProximityNotification_DistanceMI
         }
         return NSAttributedString(string: string, font: font, textColor: self.presentationData.theme.actionSheet.primaryTextColor)
     }

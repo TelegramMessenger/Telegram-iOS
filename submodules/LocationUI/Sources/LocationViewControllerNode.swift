@@ -142,8 +142,8 @@ private enum LocationViewEntry: Comparable, Identifiable {
                 return LocationActionListItem(presentationData: ItemListPresentationData(presentationData), account: context.account, title: title, subtitle: subtitle, icon: beginTimeAndTimeout != nil ? .stopLiveLocation : .liveLocation, beginTimeAndTimeout: beginTimeAndTimeout, action: {
                     if beginTimeAndTimeout != nil {
                         interaction?.stopLiveLocation()
-                    } else if let coordinate = coordinate {
-                        interaction?.sendLiveLocation(coordinate, nil)
+                    } else {
+                        interaction?.sendLiveLocation(nil)
                     }
                 }, highlighted: { highlight in
                     interaction?.updateSendActionHighlight(highlight)
@@ -176,12 +176,16 @@ struct LocationViewState {
     var displayingMapModeOptions: Bool
     var selectedLocation: LocationViewLocation
     var trackingMode: LocationTrackingMode
+    var updatingProximityRadius: Int32?
+    var cancellingProximityRadius: Bool
     
     init() {
         self.mapMode = .map
         self.displayingMapModeOptions = false
         self.selectedLocation = .initial
         self.trackingMode = .none
+        self.updatingProximityRadius = nil
+        self.cancellingProximityRadius = false
     }
 }
 
@@ -274,9 +278,6 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
             let _ = (liveLocations
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] messages in
-                guard let strongSelf = self else {
-                    return
-                }
                 var ownMessageId: MessageId?
                 for message in messages {
                     if message.localTags.contains(.OutgoingLiveLocation) {
@@ -284,7 +285,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                         break
                     }
                 }
-                interaction.setupProximityNotification(reset, strongSelf.headerNode.mapNode.currentUserLocation?.coordinate, ownMessageId)
+                interaction.setupProximityNotification(reset, ownMessageId)
                 
                 let _ = ApplicationSpecificNotice.incrementLocationProximityAlertTip(accountManager: context.sharedContext.accountManager, count: 4).start()
             })
@@ -387,29 +388,38 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 }
                         
                 for message in effectiveLiveLocations {
-                    if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info, message.threadId != nil {
-                        continue
+                    if let location = getLocation(from: message) {
+                        if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info, message.threadId != nil {
+                            continue
+                        }
+                        
+                        var liveBroadcastingTimeout: Int32 = 0
+                        if let timeout = location.liveBroadcastingTimeout {
+                            liveBroadcastingTimeout = timeout
+                        }
+                        let remainingTime = max(0, message.timestamp + liveBroadcastingTimeout - currentTime)
+                        if message.flags.contains(.Incoming) && remainingTime != 0 && proximityNotification == nil {
+                            proximityNotification = false
+                        }
+                        
+                        let subjectLocation = CLLocation(latitude: location.latitude, longitude: location.longitude)
+                        let distance = userLocation.flatMap { subjectLocation.distance(from: $0) }
+                        
+                        if message.localTags.contains(.OutgoingLiveLocation), let selfPeer = selfPeer {
+                            userAnnotation = LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer, heading: location.heading)
+                        } else {
+                            annotations.append(LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer, heading: location.heading))
+                            entries.append(.liveLocation(presentationData.theme, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, message, distance, index))
+                        }
+                        index += 1
                     }
-                    
-                    var liveBroadcastingTimeout: Int32 = 0
-                    if let location = getLocation(from: message), let timeout = location.liveBroadcastingTimeout {
-                        liveBroadcastingTimeout = timeout
-                    }
-                    let remainingTime = max(0, message.timestamp + liveBroadcastingTimeout - currentTime)
-                    if message.flags.contains(.Incoming) && remainingTime != 0 && proximityNotification == nil {
-                        proximityNotification = false
-                    }
-                    
-                    let subjectLocation = CLLocation(latitude: location.latitude, longitude: location.longitude)
-                    let distance = userLocation.flatMap { subjectLocation.distance(from: $0) }
-                    
-                    if message.localTags.contains(.OutgoingLiveLocation), let selfPeer = selfPeer {
-                        userAnnotation = LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer, heading: location.heading)
-                    } else {
-                        annotations.append(LocationPinAnnotation(context: context, theme: presentationData.theme, message: message, selfPeer: selfPeer, heading: location.heading))
-                        entries.append(.liveLocation(presentationData.theme, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, message, distance, index))
-                    }
-                    index += 1
+                }
+                
+                if let currentProximityNotification = proximityNotification, currentProximityNotification && state.cancellingProximityRadius {
+                    proximityNotification = false
+                } else if let radius = state.updatingProximityRadius {
+                    proximityNotification = true
+                    proximityNotificationRadius = radius
                 }
                 
                 if subject.id.peerId.namespace != Namespaces.Peer.CloudUser, proximityNotification == nil {
@@ -714,5 +724,16 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
         transition.updateFrame(node: self.optionsNode, frame: optionsFrame)
         self.optionsNode.updateLayout(size: optionsFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
         self.optionsNode.isUserInteractionEnabled = self.state.displayingMapModeOptions
+    }
+    
+    var coordinate: Signal<CLLocationCoordinate2D, NoError> {
+        return self.headerNode.mapNode.userLocation
+        |> filter { location in
+            return location != nil
+        }
+        |> take(1)
+        |> map { location -> CLLocationCoordinate2D in
+            return location!.coordinate
+        }
     }
 }
