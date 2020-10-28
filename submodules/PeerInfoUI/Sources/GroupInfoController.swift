@@ -507,7 +507,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                     arguments.changeProfilePhoto()
                 })
             case let .about(theme, text):
-                return ItemListMultilineTextItem(presentationData: presentationData, text: foldMultipleLineBreaks(text), enabledEntityTypes: [.url, .mention, .hashtag], sectionId: self.section, style: .blocks, longTapAction: {
+                return ItemListMultilineTextItem(presentationData: presentationData, text: foldMultipleLineBreaks(text), enabledEntityTypes: [.allUrl, .mention, .hashtag], sectionId: self.section, style: .blocks, longTapAction: {
                     arguments.displayAboutContextMenu(text)
                 }, linkItemAction: { action, itemLink in
                     arguments.aboutLinkAction(action, itemLink)

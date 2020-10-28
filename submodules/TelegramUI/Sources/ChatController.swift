@@ -8146,7 +8146,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     public func displayPromoAnnouncement(text: String) {
         let psaText: String = text
-        let psaEntities: [MessageTextEntity] = generateTextEntities(psaText, enabledTypes: .url)
+        let psaEntities: [MessageTextEntity] = generateTextEntities(psaText, enabledTypes: .allUrl)
         
         var found = false
         self.forEachController({ controller in
@@ -8239,7 +8239,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             psaText = string
         }
         
-        let psaEntities: [MessageTextEntity] = generateTextEntities(psaText, enabledTypes: .url)
+        let psaEntities: [MessageTextEntity] = generateTextEntities(psaText, enabledTypes: .allUrl)
         
         let messageId = item.message.id
         
