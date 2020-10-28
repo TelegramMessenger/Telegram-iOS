@@ -73,7 +73,7 @@ fi
 COMMIT_COMMENT="$(git log -1 --pretty=%B)"
 case "$COMMIT_COMMENT" in 
   *"[nocache]"*)
-	export BAZEL_HTTP_CACHE=""
+	export BAZEL_HTTP_CACHE_URL=""
     ;;
 esac
 
@@ -195,7 +195,7 @@ else
 fi
 scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/guest-build-telegram.sh" "$BUILDBOX_DIR/transient-data/source.tar" telegram@"$VM_IP":
 
-ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export TELEGRAM_BUILD_APPSTORE_PASSWORD=\"$TELEGRAM_BUILD_APPSTORE_PASSWORD\"; export TELEGRAM_BUILD_APPSTORE_TEAM_NAME=\"$TELEGRAM_BUILD_APPSTORE_TEAM_NAME\"; export TELEGRAM_BUILD_APPSTORE_USERNAME=\"$TELEGRAM_BUILD_APPSTORE_USERNAME\"; export BUILD_NUMBER=\"$BUILD_NUMBER\"; export COMMIT_ID=\"$COMMIT_ID\"; export COMMIT_AUTHOR=\"$COMMIT_AUTHOR\"; export BAZEL_HTTP_CACHE=\"$BAZEL_HTTP_CACHE\"; $GUEST_SHELL -l guest-build-telegram.sh $BUILD_CONFIGURATION" || true
+ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export TELEGRAM_BUILD_APPSTORE_PASSWORD=\"$TELEGRAM_BUILD_APPSTORE_PASSWORD\"; export TELEGRAM_BUILD_APPSTORE_TEAM_NAME=\"$TELEGRAM_BUILD_APPSTORE_TEAM_NAME\"; export TELEGRAM_BUILD_APPSTORE_USERNAME=\"$TELEGRAM_BUILD_APPSTORE_USERNAME\"; export BUILD_NUMBER=\"$BUILD_NUMBER\"; export COMMIT_ID=\"$COMMIT_ID\"; export COMMIT_AUTHOR=\"$COMMIT_AUTHOR\"; export BAZEL_HTTP_CACHE_URL=\"$BAZEL_HTTP_CACHE_URL\"; $GUEST_SHELL -l guest-build-telegram.sh $BUILD_CONFIGURATION" || true
 
 OUTPUT_PATH="build/artifacts"
 rm -rf "$OUTPUT_PATH"
