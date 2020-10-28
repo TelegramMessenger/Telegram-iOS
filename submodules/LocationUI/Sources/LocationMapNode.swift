@@ -483,7 +483,8 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     }
     
     var userLocation: Signal<CLLocation?, NoError> {
-        return self.locationPromise.get()
+        return .single(self.currentUserLocation)
+        |> then (self.locationPromise.get())
     }
     
     var mapCenterCoordinate: CLLocationCoordinate2D? {

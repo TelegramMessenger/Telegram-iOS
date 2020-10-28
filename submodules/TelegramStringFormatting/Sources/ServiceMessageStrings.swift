@@ -444,7 +444,9 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 attributedString = nil
             case let .geoProximityReached(fromId, toId, distance):
                 let distanceString = stringForDistance(strings: strings, distance: Double(distance))
-                if toId == accountPeerId {
+                if fromId == accountPeerId {
+                    attributedString = addAttributesToStringWithRanges(strings.Notification_ProximityYouReached(distanceString, message.peers[toId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(1, toId)]))
+                } else if toId == accountPeerId {
                     attributedString = addAttributesToStringWithRanges(strings.Notification_ProximityReachedYou(message.peers[fromId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? "", distanceString), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, fromId)]))
                 } else {
                     attributedString = addAttributesToStringWithRanges(strings.Notification_ProximityReached(message.peers[fromId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? "", distanceString, message.peers[toId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, fromId), (2, toId)]))

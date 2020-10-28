@@ -5840,6 +5840,7 @@ Any member of this group will be able to see messages in the channel.";
 
 "Notification.ProximityReached" = "%1$@ is now within %2$@ from %3$@";
 "Notification.ProximityReachedYou" = "%1$@ is now within %2$@ from you";
+"Notification.ProximityYouReached" = "You are now within %1$@ from %2$@";
 
 "Location.ProximityNotification.Title" = "Proximity Alert";
 "Location.ProximityNotification.Notify" = "Notify me within %@";

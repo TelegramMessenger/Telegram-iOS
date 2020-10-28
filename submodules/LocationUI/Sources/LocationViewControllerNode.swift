@@ -48,7 +48,7 @@ private enum LocationViewEntryId: Hashable {
 
 private enum LocationViewEntry: Comparable, Identifiable {
     case info(PresentationTheme, TelegramMediaMap, String?, Double?, Double?)
-    case toggleLiveLocation(PresentationTheme, String, String, CLLocationCoordinate2D?, Double?, Double?)
+    case toggleLiveLocation(PresentationTheme, String, String, Double?, Double?)
     case liveLocation(PresentationTheme, PresentationDateTimeFormat, PresentationPersonNameOrder, Message, Double?, Int)
     
     var stableId: LocationViewEntryId {
@@ -70,8 +70,8 @@ private enum LocationViewEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .toggleLiveLocation(lhsTheme, lhsTitle, lhsSubtitle, lhsCoordinate, lhsBeginTimestamp, lhsTimeout):
-                if case let .toggleLiveLocation(rhsTheme, rhsTitle, rhsSubtitle, rhsCoordinate, rhsBeginTimestamp, rhsTimeout) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsCoordinate == rhsCoordinate, lhsBeginTimestamp == rhsBeginTimestamp, lhsTimeout == rhsTimeout {
+            case let .toggleLiveLocation(lhsTheme, lhsTitle, lhsSubtitle, lhsBeginTimestamp, lhsTimeout):
+                if case let .toggleLiveLocation(rhsTheme, rhsTitle, rhsSubtitle, rhsBeginTimestamp, rhsTimeout) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsBeginTimestamp == rhsBeginTimestamp, lhsTimeout == rhsTimeout {
                     return true
                 } else {
                     return false
@@ -132,7 +132,7 @@ private enum LocationViewEntry: Comparable, Identifiable {
                 }, getDirections: {
                     interaction?.requestDirections()
                 })
-            case let .toggleLiveLocation(_, title, subtitle, coordinate, beginTimstamp, timeout):
+            case let .toggleLiveLocation(_, title, subtitle, beginTimstamp, timeout):
                 let beginTimeAndTimeout: (Double, Double)?
                 if let beginTimstamp = beginTimstamp, let timeout = timeout {
                     beginTimeAndTimeout = (beginTimstamp, timeout)
@@ -149,7 +149,11 @@ private enum LocationViewEntry: Comparable, Identifiable {
                     interaction?.updateSendActionHighlight(highlight)
                 })
             case let .liveLocation(_, dateTimeFormat, nameDisplayOrder, message, distance, _):
-                return LocationLiveListItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: context, message: message, distance: distance, action: {}, longTapAction: {})
+                return LocationLiveListItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: context, message: message, distance: distance, action: {
+                    if let location = getLocation(from: message) {
+                        interaction?.goToCoordinate(location.coordinate)
+                    }
+                }, longTapAction: {})
         }
     }
 }
@@ -277,10 +281,10 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
             return messages
         }
         
-        setupProximityNotificationImpl = { [weak self] reset in
+        setupProximityNotificationImpl = { reset in
             let _ = (liveLocations
             |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] messages in
+            |> deliverOnMainQueue).start(next: { messages in
                 var ownMessageId: MessageId?
                 for message in messages {
                     if message.localTags.contains(.OutgoingLiveLocation) {
@@ -369,7 +373,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     
                     if let channel = subject.author as? TelegramChannel, case .broadcast = channel.info, activeOwnLiveLocation == nil {
                     } else {
-                        entries.append(.toggleLiveLocation(presentationData.theme, title, subtitle, userLocation?.coordinate, beginTime, timeout))
+                        entries.append(.toggleLiveLocation(presentationData.theme, title, subtitle, beginTime, timeout))
                     }
                     
                     var sortedLiveLocations: [Message] = []

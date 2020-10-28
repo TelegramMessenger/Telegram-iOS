@@ -212,46 +212,58 @@ public final class LocationViewController: ViewController {
                     }
                     strongSelf.controllerNode.setProximityIndicator(radius: 0)
                     
-                    let controller = LocationDistancePickerScreen(context: context, style: .default, distances: strongSelf.controllerNode.headerNode.mapNode.distancesToAllAnnotations, updated: { [weak self] distance in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.controllerNode.setProximityIndicator(radius: distance)
-                    }, completion: { [weak self] distance, completion in
+                    let _ = (strongSelf.context.account.postbox.loadedPeerWithId(strongSelf.subject.id.peerId)
+                    |> deliverOnMainQueue).start(next: { [weak self] peer in
                         guard let strongSelf = self else {
                             return
                         }
                         
-                        if let messageId = messageId {
-                            strongSelf.controllerNode.updateState { state in
-                                var state = state
-                                state.updatingProximityRadius = distance
-                                return state
+                        var compactDisplayTitle: String?
+                        if let peer = peer as? TelegramUser {
+                            compactDisplayTitle = peer.compactDisplayTitle
+                        }
+                        
+                        let controller = LocationDistancePickerScreen(context: context, style: .default, compactDisplayTitle: compactDisplayTitle, distances: strongSelf.controllerNode.headerNode.mapNode.distancesToAllAnnotations, updated: { [weak self] distance in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.controllerNode.setProximityIndicator(radius: distance)
+                        }, completion: { [weak self] distance, completion in
+                            guard let strongSelf = self else {
+                                return
                             }
                             
-                            let _ = requestEditLiveLocation(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, messageId: messageId, stop: false, coordinate: nil, heading: nil, proximityNotificationRadius: distance).start(completed: { [weak self] in
-                                guard let strongSelf = self else {
-                                    return
-                                }
+                            if let messageId = messageId {
                                 strongSelf.controllerNode.updateState { state in
                                     var state = state
-                                    state.updatingProximityRadius = nil
+                                    state.updatingProximityRadius = distance
                                     return state
                                 }
-                            })
-                        } else {
-                            strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_Title, text: strongSelf.presentationData.strings.Location_LiveLocationRequired_Description, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_ShareLocation, action: {
-                                completion()
-                                strongSelf.interaction?.sendLiveLocation(distance)
-                            }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})], actionLayout: .vertical), in: .window(.root))
-                        }
-                        completion()
-                    }, willDismiss: { [weak self] in
-                        if let strongSelf = self {
-                            strongSelf.controllerNode.setProximityIndicator(radius: nil)
-                        }
+                                
+                                let _ = requestEditLiveLocation(postbox: context.account.postbox, network: context.account.network, stateManager: context.account.stateManager, messageId: messageId, stop: false, coordinate: nil, heading: nil, proximityNotificationRadius: distance).start(completed: { [weak self] in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.controllerNode.updateState { state in
+                                        var state = state
+                                        state.updatingProximityRadius = nil
+                                        return state
+                                    }
+                                })
+                            } else {
+                                strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_Title, text: strongSelf.presentationData.strings.Location_LiveLocationRequired_Description, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_ShareLocation, action: {
+                                    completion()
+                                    strongSelf.interaction?.sendLiveLocation(distance)
+                                }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})], actionLayout: .vertical), in: .window(.root))
+                            }
+                            completion()
+                        }, willDismiss: { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.controllerNode.setProximityIndicator(radius: nil)
+                            }
+                        })
+                        strongSelf.present(controller, in: .window(.root))
                     })
-                    strongSelf.present(controller, in: .window(.root))
                 }
             }
         }, updateSendActionHighlight: { [weak self] highlighted in

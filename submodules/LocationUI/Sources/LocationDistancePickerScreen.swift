@@ -28,16 +28,18 @@ final class LocationDistancePickerScreen: ViewController {
     private let context: AccountContext
     private let style: LocationDistancePickerScreenStyle
     private let distances: Signal<[Double], NoError>
+    private let compactDisplayTitle: String?
     private let updated: (Int32?) -> Void
     private let completion: (Int32, @escaping () -> Void) -> Void
     private let willDismiss: () -> Void
     
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, style: LocationDistancePickerScreenStyle, distances: Signal<[Double], NoError>, updated: @escaping (Int32?) -> Void, completion: @escaping (Int32, @escaping () -> Void) -> Void, willDismiss: @escaping () -> Void) {
+    init(context: AccountContext, style: LocationDistancePickerScreenStyle, compactDisplayTitle: String?, distances: Signal<[Double], NoError>, updated: @escaping (Int32?) -> Void, completion: @escaping (Int32, @escaping () -> Void) -> Void, willDismiss: @escaping () -> Void) {
         self.context = context
         self.style = style
         self.distances = distances
+        self.compactDisplayTitle = compactDisplayTitle
         self.updated = updated
         self.completion = completion
         self.willDismiss = willDismiss
@@ -67,7 +69,7 @@ final class LocationDistancePickerScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = LocationDistancePickerScreenNode(context: self.context, style: self.style, distances: self.distances)
+        self.displayNode = LocationDistancePickerScreenNode(context: self.context, style: self.style, compactDisplayTitle: self.compactDisplayTitle, distances: self.distances)
         self.controllerNode.updated = { [weak self] distance in
             guard let strongSelf = self else {
                 return
@@ -173,6 +175,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     private let context: AccountContext
     private let controllerStyle: LocationDistancePickerScreenStyle
     private var presentationData: PresentationData
+    private var compactDisplayTitle: String?
     private var distances: [Double] = []
     
     private let dimNode: ASDisplayNode
@@ -185,6 +188,8 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     private let textNode: ImmediateTextNode
     private let cancelButton: HighlightableButtonNode
     private let doneButton: SolidRoundedButtonNode
+    
+    private let measureButtonTitleNode: ImmediateTextNode
     
     private var pickerView: TimerPickerView?
     private let unitLabelNode: ImmediateTextNode
@@ -199,11 +204,12 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(context: AccountContext, style: LocationDistancePickerScreenStyle, distances: Signal<[Double], NoError>) {
+    init(context: AccountContext, style: LocationDistancePickerScreenStyle, compactDisplayTitle: String?, distances: Signal<[Double], NoError>) {
         self.context = context
         self.controllerStyle = style
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                
+        self.compactDisplayTitle = compactDisplayTitle
+        
         self.wrappingScrollNode = ASScrollNode()
         self.wrappingScrollNode.view.alwaysBounceVertical = true
         self.wrappingScrollNode.view.delaysContentTouches = false
@@ -256,8 +262,9 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
         self.doneButton.title = self.presentationData.strings.Conversation_Timer_Send
         
         self.unitLabelNode = ImmediateTextNode()
-        
         self.smallUnitLabelNode = ImmediateTextNode()
+        
+        self.measureButtonTitleNode = ImmediateTextNode()
         
         super.init()
         
@@ -368,8 +375,26 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
             if !self.usesMetricSystem {
                 value = Int32(Double(value) * 1.60934)
             }
-            let distance = stringForDistance(strings: self.presentationData.strings, distance: CLLocationDistance(value))
-            self.doneButton.title = self.presentationData.strings.Location_ProximityNotification_Notify(distance).0
+            
+            var formattedValue = String(format: "%0.1f", CGFloat(value) / 1000.0)
+            if value == 50 {
+                formattedValue = formattedValue.replacingOccurrences(of: ".1", with: "0.05")
+            }
+            let distance = self.usesMetricSystem ? "\(formattedValue) \(self.presentationData.strings.Location_ProximityNotification_DistanceKM)" : "\(formattedValue) \(self.presentationData.strings.Location_ProximityNotification_DistanceMI)"
+            
+            let shortTitle = self.presentationData.strings.Location_ProximityNotification_Notify(distance).0
+            var longTitle: String?
+            if let displayTitle = self.compactDisplayTitle, let (layout, _) = self.containerLayout {
+                let title = self.presentationData.strings.Location_ProximityNotification_NotifyLong(displayTitle, distance).0
+                let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+                
+                self.measureButtonTitleNode.attributedText = NSAttributedString(string: title, font: Font.regular(14.0), textColor: .black)
+                let titleSize = self.measureButtonTitleNode.updateLayout(CGSize(width: width * 2.0, height: 50.0))
+                if titleSize.width < width - 70.0 {
+                    longTitle = title
+                }
+            }
+            self.doneButton.title = longTitle ?? shortTitle
     
             self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Location_ProximityNotification_AlreadyClose(distance).0, font: Font.regular(14.0), textColor: self.presentationData.theme.actionSheet.secondaryTextColor)
             if let (layout, navigationBarHeight) = self.containerLayout {
@@ -540,6 +565,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        var hadValidLayout = self.containerLayout != nil
         self.containerLayout = (layout, navigationBarHeight)
         
         var insets = layout.insets(options: [.statusBar, .input])
@@ -595,5 +621,9 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
         transition.updateFrame(node: self.smallUnitLabelNode, frame: CGRect(origin: CGPoint(x: floor(pickerFrame.width / 4.0 * 3.0) + 50.0, y: floor(pickerFrame.center.y - smallUnitLabelSize.height / 2.0)), size: smallUnitLabelSize))
         
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
+        
+        if !hadValidLayout {
+            self.updateDoneButtonTitle()
+        }
     }
 }
