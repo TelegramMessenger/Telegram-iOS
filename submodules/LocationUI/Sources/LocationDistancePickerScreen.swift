@@ -388,7 +388,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
                 let title = self.presentationData.strings.Location_ProximityNotification_NotifyLong(displayTitle, distance).0
                 let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
                 
-                self.measureButtonTitleNode.attributedText = NSAttributedString(string: title, font: Font.regular(14.0), textColor: .black)
+                self.measureButtonTitleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: .black)
                 let titleSize = self.measureButtonTitleNode.updateLayout(CGSize(width: width * 2.0, height: 50.0))
                 if titleSize.width < width - 70.0 {
                     longTitle = title
