@@ -239,7 +239,10 @@ final class LocationActionListItemNode: ListViewItemNode {
             
             let titleSpacing: CGFloat = 1.0
             let bottomInset: CGFloat = hasSeparator ? 0.0 : 4.0
-            let contentSize = CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.size.height + titleSpacing + subtitleLayout.size.height + bottomInset)
+            var contentSize = CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.size.height + titleSpacing + subtitleLayout.size.height + bottomInset)
+            if hasSeparator {
+                contentSize.height = max(52.0, contentSize.height)
+            }
             let nodeLayout = ListViewItemNodeLayout(contentSize: contentSize, insets: UIEdgeInsets())
             
             return (nodeLayout, { [weak self] in
