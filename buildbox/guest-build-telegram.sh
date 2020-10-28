@@ -116,17 +116,13 @@ else
 	exit 1
 fi
 
-if [ -d "$BUCK_DIR_CACHE" ]; then
-	sudo chown telegram "$BUCK_DIR_CACHE"
-fi
-
 if [ "$1" == "appcenter-experimental" ]; then
 	export APP_CENTER_ID="$APP_CENTER_EXPERIMENTAL_ID"
 elif [ "$1" == "appcenter-experimental-2" ]; then
 	export APP_CENTER_ID="$APP_CENTER_EXPERIMENTAL_2_ID"
 fi
 
-BUCK="$(pwd)/tools/buck" BUCK_HTTP_CACHE="$BUCK_HTTP_CACHE" BUCK_CACHE_MODE="$BUCK_CACHE_MODE" BUCK_DIR_CACHE="$BUCK_DIR_CACHE" LOCAL_CODESIGNING=1 sh "$BUILD_ENV_SCRIPT" make "$APP_TARGET"
+PATH="$PATH:$(pwd)/tools" BAZEL_HTTP_CACHE="$BAZEL_HTTP_CACHE" LOCAL_CODESIGNING=1 sh "$BUILD_ENV_SCRIPT" make "$APP_TARGET"
 
 OUTPUT_PATH="build/artifacts"
 rm -rf "$OUTPUT_PATH"
