@@ -599,17 +599,28 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
     }
     
     func setProximityIndicator(radius: Int32?) {
+        guard let (layout, navigationBarHeight) = self.validLayout else {
+            return
+        }
         if let radius = radius {
             self.headerNode.forceIsHidden = true
             
-            if var coordinate = self.headerNode.mapNode.currentUserLocation?.coordinate, let span = self.headerNode.mapNode.mapSpan {
-                coordinate.latitude -= span.latitudeDelta * 0.11
+            if let coordinate = self.headerNode.mapNode.currentUserLocation?.coordinate {
                 self.updateState { state in
                     var state = state
-                    state.selectedLocation = .coordinate(coordinate, true)
+                    state.selectedLocation = .custom
                     state.trackingMode = .none
                     return state
                 }
+                
+                let panelHeight: CGFloat = 349.0 + layout.intrinsicInsets.bottom
+                let inset = (layout.size.width - 260.0) / 2.0
+                let offset = panelHeight / 2.0 + 60.0 + inset + navigationBarHeight / 2.0
+                
+                let point = CGPoint(x: layout.size.width / 2.0, y: navigationBarHeight + (layout.size.height - navigationBarHeight - panelHeight) / 2.0)
+                let convertedPoint = self.view.convert(point, to: self.headerNode.mapNode.view)
+                
+                self.headerNode.mapNode.setMapCenter(coordinate: coordinate, radius: Double(radius), insets: UIEdgeInsets(top: navigationBarHeight, left: inset, bottom: offset, right: inset), offset: convertedPoint.y - self.headerNode.mapNode.frame.height / 2.0, animated: true)
             }
             
             self.headerNode.mapNode.proximityIndicatorRadius = Double(radius)

@@ -198,7 +198,7 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             switch value.status {
                                 case .playing:
                                     isPaused = false
-                                case let .buffering(_, whilePlaying, _):
+                                case let .buffering(_, whilePlaying, _, _):
                                     initialBuffering = true
                                     isPaused = !whilePlaying
                                     var isStreaming = false

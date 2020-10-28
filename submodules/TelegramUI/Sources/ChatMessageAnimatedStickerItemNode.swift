@@ -1274,7 +1274,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                 return .optionalAction({
                                     if shouldPlay {
                                         let _ = (appConfiguration
-                                        |> deliverOnMainQueue).start(next: { [weak self] appConfiguration in
+                                        |> deliverOnMainQueue).start(next: { [weak self, weak animationNode] appConfiguration in
                                             guard let strongSelf = self else {
                                                 return
                                             }
@@ -1315,9 +1315,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                                             }
                                                         }
                                                     }))
-                                                    break
+                                                    return
                                                 }
                                             }
+                                            animationNode?.play()
                                         })
                                     }
                                 })

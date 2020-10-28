@@ -465,8 +465,8 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     func animateIn() {
         self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         
-        let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
-        self.wrappingScrollNode.layer.animateBoundsOriginYAdditive(from: -offset, to: 0.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        let offset = self.contentContainerNode.frame.height
+        self.wrappingScrollNode.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
@@ -485,8 +485,8 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
             internalCompletion()
         })
         
-        let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
-        self.wrappingScrollNode.layer.animateBoundsOriginYAdditive(from: 0.0, to: -offset, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+        let offset = self.contentContainerNode.frame.height
+        self.wrappingScrollNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: offset), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { _ in
             offsetCompleted = true
             internalCompletion()
         })

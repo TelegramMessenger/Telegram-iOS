@@ -832,7 +832,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         if isAudio && !isVoice {
                             state = .play
                         } else {
-                            if adjustedProgress.isEqual(to: 1.0), (message.flags.contains(.Unsent) || wasCheck) {
+                            if message.groupingKey != nil, adjustedProgress.isEqual(to: 1.0), (message.flags.contains(.Unsent) || wasCheck) {
                                 state = .check(appearance: nil)
                             } else {
                                 state = .progress(value: CGFloat(adjustedProgress), cancelEnabled: true, appearance: nil)

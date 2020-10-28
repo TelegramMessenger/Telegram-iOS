@@ -905,6 +905,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
     private var isSetUpForPlayback = false
     
     public func play(firstFrame: Bool = false) {
+        if case .once = self.playbackMode {
+            self.isPlaying = true
+        }
         if self.isSetUpForPlayback {
             let directData = self.directData
             let cachedData = self.cachedData

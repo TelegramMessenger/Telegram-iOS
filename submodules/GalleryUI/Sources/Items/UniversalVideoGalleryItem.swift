@@ -634,6 +634,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     var isPaused = true
                     var seekable = false
                     var hasStarted = false
+                    var displayProgress = true
                     if let value = value {
                         hasStarted = value.timestamp > 0
                         
@@ -648,7 +649,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             case .playing:
                                 isPaused = false
                                 playing = true
-                            case let .buffering(_, whilePlaying, _):
+                            case let .buffering(_, whilePlaying, _, display):
+                                displayProgress = display
                                 initialBuffering = true
                                 isPaused = !whilePlaying
                                 var isStreaming = false
@@ -700,7 +702,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     
                     var fetching = false
                     if initialBuffering {
-                        strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false), animated: false, completion: {})
+                        if displayProgress {
+                            strongSelf.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: nil, cancelEnabled: false), animated: false, completion: {})
+                        } else {
+                            strongSelf.statusNode.transitionToState(.none, animated: false, completion: {})
+                        }
                     } else {
                         var state: RadialStatusNodeState = .play(.white)
                         
