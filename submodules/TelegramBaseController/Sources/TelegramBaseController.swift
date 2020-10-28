@@ -38,7 +38,8 @@ private func presentLiveLocationController(context: AccountContext, peerId: Peer
             }, openUrl: { _ in
             }, openPeer: { peer, navigation in
             }, callPeer: { _, _ in
-            }, enqueueMessage: { _ in
+            }, enqueueMessage: { message in
+                let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
             }, sendSticker: nil,
             setupTemporaryHiddenMedia: { _, _, _ in
             }, chatAvatarHiddenMedia: { _, _ in

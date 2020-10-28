@@ -485,7 +485,9 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                     
                     if !strongSelf.reportedAnnotationsReady {
                         strongSelf.reportedAnnotationsReady = true
-                        strongSelf.onAnnotationsReady?()
+                        if annotations.count > 0 {
+                            strongSelf.onAnnotationsReady?()
+                        }
                     }
                 }
                 
@@ -496,7 +498,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 }
                 let rightBarButtonAction: LocationViewRightBarButton
                 if location.liveBroadcastingTimeout != nil {
-                    if liveLocations.count > 1 {
+                    if annotations.count > 0 {
                         rightBarButtonAction = .showAll
                     } else {
                         rightBarButtonAction = .none

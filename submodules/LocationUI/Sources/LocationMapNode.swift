@@ -158,6 +158,8 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     private weak var userLocationAnnotationView: MKAnnotationView?
     private var headingArrowView: UIImageView?
     
+    private weak var defaultUserLocationAnnotation: MKAnnotation?
+    
     private let pinDisposable = MetaDisposable()
     
     private var mapView: LocationMapView? {
@@ -390,6 +392,8 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
         for view in views {
             if view.annotation is MKUserLocation {
+                self.defaultUserLocationAnnotation = view.annotation
+                
                 self.userLocationAnnotationView = view
                 if let headingArrowView = self.headingArrowView {
                     view.addSubview(headingArrowView)
@@ -694,15 +698,15 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         guard let mapView = self.mapView else {
             return
         }
-        var annotations: [MKAnnotation] = []
-        if let userAnnotation = self.userLocationAnnotation {
-            annotations.append(userAnnotation)
+        var coordinates: [CLLocationCoordinate2D] = []
+        if let location = self.currentUserLocation {
+            coordinates.append(location.coordinate)
         }
-        annotations.append(contentsOf: self.annotations)
+        coordinates.append(contentsOf: self.annotations.map { $0.coordinate })
         
         var zoomRect: MKMapRect?
-        for annotation in annotations {
-            let pointRegionRect = MKMapRect(region: MKCoordinateRegion(center: annotation.coordinate, latitudinalMeters: 100, longitudinalMeters: 100))
+        for coordinate in coordinates {
+            let pointRegionRect = MKMapRect(region: MKCoordinateRegion(center: coordinate, latitudinalMeters: 100, longitudinalMeters: 100))
             if let currentZoomRect = zoomRect {
                 zoomRect = currentZoomRect.union(pointRegionRect)
             } else {
