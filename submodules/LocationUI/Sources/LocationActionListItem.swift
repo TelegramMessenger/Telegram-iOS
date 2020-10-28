@@ -74,7 +74,7 @@ private func generateLiveLocationIcon(theme: PresentationTheme, stop: Bool) -> U
         context.scaleBy(x: 1.0, y: -1.0)
         context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
         
-        if let image = generateTintedImage(image: UIImage(bundleImageName: "Location/SendLocationIcon"), color: theme.chat.inputPanel.actionControlForegroundColor) {
+        if let image = generateTintedImage(image: UIImage(bundleImageName: stop ? "Location/SendLocationIcon" : "Location/SendLiveLocationIcon"), color: theme.chat.inputPanel.actionControlForegroundColor) {
             context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
         }
     })!
