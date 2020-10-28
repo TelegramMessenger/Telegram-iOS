@@ -377,8 +377,8 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
             }
             
             var formattedValue = String(format: "%0.1f", CGFloat(value) / 1000.0)
-            if value == 50 {
-                formattedValue = formattedValue.replacingOccurrences(of: ".1", with: "0.05")
+            if smallValue == 5 {
+                formattedValue = formattedValue.replacingOccurrences(of: ".1", with: ".05").replacingOccurrences(of: ",1", with: ",05")
             }
             let distance = self.usesMetricSystem ? "\(formattedValue) \(self.presentationData.strings.Location_ProximityNotification_DistanceKM)" : "\(formattedValue) \(self.presentationData.strings.Location_ProximityNotification_DistanceMI)"
             
