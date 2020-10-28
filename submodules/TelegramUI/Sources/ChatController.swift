@@ -5323,10 +5323,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 case .commit:
                                                     let _ = (requestUpdatePinnedMessage(account: strongSelf.context.account, peerId: peer.id, update: .clear(id: id))
                                                     |> deliverOnMainQueue).start(completed: {
-                                                        guard let strongSelf = self else {
-                                                            return
-                                                        }
-                                                        strongSelf.chatDisplayNode.historyNode.pendingRemovedMessages.remove(id)
+                                                        Queue.mainQueue().after(1.0, {
+                                                            guard let strongSelf = self else {
+                                                                return
+                                                            }
+                                                            strongSelf.chatDisplayNode.historyNode.pendingRemovedMessages.remove(id)
+                                                        })
                                                     })
                                                 case .undo:
                                                     strongSelf.chatDisplayNode.historyNode.pendingRemovedMessages.remove(id)

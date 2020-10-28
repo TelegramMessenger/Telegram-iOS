@@ -325,27 +325,22 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                 titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedMessage) ", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
             }
             
-            for media in message.media {
-                if let image = media as? TelegramMediaImage {
-                    updatedMediaReference = .message(message: MessageReference(message), media: image)
-                    if let representation = largestRepresentationForPhoto(image) {
-                        imageDimensions = representation.dimensions.cgSize
+            if !message.containsSecretMedia {
+                for media in message.media {
+                    if let image = media as? TelegramMediaImage {
+                        updatedMediaReference = .message(message: MessageReference(message), media: image)
+                        if let representation = largestRepresentationForPhoto(image) {
+                            imageDimensions = representation.dimensions.cgSize
+                        }
+                        break
+                    } else if let file = media as? TelegramMediaFile {
+                        updatedMediaReference = .message(message: MessageReference(message), media: file)
+                        if !file.isInstantVideo, let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
+                            imageDimensions = representation.dimensions.cgSize
+                        }
+                        break
                     }
-                    break
-                } else if let file = media as? TelegramMediaFile {
-                    updatedMediaReference = .message(message: MessageReference(message), media: file)
-                    if !file.isInstantVideo, let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
-                        imageDimensions = representation.dimensions.cgSize
-                    }
-                    break
-                }/* else if let poll = media as? TelegramMediaPoll {
-                    switch poll.kind {
-                    case .poll:
-                        titleString = strings.Conversation_PinnedPoll
-                    case .quiz:
-                        titleString = strings.Conversation_PinnedQuiz
-                    }
-                }*/
+                }
             }
             
             if isReplyThread {
