@@ -305,6 +305,8 @@ public final class LocationViewController: ViewController {
                             |> deliverOnMainQueue).start(next: { coordinate in
                                 params.sendLiveLocation(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: period))
                             })
+                            
+                            strongSelf.controllerNode.showAll()
                         }
                         
                         controller.setItemGroups([
