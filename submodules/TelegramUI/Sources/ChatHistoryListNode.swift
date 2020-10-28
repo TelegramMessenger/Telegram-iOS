@@ -1159,6 +1159,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         
         let selectionRecognizer = ChatHistoryListSelectionRecognizer(target: self, action: #selector(self.selectionPanGesture(_:)))
+        selectionRecognizer.shouldBegin = { [weak self] in
+            guard let strongSelf = self else {
+                return false
+            }
+            if case .pinnedMessages = strongSelf.subject {
+                return false
+            }
+            return true
+        }
         self.view.addGestureRecognizer(selectionRecognizer)
     }
     

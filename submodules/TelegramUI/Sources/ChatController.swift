@@ -5323,10 +5323,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 case .commit:
                                                     let _ = (requestUpdatePinnedMessage(account: strongSelf.context.account, peerId: peer.id, update: .clear(id: id))
                                                     |> deliverOnMainQueue).start(completed: {
-                                                        guard let strongSelf = self else {
-                                                            return
-                                                        }
-                                                        strongSelf.chatDisplayNode.historyNode.pendingRemovedMessages.remove(id)
+                                                        Queue.mainQueue().after(1.0, {
+                                                            guard let strongSelf = self else {
+                                                                return
+                                                            }
+                                                            strongSelf.chatDisplayNode.historyNode.pendingRemovedMessages.remove(id)
+                                                        })
                                                     })
                                                 case .undo:
                                                     strongSelf.chatDisplayNode.historyNode.pendingRemovedMessages.remove(id)
@@ -8144,7 +8146,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     public func displayPromoAnnouncement(text: String) {
         let psaText: String = text
-        let psaEntities: [MessageTextEntity] = generateTextEntities(psaText, enabledTypes: .url)
+        let psaEntities: [MessageTextEntity] = generateTextEntities(psaText, enabledTypes: .allUrl)
         
         var found = false
         self.forEachController({ controller in
@@ -8237,7 +8239,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             psaText = string
         }
         
-        let psaEntities: [MessageTextEntity] = generateTextEntities(psaText, enabledTypes: .url)
+        let psaEntities: [MessageTextEntity] = generateTextEntities(psaText, enabledTypes: .allUrl)
         
         let messageId = item.message.id
         

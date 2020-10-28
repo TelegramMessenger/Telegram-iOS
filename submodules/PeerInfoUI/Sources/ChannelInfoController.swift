@@ -334,7 +334,7 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
                     arguments.tapAvatarAction()
                 }, context: arguments.avatarAndNameInfoContext, updatingImage: updatingAvatar)
             case let .about(theme, text, value):
-                return ItemListTextWithLabelItem(presentationData: presentationData, label: text, text: foldMultipleLineBreaks(value), enabledEntityTypes: [.url, .mention, .hashtag], multiline: true, sectionId: self.section, action: nil, longTapAction: {
+                return ItemListTextWithLabelItem(presentationData: presentationData, label: text, text: foldMultipleLineBreaks(value), enabledEntityTypes: [.allUrl, .mention, .hashtag], multiline: true, sectionId: self.section, action: nil, longTapAction: {
                     arguments.displayContextMenu(ChannelInfoEntryTag.about, value)
                 }, linkItemAction: { action, itemLink in
                     arguments.aboutLinkAction(action, itemLink)

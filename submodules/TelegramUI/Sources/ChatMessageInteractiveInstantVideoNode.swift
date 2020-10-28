@@ -285,7 +285,13 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             } else {
                 maxDateAndStatusWidth = width - videoFrame.midX - 85.0
             }
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode)
+            
+            var isReplyThread = false
+            if case .replyThread = item.chatLocation {
+                isReplyThread = true
+            }
+            
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread)
             
             var contentSize = imageSize
             var dateAndStatusOverflow = false
