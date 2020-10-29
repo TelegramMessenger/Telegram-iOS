@@ -4366,9 +4366,7 @@ Sorry for the inconvenience.";
 "Channel.DiscussionGroup.UnlinkGroup" = "Unlink Group";
 "Channel.DiscussionGroup.UnlinkChannel" = "Unlink Channel";
 "Channel.DiscussionGroup.PublicChannelLink" = "Do you want to make %1$@ the discussion board for %2$@?";
-"Channel.DiscussionGroup.PrivateChannelLink" = "Do you want to make %1$@ the discussion board for %2$@?
-
-Any member of this group will be able to see messages in the channel.";
+"Channel.DiscussionGroup.PrivateChannelLink" = "Do you want to make %1$@ the discussion board for %2$@?\n\nAny member of this group will be able to see messages in the channel.";
 "Channel.DiscussionGroup.MakeHistoryPublic" = "Warning: If you set this private group as the disccussion group for your channel, all channel subscribers will be able to access the group. \"Chat history for new members\" will be switched to Visible.";
 "Channel.DiscussionGroup.MakeHistoryPublicProceed" = "Proceed";
 
@@ -5840,6 +5838,7 @@ Any member of this group will be able to see messages in the channel.";
 
 "Notification.ProximityReached" = "%1$@ is now within %2$@ from %3$@";
 "Notification.ProximityReachedYou" = "%1$@ is now within %2$@ from you";
+"Notification.ProximityYouReached" = "You are now within %1$@ from %2$@";
 
 "Location.ProximityNotification.Title" = "Proximity Alert";
 "Location.ProximityNotification.Notify" = "Notify me within %@";
@@ -5879,6 +5878,11 @@ Any member of this group will be able to see messages in the channel.";
 "Location.LiveLocationRequired.Title" = "Share Location";
 "Location.LiveLocationRequired.Description" = "For the alert to work, please share your live location in this chat.";
 "Location.LiveLocationRequired.ShareLocation" = "Share Location";
+
+"Location.ProximityAlertSetTitle" = "Proximity alert set";
+"Location.ProximityAlertSetText" = "We will notify you once %1$@ is within %2$@ from you.";
+"Location.ProximityAlertSetTextGroup" = "We will notify you once any other group member is within %@ from you.";
+"Location.ProximityAlertCancelled" = "Proximity alert cancelled";
 
 "Stats.Message.Views" = "Views";
 "Stats.Message.PublicShares" = "Public Shares";

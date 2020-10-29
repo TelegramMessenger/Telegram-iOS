@@ -158,6 +158,8 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     private weak var userLocationAnnotationView: MKAnnotationView?
     private var headingArrowView: UIImageView?
     
+    private weak var defaultUserLocationAnnotation: MKAnnotation?
+    
     private let pinDisposable = MetaDisposable()
     
     private var mapView: LocationMapView? {
@@ -253,11 +255,16 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         self.mapView?.showsUserLocation = true
         self.mapView?.showsPointsOfInterest = false
         self.mapView?.customHitTest = { [weak self] point in
-            guard let strongSelf = self, let annotationView = strongSelf.customUserLocationAnnotationView else {
+            guard let strongSelf = self else {
                 return false
             }
             
-            if let annotationRect = annotationView.superview?.convert(annotationView.frame.insetBy(dx: -16.0, dy: -16.0), to: strongSelf.mapView), annotationRect.contains(point) {
+            if let annotationView = strongSelf.customUserLocationAnnotationView, let annotationRect = annotationView.superview?.convert(annotationView.frame.insetBy(dx: -16.0, dy: -16.0), to: strongSelf.mapView), annotationRect.contains(point) {
+                strongSelf.userLocationAnnotationSelected?()
+                return true
+            }
+            
+            if let userAnnotation = strongSelf.defaultUserLocationAnnotation, let annotationView = strongSelf.mapView?.view(for: userAnnotation), let annotationRect = annotationView.superview?.convert(annotationView.frame.insetBy(dx: -16.0, dy: -16.0), to: strongSelf.mapView), annotationRect.contains(point) {
                 strongSelf.userLocationAnnotationSelected?()
                 return true
             }
@@ -390,6 +397,9 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
         for view in views {
             if view.annotation is MKUserLocation {
+                self.defaultUserLocationAnnotation = view.annotation
+                view.canShowCallout = false
+                
                 self.userLocationAnnotationView = view
                 if let headingArrowView = self.headingArrowView {
                     view.addSubview(headingArrowView)
@@ -471,6 +481,9 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
             var distances: [Double] = []
             if let userLocation = userLocation {
                 for annotation in annotations {
+                    if annotation.isSelf {
+                        continue
+                    }
                     distances.append(userLocation.distance(from: CLLocation(latitude: annotation.coordinate.latitude, longitude: annotation.coordinate.longitude)))
                 }
             }
@@ -483,7 +496,8 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
     }
     
     var userLocation: Signal<CLLocation?, NoError> {
-        return self.locationPromise.get()
+        return .single(self.currentUserLocation)
+        |> then (self.locationPromise.get())
     }
     
     var mapCenterCoordinate: CLLocationCoordinate2D? {
@@ -693,15 +707,15 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         guard let mapView = self.mapView else {
             return
         }
-        var annotations: [MKAnnotation] = []
-        if let userAnnotation = self.userLocationAnnotation {
-            annotations.append(userAnnotation)
+        var coordinates: [CLLocationCoordinate2D] = []
+        if let location = self.currentUserLocation {
+            coordinates.append(location.coordinate)
         }
-        annotations.append(contentsOf: self.annotations)
+        coordinates.append(contentsOf: self.annotations.map { $0.coordinate })
         
         var zoomRect: MKMapRect?
-        for annotation in annotations {
-            let pointRegionRect = MKMapRect(region: MKCoordinateRegion(center: annotation.coordinate, latitudinalMeters: 100, longitudinalMeters: 100))
+        for coordinate in coordinates {
+            let pointRegionRect = MKMapRect(region: MKCoordinateRegion(center: coordinate, latitudinalMeters: 100, longitudinalMeters: 100))
             if let currentZoomRect = zoomRect {
                 zoomRect = currentZoomRect.union(pointRegionRect)
             } else {

@@ -38,6 +38,7 @@ static_library(
         "//submodules/LiveLocationTimerNode:LiveLocationTimerNode",
         "//submodules/TelegramNotices:TelegramNotices",
         "//submodules/TooltipUI:TooltipUI",
+        "//submodules/UndoUI:UndoUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

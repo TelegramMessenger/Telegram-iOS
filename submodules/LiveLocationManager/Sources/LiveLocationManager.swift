@@ -34,7 +34,10 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
     }
     
     private let deviceLocationDisposable = MetaDisposable()
+    private let updateCoordinateDisposable = MetaDisposable()
     private var messagesDisposable: Disposable?
+    
+    private var deviceLocationPromise = Promise<(CLLocation, Double?)>()
     
     private var broadcastToMessageIds: [MessageId: Int32] = [:]
     private var stopMessageIds = Set<MessageId>()
@@ -106,26 +109,36 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         |> deliverOn(self.queue)).start(next: { [weak self] value in
             if let strongSelf = self {
                 if value {
-                    let queue = strongSelf.queue
-                    strongSelf.deviceLocationDisposable.set(strongSelf.locationManager.push(mode: .precise, updated: { location, heading in
-                        queue.async {
-                            var effectiveHeading = heading ?? location.course
-                            if location.speed > 1.0 {
-                                effectiveHeading = location.course
-                            }
-                            self?.updateDeviceCoordinate(location.coordinate, accuracyRadius: location.horizontalAccuracy, heading: effectiveHeading)
-                        }
+                    strongSelf.deviceLocationDisposable.set(strongSelf.locationManager.push(mode: .precise, updated: { [weak self] location, heading in
+                        self?.deviceLocationPromise.set(.single((location, heading)))
                     }))
                 } else {
                     strongSelf.deviceLocationDisposable.set(nil)
                 }
             }
         })
+        
+        let throttledDeviceLocation = self.deviceLocationPromise.get()
+        |> mapToThrottled { next -> Signal<(CLLocation, Double?), NoError> in
+            return .single(next) |> then(.complete() |> delay(4.0, queue: Queue.concurrentDefaultQueue()))
+        }
+        
+        self.updateCoordinateDisposable.set((throttledDeviceLocation
+        |> deliverOn(self.queue)).start(next: { [weak self] location, heading in
+            if let strongSelf = self {
+                var effectiveHeading = heading ?? location.course
+                if location.speed > 1.0 {
+                    effectiveHeading = location.course
+                }
+                strongSelf.updateDeviceCoordinate(location.coordinate, accuracyRadius: location.horizontalAccuracy, heading: effectiveHeading)
+            }
+        }))
     }
     
     deinit {
         self.requiredLocationTypeDisposable?.dispose()
         self.deviceLocationDisposable.dispose()
+        self.updateCoordinateDisposable.dispose()
         self.messagesDisposable?.dispose()
         self.editMessageDisposables.dispose()
         self.invalidationTimer?.0.invalidate()
