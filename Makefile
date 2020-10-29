@@ -58,7 +58,8 @@ BAZEL_COMMON_FLAGS=\
 	--announce_rc \
 	--features=swift.use_global_module_cache \
 	--features=swift.split_derived_files_generation \
-	--features=swift.skip_function_bodies_for_derived_files
+	--features=swift.skip_function_bodies_for_derived_files \
+	--jobs=${CORE_COUNT}
 	
 BAZEL_DEBUG_FLAGS=\
 	--features=swift.enable_batch_mode \
