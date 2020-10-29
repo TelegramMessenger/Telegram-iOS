@@ -829,7 +829,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             wasCheck = true
                         }
                         
-                        if isAudio && !isVoice {
+                        if isAudio && !isVoice && !isSending {
                             state = .play
                         } else {
                             if message.groupingKey != nil, adjustedProgress.isEqual(to: 1.0), (message.flags.contains(.Unsent) || wasCheck) {

@@ -255,11 +255,16 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         self.mapView?.showsUserLocation = true
         self.mapView?.showsPointsOfInterest = false
         self.mapView?.customHitTest = { [weak self] point in
-            guard let strongSelf = self, let annotationView = strongSelf.customUserLocationAnnotationView else {
+            guard let strongSelf = self else {
                 return false
             }
             
-            if let annotationRect = annotationView.superview?.convert(annotationView.frame.insetBy(dx: -16.0, dy: -16.0), to: strongSelf.mapView), annotationRect.contains(point) {
+            if let annotationView = strongSelf.customUserLocationAnnotationView, let annotationRect = annotationView.superview?.convert(annotationView.frame.insetBy(dx: -16.0, dy: -16.0), to: strongSelf.mapView), annotationRect.contains(point) {
+                strongSelf.userLocationAnnotationSelected?()
+                return true
+            }
+            
+            if let userAnnotation = strongSelf.defaultUserLocationAnnotation, let annotationView = strongSelf.mapView?.view(for: userAnnotation), let annotationRect = annotationView.superview?.convert(annotationView.frame.insetBy(dx: -16.0, dy: -16.0), to: strongSelf.mapView), annotationRect.contains(point) {
                 strongSelf.userLocationAnnotationSelected?()
                 return true
             }
@@ -393,6 +398,7 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         for view in views {
             if view.annotation is MKUserLocation {
                 self.defaultUserLocationAnnotation = view.annotation
+                view.canShowCallout = false
                 
                 self.userLocationAnnotationView = view
                 if let headingArrowView = self.headingArrowView {

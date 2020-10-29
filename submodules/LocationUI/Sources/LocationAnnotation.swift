@@ -311,6 +311,7 @@ class LocationPinAnnotationView: MKAnnotationView {
                     self.smallNode.image = generateSmallBackgroundImage(color: color)
                     self.dotNode.image = generateFilledCircleImage(diameter: 6.0, color: color)
                     
+                    self.iconNode.isHidden = false
                     self.dotNode.isHidden = false
                     
                     if !self.isSelected {
@@ -354,6 +355,7 @@ class LocationPinAnnotationView: MKAnnotationView {
     }
     
     override func prepareForReuse() {
+        self.previousPeerId = nil
         self.smallNode.isHidden = true
         self.backgroundNode.isHidden = false
         self.appeared = false

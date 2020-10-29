@@ -557,6 +557,21 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
             }
         }
         
+        self.headerNode.mapNode.annotationSelected = { [weak self] annotation in
+            guard let strongSelf = self else {
+                return
+            }
+            if let annotation = annotation {
+                strongSelf.interaction.goToCoordinate(annotation.coordinate)
+            }
+        }
+        
+        self.headerNode.mapNode.userLocationAnnotationSelected = { [weak self] in
+            if let strongSelf = self, let location = strongSelf.headerNode.mapNode.currentUserLocation {
+                strongSelf.interaction.goToCoordinate(location.coordinate)
+            }
+        }
+        
         self.locationManager.manager.startUpdatingHeading()
         self.locationManager.manager.delegate = self
     }

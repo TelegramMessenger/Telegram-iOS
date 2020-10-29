@@ -372,10 +372,6 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
             let smallValue = smallUnitValues[selectedSmallRow]
             
             var value = largeValue * 1000 + smallValue * 10
-            if !self.usesMetricSystem {
-                value = Int32(Double(value) * 1.60934)
-            }
-            
             var formattedValue = String(format: "%0.1f", CGFloat(value) / 1000.0)
             if smallValue == 5 {
                 formattedValue = formattedValue.replacingOccurrences(of: ".1", with: ".05").replacingOccurrences(of: ",1", with: ",05")
