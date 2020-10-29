@@ -194,10 +194,12 @@ public final class LocationViewController: ViewController {
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.controllerNode.updateState { state in
-                            var state = state
-                            state.cancellingProximityRadius = false
-                            return state
+                        Queue.mainQueue().after(0.5) {
+                            strongSelf.controllerNode.updateState { state in
+                                var state = state
+                                state.cancellingProximityRadius = false
+                                return state
+                            }
                         }
                     })
                 }
@@ -244,10 +246,12 @@ public final class LocationViewController: ViewController {
                                     guard let strongSelf = self else {
                                         return
                                     }
-                                    strongSelf.controllerNode.updateState { state in
-                                        var state = state
-                                        state.updatingProximityRadius = nil
-                                        return state
+                                    Queue.mainQueue().after(0.5) {
+                                        strongSelf.controllerNode.updateState { state in
+                                            var state = state
+                                            state.updatingProximityRadius = nil
+                                            return state
+                                        }
                                     }
                                 })
                             } else {
