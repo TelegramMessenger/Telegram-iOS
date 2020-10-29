@@ -5881,6 +5881,11 @@ Any member of this group will be able to see messages in the channel.";
 "Location.LiveLocationRequired.Description" = "For the alert to work, please share your live location in this chat.";
 "Location.LiveLocationRequired.ShareLocation" = "Share Location";
 
+"Location.ProximityAlertSetTitle" = "Proximity alert set";
+"Location.ProximityAlertSetText" = "We will notify you once %1$@ is within %2$@ from you.";
+"Location.ProximityAlertSetTextGroup" = "We will notify you once any other group member is within %2$@ from you.";
+"Location.ProximityAlertCancelled" = "Proximity alert cancelled";
+
 "Stats.Message.Views" = "Views";
 "Stats.Message.PublicShares" = "Public Shares";
 "Stats.Message.PrivateShares" = "Private Shares";

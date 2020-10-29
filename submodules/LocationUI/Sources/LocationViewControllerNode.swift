@@ -424,6 +424,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
                 
                 if let currentProximityNotification = proximityNotification, currentProximityNotification && state.cancellingProximityRadius {
                     proximityNotification = false
+                    proximityNotificationRadius = nil
                 } else if let radius = state.updatingProximityRadius {
                     proximityNotification = true
                     proximityNotificationRadius = radius

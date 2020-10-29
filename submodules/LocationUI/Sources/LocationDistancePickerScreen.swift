@@ -371,7 +371,7 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
             let largeValue = unitValues[selectedLargeRow]
             let smallValue = smallUnitValues[selectedSmallRow]
             
-            var value = largeValue * 1000 + smallValue * 10
+            let value = largeValue * 1000 + smallValue * 10
             var formattedValue = String(format: "%0.1f", CGFloat(value) / 1000.0)
             if smallValue == 5 {
                 formattedValue = formattedValue.replacingOccurrences(of: ".1", with: ".05").replacingOccurrences(of: ",1", with: ",05")
@@ -397,7 +397,12 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
             }
             
-            if let distance = self.distances.last, Double(value) > distance {
+            var convertedValue = Double(value)
+            if !self.usesMetricSystem {
+                convertedValue = Double(convertedValue) * 1.60934
+            }
+            
+            if let distance = self.distances.last, convertedValue > distance {
                 self.doneButton.alpha = 0.0
                 self.doneButton.isUserInteractionEnabled = false
                 self.textNode.alpha = 1.0
@@ -411,8 +416,14 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     fileprivate func update() {
         if let pickerView = self.pickerView {
-            let largeValue = unitValues[pickerView.selectedRow(inComponent: 0)]
-            let smallValue = smallUnitValues[pickerView.selectedRow(inComponent: 1)]
+            let selectedLargeRow = pickerView.selectedRow(inComponent: 0)
+            var selectedSmallRow = pickerView.selectedRow(inComponent: 1)
+            if selectedLargeRow == 0 && selectedSmallRow == 0 {
+                selectedSmallRow = 1
+            }
+            
+            let largeValue = unitValues[selectedLargeRow]
+            let smallValue = smallUnitValues[selectedSmallRow]
             
             var value = largeValue * 1000 + smallValue * 10
             if !self.usesMetricSystem {
@@ -425,10 +436,9 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
         if pickerView.selectedRow(inComponent: 0) == 0 && pickerView.selectedRow(inComponent: 1) == 0 {
             pickerView.selectRow(1, inComponent: 1, animated: true)
-        } else {
-            self.updateDoneButtonTitle()
-            self.update()
         }
+        self.updateDoneButtonTitle()
+        self.update()
     }
     
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
