@@ -52,6 +52,7 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
         }
     }
     
+    var isSelf = false
     var selfPeer: Peer?
     var title: String? = ""
     var subtitle: String? = ""
@@ -78,11 +79,12 @@ class LocationPinAnnotation: NSObject, MKAnnotation {
         super.init()
     }
     
-    init(context: AccountContext, theme: PresentationTheme, message: Message, selfPeer: Peer?, heading: Int32?) {
+    init(context: AccountContext, theme: PresentationTheme, message: Message, selfPeer: Peer?, isSelf: Bool, heading: Int32?) {
         self.context = context
         self.theme = theme
         self.location = nil
         self.peer = nil
+        self.isSelf = isSelf
         self.message = message
         if let location = getLocation(from: message) {
             self.coordinate = location.coordinate

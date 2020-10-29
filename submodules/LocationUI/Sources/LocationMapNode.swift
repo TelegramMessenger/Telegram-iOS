@@ -481,6 +481,9 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
             var distances: [Double] = []
             if let userLocation = userLocation {
                 for annotation in annotations {
+                    if annotation.isSelf {
+                        continue
+                    }
                     distances.append(userLocation.distance(from: CLLocation(latitude: annotation.coordinate.latitude, longitude: annotation.coordinate.longitude)))
                 }
             }
