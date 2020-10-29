@@ -7,6 +7,7 @@ import SyncCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
+import TelegramStringFormatting
 import AccountContext
 import AppBundle
 import CoreLocation
@@ -14,6 +15,7 @@ import PresentationDataUtils
 import OpenInExternalAppUI
 import ShareController
 import DeviceAccess
+import UndoUI
 
 public class LocationViewParams {
     let sendLiveLocation: (TelegramMediaMap) -> Void
@@ -202,6 +204,21 @@ public final class LocationViewController: ViewController {
                             }
                         }
                     })
+                    strongSelf.present(
+                        UndoOverlayController(
+                            presentationData: strongSelf.presentationData,
+                            content: .setProximityAlert(
+                                title: strongSelf.presentationData.strings.Location_ProximityAlertCancelled,
+                                text: "",
+                                cancelled: true
+                            ),
+                            elevatedLayout: false,
+                            action: { action in
+                                return true
+                            }
+                        ),
+                        in: .current
+                    )
                 }
             } else {
                 DeviceAccess.authorizeAccess(to: .location(.live), locationManager: strongSelf.locationManager, presentationData: strongSelf.presentationData, present: { c, a in
@@ -254,6 +271,30 @@ public final class LocationViewController: ViewController {
                                         }
                                     }
                                 })
+                                
+                                var text: String
+                                let distanceString = shortStringForDistance(strings: strongSelf.presentationData.strings, distance: distance)
+                                if let compactDisplayTitle = compactDisplayTitle {
+                                    text = strongSelf.presentationData.strings.Location_ProximityAlertSetText(compactDisplayTitle, distanceString).0
+                                } else {
+                                    text = strongSelf.presentationData.strings.Location_ProximityAlertSetTextGroup(distanceString).0
+                                }
+                                
+                                strongSelf.present(
+                                    UndoOverlayController(
+                                        presentationData: strongSelf.presentationData,
+                                        content: .setProximityAlert(
+                                            title: strongSelf.presentationData.strings.Location_ProximityAlertSetTitle,
+                                            text: text,
+                                            cancelled: false
+                                        ),
+                                        elevatedLayout: false,
+                                        action: { action in
+                                            return true
+                                        }
+                                    ),
+                                    in: .current
+                                )
                             } else {
                                 strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_Title, text: strongSelf.presentationData.strings.Location_LiveLocationRequired_Description, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Location_LiveLocationRequired_ShareLocation, action: {
                                     completion()
@@ -292,6 +333,42 @@ public final class LocationViewController: ViewController {
                     let _ = (strongSelf.controllerNode.coordinate
                     |> deliverOnMainQueue).start(next: { coordinate in
                         params.sendLiveLocation(TelegramMediaMap(coordinate: coordinate, liveBroadcastingTimeout: 30 * 60, proximityNotificationRadius: distance))
+                    })
+                    
+                    let _ = (strongSelf.context.account.postbox.loadedPeerWithId(strongSelf.subject.id.peerId)
+                    |> deliverOnMainQueue).start(next: { [weak self] peer in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        var compactDisplayTitle: String?
+                        if let peer = peer as? TelegramUser {
+                            compactDisplayTitle = peer.compactDisplayTitle
+                        }
+                        
+                        var text: String
+                        let distanceString = shortStringForDistance(strings: strongSelf.presentationData.strings, distance: distance)
+                        if let compactDisplayTitle = compactDisplayTitle {
+                            text = strongSelf.presentationData.strings.Location_ProximityAlertSetText(compactDisplayTitle, distanceString).0
+                        } else {
+                            text = strongSelf.presentationData.strings.Location_ProximityAlertSetTextGroup(distanceString).0
+                        }
+                        
+                        strongSelf.present(
+                            UndoOverlayController(
+                                presentationData: strongSelf.presentationData,
+                                content: .setProximityAlert(
+                                    title: strongSelf.presentationData.strings.Location_ProximityAlertSetTitle,
+                                    text: text,
+                                    cancelled: false
+                                ),
+                                elevatedLayout: false,
+                                action: { action in
+                                    return true
+                                }
+                            ),
+                            in: .current
+                        )
                     })
                 } else {
                     let _  = (context.account.postbox.loadedPeerWithId(subject.id.peerId)

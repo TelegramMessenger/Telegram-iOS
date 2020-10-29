@@ -221,7 +221,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 }
                 
                 displayUndo = undo
-                self.originalRemainingSeconds = undo ? 5 : 5
+                self.originalRemainingSeconds = 5
             case let .emoji(path, text):
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -388,6 +388,23 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         }
                     })
                 }
+            case let .setProximityAlert(title, text, cancelled):
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: cancelled ? "anim_proximity_cancelled" : "anim_proximity_set", colors: [:], scale: 0.45)
+                self.animatedStickerNode = nil
+                
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                if !text.isEmpty {
+                    self.textNode.attributedText = attributedText
+                }
+                
+                displayUndo = false
+                self.originalRemainingSeconds = 3
         }
         
         self.remainingSeconds = self.originalRemainingSeconds
@@ -416,7 +433,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         switch content {
         case .removedChat:
             self.panelWrapperNode.addSubnode(self.timerTextNode)
-        case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned:
+        case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert:
             break
         case .dice:
             self.panelWrapperNode.clipsToBounds = true

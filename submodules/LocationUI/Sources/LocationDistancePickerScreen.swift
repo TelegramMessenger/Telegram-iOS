@@ -195,6 +195,8 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     private let unitLabelNode: ImmediateTextNode
     private let smallUnitLabelNode: ImmediateTextNode
     
+    private var pickerTimer: SwiftSignalKit.Timer?
+    
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
     private var distancesDisposable: Disposable?
@@ -321,6 +323,8 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
     
     deinit {
         self.distancesDisposable?.dispose()
+        
+        self.pickerTimer?.invalidate()
     }
     
     func setupPickerView() {
@@ -344,6 +348,18 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
         
         self.contentContainerNode.addSubnode(self.unitLabelNode)
         self.contentContainerNode.addSubnode(self.smallUnitLabelNode)
+        
+        self.pickerTimer?.invalidate()
+        
+        let pickerTimer = SwiftSignalKit.Timer(timeout: 0.4, repeat: true, completion: { [weak self] in
+            if let strongSelf = self {
+                if strongSelf.update() {
+                    strongSelf.updateDoneButtonTitle()
+                }
+            }
+        }, queue: Queue.mainQueue())
+        self.pickerTimer = pickerTimer
+        pickerTimer.start()
         
         self.updateDoneButtonTitle()
     }
@@ -414,7 +430,8 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
     }
     
-    fileprivate func update() {
+    var previousReportedValue: Int32?
+    fileprivate func update() -> Bool {
         if let pickerView = self.pickerView {
             let selectedLargeRow = pickerView.selectedRow(inComponent: 0)
             var selectedSmallRow = pickerView.selectedRow(inComponent: 1)
@@ -429,7 +446,16 @@ class LocationDistancePickerScreenNode: ViewControllerTracingNode, UIScrollViewD
             if !self.usesMetricSystem {
                 value = Int32(Double(value) * 1.60934)
             }
-            self.updated?(value)
+            
+            if let previousReportedValue = self.previousReportedValue, value == previousReportedValue {
+                return false
+            } else {
+                self.updated?(value)
+                self.previousReportedValue = value
+                return true
+            }
+        } else {
+            return false
         }
     }
     

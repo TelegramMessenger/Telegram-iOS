@@ -21,6 +21,7 @@ public enum UndoOverlayContent {
     case chatAddedToFolder(chatTitle: String, folderTitle: String)
     case chatRemovedFromFolder(chatTitle: String, folderTitle: String)
     case messagesUnpinned(title: String, text: String, undo: Bool, isHidden: Bool)
+    case setProximityAlert(title: String, text: String, cancelled: Bool)
 }
 
 public enum UndoOverlayAction {

@@ -39,6 +39,7 @@ swift_library(
         "//submodules/LiveLocationTimerNode:LiveLocationTimerNode",
         "//submodules/TelegramNotices:TelegramNotices",
         "//submodules/TooltipUI:TooltipUI",
+        "//submodules/UndoUI:UndoUI",
     ],
     visibility = [
         "//visibility:public",
