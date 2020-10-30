@@ -232,7 +232,12 @@ public func widgetSetupScreen(context: AccountContext) -> ViewController {
             return state
         }
     }, removePeer: { memberId in
-        
+        let _ = (updateWidgetSettingsInteractively(postbox: context.account.postbox, { settings in
+            var settings = settings
+            settings.peers.removeAll(where: { $0 == memberId })
+            return settings
+        })
+        |> deliverOnMainQueue).start()
     }, addPeer: {
         let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .peerSelection(searchChatList: true, searchGroups: true, searchChannels: false), options: []))
         addPeerDisposable.set((controller.result
