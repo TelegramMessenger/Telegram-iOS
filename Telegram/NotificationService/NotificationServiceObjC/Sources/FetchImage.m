@@ -102,7 +102,7 @@ dispatch_block_t fetchImage(BuildConfig *buildConfig, AccountProxyConnection * _
     apiEnvironment.langPack = @"ios";
     apiEnvironment.layer = @([serialization currentLayer]);
     apiEnvironment.disableUpdates = true;
-    apiEnvironment = [apiEnvironment withUpdatedLangPackCode:@"en"];
+    apiEnvironment = [apiEnvironment withUpdatedLangPackCode:@""];
     
     if (proxyConnection != nil) {
         apiEnvironment = [apiEnvironment withUpdatedSocksProxySettings:[[MTSocksProxySettings alloc] initWithIp:proxyConnection.host port:(uint16_t)proxyConnection.port username:proxyConnection.username password:proxyConnection.password secret:proxyConnection.secret]];
