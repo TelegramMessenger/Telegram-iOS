@@ -5,18 +5,30 @@ public enum WidgetCodingError: Error {
 }
 
 public struct WidgetDataPeer: Codable, Equatable {
+    public struct Badge: Codable, Equatable {
+        public var count: Int
+        public var isMuted: Bool
+        
+        public init(count: Int, isMuted: Bool) {
+            self.count = count
+            self.isMuted = isMuted
+        }
+    }
+    
     public var id: Int64
     public var name: String
     public var lastName: String?
     public var letters: [String]
     public var avatarPath: String?
+    public var badge: Badge?
     
-    public init(id: Int64, name: String, lastName: String?, letters: [String], avatarPath: String?) {
+    public init(id: Int64, name: String, lastName: String?, letters: [String], avatarPath: String?, badge: Badge?) {
         self.id = id
         self.name = name
         self.lastName = lastName
         self.letters = letters
         self.avatarPath = avatarPath
+        self.badge = badge
     }
 }
 

@@ -27,7 +27,7 @@ private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
 protocol GenericAnimatedStickerNode: ASDisplayNode {
-    
+    func setOverlayColor(_ color: UIColor?, animated: Bool)
 }
 
 extension AnimatedStickerNode: GenericAnimatedStickerNode {
@@ -1542,8 +1542,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 
                 if highlighted {
                     self.imageNode.setOverlayColor(item.presentationData.theme.theme.chat.message.mediaHighlightOverlayColor, animated: false)
+                    self.animationNode?.setOverlayColor(item.presentationData.theme.theme.chat.message.mediaHighlightOverlayColor, animated: false)
                 } else {
                     self.imageNode.setOverlayColor(nil, animated: animated)
+                    self.animationNode?.setOverlayColor(nil, animated: false)
                 }
             }
         }

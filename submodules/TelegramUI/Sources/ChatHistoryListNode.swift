@@ -593,8 +593,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, source: ChatHistoryListSource = .default, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles) {
         var tagMask = tagMask
+        var appendMessagesFromTheSameGroup = false
         if case .pinnedMessages = subject {
             tagMask = .pinned
+            appendMessagesFromTheSameGroup = true
         }
         
         self.context = context
@@ -720,7 +722,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             historyViewUpdate = self.chatHistoryLocationPromise.get()
             |> distinctUntilChanged
             |> mapToSignal { location in
-                return chatHistoryViewForLocation(location, context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, scheduled: isScheduledMessages, fixedCombinedReadStates: fixedCombinedReadStates.with { $0 }, tagMask: tagMask, additionalData: additionalData)
+                return chatHistoryViewForLocation(location, context: context, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, scheduled: isScheduledMessages, fixedCombinedReadStates: fixedCombinedReadStates.with { $0 }, tagMask: tagMask, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, additionalData: additionalData)
                 |> beforeNext { viewUpdate in
                     switch viewUpdate {
                         case let .HistoryView(view, _, _, _, _, _, _):

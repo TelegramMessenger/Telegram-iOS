@@ -101,13 +101,13 @@ done
 
 if [ "$1" == "hockeyapp" ] || [ "$1" == "appcenter-experimental" ] || [ "$1" == "appcenter-experimental-2" ]; then
 	BUILD_ENV_SCRIPT="../telegram-ios-shared/buildbox/bin/internal.sh"
-	APP_TARGET="app_arm64"
+	APP_TARGET="bazel_app_arm64"
 elif [ "$1" == "appstore" ]; then
 	BUILD_ENV_SCRIPT="../telegram-ios-shared/buildbox/bin/appstore.sh"
-	APP_TARGET="app"
+	APP_TARGET="bazel_app"
 elif [ "$1" == "verify" ]; then
 	BUILD_ENV_SCRIPT="build-system/verify.sh"
-	APP_TARGET="app"
+	APP_TARGET="bazel_app_arm64"
 	export CODESIGNING_DATA_PATH="build-system/fake-codesigning"
 	export CODESIGNING_CERTS_VARIANT="distribution"
 	export CODESIGNING_PROFILES_VARIANT="appstore"
@@ -116,23 +116,27 @@ else
 	exit 1
 fi
 
-if [ -d "$BUCK_DIR_CACHE" ]; then
-	sudo chown telegram "$BUCK_DIR_CACHE"
-fi
-
 if [ "$1" == "appcenter-experimental" ]; then
 	export APP_CENTER_ID="$APP_CENTER_EXPERIMENTAL_ID"
 elif [ "$1" == "appcenter-experimental-2" ]; then
 	export APP_CENTER_ID="$APP_CENTER_EXPERIMENTAL_2_ID"
 fi
 
-BUCK="$(pwd)/tools/buck" BUCK_HTTP_CACHE="$BUCK_HTTP_CACHE" BUCK_CACHE_MODE="$BUCK_CACHE_MODE" BUCK_DIR_CACHE="$BUCK_DIR_CACHE" LOCAL_CODESIGNING=1 sh "$BUILD_ENV_SCRIPT" make "$APP_TARGET"
+PATH="$PATH:$(pwd)/tools" BAZEL_HTTP_CACHE_URL="$BAZEL_HTTP_CACHE_URL" LOCAL_CODESIGNING=1 sh "$BUILD_ENV_SCRIPT" make "$APP_TARGET"
 
 OUTPUT_PATH="build/artifacts"
 rm -rf "$OUTPUT_PATH"
 mkdir -p "$OUTPUT_PATH"
 
-cp "build/Telegram_signed.ipa" "./$OUTPUT_PATH/Telegram.ipa"
-cp "build/DSYMs.zip" "./$OUTPUT_PATH/Telegram.DSYMs.zip"
+for f in bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/Telegram.ipa; do
+	cp "$f" $OUTPUT_PATH/
+done
+
+mkdir -p build/DSYMs
+for f in bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/*.dSYM; do
+	cp -R "$f" build/DSYMs/
+done
+
+zip -r "./$OUTPUT_PATH/Telegram.DSYMs.zip" build/DSYMs 1>/dev/null
 
 cd "$BASE_DIR"

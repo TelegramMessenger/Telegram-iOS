@@ -27,7 +27,7 @@ genrule(
     """
         OUT_DIR="ios"
         if [ "$(TARGET_CPU)" == "ios_armv7" ]; then
-            BUILD_ARCH="armv7"
+            BUILD_ARCH="arm"
         elif [ "$(TARGET_CPU)" == "ios_arm64" ]; then
             BUILD_ARCH="arm64"
         elif [ "$(TARGET_CPU)" == "ios_x86_64" ]; then
@@ -37,7 +37,7 @@ genrule(
             echo "Unsupported architecture $(TARGET_CPU)"
         fi
         BUILD_DIR="$(RULEDIR)/$$BUILD_ARCH"
-        #rm -rf "$$BUILD_DIR"
+        rm -rf "$$BUILD_DIR"
         mkdir -p "$$BUILD_DIR"
 
         SOURCE_PATH="third-party/webrtc/webrtc-ios/src"

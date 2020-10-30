@@ -1974,6 +1974,7 @@
 
 "Conversation.PinMessageAlertGroup" = "Pin this message and notify all members of the group?";
 "Conversation.PinMessageAlert.OnlyPin" = "Only Pin";
+"Conversation.PinMessageAlert.PinAndNotifyMembers" = "Pin and notify all members";
 
 "Conversation.UnpinMessageAlert" = "Would you like to unpin this message?";
 
@@ -5887,3 +5888,5 @@ Sorry for the inconvenience.";
 "Stats.Message.Views" = "Views";
 "Stats.Message.PublicShares" = "Public Shares";
 "Stats.Message.PrivateShares" = "Private Shares";
+
+"ChatSettings.WidgetSettings" = "Widget";

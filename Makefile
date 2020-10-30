@@ -48,7 +48,7 @@ BAZEL=$(shell which bazel)
 
 ifneq ($(BAZEL_HTTP_CACHE_URL),)
 	export BAZEL_CACHE_FLAGS=\
-		--remote_cache="$(BAZEL_HTTP_CACHE_URL)"
+		--remote_cache="$(BAZEL_HTTP_CACHE_URL)" --experimental_remote_downloader="$(BAZEL_HTTP_CACHE_URL)"
 else ifneq ($(BAZEL_CACHE_DIR),)
 	export BAZEL_CACHE_FLAGS=\
 		--disk_cache="${BAZEL_CACHE_DIR}"
@@ -57,6 +57,9 @@ endif
 BAZEL_COMMON_FLAGS=\
 	--announce_rc \
 	--features=swift.use_global_module_cache \
+	--features=swift.split_derived_files_generation \
+	--features=swift.skip_function_bodies_for_derived_files \
+	--jobs=${CORE_COUNT}
 	
 BAZEL_DEBUG_FLAGS=\
 	--features=swift.enable_batch_mode \
@@ -403,6 +406,7 @@ bazel_app_debug_arm64:
 bazel_app_arm64:
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
+	BAZEL_HTTP_CACHE_URL="${BAZEL_HTTP_CACHE_URL}" \
 	build-system/prepare-build.sh Telegram distribution
 	"${BAZEL}" build Telegram/Telegram ${BAZEL_CACHE_FLAGS} ${BAZEL_COMMON_FLAGS} ${BAZEL_OPT_FLAGS} \
 	-c opt \
@@ -414,24 +418,58 @@ bazel_app_arm64:
 	--output_groups=+dsyms \
 	--verbose_failures
 
+bazel_app_armv7:
+	APP_VERSION="${APP_VERSION}" \
+	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
+	BAZEL_HTTP_CACHE_URL="${BAZEL_HTTP_CACHE_URL}" \
+	build-system/prepare-build.sh Telegram distribution
+	"${BAZEL}" build Telegram/Telegram ${BAZEL_CACHE_FLAGS} ${BAZEL_COMMON_FLAGS} ${BAZEL_OPT_FLAGS} \
+	-c opt \
+	--ios_multi_cpus=armv7 \
+	--watchos_cpus=armv7k,arm64_32 \
+	--objc_enable_binary_stripping=true \
+	--features=dead_strip \
+	--apple_generate_dsym \
+	--output_groups=+dsyms \
+	--verbose_failures
+
+bazel_app:
+	APP_VERSION="${APP_VERSION}" \
+	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
+	BAZEL_HTTP_CACHE_URL="${BAZEL_HTTP_CACHE_URL}" \
+	build-system/prepare-build.sh Telegram distribution
+	"${BAZEL}" build Telegram/Telegram ${BAZEL_CACHE_FLAGS} ${BAZEL_COMMON_FLAGS} ${BAZEL_OPT_FLAGS} \
+	-c opt \
+	--ios_multi_cpus=armv7,arm64 \
+	--watchos_cpus=armv7k,arm64_32 \
+	--objc_enable_binary_stripping=true \
+	--features=dead_strip \
+	--apple_generate_dsym \
+	--output_groups=+dsyms \
+	--verbose_failures
+
 bazel_prepare_development_build:
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
+	BAZEL_HTTP_CACHE_URL="${BAZEL_HTTP_CACHE_URL}" \
 	build-system/prepare-build.sh Telegram development
 
 bazel_project: kill_xcode bazel_prepare_development_build
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
+	BAZEL_HTTP_CACHE_URL="${BAZEL_HTTP_CACHE_URL}" \
 	build-system/generate-xcode-project.sh Telegram
 
 bazel_soft_project: bazel_prepare_development_build
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
+	BAZEL_HTTP_CACHE_URL="${BAZEL_HTTP_CACHE_URL}" \
 	build-system/generate-xcode-project.sh Telegram
 
 bazel_opt_project: bazel_prepare_development_build
 	APP_VERSION="${APP_VERSION}" \
 	BAZEL_CACHE_DIR="${BAZEL_CACHE_DIR}" \
+	BAZEL_HTTP_CACHE_URL="${BAZEL_HTTP_CACHE_URL}" \
 	GENERATE_OPT_PROJECT=1 \
 	build-system/generate-xcode-project.sh Telegram
 

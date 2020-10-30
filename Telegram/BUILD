@@ -1628,13 +1628,8 @@ ios_application(
         ":AdditionalInfoPlist",
         ":TelegramInfoIconsPlist",
     ],
-    #app_icons = [
-    #    ":DefaultAppIcon",
-    #],
     resources = [
         ":AdditionalIcons",
-        #":DefaultAppIcon",
-        #":AppIcons",
     ],
     frameworks = [
         ":MtProtoKitFramework",
@@ -1652,10 +1647,10 @@ ios_application(
     ],
     extensions = [
         ":ShareExtension",
-        ":WidgetExtension",
         ":NotificationContentExtension",
         ":NotificationServiceExtension",
         ":IntentsExtension",
+        ":WidgetExtension",
     ],
     watch_application = ":TelegramWatchApp",
     deps = [

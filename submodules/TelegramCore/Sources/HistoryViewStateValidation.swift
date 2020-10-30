@@ -269,6 +269,11 @@ final class HistoryViewStateValidationContexts {
             
             for entry in view.entries {
                 if historyState.matchesPeerId(entry.message.id.peerId) && entry.message.id.namespace == Namespaces.Message.Cloud {
+                    if let tag = view.tagMask {
+                        if !entry.message.tags.contains(tag) {
+                            continue
+                        }
+                    }
                     if !historyState.isMessageValid(entry.message) {
                         addToRange(entry.message.id, &rangesToInvalidate)
                     } else {

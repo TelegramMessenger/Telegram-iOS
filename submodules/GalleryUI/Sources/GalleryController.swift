@@ -440,7 +440,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                         } else {
                             namespaces = .not(Namespaces.Message.allScheduled)
                         }
-                        return context.account.postbox.aroundMessageHistoryViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), anchor: .index(message!.index), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, namespaces: namespaces, orderStatistics: [.combinedLocation])
+                        return context.account.postbox.aroundMessageHistoryViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), anchor: .index(message!.index), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [.combinedLocation])
                             |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
                                 let mapped = GalleryMessageHistoryView.view(view)
                                 return .single(mapped)
@@ -1029,7 +1029,7 @@ public class GalleryController: ViewController, StandalonePresentableController 
                                 } else {
                                     namespaces = .not(Namespaces.Message.allScheduled)
                                 }
-                                let signal = strongSelf.context.account.postbox.aroundMessageHistoryViewForLocation(strongSelf.context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), anchor: .index(reloadAroundIndex), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [.combinedLocation])
+                                let signal = strongSelf.context.account.postbox.aroundMessageHistoryViewForLocation(strongSelf.context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), anchor: .index(reloadAroundIndex), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [.combinedLocation])
                                     |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
                                         let mapped = GalleryMessageHistoryView.view(view)
                                         return .single(mapped)
