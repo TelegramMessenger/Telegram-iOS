@@ -107,7 +107,7 @@ elif [ "$1" == "appstore" ]; then
 	APP_TARGET="bazel_app"
 elif [ "$1" == "verify" ]; then
 	BUILD_ENV_SCRIPT="build-system/verify.sh"
-	APP_TARGET="bazel_app"
+	APP_TARGET="bazel_app_arm64"
 	export CODESIGNING_DATA_PATH="build-system/fake-codesigning"
 	export CODESIGNING_CERTS_VARIANT="distribution"
 	export CODESIGNING_PROFILES_VARIANT="appstore"

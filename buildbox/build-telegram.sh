@@ -208,8 +208,9 @@ if [ -z "$RUNNING_VM" ]; then
 		virsh destroy "$VM_NAME"
 		virsh undefine "$VM_NAME" --remove-all-storage --nvram
 	elif [ "$BUILD_MACHINE" == "macOS" ]; then
-		prlctl stop "$VM_NAME" --kill
-		prlctl delete "$VM_NAME"
+		echo "Deleting VM..."
+		#prlctl stop "$VM_NAME" --kill
+		#prlctl delete "$VM_NAME"
 	fi
 fi
 
