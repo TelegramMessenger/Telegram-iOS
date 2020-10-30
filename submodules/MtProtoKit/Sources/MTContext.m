@@ -629,7 +629,9 @@ static int32_t fixedTimeDifferenceValue = 0;
             }
             
             if (MTLogEnabled()) {
-                MTLog(@"[MTContext#%x: auth info updated for %d selector %d to %@]", (int)self, datacenterId, selector, authInfo);
+                MTDatacenterAuthInfo *persistentInfo = _datacenterAuthInfoById[authInfoMapIntegerKey((int32_t)datacenterId, MTDatacenterAuthInfoSelectorPersistent)];
+                
+                MTLog(@"[MTContext#%x: auth info updated for %d selector %d to %@ (persistent key id is %llu)]", (int)self, datacenterId, selector, authInfo, persistentInfo.authKeyId);
             }
             
             [_keychain setObject:_datacenterAuthInfoById forKey:@"datacenterAuthInfoById" group:@"persistent"];

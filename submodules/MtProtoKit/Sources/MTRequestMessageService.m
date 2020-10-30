@@ -292,7 +292,7 @@
     if (initializeApi && _apiEnvironment != nil)
     {
         if (MTLogEnabled()) {
-            MTLog(@"apiEnvironment: %d", (int)_apiEnvironment.systemCode.length);
+            MTLog(@"apiEnvironment: %@", [_apiEnvironment apiInitializationHash]);
         }
         MTBuffer *buffer = [[MTBuffer alloc] init];
         
