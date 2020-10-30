@@ -796,7 +796,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     embeddedState = embeddedStateValue
                     summaryInfo = summaryInfoValue
                     
-                    switch peerValue {
+                    switch peerValue.peer {
                     case _ as TelegramUser, _ as TelegramSecretChat:
                         if let peerPresence = peerPresence as? TelegramUserPresence, case .present = peerPresence.status {
                             inputActivities = inputActivitiesValue
