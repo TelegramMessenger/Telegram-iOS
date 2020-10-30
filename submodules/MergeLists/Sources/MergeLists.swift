@@ -226,7 +226,7 @@ public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T], isLess
         }
         var i = 0
         while i < rightList.count {
-            if updatedItems[i].1 != getId(rightList[i]) {
+            if updatedItems.count <= i || updatedItems[i].1 != getId(rightList[i]) {
                 updatedItems.insert((rightList[i], getId(rightList[i])), at: i)
                 var previousIndex: Int?
                 for k in 0 ..< leftList.count {

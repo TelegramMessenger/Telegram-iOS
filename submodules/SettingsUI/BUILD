@@ -86,6 +86,7 @@ swift_library(
         "//submodules/OpenInExternalAppUI:OpenInExternalAppUI",
         "//submodules/AccountUtils:AccountUtils",
         "//submodules/AuthTransferUI:AuthTransferUI",
+        "//submodules/WidgetSetupScreen:WidgetSetupScreen",
     ],
     visibility = [
         "//visibility:public",

@@ -7,12 +7,14 @@ private enum ApplicationSpecificPreferencesKeyValues: Int32 {
     case voipDerivedState = 16
     case chatArchiveSettings = 17
     case chatListFilterSettings = 18
+    case widgetSettings = 19
 }
 
 public struct ApplicationSpecificPreferencesKeys {
     public static let voipDerivedState = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.voipDerivedState.rawValue)
     public static let chatArchiveSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.chatArchiveSettings.rawValue)
     public static let chatListFilterSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.chatListFilterSettings.rawValue)
+    public static let widgetSettings = applicationSpecificPreferencesKey(ApplicationSpecificPreferencesKeyValues.widgetSettings.rawValue)
 }
 
 private enum ApplicationSpecificSharedDataKeyValues: Int32 {

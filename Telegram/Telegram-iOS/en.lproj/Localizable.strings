@@ -5888,3 +5888,5 @@ Sorry for the inconvenience.";
 "Stats.Message.Views" = "Views";
 "Stats.Message.PublicShares" = "Public Shares";
 "Stats.Message.PrivateShares" = "Private Shares";
+
+"ChatSettings.WidgetSettings" = "Widget";
