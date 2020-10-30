@@ -306,6 +306,8 @@ func openChatTheme(context: AccountContext, message: Message, pushController: @e
                         } else {
                             displayUnsupportedAlert()
                         }
+                    } else {
+                        displayUnsupportedAlert()
                     }
                 } else {
                     displayUnsupportedAlert()

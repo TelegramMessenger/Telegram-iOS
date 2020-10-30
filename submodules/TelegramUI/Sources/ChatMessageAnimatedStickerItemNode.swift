@@ -1285,7 +1285,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                             }
                                             let emojiSounds = AnimatedEmojiSoundsConfiguration.with(appConfiguration: appConfiguration, account: item.context.account)
                                             for (emoji, file) in emojiSounds.sounds {
-                                                if emoji.unicodeScalars.first == firstScalar {
+                                                if emoji.strippedEmoji == text.strippedEmoji {
                                                     let mediaManager = item.context.sharedContext.mediaManager
                                                     let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: item.context.account.postbox, resourceReference: .standalone(resource: file.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true, ambient: true)
                                                     mediaPlayer.togglePlayPause()
