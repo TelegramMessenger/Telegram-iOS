@@ -45,34 +45,45 @@ private final class PrefetchManagerImpl {
         }
         |> distinctUntilChanged
         
-        let orderedPreloadMedia = account.viewTracker.orderedPreloadMedia
-        |> mapToSignal { orderedPreloadMedia in
-            return loadedStickerPack(postbox: account.postbox, network: account.network, reference: .animatedEmoji, forceActualized: false)
-            |> map { result -> [PrefetchMediaItem] in
-                let chatHistoryMediaItems = orderedPreloadMedia.map { PrefetchMediaItem.chatHistory($0) }
-                switch result {
-                    case let .result(_, items, _):
-                        var animatedEmojiStickers: [String: StickerPackItem] = [:]
-                        for case let item as StickerPackItem in items {
-                            if let emoji = item.getStringRepresentationsOfIndexKeys().first {
-                                animatedEmojiStickers[emoji.basicEmoji.0] = item
+        let appConfiguration = account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+        |> take(1)
+        |> map { view in
+            return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+        }
+        
+        let orderedPreloadMedia = combineLatest(account.viewTracker.orderedPreloadMedia, loadedStickerPack(postbox: account.postbox, network: account.network, reference: .animatedEmoji, forceActualized: false), appConfiguration)
+        |> map { orderedPreloadMedia, stickerPack, appConfiguration -> [PrefetchMediaItem] in
+            let emojiSounds = AnimatedEmojiSoundsConfiguration.with(appConfiguration: appConfiguration, account: account)
+            let chatHistoryMediaItems = orderedPreloadMedia.map { PrefetchMediaItem.chatHistory($0) }
+            var stickerItems: [PrefetchMediaItem] = []
+            switch stickerPack {
+                case let .result(_, items, _):
+                    var animatedEmojiStickers: [String: StickerPackItem] = [:]
+                    for case let item as StickerPackItem in items {
+                        if let emoji = item.getStringRepresentationsOfIndexKeys().first {
+                            animatedEmojiStickers[emoji.basicEmoji.0] = item
+                        }
+                    }
+                    
+                    let popularEmoji = ["\u{2764}", "👍", "😳", "😒", "🥳"]
+                    for emoji in popularEmoji {
+                        if let sticker = animatedEmojiStickers[emoji] {
+                            if let _ = account.postbox.mediaBox.completedResourcePath(sticker.file.resource) {
+                            } else {
+                                stickerItems.append(.animatedEmojiSticker(sticker.file))
                             }
                         }
-                        var stickerItems: [PrefetchMediaItem] = []
-                        let popularEmoji = ["\u{2764}", "👍", "😳", "😒", "🥳"]
-                        for emoji in popularEmoji {
-                            if let sticker = animatedEmojiStickers[emoji] {
-                                if let _ = account.postbox.mediaBox.completedResourcePath(sticker.file.resource) {
-                                } else {
-                                    stickerItems.append(.animatedEmojiSticker(sticker.file))
-                                }
-                            }
-                        }
-                        return stickerItems + chatHistoryMediaItems
-                    default:
-                        return chatHistoryMediaItems
-                }
+                    }
+                default:
+                    break
             }
+            
+            var prefetchItems: [PrefetchMediaItem] = []
+            prefetchItems.append(contentsOf: chatHistoryMediaItems)
+            prefetchItems.append(contentsOf: stickerItems)
+            prefetchItems.append(contentsOf: emojiSounds.sounds.values.map { .animatedEmojiSticker($0) })
+            
+            return prefetchItems
         }
         
         self.listDisposable = (combineLatest(orderedPreloadMedia, sharedContext.automaticMediaDownloadSettings, networkType)

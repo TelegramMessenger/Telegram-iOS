@@ -811,7 +811,7 @@ public func createPollController(context: AccountContext, peer: Peer, isQuiz: Bo
             if state.isQuiz {
                 kind = .quiz
                 if !state.solutionText.value.string.isEmpty {
-                    let entities = generateTextEntities(state.solutionText.value.string, enabledTypes: .url, currentEntities: generateChatInputTextEntities(state.solutionText.value))
+                    let entities = generateTextEntities(state.solutionText.value.string, enabledTypes: .allUrl, currentEntities: generateChatInputTextEntities(state.solutionText.value))
                     resolvedSolution = TelegramMediaPollResults.Solution(text: state.solutionText.value.string, entities: entities)
                 }
             } else {

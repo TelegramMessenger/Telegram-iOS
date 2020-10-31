@@ -85,6 +85,7 @@ enum AccountStateMutationOperation {
     case UpdatePeer(PeerId, (Peer?) -> Peer?)
     case UpdateIsContact(PeerId, Bool)
     case UpdateCachedPeerData(PeerId, (CachedPeerData?) -> CachedPeerData?)
+    case UpdateMessagesPinned([MessageId], Bool)
     case MergeApiUsers([Api.User])
     case MergePeerPresences([PeerId: Api.UserStatus], Bool)
     case UpdateSecretChat(chat: Api.EncryptedChat, timestamp: Int32)
@@ -369,6 +370,10 @@ struct AccountMutableState {
         self.addOperation(.UpdateCachedPeerData(id, f))
     }
     
+    mutating func updateMessagesPinned(ids: [MessageId], pinned: Bool) {
+        self.addOperation(.UpdateMessagesPinned(ids, pinned))
+    }
+    
     mutating func updateLangPack(langCode: String, difference: Api.LangPackDifference?) {
         self.addOperation(.UpdateLangPack(langCode, difference))
     }
@@ -479,7 +484,7 @@ struct AccountMutableState {
     
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll/*, .UpdateMessageReactions*/, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilterOrder, .UpdateChatListFilter, .UpdateReadThread:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll/*, .UpdateMessageReactions*/, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilterOrder, .UpdateChatListFilter, .UpdateReadThread, .UpdateMessagesPinned:
                 break
             case let .AddMessages(messages, location):
                 for message in messages {

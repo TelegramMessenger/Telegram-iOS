@@ -417,6 +417,9 @@ typedef enum {
                         [newEncryptedData appendData:encryptedData];
                         encryptedData = newEncryptedData;
                     }
+                    #if DEBUG
+                    assert(encryptedData.length == 256);
+                    #endif
                     
                     _dhEncryptedData = encryptedData;
                 } else {

@@ -3737,9 +3737,26 @@ public extension Api {
                     })
                 }
             
-                public static func search(flags: Int32, peer: Api.InputPeer, q: String, fromId: Api.InputUser?, topMsgId: Int32?, filter: Api.MessagesFilter, minDate: Int32, maxDate: Int32, offsetId: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32, hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
+                public static func setTyping(flags: Int32, peer: Api.InputPeer, topMsgId: Int32?, action: Api.SendMessageAction) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1310163211)
+                    buffer.appendInt32(1486110434)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(topMsgId!, buffer: buffer, boxed: false)}
+                    action.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.setTyping", parameters: [("flags", flags), ("peer", peer), ("topMsgId", topMsgId), ("action", action)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func search(flags: Int32, peer: Api.InputPeer, q: String, fromId: Api.InputPeer?, topMsgId: Int32?, filter: Api.MessagesFilter, minDate: Int32, maxDate: Int32, offsetId: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32, hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(204812012)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     serializeString(q, buffer: buffer, boxed: false)
@@ -3764,18 +3781,15 @@ public extension Api {
                     })
                 }
             
-                public static func setTyping(flags: Int32, peer: Api.InputPeer, topMsgId: Int32?, action: Api.SendMessageAction) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                public static func unpinAllMessages(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedHistory>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1486110434)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    buffer.appendInt32(-265962357)
                     peer.serialize(buffer, true)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(topMsgId!, buffer: buffer, boxed: false)}
-                    action.serialize(buffer, true)
-                    return (FunctionDescription(name: "messages.setTyping", parameters: [("flags", flags), ("peer", peer), ("topMsgId", topMsgId), ("action", action)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "messages.unpinAllMessages", parameters: [("peer", peer)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.AffectedHistory? in
                         let reader = BufferReader(buffer)
-                        var result: Api.Bool?
+                        var result: Api.messages.AffectedHistory?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                            result = Api.parse(reader, signature: signature) as? Api.messages.AffectedHistory
                         }
                         return result
                     })

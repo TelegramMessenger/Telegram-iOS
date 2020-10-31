@@ -35,10 +35,10 @@ private var globalInternalContext: InternalContext?
 
 private var installedSharedLogger = false
 
-private func setupSharedLogger(_ path: String) {
+private func setupSharedLogger(rootPath: String, path: String) {
     if !installedSharedLogger {
         installedSharedLogger = true
-        Logger.setSharedLogger(Logger(basePath: path))
+        Logger.setSharedLogger(Logger(rootPath: rootPath, basePath: path))
     }
 }
 
@@ -138,7 +138,7 @@ public class ShareRootControllerImpl {
             let logsPath = rootPath + "/share-logs"
             let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
             
-            setupSharedLogger(logsPath)
+            setupSharedLogger(rootPath: rootPath, path: logsPath)
             
             let applicationBindings = TelegramApplicationBindings(isMainApp: false, containerPath: self.initializationData.appGroupPath, appSpecificScheme: "tg", openUrl: { _ in
             }, openUniversalUrl: { _, completion in

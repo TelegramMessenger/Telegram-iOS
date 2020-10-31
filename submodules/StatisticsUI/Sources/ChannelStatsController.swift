@@ -18,12 +18,12 @@ import GraphUI
 private final class ChannelStatsControllerArguments {
     let context: AccountContext
     let loadDetailedGraph: (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>
-    let openMessage: (MessageId) -> Void
+    let openMessageStats: (MessageId) -> Void
     
     init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (MessageId) -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
-        self.openMessage = openMessage
+        self.openMessageStats = openMessage
     }
 }
 
@@ -329,7 +329,7 @@ private enum StatsEntry: ItemListNodeEntry {
                 }, sectionId: self.section, style: .blocks)
             case let .post(_, _, _, _, message, interactions):
                 return StatsMessageItem(context: arguments.context, presentationData: presentationData, message: message, views: interactions.views, forwards: interactions.forwards, sectionId: self.section, style: .blocks, action: {
-                    arguments.openMessage(message.id)
+                    arguments.openMessageStats(message.id)
                 })
         }
     }
@@ -406,7 +406,7 @@ private func channelStatsControllerEntries(data: ChannelStats?, messages: [Messa
 }
 
 public func channelStatsController(context: AccountContext, peerId: PeerId, cachedPeerData: CachedPeerData) -> ViewController {
-    var navigateToMessageImpl: ((MessageId) -> Void)?
+    var openMessageStatsImpl: ((MessageId) -> Void)?
     
     let actionsDisposable = DisposableSet()    
     let dataPromise = Promise<ChannelStats?>(nil)
@@ -439,7 +439,7 @@ public func channelStatsController(context: AccountContext, peerId: PeerId, cach
     let arguments = ChannelStatsControllerArguments(context: context, loadDetailedGraph: { graph, x -> Signal<StatsGraph?, NoError> in
         return statsContext.loadDetailedGraph(graph, x: x)
     }, openMessage: { messageId in
-        navigateToMessageImpl?(messageId)
+        openMessageStatsImpl?(messageId)
     })
     
     let messageView = context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId), index: .upperBound, anchorIndex: .upperBound, count: 100, fixedCombinedReadStates: nil)
@@ -495,9 +495,9 @@ public func channelStatsController(context: AccountContext, peerId: PeerId, cach
     controller.didDisappear = { [weak controller] _ in
         controller?.clearItemNodesHighlight(animated: true)
     }
-    navigateToMessageImpl = { [weak controller] messageId in
+    openMessageStatsImpl = { [weak controller] messageId in
         if let navigationController = controller?.navigationController as? NavigationController {
-            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(messageId.peerId), subject: .message(id: messageId, highlight: true), keepStack: .always, useExisting: false, purposefulAction: {}, peekData: nil))
+            controller?.push(messageStatsController(context: context, messageId: messageId, cachedPeerData: cachedPeerData))
         }
     }
     return controller

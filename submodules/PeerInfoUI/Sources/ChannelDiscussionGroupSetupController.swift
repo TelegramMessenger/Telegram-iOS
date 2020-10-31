@@ -152,8 +152,10 @@ private enum ChannelDiscussionGroupSetupControllerEntry: ItemListNodeEntry {
                 let text: String
                 if let peer = peer as? TelegramChannel, let addressName = peer.addressName, !addressName.isEmpty {
                     text = "@\(addressName)"
-                } else {
+                } else if let peer = peer as? TelegramChannel, case .group = peer.info {
                     text = strings.Channel_DiscussionGroup_PrivateGroup
+                } else {
+                    text = strings.Channel_DiscussionGroup_PrivateChannel
                 }
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .monthFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: "."), nameDisplayOrder: nameOrder, context: arguments.context, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .text(text), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.selectGroup(peer.id)
@@ -560,9 +562,15 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
         var isEmptyState = false
         var displayGroupList = false
         if let cachedData = view.cachedData as? CachedChannelData {
-            let isEmpty = cachedData.linkedDiscussionPeerId == nil
+            var isEmpty = true
+            switch cachedData.linkedDiscussionPeerId {
+            case .unknown:
+                isEmpty = true
+            case let .known(value):
+                isEmpty = value == nil
+            }
             if let peer = view.peers[view.peerId] as? TelegramChannel, case .broadcast = peer.info {
-                if cachedData.linkedDiscussionPeerId == nil {
+                if isEmpty {
                     if groups == nil {
                         isEmptyState = true
                     } else {
@@ -570,13 +578,13 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                     }
                 }
             }
-            if let wasEmpty = wasEmpty, wasEmpty != isEmpty {
-                crossfade = true
-            }
-            wasEmpty = isEmpty
         } else {
             isEmptyState = true
         }
+        if let wasEmpty = wasEmpty, wasEmpty != isEmptyState {
+            crossfade = true
+        }
+        wasEmpty = isEmptyState
         
         var emptyStateItem: ItemListControllerEmptyStateItem?
         if isEmptyState {

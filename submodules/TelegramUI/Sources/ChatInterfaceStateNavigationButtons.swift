@@ -36,7 +36,7 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
         } else if let peer = presentationInterfaceState.renderedPeer?.peer {
             let canClear: Bool
             var title = strings.Conversation_ClearAll
-            if presentationInterfaceState.isScheduledMessages {
+            if case .scheduledMessages = presentationInterfaceState.subject {
                 canClear = true
                 title = strings.ScheduledMessages_ClearAll
             } else {
@@ -83,6 +83,10 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
         }
     }
     
+    if case .pinnedMessages = presentationInterfaceState.subject {
+        return nil
+    }
+    
     if case .replyThread = presentationInterfaceState.chatLocation {
         if hasMessages {
             if case .search = currentButton?.action {
@@ -120,7 +124,7 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
         }
     }
     
-    if presentationInterfaceState.isScheduledMessages {
+    if case .scheduledMessages = presentationInterfaceState.subject {
         return chatInfoNavigationButton
     }
     
@@ -128,7 +132,7 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
         return chatInfoNavigationButton
     } else if let peer = presentationInterfaceState.renderedPeer?.peer {
         if presentationInterfaceState.accountPeerId == peer.id {
-            if presentationInterfaceState.isScheduledMessages {
+            if case .scheduledMessages = presentationInterfaceState.subject {
                 return chatInfoNavigationButton
             } else {
                 let buttonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)

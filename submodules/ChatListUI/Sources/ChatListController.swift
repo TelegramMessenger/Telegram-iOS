@@ -95,7 +95,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     }
 }
 
-public class ChatListControllerImpl: TelegramBaseController, ChatListController, UIViewControllerPreviewingDelegate {
+public class ChatListControllerImpl: TelegramBaseController, ChatListController {
     private var validLayout: ContainerViewLayout?
     
     public let context: AccountContext
@@ -1291,7 +1291,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             
                             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 8.0), size: CGSize())
                             
-                            parentController.present(TooltipScreen(text: text, icon: .chatListPress, location: .point(location), shouldDismissOnTouch: { point in
+                            parentController.present(TooltipScreen(text: text, icon: .chatListPress, location: .point(location, .bottom), shouldDismissOnTouch: { point in
                                 guard let strongSelf = self, let parentController = strongSelf.parent as? TabBarController else {
                                     return .dismiss(consume: false)
                                 }
@@ -1778,111 +1778,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     @objc private func composePressed() {
         let controller = self.context.sharedContext.makeComposeController(context: self.context)
         (self.navigationController as? NavigationController)?.pushViewController(controller)
-    }
-    
-    public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {
-        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-            if let (controller, rect) = self.previewingController(from: previewingContext.sourceView, for: location) {
-                previewingContext.sourceRect = rect
-                return controller
-            } else {
-                return nil
-            }
-        } else {
-            return nil
-        }
-    }
-    
-    func previewingController(from sourceView: UIView, for location: CGPoint) -> (UIViewController, CGRect)? {
-        guard let layout = self.validLayout, case .phone = layout.deviceMetrics.type else {
-            return nil
-        }
-        
-        let boundsSize = self.view.bounds.size
-        let contentSize: CGSize
-        if case .unknown = layout.deviceMetrics {
-            contentSize = boundsSize
-        } else {
-            contentSize = layout.deviceMetrics.previewingContentSize(inLandscape: boundsSize.width > boundsSize.height)
-        }
-
-        if let searchController = self.chatListDisplayNode.searchDisplayController {
-            if let (view, bounds, action) = searchController.previewViewAndActionAtLocation(location) {
-                if let peerId = action as? PeerId, peerId.namespace != Namespaces.Peer.SecretChat {
-                    var sourceRect = view.superview!.convert(view.frame, to: sourceView)
-                    sourceRect = CGRect(x: sourceRect.minX, y: sourceRect.minY + bounds.minY, width: bounds.width, height: bounds.height)
-                    sourceRect.size.height -= UIScreenPixel
-                    
-                    let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))
-                    chatController.canReadHistory.set(false)
-                    chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
-                    return (chatController, sourceRect)
-                } else if let messageId = action as? MessageId, messageId.peerId.namespace != Namespaces.Peer.SecretChat {
-                    var sourceRect = view.superview!.convert(view.frame, to: sourceView)
-                    sourceRect = CGRect(x: sourceRect.minX, y: sourceRect.minY + bounds.minY, width: bounds.width, height: bounds.height)
-                    sourceRect.size.height -= UIScreenPixel
-                    
-                    let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(messageId.peerId), subject: .message(id: messageId, highlight: true), botStart: nil, mode: .standard(previewing: true))
-                    chatController.canReadHistory.set(false)
-                    chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
-                    return (chatController, sourceRect)
-                }
-            }
-            return nil
-        }
-        
-        let listLocation = self.view.convert(location, to: self.chatListDisplayNode.containerNode.currentItemNode.view)
-        
-        var selectedNode: ChatListItemNode?
-        self.chatListDisplayNode.containerNode.currentItemNode.forEachItemNode { itemNode in
-            if let itemNode = itemNode as? ChatListItemNode, itemNode.frame.contains(listLocation), !itemNode.isDisplayingRevealedOptions {
-                selectedNode = itemNode
-            }
-        }
-        if let selectedNode = selectedNode, let item = selectedNode.item {
-            var sourceRect = selectedNode.view.superview!.convert(selectedNode.frame, to: sourceView)
-            sourceRect.size.height -= UIScreenPixel
-            switch item.content {
-                case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _):
-                    if peer.peerId.namespace != Namespaces.Peer.SecretChat {
-                        let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(peer.peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))
-                        chatController.canReadHistory.set(false)
-                        chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
-                        return (chatController, sourceRect)
-                    } else {
-                        return nil
-                    }
-                case let .groupReference(groupId, _, _, _, _):
-                    let chatListController = ChatListControllerImpl(context: self.context, groupId: groupId, controlsHistoryPreload: false, enableDebugActions: false)
-                    chatListController.navigationPresentation = .master
-                    chatListController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
-                    return (chatListController, sourceRect)
-            }
-        } else {
-            return nil
-        }
-    }
-    
-    public func previewingContext(_ previewingContext: UIViewControllerPreviewing, commit viewControllerToCommit: UIViewController) {
-        self.previewingCommit(viewControllerToCommit)
-    }
-    
-    func previewingCommit(_ viewControllerToCommit: UIViewController) {
-        if let viewControllerToCommit = viewControllerToCommit as? ViewController {
-            if let chatController = viewControllerToCommit as? ChatController {
-                chatController.canReadHistory.set(true)
-                chatController.updatePresentationMode(.standard(previewing: false))
-                if let navigationController = self.navigationController as? NavigationController {
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: chatController, context: self.context, chatLocation: chatController.chatLocation, animated: false))
-                    self.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
-                }
-            } else if let chatListController = viewControllerToCommit as? ChatListController {
-                if let navigationController = self.navigationController as? NavigationController {
-                    navigationController.pushViewController(chatListController, animated: false, completion: {})
-                    self.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
-                }
-            }
-        }
     }
     
     public override var keyShortcuts: [KeyShortcut] {

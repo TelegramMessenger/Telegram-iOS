@@ -257,7 +257,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                                 isBroadcastChannel = true
                             }
                             
-                            if replyThreadMessage.isChannelPost, replyThreadMessage.messageId == item.message.id {
+                            if replyThreadMessage.isChannelPost, replyThreadMessage.effectiveTopId == item.message.id {
                                 isBroadcastChannel = true
                             }
                             
@@ -279,7 +279,9 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
             
             var needShareButton = false
-            if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
+            if case .pinnedMessages = item.associatedData.subject {
+                needShareButton = true
+            } else if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
                 needShareButton = false
             } else if item.message.id.peerId == item.context.account.peerId {
                 for attribute in item.content.firstMessage.attributes {
@@ -382,7 +384,12 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .regular, reactionCount: dateReactionCount)
             
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies)
+            var isReplyThread = false
+            if case .replyThread = item.chatLocation {
+                isReplyThread = true
+            }
+            
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread)
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
@@ -568,7 +575,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                             strongSelf.addSubnode(updatedShareButtonNode)
                             updatedShareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
                         }
-                        let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, message: item.message, account: item.context.account)
+                        let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account)
                         let shareButtonFrame = CGRect(origin: CGPoint(x: baseShareButtonFrame.minX, y: baseShareButtonFrame.maxY - buttonSize.height), size: buttonSize)
                         transition.updateFrame(node: updatedShareButtonNode, frame: shareButtonFrame)
                     } else if let shareButtonNode = strongSelf.shareButtonNode {
@@ -811,6 +818,11 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     
     @objc func shareButtonPressed() {
         if let item = self.item {
+            if case .pinnedMessages = item.associatedData.subject {
+                item.controllerInteraction.navigateToMessageStandalone(item.content.firstMessage.id)
+                return
+            }
+            
             if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
                 for attribute in item.message.attributes {
                     if let _ = attribute as? ReplyThreadMessageAttribute {
@@ -922,7 +934,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             return
         }
         
-        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == item.message.id {
+        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.effectiveTopId == item.message.id {
             return
         }
         
@@ -1051,7 +1063,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func getMessageContextSourceNode() -> ContextExtractedContentContainingNode? {
+    override func getMessageContextSourceNode(stableId: UInt32?) -> ContextExtractedContentContainingNode? {
         return self.contextSourceNode
     }
     

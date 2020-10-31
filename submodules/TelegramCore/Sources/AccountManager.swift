@@ -209,7 +209,7 @@ public func temporaryAccount(manager: AccountManager, rootPath: String, encrypti
     return manager.allocatedTemporaryAccountId()
     |> mapToSignal { id -> Signal<TemporaryAccount, NoError> in
         let path = "\(rootPath)/\(accountRecordIdPathName(id))"
-        return openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters)
+        return openPostbox(basePath: path + "/postbox", seedConfiguration: telegramPostboxSeedConfiguration, encryptionParameters: encryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970))
         |> mapToSignal { result -> Signal<TemporaryAccount, NoError> in
             switch result {
                 case .upgrading:

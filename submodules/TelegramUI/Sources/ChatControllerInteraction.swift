@@ -54,6 +54,7 @@ public final class ChatControllerInteraction {
     let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void
     let openMessageContextActions: (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void
     let navigateToMessage: (MessageId, MessageId) -> Void
+    let navigateToMessageStandalone: (MessageId) -> Void
     let tapMessage: ((Message) -> Void)?
     let clickThroughMessage: () -> Void
     let toggleMessagesSelection: ([MessageId], Bool) -> Void
@@ -109,11 +110,12 @@ public final class ChatControllerInteraction {
     let displayPollSolution: (TelegramMediaPollResults.Solution, ASDisplayNode) -> Void
     let displayPsa: (String, ASDisplayNode) -> Void
     let displayDiceTooltip: (TelegramMediaDice) -> Void
-    let animateDiceSuccess: () -> Void
+    let animateDiceSuccess: (Bool) -> Void
     let greetingStickerNode: () -> (ASDisplayNode, ASDisplayNode, ASDisplayNode, () -> Void)?
     let openPeerContextMenu: (Peer, ASDisplayNode, CGRect, ContextGesture?) -> Void
     let openMessageReplies: (MessageId, Bool, Bool) -> Void
     let openReplyThreadOriginalMessage: (Message) -> Void
+    let openMessageStats: (MessageId) -> Void
     
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
@@ -139,6 +141,7 @@ public final class ChatControllerInteraction {
         openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void,
         openMessageContextActions: @escaping (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void,
         navigateToMessage: @escaping (MessageId, MessageId) -> Void,
+        navigateToMessageStandalone: @escaping (MessageId) -> Void,
         tapMessage: ((Message) -> Void)?,
         clickThroughMessage: @escaping () -> Void,
         toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void,
@@ -194,11 +197,12 @@ public final class ChatControllerInteraction {
         displayPollSolution: @escaping (TelegramMediaPollResults.Solution, ASDisplayNode) -> Void,
         displayPsa: @escaping (String, ASDisplayNode) -> Void,
         displayDiceTooltip: @escaping (TelegramMediaDice) -> Void,
-        animateDiceSuccess: @escaping () -> Void,
+        animateDiceSuccess: @escaping (Bool) -> Void,
         greetingStickerNode: @escaping () -> (ASDisplayNode, ASDisplayNode, ASDisplayNode, () -> Void)?,
         openPeerContextMenu: @escaping (Peer, ASDisplayNode, CGRect, ContextGesture?) -> Void,
         openMessageReplies: @escaping (MessageId, Bool, Bool) -> Void,
         openReplyThreadOriginalMessage: @escaping (Message) -> Void,
+        openMessageStats: @escaping (MessageId) -> Void,
         requestMessageUpdate: @escaping (MessageId) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
@@ -211,6 +215,7 @@ public final class ChatControllerInteraction {
         self.openMessageContextMenu = openMessageContextMenu
         self.openMessageContextActions = openMessageContextActions
         self.navigateToMessage = navigateToMessage
+        self.navigateToMessageStandalone = navigateToMessageStandalone
         self.tapMessage = tapMessage
         self.clickThroughMessage = clickThroughMessage
         self.toggleMessagesSelection = toggleMessagesSelection
@@ -271,6 +276,7 @@ public final class ChatControllerInteraction {
         self.openPeerContextMenu = openPeerContextMenu
         self.openMessageReplies = openMessageReplies
         self.openReplyThreadOriginalMessage = openReplyThreadOriginalMessage
+        self.openMessageStats = openMessageStats
         
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
@@ -283,7 +289,7 @@ public final class ChatControllerInteraction {
     
     static var `default`: ChatControllerInteraction {
         return ChatControllerInteraction(openMessage: { _, _ in
-            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in }, navigationController: {
             return nil
         }, chatControllerNode: {
@@ -315,12 +321,13 @@ public final class ChatControllerInteraction {
         }, displayPollSolution: { _, _ in
         }, displayPsa: { _, _ in
         }, displayDiceTooltip: { _ in
-        }, animateDiceSuccess: {
+        }, animateDiceSuccess: { _ in
         }, greetingStickerNode: {
             return nil
         }, openPeerContextMenu: { _, _, _, _ in
         }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in
+        }, openMessageStats: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

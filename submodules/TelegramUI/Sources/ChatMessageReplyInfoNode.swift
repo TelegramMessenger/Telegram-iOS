@@ -28,7 +28,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
     override init() {
         self.contentNode = ASDisplayNode()
         self.contentNode.isUserInteractionEnabled = false
-        self.contentNode.displaysAsynchronously = true
+        self.contentNode.displaysAsynchronously = false
         self.contentNode.contentMode = .left
         self.contentNode.contentsScale = UIScreenScale
         

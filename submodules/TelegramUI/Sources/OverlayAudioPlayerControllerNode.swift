@@ -69,6 +69,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, openMessageContextMenu: { _, _, _, _, _ in
         }, openMessageContextActions: { _, _, _, _ in
         }, navigateToMessage: { _, _ in
+        }, navigateToMessageStandalone: { _ in
         }, tapMessage: nil, clickThroughMessage: {
         }, toggleMessagesSelection: { _, _ in
         }, sendCurrentMessage: { _ in
@@ -130,12 +131,13 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, displayPollSolution: { _, _ in
         }, displayPsa: { _, _ in
         }, displayDiceTooltip: { _ in
-        }, animateDiceSuccess: {  
+        }, animateDiceSuccess: { _ in
         }, greetingStickerNode: {
             return nil
         }, openPeerContextMenu: { _, _, _, _ in
         }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in
+        }, openMessageStats: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false))

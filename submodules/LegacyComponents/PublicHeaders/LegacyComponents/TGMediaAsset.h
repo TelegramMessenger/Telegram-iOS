@@ -37,6 +37,7 @@ typedef enum
 @property (nonatomic, readonly) bool representsBurst;
 @property (nonatomic, readonly) NSString *uniformTypeIdentifier;
 @property (nonatomic, readonly) NSString *fileName;
+@property (nonatomic, readonly) NSInteger fileSize;
 
 @property (nonatomic, readonly) TGMediaAssetType type;
 @property (nonatomic, readonly) TGMediaAssetSubtype subtypes;

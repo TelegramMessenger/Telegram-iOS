@@ -14,6 +14,7 @@ import TelegramNotices
 import ReactionSelectionNode
 import TelegramUniversalVideoContent
 import ChatInterfaceState
+import FastBlur
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -28,19 +29,9 @@ import NGStrings
 import NGUI
 //
 
-private final class ChatControllerNodeView: UITracingLayerView, WindowInputAccessoryHeightProvider, PreviewingHostView {
+private final class ChatControllerNodeView: UITracingLayerView, WindowInputAccessoryHeightProvider {
     var inputAccessoryHeight: (() -> CGFloat)?
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
-    
-    var previewingDelegate: PreviewingHostViewDelegate? {
-        return PreviewingHostViewDelegate(controllerForLocation: { [weak self] sourceView, point in
-            return self?.controller?.previewingController(from: sourceView, for: point)
-        }, commitController: { [weak self] controller in
-            self?.controller?.previewingCommit(controller)
-        })
-    }
-    
-    weak var controller: ChatControllerImpl?
     
     func getWindowInputAccessoryHeight() -> CGFloat {
         return self.inputAccessoryHeight?() ?? 0.0
@@ -314,6 +305,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let backgroundNode: WallpaperBackgroundNode
     let backgroundImageDisposable = MetaDisposable()
     let historyNode: ChatHistoryListNode
+    var blurredHistoryNode: ASImageNode?
     let reactionContainerNode: ReactionSelectionParentNode
     let historyNodeContainer: ASDisplayNode
     let loadingNode: ChatLoadingNode
@@ -587,15 +579,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.historyNodeContainer)
+        self.addSubnode(self.navigateButtons)
         self.addSubnode(self.titleAccessoryPanelContainer)
         
         self.addSubnode(self.inputPanelBackgroundNode)
         self.addSubnode(self.inputPanelBackgroundSeparatorNode)
         
         self.addSubnode(self.inputContextPanelContainer)
-        
-        self.addSubnode(self.navigateButtons)
-        
+                
         self.addSubnode(self.navigationBarBackroundNode)
         self.addSubnode(self.navigationBarSeparatorNode)
         if !self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding {
@@ -619,7 +610,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.textInputPanelNode?.sendMessage = { [weak self] in
             if let strongSelf = self {
-                if strongSelf.chatPresentationInterfaceState.isScheduledMessages && strongSelf.chatPresentationInterfaceState.editMessageState == nil {
+                if case .scheduledMessages = strongSelf.chatPresentationInterfaceState.subject, strongSelf.chatPresentationInterfaceState.editMessageState == nil {
                     strongSelf.controllerInteraction.scheduleCurrentMessage()
                 } else {
                     strongSelf.sendCurrentMessage()
@@ -683,8 +674,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             return false
         }
-        
-        (self.view as? ChatControllerNodeView)?.controller = self.controller
         
         self.displayVideoUnmuteTipDisposable = (combineLatest(queue: Queue.mainQueue(), ApplicationSpecificNotice.getVolumeButtonToUnmute(accountManager: self.context.sharedContext.accountManager), self.historyNode.hasVisiblePlayableItemNodes, self.historyNode.isInteractivelyScrolling)
         |> mapToSignal { notice, hasVisiblePlayableItemNodes, isInteractivelyScrolling -> Signal<Bool, NoError> in
@@ -1000,7 +989,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        if let pinnedMessage = self.chatPresentationInterfaceState.pinnedMessage, self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding, self.context.sharedContext.immediateExperimentalUISettings.playlistPlayback, self.embeddedTitleContentNode == nil, let url = extractExperimentalPlaylistUrl(pinnedMessage.text), self.didProcessExperimentalEmbedUrl != url {
+        if let pinnedMessage = self.chatPresentationInterfaceState.pinnedMessage, self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding, self.context.sharedContext.immediateExperimentalUISettings.playlistPlayback, self.embeddedTitleContentNode == nil, let url = extractExperimentalPlaylistUrl(pinnedMessage.message.text), self.didProcessExperimentalEmbedUrl != url {
             self.didProcessExperimentalEmbedUrl = url
             let context = self.context
             let baseNavigationController = self.controller?.navigationController as? NavigationController
@@ -1225,6 +1214,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         transition.updateFrame(node: self.historyNodeContainer, frame: contentBounds)
         transition.updateBounds(node: self.historyNode, bounds: CGRect(origin: CGPoint(), size: contentBounds.size))
         transition.updatePosition(node: self.historyNode, position: CGPoint(x: contentBounds.size.width / 2.0, y: contentBounds.size.height / 2.0))
+        if let blurredHistoryNode = self.blurredHistoryNode {
+            transition.updateFrame(node: blurredHistoryNode, frame: contentBounds)
+        }
         
         transition.updateFrame(node: self.loadingNode, frame: contentBounds)
         
@@ -2710,7 +2702,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let _ = effectivePresentationInterfaceState.interfaceState.editMessage {
                 self.interfaceInteraction?.editMessage()
             } else {
-                if let _ = effectivePresentationInterfaceState.slowmodeState, !effectivePresentationInterfaceState.isScheduledMessages && scheduleTime == nil {
+                var isScheduledMessages = false
+                if case .scheduledMessages = effectivePresentationInterfaceState.subject {
+                    isScheduledMessages = true
+                }
+                
+                if let _ = effectivePresentationInterfaceState.slowmodeState, !isScheduledMessages && scheduleTime == nil {
                     if let rect = self.frameForInputActionButton() {
                         self.interfaceInteraction?.displaySlowmodeTooltip(self, rect)
                     }
@@ -2969,5 +2966,40 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.requestLayout(.animated(duration: 0.25, curve: .spring))
             self.updateHasEmbeddedTitleContent?()
         }
+    }
+    
+    func updateIsBlurred(_ isBlurred: Bool) {
+        if isBlurred {
+            if self.blurredHistoryNode == nil {
+                let unscaledSize = self.historyNode.frame.size
+                let image = generateImage(CGSize(width: floor(unscaledSize.width), height: floor(unscaledSize.height)), opaque: true, scale: 1.0, rotatedContext: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    
+                    UIGraphicsPushContext(context)
+                    
+                    let backgroundFrame = self.backgroundNode.view.convert(self.backgroundNode.bounds, to: self.historyNode.supernode?.view)
+                    self.backgroundNode.view.drawHierarchy(in: backgroundFrame, afterScreenUpdates: false)
+                    
+                    context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                    context.scaleBy(x: -1.0, y: -1.0)
+                    context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                    
+                    self.historyNode.view.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: false)
+                    
+                    UIGraphicsPopContext()
+                }).flatMap(applyScreenshotEffectToImage)
+                let blurredHistoryNode = ASImageNode()
+                blurredHistoryNode.image = image
+                blurredHistoryNode.frame = self.historyNode.frame
+                self.blurredHistoryNode = blurredHistoryNode
+                self.historyNode.supernode?.insertSubnode(blurredHistoryNode, aboveSubnode: self.historyNode)
+            }
+        } else {
+            if let blurredHistoryNode = self.blurredHistoryNode {
+                self.blurredHistoryNode = nil
+                blurredHistoryNode.removeFromSupernode()
+            }
+        }
+        self.historyNode.isHidden = isBlurred
     }
 }

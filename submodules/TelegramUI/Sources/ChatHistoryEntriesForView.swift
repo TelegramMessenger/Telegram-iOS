@@ -8,7 +8,7 @@ import AccountContext
 import TelegramPresentationData
 
 
-func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView, includeUnreadEntry: Bool, includeEmptyEntry: Bool, includeChatInfoEntry: Bool, includeSearchEntry: Bool, reverse: Bool, groupMessages: Bool, selectedMessages: Set<MessageId>?, presentationData: ChatPresentationData, historyAppearsCleared: Bool, associatedData: ChatMessageItemAssociatedData, updatingMedia: [MessageId: ChatUpdatingMessageMedia], customChannelDiscussionReadState: MessageId?, customThreadOutgoingReadState: MessageId?) -> [ChatHistoryEntry] {
+func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView, includeUnreadEntry: Bool, includeEmptyEntry: Bool, includeChatInfoEntry: Bool, includeSearchEntry: Bool, reverse: Bool, groupMessages: Bool, selectedMessages: Set<MessageId>?, presentationData: ChatPresentationData, historyAppearsCleared: Bool, pendingUnpinnedAllMessages: Bool, pendingRemovedMessages: Set<MessageId>, associatedData: ChatMessageItemAssociatedData, updatingMedia: [MessageId: ChatUpdatingMessageMedia], customChannelDiscussionReadState: MessageId?, customThreadOutgoingReadState: MessageId?) -> [ChatHistoryEntry] {
     if historyAppearsCleared {
         return []
     }
@@ -33,6 +33,10 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
     loop: for entry in view.entries {
         var message = entry.message
         var isRead = entry.isRead
+        
+        if pendingRemovedMessages.contains(message.id) {
+            continue
+        }
         
         if let customThreadOutgoingReadState = customThreadOutgoingReadState {
             isRead = customThreadOutgoingReadState >= message.id
@@ -139,7 +143,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
     if case let .replyThread(replyThreadMessage) = location, view.earlierId == nil, !view.holeEarlier, !view.isLoading {
         loop: for entry in view.additionalData {
             switch entry {
-            case let .message(id, messages) where id == replyThreadMessage.messageId:
+            case let .message(id, messages) where id == replyThreadMessage.effectiveTopId:
                 if !messages.isEmpty {
                     let selection: ChatHistoryMessageSelection = .none
                     

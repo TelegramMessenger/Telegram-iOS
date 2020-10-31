@@ -4,7 +4,7 @@ import TelegramApi
 
 import SyncCore
 
-public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], media: [Media], textEntities: [MessageTextEntity]?) -> (MessageTags, GlobalMessageTags) {
+public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], media: [Media], textEntities: [MessageTextEntity]?, isPinned: Bool) -> (MessageTags, GlobalMessageTags) {
     var isSecret = false
     var isUnconsumedPersonalMention = false
     for attribute in attributes {
@@ -24,6 +24,10 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
     
     if isUnconsumedPersonalMention {
         tags.insert(.unseenPersonalMessage)
+    }
+    
+    if isPinned {
+        tags.insert(.pinned)
     }
     
     for attachment in media {
@@ -202,6 +206,9 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
                     result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: inviterId))
                 case let .messageActionChatMigrateTo(channelId):
                     result.append(PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId))
+                case let .messageActionGeoProximityReached(fromId, toId, _):
+                    result.append(fromId.peerId)
+                    result.append(toId.peerId)
             }
         
             return result
@@ -248,13 +255,13 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
             let mediaContact = TelegramMediaContact(firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, peerId: contactPeerId, vCardData: vcard.isEmpty ? nil : vcard)
             return (mediaContact, nil)
         case let .messageMediaGeo(geo):
-            let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: nil)
+            let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil, heading: nil)
             return (mediaMap, nil)
         case let .messageMediaVenue(geo, title, address, provider, venueId, venueType):
-            let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: title, address: address, provider: provider, venueId: venueId, venueType: venueType, liveBroadcastingTimeout: nil)
+            let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: title, address: address, provider: provider, venueId: venueId, venueType: venueType, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil, heading: nil)
             return (mediaMap, nil)
-        case let .messageMediaGeoLive(geo, period):
-            let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: period)
+        case let .messageMediaGeoLive(_, geo, heading, period, proximityNotificationRadius):
+            let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: period, liveProximityNotificationRadius: proximityNotificationRadius, heading: heading)
             return (mediaMap, nil)
         case let .messageMediaDocument(_, document, ttlSeconds):
             if let document = document {
@@ -582,7 +589,9 @@ extension StoreMessage {
                     attributes.append(NotificationInfoMessageAttribute(flags: notificationFlags))
                 }
                 
-                let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: medias, textEntities: entitiesAttribute?.entities)
+                let isPinned = (flags & (1 << 24)) != 0
+                
+                let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: medias, textEntities: entitiesAttribute?.entities, isPinned: isPinned)
                 
                 storeFlags.insert(.CanBeGroupedIntoFeed)
                 
@@ -603,12 +612,6 @@ extension StoreMessage {
                         let replyPeerId = replyToPeerId?.peerId ?? peerId
                         if let replyToTopId = replyToTopId {
                             let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
-                            threadMessageId = threadIdValue
-                            if replyPeerId == peerId {
-                                threadId = makeMessageThreadId(threadIdValue)
-                            }
-                        } else if peerId.namespace == Namespaces.Peer.CloudChannel {
-                            let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
                             threadMessageId = threadIdValue
                             if replyPeerId == peerId {
                                 threadId = makeMessageThreadId(threadIdValue)
@@ -643,7 +646,7 @@ extension StoreMessage {
                     media.append(action)
                 }
                 
-                let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: media, textEntities: nil)
+                let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: media, textEntities: nil, isPinned: false)
                 
                 storeFlags.insert(.CanBeGroupedIntoFeed)
                 

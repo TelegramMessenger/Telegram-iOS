@@ -423,15 +423,15 @@ extension ChatContextResultMessage {
                     parsedReplyMarkup = ReplyMarkupMessageAttribute(apiMarkup: replyMarkup)
                 }
                 self = .text(text: message, entities: parsedEntities, disableUrlPreview: (flags & (1 << 0)) != 0, replyMarkup: parsedReplyMarkup)
-            case let .botInlineMessageMediaGeo(_, geo, period, replyMarkup):
-                let media = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: period)
+            case let .botInlineMessageMediaGeo(_, geo, heading, period, proximityNotificationRadius, replyMarkup):
+                let media = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: period, liveProximityNotificationRadius: proximityNotificationRadius, heading: heading)
                 var parsedReplyMarkup: ReplyMarkupMessageAttribute?
                 if let replyMarkup = replyMarkup {
                     parsedReplyMarkup = ReplyMarkupMessageAttribute(apiMarkup: replyMarkup)
                 }
                 self = .mapLocation(media: media, replyMarkup: parsedReplyMarkup)
             case let .botInlineMessageMediaVenue(_, geo, title, address, provider, venueId, venueType, replyMarkup):
-                let media = telegramMediaMapFromApiGeoPoint(geo, title: title, address: address, provider: provider, venueId: venueId, venueType: venueType, liveBroadcastingTimeout: nil)
+                let media = telegramMediaMapFromApiGeoPoint(geo, title: title, address: address, provider: provider, venueId: venueId, venueType: venueType, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil, heading: nil)
                 var parsedReplyMarkup: ReplyMarkupMessageAttribute?
                 if let replyMarkup = replyMarkup {
                     parsedReplyMarkup = ReplyMarkupMessageAttribute(apiMarkup: replyMarkup)

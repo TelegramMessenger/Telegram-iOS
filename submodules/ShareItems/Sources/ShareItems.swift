@@ -260,9 +260,9 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                 let disposable = TGShareLocationSignals.locationMessageContent(for: url).start(next: { value in
                     if let value = value as? TGShareLocationResult {
                         if let title = value.title {
-                            subscriber.putNext(.done(.media(.media(.standalone(media: TelegramMediaMap(latitude: value.latitude, longitude: value.longitude, geoPlace: nil, venue: MapVenue(title: title, address: value.address, provider: value.provider, id: value.venueId, type: value.venueType), liveBroadcastingTimeout: nil))))))
+                            subscriber.putNext(.done(.media(.media(.standalone(media: TelegramMediaMap(latitude: value.latitude, longitude: value.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: MapVenue(title: title, address: value.address, provider: value.provider, id: value.venueId, type: value.venueType), liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))))))
                         } else {
-                            subscriber.putNext(.done(.media(.media(.standalone(media: TelegramMediaMap(latitude: value.latitude, longitude: value.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil))))))
+                            subscriber.putNext(.done(.media(.media(.standalone(media: TelegramMediaMap(latitude: value.latitude, longitude: value.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))))))
                         }
                         subscriber.putCompletion()
                     } else if let value = value as? String {
@@ -355,6 +355,34 @@ public func preparedShareItems(account: Account, to peerId: PeerId, dataItems: [
 
 public func sentShareItems(account: Account, to peerIds: [PeerId], items: [PreparedShareItemContent]) -> Signal<Float, Void> {
     var messages: [EnqueueMessage] = []
+    var groupingKey: Int64?
+    var mediaTypes: (photo: Bool, video: Bool, music: Bool, other: Bool) = (false, false, false, false)
+    for item in items {
+        if case let .media(result) = item, case let .media(media) = result {
+            if media.media is TelegramMediaImage {
+                mediaTypes.photo = true
+            } else if let media = media.media as? TelegramMediaFile {
+                if media.isVideo {
+                    mediaTypes.video = true
+                } else if let fileName = media.fileName, fileName.hasPrefix("mp3") || fileName.hasPrefix("m4a") {
+                    mediaTypes.music = true
+                } else {
+                    mediaTypes.other = true
+                }
+            } else {
+                mediaTypes = (false, false, false, false)
+                break
+            }
+        }
+    }
+    
+    if (mediaTypes.photo || mediaTypes.video) && !(mediaTypes.music || mediaTypes.other) {
+        groupingKey = arc4random64()
+    } else if !(mediaTypes.photo || mediaTypes.video) && (mediaTypes.music != mediaTypes.other) {
+        groupingKey = arc4random64()
+    }
+    
+    var mediaMessages: [EnqueueMessage] = []
     for item in items {
         switch item {
             case let .text(text):
@@ -362,7 +390,13 @@ public func sentShareItems(account: Account, to peerIds: [PeerId], items: [Prepa
             case let .media(media):
                 switch media {
                     case let .media(reference):
-                        messages.append(.message(text: "", attributes: [], mediaReference: reference, replyToMessageId: nil, localGroupingKey: nil))
+                        let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: reference, replyToMessageId: nil, localGroupingKey: groupingKey)
+                        messages.append(message)
+                        mediaMessages.append(message)
+                        
+                }
+                if let _ = groupingKey, mediaMessages.count % 10 == 0 {
+                    groupingKey = arc4random64()
                 }
         }
     }

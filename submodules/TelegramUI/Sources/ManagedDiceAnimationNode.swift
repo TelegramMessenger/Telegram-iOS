@@ -30,9 +30,9 @@ private func animationItem(account: Account, emojis: Signal<[TelegramMediaFile],
         
         if let _ = account.postbox.mediaBox.completedResourcePath(file.resource) {
             if immediate {
-                return .single(ManagedAnimationItem(source: .resource(account.postbox.mediaBox, file.resource), frames: .still(.end), duration: 0))
+                return .single(ManagedAnimationItem(source: .resource(account, file.resource), frames: .still(.end), duration: 0))
             } else {
-                return .single(ManagedAnimationItem(source: .resource(account.postbox.mediaBox, file.resource), loop: loop, callbacks: callbacks))
+                return .single(ManagedAnimationItem(source: .resource(account, file.resource), loop: loop, callbacks: callbacks))
             }
         } else {
             let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
@@ -45,7 +45,7 @@ private func animationItem(account: Account, emojis: Signal<[TelegramMediaFile],
                 |> filter { data in
                     return data.complete
                 }).start(next: { next in
-                    subscriber.putNext(ManagedAnimationItem(source: .resource(account.postbox.mediaBox, file.resource), loop: loop, callbacks: callbacks))
+                    subscriber.putNext(ManagedAnimationItem(source: .resource(account, file.resource), loop: loop, callbacks: callbacks))
                     subscriber.putCompletion()
                 })
 

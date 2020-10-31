@@ -176,7 +176,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let statusType: ChatMessageDateAndStatusType?
                 switch position {
-                    case .linear(_, .None), .linear(_, .Neighbour(true, _)):
+                    case .linear(_, .None), .linear(_, .Neighbour(true, _, _)):
                         if item.message.effectivelyIncoming(item.context.account.peerId) {
                             statusType = .BubbleIncoming
                         } else {
@@ -196,7 +196,12 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 var statusApply: ((Bool) -> Void)?
                 
                 if let statusType = statusType {
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: constrainedSize.width, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies)
+                    var isReplyThread = false
+                    if case .replyThread = item.chatLocation {
+                        isReplyThread = true
+                    }
+                    
+                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: constrainedSize.width, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread)
                     statusSize = size
                     statusApply = apply
                 }

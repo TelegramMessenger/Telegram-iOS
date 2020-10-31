@@ -31,10 +31,7 @@ final class LocationOptionsNode: ASDisplayNode {
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.segmentedControlNode)
         
-        self.segmentedControlNode.selectedIndexChanged = { [weak self] index in
-            guard let strongSelf = self else {
-                return
-            }
+        self.segmentedControlNode.selectedIndexChanged = { index in
             switch index {
                 case 0:
                     updateMapMode(.map)

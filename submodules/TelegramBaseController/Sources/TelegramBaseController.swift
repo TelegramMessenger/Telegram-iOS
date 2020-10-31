@@ -38,7 +38,8 @@ private func presentLiveLocationController(context: AccountContext, peerId: Peer
             }, openUrl: { _ in
             }, openPeer: { peer, navigation in
             }, callPeer: { _, _ in
-            }, enqueueMessage: { _ in
+            }, enqueueMessage: { message in
+                let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
             }, sendSticker: nil,
             setupTemporaryHiddenMedia: { _, _, _ in
             }, chatAvatarHiddenMedia: { _, _ in
@@ -570,7 +571,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                                 strongSelf.displayNode.view.window?.endEditing(true)
                                 strongSelf.present(controller, in: .window(.root))
                             } else {
-                                let signal = strongSelf.context.sharedContext.messageFromPreloadedChatHistoryViewForLocation(id: id.messageId, location: ChatHistoryLocationInput(content: .InitialSearch(location: .id(id.messageId), count: 60, highlight: true), id: 0), context: strongSelf.context, chatLocation: .peer(id.messageId.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), tagMask: MessageTags.music)
+                                let signal = strongSelf.context.sharedContext.messageFromPreloadedChatHistoryViewForLocation(id: id.messageId, location: ChatHistoryLocationInput(content: .InitialSearch(location: .id(id.messageId), count: 60, highlight: true), id: 0), context: strongSelf.context, chatLocation: .peer(id.messageId.peerId), subject: nil, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), tagMask: MessageTags.music)
                                 
                                 var cancelImpl: (() -> Void)?
                                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }

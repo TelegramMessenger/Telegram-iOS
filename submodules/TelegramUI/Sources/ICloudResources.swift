@@ -6,6 +6,7 @@ import SyncCore
 import SwiftSignalKit
 import Display
 import Pdf
+import AVFoundation
 
 public struct ICloudFileResourceId: MediaResourceId {
     public let urlData: String
@@ -68,9 +69,16 @@ public class ICloudFileResource: TelegramMediaResource {
 }
 
 struct ICloudFileDescription {
+    struct AudioMetadata {
+        let title: String?
+        let performer: String?
+        let duration: Int
+    }
+    
     let urlData: String
     let fileName: String
     let fileSize: Int
+    let audioMetadata: AudioMetadata?
 }
 
 private func descriptionWithUrl(_ url: URL) -> ICloudFileDescription? {
@@ -91,7 +99,18 @@ private func descriptionWithUrl(_ url: URL) -> ICloudFileDescription? {
             return nil
         }
         
-        let result = ICloudFileDescription(urlData: urlData.base64EncodedString(), fileName: fileName, fileSize: fileSize)
+        var audioMetadata: ICloudFileDescription.AudioMetadata?
+        if ["mp3", "m4a"].contains(url.pathExtension.lowercased()) {
+            let asset = AVURLAsset(url: url)
+            let title = AVMetadataItem.metadataItems(from: asset.commonMetadata, withKey: AVMetadataKey.commonKeyTitle, keySpace: AVMetadataKeySpace.common).first?.stringValue
+            let performer = AVMetadataItem.metadataItems(from: asset.commonMetadata, withKey: AVMetadataKey.commonKeyArtist, keySpace: AVMetadataKeySpace.common).first?.stringValue
+            let duration = CMTimeGetSeconds(asset.duration)
+            if duration > 0 {
+                audioMetadata = ICloudFileDescription.AudioMetadata(title: title, performer: performer, duration: Int(duration))
+            }
+        }
+        
+        let result = ICloudFileDescription(urlData: urlData.base64EncodedString(), fileName: fileName, fileSize: fileSize, audioMetadata: audioMetadata)
         
         url.stopAccessingSecurityScopedResource()
         
@@ -211,7 +230,10 @@ func fetchICloudFileResource(resource: ICloudFileResource) -> Signal<MediaResour
             if resource.thumbnail {
                 let tempFile = TempBox.shared.tempFile(fileName: "thumb.jpg")
                 var data = Data()
-                if let image = generatePdfPreviewImage(url: url, size: CGSize(width: 256, height: 256.0)), let jpegData = image.jpegData(compressionQuality: 0.5) {
+                                
+                if let imageData = try? Data(contentsOf: url, options: .mappedIfSafe), let originalImage = UIImage(data: imageData), let image = generateScaledImage(image: originalImage, size: originalImage.size.fitted(CGSize(width: 256, height: 256.0))), let jpegData = image.jpegData(compressionQuality: 0.5) {
+                    data = jpegData
+                } else if let image = generatePdfPreviewImage(url: url, size: CGSize(width: 256, height: 256.0)), let jpegData = image.jpegData(compressionQuality: 0.5) {
                     data = jpegData
                 }
                 if let _ = try? data.write(to: URL(fileURLWithPath: tempFile.path)) {

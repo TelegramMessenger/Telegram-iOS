@@ -135,22 +135,18 @@ private enum StatsEntry: ItemListNodeEntry {
                     })
                 }, sectionId: self.section, style: .blocks)
             case let .publicForward(_, _, _, _, message):
-                var views: Int = 0
+                var views: Int32 = 0
                 for attribute in message.attributes {
                     if let viewsAttribute = attribute as? ViewCountMessageAttribute {
-                        views = viewsAttribute.count
+                        views = Int32(viewsAttribute.count)
                         break
                     }
                 }
                 
-                var text: String = ""
-                text += "\(views) views"
+                let text: String = presentationData.strings.Stats_MessageViews(views)
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .military, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ",", groupingSeparator: ""), nameDisplayOrder: .firstLast, context: arguments.context, peer: message.peers[message.id.peerId]!, height: .generic, aliasHandling: .standard, nameColor: .primary, nameStyle: .plain, presence: nil, text: .text(text), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: nil), revealOptions: nil, switchValue: nil, enabled: true, highlighted: false, selectable: true, sectionId: self.section, action: {
                     arguments.openMessage(message.id)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: nil, contextAction: nil)
-//                return StatsMessageItem(context: arguments.context, presentationData: presentationData, message: message, views: 0, forwards: 0, sectionId: self.section, style: .blocks, action: {
-//                    arguments.openMessage(message.id)
-//                })
         }
     }
 }
@@ -164,7 +160,17 @@ private func messageStatsControllerEntries(data: MessageStats?, messages: Search
     
         if !data.interactionsGraph.isEmpty {
             entries.append(.interactionsTitle(presentationData.theme, presentationData.strings.Stats_MessageInteractionsTitle.uppercased()))
-            entries.append(.interactionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.interactionsGraph, .twoAxisStep))
+            
+            var chartType: ChartType
+            if data.interactionsGraphDelta == 3600 {
+                chartType = .twoAxisHourlyStep
+            } else if data.interactionsGraphDelta == 300 {
+                chartType = .twoAxis5MinStep
+            } else {
+                chartType = .twoAxisStep
+            }
+            
+            entries.append(.interactionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.interactionsGraph, chartType))
         }
 
         if let messages = messages, !messages.messages.isEmpty {

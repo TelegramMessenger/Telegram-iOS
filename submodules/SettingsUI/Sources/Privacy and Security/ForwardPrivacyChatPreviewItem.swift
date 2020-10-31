@@ -287,7 +287,7 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
                     let contentSize = CGSize(width: textSize.width + 12.0, height: textSize.height + 34.0)
                     
                     var sourceRect: CGRect
-                    if let messageNode = strongSelf.messageNode as? ChatMessagePrevewItemNode, let forwardInfoNode = messageNode.forwardInfoReferenceNode {
+                    if let messageNode = strongSelf.messageNode as? ChatMessagePreviewItemNode, let forwardInfoNode = messageNode.forwardInfoReferenceNode {
                         sourceRect = forwardInfoNode.convert(forwardInfoNode.bounds, to: strongSelf)
                         if let authorNameCenter = authorNameCenter {
                             sourceRect.origin = CGPoint(x: sourceRect.minX + authorNameCenter, y: sourceRect.minY)

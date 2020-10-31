@@ -7,8 +7,8 @@ import TelegramStringFormatting
 import MapKit
 
 extension TelegramMediaMap {
-    convenience init(coordinate: CLLocationCoordinate2D, liveBroadcastingTimeout: Int32? = nil) {
-        self.init(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: liveBroadcastingTimeout)
+    convenience init(coordinate: CLLocationCoordinate2D, liveBroadcastingTimeout: Int32? = nil, proximityNotificationRadius: Int32? = nil) {
+        self.init(latitude: coordinate.latitude, longitude: coordinate.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: liveBroadcastingTimeout, liveProximityNotificationRadius: proximityNotificationRadius)
     }
     
     var coordinate: CLLocationCoordinate2D {
@@ -68,24 +68,6 @@ public func nearbyVenues(account: Account, latitude: Double, longitude: Double, 
             return list
         }
     }
-}
-
-private var sharedDistanceFormatter: MKDistanceFormatter?
-func stringForDistance(strings: PresentationStrings, distance: CLLocationDistance) -> String {
-    let distanceFormatter: MKDistanceFormatter
-    if let currentDistanceFormatter = sharedDistanceFormatter {
-        distanceFormatter = currentDistanceFormatter
-    } else {
-        distanceFormatter = MKDistanceFormatter()
-        distanceFormatter.unitStyle = .full
-        sharedDistanceFormatter = distanceFormatter
-    }
-    
-    let locale = localeWithStrings(strings)
-    if distanceFormatter.locale != locale {
-        distanceFormatter.locale = locale
-    }
-    return distanceFormatter.string(fromDistance: distance)
 }
 
 func stringForEstimatedDuration(strings: PresentationStrings, eta: Double) -> String? {

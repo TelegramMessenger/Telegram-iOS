@@ -3,7 +3,7 @@
 include Utils.makefile
 
 
-APP_VERSION="7.1.1"
+APP_VERSION="7.2"
 CORE_COUNT=$(shell sysctl -n hw.logicalcpu)
 CORE_COUNT_MINUS_ONE=$(shell expr ${CORE_COUNT} \- 1)
 
@@ -49,7 +49,10 @@ BUCK_OPTIONS=\
 
 BAZEL=$(shell which bazel)
 
-ifneq ($(BAZEL_CACHE_DIR),)
+ifneq ($(BAZEL_HTTP_CACHE_URL),)
+	export BAZEL_CACHE_FLAGS=\
+		--remote_cache="$(BAZEL_HTTP_CACHE_URL)"
+else ifneq ($(BAZEL_CACHE_DIR),)
 	export BAZEL_CACHE_FLAGS=\
 		--disk_cache="${BAZEL_CACHE_DIR}"
 endif
@@ -62,9 +65,14 @@ BAZEL_DEBUG_FLAGS=\
 	--features=swift.enable_batch_mode \
 	--swiftcopt=-j${CORE_COUNT_MINUS_ONE} \
 
+# --num-threads 0 forces swiftc to generate one object file per module; it:
+# 1. resolves issues with the linker caused by swift-objc mixing.
+# 2. makes the resulting binaries significantly smaller (up to 9% for this project).
 BAZEL_OPT_FLAGS=\
-	--swiftcopt=-whole-module-optimization \
-	--swiftcopt='-num-threads' --swiftcopt='16' \
+	--features=swift.opt_uses_wmo \
+	--features=swift.opt_uses_osize \
+	--swiftcopt='-num-threads' --swiftcopt='0' \
+    --objc_enable_binary_stripping \
 
 
 build_arm64: check_env

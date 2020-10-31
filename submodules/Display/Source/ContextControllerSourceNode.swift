@@ -61,13 +61,13 @@ public final class ContextControllerSourceNode: ASDisplayNode {
                 let currentScale = 1.0 * (1.0 - progress) + minScale * progress
                 
                 let originalCenterOffsetX: CGFloat = targetNode.bounds.width / 2.0 - targetContentRect.midX
-                let scaledCaneterOffsetX: CGFloat = originalCenterOffsetX * currentScale
+                let scaledCenterOffsetX: CGFloat = originalCenterOffsetX * currentScale
                 
                 let originalCenterOffsetY: CGFloat = targetNode.bounds.height / 2.0 - targetContentRect.midY
-                let scaledCaneterOffsetY: CGFloat = originalCenterOffsetY * currentScale
+                let scaledCenterOffsetY: CGFloat = originalCenterOffsetY * currentScale
                 
-                let scaleMidX: CGFloat = scaledCaneterOffsetX - originalCenterOffsetX
-                let scaleMidY: CGFloat = scaledCaneterOffsetY - originalCenterOffsetY
+                let scaleMidX: CGFloat = scaledCenterOffsetX - originalCenterOffsetX
+                let scaleMidY: CGFloat = scaledCenterOffsetY - originalCenterOffsetY
                 
                 switch update {
                 case .update:

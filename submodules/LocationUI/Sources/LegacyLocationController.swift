@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import SwiftSignalKit
 import LegacyComponents
 import TelegramCore
 import SyncCore
@@ -12,6 +13,7 @@ import LegacyUI
 import OpenInExternalAppUI
 import AppBundle
 import LocationResources
+import DeviceLocationManager
 
 private func generateClearIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)
@@ -120,7 +122,7 @@ private func telegramMap(for location: TGLocationMediaAttachment) -> TelegramMed
     } else {
         mapVenue = nil
     }
-    return TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, geoPlace: nil, venue: mapVenue, liveBroadcastingTimeout: nil)
+    return TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: mapVenue, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil)
 }
 
 func legacyLocationPalette(from theme: PresentationTheme) -> TGLocationPallete {

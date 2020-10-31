@@ -1,4 +1,5 @@
 import Foundation
+import MurMurHashObjC
 
 public enum HashFunctions {
     public static func murMurHash32(_ s: String) -> Int32 {

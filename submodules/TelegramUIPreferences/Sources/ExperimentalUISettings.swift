@@ -14,6 +14,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
     public var preferredVideoCodec: String?
     public var disableVideoAspectScaling: Bool
     public var enableVoipTcp: Bool
+    public var snapPinListToTop: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -27,7 +28,8 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
             playlistPlayback: false,
             preferredVideoCodec: nil,
             disableVideoAspectScaling: false,
-            enableVoipTcp: false
+            enableVoipTcp: false,
+            snapPinListToTop: false
         )
     }
     
@@ -42,7 +44,8 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         playlistPlayback: Bool,
         preferredVideoCodec: String?,
         disableVideoAspectScaling: Bool,
-        enableVoipTcp: Bool
+        enableVoipTcp: Bool,
+        snapPinListToTop: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -55,6 +58,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         self.preferredVideoCodec = preferredVideoCodec
         self.disableVideoAspectScaling = disableVideoAspectScaling
         self.enableVoipTcp = enableVoipTcp
+        self.snapPinListToTop = snapPinListToTop
     }
     
     public init(decoder: PostboxDecoder) {
@@ -69,6 +73,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         self.preferredVideoCodec = decoder.decodeOptionalStringForKey("preferredVideoCodec")
         self.disableVideoAspectScaling = decoder.decodeInt32ForKey("disableVideoAspectScaling", orElse: 0) != 0
         self.enableVoipTcp = decoder.decodeInt32ForKey("enableVoipTcp", orElse: 0) != 0
+        self.snapPinListToTop = decoder.decodeInt32ForKey("snapPinListToTop", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -85,6 +90,7 @@ public struct ExperimentalUISettings: Equatable, PreferencesEntry {
         }
         encoder.encodeInt32(self.disableVideoAspectScaling ? 1 : 0, forKey: "disableVideoAspectScaling")
         encoder.encodeInt32(self.enableVoipTcp ? 1 : 0, forKey: "enableVoipTcp")
+        encoder.encodeInt32(self.snapPinListToTop ? 1 : 0, forKey: "snapPinListToTop")
     }
     
     public func isEqual(to: PreferencesEntry) -> Bool {

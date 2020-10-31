@@ -63,26 +63,18 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     return nil
                 }))
                 return true
-            case let .map(mapMedia):
+            case .map:
                 params.dismissInput()
                 
-//                let controllerParams = LocationViewParams(sendLiveLocation: { location in
-//                    let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: location), replyToMessageId: nil, localGroupingKey: nil)
-//                    params.enqueueMessage(outMessage)
-//                }, stopLiveLocation: {
-//                    params.context.liveLocationManager?.cancelLiveLocation(peerId: params.message.id.peerId)
-//                }, openUrl: params.openUrl, openPeer: { peer in
-//                    params.openPeer(peer, .info)
-//                })
-//                let controller = LocationViewController(context: params.context, mapMedia: mapMedia, params: controllerParams)
-                let controller = legacyLocationController(message: params.message, mapMedia: mapMedia, context: params.context, openPeer: { peer in
-                    params.openPeer(peer, .info)
-                }, sendLiveLocation: { coordinate, period in
-                    let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period)), replyToMessageId: nil, localGroupingKey: nil)
+                let controllerParams = LocationViewParams(sendLiveLocation: { location in
+                    let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: location), replyToMessageId: nil, localGroupingKey: nil)
                     params.enqueueMessage(outMessage)
-                }, stopLiveLocation: {
-                    params.context.liveLocationManager?.cancelLiveLocation(peerId: params.message.id.peerId)
-                }, openUrl: params.openUrl)
+                }, stopLiveLocation: { messageId in
+                    params.context.liveLocationManager?.cancelLiveLocation(peerId: messageId?.peerId ?? params.message.id.peerId)
+                }, openUrl: params.openUrl, openPeer: { peer in
+                    params.openPeer(peer, .info)
+                }, showAll: params.modal)
+                let controller = LocationViewController(context: params.context, subject: params.message, params: controllerParams)
                 controller.navigationPresentation = .modal
                 params.navigationController?.pushViewController(controller)
                 return true
@@ -138,7 +130,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     } else if params.standalone {
                         location = .recentActions(params.message)
                     } else {
-                        location = .messages(peerId: params.message.id.peerId, tagMask: .voiceOrInstantVideo, at: params.message.id)
+                        location = .messages(chatLocation: params.chatLocation ?? .peer(params.message.id.peerId), tagMask: .voiceOrInstantVideo, at: params.message.id)
                     }
                     playerType = .voice
                 } else if file.isMusic && params.message.tags.contains(.music) {
@@ -147,7 +139,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     } else if params.standalone {
                         location = .recentActions(params.message)
                     } else {
-                        location = .messages(peerId: params.message.id.peerId, tagMask: .music, at: params.message.id)
+                        location = .messages(chatLocation: params.chatLocation ?? .peer(params.message.id.peerId), tagMask: .music, at: params.message.id)
                     }
                     playerType = .music
                 } else {
@@ -158,7 +150,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     }
                     playerType = (file.isVoice || file.isInstantVideo) ? .voice : .music
                 }
-                params.context.sharedContext.mediaManager.setPlaylist((params.context.account, PeerMessagesMediaPlaylist(postbox: params.context.account.postbox, network: params.context.account.network, location: location)), type: playerType, control: control)
+                params.context.sharedContext.mediaManager.setPlaylist((params.context.account, PeerMessagesMediaPlaylist(context: params.context, location: location, chatLocationContextHolder: params.chatLocationContextHolder)), type: playerType, control: control)
                 return true
             case let .gallery(gallery):
                 params.dismissInput()

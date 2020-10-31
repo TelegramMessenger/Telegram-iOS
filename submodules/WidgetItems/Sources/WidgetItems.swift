@@ -33,10 +33,14 @@ public struct WidgetDataPeers: Codable, Equatable {
 public struct WidgetPresentationData: Codable, Equatable {
     public var applicationLockedString: String
     public var applicationStartRequiredString: String
+    public var widgetGalleryTitle: String
+    public var widgetGalleryDescription: String
     
-    public init(applicationLockedString: String, applicationStartRequiredString: String) {
+    public init(applicationLockedString: String, applicationStartRequiredString: String, widgetGalleryTitle: String, widgetGalleryDescription: String) {
         self.applicationLockedString = applicationLockedString
         self.applicationStartRequiredString = applicationStartRequiredString
+        self.widgetGalleryTitle = widgetGalleryTitle
+        self.widgetGalleryDescription = widgetGalleryDescription
     }
 }
 

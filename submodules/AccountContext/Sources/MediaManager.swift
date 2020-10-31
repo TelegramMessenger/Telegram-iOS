@@ -22,15 +22,20 @@ public enum PeerMessagesMediaPlaylistId: Equatable, SharedMediaPlaylistId {
 }
     
 public enum PeerMessagesPlaylistLocation: Equatable, SharedMediaPlaylistLocation {
-    case messages(peerId: PeerId, tagMask: MessageTags, at: MessageId)
+    case messages(chatLocation: ChatLocation, tagMask: MessageTags, at: MessageId)
     case singleMessage(MessageId)
     case recentActions(Message)
     case custom(messages: Signal<([Message], Int32, Bool), NoError>, at: MessageId, loadMore: (() -> Void)?)
 
     public var playlistId: PeerMessagesMediaPlaylistId {
         switch self {
-            case let .messages(peerId, _, _):
-                return .peer(peerId)
+            case let .messages(chatLocation, _, _):
+                switch chatLocation {
+                case let .peer(peerId):
+                    return .peer(peerId)
+                case let .replyThread(replyThreaMessage):
+                    return .peer(replyThreaMessage.messageId.peerId)
+                }
             case let .singleMessage(id):
                 return .peer(id.peerId)
             case let .recentActions(message):
@@ -59,8 +64,8 @@ public enum PeerMessagesPlaylistLocation: Equatable, SharedMediaPlaylistLocation
     
     public static func ==(lhs: PeerMessagesPlaylistLocation, rhs: PeerMessagesPlaylistLocation) -> Bool {
         switch lhs {
-            case let .messages(peerId, tagMask, at):
-                if case .messages(peerId, tagMask, at) = rhs {
+            case let .messages(chatLocation, tagMask, at):
+                if case .messages(chatLocation, tagMask, at) = rhs {
                     return true
                 } else {
                     return false

@@ -1378,10 +1378,6 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     }
                 }
                 strongSelf.searchCurrentMessages = messages
-                
-                if strongSelf.didSetReady && tagMask == nil {
-                    interaction.updateSuggestedPeers(Array(peers.prefix(8)), strongSelf.key)
-                }
             }
         }))
         
@@ -1494,6 +1490,18 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             if let strongSelf = self {
                 strongSelf.presentationData = presentationData
                 strongSelf.presentationDataPromise.set(.single(ChatListPresentationData(theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations)))
+                
+                strongSelf.listNode.forEachItemHeaderNode({ itemHeaderNode in
+                    if let itemHeaderNode = itemHeaderNode as? ChatListSearchItemHeaderNode {
+                        itemHeaderNode.updateTheme(theme: presentationData.theme)
+                    }
+                })
+                
+                strongSelf.recentListNode.forEachItemHeaderNode({ itemHeaderNode in
+                    if let itemHeaderNode = itemHeaderNode as? ChatListSearchItemHeaderNode {
+                        itemHeaderNode.updateTheme(theme: presentationData.theme)
+                    }
+                })
             }
         })
                         
@@ -1762,7 +1770,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                 strongSelf.interaction.dismissInput()
                                 strongSelf.interaction.present(controller, nil)
                             } else {
-                                let signal = strongSelf.context.sharedContext.messageFromPreloadedChatHistoryViewForLocation(id: id.messageId, location: ChatHistoryLocationInput(content: .InitialSearch(location: .id(id.messageId), count: 60, highlight: true), id: 0), context: strongSelf.context, chatLocation: .peer(id.messageId.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), tagMask: MessageTags.music)
+                                let signal = strongSelf.context.sharedContext.messageFromPreloadedChatHistoryViewForLocation(id: id.messageId, location: ChatHistoryLocationInput(content: .InitialSearch(location: .id(id.messageId), count: 60, highlight: true), id: 0), context: strongSelf.context, chatLocation: .peer(id.messageId.peerId), subject: nil, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), tagMask: MessageTags.music)
                                 
                                 var cancelImpl: (() -> Void)?
                                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }

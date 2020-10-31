@@ -300,9 +300,9 @@
                     fileName = asset.fileName;
                 }
                 
-                if (iosMajorVersion() >= 10 && [dataUTI rangeOfString:@"heic"].location != NSNotFound)
+                if (iosMajorVersion() >= 10 && [asset.uniformTypeIdentifier rangeOfString:@"heic"].location != NSNotFound)
                 {
-#if !DEBUG
+//#if !DEBUG
                     CIContext *context = [[CIContext alloc] init];
                     CIImage *image = [[CIImage alloc] initWithData:imageData];
                     NSURL *tmpURL = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[[NSString alloc] initWithFormat:@"%x.jpg", (int)arc4random()]]];
@@ -318,7 +318,7 @@
                         if (range.location != NSNotFound)
                             fileName = [fileName stringByReplacingCharactersInRange:range withString:@".JPG"];
                     }
-#endif
+//#endif
                 }
                 
                 TGMediaAssetImageData *data = [[TGMediaAssetImageData alloc] init];
@@ -409,23 +409,17 @@
 {
     SSignal *attributesSignal = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
     {
-        PHImageRequestID token = [[PHImageManager defaultManager] requestImageDataForAsset:asset.backingAsset options:nil resultHandler:^(NSData *data, NSString *dataUTI, __unused UIImageOrientation orientation, NSDictionary *info)
-        {
-            NSURL *fileUrl = info[@"PHImageFileURLKey"];
-            
-            TGMediaAssetImageFileAttributes *attributes = [[TGMediaAssetImageFileAttributes alloc] init];
-            attributes.fileName = fileUrl.absoluteString.lastPathComponent;
-            attributes.fileUTI = dataUTI;
-            attributes.dimensions = asset.dimensions;
-            attributes.fileSize = data.length;
-            
-            [subscriber putNext:attributes];
-            [subscriber putCompletion];
-        }];
+        TGMediaAssetImageFileAttributes *attributes = [[TGMediaAssetImageFileAttributes alloc] init];
+        attributes.fileName = asset.fileName;
+        attributes.fileUTI = asset.uniformTypeIdentifier;
+        attributes.dimensions = asset.dimensions;
+        attributes.fileSize = asset.fileSize;
         
+        [subscriber putNext:attributes];
+        [subscriber putCompletion];
+
         return [[SBlockDisposable alloc] initWithBlock:^
         {
-            [[PHImageManager defaultManager] cancelImageRequest:token];
         }];
     }];
     

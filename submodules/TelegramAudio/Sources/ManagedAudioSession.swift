@@ -4,6 +4,7 @@ import AVFoundation
 import UIKit
 
 public enum ManagedAudioSessionType: Equatable {
+    case ambient
     case play
     case playWithPossiblePortOverride
     case record(speaker: Bool)
@@ -22,6 +23,8 @@ public enum ManagedAudioSessionType: Equatable {
 
 private func nativeCategoryForType(_ type: ManagedAudioSessionType, headphones: Bool, outputMode: AudioSessionOutputMode) -> AVAudioSession.Category {
     switch type {
+    case .ambient:
+        return .ambient
     case .play:
         return .playback
     case .record, .voiceCall, .videoCall:
@@ -665,7 +668,7 @@ public final class ManagedAudioSession {
                 print("ManagedAudioSession setting category for \(type) (native: \(nativeCategory))")
                 var options: AVAudioSession.CategoryOptions = []
                 switch type {
-                    case .play:
+                    case .play, .ambient:
                         break
                     case .playWithPossiblePortOverride:
                         if case .playAndRecord = nativeCategory {

@@ -59,7 +59,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         self.textNode.isUserInteractionEnabled = false
         self.textNode.contentMode = .topLeft
         self.textNode.contentsScale = UIScreenScale
-        self.textNode.displaysAsynchronously = true
+        self.textNode.displaysAsynchronously = false
         self.addSubnode(self.textNode)
         self.addSubnode(self.textAccessibilityOverlayNode)
         
@@ -143,7 +143,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 case let .linear(_, neighbor):
                     if case .None = neighbor {
                         displayStatus = true
-                    } else if case .Neighbour(true, _) = neighbor {
+                    } else if case .Neighbour(true, _, _) = neighbor {
                         displayStatus = true
                     }
                 default:
@@ -169,7 +169,12 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 var statusApply: ((Bool) -> Void)?
                 
                 if let statusType = statusType {
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions, dateReplies)
+                    var isReplyThread = false
+                    if case .replyThread = item.chatLocation {
+                        isReplyThread = true
+                    }
+                    
+                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread)
                     statusSize = size
                     statusApply = apply
                 }

@@ -359,7 +359,18 @@ final class AuthorizedApplicationContext {
                                         
                                         strongSelf.notificationController.removeItemsWithGroupingKey(firstMessage.id.peerId)
                                         
-                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(firstMessage.id.peerId)))
+                                        var processed = false
+                                        for media in firstMessage.media {
+                                            if let action = media as? TelegramMediaAction, case let .geoProximityReached(fromId, toId, distance) = action.action {
+                                                strongSelf.context.sharedContext.openLocationScreen(context: strongSelf.context, messageId: firstMessage.id, navigationController: strongSelf.rootController)
+                                                processed = true
+                                                break
+                                            }
+                                        }
+                                        
+                                        if !processed {
+                                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(firstMessage.id.peerId)))
+                                        }
                                     }
                                     return false
                                 }, expandAction: { expandData in

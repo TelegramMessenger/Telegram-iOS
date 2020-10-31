@@ -18,6 +18,7 @@ import PresentationDataUtils
 enum ChatMediaGalleryThumbnail: Equatable {
     case image(ImageMediaReference)
     case video(FileMediaReference)
+    case file(FileMediaReference)
     
     static func ==(lhs: ChatMediaGalleryThumbnail, rhs: ChatMediaGalleryThumbnail) -> Bool {
         switch lhs {
@@ -29,6 +30,12 @@ enum ChatMediaGalleryThumbnail: Equatable {
                 }
             case let .video(lhsVideo):
                 if case let .video(rhsVideo) = rhs, lhsVideo.media.isEqual(to: rhsVideo.media) {
+                    return true
+                } else {
+                    return false
+                }
+            case let .file(lhsFile):
+                if case let .file(rhsFile) = rhs, lhsFile.media.isEqual(to: rhsFile.media) {
                     return true
                 } else {
                     return false
@@ -45,8 +52,12 @@ final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
         self.account = account
         if let imageReference = mediaReference.concrete(TelegramMediaImage.self) {
             self.thumbnail = .image(imageReference)
-        } else if let fileReference = mediaReference.concrete(TelegramMediaFile.self), fileReference.media.isVideo {
-            self.thumbnail = .video(fileReference)
+        } else if let fileReference = mediaReference.concrete(TelegramMediaFile.self) {
+            if fileReference.media.isVideo {
+                self.thumbnail = .video(fileReference)
+            } else {
+                self.thumbnail = .file(fileReference)
+            }
         } else {
             return nil
         }
@@ -71,6 +82,12 @@ final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
             case let .video(fileReference):
                 if let representation = largestImageRepresentation(fileReference.media.previewRepresentations) {
                     return (mediaGridMessageVideo(postbox: self.account.postbox, videoReference: fileReference), representation.dimensions.cgSize)
+                } else {
+                    return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
+                }
+            case let .file(fileReference):
+                if let representation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
+                    return (chatWebpageSnippetFile(account: self.account, fileReference: fileReference, representation: representation), representation.dimensions.cgSize)
                 } else {
                     return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
                 }
@@ -153,7 +170,7 @@ class ChatImageGalleryItem: GalleryItem {
             for m in self.message.media {
                 if let m = m as? TelegramMediaImage {
                     mediaReference = .message(message: MessageReference(self.message), media: m)
-                } else if let m = m as? TelegramMediaFile, m.isVideo {
+                } else if let m = m as? TelegramMediaFile {
                     mediaReference = .message(message: MessageReference(self.message), media: m)
                 }
             }

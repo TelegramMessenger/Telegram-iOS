@@ -60,6 +60,7 @@ import UndoUI
 import ListMessageItem
 import GalleryData
 import ChatInterfaceState
+import TelegramVoip
 
 protocol PeerInfoScreenItem: class {
     var id: AnyHashable { get }
@@ -389,7 +390,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, navigateMessageSearch: { _ in
         }, openCalendarSearch: {
         }, toggleMembersSearch: { _ in
-        }, navigateToMessage: { _, _ in
+        }, navigateToMessage: { _, _, _ in
         }, navigateToChat: { _ in
         }, navigateToProfile: { _ in
         }, openPeerInfo: {
@@ -404,7 +405,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, stopMediaRecording: {
         }, lockMediaRecording: {
         }, deleteRecordedMedia: {
-        }, sendRecordedMedia: {
+        }, sendRecordedMedia: { _ in
         }, displayRestrictedInfo: { _, _ in
         }, displayVideoUnmuteTip: { _ in
         }, switchMediaRecordingMode: {
@@ -412,8 +413,10 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, sendSticker: { _, _, _ in
             return false
         }, unblockPeer: {
-        }, pinMessage: { _ in
-        }, unpinMessage: {
+        }, pinMessage: { _, _ in
+        }, unpinMessage: { _, _, _ in
+        }, unpinAllMessages: {
+        }, openPinnedList: { _ in
         }, shareAccountContact: {
         }, reportPeer: {
         }, presentPeerContact: {
@@ -441,7 +444,9 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, displaySearchResultsTooltip: { _, _ in
         }, unarchivePeer: {
         }, scrollToTop: {
-        }, viewReplies: { _, _ in }, statuses: nil)
+        }, viewReplies: { _, _ in
+        }, activatePinnedListPreview: { _, _ in
+        }, statuses: nil)
         
         self.selectionPanel.interfaceInteraction = interfaceInteraction
         
@@ -456,7 +461,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         self.backgroundNode.backgroundColor = presentationData.theme.rootController.navigationBar.backgroundColor
         self.separatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
         
-        let interfaceState = ChatPresentationInterfaceState(chatWallpaper: .color(0), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, limitsConfiguration: .defaultValue, fontSize: .regular, bubbleCorners: PresentationChatBubbleCorners(mainRadius: 16.0, auxiliaryRadius: 8.0, mergeBubbleCorners: true), accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(self.peerId), isScheduledMessages: false, peerNearbyData: nil)
+        let interfaceState = ChatPresentationInterfaceState(chatWallpaper: .color(0), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, limitsConfiguration: .defaultValue, fontSize: .regular, bubbleCorners: PresentationChatBubbleCorners(mainRadius: 16.0, auxiliaryRadius: 8.0, mergeBubbleCorners: true), accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(self.peerId), subject: nil, peerNearbyData: nil, pendingUnpinnedAllMessages: false)
         let panelHeight = self.selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: 0.0, isSecondary: false, transition: transition, interfaceState: interfaceState, metrics: layout.metrics)
         
         transition.updateFrame(node: self.selectionPanel, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: panelHeight)))
@@ -626,7 +631,8 @@ private final class PeerInfoInteraction {
     }
 }
 
-private let enabledBioEntities: EnabledEntityTypes = [.url, .mention, .hashtag]
+private let enabledPublicBioEntities: EnabledEntityTypes = [.allUrl, .mention, .hashtag]
+private let enabledPrivateBioEntities: EnabledEntityTypes = [.internalUrl, .mention, .hashtag]
 
 private enum SettingsSection: Int, CaseIterable {
     case edit
@@ -949,11 +955,11 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         }
         if let cachedData = data.cachedData as? CachedUserData {
             if user.isScam {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: user.botInfo != nil ? presentationData.strings.UserInfo_ScamBotWarning : presentationData.strings.UserInfo_ScamUserWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.botInfo != nil ? enabledBioEntities : []), action: nil, requestLayout: {
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: user.botInfo != nil ? presentationData.strings.UserInfo_ScamBotWarning : presentationData.strings.UserInfo_ScamUserWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.botInfo != nil ? enabledPrivateBioEntities : []), action: nil, requestLayout: {
                     interaction.requestLayout()
                 }))
             } else if let about = cachedData.about, !about.isEmpty {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: []), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPrivateBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
                     interaction.requestLayout()
                 }))
             }
@@ -1037,11 +1043,11 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         }
         if let cachedData = data.cachedData as? CachedChannelData {
             if channel.isScam {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Channel_AboutItem, text: presentationData.strings.GroupInfo_ScamGroupWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledBioEntities), action: nil, requestLayout: {
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Channel_AboutItem, text: presentationData.strings.GroupInfo_ScamGroupWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPublicBioEntities), action: nil, requestLayout: {
                     interaction.requestLayout()
                 }))
             } else if let about = cachedData.about, !about.isEmpty {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Channel_AboutItem, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Channel_AboutItem, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPublicBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
                     interaction.requestLayout()
                 }))
             }
@@ -1073,11 +1079,11 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
     } else if let group = data.peer as? TelegramGroup {
         if let cachedData = data.cachedData as? CachedGroupData {
             if group.isScam {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.PeerInfo_GroupAboutItem, text: presentationData.strings.GroupInfo_ScamGroupWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledBioEntities), action: nil, requestLayout: {
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.PeerInfo_GroupAboutItem, text: presentationData.strings.GroupInfo_ScamGroupWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPublicBioEntities), action: nil, requestLayout: {
                     interaction.requestLayout()
                 }))
             } else if let about = cachedData.about, !about.isEmpty {
-                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.PeerInfo_GroupAboutItem, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
+                items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.PeerInfo_GroupAboutItem, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPublicBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
                     interaction.requestLayout()
                 }))
             }
@@ -1277,7 +1283,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                                     }))
                                 }
                             }
-                            if !isPublic && cachedData.linkedDiscussionPeerId == nil {
+                            if !isPublic, case .known(nil) = cachedData.linkedDiscussionPeerId {
                                 items[.peerPublicSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPreHistory, label: .text(cachedData.flags.contains(.preHistoryEnabled) ? presentationData.strings.GroupInfo_GroupHistoryVisible : presentationData.strings.GroupInfo_GroupHistoryHidden), text: presentationData.strings.GroupInfo_GroupHistory, action: {
                                     interaction.editingOpenPreHistorySetup()
                                 }))
@@ -1695,7 +1701,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 if strongSelf.searchDisplayController == nil {
                     items.append(.separator)
                     
-                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuMore, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/More"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuSelect, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                         c.dismiss(completion: {
                             if let strongSelf = self {
                                 strongSelf.chatInterfaceInteraction.toggleMessagesSelection([message.id], true)
@@ -1803,8 +1809,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                         }
                         
                         items.append(.separator)
-                        items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuMore, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/More"), color: theme.actionSheet.primaryTextColor)
+                        items.append(.action(ContextMenuActionItem(text: strings.Conversation_ContextMenuSelect, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.actionSheet.primaryTextColor)
                         }, action: { _, f in
                             guard let strongSelf = self else {
                                 return
@@ -1828,6 +1834,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 }
             })
         }, navigateToMessage: { fromId, id in
+        }, navigateToMessageStandalone: { _ in
         }, tapMessage: nil, clickThroughMessage: {
         }, toggleMessagesSelection: { [weak self] ids, value in
             guard let strongSelf = self else {
@@ -1982,12 +1989,13 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }, displayPollSolution: { _, _ in
         }, displayPsa: { _, _ in
         }, displayDiceTooltip: { _ in
-        }, animateDiceSuccess: {  
+        }, animateDiceSuccess: { _ in
         }, greetingStickerNode: {
             return nil
         }, openPeerContextMenu: { _, _, _, _ in
         }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in
+        }, openMessageStats: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
@@ -3112,7 +3120,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             guard let strongSelf = self else {
                 return
             }
-            if let currentPeerId = currentPeerId {
+            if false, let currentPeerId = currentPeerId {
                 if let navigationController = (strongSelf.controller?.navigationController as? NavigationController) {
                     strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(currentPeerId)))
                 }
@@ -3667,7 +3675,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         let context = self.context
         let presentationData = self.presentationData
-        let mapMedia = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, geoPlace: nil, venue: MapVenue(title: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), address: location.address, provider: nil, id: nil, type: nil), liveBroadcastingTimeout: nil)
+        let mapMedia = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: MapVenue(title: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), address: location.address, provider: nil, id: nil, type: nil), liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil)
         let locationController = legacyLocationController(message: nil, mapMedia: mapMedia, context: context, openPeer: { _ in }, sendLiveLocation: { _, _ in }, stopLiveLocation: {}, openUrl: { url in
             context.sharedContext.applicationBindings.openUrl(url)
         })

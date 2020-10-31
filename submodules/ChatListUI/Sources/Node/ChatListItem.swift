@@ -795,7 +795,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     embeddedState = embeddedStateValue
                     summaryInfo = summaryInfoValue
-                    inputActivities = inputActivitiesValue
+                    
+                    if let peerPresence = peerPresence as? TelegramUserPresence, case .present = peerPresence.status {
+                        inputActivities = inputActivitiesValue
+                    } else {
+                        inputActivities = nil
+                    }
+                    
                     isPeerGroup = false
                     promoInfo = promoInfoValue
                     displayAsMessage = displayAsMessageValue
@@ -1320,6 +1326,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var inputActivitiesSize: CGSize?
             var inputActivitiesApply: (() -> Void)?
             if let inputActivities = inputActivities, !inputActivities.isEmpty {
+
                 let (size, apply) = inputActivitiesLayout(CGSize(width: rawContentWidth - badgeSize, height: 40.0), item.presentationData, item.presentationData.theme.chatList.messageTextColor, item.index.messageIndex.id.peerId, inputActivities)
                 inputActivitiesSize = size
                 inputActivitiesApply = apply

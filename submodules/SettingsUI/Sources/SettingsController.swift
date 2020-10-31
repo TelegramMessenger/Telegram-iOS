@@ -1924,42 +1924,6 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         updateNotifyExceptions()
         updateActiveSessions()
     }
-    controller.previewItemWithTag = { tag in
-        if let tag = tag as? SettingsEntryTag, case let .account(id) = tag {
-            var selectedAccount: Account?
-            let _ = (accountsAndPeers.get()
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { accountsAndPeers in
-                for (account, _, _) in accountsAndPeers.1 {
-                    if account.id == id {
-                        selectedAccount = account
-                        break
-                    }
-                }
-            })
-            var sharedContext: SharedAccountContext?
-            let _ = (contextValue.get()
-            |> deliverOnMainQueue
-            |> take(1)).start(next: { context in
-                sharedContext = context.sharedContext
-            })
-            if let selectedAccount = selectedAccount, let sharedContext = sharedContext {
-                let accountContext = sharedContext.makeTempAccountContext(account: selectedAccount)
-                let chatListController = accountContext.sharedContext.makeChatListController(context: accountContext, groupId: .root, controlsHistoryPreload: false, hideNetworkActivityStatus: true, previewing: true, enableDebugActions: enableDebugActions)
-                return chatListController
-            }
-        }
-        return nil
-    }
-    controller.commitPreview = { previewController in
-        if let chatListController = previewController as? ChatListController {
-            let _ = (contextValue.get()
-            |> deliverOnMainQueue
-            |> take(1)).start(next: { context in
-                context.sharedContext.switchToAccount(id: chatListController.context.account.id, fromSettingsController: nil, withChatListController: chatListController)
-            })
-        }
-    }
     controller.switchToAccount = { id in
         let _ = (contextValue.get()
         |> take(1)

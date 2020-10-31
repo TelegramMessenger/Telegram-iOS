@@ -104,13 +104,13 @@ func suggestDates(for string: String, strings: PresentationStrings, dateTimeForm
                     
                     let stringComponents = string.components(separatedBy: dateSeparator)
                     if stringComponents.count < 3 {
-                        for i in 0..<5 {
-                            if let date = calendar.date(byAdding: .year, value: -i, to: resultDate), date < now {
+                        for i in 0..<8 {
+                            if let date = calendar.date(byAdding: .year, value: -i, to: resultDate), date < now, date > telegramReleaseDate {
                                 let lowerDate = getLowerDate(for: resultDate)
                                 result.append((lowerDate, date, nil))
                             }
                         }
-                    } else if resultDate < now {
+                    } else if resultDate < now, date > telegramReleaseDate {
                         let lowerDate = getLowerDate(for: resultDate)
                         result.append((lowerDate, resultDate, nil))
                     }

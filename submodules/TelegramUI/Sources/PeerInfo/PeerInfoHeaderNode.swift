@@ -311,7 +311,7 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
         var bufferingProgress: Float?
         if isMediaStreamable(resource: videoContent.fileReference.media.resource) {
             if let playerStatus = self.playerStatus {
-                if case let .buffering(_, _, progress) = playerStatus.status {
+                if case let .buffering(_, _, progress, _) = playerStatus.status {
                     bufferingProgress = progress
                 } else if case .playing = playerStatus.status {
                     bufferingProgress = nil

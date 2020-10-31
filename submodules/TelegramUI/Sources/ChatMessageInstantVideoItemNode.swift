@@ -194,7 +194,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                             isBroadcastChannel = true
                         }
                         
-                        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.messageId == item.message.id {
+                        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.effectiveTopId == item.message.id {
                             isBroadcastChannel = true
                         }
                         
@@ -216,7 +216,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
             
             var needShareButton = false
-            if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
+            if case .pinnedMessages = item.associatedData.subject {
+                needShareButton = true
+            } else if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
                 needShareButton = false
             }
             else if item.message.id.peerId == item.context.account.peerId {
@@ -276,7 +278,12 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 }
             }
             
-            let (videoLayout, videoApply) = makeVideoLayout(ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: item.message, read: item.read, chatLocation: item.chatLocation, presentationData: item.presentationData, associatedData: item.associatedData, attributes: item.content.firstMessageAttributes), params.width - params.leftInset - params.rightInset - avatarInset, displaySize, .free, automaticDownload)
+            var isReplyThread = false
+            if case .replyThread = item.chatLocation {
+                isReplyThread = true
+            }
+            
+            let (videoLayout, videoApply) = makeVideoLayout(ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: item.message, read: item.read, chatLocation: item.chatLocation, presentationData: item.presentationData, associatedData: item.associatedData, attributes: item.content.firstMessageAttributes, isItemPinned: item.message.tags.contains(.pinned) && !isReplyThread, isItemEdited: false), params.width - params.leftInset - params.rightInset - avatarInset, displaySize, .free, automaticDownload)
             
             let videoFrame = CGRect(origin: CGPoint(x: (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - videoLayout.contentSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: videoLayout.contentSize)
             
@@ -473,7 +480,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                             strongSelf.addSubnode(updatedShareButtonNode)
                             updatedShareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
                         }
-                        let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, message: item.message, account: item.context.account)
+                        let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account)
                         updatedShareButtonNode.frame = CGRect(origin: CGPoint(x: videoFrame.maxX - 7.0, y: videoFrame.maxY - 24.0 - buttonSize.height), size: buttonSize)
                     } else if let shareButtonNode = strongSelf.shareButtonNode {
                         shareButtonNode.removeFromSupernode()
@@ -745,6 +752,11 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     
     @objc func shareButtonPressed() {
         if let item = self.item {
+            if case .pinnedMessages = item.associatedData.subject {
+                item.controllerInteraction.navigateToMessageStandalone(item.content.firstMessage.id)
+                return
+            }
+            
             if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
                 for attribute in item.message.attributes {
                     if let _ = attribute as? ReplyThreadMessageAttribute {
@@ -858,7 +870,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             return
         }
         
-        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == item.message.id {
+        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.effectiveTopId == item.message.id {
             return
         }
         
@@ -944,7 +956,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         return self.interactiveVideoNode.playMediaWithSound()
     }
     
-    override func getMessageContextSourceNode() -> ContextExtractedContentContainingNode? {
+    override func getMessageContextSourceNode(stableId: UInt32?) -> ContextExtractedContentContainingNode? {
         return self.contextSourceNode
     }
     

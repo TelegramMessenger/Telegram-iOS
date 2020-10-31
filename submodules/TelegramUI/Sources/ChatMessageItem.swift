@@ -305,7 +305,12 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         
         self.effectiveAuthorId = effectiveAuthor?.id
         
-        self.header = ChatMessageDateHeader(timestamp: content.index.timestamp, scheduled: associatedData.isScheduledMessages, presentationData: presentationData, context: context, action: { timestamp in
+        var isScheduledMessages = false
+        if case .scheduledMessages = associatedData.subject {
+            isScheduledMessages = true
+        }
+        
+        self.header = ChatMessageDateHeader(timestamp: content.index.timestamp, scheduled: isScheduledMessages, presentationData: presentationData, context: context, action: { timestamp in
             var calendar = NSCalendar.current
             calendar.timeZone = TimeZone(abbreviation: "UTC")!
             let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
@@ -330,7 +335,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                 if let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
                     isBroadcastChannel = true
                 }
-            } else if case let .replyThread(replyThreadMessage) = chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.messageId == message.id {
+            } else if case let .replyThread(replyThreadMessage) = chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.effectiveTopId == message.id {
                 isBroadcastChannel = true
             }
             if !hasActionMedia && !isBroadcastChannel {

@@ -1037,7 +1037,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                         return []
                     }, to: &text, entities: &entities)
                     
-                    let mediaMap = TelegramMediaMap(latitude: updated.latitude, longitude: updated.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil)
+                    let mediaMap = TelegramMediaMap(latitude: updated.latitude, longitude: updated.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil)
                     
                     let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: text, attributes: [], media: [mediaMap], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
                     return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes()))

@@ -1290,6 +1290,9 @@
 
 - (void)_seekToPosition:(NSTimeInterval)position manual:(bool)__unused manual
 {
+    if (self.player == nil) {
+        return;
+    }
     CMTime targetTime = CMTimeMakeWithSeconds(position, NSEC_PER_SEC);
     
     if (CMTIME_COMPARE_INLINE(targetTime, !=, _chaseTime))

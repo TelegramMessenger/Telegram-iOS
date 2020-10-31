@@ -114,8 +114,11 @@ private func chatBubbleActionButtonTrImage(fillColor: UIColor, strokeColor: UICo
 
 public final class PrincipalThemeEssentialGraphics {
     public let chatMessageBackgroundIncomingMaskImage: UIImage
+    public let chatMessageBackgroundIncomingExtractedMaskImage: UIImage
     public let chatMessageBackgroundIncomingImage: UIImage
+    public let chatMessageBackgroundIncomingExtractedImage: UIImage
     public let chatMessageBackgroundIncomingOutlineImage: UIImage
+    public let chatMessageBackgroundIncomingExtractedOutlineImage: UIImage
     public let chatMessageBackgroundIncomingShadowImage: UIImage
     public let chatMessageBackgroundIncomingHighlightedImage: UIImage
     public let chatMessageBackgroundIncomingMergedTopMaskImage: UIImage
@@ -145,8 +148,11 @@ public final class PrincipalThemeEssentialGraphics {
     public let chatMessageBackgroundIncomingMergedSideHighlightedImage: UIImage
     
     public let chatMessageBackgroundOutgoingMaskImage: UIImage
+    public let chatMessageBackgroundOutgoingExtractedMaskImage: UIImage
     public let chatMessageBackgroundOutgoingImage: UIImage
+    public let chatMessageBackgroundOutgoingExtractedImage: UIImage
     public let chatMessageBackgroundOutgoingOutlineImage: UIImage
+    public let chatMessageBackgroundOutgoingExtractedOutlineImage: UIImage
     public let chatMessageBackgroundOutgoingShadowImage: UIImage
     public let chatMessageBackgroundOutgoingHighlightedImage: UIImage
     public let chatMessageBackgroundOutgoingMergedTopMaskImage: UIImage
@@ -203,6 +209,10 @@ public final class PrincipalThemeEssentialGraphics {
     public let outgoingDateAndStatusRepliesIcon: UIImage
     public let mediaRepliesIcon: UIImage
     public let freeRepliesIcon: UIImage
+    public let incomingDateAndStatusPinnedIcon: UIImage
+    public let outgoingDateAndStatusPinnedIcon: UIImage
+    public let mediaPinnedIcon: UIImage
+    public let freePinnedIcon: UIImage
     
     public let dateStaticBackground: UIImage
     public let dateFloatingBackground: UIImage
@@ -213,9 +223,12 @@ public final class PrincipalThemeEssentialGraphics {
     public let incomingBubbleGradientImage: UIImage?
     public let outgoingBubbleGradientImage: UIImage?
     
+    public let hasWallpaper: Bool
+    
     init(mediaBox: MediaBox, presentationTheme: PresentationTheme, wallpaper initialWallpaper: TelegramWallpaper, preview: Bool = false, knockoutMode: Bool, bubbleCorners: PresentationChatBubbleCorners) {
         let theme = presentationTheme.chat
         var wallpaper = initialWallpaper
+        self.hasWallpaper = !wallpaper.isEmpty
         
         let incoming: PresentationThemeBubbleColorComponents = wallpaper.isEmpty ? theme.message.incoming.bubble.withoutWallpaper : theme.message.incoming.bubble.withWallpaper
         let outgoing: PresentationThemeBubbleColorComponents = wallpaper.isEmpty ? theme.message.outgoing.bubble.withoutWallpaper : theme.message.outgoing.bubble.withWallpaper
@@ -274,12 +287,18 @@ public final class PrincipalThemeEssentialGraphics {
         let emptyImage = UIImage()
         if preview {
             self.chatMessageBackgroundIncomingMaskImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: true, fillColor: UIColor.black, strokeColor: UIColor.clear, neighbors: .none, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true, extendedEdges: true)
+            self.chatMessageBackgroundIncomingExtractedMaskImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: true, fillColor: UIColor.black, strokeColor: UIColor.clear, neighbors: .extracted, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true, extendedEdges: true)
             self.chatMessageBackgroundIncomingImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout, extendedEdges: true)
+            self.chatMessageBackgroundIncomingExtractedImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .extracted, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout, extendedEdges: true)
             self.chatMessageBackgroundIncomingOutlineImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout, extendedEdges: true, onlyOutline: true)
+            self.chatMessageBackgroundIncomingExtractedOutlineImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .extracted, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout, extendedEdges: true, onlyOutline: true)
             self.chatMessageBackgroundIncomingShadowImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout, extendedEdges: true, onlyShadow: true)
             self.chatMessageBackgroundOutgoingMaskImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: false, fillColor: .black, strokeColor: .clear, neighbors: .none, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true, extendedEdges: true)
+            self.chatMessageBackgroundOutgoingExtractedMaskImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: false, fillColor: .black, strokeColor: .clear, neighbors: .extracted, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true, extendedEdges: true)
             self.chatMessageBackgroundOutgoingImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout, extendedEdges: true)
+            self.chatMessageBackgroundOutgoingExtractedImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .extracted, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout, extendedEdges: true)
             self.chatMessageBackgroundOutgoingOutlineImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout, extendedEdges: true, onlyOutline: true)
+            self.chatMessageBackgroundOutgoingExtractedOutlineImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .extracted, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout, extendedEdges: true, onlyOutline: true)
             self.chatMessageBackgroundOutgoingShadowImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout, extendedEdges: true, onlyShadow: true)
             self.checkBubbleFullImage = generateCheckImage(partial: false, color: theme.message.outgoingCheckColor, width: 11.0)!
             self.checkBubblePartialImage = generateCheckImage(partial: true, color: theme.message.outgoingCheckColor, width: 11.0)!
@@ -362,12 +381,21 @@ public final class PrincipalThemeEssentialGraphics {
             self.mediaRepliesIcon = generateTintedImage(image: repliesImage, color: .white)!
             self.freeRepliesIcon = generateTintedImage(image: repliesImage, color: serviceColor.primaryText)!
             
+            let pinnedImage = UIImage(bundleImageName: "Chat/Message/Pinned")!
+            self.incomingDateAndStatusPinnedIcon = generateTintedImage(image: pinnedImage, color: theme.message.incoming.secondaryTextColor)!
+            self.outgoingDateAndStatusPinnedIcon = generateTintedImage(image: pinnedImage, color: theme.message.outgoing.secondaryTextColor)!
+            self.mediaPinnedIcon = generateTintedImage(image: pinnedImage, color: .white)!
+            self.freePinnedIcon = generateTintedImage(image: pinnedImage, color: serviceColor.primaryText)!
+            
             self.radialIndicatorFileIconIncoming = emptyImage
             self.radialIndicatorFileIconOutgoing = emptyImage
         } else {
             self.chatMessageBackgroundIncomingMaskImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: true, fillColor: .black, strokeColor: .clear, neighbors: .none, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true, extendedEdges: true)
+            self.chatMessageBackgroundIncomingExtractedMaskImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: true, fillColor: .black, strokeColor: .clear, neighbors: .extracted, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true, extendedEdges: true)
             self.chatMessageBackgroundIncomingImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout, extendedEdges: true)
+            self.chatMessageBackgroundIncomingExtractedImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .extracted, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout, extendedEdges: true)
             self.chatMessageBackgroundIncomingOutlineImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout, extendedEdges: true, onlyOutline: true)
+            self.chatMessageBackgroundIncomingExtractedOutlineImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .extracted, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout, extendedEdges: true, onlyOutline: true)
             self.chatMessageBackgroundIncomingShadowImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout, extendedEdges: true, onlyShadow: true)
             self.chatMessageBackgroundIncomingHighlightedImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: true, fillColor: incoming.highlightedFill, strokeColor: incoming.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout, extendedEdges: true)
             self.chatMessageBackgroundIncomingMergedTopMaskImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: true, fillColor: .black, strokeColor: .clear, neighbors: .top(side: false), theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true, extendedEdges: true)
@@ -392,8 +420,11 @@ public final class PrincipalThemeEssentialGraphics {
             self.chatMessageBackgroundIncomingMergedBothHighlightedImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: true, fillColor: incoming.highlightedFill, strokeColor: incoming.stroke, neighbors: .both, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout, extendedEdges: true)
             
             self.chatMessageBackgroundOutgoingMaskImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: false, fillColor: .black, strokeColor: .clear, neighbors: .none, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true, extendedEdges: true)
+            self.chatMessageBackgroundOutgoingExtractedMaskImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: false, fillColor: .black, strokeColor: .clear, neighbors: .extracted, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true, extendedEdges: true)
             self.chatMessageBackgroundOutgoingImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout, extendedEdges: true)
+            self.chatMessageBackgroundOutgoingExtractedImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .extracted, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout, extendedEdges: true)
             self.chatMessageBackgroundOutgoingOutlineImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout, extendedEdges: true, onlyOutline: true)
+            self.chatMessageBackgroundOutgoingExtractedOutlineImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .extracted, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout, extendedEdges: true, onlyOutline: true)
             self.chatMessageBackgroundOutgoingShadowImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout, extendedEdges: true, onlyShadow: true)
             self.chatMessageBackgroundOutgoingHighlightedImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: false, fillColor: outgoing.highlightedFill, strokeColor: outgoing.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout, extendedEdges: true)
             self.chatMessageBackgroundOutgoingMergedTopMaskImage = messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: false, fillColor: .black, strokeColor: .clear, neighbors: .top(side: false), theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true, extendedEdges: true)
@@ -462,6 +493,12 @@ public final class PrincipalThemeEssentialGraphics {
             self.outgoingDateAndStatusRepliesIcon = generateTintedImage(image: repliesImage, color: theme.message.outgoing.secondaryTextColor)!
             self.mediaRepliesIcon = generateTintedImage(image: repliesImage, color: .white)!
             self.freeRepliesIcon = generateTintedImage(image: repliesImage, color: serviceColor.primaryText)!
+            
+            let pinnedImage = UIImage(bundleImageName: "Chat/Message/Pinned")!
+            self.incomingDateAndStatusPinnedIcon = generateTintedImage(image: pinnedImage, color: theme.message.incoming.secondaryTextColor)!
+            self.outgoingDateAndStatusPinnedIcon = generateTintedImage(image: pinnedImage, color: theme.message.outgoing.secondaryTextColor)!
+            self.mediaPinnedIcon = generateTintedImage(image: pinnedImage, color: .white)!
+            self.freePinnedIcon = generateTintedImage(image: pinnedImage, color: serviceColor.primaryText)!
             
             self.radialIndicatorFileIconIncoming = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: .black)!
             self.radialIndicatorFileIconOutgoing = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: .black)!

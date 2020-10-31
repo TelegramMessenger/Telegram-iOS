@@ -19,17 +19,17 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let automaticDownloadPeerType: MediaAutoDownloadPeerType
     public let automaticDownloadNetworkType: MediaAutoDownloadNetworkType
     public let isRecentActions: Bool
-    public let isScheduledMessages: Bool
+    public let subject: ChatControllerSubject?
     public let contactsPeerIds: Set<PeerId>
     public let channelDiscussionGroup: ChannelDiscussionGroupStatus
     public let animatedEmojiStickers: [String: [StickerPackItem]]
     public let forcedResourceStatus: FileMediaResourceStatus?
     
-    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, isScheduledMessages: Bool = false, contactsPeerIds: Set<PeerId> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil) {
+    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<PeerId> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions
-        self.isScheduledMessages = isScheduledMessages
+        self.subject = subject
         self.contactsPeerIds = contactsPeerIds
         self.channelDiscussionGroup = channelDiscussionGroup
         self.animatedEmojiStickers = animatedEmojiStickers
@@ -46,7 +46,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         if lhs.isRecentActions != rhs.isRecentActions {
             return false
         }
-        if lhs.isScheduledMessages != rhs.isScheduledMessages {
+        if lhs.subject != rhs.subject {
             return false
         }
         if lhs.contactsPeerIds != rhs.contactsPeerIds {
@@ -62,6 +62,16 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         return true
+    }
+}
+
+public extension ChatMessageItemAssociatedData {
+    var isInPinnedListMode: Bool {
+        if case .pinnedMessages = self.subject {
+            return true
+        } else {
+            return false
+        }
     }
 }
 
@@ -331,6 +341,7 @@ public struct ChatTextInputStateText: PostboxCoding, Equatable {
 public enum ChatControllerSubject: Equatable {
     case message(id: MessageId, highlight: Bool)
     case scheduledMessages
+    case pinnedMessages(id: MessageId?)
 }
 
 public enum ChatControllerPresentationMode: Equatable {
@@ -465,7 +476,7 @@ public protocol ChatController: ViewController {
     func displayPromoAnnouncement(text: String)
 }
 
-public protocol ChatMessagePrevewItemNode: class {
+public protocol ChatMessagePreviewItemNode: class {
     var forwardInfoReferenceNode: ASDisplayNode? { get }
 }
 
