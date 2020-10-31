@@ -433,7 +433,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             })
         case let .sendNGLogs(theme):
         return ItemListDisclosureItem(presentationData: presentationData, title: "Send Nicegram Logs", label: "", sectionId: self.section, style: .blocks, action: {
-            let _ = (Logger(basePath: arguments.sharedContext.basePath + "/ngLogs").collectLogs()
+            let _ = (Logger(rootPath: arguments.sharedContext.basePath, basePath: arguments.sharedContext.basePath + "/ngLogs").collectLogs()
                 |> deliverOnMainQueue).start(next: { logs in
                     guard let context = arguments.context else {
                         return
