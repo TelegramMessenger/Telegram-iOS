@@ -506,7 +506,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 switch type {
                     case .youtube:
                         forceEnableUserInteraction = true
-                        disablePictureInPicture = !(item.configuration?.youtubePictureInPictureEnabled ?? false)
+                        disablePictureInPicture = !(UserDefaults(suiteName: "GlobalNGSettings")?.bool(forKey: "youtube_pip") ?? true)// || !(item.configuration?.youtubePictureInPictureEnabled ?? false)
                         self.videoFramePreview = YoutubeEmbedFramePreview(context: item.context, content: content)
                     case .iframe:
                         disablePlayerControls = true
