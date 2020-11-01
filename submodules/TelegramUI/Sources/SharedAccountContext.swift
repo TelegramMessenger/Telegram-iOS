@@ -27,6 +27,7 @@ import OverlayStatusController
 import AlertUI
 import PresentationDataUtils
 import LocationUI
+import NGData
 
 private enum CallStatusText: Equatable {
     case none
@@ -1369,9 +1370,23 @@ public final class SharedAccountContextImpl: SharedAccountContext {
 private let defaultChatControllerInteraction = ChatControllerInteraction.default
 
 private func peerInfoControllerImpl(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool) -> ViewController? {
+    let useClassicUi = NGSettings.classicProfileUI
     if let _ = peer as? TelegramGroup {
+        if useClassicUi {
+            return groupInfoController(context: context, peerId: peer.id)
+        }
         return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
     } else if let channel = peer as? TelegramChannel {
+        switch channel.info {
+        case .broadcast:
+            if useClassicUi {
+                return channelInfoController(context: context, peerId: peer.id)
+            }
+        case .group:
+            if useClassicUi {
+                return groupInfoController(context: context, peerId: peer.id)
+            }
+        }
         return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
     } else if peer is TelegramUser {
         var nearbyPeerDistance: Int32?
@@ -1387,8 +1402,14 @@ private func peerInfoControllerImpl(context: AccountContext, peer: Peer, mode: P
         case let .group(id):
             ignoreGroupInCommon = id
         }
+        if useClassicUi && nearbyPeerDistance == nil {
+            return userInfoController(context: context, peerId: peer.id)
+        }
         return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nearbyPeerDistance, callMessages: callMessages, ignoreGroupInCommon: ignoreGroupInCommon)
     } else if peer is TelegramSecretChat {
+        if useClassicUi {
+            return userInfoController(context: context, peerId: peer.id)
+        }
         return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
     }
     return nil
