@@ -20,6 +20,8 @@ private func stringForKeepMediaTimeout(strings: PresentationStrings, timeout: In
 }
 
 private let keepMediaTimeoutValues: [Int32] = [
+    1 * 60 * 60,
+    1 * 24 * 60 * 60,
     3 * 24 * 60 * 60,
     7 * 24 * 60 * 60,
     1 * 31 * 24 * 60 * 60,
@@ -109,7 +111,7 @@ private final class KeepMediaDurationPickerItemNode: ListViewItemNode {
         self.maskNode = ASImageNode()
         
         var textNodes: [TextNode] = []
-        for i in 0 ..< 4 {
+        for i in 0 ..< 6 {
             let textNode = TextNode()
             textNode.isUserInteractionEnabled = false
             textNode.displaysAsynchronously = false
@@ -126,8 +128,8 @@ private final class KeepMediaDurationPickerItemNode: ListViewItemNode {
     
     func updateSliderView() {
         if let sliderView = self.sliderView, let item = self.item {
-            sliderView.maximumValue = 3.0
-            sliderView.positionsCount = 4
+            sliderView.maximumValue = 5.0
+            sliderView.positionsCount = 6
             
             let value = keepMediaTimeoutValues.firstIndex(where: { $0 == item.value }) ?? 0
             sliderView.value = CGFloat(value)
@@ -143,10 +145,10 @@ private final class KeepMediaDurationPickerItemNode: ListViewItemNode {
         sliderView.lineSize = 2.0
         sliderView.dotSize = 5.0
         sliderView.minimumValue = 0.0
-        sliderView.maximumValue = 3.0
+        sliderView.maximumValue = 5.0
         sliderView.startValue = 0.0
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
-        sliderView.positionsCount = 4
+        sliderView.positionsCount = 6
         sliderView.useLinesForPositions = true
         if let item = self.item, let params = self.layoutParams {
             let value = keepMediaTimeoutValues.firstIndex(where: { $0 == item.value }) ?? 0
