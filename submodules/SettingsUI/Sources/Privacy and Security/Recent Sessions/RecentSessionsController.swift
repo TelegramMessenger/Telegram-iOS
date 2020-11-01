@@ -11,6 +11,7 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import AuthTransferUI
+import NGData
 
 private final class RecentSessionsControllerArguments {
     let context: AccountContext
@@ -619,6 +620,9 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
     
     let enableQRLogin = context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
     |> map { view -> Bool in
+        if VarGNGSettings.qr_login_camera {
+            return true
+        }
         guard let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration else {
             return false
         }
