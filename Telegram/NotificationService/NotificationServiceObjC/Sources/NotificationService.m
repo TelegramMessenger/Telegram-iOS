@@ -362,6 +362,13 @@ static void reportMemory() {
             if ([soundString isKindOfClass:[NSString class]]) {
                 _bestAttemptContent.sound = [UNNotificationSound soundNamed:soundString];
             }
+            
+            NSString *appGroupName = [@"group." stringByAppendingString:_baseAppBundleId];
+            NSUserDefaults *sharedDefaults = [[NSUserDefaults alloc] initWithSuiteName:appGroupName];
+
+            BOOL *muteSoundSilent = [sharedDefaults boolForKey:@"muteSoundSilent"];
+            BOOL *hideNotifyAccountName = [sharedDefaults boolForKey:@"hideNotifyAccountName"];
+
             if (_isLockedValue) {
                 _bestAttemptContent.categoryIdentifier = @"locked";
             } else {
@@ -387,7 +394,9 @@ static void reportMemory() {
                 
                 if (accountInfos.accounts.count > 1) {
                     if (_bestAttemptContent.title.length != 0 && account.peerName.length != 0) {
-                        _bestAttemptContent.title = [NSString stringWithFormat:@"%@ → %@", _bestAttemptContent.title, account.peerName];
+                        if (!hideNotifyAccountName) {
+                            _bestAttemptContent.title = [NSString stringWithFormat:@"%@ → %@", _bestAttemptContent.title, account.peerName];
+                        }
                     }
                 }
             }
