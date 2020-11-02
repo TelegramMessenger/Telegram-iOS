@@ -10,8 +10,7 @@ import TelegramAudio
 import AccountContext
 
 public final class GroupCallController: ViewController {
-}
-/*    private final class Node: ViewControllerTracingNode {
+    private final class Node: ViewControllerTracingNode {
         private let context: AccountContext
         private let presentationData: PresentationData
         
@@ -146,4 +145,4 @@ public final class GroupCallController: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, transition: transition)
     }
 }
-*/
+
