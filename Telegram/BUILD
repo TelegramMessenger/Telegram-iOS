@@ -286,6 +286,8 @@ telegram_entitlements_template = """
     </array>
     <key>application-identifier</key>
     <string>{telegram_team_id}.{telegram_bundle_id}</string>
+    <key>com.apple.developer.icloud-container-environment</key>
+    <string>Production</string>
 """ + apple_pay_merchants_fragment + unrestricted_voip_fragment
 
 plist_fragment(
@@ -1090,6 +1092,10 @@ plist_fragment(
         <key>NSExtensionPointIdentifier</key>
         <string>com.apple.widgetkit-extension</string>
     </dict>
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+        <string>arm64</string>
+    </array>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
     )
@@ -1630,6 +1636,7 @@ ios_application(
     ],
     resources = [
         ":AdditionalIcons",
+        ":LaunchScreen",
     ],
     frameworks = [
         ":MtProtoKitFramework",
