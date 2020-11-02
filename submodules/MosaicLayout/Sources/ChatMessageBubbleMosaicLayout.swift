@@ -36,8 +36,6 @@ private struct MosaicLayoutAttempt {
 }
 
 public func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize]) -> ([(CGRect, MosaicItemPosition)], CGSize) {
-    var larger: Bool = false
-    
     let spacing: CGFloat = 2.0
     
     var proportions = ""
@@ -45,7 +43,7 @@ public func chatMessageBubbleMosaicLayout(maxSize: CGSize, itemSizes: [CGSize]) 
     var forceCalc = false
     
     var itemInfos = itemSizes.enumerated().map { index, itemSize -> MosaicItemInfo in
-        let aspectRatio = itemSize.width / itemSize.height
+        let aspectRatio = itemSize.height.isZero ? 1.0 : itemSize.width / itemSize.height
         if aspectRatio > 1.2 {
             proportions += "w"
         } else if aspectRatio < 0.8 {
