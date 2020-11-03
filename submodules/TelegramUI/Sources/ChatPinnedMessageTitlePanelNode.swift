@@ -41,6 +41,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let buttonsContainer: ButtonsContainerNode
     private let closeButton: HighlightableButtonNode
     private let listButton: HighlightableButtonNode
+    private let activityIndicatorContainer: ASDisplayNode
     private let activityIndicator: RadialStatusNode
     
     private let contextContainer: ContextControllerSourceNode
@@ -83,8 +84,13 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.listButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.listButton.displaysAsynchronously = false
         
+        self.activityIndicatorContainer = ASDisplayNode()
+        self.activityIndicatorContainer.isUserInteractionEnabled = false
         self.activityIndicator = RadialStatusNode(backgroundNodeColor: .clear)
         self.activityIndicator.isUserInteractionEnabled = false
+        self.activityIndicatorContainer.addSubnode(self.activityIndicator)
+        self.activityIndicator.alpha = 0.0
+        ContainedViewLayoutTransition.immediate.updateSublayerTransformScale(node: self.activityIndicatorContainer, scale: 0.1)
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
@@ -152,6 +158,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.buttonsContainer.addSubnode(self.closeButton)
         self.buttonsContainer.addSubnode(self.listButton)
         self.contextContainer.addSubnode(self.buttonsContainer)
+        self.contextContainer.addSubnode(self.activityIndicatorContainer)
         
         self.tapButton.addTarget(self, action: #selector(self.tapped), forControlEvents: [.touchUpInside])
         self.contextContainer.addSubnode(self.tapButton)
@@ -199,22 +206,33 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                 guard let strongSelf = self else {
                     return
                 }
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
                 if isLoading {
-                    if strongSelf.activityIndicator.supernode == nil {
-                        strongSelf.buttonsContainer.supernode?.insertSubnode(strongSelf.activityIndicator, aboveSubnode: strongSelf.buttonsContainer)
+                    if strongSelf.activityIndicator.alpha.isZero {
+                        transition.updateAlpha(node: strongSelf.activityIndicator, alpha: 1.0)
+                        transition.updateSublayerTransformScale(node: strongSelf.activityIndicatorContainer, scale: 1.0)
+                        
+                        transition.updateAlpha(node: strongSelf.buttonsContainer, alpha: 0.0)
+                        transition.updateSublayerTransformScale(node: strongSelf.buttonsContainer, scale: 0.1)
+                        
                         if let theme = strongSelf.theme {
                             strongSelf.activityIndicator.transitionToState(.progress(color: theme.chat.inputPanel.panelControlAccentColor, lineWidth: nil, value: nil, cancelEnabled: false), animated: false, completion: {
                             })
                         }
                     }
-                    strongSelf.buttonsContainer.isHidden = true
                 } else {
-                    if strongSelf.activityIndicator.supernode != nil {
-                        strongSelf.activityIndicator.removeFromSupernode()
-                        strongSelf.activityIndicator.transitionToState(.none, animated: false, completion: {
+                    if !strongSelf.activityIndicator.alpha.isZero {
+                        transition.updateAlpha(node: strongSelf.activityIndicator, alpha: 0.0, completion: { [weak self] completed in
+                            if completed {
+                                self?.activityIndicator.transitionToState(.none, animated: false, completion: {
+                                })
+                            }
                         })
+                        transition.updateSublayerTransformScale(node: strongSelf.activityIndicatorContainer, scale: 0.1)
+                        
+                        transition.updateAlpha(node: strongSelf.buttonsContainer, alpha: 1.0)
+                        transition.updateSublayerTransformScale(node: strongSelf.buttonsContainer, scale: 1.0)
                     }
-                    strongSelf.buttonsContainer.isHidden = false
                 }
             })
         }
@@ -273,16 +291,18 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         let rightInset: CGFloat = 18.0 + rightInset
         
-        self.buttonsContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight))
+        let buttonsContainerSize = CGSize(width: 16.0, height: panelHeight)
+        self.buttonsContainer.frame = CGRect(origin: CGPoint(x: width - buttonsContainerSize.width - rightInset, y: 0.0), size: buttonsContainerSize)
         
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
-        transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: width - rightInset - closeButtonSize.width, y: 19.0), size: closeButtonSize))
+        transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: buttonsContainerSize.width - closeButtonSize.width, y: 19.0), size: closeButtonSize))
         
         let listButtonSize = self.listButton.measure(CGSize(width: 100.0, height: 100.0))
-        transition.updateFrame(node: self.listButton, frame: CGRect(origin: CGPoint(x: width - rightInset - listButtonSize.width + 4.0, y: 13.0), size: listButtonSize))
+        transition.updateFrame(node: self.listButton, frame: CGRect(origin: CGPoint(x: buttonsContainerSize.width - listButtonSize.width + 4.0, y: 13.0), size: listButtonSize))
         
         let indicatorSize = CGSize(width: 22.0, height: 22.0)
-        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: width - rightInset - indicatorSize.width + 2.0, y: 15.0), size: indicatorSize))
+        transition.updateFrame(node: self.activityIndicatorContainer, frame: CGRect(origin: CGPoint(x: width - rightInset - indicatorSize.width + 5.0, y: 15.0), size: indicatorSize))
+        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(), size: indicatorSize))
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
         self.tapButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: width - rightInset - closeButtonSize.width - 4.0, height: panelHeight))
