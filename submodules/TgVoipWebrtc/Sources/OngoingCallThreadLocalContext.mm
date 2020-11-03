@@ -784,8 +784,8 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     
 }
 
-- (void)switchAudioInput:(NSString * _Nonnull)deviceId {
-    _tgVoip->setAudioInputDevice(deviceId.UTF8String);
+- (void)switchAudioOutput:(NSString * _Nonnull)deviceId {
+    _tgVoip->setAudioOutputDevice(deviceId.UTF8String);
 }
 
 @end
