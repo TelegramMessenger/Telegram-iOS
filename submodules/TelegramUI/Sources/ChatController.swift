@@ -9412,20 +9412,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let presentationData = self.presentationData
                         let displayTime = CACurrentMediaTime()
                         let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
-                            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
-                                if CACurrentMediaTime() - displayTime > 1.5 {
-                                    cancelImpl?()
+                            if case .generic = statusSubject {
+                                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                                    if CACurrentMediaTime() - displayTime > 1.5 {
+                                        cancelImpl?()
+                                    }
+                                }))
+                                if let customPresentProgress = customPresentProgress {
+                                    customPresentProgress(controller, nil)
+                                } else {
+                                    self?.present(controller, in: .window(.root))
                                 }
-                            }))
-                            if let customPresentProgress = customPresentProgress {
-                                customPresentProgress(controller, nil)
+                                return ActionDisposable { [weak controller] in
+                                    Queue.mainQueue().async() {
+                                        controller?.dismiss()
+                                    }
+                                }
                             } else {
-                                self?.present(controller, in: .window(.root))
-                            }
-                            return ActionDisposable { [weak controller] in
-                                Queue.mainQueue().async() {
-                                    controller?.dismiss()
-                                }
+                                return EmptyDisposable
                             }
                         }
                         |> runOn(Queue.mainQueue())
