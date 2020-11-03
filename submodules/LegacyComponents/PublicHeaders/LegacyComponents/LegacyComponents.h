@@ -136,15 +136,7 @@
 #import <LegacyComponents/TGLiveUploadInterface.h>
 #import <LegacyComponents/TGLocalMessageMetaMediaAttachment.h>
 #import <LegacyComponents/TGLocalization.h>
-#import <LegacyComponents/TGLocationLiveElapsedView.h>
-#import <LegacyComponents/TGLocationLiveSessionItemView.h>
-#import <LegacyComponents/TGLocationMapViewController.h>
 #import <LegacyComponents/TGLocationMediaAttachment.h>
-#import <LegacyComponents/TGLocationPickerController.h>
-#import <LegacyComponents/TGLocationPulseView.h>
-#import <LegacyComponents/TGLocationVenue.h>
-#import <LegacyComponents/TGLocationViewController.h>
-#import <LegacyComponents/TGLocationWavesView.h>
 #import <LegacyComponents/TGMediaAsset.h>
 #import <LegacyComponents/TGMediaAssetFetchResult.h>
 #import <LegacyComponents/TGMediaAssetFetchResultChange.h>
