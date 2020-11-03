@@ -148,6 +148,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)disableVideo;
 - (void)addSignalingData:(NSData * _Nonnull)data;
 - (void)switchAudioOutput:(NSString * _Nonnull)deviceId;
+- (void)switchAudioInput:(NSString * _Nonnull)deviceId;
 @end
 
 #endif
