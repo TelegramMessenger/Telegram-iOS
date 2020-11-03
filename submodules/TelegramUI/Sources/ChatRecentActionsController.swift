@@ -76,7 +76,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, navigateMessageSearch: { _ in
         }, openCalendarSearch: {
         }, toggleMembersSearch: { _ in
-        }, navigateToMessage: { _, _, _ in
+        }, navigateToMessage: { _, _, _, _ in
         }, navigateToChat: { _ in
         }, navigateToProfile: { _ in
         }, openPeerInfo: {

@@ -167,6 +167,11 @@ private struct ScrolledToMessageId: Equatable {
     var allowedReplacementDirection: AllowedReplacementDirections
 }
 
+enum ChatLoadingMessageSubject {
+    case generic
+    case pinnedMessage
+}
+
 public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
     
@@ -230,7 +235,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let unblockingPeer = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let searching = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let searchResult = Promise<(SearchMessagesResult, SearchMessagesState, SearchMessagesLocation)?>()
-    private let loadingMessage = ValuePromise<Bool>(false, ignoreRepeated: true)
+    private let loadingMessage = ValuePromise<ChatLoadingMessageSubject?>(nil, ignoreRepeated: true)
     private let performingInlineSearch = ValuePromise<Bool>(false, ignoreRepeated: true)
     
     private var preloadHistoryPeerId: PeerId?
@@ -4740,7 +4745,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.loadingMessage.set(true)
+                    strongSelf.loadingMessage.set(.generic)
                     
                     let peerId: PeerId
                     let threadId: Int64?
@@ -4755,7 +4760,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     strongSelf.messageIndexDisposable.set((searchMessageIdByTimestamp(account: strongSelf.context.account, peerId: peerId, threadId: threadId, timestamp: timestamp) |> deliverOnMainQueue).start(next: { messageId in
                         if let strongSelf = self {
-                            strongSelf.loadingMessage.set(false)
+                            strongSelf.loadingMessage.set(nil)
                             if let messageId = messageId {
                                 strongSelf.navigateToMessage(from: nil, to: .id(messageId), forceInCurrentChat: true)
                             }
@@ -4784,8 +4789,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 })
                 strongSelf.updateItemNodesSearchTextHighlightStates()
             }
-        }, navigateToMessage: { [weak self] messageId, dropStack, forceInCurrentChat in
-            self?.navigateToMessage(from: nil, to: .id(messageId), forceInCurrentChat: forceInCurrentChat, dropStack: dropStack)
+        }, navigateToMessage: { [weak self] messageId, dropStack, forceInCurrentChat, statusSubject in
+            self?.navigateToMessage(from: nil, to: .id(messageId), forceInCurrentChat: forceInCurrentChat, dropStack: dropStack, statusSubject: statusSubject)
         }, navigateToChat: { [weak self] peerId in
             guard let strongSelf = self else {
                 return
@@ -9112,13 +9117,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, completed: { [weak self] in
             if let strongSelf = self {
-                strongSelf.loadingMessage.set(false)
+                strongSelf.loadingMessage.set(nil)
                 strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
             }
         }))
         cancelImpl = { [weak self] in
             if let strongSelf = self {
-                strongSelf.loadingMessage.set(false)
+                strongSelf.loadingMessage.set(nil)
                 strongSelf.messageIndexDisposable.set(nil)
             }
         }
@@ -9176,13 +9181,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, completed: { [weak self] in
             if let strongSelf = self {
-                strongSelf.loadingMessage.set(false)
+                strongSelf.loadingMessage.set(nil)
                 strongSelf.chatDisplayNode.historyNode.scrollToStartOfHistory()
             }
         }))
         cancelImpl = { [weak self] in
             if let strongSelf = self {
-                strongSelf.loadingMessage.set(false)
+                strongSelf.loadingMessage.set(nil)
                 strongSelf.messageIndexDisposable.set(nil)
             }
         }
@@ -9310,7 +9315,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.navigateToMessage(from: nil, to: messageLocation, scrollPosition: scrollPosition, rememberInStack: false, forceInCurrentChat: forceInCurrentChat, dropStack: dropStack, animated: animated, completion: completion, customPresentProgress: customPresentProgress)
     }
     
-    private func navigateToMessage(from fromId: MessageId?, to messageLocation: NavigateToMessageLocation, scrollPosition: ListViewScrollPosition = .center(.bottom), rememberInStack: Bool = true, forceInCurrentChat: Bool = false, dropStack: Bool = false, animated: Bool = true, completion: (() -> Void)? = nil, customPresentProgress: ((ViewController, Any?) -> Void)? = nil) {
+    private func navigateToMessage(from fromId: MessageId?, to messageLocation: NavigateToMessageLocation, scrollPosition: ListViewScrollPosition = .center(.bottom), rememberInStack: Bool = true, forceInCurrentChat: Bool = false, dropStack: Bool = false, animated: Bool = true, completion: (() -> Void)? = nil, customPresentProgress: ((ViewController, Any?) -> Void)? = nil, statusSubject: ChatLoadingMessageSubject = .generic) {
         if self.isNodeLoaded {
             var fromIndex: MessageIndex?
             
@@ -9360,14 +9365,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 if let scrollFromIndex = scrollFromIndex {
                     if let messageId = messageLocation.messageId, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
-                        self.loadingMessage.set(false)
+                        self.loadingMessage.set(nil)
                         self.messageIndexDisposable.set(nil)
                         self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: message.index, animated: animated, scrollPosition: scrollPosition)
                         completion?()
                     } else if case let .index(index) = messageLocation, index.id.id == 0, index.timestamp > 0, case .scheduledMessages = self.presentationInterfaceState.subject {
                         self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: index, animated: animated, scrollPosition: scrollPosition)
                     } else {
-                        self.loadingMessage.set(true)
+                        self.loadingMessage.set(statusSubject)
                         let searchLocation: ChatHistoryInitialSearchLocation
                         switch messageLocation {
                             case let .id(id):
@@ -9377,7 +9382,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             case .upperBound:
                                 searchLocation = .index(MessageIndex.upperBound(peerId: self.chatLocation.peerId))
                         }
-                        let historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(location: searchLocation, count: 50, highlight: true), id: 0), context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
+                        var historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(location: searchLocation, count: 50, highlight: true), id: 0), context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
+                        #if DEBUG
+                        historyView = historyView |> delay(1.0, queue: .mainQueue())
+                        #endif
+                        
                         let signal = historyView
                         |> mapToSignal { historyView -> Signal<(MessageIndex?, Bool), NoError> in
                             switch historyView {
@@ -9441,12 +9450,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }, completed: { [weak self] in
                             if let strongSelf = self {
-                                strongSelf.loadingMessage.set(false)
+                                strongSelf.loadingMessage.set(nil)
                             }
                         }))
                         cancelImpl = { [weak self] in
                             if let strongSelf = self {
-                                strongSelf.loadingMessage.set(false)
+                                strongSelf.loadingMessage.set(nil)
                                 strongSelf.messageIndexDisposable.set(nil)
                             }
                         }
@@ -9468,7 +9477,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let _ = fromId, rememberInStack {
                         self.historyNavigationStack.add(fromIndex)
                     }
-                    self.loadingMessage.set(true)
+                    self.loadingMessage.set(statusSubject)
                     let historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(location: searchLocation, count: 50, highlight: true), id: 0), context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
                     let signal = historyView
                         |> mapToSignal { historyView -> Signal<MessageIndex?, NoError> in
@@ -9499,7 +9508,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }, completed: { [weak self] in
                         if let strongSelf = self {
-                            strongSelf.loadingMessage.set(false)
+                            strongSelf.loadingMessage.set(nil)
                         }
                     }))
                 } else {

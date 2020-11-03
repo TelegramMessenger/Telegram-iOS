@@ -14,6 +14,7 @@ public final class GroupCallController: ViewController {
         private let context: AccountContext
         private let presentationData: PresentationData
         
+        private var videoCapturer: OngoingCallVideoCapturer?
         private var callContext: GroupCallContext?
         private var callDisposable: Disposable?
         private var memberCountDisposable: Disposable?
@@ -59,7 +60,10 @@ public final class GroupCallController: ViewController {
             }, availableOutputsChanged: { _, _ in
             })
             
-            let callContext = GroupCallContext(audioSessionActive: self.audioSessionActive.get())
+            let videoCapturer = OngoingCallVideoCapturer()
+            self.videoCapturer = videoCapturer
+            
+            let callContext = GroupCallContext(audioSessionActive: self.audioSessionActive.get(), video: videoCapturer)
             self.callContext = callContext
             
             self.memberCountDisposable = (callContext.memberCount

@@ -150,4 +150,15 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 
 @end
 
+
+@interface GroupCallThreadLocalContext : NSObject
+
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue relaySdpAnswer:(void (^ _Nonnull)(NSString * _Nonnull))relaySdpAnswer videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer;
+
+- (void)emitOffer;
+- (void)setOfferSdp:(NSString * _Nonnull)offerSdp isPartial:(bool)isPartial;
+- (void)setIsMuted:(bool)isMuted;
+
+@end
+
 #endif

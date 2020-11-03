@@ -333,7 +333,7 @@ extension OngoingCallThreadLocalContext: OngoingCallThreadLocalContextProtocol {
 }
 
 public final class OngoingCallVideoCapturer {
-    fileprivate let impl: OngoingCallThreadLocalContextVideoCapturer
+    internal let impl: OngoingCallThreadLocalContextVideoCapturer
     
     public init() {
         self.impl = OngoingCallThreadLocalContextVideoCapturer()
