@@ -85,8 +85,12 @@ BASE_DIR=$(pwd)
 cd "$SOURCE_PATH"
 tar -xf "../source.tar"
 
-for f in $(ls "$CERTS_PATH"); do
-	security import "$CERTS_PATH/$f" -k "$MY_KEYCHAIN" -P "" -T /usr/bin/codesign -T /usr/bin/security
+for f in "$CERTS_PATH"/*.p12; do
+	security import "$f" -k "$MY_KEYCHAIN" -P "" -T /usr/bin/codesign -T /usr/bin/security
+done
+
+for f in "$CERTS_PATH"/*.cer; do
+	sudo security add-trusted-cert -d -r trustRoot -p codeSign -k "$MY_KEYCHAIN" "$f"
 done
 
 security set-key-partition-list -S apple-tool:,apple: -k "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"

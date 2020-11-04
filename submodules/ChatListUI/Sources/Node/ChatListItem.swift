@@ -796,10 +796,15 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     embeddedState = embeddedStateValue
                     summaryInfo = summaryInfoValue
                     
-                    if let peerPresence = peerPresence as? TelegramUserPresence, case .present = peerPresence.status {
+                    switch peerValue.peer {
+                    case _ as TelegramUser, _ as TelegramSecretChat:
+                        if let peerPresence = peerPresence as? TelegramUserPresence, case .present = peerPresence.status {
+                            inputActivities = inputActivitiesValue
+                        } else {
+                            inputActivities = nil
+                        }
+                    default:
                         inputActivities = inputActivitiesValue
-                    } else {
-                        inputActivities = nil
                     }
                     
                     isPeerGroup = false

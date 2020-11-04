@@ -4,7 +4,6 @@
 #import <TgVoipWebrtc/OngoingCallThreadLocalContext.h>
 #endif
 
-
 #import "Instance.h"
 #import "InstanceImpl.h"
 #import "reference/InstanceImplReference.h"
@@ -21,6 +20,8 @@
 #import "platform/darwin/VideoMetalView.h"
 #import "platform/darwin/GLVideoView.h"
 #endif
+
+#import "group/GroupInstanceImpl.h"
 
 @implementation OngoingCallConnectionDescriptionWebrtc
 
@@ -784,4 +785,69 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     
 }
 
+- (void)switchAudioOutput:(NSString * _Nonnull)deviceId {
+    _tgVoip->setAudioOutputDevice(deviceId.UTF8String);
+}
+- (void)switchAudioInput:(NSString * _Nonnull)deviceId {
+    _tgVoip->setAudioInputDevice(deviceId.UTF8String);
+}
+
 @end
+
+
+@interface GroupCallThreadLocalContext () {
+    id<OngoingCallThreadLocalContextQueueWebrtc> _queue;
+    
+    std::unique_ptr<tgcalls::GroupInstanceImpl> _instance;
+    OngoingCallThreadLocalContextVideoCapturer *_videoCapturer;
+}
+
+@end
+
+@implementation GroupCallThreadLocalContext
+
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue relaySdpAnswer:(void (^ _Nonnull)(NSString * _Nonnull))relaySdpAnswer videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer {
+    self = [super init];
+    if (self != nil) {
+        _queue = queue;
+        
+        _videoCapturer = videoCapturer;
+        
+        __weak GroupCallThreadLocalContext *weakSelf = self;
+        _instance.reset(new tgcalls::GroupInstanceImpl((tgcalls::GroupInstanceDescriptor){
+            .sdpAnswerEmitted = [weakSelf, queue, relaySdpAnswer](std::string const &sdpAnswer) {
+                NSString *string = [NSString stringWithUTF8String:sdpAnswer.c_str()];
+                [queue dispatch:^{
+                    __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
+                    if (strongSelf == nil) {
+                        return;
+                    }
+                    relaySdpAnswer(string);
+                }];
+            },
+            .videoCapture = [_videoCapturer getInterface]
+        }));
+    }
+    return self;
+}
+
+- (void)emitOffer {
+    if (_instance) {
+        _instance->emitOffer();
+    }
+}
+
+- (void)setOfferSdp:(NSString * _Nonnull)offerSdp isPartial:(bool)isPartial {
+    if (_instance) {
+        _instance->setOfferSdp([offerSdp UTF8String], isPartial);
+    }
+}
+
+- (void)setIsMuted:(bool)isMuted {
+    if (_instance) {
+        _instance->setIsMuted(isMuted);
+    }
+}
+
+@end
+
