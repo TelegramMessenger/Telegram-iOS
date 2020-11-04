@@ -284,7 +284,6 @@
 #import <LegacyComponents/TGWebPageMediaAttachment.h>
 #import <LegacyComponents/UICollectionView+Utils.h>
 #import <LegacyComponents/UIControl+HitTestEdgeInsets.h>
-#import <LegacyComponents/UIDevice+PlatformInfo.h>
 #import <LegacyComponents/UIImage+TG.h>
 #import <LegacyComponents/UIImage+TGMediaEditableItem.h>
 #import <LegacyComponents/UIScrollView+TGHacks.h>
