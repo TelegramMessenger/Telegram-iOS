@@ -259,8 +259,6 @@
 #import <LegacyComponents/TGRemoteImageView.h>
 #import <LegacyComponents/TGReplyMarkupAttachment.h>
 #import <LegacyComponents/TGReplyMessageMediaAttachment.h>
-#import <LegacyComponents/TGSearchBar.h>
-#import <LegacyComponents/TGSearchDisplayMixin.h>
 #import <LegacyComponents/TGStaticBackdropAreaData.h>
 #import <LegacyComponents/TGStaticBackdropImageData.h>
 #import <LegacyComponents/TGStickerAssociation.h>
