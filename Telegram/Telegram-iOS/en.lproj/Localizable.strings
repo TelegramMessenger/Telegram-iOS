@@ -5868,6 +5868,7 @@ Sorry for the inconvenience.";
 "Chat.PinnedMessagesHiddenText" = "You will see the bar with pinned messages only if a new message is pinned.";
 
 "OpenFile.PotentiallyDangerousContentAlert" = "Previewing this file can potentially expose your IP address to its sender. Continue?";
+"OpenFile.Proceed" = "Proceed";
 
 "Chat.PinnedListPreview.ShowAllMessages" = "Show All Messages";
 "Chat.PinnedListPreview.UnpinAllMessages" = "Unpin All Messages";
@@ -5890,3 +5891,10 @@ Sorry for the inconvenience.";
 "Stats.Message.PrivateShares" = "Private Shares";
 
 "ChatSettings.WidgetSettings" = "Widget";
+
+"Conversation.AddCaption" = "Add a Caption";
+"Conversation.EditCaption" = "Edit Caption";
+"Conversation.EditThisPhoto" = "Edit This Photo";
+"Conversation.ReplacePhoto" = "Replace Photo";
+"Conversation.ReplaceFile" = "Replace File";
+"Conversation.SendAsNewPhoto" = "Send as New Photo";

@@ -1,0 +1,605 @@
+import Foundation
+import AsyncDisplayKit
+import Display
+import Postbox
+import TelegramPresentationData
+import GZip
+
+private final class ShimmerEffectForegroundNode: ASDisplayNode {
+    private var currentBackgroundColor: UIColor?
+    private var currentForegroundColor: UIColor?
+    private let imageNodeContainer: ASDisplayNode
+    private let imageNode: ASImageNode
+    
+    private var absoluteLocation: (CGRect, CGSize)?
+    private var isCurrentlyInHierarchy = false
+    private var shouldBeAnimating = false
+    
+    override init() {
+        self.imageNodeContainer = ASDisplayNode()
+        self.imageNodeContainer.isLayerBacked = true
+        
+        self.imageNode = ASImageNode()
+        self.imageNode.isLayerBacked = true
+        self.imageNode.displaysAsynchronously = false
+        self.imageNode.displayWithoutProcessing = true
+        self.imageNode.contentMode = .scaleToFill
+        
+        super.init()
+        
+        self.isLayerBacked = true
+        self.clipsToBounds = true
+        
+        self.imageNodeContainer.addSubnode(self.imageNode)
+        self.addSubnode(self.imageNodeContainer)
+    }
+    
+    override func didEnterHierarchy() {
+        super.didEnterHierarchy()
+        
+        self.isCurrentlyInHierarchy = true
+        self.updateAnimation()
+    }
+    
+    override func didExitHierarchy() {
+        super.didExitHierarchy()
+        
+        self.isCurrentlyInHierarchy = false
+        self.updateAnimation()
+    }
+    
+    func update(backgroundColor: UIColor, foregroundColor: UIColor) {
+        if let currentBackgroundColor = self.currentBackgroundColor, currentBackgroundColor.isEqual(backgroundColor), let currentForegroundColor = self.currentForegroundColor, currentForegroundColor.isEqual(foregroundColor) {
+            return
+        }
+        self.currentBackgroundColor = backgroundColor
+        self.currentForegroundColor = foregroundColor
+        
+        let image = generateImage(CGSize(width: 320.0, height: 16.0), opaque: false, scale: 1.0, rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(backgroundColor.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: size))
+            
+            context.clip(to: CGRect(origin: CGPoint(), size: size))
+            
+            let transparentColor = foregroundColor.withAlphaComponent(0.0).cgColor
+            let peakColor = foregroundColor.cgColor
+            
+            var locations: [CGFloat] = [0.0, 0.5, 1.0]
+            let colors: [CGColor] = [transparentColor, peakColor, transparentColor]
+            
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+            
+            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
+        })
+        self.imageNode.image = image
+    }
+    
+    func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        if let absoluteLocation = self.absoluteLocation, absoluteLocation.0 == rect && absoluteLocation.1 == containerSize {
+            return
+        }
+        let sizeUpdated = self.absoluteLocation?.1 != containerSize
+        let frameUpdated = self.absoluteLocation?.0 != rect
+        self.absoluteLocation = (rect, containerSize)
+        
+        if sizeUpdated {
+            if self.shouldBeAnimating {
+                self.imageNode.layer.removeAnimation(forKey: "shimmer")
+                self.addImageAnimation()
+            } else {
+                self.updateAnimation()
+            }
+        }
+        
+        if frameUpdated {
+            self.imageNodeContainer.frame = CGRect(origin: CGPoint(x: -rect.minX, y: -rect.minY), size: containerSize)
+        }
+    }
+    
+    private func updateAnimation() {
+        let shouldBeAnimating = self.isCurrentlyInHierarchy && self.absoluteLocation != nil
+        if shouldBeAnimating != self.shouldBeAnimating {
+            self.shouldBeAnimating = shouldBeAnimating
+            if shouldBeAnimating {
+                self.addImageAnimation()
+            } else {
+                self.imageNode.layer.removeAnimation(forKey: "shimmer")
+            }
+        }
+    }
+    
+    private func addImageAnimation() {
+        guard let containerSize = self.absoluteLocation?.1 else {
+            return
+        }
+        let gradientHeight: CGFloat = 320.0
+        self.imageNode.frame = CGRect(origin: CGPoint(x: -gradientHeight, y: 0.0), size: CGSize(width: gradientHeight, height: containerSize.height))
+        let animation = self.imageNode.layer.makeAnimation(from: 0.0 as NSNumber, to: (containerSize.width + gradientHeight) as NSNumber, keyPath: "position.x", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 1.3 * 1.0, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: true)
+        animation.repeatCount = Float.infinity
+        animation.beginTime = 1.0
+        self.imageNode.layer.add(animation, forKey: "shimmer")
+    }
+}
+
+class StickerShimmerEffectNode: ASDisplayNode {
+    private let backgroundNode: ASDisplayNode
+    private let effectNode: ShimmerEffectForegroundNode
+    private let foregroundNode: ASImageNode
+    
+    private var maskView: UIImageView?
+    
+    private var currentData: Data?
+    private var currentBackgroundColor: UIColor?
+    private var currentForegroundColor: UIColor?
+    private var currentShimmeringColor: UIColor?
+    private var currentSize = CGSize()
+    
+    override init() {
+        self.backgroundNode = ASDisplayNode()
+        self.effectNode = ShimmerEffectForegroundNode()
+        self.foregroundNode = ASImageNode()
+        
+        super.init()
+        
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.effectNode)
+        self.addSubnode(self.foregroundNode)
+    }
+    
+    public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        self.effectNode.updateAbsoluteRect(rect, within: containerSize)
+    }
+    
+    public func update(backgroundColor: UIColor?, foregroundColor: UIColor, shimmeringColor: UIColor, data: Data?, size: CGSize) {
+        if self.currentData == data, let currentBackgroundColor = self.currentBackgroundColor, currentBackgroundColor.isEqual(backgroundColor), let currentForegroundColor = self.currentForegroundColor, currentForegroundColor.isEqual(foregroundColor), let currentShimmeringColor = self.currentShimmeringColor, currentShimmeringColor.isEqual(shimmeringColor), self.currentSize == size {
+            return
+        }
+        
+        self.currentBackgroundColor = backgroundColor
+        self.currentForegroundColor = foregroundColor
+        self.currentShimmeringColor = shimmeringColor
+        self.currentData = data
+        self.currentSize = size
+        
+        self.backgroundNode.backgroundColor = foregroundColor
+        
+        self.effectNode.update(backgroundColor: backgroundColor == nil ? .clear : foregroundColor, foregroundColor: shimmeringColor)
+        
+        let image = generateImage(size, rotatedContext: { size, context in
+            if let backgroundColor = backgroundColor {
+                context.setFillColor(backgroundColor.cgColor)
+                context.setBlendMode(.copy)
+                context.fill(CGRect(origin: CGPoint(), size: size))
+                
+                context.setFillColor(UIColor.clear.cgColor)
+            } else {
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                
+                context.setFillColor(UIColor.black.cgColor)
+            }
+        
+            if let data = data, let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024), let path = String(data: unpackedData, encoding: .utf8) {
+                let reader = PathDataReader(input: path)
+                let segments = reader.read()
+                
+                var currentX: Double = 0.0
+                var currentY: Double = 0.0
+                
+                let mul: Double = Double(size.width) / 512.0
+                
+                for segment in segments {
+                    switch segment.type {
+                        case .M, .m:
+                            let x = segment.data[0]
+                            let y = segment.data[1]
+                            
+                            if segment.isAbsolute() {
+                                currentX = x
+                                currentY = y
+                            } else {
+                                currentX += x
+                                currentY += y
+                            }
+                            
+                            context.move(to: CGPoint(x: currentX * mul, y: currentY * mul))
+                        case .L, .l:
+                            let x = segment.data[0]
+                            let y = segment.data[1]
+                            
+                            let effectiveX: Double
+                            let effectiveY: Double
+                            if segment.isAbsolute() {
+                                effectiveX = x
+                                effectiveY = y
+                            } else {
+                                effectiveX = currentX + x
+                                effectiveY = currentY + y
+                            }
+                            
+                            currentX = effectiveX
+                            currentY = effectiveY
+                            
+                            context.addLine(to: CGPoint(x: effectiveX * mul, y: effectiveY * mul))
+                        case .C, .c:
+                            let x1 = segment.data[0]
+                            let y1 = segment.data[1]
+                            let x2 = segment.data[2]
+                            let y2 = segment.data[3]
+                            let x = segment.data[4]
+                            let y = segment.data[5]
+                            
+                            let effectiveX1: Double
+                            let effectiveY1: Double
+                            let effectiveX2: Double
+                            let effectiveY2: Double
+                            let effectiveX: Double
+                            let effectiveY: Double
+                            
+                            if segment.isAbsolute() {
+                                effectiveX1 = x1
+                                effectiveY1 = y1
+                                effectiveX2 = x2
+                                effectiveY2 = y2
+                                effectiveX = x
+                                effectiveY = y
+                            } else {
+                                effectiveX1 = currentX + x1
+                                effectiveY1 = currentY + y1
+                                effectiveX2 = currentX + x2
+                                effectiveY2 = currentY + y2
+                                effectiveX = currentX + x
+                                effectiveY = currentY + y
+                            }
+                            
+                            currentX = effectiveX
+                            currentY = effectiveY
+                            
+                            context.addCurve(to: CGPoint(x: effectiveX * mul, y: effectiveY * mul), control1: CGPoint(x: effectiveX1 * mul, y: effectiveY1 * mul), control2: CGPoint(x: effectiveX2 * mul, y: effectiveY2 * mul))
+                        case .z:
+                            context.fillPath()
+                        default:
+                            break
+                    }
+                }
+            } else {
+                let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), byRoundingCorners: [.topLeft, .topRight, .bottomLeft, .bottomRight], cornerRadii: CGSize(width: 10.0, height: 10.0))
+                UIGraphicsPushContext(context)
+                path.fill()
+                UIGraphicsPopContext()
+            }
+        })
+                
+        if backgroundColor == nil {
+            self.foregroundNode.image = nil
+            
+            let maskView: UIImageView
+            if let current = self.maskView {
+                maskView = current
+            } else {
+                maskView = UIImageView()
+                maskView.frame = CGRect(origin: CGPoint(), size: size)
+                self.maskView = maskView
+                self.view.mask = maskView
+            }
+            
+        } else {
+            self.foregroundNode.image = image
+            
+            if let _ = self.maskView {
+                self.view.mask = nil
+                self.maskView = nil
+            }
+        }
+        
+        self.maskView?.image = image
+        
+        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.foregroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.effectNode.frame = CGRect(origin: CGPoint(), size: size)
+    }
+}
+
+open class PathSegment: Equatable {
+    public enum SegmentType {
+        case M
+        case L
+        case C
+        case Q
+        case A
+        case z
+        case H
+        case V
+        case S
+        case T
+        case m
+        case l
+        case c
+        case q
+        case a
+        case h
+        case v
+        case s
+        case t
+        case E
+        case e
+    }
+    
+    public let type: SegmentType
+    public let data: [Double]
+
+    public init(type: PathSegment.SegmentType = .M, data: [Double] = []) {
+        self.type = type
+        self.data = data
+    }
+
+    open func isAbsolute() -> Bool {
+        switch type {
+        case .M, .L, .H, .V, .C, .S, .Q, .T, .A, .E:
+            return true
+        default:
+            return false
+        }
+    }
+
+    public static func == (lhs: PathSegment, rhs: PathSegment) -> Bool {
+        return lhs.type == rhs.type && lhs.data == rhs.data
+    }
+}
+
+private class PathDataReader {
+    private let input: String
+    private var current: UnicodeScalar?
+    private var previous: UnicodeScalar?
+    private var iterator: String.UnicodeScalarView.Iterator
+
+    private static let spaces: Set<UnicodeScalar> = Set("\n\r\t ,".unicodeScalars)
+
+    init(input: String) {
+        self.input = input
+        self.iterator = input.unicodeScalars.makeIterator()
+    }
+
+    public func read() -> [PathSegment] {
+        readNext()
+        var segments = [PathSegment]()
+        while let array = readSegments() {
+            segments.append(contentsOf: array)
+        }
+        return segments
+    }
+
+    private func readSegments() -> [PathSegment]? {
+        if let type = readSegmentType() {
+            let argCount = getArgCount(segment: type)
+            if argCount == 0 {
+                return [PathSegment(type: type)]
+            }
+            var result = [PathSegment]()
+            let data: [Double]
+            if type == .a || type == .A {
+                data = readDataOfASegment()
+            } else {
+                data = readData()
+            }
+            var index = 0
+            var isFirstSegment = true
+            while index < data.count {
+                let end = index + argCount
+                if end > data.count {
+                    break
+                }
+                var currentType = type
+                if type == .M && !isFirstSegment {
+                    currentType = .L
+                }
+                if type == .m && !isFirstSegment {
+                    currentType = .l
+                }
+                result.append(PathSegment(type: currentType, data: Array(data[index..<end])))
+                isFirstSegment = false
+                index = end
+            }
+            return result
+        }
+        return nil
+    }
+
+    private func readData() -> [Double] {
+        var data = [Double]()
+        while true {
+            skipSpaces()
+            if let value = readNum() {
+                data.append(value)
+            } else {
+                return data
+            }
+        }
+    }
+
+    private func readDataOfASegment() -> [Double] {
+        let argCount = getArgCount(segment: .A)
+        var data: [Double] = []
+        var index = 0
+        while true {
+            skipSpaces()
+            let value: Double?
+            let indexMod = index % argCount
+            if indexMod == 3 || indexMod == 4 {
+                value = readFlag()
+            } else {
+                value = readNum()
+            }
+            guard let doubleValue = value else {
+                return data
+            }
+            data.append(doubleValue)
+            index += 1
+        }
+        return data
+    }
+
+    private func skipSpaces() {
+        var currentCharacter = current
+        while let character = currentCharacter, Self.spaces.contains(character) {
+            currentCharacter = readNext()
+        }
+    }
+
+    private func readFlag() -> Double? {
+        guard let ch = current else {
+            return .none
+        }
+        readNext()
+        switch ch {
+        case "0":
+            return 0
+        case "1":
+            return 1
+        default:
+            return .none
+        }
+    }
+
+    fileprivate func readNum() -> Double? {
+        guard let ch = current else {
+            return .none
+        }
+
+        guard ch >= "0" && ch <= "9" || ch == "." || ch == "-" else {
+            return .none
+        }
+
+        var chars = [ch]
+        var hasDot = ch == "."
+        while let ch = readDigit(&hasDot) {
+            chars.append(ch)
+        }
+
+        var buf = ""
+        buf.unicodeScalars.append(contentsOf: chars)
+        guard let value = Double(buf) else {
+            return .none
+        }
+        return value
+    }
+
+    fileprivate func readDigit(_ hasDot: inout Bool) -> UnicodeScalar? {
+        if let ch = readNext() {
+            if (ch >= "0" && ch <= "9") || ch == "e" || (previous == "e" && ch == "-") {
+                return ch
+            } else if ch == "." && !hasDot {
+                hasDot = true
+                return ch
+            }
+        }
+        return nil
+    }
+
+    fileprivate func isNum(ch: UnicodeScalar, hasDot: inout Bool) -> Bool {
+        switch ch {
+        case "0"..."9":
+            return true
+        case ".":
+            if hasDot {
+                return false
+            }
+            hasDot = true
+        default:
+            return true
+        }
+        return false
+    }
+
+    @discardableResult
+    private func readNext() -> UnicodeScalar? {
+        previous = current
+        current = iterator.next()
+        return current
+    }
+
+    private func isAcceptableSeparator(_ ch: UnicodeScalar?) -> Bool {
+        if let ch = ch {
+            return "\n\r\t ,".contains(String(ch))
+        }
+        return false
+    }
+
+    private func readSegmentType() -> PathSegment.SegmentType? {
+        while true {
+            if let type = getPathSegmentType() {
+                readNext()
+                return type
+            }
+            if readNext() == nil {
+                return nil
+            }
+        }
+    }
+
+    fileprivate func getPathSegmentType() -> PathSegment.SegmentType? {
+        if let ch = current {
+            switch ch {
+            case "M":
+                return .M
+            case "m":
+                return .m
+            case "L":
+                return .L
+            case "l":
+                return .l
+            case "C":
+                return .C
+            case "c":
+                return .c
+            case "Q":
+                return .Q
+            case "q":
+                return .q
+            case "A":
+                return .A
+            case "a":
+                return .a
+            case "z", "Z":
+                return .z
+            case "H":
+                return .H
+            case "h":
+                return .h
+            case "V":
+                return .V
+            case "v":
+                return .v
+            case "S":
+                return .S
+            case "s":
+                return .s
+            case "T":
+                return .T
+            case "t":
+                return .t
+            default:
+                break
+            }
+        }
+        return nil
+    }
+
+    fileprivate func getArgCount(segment: PathSegment.SegmentType) -> Int {
+        switch segment {
+        case .H, .h, .V, .v:
+            return 1
+        case .M, .m, .L, .l, .T, .t:
+            return 2
+        case .S, .s, .Q, .q:
+            return 4
+        case .C, .c:
+            return 6
+        case .A, .a:
+            return 7
+        default:
+            return 0
+        }
+    }
+}

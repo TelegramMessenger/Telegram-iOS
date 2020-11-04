@@ -59,6 +59,60 @@ public enum LegacyAttachmentMenuMediaEditing {
     case file
 }
 
+public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMediaReference, initialCaption: String, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    let _ = (fetchMediaData(context: context, postbox: context.account.postbox, mediaReference: media)
+    |> deliverOnMainQueue).start(next: { (value, isImage) in
+        guard case let .data(data) = value, data.complete else {
+            return
+        }
+        
+        let item: TGMediaEditableItem & TGMediaSelectableItem
+        if let image = UIImage(contentsOfFile: data.path) {
+            item = TGCameraCapturedPhoto(existing: image)
+        } else {
+            item = TGCameraCapturedVideo(url: URL(fileURLWithPath: data.path))
+        }
+        
+        let paintStickersContext = LegacyPaintStickersContext(context: context)
+        paintStickersContext.presentStickersController = { completion in
+            return presentStickers({ file, animated, view, rect in
+                let coder = PostboxEncoder()
+                coder.encodeRootObject(file)
+                completion?(coder.makeData(), animated, view, rect)
+            })
+        }
+        
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let recipientName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        
+        let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
+        legacyController.blocksBackgroundWhenInOverlay = true
+        legacyController.acceptsFocusWhenInOverlay = true
+        legacyController.statusBar.statusBarStyle = .Ignore
+        legacyController.controllerLoaded = { [weak legacyController] in
+            legacyController?.view.disablesInteractiveTransitionGestureRecognizer = true
+        }
+
+        let emptyController = LegacyEmptyController(context: legacyController.context)!
+        emptyController.navigationBarShouldBeHidden = true
+        let navigationController = makeLegacyNavigationController(rootController: emptyController)
+        navigationController.setNavigationBarHidden(true, animated: false)
+        legacyController.bind(controller: navigationController)
+
+        legacyController.enableSizeClassSignal = true
+        
+        present(legacyController, nil)
+        
+        TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: initialCaption, entities: [], withItem: item, paint: true, recipientName: recipientName, stickersContext: paintStickersContext, completion: { result, editingContext in
+            let intent: TGMediaAssetsControllerIntent = TGMediaAssetsControllerSendMediaIntent
+            let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: result as! TGMediaSelectableItem, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: legacyAssetPickerItemGenerator())
+            sendMessagesWithSignals(signals, false, 0)
+        }, dismissed: { [weak legacyController] in
+            legacyController?.dismiss()
+        })
+    })
+}
+
 public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocation: ChatLocation, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, presentationData: PresentationData, parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: String, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, present: @escaping (ViewController, Any?) -> Void) -> TGMenuSheetController {
     let defaultVideoPreset = defaultVideoPresetForContext(context)
     UserDefaults.standard.set(defaultVideoPreset.rawValue as NSNumber, forKey: "TG_preferredVideoPreset_v0")
@@ -261,45 +315,14 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
                 
                 present(legacyController, nil)
                 
-                TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: "", entities: [], withItem: item, recipientName: recipientName, stickersContext: paintStickersContext, completion: { result, editingContext in
+                TGPhotoVideoEditor.present(with: legacyController.context, controller: emptyController, caption: "", entities: [], withItem: item, paint: false, recipientName: recipientName, stickersContext: paintStickersContext, completion: { result, editingContext in
                     let intent: TGMediaAssetsControllerIntent = TGMediaAssetsControllerSendMediaIntent
                     let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: result as! TGMediaSelectableItem, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: legacyAssetPickerItemGenerator())
                     sendMessagesWithSignals(signals, false, 0)
-                    /*
-                     [TGCameraController resultSignalsForSelectionContext:nil editingContext:editingContext currentItem:result storeAssets:false saveEditedPhotos:false descriptionGenerator:^id(id result, NSString *caption, NSArray *entities, NSString *hash)
-                     {
-                         __strong TGModernConversationController *strongSelf = weakSelf;
-                         if (strongSelf == nil)
-                             return nil;
-                         
-                         NSDictionary *desc = [strongSelf _descriptionForItem:result caption:caption entities:entities hash:hash allowRemoteCache:allowRemoteCache];
-                         return [strongSelf _descriptionForReplacingMedia:desc message:message];
-                     }]]
-                     */
-                    //let signals = TGMediaAssetsController.resultSignals(for: nil, editingContext: editingContext, intent: intent, currentItem: result, storeAssets: true, useMediaCache: false, descriptionGenerator: legacyAssetPickerItemGenerator(), saveEditedPhotos: saveEditedPhotos)
-                    //sendMessagesWithSignals(signals, silentPosting, scheduleTime)
                 }, dismissed: { [weak legacyController] in
                     legacyController?.dismiss()
                 })
             })
-            /*
-             
-             
-                 bool allowRemoteCache = [strongSelf->_companion controllerShouldCacheServerAssets];
-                 [TGPhotoVideoEditor presentWithContext:[TGLegacyComponentsContext shared] controller:strongSelf caption:text entities:entities withItem:item recipientName:[strongSelf->_companion title] completion:^(id result, TGMediaEditingContext *editingContext)
-                 {
-                     [strongSelf _asyncProcessMediaAssetSignals:[TGCameraController resultSignalsForSelectionContext:nil editingContext:editingContext currentItem:result storeAssets:false saveEditedPhotos:false descriptionGenerator:^id(id result, NSString *caption, NSArray *entities, NSString *hash)
-                     {
-                         __strong TGModernConversationController *strongSelf = weakSelf;
-                         if (strongSelf == nil)
-                             return nil;
-                         
-                         NSDictionary *desc = [strongSelf _descriptionForItem:result caption:caption entities:entities hash:hash allowRemoteCache:allowRemoteCache];
-                         return [strongSelf _descriptionForReplacingMedia:desc message:message];
-                     }]];
-                     [strongSelf endMessageEditing:true];
-                 }];
-             */
         })!
         itemViews.append(editCurrentItem)
     }

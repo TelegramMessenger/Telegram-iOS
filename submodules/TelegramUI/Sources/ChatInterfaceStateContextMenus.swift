@@ -276,7 +276,7 @@ func updatedChatEditInterfaceMessageState(state: ChatPresentationInterfaceState,
     return updated
 }
 
-func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, messages: [Message], controllerInteraction: ChatControllerInteraction?, selectAll: Bool, interfaceInteraction: ChatPanelInterfaceInteraction?) -> Signal<[ContextMenuItem], NoError> {
+func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, messages: [Message], controllerInteraction: ChatControllerInteraction?, selectAll: Bool, interfaceInteraction: ChatPanelInterfaceInteraction?) -> Signal<[ContextMenuItem], NoError> {
     guard let interfaceInteraction = interfaceInteraction, let controllerInteraction = controllerInteraction else {
         return .single([])
     }
@@ -643,12 +643,79 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
                 
         if data.canEdit && !isPinnedMessages {
+            var mediaReference: AnyMediaReference?
+            for media in message.media {
+                if let image = media as? TelegramMediaImage, let _ = largestImageRepresentation(image.representations) {
+                    mediaReference = ImageMediaReference.standalone(media: image).abstract
+                    break
+                } else if let file = media as? TelegramMediaFile {
+                    mediaReference = FileMediaReference.standalone(media: file).abstract
+                    break
+                }
+            }
+            
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
-            }, action: { _, f in
-                interfaceInteraction.setupEditMessage(messages[0].id, { transition in
-                    f(.custom(transition))
-                })
+            }, action: { c, f in
+                if let _  = mediaReference?.media as? TelegramMediaImage {
+                    var updatedItems: [ContextMenuItem] = []
+                    updatedItems.append(.action(ContextMenuActionItem(text: message.text.isEmpty ? chatPresentationInterfaceState.strings.Conversation_AddCaption :  chatPresentationInterfaceState.strings.Conversation_EditCaption, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Caption"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        interfaceInteraction.setupEditMessage(messages[0].id, { transition in
+                            f(.custom(transition))
+                        })
+                    })))
+                    updatedItems.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_EditThisPhoto, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Draw"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        controllerInteraction.editMessageMedia(messages[0].id, true)
+                        f(.dismissWithoutContent)
+                    })))
+                    updatedItems.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ReplacePhoto, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        controllerInteraction.editMessageMedia(messages[0].id, false)
+                        f(.dismissWithoutContent)
+                    })))
+                    
+                    updatedItems.append(.separator)
+                    updatedItems.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ChatList_Context_Back, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
+                    }, action: { c, _ in
+                        c.setItems(contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: chatPresentationInterfaceState, context: context, messages: messages, controllerInteraction: controllerInteraction, selectAll: selectAll, interfaceInteraction: interfaceInteraction))
+                    })))
+                    
+                    c.setItems(.single(updatedItems))
+                } else if let _ = mediaReference?.media as? TelegramMediaFile {
+                    var updatedItems: [ContextMenuItem] = []
+                    updatedItems.append(.action(ContextMenuActionItem(text: message.text.isEmpty ? chatPresentationInterfaceState.strings.Conversation_AddCaption :  chatPresentationInterfaceState.strings.Conversation_EditCaption, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Caption"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        interfaceInteraction.setupEditMessage(messages[0].id, { transition in
+                            f(.custom(transition))
+                        })
+                    })))
+                    updatedItems.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ReplaceFile, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        controllerInteraction.editMessageMedia(messages[0].id, false)
+                        f(.dismissWithoutContent)
+                    })))
+                    
+                    updatedItems.append(.separator)
+                    updatedItems.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ChatList_Context_Back, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
+                    }, action: { c, _ in
+                        c.setItems(contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: chatPresentationInterfaceState, context: context, messages: messages, controllerInteraction: controllerInteraction, selectAll: selectAll, interfaceInteraction: interfaceInteraction))
+                    })))
+                    
+                    c.setItems(.single(updatedItems))
+                } else {
+                    interfaceInteraction.setupEditMessage(messages[0].id, { transition in
+                        f(.custom(transition))
+                    })
+                }
             })))
         }
         

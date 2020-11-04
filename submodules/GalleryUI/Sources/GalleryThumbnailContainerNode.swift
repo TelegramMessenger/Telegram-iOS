@@ -125,9 +125,15 @@ public final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDel
             self.items = items
             self.itemNodes = itemNodes
         }
+        
+        var updatedIndexOnly = false
+        if let centralIndexAndProgress = self.centralIndexAndProgress, centralIndexAndProgress.0 != centralIndex, centralIndexAndProgress.1 == progress {
+            updatedIndexOnly = true
+        }
+        
         self.centralIndexAndProgress = (centralIndex, progress)
         if let size = self.currentLayout {
-            self.updateLayout(size: size, transition: .immediate)
+            self.updateLayout(size: size, transition: updatedIndexOnly ? .animated(duration: 0.2, curve: .spring) : .immediate)
         }
     }
     

@@ -175,7 +175,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     private var currentSize: CGSize?
     let imageNode: TransformImageNode
     var animationNode: AnimatedStickerNode?
-    private var placeholderNode: ShimmerEffectNode?
+    private var placeholderNode: StickerShimmerEffectNode?
     private var didSetUpAnimationNode = false
     private var item: ChatMediaInputStickerGridItem?
     
@@ -202,7 +202,8 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     
     override init() {
         self.imageNode = TransformImageNode()
-        self.placeholderNode = ShimmerEffectNode()
+        self.placeholderNode = StickerShimmerEffectNode()
+        self.placeholderNode?.isUserInteractionEnabled = false
         
         super.init()
         
@@ -315,16 +316,16 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         
         if let placeholderNode = self.placeholderNode {
             let placeholderFrame = CGRect(origin: CGPoint(x: floor((size.width - boundingSize.width) / 2.0), y: floor((size.height - boundingSize.height) / 2.0)), size: boundingSize)
-            placeholderNode.frame = CGRect(origin: CGPoint(), size: size)
+            placeholderNode.frame = placeholderFrame
             
             let theme = item.theme
-            placeholderNode.update(backgroundColor: theme.chat.inputMediaPanel.stickersBackgroundColor, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputMediaPanel.stickersBackgroundColor, alpha: 0.1), shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3), shapes: [.roundedRect(rect: placeholderFrame, cornerRadius: 10.0)], size: bounds.size)
+            placeholderNode.update(backgroundColor: theme.chat.inputMediaPanel.stickersBackgroundColor, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputMediaPanel.stickersBackgroundColor, alpha: 0.15), shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3), data: item.stickerItem.file.immediateThumbnailData, size: placeholderFrame.size)
         }
     }
     
     override func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {
         if let placeholderNode = self.placeholderNode {
-            placeholderNode.updateAbsoluteRect(absoluteRect, within: containerSize)
+            placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: absoluteRect.minX + placeholderNode.frame.minX, y: absoluteRect.minY + placeholderNode.frame.minY), size: placeholderNode.frame.size), within: containerSize)
         }
     }
     

@@ -530,7 +530,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             let mediaManager = item.context.sharedContext.mediaManager
             
             let videoNode = UniversalVideoNode(postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .gallery)
-            
             let videoScale: CGFloat
             if item.content is WebEmbedVideoContent {
                 videoScale = 1.0
@@ -578,6 +577,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             self.requiresDownload = true
             var mediaFileStatus: Signal<MediaResourceStatus?, NoError> = .single(nil)
+            
+            var hintSeekable = false
             if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
                 if Namespaces.Message.allScheduled.contains(message.id.namespace) {
                     disablePictureInPicture = true
@@ -611,6 +612,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 }
                 if let file = file {
+                    for attribute in file.attributes {
+                        if case let .Video(duration, _, _) = attribute, duration >= 30 {
+                            hintSeekable = true
+                            break
+                        }
+                    }
                     let status = messageMediaFileStatus(context: item.context, messageId: message.id, file: file)
                     if !isWebpage {
                         self.scrubberView.setFetchStatusSignal(status, strings: self.presentationData.strings, decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator, fileSize: file.size)
@@ -634,7 +641,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     var initialBuffering = false
                     var playing = false
                     var isPaused = true
-                    var seekable = false
+                    var seekable = hintSeekable
                     var hasStarted = false
                     var displayProgress = true
                     if let value = value {
@@ -688,7 +695,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     strongSelf.controlsTimer = nil
                                 }
                         }
-                        seekable = value.duration >= 30.0
+                        if !value.duration.isZero {
+                            seekable = value.duration >= 30.0
+                        }
                     }
                     
                     if strongSelf.isCentral && playing && strongSelf.previousPlaying != true && !disablePlayerControls {
@@ -749,7 +758,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         if hasStarted || strongSelf.didPause {
                             strongSelf.footerContentNode.content = .playback(paused: true, seekable: seekable)
                         } else if let fetchStatus = fetchStatus, !strongSelf.requiresDownload {
-                            strongSelf.footerContentNode.content = .fetch(status: fetchStatus)
+                            strongSelf.footerContentNode.content = .fetch(status: fetchStatus, seekable: seekable)
                         }
                     } else {
                         strongSelf.footerContentNode.content = .playback(paused: false, seekable: seekable)
@@ -773,11 +782,17 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
             self._rightBarButtonItems.set(.single(barButtonItems))
         
-            videoNode.playbackCompleted = { [weak videoNode] in
+            videoNode.playbackCompleted = { [weak self, weak videoNode] in
                 Queue.mainQueue().async {
                     item.playbackCompleted()
-                    if !isAnimated {
+                    if let strongSelf = self, !isAnimated {
                         videoNode?.seek(0.0)
+                        
+                        if strongSelf.actionAtEnd == .stop {
+                            strongSelf.updateControlsVisibility(true)
+                            strongSelf.controlsTimer?.invalidate()
+                            strongSelf.controlsTimer = nil
+                        }
                     }
                 }
             }

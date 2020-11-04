@@ -143,6 +143,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
     let imageNode: TransformImageNode
+    private var placeholderNode: StickerShimmerEffectNode?
     private var animationNode: GenericAnimatedStickerNode?
     private var didSetUpAnimationNode = false
     private var isPlaying = false
@@ -191,6 +192,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.imageNode = TransformImageNode()
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         
+        self.placeholderNode = StickerShimmerEffectNode()
+        self.placeholderNode?.isUserInteractionEnabled = false
+        
         super.init(layerBacked: false)
         
         self.containerNode.shouldBegin = { [weak self] location in
@@ -230,12 +234,28 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
             }
         }
+        
+        var firstTime = true
+        self.imageNode.imageUpdated = { [weak self] image in
+            guard let strongSelf = self else {
+                return
+            }
+            if image != nil {
+                strongSelf.removePlaceholder(animated: !firstTime)
+            }
+            firstTime = false
+        }
                 
         self.imageNode.displaysAsynchronously = false
         self.containerNode.addSubnode(self.contextSourceNode)
         self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
         self.addSubnode(self.containerNode)
         self.contextSourceNode.contentNode.addSubnode(self.imageNode)
+        
+        if let placeholderNode = self.placeholderNode {
+            self.contextSourceNode.contentNode.addSubnode(placeholderNode)
+        }
+        
         self.contextSourceNode.contentNode.addSubnode(self.dateAndStatusNode)
         
         self.dateAndStatusNode.openReactions = { [weak self] in
@@ -253,6 +273,20 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func removePlaceholder(animated: Bool) {
+        if let placeholderNode = self.placeholderNode {
+            self.placeholderNode = nil
+            if !animated {
+                placeholderNode.removeFromSupernode()
+            } else {
+                placeholderNode.alpha = 0.0
+                placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak placeholderNode] _ in
+                    placeholderNode?.removeFromSupernode()
+                })
+            }
+        }
     }
     
     override func didLoad() {
@@ -388,7 +422,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         if let animationNode = self.animationNode, !self.animateGreeting {
-            self.contextSourceNode.contentNode.insertSubnode(animationNode, aboveSubnode: self.imageNode)
+            if let placeholderNode = self.placeholderNode {
+                self.contextSourceNode.contentNode.insertSubnode(animationNode, aboveSubnode: placeholderNode)
+            } else {
+                self.contextSourceNode.contentNode.insertSubnode(animationNode, aboveSubnode: self.imageNode)
+            }
         }
     }
     
@@ -518,6 +556,20 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     override func updateStickerSettings() {
         self.updateVisibility()
+    }
+    
+    
+    private var absoluteRect: (CGRect, CGSize)?
+    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        self.absoluteRect = (rect, containerSize)
+        if !self.contextSourceNode.isExtractedToContextPreview {
+            var rect = rect
+            rect.origin.y = containerSize.height - rect.maxY + self.insets.top
+
+            if let placeholderNode = self.placeholderNode {
+                placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + placeholderNode.frame.minX, y: rect.minY + placeholderNode.frame.minY), size: placeholderNode.frame.size), within: containerSize)
+            }
+        }
     }
     
     override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
@@ -903,6 +955,20 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     strongSelf.imageNode.frame = updatedContentFrame
                     
                     let animationNodeFrame = updatedContentFrame.insetBy(dx: imageInset, dy: imageInset)
+
+                    var file: TelegramMediaFile?
+                    if let emojiFile = emojiFile {
+                        file = emojiFile
+                    } else if let telegramFile = telegramFile {
+                        file = telegramFile
+                    }
+                    
+                    if let immediateThumbnailData = file?.immediateThumbnailData, let placeholderNode = strongSelf.placeholderNode {
+                        placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0x748391, alpha: 0.2), shimmeringColor: UIColor(rgb: 0x748391, alpha: 0.35), data: immediateThumbnailData, size: animationNodeFrame.size)
+                        placeholderNode.frame = animationNodeFrame
+                        strongSelf.animationNode?.isHidden = true
+                    }
+                    
                     if let animationNode = strongSelf.animationNode, let parentNode = strongSelf.greetingStickerParentNode, strongSelf.animateGreeting {
                         strongSelf.animateGreeting = false
                         
@@ -1117,7 +1183,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         switch recognizer.state {
         case .ended:
             if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
-                if let action = self.gestureRecognized(gesture: gesture, location: location, recognizer: nil) {
+                if let action = self.gestureRecognized(gesture: gesture, location: location, recognizer: recognizer) {
                     if case .doubleTap = gesture {
                         self.containerNode.cancelGesture()
                     }
@@ -1224,7 +1290,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         item.controllerInteraction.displayDiceTooltip(dice)
                     })
                 } else if let _ = self.emojiFile {
-                    if let animationNode = self.animationNode as? AnimatedStickerNode {
+                    if let animationNode = self.animationNode as? AnimatedStickerNode, let _ = recognizer {
                         var startTime: Signal<Double, NoError>
                         var shouldPlay = false
                         if !animationNode.isPlaying {
@@ -1248,86 +1314,63 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         }
                                                 
                         if let text = self.item?.message.text, let firstScalar = text.unicodeScalars.first {
-                            if beatingHearts.contains(firstScalar.value) || firstScalar.value == peach {
+                            return .optionalAction({
                                 if shouldPlay {
-                                    animationNode.play()
-                                }
-                                return .optionalAction({
-                                    let _ = startTime.start(next: { [weak self] time in
+                                    let _ = (appConfiguration
+                                    |> deliverOnMainQueue).start(next: { [weak self, weak animationNode] appConfiguration in
                                         guard let strongSelf = self else {
                                             return
                                         }
-                                        
-                                        var haptic: EmojiHaptic
-                                        if let current = strongSelf.haptic {
-                                            haptic = current
-                                        } else {
-                                            if beatingHearts.contains(firstScalar.value) {
-                                                haptic = HeartbeatHaptic()
-                                            } else {
-                                                haptic = PeachHaptic()
-                                            }
-                                            haptic.enabled = true
-                                            strongSelf.haptic = haptic
-                                        }
-                                        if !haptic.active {
-                                            haptic.start(time: time)
-                                        }
-                                    })
-                                })
-                            } else {
-                                return .optionalAction({
-                                    if shouldPlay {
-                                        let _ = (appConfiguration
-                                        |> deliverOnMainQueue).start(next: { [weak self, weak animationNode] appConfiguration in
-                                            guard let strongSelf = self else {
-                                                return
-                                            }
-                                            let emojiSounds = AnimatedEmojiSoundsConfiguration.with(appConfiguration: appConfiguration, account: item.context.account)
-                                            for (emoji, file) in emojiSounds.sounds {
-                                                if emoji.strippedEmoji == text.strippedEmoji {
-                                                    let mediaManager = item.context.sharedContext.mediaManager
-                                                    let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: item.context.account.postbox, resourceReference: .standalone(resource: file.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true, ambient: true)
-                                                    mediaPlayer.togglePlayPause()
-                                                    mediaPlayer.actionAtEnd = .action({ [weak self] in
-                                                        self?.mediaPlayer = nil
-                                                    })
-                                                    strongSelf.mediaPlayer = mediaPlayer
-                                                    
-                                                    strongSelf.mediaStatusDisposable.set((mediaPlayer.status
-                                                    |> deliverOnMainQueue).start(next: { [weak self, weak animationNode] status in
-                                                        if let strongSelf = self {
-                                                            if firstScalar.value == coffin {
-                                                                var haptic: EmojiHaptic
-                                                                if let current = strongSelf.haptic {
-                                                                    haptic = current
-                                                                } else {
+                                        let emojiSounds = AnimatedEmojiSoundsConfiguration.with(appConfiguration: appConfiguration, account: item.context.account)
+                                        for (emoji, file) in emojiSounds.sounds {
+                                            if emoji.strippedEmoji == text.strippedEmoji {
+                                                let mediaManager = item.context.sharedContext.mediaManager
+                                                let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: item.context.account.postbox, resourceReference: .standalone(resource: file.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true, ambient: true)
+                                                mediaPlayer.togglePlayPause()
+                                                mediaPlayer.actionAtEnd = .action({ [weak self] in
+                                                    self?.mediaPlayer = nil
+                                                })
+                                                strongSelf.mediaPlayer = mediaPlayer
+                                                
+                                                strongSelf.mediaStatusDisposable.set((mediaPlayer.status
+                                                |> deliverOnMainQueue).start(next: { [weak self, weak animationNode] status in
+                                                    if let strongSelf = self {
+                                                        if firstScalar.value == coffin || firstScalar.value == peach {
+                                                            var haptic: EmojiHaptic
+                                                            if let current = strongSelf.haptic {
+                                                                haptic = current
+                                                            } else {
+                                                                if beatingHearts.contains(firstScalar.value) {
+                                                                    haptic = HeartbeatHaptic()
+                                                                } else if firstScalar.value == coffin {
                                                                     haptic = CoffinHaptic()
-                                                                    haptic.enabled = true
-                                                                    strongSelf.haptic = haptic
+                                                                } else {
+                                                                    haptic = PeachHaptic()
                                                                 }
-                                                                if !haptic.active {
-                                                                    haptic.start(time: 0.0)
-                                                                }
+                                                                haptic.enabled = true
+                                                                strongSelf.haptic = haptic
                                                             }
-                                                            
-                                                            switch status.status {
-                                                                case .playing:
-                                                                    animationNode?.play()
-                                                                    strongSelf.mediaStatusDisposable.set(nil)
-                                                                default:
-                                                                    break
+                                                            if !haptic.active {
+                                                                haptic.start(time: 0.0)
                                                             }
                                                         }
-                                                    }))
-                                                    return
-                                                }
+                                                        
+                                                        switch status.status {
+                                                            case .playing:
+                                                                animationNode?.play()
+                                                                strongSelf.mediaStatusDisposable.set(nil)
+                                                            default:
+                                                                break
+                                                        }
+                                                    }
+                                                }))
+                                                return
                                             }
-                                            animationNode?.play()
-                                        })
-                                    }
-                                })
-                            }
+                                        }
+                                        animationNode?.play()
+                                    })
+                                }
+                            })
                         }
                     }
                 }

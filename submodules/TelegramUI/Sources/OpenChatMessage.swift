@@ -114,7 +114,15 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     let controller = ShareController(context: params.context, subject: .media(.standalone(media: file)), immediateExternalShare: true)
                     params.present(controller, nil)
                 } else if let rootController = params.navigationController?.view.window?.rootViewController {
-                    presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file)
+                    let proceed = {
+                        presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file)
+                    }
+                    if file.mimeType.contains("image/svg") {
+                        let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
+                        params.present(textAlertController(context: params.context, title: nil, text: presentationData.strings.OpenFile_PotentiallyDangerousContentAlert, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.OpenFile_Proceed, action: { proceed() })] ), nil)
+                    } else {
+                        proceed()
+                    }
                 }
                 return true
             case let .audio(file):
@@ -217,9 +225,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 let path = params.context.account.postbox.mediaBox.completedResourcePath(media.resource)
                 var previewTheme: PresentationTheme?
                 if let path = path, let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedIfSafe) {
-                    let startTime = CACurrentMediaTime()
                     previewTheme = makePresentationTheme(data: data)
-                    print("time \(CACurrentMediaTime() - startTime)")
                 }
                 
                 guard let theme = previewTheme else {
