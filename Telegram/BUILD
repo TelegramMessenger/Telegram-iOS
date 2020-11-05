@@ -294,7 +294,7 @@ telegram_entitlements_template = """
     <key>application-identifier</key>
     <string>{telegram_team_id}.{telegram_bundle_id}</string>
     <key>com.apple.developer.icloud-container-environment</key>
-    <string>Production</string>
+    <string>{telegram_icloud_environment}</string>
 """ + apple_pay_merchants_fragment + unrestricted_voip_fragment
 
 plist_fragment(
@@ -304,6 +304,7 @@ plist_fragment(
         telegram_bundle_id = telegram_bundle_id,
         telegram_team_id = telegram_team_id,
         telegram_aps_environment = telegram_aps_environment,
+        telegram_icloud_environment = "Production" if telegram_aps_environment == "production" else "Development",
     )
 )
 
@@ -1527,13 +1528,13 @@ ios_application(
         ":AppStringResources",
     ],
     extensions = [
-        ":ShareExtension",
-        ":NotificationContentExtension",
-        ":NotificationServiceExtension",
-        ":IntentsExtension",
-        ":WidgetExtension",
+        #":ShareExtension",
+        #":NotificationContentExtension",
+        #":NotificationServiceExtension",
+        #":IntentsExtension",
+        #":WidgetExtension",
     ],
-    watch_application = ":TelegramWatchApp",
+    #watch_application = ":TelegramWatchApp",
     deps = [
         ":Main",
         ":Lib",
