@@ -59,6 +59,7 @@ BAZEL_COMMON_FLAGS=\
 	--features=swift.use_global_module_cache \
 	--features=swift.split_derived_files_generation \
 	--features=swift.skip_function_bodies_for_derived_files \
+	--apple_bitcode=watchos=embedded \
 	--jobs=${CORE_COUNT}
 	
 BAZEL_DEBUG_FLAGS=\
@@ -72,6 +73,7 @@ BAZEL_OPT_FLAGS=\
 	--features=swift.opt_uses_wmo \
 	--features=swift.opt_uses_osize \
 	--swiftcopt='-num-threads' --swiftcopt='0' \
+	--features=dead_strip \
     --objc_enable_binary_stripping \
 
 
@@ -412,8 +414,6 @@ bazel_app_arm64:
 	-c opt \
 	--ios_multi_cpus=arm64 \
 	--watchos_cpus=armv7k,arm64_32 \
-	--objc_enable_binary_stripping=true \
-	--features=dead_strip \
 	--apple_generate_dsym \
 	--output_groups=+dsyms \
 	--verbose_failures
@@ -427,8 +427,6 @@ bazel_app_armv7:
 	-c opt \
 	--ios_multi_cpus=armv7 \
 	--watchos_cpus=armv7k,arm64_32 \
-	--objc_enable_binary_stripping=true \
-	--features=dead_strip \
 	--apple_generate_dsym \
 	--output_groups=+dsyms \
 	--verbose_failures
@@ -442,8 +440,6 @@ bazel_app:
 	-c opt \
 	--ios_multi_cpus=armv7,arm64 \
 	--watchos_cpus=armv7k,arm64_32 \
-	--objc_enable_binary_stripping=true \
-	--features=dead_strip \
 	--apple_generate_dsym \
 	--output_groups=+dsyms \
 	--verbose_failures
