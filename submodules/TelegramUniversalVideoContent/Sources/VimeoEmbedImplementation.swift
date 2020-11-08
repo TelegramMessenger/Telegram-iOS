@@ -224,6 +224,11 @@ final class VimeoEmbedImplementation: WebEmbedImplementation {
                         playbackStatus = .buffering(initial: true, whilePlaying: false, progress: 0.0, display: true)
                     }
                     
+                    if case .playing = playbackStatus, !self.started {
+                        self.started = true
+                        self.onPlaybackStarted?()
+                    }
+                    
                     self.status = MediaPlayerStatus(generationTimestamp: self.status.generationTimestamp, duration: Double(duration), dimensions: self.status.dimensions, timestamp: newTimestamp, baseRate: 1.0, seekId: self.status.seekId, status: playbackStatus, soundEnabled: true)
                     updateStatus(self.status)
                 }

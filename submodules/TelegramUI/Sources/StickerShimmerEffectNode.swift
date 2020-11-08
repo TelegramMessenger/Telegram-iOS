@@ -179,90 +179,21 @@ class StickerShimmerEffectNode: ASDisplayNode {
                 
                 context.setFillColor(UIColor.black.cgColor)
             }
-        
+                    
             if let data = data, let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024), let path = String(data: unpackedData, encoding: .utf8) {
+                if data.count == 141 {
+                    print()
+                }
+                var path = path
+                if !path.hasPrefix("z") {
+                    path = "\(path)z"
+                }
                 let reader = PathDataReader(input: path)
                 let segments = reader.read()
-                
-                var currentX: Double = 0.0
-                var currentY: Double = 0.0
-                
-                let mul: Double = Double(size.width) / 512.0
-                
-                for segment in segments {
-                    switch segment.type {
-                        case .M, .m:
-                            let x = segment.data[0]
-                            let y = segment.data[1]
-                            
-                            if segment.isAbsolute() {
-                                currentX = x
-                                currentY = y
-                            } else {
-                                currentX += x
-                                currentY += y
-                            }
-                            
-                            context.move(to: CGPoint(x: currentX * mul, y: currentY * mul))
-                        case .L, .l:
-                            let x = segment.data[0]
-                            let y = segment.data[1]
-                            
-                            let effectiveX: Double
-                            let effectiveY: Double
-                            if segment.isAbsolute() {
-                                effectiveX = x
-                                effectiveY = y
-                            } else {
-                                effectiveX = currentX + x
-                                effectiveY = currentY + y
-                            }
-                            
-                            currentX = effectiveX
-                            currentY = effectiveY
-                            
-                            context.addLine(to: CGPoint(x: effectiveX * mul, y: effectiveY * mul))
-                        case .C, .c:
-                            let x1 = segment.data[0]
-                            let y1 = segment.data[1]
-                            let x2 = segment.data[2]
-                            let y2 = segment.data[3]
-                            let x = segment.data[4]
-                            let y = segment.data[5]
-                            
-                            let effectiveX1: Double
-                            let effectiveY1: Double
-                            let effectiveX2: Double
-                            let effectiveY2: Double
-                            let effectiveX: Double
-                            let effectiveY: Double
-                            
-                            if segment.isAbsolute() {
-                                effectiveX1 = x1
-                                effectiveY1 = y1
-                                effectiveX2 = x2
-                                effectiveY2 = y2
-                                effectiveX = x
-                                effectiveY = y
-                            } else {
-                                effectiveX1 = currentX + x1
-                                effectiveY1 = currentY + y1
-                                effectiveX2 = currentX + x2
-                                effectiveY2 = currentY + y2
-                                effectiveX = currentX + x
-                                effectiveY = currentY + y
-                            }
-                            
-                            currentX = effectiveX
-                            currentY = effectiveY
-                            
-                            context.addCurve(to: CGPoint(x: effectiveX * mul, y: effectiveY * mul), control1: CGPoint(x: effectiveX1 * mul, y: effectiveY1 * mul), control2: CGPoint(x: effectiveX2 * mul, y: effectiveY2 * mul))
-                        case .z:
-                            context.fillPath()
-                        default:
-                            break
-                    }
-                }
+
+                let scale = size.width / 512.0
+                context.scaleBy(x: scale, y: scale)
+                renderPath(segments, context: context)
             } else {
                 let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), byRoundingCorners: [.topLeft, .topRight, .bottomLeft, .bottomRight], cornerRadii: CGSize(width: 10.0, height: 10.0))
                 UIGraphicsPushContext(context)
@@ -345,6 +276,225 @@ open class PathSegment: Equatable {
 
     public static func == (lhs: PathSegment, rhs: PathSegment) -> Bool {
         return lhs.type == rhs.type && lhs.data == rhs.data
+    }
+}
+
+private func renderPath(_ segments: [PathSegment], context: CGContext) {
+    var currentPoint: CGPoint?
+    var cubicPoint: CGPoint?
+    var quadrPoint: CGPoint?
+    var initialPoint: CGPoint?
+    
+    func M(_ x: Double, y: Double) {
+        let point = CGPoint(x: CGFloat(x), y: CGFloat(y))
+        context.move(to: point)
+        setInitPoint(point)
+    }
+    
+    func m(_ x: Double, y: Double) {
+        if let cur = currentPoint {
+            let next = CGPoint(x: CGFloat(x) + cur.x, y: CGFloat(y) + cur.y)
+            context.move(to: next)
+            setInitPoint(next)
+        } else {
+            M(x, y: y)
+        }
+    }
+    
+    func L(_ x: Double, y: Double) {
+        lineTo(CGPoint(x: CGFloat(x), y: CGFloat(y)))
+    }
+    
+    func l(_ x: Double, y: Double) {
+        if let cur = currentPoint {
+            lineTo(CGPoint(x: CGFloat(x) + cur.x, y: CGFloat(y) + cur.y))
+        } else {
+            L(x, y: y)
+        }
+    }
+    
+    func H(_ x: Double) {
+        if let cur = currentPoint {
+            lineTo(CGPoint(x: CGFloat(x), y: CGFloat(cur.y)))
+        }
+    }
+    
+    func h(_ x: Double) {
+        if let cur = currentPoint {
+            lineTo(CGPoint(x: CGFloat(x) + cur.x, y: CGFloat(cur.y)))
+        }
+    }
+    
+    func V(_ y: Double) {
+        if let cur = currentPoint {
+            lineTo(CGPoint(x: CGFloat(cur.x), y: CGFloat(y)))
+        }
+    }
+    
+    func v(_ y: Double) {
+        if let cur = currentPoint {
+            lineTo(CGPoint(x: CGFloat(cur.x), y: CGFloat(y) + cur.y))
+        }
+    }
+
+    func lineTo(_ p: CGPoint) {
+        context.addLine(to: p)
+        setPoint(p)
+    }
+    
+    func c(_ x1: Double, y1: Double, x2: Double, y2: Double, x: Double, y: Double) {
+        if let cur = currentPoint {
+            let endPoint = CGPoint(x: CGFloat(x) + cur.x, y: CGFloat(y) + cur.y)
+            let controlPoint1 = CGPoint(x: CGFloat(x1) + cur.x, y: CGFloat(y1) + cur.y)
+            let controlPoint2 = CGPoint(x: CGFloat(x2) + cur.x, y: CGFloat(y2) + cur.y)
+            context.addCurve(to: endPoint, control1: controlPoint1, control2: controlPoint2)
+            setCubicPoint(endPoint, cubic: controlPoint2)
+        }
+    }
+    
+    func C(_ x1: Double, y1: Double, x2: Double, y2: Double, x: Double, y: Double) {
+        let endPoint = CGPoint(x: CGFloat(x), y: CGFloat(y))
+        let controlPoint1 = CGPoint(x: CGFloat(x1), y: CGFloat(y1))
+        let controlPoint2 = CGPoint(x: CGFloat(x2), y: CGFloat(y2))
+        context.addCurve(to: endPoint, control1: controlPoint1, control2: controlPoint2)
+        setCubicPoint(endPoint, cubic: controlPoint2)
+    }
+    
+    func s(_ x2: Double, y2: Double, x: Double, y: Double) {
+        if let cur = currentPoint {
+            let nextCubic = CGPoint(x: CGFloat(x2) + cur.x, y: CGFloat(y2) + cur.y)
+            let next = CGPoint(x: CGFloat(x) + cur.x, y: CGFloat(y) + cur.y)
+            
+            let xy1: CGPoint
+            if let curCubicVal = cubicPoint {
+                xy1 = CGPoint(x: CGFloat(2 * cur.x) - curCubicVal.x, y: CGFloat(2 * cur.y) - curCubicVal.y)
+            } else {
+                xy1 = cur
+            }
+            context.addCurve(to: next, control1: xy1, control2: nextCubic)
+            setCubicPoint(next, cubic: nextCubic)
+        }
+    }
+    
+    func S(_ x2: Double, y2: Double, x: Double, y: Double) {
+        if let cur = currentPoint {
+            let nextCubic = CGPoint(x: CGFloat(x2), y: CGFloat(y2))
+            let next = CGPoint(x: CGFloat(x), y: CGFloat(y))
+            let xy1: CGPoint
+            if let curCubicVal = cubicPoint {
+                xy1 = CGPoint(x: CGFloat(2 * cur.x) - curCubicVal.x, y: CGFloat(2 * cur.y) - curCubicVal.y)
+            } else {
+                xy1 = cur
+            }
+            context.addCurve(to: next, control1: xy1, control2: nextCubic)
+            setCubicPoint(next, cubic: nextCubic)
+        }
+    }
+    
+    func z() {
+        context.fillPath()
+    }
+    
+    func setQuadrPoint(_ p: CGPoint, quadr: CGPoint) {
+        currentPoint = p
+        quadrPoint = quadr
+        cubicPoint = nil
+    }
+
+    func setCubicPoint(_ p: CGPoint, cubic: CGPoint) {
+        currentPoint = p
+        cubicPoint = cubic
+        quadrPoint = nil
+    }
+
+    func setInitPoint(_ p: CGPoint) {
+        setPoint(p)
+        initialPoint = p
+    }
+
+    func setPoint(_ p: CGPoint) {
+        currentPoint = p
+        cubicPoint = nil
+        quadrPoint = nil
+    }
+    
+    for segment in segments {
+        var data = segment.data
+        switch segment.type {
+            case .M:
+                M(data[0], y: data[1])
+                data.removeSubrange(Range(uncheckedBounds: (lower: 0, upper: 2)))
+                while data.count >= 2 {
+                    L(data[0], y: data[1])
+                    data.removeSubrange((0 ..< 2))
+                }
+            case .m:
+                m(data[0], y: data[1])
+                data.removeSubrange((0 ..< 2))
+                while data.count >= 2 {
+                    l(data[0], y: data[1])
+                    data.removeSubrange((0 ..< 2))
+                }
+            case .L:
+                while data.count >= 2 {
+                    L(data[0], y: data[1])
+                    data.removeSubrange((0 ..< 2))
+                }
+            case .l:
+                while data.count >= 2 {
+                    l(data[0], y: data[1])
+                    data.removeSubrange((0 ..< 2))
+                }
+            case .H:
+                H(data[0])
+            case .h:
+                h(data[0])
+            case .V:
+                V(data[0])
+            case .v:
+                v(data[0])
+            case .C:
+                while data.count >= 6 {
+                    C(data[0], y1: data[1], x2: data[2], y2: data[3], x: data[4], y: data[5])
+                    data.removeSubrange((0 ..< 6))
+                }
+            case .c:
+                while data.count >= 6 {
+                    c(data[0], y1: data[1], x2: data[2], y2: data[3], x: data[4], y: data[5])
+                    data.removeSubrange((0 ..< 6))
+                }
+            case .S:
+                while data.count >= 4 {
+                    S(data[0], y2: data[1], x: data[2], y: data[3])
+                    data.removeSubrange((0 ..< 4))
+                }
+            case .s:
+                while data.count >= 4 {
+                    s(data[0], y2: data[1], x: data[2], y: data[3])
+                    data.removeSubrange((0 ..< 4))
+                }
+//            case .Q:
+//                Q(data[0], y1: data[1], x: data[2], y: data[3])
+//            case .q:
+//                q(data[0], y1: data[1], x: data[2], y: data[3])
+//            case .T:
+//                T(data[0], y: data[1])
+//            case .t:
+//                t(data[0], y: data[1])
+//            case .A:
+//                A(data[0], ry: data[1], angle: data[2], largeArc: num2bool(data[3]), sweep: num2bool(data[4]), x: data[5], y: data[6])
+//            case .a:
+//                a(data[0], ry: data[1], angle: data[2], largeArc: num2bool(data[3]), sweep: num2bool(data[4]), x: data[5], y: data[6])
+//            case .E:
+//                E(data[0], y: data[1], w: data[2], h: data[3], startAngle: data[4], arcAngle: data[5])
+//            case .e:
+//                e(data[0], y: data[1], w: data[2], h: data[3], startAngle: data[4], arcAngle: data[5])
+            case .z:
+                z()
+            default:
+                print("unknown")
+                break
+        }
     }
 }
 

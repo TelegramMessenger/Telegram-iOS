@@ -309,8 +309,13 @@
                 return false;
             
             bool onlyGroupableMedia = true;
-            for (TGMediaAsset *asset in strongSelf->_selectionContext.selectedItems)
+            for (TGMediaAsset *item in strongSelf->_selectionContext.selectedItems)
             {
+                TGMediaAsset *asset = asset;
+                if ([asset isKindOfClass:[TGCameraCapturedVideo class]]) {
+                    asset = [(TGCameraCapturedVideo *)item originalAsset];
+                }
+                
                 if (asset.type == TGMediaAssetGifType)
                 {
                     onlyGroupableMedia = false;

@@ -46,13 +46,15 @@ public final class ContactMultiselectionControllerParams {
     public let options: [ContactListAdditionalOption]
     public let filters: [ContactListFilter]
     public let alwaysEnabled: Bool
+    public let limit: Int32?
 
-    public init(context: AccountContext, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter] = [.excludeSelf], alwaysEnabled: Bool = false) {
+    public init(context: AccountContext, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter] = [.excludeSelf], alwaysEnabled: Bool = false, limit: Int32? = nil) {
         self.context = context
         self.mode = mode
         self.options = options
         self.filters = filters
         self.alwaysEnabled = alwaysEnabled
+        self.limit = limit
     }
 }
 

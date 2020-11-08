@@ -136,6 +136,10 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
     }
     
     deinit {
+        let webView = self.webView
+        Queue.mainQueue().after(1.0) {
+            print(webView.debugDescription)
+        }
         func disableGestures(view: UIView) {
             if let recognizers = view.gestureRecognizers {
                 for recognizer in recognizers {
@@ -167,7 +171,6 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
     }
     
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-        print("w")
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
