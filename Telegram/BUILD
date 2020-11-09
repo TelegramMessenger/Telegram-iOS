@@ -251,9 +251,9 @@ official_bundle_ids = [
     "org.telegram.Telegram-iOS",
 ]
 
-apple_pay_merchants = []#official_apple_pay_merchants if telegram_bundle_id == "ph.telegra.Telegraph" else ""
+apple_pay_merchants = official_apple_pay_merchants if telegram_bundle_id == "ph.telegra.Telegraph" else []
 
-apple_pay_merchants_fragment = "" if apple_pay_merchants == "" else """
+apple_pay_merchants_fragment = "" if apple_pay_merchants == [] else """
 <key>com.apple.developer.in-app-payments</key>
 <array>
 """ + "\n".join([
@@ -1528,13 +1528,13 @@ ios_application(
         ":AppStringResources",
     ],
     extensions = [
-        #":ShareExtension",
-        #":NotificationContentExtension",
-        #":NotificationServiceExtension",
-        #":IntentsExtension",
-        #":WidgetExtension",
+        ":ShareExtension",
+        ":NotificationContentExtension",
+        ":NotificationServiceExtension",
+        ":IntentsExtension",
+        ":WidgetExtension",
     ],
-    #watch_application = ":TelegramWatchApp",
+    watch_application = ":TelegramWatchApp",
     deps = [
         ":Main",
         ":Lib",
