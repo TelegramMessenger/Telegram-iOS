@@ -472,7 +472,7 @@ public enum OngoingCallVideoOrientation {
     case rotation270
 }
 
-private extension OngoingCallVideoOrientation {
+extension OngoingCallVideoOrientation {
     init(_ orientation: OngoingCallVideoOrientationWebrtc) {
         switch orientation {
         case .orientation0:

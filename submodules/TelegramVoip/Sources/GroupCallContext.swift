@@ -501,9 +501,15 @@ private extension ConferenceDescription.Content.Channel.PayloadType {
             [
                 "type": "transport-cc"
             ] as [String: Any],
-            /*[
+            [
+                "type": "ccm fir"
+            ] as [String: Any],
+            [
                 "type": "nack"
-            ] as [String: Any]*/
+            ] as [String: Any],
+            [
+                "type": "nack pli"
+            ] as [String: Any],
         ] as [Any]
         if let parameters = self.parameters {
             result["parameters"] = parameters
@@ -782,7 +788,7 @@ private extension ConferenceDescription {
                     appendSdp("a=ssrc:\(stream.audioSsrc) label:audio\(stream.audioSsrc)")
                 }
                 
-                appendSdp("m=video \(stream.isMain ? "1" : "0") RTP/SAVPF 100")
+                appendSdp("m=video 0 RTP/SAVPF 100")
                 appendSdp("a=mid:video\(stream.videoSsrc)")
                 if stream.isRemoved {
                     appendSdp("a=inactive")
@@ -809,6 +815,11 @@ private extension ConferenceDescription {
                     appendSdp("a=rtcp-fb:100 nack")
                     appendSdp("a=rtcp-fb:100 nack pli")
                     
+                    if stream.isMain {
+                        appendSdp("a=sendrecv")
+                    } else {
+                        appendSdp("a=sendonly")
+                    }
                     appendSdp("a=bundle-only")
                     
                     appendSdp("a=ssrc-group:FID \(stream.videoSsrc)")
@@ -1026,9 +1037,6 @@ private extension ConferenceDescription {
                         [
                             "type": "transport-cc"
                         ] as [String: Any],
-                        /*[
-                            "type": "nack"
-                        ] as [String: Any]*/
                     ] as [Any]
                 ]
             ),
@@ -1076,8 +1084,14 @@ private extension ConferenceDescription {
                             "type": "transport-cc"
                         ] as [String: Any],
                         [
+                            "type": "ccm fir"
+                        ] as [String: Any],
+                        [
                             "type": "nack"
-                        ] as [String: Any]
+                        ] as [String: Any],
+                        [
+                            "type": "nack pli"
+                        ] as [String: Any],
                     ] as [Any]
                 ]
             )
@@ -1263,6 +1277,7 @@ public final class GroupCallContext {
         private var localTransport: ConferenceDescription.Transport?
         
         let memberCount = ValuePromise<Int>(0, ignoreRepeated: true)
+        let videoStreamList = ValuePromise<[String]>([], ignoreRepeated: true)
         
         private var isMutedValue: Bool = false
         let isMuted = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -1271,13 +1286,19 @@ public final class GroupCallContext {
             self.queue = queue
             
             self.sessionId = UInt32.random(in: 0 ..< UInt32(Int32.max))
-            self.colibriHost = "192.168.8.118"
+            self.colibriHost = "192.168.93.24"
             
             var relaySdpAnswerImpl: ((String) -> Void)?
+            
+            let videoStreamList = self.videoStreamList
             
             self.context = GroupCallThreadLocalContext(queue: ContextQueueImpl(queue: queue), relaySdpAnswer: { sdpAnswer in
                 queue.async {
                     relaySdpAnswerImpl?(sdpAnswer)
+                }
+            }, incomingVideoStreamListUpdated: { streamList in
+                queue.async {
+                    videoStreamList.set(streamList)
                 }
             }, videoCapturer: video?.impl)
             
@@ -1595,6 +1616,45 @@ public final class GroupCallContext {
             self.isMuted.set(self.isMutedValue)
             self.context.setIsMuted(self.isMutedValue)
         }
+        
+        func makeIncomingVideoView(id: String, completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
+            self.context.makeIncomingVideoView(withStreamId: id, completion: { view in
+                if let view = view {
+                    completion(OngoingCallContextPresentationCallVideoView(
+                        view: view,
+                        setOnFirstFrameReceived: { [weak view] f in
+                            view?.setOnFirstFrameReceived(f)
+                        },
+                        getOrientation: { [weak view] in
+                            if let view = view {
+                                return OngoingCallVideoOrientation(view.orientation)
+                            } else {
+                                return .rotation0
+                            }
+                        },
+                        getAspect: { [weak view] in
+                            if let view = view {
+                                return view.aspect
+                            } else {
+                                return 0.0
+                            }
+                        },
+                        setOnOrientationUpdated: { [weak view] f in
+                            view?.setOnOrientationUpdated { value, aspect in
+                                f?(OngoingCallVideoOrientation(value), aspect)
+                            }
+                        },
+                        setOnIsMirroredUpdated: { [weak view] f in
+                            view?.setOnIsMirroredUpdated { value in
+                                f?(value)
+                            }
+                        }
+                    ))
+                } else {
+                    completion(nil)
+                }
+            })
+        }
     }
     
     private let queue = Queue()
@@ -1619,6 +1679,18 @@ public final class GroupCallContext {
         }
     }
     
+    public var videoStreamList: Signal<[String], NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.videoStreamList.get().start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+    }
+    
     public var isMuted: Signal<Bool, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -1634,6 +1706,12 @@ public final class GroupCallContext {
     public func toggleIsMuted() {
         self.impl.with { impl in
             impl.toggleIsMuted()
+        }
+    }
+    
+    public func makeIncomingVideoView(id: String, completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
+        self.impl.with { impl in
+            impl.makeIncomingVideoView(id: id, completion: completion)
         }
     }
 }
