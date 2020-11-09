@@ -604,16 +604,15 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
             hintSize = Int(size)
         }
         
-        loop: for attr in file.attributes {
-            switch attr {
-            case .hintFileIsLarge:
-                hintFileIsLarge = true
-                break loop
-            default:
-                break loop
+        loop: for attribute in file.attributes {
+            switch attribute {
+                case .hintFileIsLarge:
+                    hintFileIsLarge = true
+                    break loop
+                default:
+                    break loop
             }
         }
-
         
         let fileReference: AnyMediaReference
         if let partialReference = file.partialReference {

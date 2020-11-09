@@ -441,6 +441,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
         
         if origin == nil {
+            self.editButton.isHidden = true
             self.deleteButton.isHidden = true
         }
     }
@@ -516,9 +517,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             }
             messageText = galleryCaptionStringWithAppliedEntities(message.text, entities: entities)
         }
-                
-        self.editButton.isHidden = message.containsSecretMedia
-        
+                        
         if self.currentMessageText != messageText || canDelete != !self.deleteButton.isHidden || canShare != !self.actionButton.isHidden || canEdit != !self.editButton.isHidden || self.currentAuthorNameText != authorNameText || self.currentDateText != dateText {
             self.currentMessageText = messageText
             

@@ -160,7 +160,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
                         peer = RenderedPeer(peer: channelPeer)
                     }
                 }
-                entries.append(.message(message, peer, nil, presentationData))
+                entries.append(.message(message, peer, searchResult.readStates[peer.peerId], presentationData))
             }
             
             return entries

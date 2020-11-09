@@ -236,7 +236,12 @@
 
 - (SSignal *)_signalForItem:(id)item
 {
-    SSignal *assetSignal = [TGMediaAssetImageSignals imageForAsset:item imageType:TGMediaAssetImageTypeThumbnail size:[_layoutMetrics imageSize]];
+    TGMediaAsset *concreteAsset = (TGMediaAsset *)item;
+    if ([concreteAsset isKindOfClass:[TGCameraCapturedVideo class]]) {
+        concreteAsset = [(TGCameraCapturedVideo *)item originalAsset];
+    }
+    
+    SSignal *assetSignal = [TGMediaAssetImageSignals imageForAsset:concreteAsset imageType:TGMediaAssetImageTypeThumbnail size:[_layoutMetrics imageSize]];
     if (self.editingContext == nil)
         return assetSignal;
     

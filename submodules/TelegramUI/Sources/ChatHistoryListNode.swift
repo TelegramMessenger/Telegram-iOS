@@ -640,8 +640,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.refreshMediaProcessingManager.process = { [weak context] messageIds in
             context?.account.viewTracker.refreshSecretMediaMediaForMessageIds(messageIds: messageIds)
         }
-        self.messageMentionProcessingManager.process = { [weak context] messageIds in
-            context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
+        
+        self.messageMentionProcessingManager.process = { [weak self, weak context] messageIds in
+            if let strongSelf = self {
+                let _ = (strongSelf.canReadHistory.get()
+                |> take(1)).start(next: { [weak context] canReadHistory in
+                    if canReadHistory {
+                        context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
+                    }
+                })
+            }
         }
         
         self.preloadPages = false
