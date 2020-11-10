@@ -457,12 +457,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return true
             }
-            if let _ = strongSelf.presentationInterfaceState.inputTextPanelState.mediaRecordingState {
-                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Conversation_DiscardVoiceMessageDescription, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Conversation_DiscardVoiceMessageAction, action: {
-                    self?.stopMediaRecorder()
-                    action()
-                })]), in: .window(.root))
-                
+            if strongSelf.presentVoiceMessageDiscardAlert(action: action) {
                 return false
             }
             return true
@@ -472,6 +467,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) else {
                 return false
             }
+            
             strongSelf.commitPurposefulAction()
             strongSelf.dismissAllTooltips()
             
@@ -7785,13 +7781,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     
                                     var groupingKey: Int64?
                                     var fileTypes: (music: Bool, other: Bool) = (false, false)
-                                    for item in results {
-                                        if let item = item {
-                                            let pathExtension = (item.fileName as NSString).pathExtension.lowercased()
-                                            if ["mp3", "m4a"].contains(pathExtension) {
-                                                fileTypes.music = true
-                                            } else {
-                                                fileTypes.other = true
+                                    if results.count > 1 {
+                                        for item in results {
+                                            if let item = item {
+                                                let pathExtension = (item.fileName as NSString).pathExtension.lowercased()
+                                                if ["mp3", "m4a"].contains(pathExtension) {
+                                                    fileTypes.music = true
+                                                } else {
+                                                    fileTypes.other = true
+                                                }
                                             }
                                         }
                                     }
@@ -11203,6 +11201,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
         self.chatDisplayNode.dismissInput()
         self.present(controller, in: .window(.root))
+    }
+    
+    private func presentVoiceMessageDiscardAlert(action: @escaping () -> Void = {}) -> Bool {
+        if let _ = self.presentationInterfaceState.inputTextPanelState.mediaRecordingState {
+            self.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.Conversation_DiscardVoiceMessageDescription, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Conversation_DiscardVoiceMessageAction, action: { [weak self] in
+                self?.stopMediaRecorder()
+                action()
+            })]), in: .window(.root))
+            
+            return true
+        }
+        return false
     }
     
     private var effectiveNavigationController: NavigationController? {

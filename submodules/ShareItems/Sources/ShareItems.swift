@@ -110,7 +110,9 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
             }
         }
         var finalDuration: Double = CMTimeGetSeconds(asset.duration)
-        let finalDimensions = TGMediaVideoConverter.dimensions(for: asset.originalSize, adjustments: adjustments, preset: adjustments?.preset ?? TGMediaVideoConversionPresetCompressedMedium)
+        
+        let preset = adjustments?.preset ?? TGMediaVideoConversionPresetCompressedMedium
+        let finalDimensions = TGMediaVideoConverter.dimensions(for: asset.originalSize, adjustments: adjustments, preset: preset)
         
         var resourceAdjustments: VideoMediaResourceAdjustments?
         if let adjustments = adjustments {
@@ -123,8 +125,10 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
             resourceAdjustments = VideoMediaResourceAdjustments(data: adjustmentsData, digest: digest)
         }
         
+        let estimatedSize = TGMediaVideoConverter.estimatedSize(for: preset, duration: finalDuration, hasAudio: true)
+        
         let resource = LocalFileVideoMediaResource(randomId: arc4random64(), path: asset.url.path, adjustments: resourceAdjustments)
-        return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), mimeType: "video/mp4", attributes: [.Video(duration: Int(finalDuration), size: PixelDimensions(width: Int32(finalDimensions.width), height: Int32(finalDimensions.height)), flags: flags)], hintFileIsLarge: finalDuration > 3.0 * 60.0)
+        return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .resource(.standalone(resource: resource)), mimeType: "video/mp4", attributes: [.Video(duration: Int(finalDuration), size: PixelDimensions(width: Int32(finalDimensions.width), height: Int32(finalDimensions.height)), flags: flags)], hintFileIsLarge: estimatedSize > 5 * 1024 * 1024)
         |> mapError { _ -> Void in
             return Void()
         }
@@ -229,7 +233,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
         if let audioData = try? Data(contentsOf: url, options: [.mappedIfSafe]) {
             let fileName = url.lastPathComponent
             let duration = (value["duration"] as? NSNumber)?.doubleValue ?? 0.0
-            let isVoice = ((value["isVoice"] as? NSNumber)?.boolValue ?? false) || (duration.isZero && duration < 30.0)
+            let isVoice = ((value["isVoice"] as? NSNumber)?.boolValue ?? false)
             let title = value["title"] as? String
             let artist = value["artist"] as? String
             
@@ -357,21 +361,23 @@ public func sentShareItems(account: Account, to peerIds: [PeerId], items: [Prepa
     var messages: [EnqueueMessage] = []
     var groupingKey: Int64?
     var mediaTypes: (photo: Bool, video: Bool, music: Bool, other: Bool) = (false, false, false, false)
-    for item in items {
-        if case let .media(result) = item, case let .media(media) = result {
-            if media.media is TelegramMediaImage {
-                mediaTypes.photo = true
-            } else if let media = media.media as? TelegramMediaFile {
-                if media.isVideo {
-                    mediaTypes.video = true
-                } else if let fileName = media.fileName, fileName.hasPrefix("mp3") || fileName.hasPrefix("m4a") {
-                    mediaTypes.music = true
+    if items.count > 1 {
+        for item in items {
+            if case let .media(result) = item, case let .media(media) = result {
+                if media.media is TelegramMediaImage {
+                    mediaTypes.photo = true
+                } else if let media = media.media as? TelegramMediaFile {
+                    if media.isVideo {
+                        mediaTypes.video = true
+                    } else if let fileName = media.fileName, fileName.hasPrefix("mp3") || fileName.hasPrefix("m4a") {
+                        mediaTypes.music = true
+                    } else {
+                        mediaTypes.other = true
+                    }
                 } else {
-                    mediaTypes.other = true
+                    mediaTypes = (false, false, false, false)
+                    break
                 }
-            } else {
-                mediaTypes = (false, false, false, false)
-                break
             }
         }
     }

@@ -306,16 +306,19 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 return .single([])
             }
         }
+        
+        let accountPeer = self.context.account.postbox.loadedPeerWithId(self.context.account.peerId)
+        |> take(1)
                         
-        self.suggestedFiltersDisposable.set((combineLatest(suggestedPeers, self.suggestedDates.get(), self.selectedFilterKeyPromise.get(), self.searchQuery.get())
-        |> mapToSignal { peers, dates, selectedFilter, searchQuery -> Signal<([Peer], [(Date?, Date, String?)], ChatListSearchFilterEntryId?), NoError> in
+        self.suggestedFiltersDisposable.set((combineLatest(suggestedPeers, self.suggestedDates.get(), self.selectedFilterKeyPromise.get(), self.searchQuery.get(), accountPeer)
+        |> mapToSignal { peers, dates, selectedFilter, searchQuery, accountPeer -> Signal<([Peer], [(Date?, Date, String?)], ChatListSearchFilterEntryId?, String?, Peer?), NoError> in
             if searchQuery?.isEmpty ?? true {
-                return .single((peers, dates, selectedFilter))
+                return .single((peers, dates, selectedFilter, searchQuery, accountPeer))
             } else {
                 return (.complete() |> delay(0.25, queue: Queue.mainQueue()))
-                |> then(.single((peers, dates, selectedFilter)))
+                |> then(.single((peers, dates, selectedFilter, searchQuery, accountPeer)))
             }
-        } |> map { peers, dates, selectedFilter -> [ChatListSearchFilter] in
+        } |> map { peers, dates, selectedFilter, searchQuery, accountPeer -> [ChatListSearchFilter] in
             var suggestedFilters: [ChatListSearchFilter] = []
             if !dates.isEmpty {
                 let formatter = DateFormatter()
@@ -327,8 +330,18 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     suggestedFilters.append(.date(minDate.flatMap { Int32($0.timeIntervalSince1970) }, Int32(maxDate.timeIntervalSince1970), title))
                 }
             }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             if !peers.isEmpty && selectedFilter != .filter(ChatListSearchFilter.chats.id) {
+                var existingPeerIds = Set<PeerId>()
+                var peers = peers
+                if let accountPeer = accountPeer, let lowercasedQuery = searchQuery?.lowercased(), lowercasedQuery.count > 1 && (presentationData.strings.DialogList_SavedMessages.lowercased().hasPrefix(lowercasedQuery) || "saved messages".hasPrefix(lowercasedQuery)) {
+                    peers.insert(accountPeer, at: 0)
+                }
+                
                 for peer in peers {
+                    if existingPeerIds.contains(peer.id) {
+                        continue
+                    }
                     let isGroup: Bool
                     if peer.id.namespace == Namespaces.Peer.SecretChat {
                         continue
@@ -339,8 +352,15 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     } else {
                         isGroup = false
                     }
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    suggestedFilters.append(.peer(peer.id, isGroup, peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), peer.compactDisplayTitle))
+                    
+                    var title: String = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                    var compactDisplayTitle = peer.compactDisplayTitle
+                    if peer.id == accountPeer?.id {
+                        title = presentationData.strings.DialogList_SavedMessages
+                        compactDisplayTitle = title
+                    }
+                    suggestedFilters.append(.peer(peer.id, isGroup, title, compactDisplayTitle))
+                    existingPeerIds.insert(peer.id)
                 }
             }
             return suggestedFilters

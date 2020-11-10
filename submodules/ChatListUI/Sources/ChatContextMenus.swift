@@ -244,18 +244,18 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                     })))
                 }
             }
-            
-            if isUnread {
-                items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                    let _ = togglePeerUnreadMarkInteractively(postbox: context.account.postbox, viewTracker: context.account.viewTracker, peerId: peerId).start()
-                    f(.default)
-                })))
-            } else {
-                items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsUnread, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsUnread"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                    let _ = togglePeerUnreadMarkInteractively(postbox: context.account.postbox, viewTracker: context.account.viewTracker, peerId: peerId).start()
-                    f(.default)
-                })))
-            }
+        }
+        
+        if isUnread {
+            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                let _ = togglePeerUnreadMarkInteractively(postbox: context.account.postbox, viewTracker: context.account.viewTracker, peerId: peerId).start()
+                f(.default)
+            })))
+        } else {
+            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsUnread, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsUnread"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                let _ = togglePeerUnreadMarkInteractively(postbox: context.account.postbox, viewTracker: context.account.viewTracker, peerId: peerId).start()
+                f(.default)
+            })))
         }
         
         let groupAndIndex = transaction.getPeerChatListIndex(peerId)
@@ -288,17 +288,19 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                 })))
             }
             
-            if case let .chatList(filter) = source {
+//            if  {
                 let location: TogglePeerChatPinnedLocation
-                if let filter = filter {
-                    location = .filter(filter.id)
+                var chatListFilter: ChatListFilter?
+                if case let .chatList(filter) = source, let chatFilter = filter {
+                    chatListFilter = chatFilter
+                    location = .filter(chatFilter.id)
                 } else {
                     location = .group(group)
                 }
                 
                 let isPinned = getPinnedItemIds(transaction: transaction, location: location).contains(.peer(peerId))
                 
-                if isPinned || filter == nil || peerId.namespace != Namespaces.Peer.SecretChat {
+                if isPinned || chatListFilter == nil || peerId.namespace != Namespaces.Peer.SecretChat {
                     items.append(.action(ContextMenuActionItem(text: isPinned ? strings.ChatList_Context_Unpin : strings.ChatList_Context_Pin, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin" : "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                         let _ = (toggleItemPinned(postbox: context.account.postbox, location: location, itemId: .peer(peerId))
                         |> deliverOnMainQueue).start(next: { result in
@@ -312,7 +314,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                         })
                     })))
                 }
-            }
+//            }
         
             if !isSavedMessages, let notificationSettings = transaction.getPeerNotificationSettings(peerId) as? TelegramPeerNotificationSettings {
                 var isMuted = false
