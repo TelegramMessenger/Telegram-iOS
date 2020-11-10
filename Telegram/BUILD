@@ -184,6 +184,7 @@ swift_library(
     ],
     deps = [
         "//submodules/TelegramUI:TelegramUI",
+        "//third-party/boringssl:crypto",
     ],
 )
 
@@ -783,7 +784,7 @@ ios_framework(
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
         ":SyncCoreFramework",
-        ":TelegramApiFramework",
+        #":TelegramApiFramework",
     ],
     minimum_os_version = "9.0",
     ipa_post_processor = strip_framework,
@@ -965,7 +966,7 @@ ios_framework(
         ":MtProtoKitFramework",
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
-        ":TelegramApiFramework",
+        #":TelegramApiFramework",
         ":SyncCoreFramework",
         ":TelegramCoreFramework",
         ":AsyncDisplayKitFramework",
@@ -1268,7 +1269,8 @@ ios_extension(
     frameworks = [
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
-        ":TelegramApiFramework",
+        ":TelegramCoreFramework",
+        #":TelegramApiFramework",
         ":SyncCoreFramework",
     ],
 )
@@ -1319,8 +1321,8 @@ ios_extension(
         ":MtProtoKitFramework",
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
-        ":TelegramApiFramework",
-        ":SyncCoreFramework",
+        #":TelegramApiFramework",
+        #":SyncCoreFramework",
     ],
 )
 
@@ -1517,7 +1519,7 @@ ios_application(
         ":MtProtoKitFramework",
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
-        ":TelegramApiFramework",
+        #":TelegramApiFramework",
         ":SyncCoreFramework",
         ":TelegramCoreFramework",
         ":AsyncDisplayKitFramework",

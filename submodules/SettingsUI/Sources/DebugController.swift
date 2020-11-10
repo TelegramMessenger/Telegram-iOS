@@ -741,9 +741,15 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 guard let context = arguments.context else {
                     return
                 }
-                let controller = GroupCallController(context: context)
-                controller.navigationPresentation = .modal
-                arguments.pushController(controller)
+                let _ = (resolvePeerByName(account: context.account, name: "tgbetachat")
+                |> deliverOnMainQueue).start(next: { peerId in
+                    guard let peerId = peerId else {
+                        return
+                    }
+                    
+                    let controller = VoiceChatController(context: context, peerId: peerId)
+                    arguments.presentController(controller, nil)
+                })
             })
         case let .preferredVideoCodec(_, title, value, isSelected):
             return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .right, checked: isSelected, zeroSeparatorInsets: false, sectionId: self.section, action: {
