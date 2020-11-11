@@ -123,6 +123,25 @@ private final class ShimmerEffectForegroundNode: ASDisplayNode {
     }
 }
 
+private let decodingMap: [String] = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "-", ","]
+private func decodeStickerThumbnailData(_ data: Data) -> String {
+    var string = "M"
+    data.forEach { byte in
+        if byte >= 128 + 64 {
+            string.append(decodingMap[Int(byte) - 128 - 64])
+        } else {
+            if byte >= 128 {
+                string.append(",")
+            } else if byte >= 64 {
+                string.append("-")
+            }
+            string.append("\(byte & 63)")
+        }
+    }
+    string.append("z")
+    return string
+}
+
 class StickerShimmerEffectNode: ASDisplayNode {
     private let backgroundNode: ASDisplayNode
     private let effectNode: ShimmerEffectForegroundNode
@@ -172,19 +191,14 @@ class StickerShimmerEffectNode: ASDisplayNode {
                 context.setFillColor(backgroundColor.cgColor)
                 context.setBlendMode(.copy)
                 context.fill(CGRect(origin: CGPoint(), size: size))
-                
                 context.setFillColor(UIColor.clear.cgColor)
             } else {
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                
                 context.setFillColor(UIColor.black.cgColor)
             }
-                    
-            if let data = data, let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024), let path = String(data: unpackedData, encoding: .utf8) {
-                if data.count == 141 {
-                    print()
-                }
-                var path = path
+            
+            if let data = data {
+                var path = decodeStickerThumbnailData(data)
                 if !path.hasPrefix("z") {
                     path = "\(path)z"
                 }
@@ -473,22 +487,6 @@ private func renderPath(_ segments: [PathSegment], context: CGContext) {
                     s(data[0], y2: data[1], x: data[2], y: data[3])
                     data.removeSubrange((0 ..< 4))
                 }
-//            case .Q:
-//                Q(data[0], y1: data[1], x: data[2], y: data[3])
-//            case .q:
-//                q(data[0], y1: data[1], x: data[2], y: data[3])
-//            case .T:
-//                T(data[0], y: data[1])
-//            case .t:
-//                t(data[0], y: data[1])
-//            case .A:
-//                A(data[0], ry: data[1], angle: data[2], largeArc: num2bool(data[3]), sweep: num2bool(data[4]), x: data[5], y: data[6])
-//            case .a:
-//                a(data[0], ry: data[1], angle: data[2], largeArc: num2bool(data[3]), sweep: num2bool(data[4]), x: data[5], y: data[6])
-//            case .E:
-//                E(data[0], y: data[1], w: data[2], h: data[3], startAngle: data[4], arcAngle: data[5])
-//            case .e:
-//                e(data[0], y: data[1], w: data[2], h: data[3], startAngle: data[4], arcAngle: data[5])
             case .z:
                 z()
             default:
