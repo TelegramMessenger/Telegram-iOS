@@ -146,19 +146,7 @@ func preparedChatMediaInputGridEntryTransition(account: Account, view: ItemColle
             firstIndexInSectionOffset = Int(index.itemIndex.index)
         }
     }
-    
-    if case .initial = update {
-        switch toEntries[0].index {
-            case .search:
-                if toEntries.count > 1 {
-                    //scrollToItem = GridNodeScrollToItem(index: 1, position: .top, transition: .immediate, directionHint: .up, adjustForSection: true)
-                }
-                break
-            default:
-                break
-        }
-    }
-    
+        
     let opaqueState = ChatMediaInputStickerPaneOpaqueState(hasLower: view.lower != nil)
     
     return ChatMediaInputGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem, updateOpaqueState: opaqueState, animated: animated)

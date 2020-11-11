@@ -117,6 +117,7 @@ public final class ChatControllerInteraction {
     let openReplyThreadOriginalMessage: (Message) -> Void
     let openMessageStats: (MessageId) -> Void
     let editMessageMedia: (MessageId, Bool) -> Void
+    let copyText: (String) -> Void
     
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
@@ -205,6 +206,7 @@ public final class ChatControllerInteraction {
         openReplyThreadOriginalMessage: @escaping (Message) -> Void,
         openMessageStats: @escaping (MessageId) -> Void,
         editMessageMedia: @escaping (MessageId, Bool) -> Void,
+        copyText: @escaping (String) -> Void,
         requestMessageUpdate: @escaping (MessageId) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
@@ -280,6 +282,7 @@ public final class ChatControllerInteraction {
         self.openReplyThreadOriginalMessage = openReplyThreadOriginalMessage
         self.openMessageStats = openMessageStats
         self.editMessageMedia = editMessageMedia
+        self.copyText = copyText
         
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
@@ -332,6 +335,7 @@ public final class ChatControllerInteraction {
         }, openReplyThreadOriginalMessage: { _ in
         }, openMessageStats: { _ in
         }, editMessageMedia: { _, _ in
+        }, copyText: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

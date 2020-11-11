@@ -218,7 +218,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                 return
             }
             if image != nil {
-                strongSelf.removePlaceholder(animated: !firstTime)
+//                strongSelf.removePlaceholder(animated: !firstTime)
             }
             firstTime = false
         }

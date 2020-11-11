@@ -517,7 +517,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
         }
         if self.itemNodes.isEmpty {
             let node = self.makeNodeForItem(at: self.centralItemIndex ?? 0, synchronous: synchronous)
-            node.frame = CGRect(origin: CGPoint(), size: scrollView.bounds.size)
+            node.frame = CGRect(origin: CGPoint(), size: self.scrollView.bounds.size)
             if let containerLayout = self.containerLayout {
                 node.containerLayoutUpdated(containerLayout.0, navigationBarHeight: containerLayout.1, transition: .immediate)
             }

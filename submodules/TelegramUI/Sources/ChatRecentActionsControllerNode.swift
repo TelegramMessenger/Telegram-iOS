@@ -456,6 +456,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, openReplyThreadOriginalMessage: { _ in
         }, openMessageStats: { _ in
         }, editMessageMedia: { _, _ in  
+        }, copyText: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,

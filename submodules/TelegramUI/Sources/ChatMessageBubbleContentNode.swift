@@ -97,6 +97,7 @@ enum ChatMessageBubbleContentTapAction {
     case bankCard(String)
     case ignore
     case openPollResults(Data)
+    case copy(String)
 }
 
 final class ChatMessageBubbleContentItem {

@@ -2345,6 +2345,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self?.editMessageMediaWithLegacySignals(signals)
                 })
             }
+        }, copyText: { [weak self] text in
+            if let strongSelf = self {
+                storeMessageTextInPasteboard(text, entities: nil)
+                
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in
+                        return true
+                }), in: .current)
+            }
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -4396,7 +4405,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     break
                                 }
                             }
-                            var inputTextMaxLength: Int32?
+                            var inputTextMaxLength: Int32 = 4096
                             for media in message.media {
                                 if media is TelegramMediaImage || media is TelegramMediaFile {
                                     inputTextMaxLength = strongSelf.context.currentLimitsConfiguration.with { $0 }.maxMediaCaptionLength

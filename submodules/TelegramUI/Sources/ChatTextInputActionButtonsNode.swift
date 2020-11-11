@@ -31,8 +31,6 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         
         self.micButton = ChatTextInputMediaRecordingButton(theme: theme, strings: strings, presentController: presentController)
         self.sendButton = HighlightTrackingButtonNode(pointerStyle: .lift)
-        //self.sendButton.adjustsImageWhenHighlighted = false
-        //self.sendButton.adjustsImageWhenDisabled = false
         
         self.expandMediaInputButton = HighlightableButtonNode(pointerStyle: .default)
         

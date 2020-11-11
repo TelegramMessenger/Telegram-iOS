@@ -450,6 +450,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 return .timecode(timecode.time, timecode.text)
             } else if let bankCard = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BankCard)] as? String {
                 return .bankCard(bankCard)
+            } else if let pre = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Pre)] as? String {
+                return .copy(pre)
             } else {
                 return .none
             }

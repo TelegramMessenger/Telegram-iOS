@@ -1239,6 +1239,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }, openReplyThreadOriginalMessage: { _ in
             }, openMessageStats: { _ in
             }, editMessageMedia: { _, _ in
+            }, copyText: { _ in
             }, requestMessageUpdate: { _ in
             }, cancelInteractiveKeyboardGestures: {
             }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

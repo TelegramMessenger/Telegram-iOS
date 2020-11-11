@@ -331,13 +331,14 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 }
             }
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            
+            var existingPeerIds = Set<PeerId>()
+            var peers = peers
+            if let accountPeer = accountPeer, let lowercasedQuery = searchQuery?.lowercased(), lowercasedQuery.count > 1 && (presentationData.strings.DialogList_SavedMessages.lowercased().hasPrefix(lowercasedQuery) || "saved messages".hasPrefix(lowercasedQuery)) {
+                peers.insert(accountPeer, at: 0)
+            }
+            
             if !peers.isEmpty && selectedFilter != .filter(ChatListSearchFilter.chats.id) {
-                var existingPeerIds = Set<PeerId>()
-                var peers = peers
-                if let accountPeer = accountPeer, let lowercasedQuery = searchQuery?.lowercased(), lowercasedQuery.count > 1 && (presentationData.strings.DialogList_SavedMessages.lowercased().hasPrefix(lowercasedQuery) || "saved messages".hasPrefix(lowercasedQuery)) {
-                    peers.insert(accountPeer, at: 0)
-                }
-                
                 for peer in peers {
                     if existingPeerIds.contains(peer.id) {
                         continue

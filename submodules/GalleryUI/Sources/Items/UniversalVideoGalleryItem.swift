@@ -449,7 +449,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         if let (previousLayout, _) = self.validLayout, self.dismissOnOrientationChange, previousLayout.size.width > previousLayout.size.height && previousLayout.size.height == layout.size.width {
             dismiss = true
         }
+        let hadLayout = self.validLayout != nil
         self.validLayout = (layout, navigationBarHeight)
+        
+        if !hadLayout {
+            self.zoomableContent = zoomableContent
+        }
         
         let statusDiameter: CGFloat = 50.0
         let statusFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - statusDiameter) / 2.0), y: floor((layout.size.height - statusDiameter) / 2.0)), size: CGSize(width: statusDiameter, height: statusDiameter))

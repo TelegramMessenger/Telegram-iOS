@@ -5898,3 +5898,5 @@ Sorry for the inconvenience.";
 "Conversation.ReplacePhoto" = "Replace Photo";
 "Conversation.ReplaceFile" = "Replace File";
 "Conversation.SendAsNewPhoto" = "Send as New Photo";
+
+"Conversation.TextCopied" = "Text copied to clipboard";
