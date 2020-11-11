@@ -21,12 +21,17 @@ public final class GroupCallController: ViewController {
         private var isMutedDisposable: Disposable?
         private let audioSessionActive = Promise<Bool>(false)
         
+        private var incomingVideoStreamList: [String] = []
+        private var incomingVideoStreamListDisposable: Disposable?
+        
         private var memberCount: Int = 0
         private let memberCountNode: ImmediateTextNode
         
         private var isMuted: Bool = false
         private let isMutedNode: ImmediateTextNode
         private let muteButton: HighlightableButtonNode
+        
+        private var videoViews: [OngoingCallContextPresentationCallVideoView] = []
         
         private var validLayout: ContainerViewLayout?
         
@@ -77,6 +82,34 @@ public final class GroupCallController: ViewController {
                 }
             })
             
+            self.incomingVideoStreamListDisposable = (callContext.videoStreamList
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                guard let strongSelf = self else {
+                    return
+                }
+                var addedStreamIds: [String] = []
+                for id in value {
+                    if !strongSelf.incomingVideoStreamList.contains(id) {
+                        addedStreamIds.append(id)
+                    }
+                }
+                strongSelf.incomingVideoStreamList = value
+                
+                for id in addedStreamIds {
+                    callContext.makeIncomingVideoView(id: id, completion: { videoView in
+                        guard let strongSelf = self, let videoView = videoView else {
+                            return
+                        }
+                        strongSelf.videoViews.append(videoView)
+                        videoView.view.backgroundColor = .black
+                        strongSelf.view.addSubview(videoView.view)
+                        if let layout = strongSelf.validLayout {
+                            strongSelf.containerLayoutUpdated(layout, transition: .immediate)
+                        }
+                    })
+                }
+            })
+            
             self.isMutedDisposable = (callContext.isMuted
             |> deliverOnMainQueue).start(next: { [weak self] value in
                 guard let strongSelf = self else {
@@ -94,6 +127,7 @@ public final class GroupCallController: ViewController {
         deinit {
             self.callDisposable?.dispose()
             self.memberCountDisposable?.dispose()
+            self.incomingVideoStreamListDisposable?.dispose()
         }
         
         @objc private func muteButtonPressed() {
@@ -116,6 +150,17 @@ public final class GroupCallController: ViewController {
             let isMutedFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - isMutedSize.width) / 2.0), y: textFrame.maxY + 12.0), size: isMutedSize)
             transition.updateFrame(node: self.muteButton, frame: isMutedFrame)
             self.isMutedNode.frame = CGRect(origin: CGPoint(), size: isMutedFrame.size)
+            
+            let videoSize = CGSize(width: 200.0, height: 360.0)
+            var nextVideoOrigin = CGPoint()
+            for videoView in self.videoViews {
+                videoView.view.frame = CGRect(origin: nextVideoOrigin, size: videoSize)
+                nextVideoOrigin.x += videoSize.width
+                if nextVideoOrigin.x + videoSize.width > layout.size.width {
+                    nextVideoOrigin.x = 0.0
+                    nextVideoOrigin.y += videoSize.height
+                }
+            }
         }
     }
     

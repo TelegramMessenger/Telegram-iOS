@@ -24,6 +24,9 @@ swift_library(
         "//submodules/TelegramCallsUI/CallsEmoji:CallsEmoji",
         "//submodules/SemanticStatusNode:SemanticStatusNode",
         "//submodules/TooltipUI:TooltipUI",
+        "//submodules/ItemListPeerItem:ItemListPeerItem",
+        "//submodules/MergeLists:MergeLists",
+        "//submodules/RadialStatusNode:RadialStatusNode",
     ],
     visibility = [
         "//visibility:public",

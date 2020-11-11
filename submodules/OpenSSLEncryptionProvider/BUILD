@@ -13,9 +13,12 @@ objc_library(
     includes = [
         "PublicHeaders",
     ],
+    copts = [
+        "-DTELEGRAM_USE_BORINGSSL=1",
+    ],
     deps = [
         "//submodules/EncryptionProvider:EncryptionProvider",
-        "//submodules/openssl:openssl",
+        "//third-party/boringssl:crypto",
     ],
     sdk_frameworks = [
         "Foundation",

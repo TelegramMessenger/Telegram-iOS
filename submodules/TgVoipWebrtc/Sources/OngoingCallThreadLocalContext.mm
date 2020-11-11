@@ -806,7 +806,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 
 @implementation GroupCallThreadLocalContext
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue relaySdpAnswer:(void (^ _Nonnull)(NSString * _Nonnull))relaySdpAnswer videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue relaySdpAnswer:(void (^ _Nonnull)(NSString * _Nonnull))relaySdpAnswer incomingVideoStreamListUpdated:(void (^ _Nonnull)(NSArray<NSString *> * _Nonnull))incomingVideoStreamListUpdated videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -823,6 +823,19 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                         return;
                     }
                     relaySdpAnswer(string);
+                }];
+            },
+            .incomingVideoStreamListUpdated = [weakSelf, queue, incomingVideoStreamListUpdated](std::vector<std::string> const &incomingVideoStreamList) {
+                NSMutableArray<NSString *> *mappedList = [[NSMutableArray alloc] init];
+                for (auto &it : incomingVideoStreamList) {
+                    [mappedList addObject:[NSString stringWithUTF8String:it.c_str()]];
+                }
+                [queue dispatch:^{
+                    __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
+                    if (strongSelf == nil) {
+                        return;
+                    }
+                    incomingVideoStreamListUpdated(mappedList);
                 }];
             },
             .videoCapture = [_videoCapturer getInterface]
@@ -846,6 +859,44 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 - (void)setIsMuted:(bool)isMuted {
     if (_instance) {
         _instance->setIsMuted(isMuted);
+    }
+}
+
+- (void)makeIncomingVideoViewWithStreamId:(NSString * _Nonnull)streamId completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion {
+    if (_instance) {
+        __weak GroupCallThreadLocalContext *weakSelf = self;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if ([VideoMetalView isSupported]) {
+                VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
+#if TARGET_OS_IPHONE
+                remoteRenderer.videoContentMode = UIViewContentModeScaleToFill;
+#else
+                remoteRenderer.videoContentMode = UIViewContentModeScaleAspect;
+#endif
+                
+                std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
+                __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
+                if (strongSelf) {
+                    //[remoteRenderer setOrientation:strongSelf->_remoteVideoOrientation];
+                    //strongSelf->_currentRemoteVideoRenderer = remoteRenderer;
+                    strongSelf->_instance->setIncomingVideoOutput([streamId UTF8String], sink);
+                }
+                
+                completion(remoteRenderer);
+            } else {
+                GLVideoView *remoteRenderer = [[GLVideoView alloc] initWithFrame:CGRectZero];
+                
+                std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
+                __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
+                if (strongSelf) {
+                    //[remoteRenderer setOrientation:strongSelf->_remoteVideoOrientation];
+                    //strongSelf->_currentRemoteVideoRenderer = remoteRenderer;
+                    strongSelf->_instance->setIncomingVideoOutput([streamId UTF8String], sink);
+                }
+                
+                completion(remoteRenderer);
+            }
+        });
     }
 }
 

@@ -1,4 +1,4 @@
-use_gn_build = True
+use_gn_build = False
 
 webrtc_libs = [
     "libwebrtc.a",
@@ -1967,7 +1967,8 @@ cc_library(
         "-DPACKAGE_STRING='\"\"'",
     ] + arch_specific_cflags,
     deps = [
-        "//submodules/openssl:openssl",
+        "//third-party/boringssl:crypto",
+        "//third-party/boringssl:ssl",
     ],
     visibility = ["//visibility:public"],
 )
@@ -2127,7 +2128,8 @@ objc_library(
         "-DPACKAGE_VERSION='\"\"'",
     ] + arch_specific_cflags,
     deps = [
-        "//submodules/openssl:openssl",
+        "//third-party/boringssl:crypto",
+        "//third-party/boringssl:ssl",
         "//submodules/Opus:opus",
         ":usrsctp",
         ":libsrtp",
@@ -2174,7 +2176,8 @@ objc_library(
         "-std=c++14",
     ] + arch_specific_cflags,
     deps = [
-        "//submodules/openssl:openssl",
+        "//third-party/boringssl:crypto",
+        "//third-party/boringssl:ssl",
         "//submodules/Opus:opus",
         ":usrsctp",
         ":libsrtp",
@@ -2215,7 +2218,8 @@ objc_library(
         "-DPACKAGE_VERSION='\"\"'",
     ] + arch_specific_cflags,
     deps = [
-        "//submodules/openssl:openssl",
+        "//third-party/boringssl:crypto",
+        "//third-party/boringssl:ssl",
         "//submodules/Opus:opus",
         ":usrsctp",
         ":libsrtp",

@@ -17,7 +17,7 @@ objc_library(
     ],
     deps = [
         "//submodules/SSignalKit/SSignalKit:SSignalKit",
-        "//submodules/openssl:openssl",
+        "//third-party/boringssl:crypto",
         "//submodules/ton:ton",
     ],
     visibility = [

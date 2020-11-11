@@ -184,6 +184,7 @@ swift_library(
     ],
     deps = [
         "//submodules/TelegramUI:TelegramUI",
+        "//third-party/boringssl:crypto",
     ],
 )
 
@@ -251,9 +252,9 @@ official_bundle_ids = [
     "org.telegram.Telegram-iOS",
 ]
 
-apple_pay_merchants = []#official_apple_pay_merchants if telegram_bundle_id == "ph.telegra.Telegraph" else ""
+apple_pay_merchants = official_apple_pay_merchants if telegram_bundle_id == "ph.telegra.Telegraph" else []
 
-apple_pay_merchants_fragment = "" if apple_pay_merchants == "" else """
+apple_pay_merchants_fragment = "" if apple_pay_merchants == [] else """
 <key>com.apple.developer.in-app-payments</key>
 <array>
 """ + "\n".join([
@@ -294,7 +295,7 @@ telegram_entitlements_template = """
     <key>application-identifier</key>
     <string>{telegram_team_id}.{telegram_bundle_id}</string>
     <key>com.apple.developer.icloud-container-environment</key>
-    <string>Production</string>
+    <string>{telegram_icloud_environment}</string>
 """ + apple_pay_merchants_fragment + unrestricted_voip_fragment
 
 plist_fragment(
@@ -304,6 +305,7 @@ plist_fragment(
         telegram_bundle_id = telegram_bundle_id,
         telegram_team_id = telegram_team_id,
         telegram_aps_environment = telegram_aps_environment,
+        telegram_icloud_environment = "Production" if telegram_aps_environment == "production" else "Development",
     )
 )
 
@@ -782,7 +784,7 @@ ios_framework(
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
         ":SyncCoreFramework",
-        ":TelegramApiFramework",
+        #":TelegramApiFramework",
     ],
     minimum_os_version = "9.0",
     ipa_post_processor = strip_framework,
@@ -964,7 +966,7 @@ ios_framework(
         ":MtProtoKitFramework",
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
-        ":TelegramApiFramework",
+        #":TelegramApiFramework",
         ":SyncCoreFramework",
         ":TelegramCoreFramework",
         ":AsyncDisplayKitFramework",
@@ -1267,7 +1269,8 @@ ios_extension(
     frameworks = [
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
-        ":TelegramApiFramework",
+        ":TelegramCoreFramework",
+        #":TelegramApiFramework",
         ":SyncCoreFramework",
     ],
 )
@@ -1318,8 +1321,8 @@ ios_extension(
         ":MtProtoKitFramework",
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
-        ":TelegramApiFramework",
-        ":SyncCoreFramework",
+        #":TelegramApiFramework",
+        #":SyncCoreFramework",
     ],
 )
 
@@ -1516,7 +1519,7 @@ ios_application(
         ":MtProtoKitFramework",
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
-        ":TelegramApiFramework",
+        #":TelegramApiFramework",
         ":SyncCoreFramework",
         ":TelegramCoreFramework",
         ":AsyncDisplayKitFramework",

@@ -14,6 +14,9 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
             enum Color {
                 case red
                 case green
+                case redDimmed
+                case greenDimmed
+                case grayDimmed
             }
             
             case blurred(isFilled: Bool)
@@ -195,6 +198,12 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                         fillColor = UIColor(rgb: 0xd92326)
                     case .green:
                         fillColor = UIColor(rgb: 0x74db58)
+                    case .redDimmed:
+                        fillColor = UIColor(rgb: 0xd92326).withMultipliedBrightnessBy(0.3)
+                    case .greenDimmed:
+                        fillColor = UIColor(rgb: 0x74db58).withMultipliedBrightnessBy(0.3)
+                    case .grayDimmed:
+                        fillColor = UIColor(rgb: 0x1C1C1E)
                     }
                 }
                 
@@ -287,6 +296,12 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                         fillColor = UIColor(rgb: 0xd92326).withMultipliedBrightnessBy(0.2).withAlphaComponent(0.2)
                     case .green:
                         fillColor = UIColor(rgb: 0x74db58).withMultipliedBrightnessBy(0.2).withAlphaComponent(0.2)
+                    case .redDimmed:
+                        fillColor = UIColor(rgb: 0xd92326).withMultipliedBrightnessBy(0.4).withAlphaComponent(0.2)
+                    case .greenDimmed:
+                        fillColor = UIColor(rgb: 0x74db58).withMultipliedBrightnessBy(0.4).withAlphaComponent(0.2)
+                    case .grayDimmed:
+                        fillColor = UIColor(rgb: 0x1C1C1E).withAlphaComponent(0.2)
                     }
                 }
                 
