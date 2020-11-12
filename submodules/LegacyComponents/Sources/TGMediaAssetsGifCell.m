@@ -59,7 +59,7 @@ NSString *const TGMediaAssetsGifCellKind = @"TGMediaAssetsGifCellKind";
         _typeLabel.textColor = [UIColor whiteColor];
         _typeLabel.backgroundColor = [UIColor clearColor];
         _typeLabel.textAlignment = NSTextAlignmentLeft;
-        _typeLabel.font = TGSystemFontOfSize(12.0f);
+        _typeLabel.font = TGBoldSystemFontOfSize(13);
         _typeLabel.text = @"GIF";
         [_typeLabel sizeToFit];
         [self addSubview:_typeLabel];
@@ -78,7 +78,9 @@ NSString *const TGMediaAssetsGifCellKind = @"TGMediaAssetsGifCellKind";
     [super layoutSubviews];
     
     _shadowView.frame = (CGRect){ { 0, self.frame.size.height - _shadowView.frame.size.height }, {self.frame.size.width, _shadowView.frame.size.height } };
-    _typeLabel.frame = (CGRect){ { 5, _shadowView.frame.origin.y }, {self.frame.size.width - 5 - 4, _shadowView.frame.size.height } };
+    
+    CGSize typeSize = _typeLabel.frame.size;
+    _typeLabel.frame = CGRectMake(self.frame.size.width - floor(typeSize.width) - 5.0, self.frame.size.height - floor(typeSize.height) - 4.0, typeSize.width, typeSize.height);
 }
 
 @end

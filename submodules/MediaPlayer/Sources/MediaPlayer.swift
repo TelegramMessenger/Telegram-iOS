@@ -870,12 +870,12 @@ private final class MediaPlayerContext {
         
         var statusTimestamp = CACurrentMediaTime()
         let playbackStatus: MediaPlayerPlaybackStatus
+        var isPlaying = false
+        if case .playing = self.state {
+            isPlaying = true
+        }
         if let bufferingProgress = bufferingProgress {
-            var whilePlaying = false
-            if case .playing = self.state {
-                whilePlaying = true
-            }
-            playbackStatus = .buffering(initial: false, whilePlaying: whilePlaying, progress: Float(bufferingProgress), display: true)
+            playbackStatus = .buffering(initial: false, whilePlaying: isPlaying, progress: Float(bufferingProgress), display: true)
         } else if !rate.isZero {
             if reportRate.isZero {
                 //playbackStatus = .buffering(initial: false, whilePlaying: true)
@@ -885,8 +885,13 @@ private final class MediaPlayerContext {
                 playbackStatus = .playing
             }
         } else {
-            playbackStatus = .paused
+            if performActionAtEndNow && !self.stoppedAtEnd, case .loop = self.actionAtEnd, isPlaying {
+                playbackStatus = .playing
+            } else {
+                playbackStatus = .paused
+            }
         }
+        
         if self.lastStatusUpdateTimestamp == nil || self.lastStatusUpdateTimestamp! < statusTimestamp + 500 {
             lastStatusUpdateTimestamp = statusTimestamp
             var reportTimestamp = timestamp
