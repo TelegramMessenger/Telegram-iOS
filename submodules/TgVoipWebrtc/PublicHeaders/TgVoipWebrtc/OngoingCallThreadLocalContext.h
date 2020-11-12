@@ -156,7 +156,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 
 - (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue relaySdpAnswer:(void (^ _Nonnull)(NSString * _Nonnull))relaySdpAnswer incomingVideoStreamListUpdated:(void (^ _Nonnull)(NSArray<NSString *> * _Nonnull))incomingVideoStreamListUpdated videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer;
 
-- (void)emitOffer;
+- (void)emitOfferWithAdjustSdp:(NSString * _Nonnull (^ _Nonnull)(NSString * _Nonnull))adjustSdp completion:(void (^ _Nonnull)(NSString * _Nonnull))completion;
 - (void)setOfferSdp:(NSString * _Nonnull)offerSdp isPartial:(bool)isPartial;
 - (void)setIsMuted:(bool)isMuted;
 - (void)makeIncomingVideoViewWithStreamId:(NSString * _Nonnull)streamId completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion;

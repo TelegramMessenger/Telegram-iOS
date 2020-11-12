@@ -844,9 +844,16 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     return self;
 }
 
-- (void)emitOffer {
+- (void)emitOfferWithAdjustSdp:(NSString * _Nonnull (^ _Nonnull)(NSString * _Nonnull))adjustSdp completion:(void (^ _Nonnull)(NSString * _Nonnull))completion {
     if (_instance) {
-        _instance->emitOffer();
+        _instance->emitOffer([adjustSdp](std::string const &sdp) {
+            NSString *string = [NSString stringWithUTF8String:sdp.c_str()];
+            NSString *result = adjustSdp(string);
+            return result.UTF8String;
+        }, [completion](std::string const &sdp) {
+            NSString *string = [NSString stringWithUTF8String:sdp.c_str()];
+            completion(string);
+        });
     }
 }
 

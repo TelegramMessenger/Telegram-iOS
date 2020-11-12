@@ -653,8 +653,9 @@ private extension ConferenceDescription.ChannelBundle {
 private struct RemoteOffer {
     struct State: Equatable {
         struct Item: Equatable {
+            var isMain: Bool
             var audioSsrc: Int
-            var videoSsrc: Int
+            var videoSsrc: Int?
             var isRemoved: Bool
         }
         
@@ -676,11 +677,11 @@ private extension ConferenceDescription {
         return result
     }
     
-    func offerSdp(sessionId: UInt32, bundleId: String, bridgeHost: String, transport: ConferenceDescription.Transport, currentState: RemoteOffer.State?) -> RemoteOffer? {
+    func offerSdp(sessionId: UInt32, bundleId: String, bridgeHost: String, transport: ConferenceDescription.Transport, currentState: RemoteOffer.State?, isAnswer: Bool) -> RemoteOffer? {
         struct StreamSpec {
             var isMain: Bool
             var audioSsrc: Int
-            var videoSsrc: Int
+            var videoSsrc: Int?
             var isRemoved: Bool
         }
         
@@ -698,15 +699,58 @@ private extension ConferenceDescription {
             appendSdp("s=-")
             appendSdp("t=0 0")
             
-            appendSdp("a=group:BUNDLE \(bundleStreams.map({ "audio\($0.audioSsrc) video\($0.videoSsrc)" }).joined(separator: " "))")
+            var bundleString = "a=group:BUNDLE"
+            for stream in bundleStreams {
+                bundleString.append(" ")
+                if let videoSsrc = stream.videoSsrc {
+                    let audioMid: String
+                    let videoMid: String
+                    if stream.isMain {
+                        audioMid = "0"
+                        videoMid = "1"
+                    } else {
+                        audioMid = "audio\(stream.audioSsrc)"
+                        videoMid = "video\(videoSsrc)"
+                    }
+                    bundleString.append("\(audioMid) \(videoMid)")
+                } else {
+                    let audioMid: String
+                    if stream.isMain {
+                        audioMid = "0"
+                    } else {
+                        audioMid = "audio\(stream.audioSsrc)"
+                    }
+                    bundleString.append("\(audioMid)")
+                }
+            }
+            appendSdp(bundleString)
+            
             appendSdp("a=ice-lite")
             
             for stream in bundleStreams {
+                let audioMid: String
+                let videoMid: String?
+                if stream.isMain {
+                    audioMid = "0"
+                    if let videoSsrc = stream.videoSsrc {
+                        videoMid = "1"
+                    } else {
+                        videoMid = nil
+                    }
+                } else {
+                    audioMid = "audio\(stream.audioSsrc)"
+                    if let videoSsrc = stream.videoSsrc {
+                        videoMid = "video\(stream.videoSsrc)"
+                    } else {
+                        videoMid = nil
+                    }
+                }
+                
                 appendSdp("m=audio \(stream.isMain ? "1" : "0") RTP/SAVPF 111 126")
                 if stream.isMain {
                     appendSdp("c=IN IP4 0.0.0.0")
                 }
-                appendSdp("a=mid:audio\(stream.audioSsrc)")
+                appendSdp("a=mid:\(audioMid)")
                 if stream.isRemoved {
                     appendSdp("a=inactive")
                 } else {
@@ -716,7 +760,9 @@ private extension ConferenceDescription {
                         
                         for fingerprint in transport.fingerprints {
                             appendSdp("a=fingerprint:\(fingerprint.hashType) \(fingerprint.fingerprint)")
-                            appendSdp("a=setup:\(fingerprint.setup)")
+                            //appendSdp("a=setup:\(fingerprint.setup)")
+                            //appendSdp("a=setup:active")
+                            appendSdp("a=setup:passive")
                         }
                         
                         for candidate in transport.candidates {
@@ -733,6 +779,8 @@ private extension ConferenceDescription {
                             var ip = candidate.ip
                             if ip.hasPrefix("192.") {
                                 ip = bridgeHost
+                            } else {
+                                continue
                             }
                             candidateString.append("\(ip) ")
                             candidateString.append("\(candidate.port) ")
@@ -771,62 +819,58 @@ private extension ConferenceDescription {
                     appendSdp("a=extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time")
                     appendSdp("a=extmap:5 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01")
                     appendSdp("a=rtcp-fb:111 transport-cc")
-                    //appendSdp("a=rtcp-fb:111 ccm fir")
-                    //appendSdp("a=rtcp-fb:111 nack")
                     
-                    if stream.isMain {
-                        appendSdp("a=sendrecv")
+                    if isAnswer {
+                        appendSdp("a=recvonly")
                     } else {
-                        appendSdp("a=sendonly")
-                        appendSdp("a=bundle-only")
+                        if stream.isMain {
+                            appendSdp("a=sendrecv")
+                        } else {
+                            appendSdp("a=sendonly")
+                            appendSdp("a=bundle-only")
+                        }
+                        
+                        appendSdp("a=ssrc-group:FID \(stream.audioSsrc)")
+                        appendSdp("a=ssrc:\(stream.audioSsrc) cname:stream\(stream.audioSsrc)")
+                        appendSdp("a=ssrc:\(stream.audioSsrc) msid:stream\(stream.audioSsrc) audio\(stream.audioSsrc)")
+                        appendSdp("a=ssrc:\(stream.audioSsrc) mslabel:audio\(stream.audioSsrc)")
+                        appendSdp("a=ssrc:\(stream.audioSsrc) label:audio\(stream.audioSsrc)")
                     }
-                    
-                    appendSdp("a=ssrc-group:FID \(stream.audioSsrc)")
-                    appendSdp("a=ssrc:\(stream.audioSsrc) cname:stream\(stream.audioSsrc)")
-                    appendSdp("a=ssrc:\(stream.audioSsrc) msid:stream\(stream.audioSsrc) audio\(stream.audioSsrc)")
-                    appendSdp("a=ssrc:\(stream.audioSsrc) mslabel:audio\(stream.audioSsrc)")
-                    appendSdp("a=ssrc:\(stream.audioSsrc) label:audio\(stream.audioSsrc)")
                 }
                 
-                appendSdp("m=video 0 RTP/SAVPF 100")
-                appendSdp("a=mid:video\(stream.videoSsrc)")
-                if stream.isRemoved {
-                    appendSdp("a=inactive")
-                    continue
-                } else {
-                    /*a=rtpmap:100 VP8/90000
-                    a=fmtp:100 x-google-start-bitrate=800
-                    a=rtcp:1 IN IP4 0.0.0.0
-                    a=rtcp-fb:100 ccm fir
-                    a=rtcp-fb:100 nack
-                    a=rtcp-fb:100 nack pli
-                    a=rtcp-fb:100 goog-remb*/
-                    
-                    appendSdp("a=rtpmap:100 VP8/90000")
-                    appendSdp("a=fmtp:100 x-google-start-bitrate=800")
-                    appendSdp("a=rtcp:1 IN IP4 0.0.0.0")
-                    appendSdp("a=rtcp-mux")
-                    
-                    appendSdp("a=extmap:2 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time")
-                    appendSdp("a=extmap:4 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01")
-                    
-                    appendSdp("a=rtcp-fb:100 transport-cc")
-                    appendSdp("a=rtcp-fb:100 ccm fir")
-                    appendSdp("a=rtcp-fb:100 nack")
-                    appendSdp("a=rtcp-fb:100 nack pli")
-                    
-                    if stream.isMain {
-                        appendSdp("a=sendrecv")
+                if let videoMid = videoMid {
+                    appendSdp("m=video 0 RTP/SAVPF 100")
+                    appendSdp("a=mid:\(videoMid)")
+                    if stream.isRemoved {
+                        appendSdp("a=inactive")
+                        continue
                     } else {
-                        appendSdp("a=sendonly")
+                        appendSdp("a=rtpmap:100 VP8/90000")
+                        appendSdp("a=fmtp:100 x-google-start-bitrate=800")
+                        appendSdp("a=rtcp:1 IN IP4 0.0.0.0")
+                        appendSdp("a=rtcp-mux")
+                        
+                        appendSdp("a=extmap:2 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time")
+                        appendSdp("a=extmap:4 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01")
+                        
+                        appendSdp("a=rtcp-fb:100 transport-cc")
+                        appendSdp("a=rtcp-fb:100 ccm fir")
+                        appendSdp("a=rtcp-fb:100 nack")
+                        appendSdp("a=rtcp-fb:100 nack pli")
+                        
+                        if stream.isMain {
+                            appendSdp("a=sendrecv")
+                        } else {
+                            appendSdp("a=sendonly")
+                        }
+                        appendSdp("a=bundle-only")
+                        
+                        appendSdp("a=ssrc-group:FID \(stream.videoSsrc)")
+                        appendSdp("a=ssrc:\(stream.videoSsrc) cname:stream\(stream.audioSsrc)")
+                        appendSdp("a=ssrc:\(stream.videoSsrc) msid:stream\(stream.audioSsrc) video\(stream.videoSsrc)")
+                        appendSdp("a=ssrc:\(stream.videoSsrc) mslabel:video\(stream.videoSsrc)")
+                        appendSdp("a=ssrc:\(stream.videoSsrc) label:video\(stream.videoSsrc)")
                     }
-                    appendSdp("a=bundle-only")
-                    
-                    appendSdp("a=ssrc-group:FID \(stream.videoSsrc)")
-                    appendSdp("a=ssrc:\(stream.videoSsrc) cname:stream\(stream.audioSsrc)")
-                    appendSdp("a=ssrc:\(stream.videoSsrc) msid:stream\(stream.audioSsrc) video\(stream.videoSsrc)")
-                    appendSdp("a=ssrc:\(stream.videoSsrc) mslabel:video\(stream.videoSsrc)")
-                    appendSdp("a=ssrc:\(stream.videoSsrc) label:video\(stream.videoSsrc)")
                 }
             }
             
@@ -843,7 +887,39 @@ private extension ConferenceDescription {
                 continue
             }
             for audioChannel in audioContent.channels {
-                for videoContent in self.contents {
+                if audioChannel.channelBundleId == bundleId {
+                    precondition(audioChannel.sources.count == 1)
+                    streams.append(StreamSpec(
+                        isMain: true,
+                        audioSsrc: audioChannel.sources[0],
+                        videoSsrc: nil,
+                        isRemoved: false
+                    ))
+                    maybeMainStreamAudioSsrc = audioChannel.sources[0]
+                    if false && isAnswer {
+                        precondition(audioChannel.ssrcs.count <= 1)
+                        if audioChannel.ssrcs.count == 1 {
+                            streams.append(StreamSpec(
+                                isMain: false,
+                                audioSsrc: audioChannel.ssrcs[0],
+                                videoSsrc: nil,
+                                isRemoved: false
+                            ))
+                        }
+                    }
+                } else {
+                    precondition(audioChannel.ssrcs.count <= 1)
+                    if audioChannel.ssrcs.count == 1 {
+                        streams.append(StreamSpec(
+                            isMain: false,
+                            audioSsrc: audioChannel.ssrcs[0],
+                            videoSsrc: nil,
+                            isRemoved: false
+                        ))
+                    }
+                }
+                
+                /*for videoContent in self.contents {
                     if videoContent.name != "video" {
                         continue
                     }
@@ -861,8 +937,8 @@ private extension ConferenceDescription {
                                 maybeMainStreamAudioSsrc = audioChannel.sources[0]
                             } else {
                                 precondition(audioChannel.ssrcs.count <= 1)
-                                precondition(videoChannel.ssrcs.count <= 1)
-                                if audioChannel.ssrcs.count == 1 && videoChannel.ssrcs.count == 1 {
+                                precondition(videoChannel.ssrcs.count <= 2)
+                                if audioChannel.ssrcs.count == 1 && videoChannel.ssrcs.count <= 2 {
                                     streams.append(StreamSpec(
                                         isMain: false,
                                         audioSsrc: audioChannel.ssrcs[0],
@@ -873,7 +949,7 @@ private extension ConferenceDescription {
                             }
                         }
                     }
-                }
+                }*/
             }
         }
         
@@ -910,6 +986,7 @@ private extension ConferenceDescription {
             state: RemoteOffer.State(
                 items: bundleStreams.map { stream in
                     RemoteOffer.State.Item(
+                        isMain: stream.isMain,
                         audioSsrc: stream.audioSsrc,
                         videoSsrc: stream.videoSsrc,
                         isRemoved: stream.isRemoved
@@ -921,14 +998,14 @@ private extension ConferenceDescription {
     
     mutating func updateLocalChannelFromSdpAnswer(bundleId: String, sdpAnswer: String) {
         var maybeAudioChannel: ConferenceDescription.Content.Channel?
-        var maybeVideoChannel: ConferenceDescription.Content.Channel?
+        var videoChannel: ConferenceDescription.Content.Channel?
         for content in self.contents {
             for channel in content.channels {
                 if channel.endpoint == bundleId {
                     if content.name == "audio" {
                         maybeAudioChannel = channel
                     } else if content.name == "video" {
-                        maybeVideoChannel = channel
+                        videoChannel = channel
                     }
                     break
                 }
@@ -936,10 +1013,6 @@ private extension ConferenceDescription {
         }
         
         guard var audioChannel = maybeAudioChannel else {
-            assert(false)
-            return
-        }
-        guard var videoChannel = maybeVideoChannel else {
             assert(false)
             return
         }
@@ -1018,10 +1091,6 @@ private extension ConferenceDescription {
         }
         
         audioChannel.sources = audioSources
-        /*audioChannel.ssrcGroups = [ConferenceDescription.Content.Channel.SsrcGroup(
-            sources: audioSources,
-            semantics: "SIM"
-        )]*/
         
         audioChannel.payloadTypes = [
             ConferenceDescription.Content.Channel.PayloadType(
@@ -1063,13 +1132,13 @@ private extension ConferenceDescription {
             ),
         ]
         
-        videoChannel.sources = videoSources
+        videoChannel?.sources = videoSources
         /*audioChannel.ssrcGroups = [ConferenceDescription.Content.Channel.SsrcGroup(
             sources: audioSources,
             semantics: "SIM"
         )]*/
-        
-        videoChannel.payloadTypes = [
+            
+        videoChannel?.payloadTypes = [
             ConferenceDescription.Content.Channel.PayloadType(
                 id: 100,
                 name: "VP8",
@@ -1135,7 +1204,7 @@ private extension ConferenceDescription {
                 if self.contents[i].channels[j].endpoint == bundleId {
                     if self.contents[i].name == "audio" {
                         self.contents[i].channels[j] = audioChannel
-                    } else if self.contents[i].name == "video" {
+                    } else if self.contents[i].name == "video", let videoChannel = videoChannel {
                         self.contents[i].channels[j] = videoChannel
                     }
                 }
@@ -1380,7 +1449,7 @@ public final class GroupCallContext {
                 payloadTypes: [],
                 rtpHdrExts: []
             )
-            let videoChannel = ConferenceDescription.Content.Channel(
+            let videoChannel: ConferenceDescription.Content.Channel? = nil /*ConferenceDescription.Content.Channel(
                 id: nil,
                 endpoint: bundleId,
                 channelBundleId: bundleId,
@@ -1393,7 +1462,7 @@ public final class GroupCallContext {
                 ssrcGroups: [],
                 payloadTypes: [],
                 rtpHdrExts: []
-            )
+            )*/
             
             var foundAudioContent = false
             var foundVideoContent = false
@@ -1419,7 +1488,7 @@ public final class GroupCallContext {
                     conference.contents[i].channels.append(audioChannel)
                     foundAudioContent = true
                     break
-                } else if conference.contents[i].name == "video" {
+                } else if conference.contents[i].name == "video", let videoChannel = videoChannel {
                     for j in 0 ..< conference.contents[i].channels.count {
                         let channel = conference.contents[i].channels[j]
                         conference.contents[i].channels[j] = ConferenceDescription.Content.Channel(
@@ -1448,7 +1517,7 @@ public final class GroupCallContext {
                     channels: [audioChannel]
                 ))
             }
-            if !foundVideoContent {
+            if !foundVideoContent, let videoChannel = videoChannel {
                 conference.contents.append(ConferenceDescription.Content(
                     name: "video",
                     channels: [videoChannel]
@@ -1510,9 +1579,19 @@ public final class GroupCallContext {
                 strongSelf.localBundleId = bundleId
                 strongSelf.localTransport = transport
                 
-                //strongSelf.context.emitOffer()
+                let queue = strongSelf.queue
+                strongSelf.context.emitOffer(adjustSdp: { sdp in
+                    return sdp
+                }, completion: { offerSdp in
+                    queue.async {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.relaySdpAnswer(sdpAnswer: offerSdp)
+                    }
+                })
                 
-                guard let offer = conference.offerSdp(sessionId: strongSelf.sessionId, bundleId: bundleId, bridgeHost: strongSelf.colibriHost, transport: transport, currentState: strongSelf.currentOfferState) else {
+                /*guard let offer = conference.offerSdp(sessionId: strongSelf.sessionId, bundleId: bundleId, bridgeHost: strongSelf.colibriHost, transport: transport, currentState: strongSelf.currentOfferState) else {
                     return
                 }
                 strongSelf.currentOfferState = offer.state
@@ -1521,7 +1600,7 @@ public final class GroupCallContext {
                 
                 for sdp in offer.sdpList {
                     strongSelf.context.setOfferSdp(sdp, isPartial: false)
-                }
+                }*/
             }))
         }
         
@@ -1529,6 +1608,10 @@ public final class GroupCallContext {
             guard let conferenceId = self.conferenceId, let localBundleId = self.localBundleId else {
                 return
             }
+            
+            print("===== relaySdpAnswer =====")
+            print(sdpAnswer)
+            print("===== -------------- =====")
             
             self.disposable.set((httpJsonRequest(url: "http://\(self.colibriHost):8080/colibri/conferences/\(conferenceId)", method: .get, resultType: [String: Any].self)
             |> deliverOn(self.queue)).start(next: { [weak self] result in
@@ -1571,8 +1654,24 @@ public final class GroupCallContext {
                         return
                     }
                     
+                    guard let localTransport = strongSelf.localTransport else {
+                        return
+                    }
+                    
                     if conference.id == strongSelf.conferenceId {
-                        strongSelf.pollOnceDelayed()
+                        if let offer = conference.offerSdp(sessionId: strongSelf.sessionId, bundleId: localBundleId, bridgeHost: strongSelf.colibriHost, transport: localTransport, currentState: strongSelf.currentOfferState, isAnswer: true) {
+                            //strongSelf.currentOfferState = offer.state
+                            
+                            strongSelf.memberCount.set(offer.state.items.filter({ !$0.isRemoved }).count)
+                            
+                            for sdp in offer.sdpList {
+                                strongSelf.context.setOfferSdp(sdp, isPartial: true)
+                            }
+                        }
+                        
+                        strongSelf.queue.after(2.0, {
+                            self?.pollOnceDelayed()
+                        })
                     }
                 }))
             }))
@@ -1597,17 +1696,138 @@ public final class GroupCallContext {
                     return
                 }
                 
-                if let offer = conference.offerSdp(sessionId: strongSelf.sessionId, bundleId: localBundleId, bridgeHost: strongSelf.colibriHost, transport: localTransport, currentState: strongSelf.currentOfferState) {
+                if let offer = conference.offerSdp(sessionId: strongSelf.sessionId, bundleId: localBundleId, bridgeHost: strongSelf.colibriHost, transport: localTransport, currentState: strongSelf.currentOfferState, isAnswer: false) {
                     strongSelf.currentOfferState = offer.state
+                    let queue = strongSelf.queue
                     
                     strongSelf.memberCount.set(offer.state.items.filter({ !$0.isRemoved }).count)
                     
                     for sdp in offer.sdpList {
                         strongSelf.context.setOfferSdp(sdp, isPartial: false)
                     }
+                    
+                    strongSelf.pollOnceDelayed()
+                    
+                    /*strongSelf.context.emitOffer(adjustSdp: { sdp in
+                        var resultLines: [String] = []
+                        
+                        func appendSdp(_ line: String) {
+                            resultLines.append(line)
+                        }
+                        
+                        var sharedPort = "0"
+                        
+                        let lines = sdp.components(separatedBy: "\n")
+                        for line in lines {
+                            var cleanLine = line
+                            if cleanLine.hasSuffix("\r") {
+                                cleanLine.removeLast()
+                            }
+                            if cleanLine.isEmpty {
+                                continue
+                            }
+                            
+                            if cleanLine.hasPrefix("a=group:BUNDLE 0 1") {
+                                cleanLine = "a=group:BUNDLE 0 1"
+                                
+                                for item in offer.state.items {
+                                    if item.isMain {
+                                        continue
+                                    }
+                                    cleanLine.append(" audio\(item.audioSsrc) video\(item.videoSsrc)")
+                                }
+                            } else if cleanLine.hasPrefix("m=audio ") {
+                                let scanner = Scanner(string: cleanLine)
+                                if #available(iOS 13.0, *) {
+                                    if let _ = scanner.scanString("m=audio "), let value = scanner.scanInt() {
+                                        sharedPort = "\(value)"
+                                    }
+                                }
+                            }
+                            
+                            appendSdp(cleanLine)
+                        }
+                        
+                        for item in offer.state.items {
+                            if item.isMain {
+                                continue
+                            }
+                            
+                            let audioSsrc = item.audioSsrc
+                            let videoSsrc = item.videoSsrc
+                            
+                            appendSdp("m=audio \(sharedPort) RTP/SAVPF 111 126")
+                            appendSdp("a=mid:audio\(audioSsrc)")
+                            
+                            appendSdp("a=rtpmap:111 opus/48000/2")
+                            appendSdp("a=rtpmap:126 telephone-event/8000")
+                            appendSdp("a=fmtp:111 minptime=10; useinbandfec=1; usedtx=1")
+                            appendSdp("a=rtcp:1 IN IP4 0.0.0.0")
+                            appendSdp("a=rtcp-mux")
+                            appendSdp("a=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level")
+                            appendSdp("a=extmap:3 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time")
+                            appendSdp("a=extmap:5 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01")
+                            appendSdp("a=rtcp-fb:111 transport-cc")
+                            
+                            appendSdp("a=recvonly")
+                            appendSdp("a=bundle-only")
+                            
+                            appendSdp("a=ssrc-group:FID \(audioSsrc)")
+                            appendSdp("a=ssrc:\(audioSsrc) cname:stream\(audioSsrc)")
+                            appendSdp("a=ssrc:\(audioSsrc) msid:stream\(audioSsrc) audio\(audioSsrc)")
+                            appendSdp("a=ssrc:\(audioSsrc) mslabel:audio\(audioSsrc)")
+                            appendSdp("a=ssrc:\(audioSsrc) label:audio\(audioSsrc)")
+                            
+                            appendSdp("m=video \(sharedPort) RTP/SAVPF 100")
+                            appendSdp("a=mid:video\(videoSsrc)")
+                            
+                            appendSdp("a=rtpmap:100 VP8/90000")
+                            appendSdp("a=fmtp:100 x-google-start-bitrate=800")
+                            appendSdp("a=rtcp:1 IN IP4 0.0.0.0")
+                            appendSdp("a=rtcp-mux")
+                            
+                            appendSdp("a=extmap:2 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time")
+                            appendSdp("a=extmap:4 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01")
+                            
+                            appendSdp("a=rtcp-fb:100 transport-cc")
+                            appendSdp("a=rtcp-fb:100 ccm fir")
+                            appendSdp("a=rtcp-fb:100 nack")
+                            appendSdp("a=rtcp-fb:100 nack pli")
+                            
+                            appendSdp("a=recvonly")
+                            appendSdp("a=bundle-only")
+                            
+                            appendSdp("a=ssrc-group:FID \(videoSsrc)")
+                            appendSdp("a=ssrc:\(videoSsrc) cname:stream\(audioSsrc)")
+                            appendSdp("a=ssrc:\(videoSsrc) msid:stream\(audioSsrc) video\(videoSsrc)")
+                            appendSdp("a=ssrc:\(videoSsrc) mslabel:video\(videoSsrc)")
+                            appendSdp("a=ssrc:\(videoSsrc) label:video\(videoSsrc)")
+                        }
+                        
+                        let resultSdp = resultLines.joined(separator: "\n")
+                        print("------ modified local sdp ------")
+                        print(resultSdp)
+                        print("------")
+                        return resultSdp
+                    }, completion: { _ in
+                        queue.async {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                                
+                            strongSelf.memberCount.set(offer.state.items.filter({ !$0.isRemoved }).count)
+                            
+                            for sdp in offer.sdpList {
+                                print("===== setOffer polled =====")
+                                print(sdp)
+                                print("===== -------------- =====")
+                                strongSelf.context.setOfferSdp(sdp, isPartial: false)
+                            }
+                            
+                            strongSelf.pollOnceDelayed()
+                        }
+                    })*/
                 }
-                
-                strongSelf.pollOnceDelayed()
             }))
         }
         
