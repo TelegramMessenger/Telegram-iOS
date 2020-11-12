@@ -636,7 +636,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
-                        legacyMediaEditor(context: strongSelf.context, peer: peer, media: mediaReference, initialCaption: message.text, presentStickers: { _ in return nil }, sendMessagesWithSignals: { [weak self] signals, _, _ in
+                        legacyMediaEditor(context: strongSelf.context, peer: peer, media: mediaReference, initialCaption: message.text, presentStickers: { [weak self] completion in
+                            if let strongSelf = self {
+                                let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
+                                    completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
+                                    return true
+                                })
+                                strongSelf.present(controller, in: .window(.root))
+                                return controller
+                            } else {
+                                return nil
+                            }
+                        }, sendMessagesWithSignals: { [weak self] signals, _, _ in
                             if let strongSelf = self {
                                 strongSelf.interfaceInteraction?.setupEditMessage(messageId, { _ in })
                                 strongSelf.editMessageMediaWithLegacySignals(signals!)
@@ -2329,7 +2340,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
-                        legacyMediaEditor(context: strongSelf.context, peer: peer, media: mediaReference, initialCaption: message.text, presentStickers: { _ in return nil }, sendMessagesWithSignals: { [weak self] signals, _, _ in
+                        legacyMediaEditor(context: strongSelf.context, peer: peer, media: mediaReference, initialCaption: message.text, presentStickers: { [weak self] completion in
+                            if let strongSelf = self {
+                                let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
+                                    completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
+                                    return true
+                                })
+                                strongSelf.present(controller, in: .window(.root))
+                                return controller
+                            } else {
+                                return nil
+                            }
+                        }, sendMessagesWithSignals: { [weak self] signals, _, _ in
                             if let strongSelf = self {
                                 strongSelf.interfaceInteraction?.setupEditMessage(messageId, { _ in })
                                 strongSelf.editMessageMediaWithLegacySignals(signals!)

@@ -347,7 +347,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     [_doneButton setTitle:TGLocalized(@"Common.Done") forState:UIControlStateNormal];
     _doneButton.titleLabel.font = TGSystemFontOfSize(17.0);
     [_doneButton sizeToFit];
-    [_wrapperView addSubview:_doneButton];
+//    [_wrapperView addSubview:_doneButton];
     
     void (^settingsPressed)(void) = ^
     {

@@ -16,6 +16,7 @@ import ActivityIndicator
 import AnimationUI
 
 private let accessoryButtonFont = Font.medium(14.0)
+private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
 
 private final class AccessoryItemIconButton: HighlightTrackingButton {
     private let item: ChatTextInputAccessoryItem
@@ -1193,11 +1194,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             let textCount = Int32(textInputNode.textView.text.count)
             let counterColor: UIColor = textCount > inputTextMaxLength ? presentationInterfaceState.theme.chat.inputPanel.panelControlDestructiveColor : presentationInterfaceState.theme.chat.inputPanel.panelControlColor
             
-            let remainingCount = inputTextMaxLength - textCount
-            let counterText = remainingCount >= 5 ? "" : "\(inputTextMaxLength - textCount)"
-            self.counterTextNode.attributedText = NSAttributedString(string: counterText, font: Font.regular(14.0), textColor: counterColor)
+            let remainingCount = max(-999, inputTextMaxLength - textCount)
+            let counterText = remainingCount >= 5 ? "" : "\(remainingCount)"
+            self.counterTextNode.attributedText = NSAttributedString(string: counterText, font: counterFont, textColor: counterColor)
         } else {
-            self.counterTextNode.attributedText = NSAttributedString(string: "", font: Font.regular(14.0), textColor: .black)
+            self.counterTextNode.attributedText = NSAttributedString(string: "", font: counterFont, textColor: .black)
         }
         
         let counterSize = self.counterTextNode.updateLayout(CGSize(width: 44.0, height: 44.0))
@@ -1481,11 +1482,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 let textCount = Int32(textInputNode.textView.text.count)
                 let counterColor: UIColor = textCount > inputTextMaxLength ? presentationInterfaceState.theme.chat.inputPanel.panelControlDestructiveColor : presentationInterfaceState.theme.chat.inputPanel.panelControlColor
                 
-                let remainingCount = inputTextMaxLength - textCount
-                let counterText = remainingCount >= 5 ? "" : "\(inputTextMaxLength - textCount)"
-                self.counterTextNode.attributedText = NSAttributedString(string: counterText, font: Font.regular(14.0), textColor: counterColor)
+                let remainingCount = max(-999, inputTextMaxLength - textCount)
+                let counterText = remainingCount >= 5 ? "" : "\(remainingCount)"
+                self.counterTextNode.attributedText = NSAttributedString(string: counterText, font: counterFont, textColor: counterColor)
             } else {
-                self.counterTextNode.attributedText = NSAttributedString(string: "", font: Font.regular(14.0), textColor: .black)
+                self.counterTextNode.attributedText = NSAttributedString(string: "", font: counterFont, textColor: .black)
             }
             
             if let (width, leftInset, rightInset, maxHeight, metrics, isSecondary) = self.validLayout {

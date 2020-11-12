@@ -694,7 +694,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     if !content.enableSound {
                                         isPaused = false
                                     }
-                                } else {
+                                } else if strongSelf.actionAtEnd == .stop {
                                     strongSelf.updateControlsVisibility(true)
                                     strongSelf.controlsTimer?.invalidate()
                                     strongSelf.controlsTimer = nil

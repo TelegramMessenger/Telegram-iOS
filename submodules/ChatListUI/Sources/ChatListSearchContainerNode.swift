@@ -226,25 +226,23 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.paneContainerNode.interaction = interaction
         
         self.paneContainerNode.currentPaneUpdated = { [weak self] key, transitionFraction, transition in
-            if let strongSelf = self {
-                var filterKey: ChatListSearchFilter?
-                if let key = key {
-                    switch key {
-                        case .chats:
-                            filterKey = .chats
-                        case .media:
-                            filterKey = .media
-                        case .links:
-                            filterKey = .links
-                        case .files:
-                            filterKey = .files
-                        case .music:
-                            filterKey = .music
-                        case .voice:
-                            filterKey = .voice
-                    }
+            if let strongSelf = self, let key = key {
+                var filterKey: ChatListSearchFilter
+                switch key {
+                    case .chats:
+                        filterKey = .chats
+                    case .media:
+                        filterKey = .media
+                    case .links:
+                        filterKey = .links
+                    case .files:
+                        filterKey = .files
+                    case .music:
+                        filterKey = .music
+                    case .voice:
+                        filterKey = .voice
                 }
-                strongSelf.selectedFilterKey = filterKey.flatMap { .filter($0.id) }
+                strongSelf.selectedFilterKey = .filter(filterKey.id) 
                 strongSelf.selectedFilterKeyPromise.set(.single(strongSelf.selectedFilterKey))
                 strongSelf.transitionFraction = transitionFraction
                 
