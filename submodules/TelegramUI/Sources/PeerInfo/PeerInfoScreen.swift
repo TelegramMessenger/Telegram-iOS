@@ -3163,6 +3163,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
     }
     
     private func requestCall(isVideo: Bool) {
+        if let peer = self.data?.peer as? TelegramChannel {
+            self.context.sharedContext.callManager?.requestOrJoinGroupCall(context: self.context, peerId: peer.id)
+            
+            return
+        }
+        
         guard let peer = self.data?.peer as? TelegramUser, let cachedUserData = self.data?.cachedData as? CachedUserData else {
             return
         }

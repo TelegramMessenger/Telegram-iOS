@@ -1306,6 +1306,11 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.addUpdateCall(phoneCall)
             case let .updatePhoneCallSignalingData(phoneCallId, data):
                 updatedState.addCallSignalingData(callId: phoneCallId, data: data.makeData())
+            case let .updateGroupCallParticipant(call, participant):
+                switch call {
+                case let .inputGroupCall(id, accessHash):
+                    updatedState.updateGroupCallParticipant(id: id, accessHash: accessHash, participant: participant)
+                }
             case let .updateLangPackTooLong(langCode):
                 updatedState.updateLangPack(langCode: langCode, difference: nil)
             case let .updateLangPack(difference):
@@ -2109,7 +2114,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddScheduledMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll/*, .UpdateMessageReactions*/, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll/*, .UpdateMessageReactions*/, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipant:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -2196,6 +2201,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     var updatedWebpages: [MediaId: TelegramMediaWebpage] = [:]
     var updatedCalls: [Api.PhoneCall] = []
     var addedCallSignalingData: [(Int64, Data)] = []
+    var updatedGroupCallParticipants: [(Int64, Int32)] = []
     var updatedPeersNearby: [PeerNearby]?
     var isContactUpdates: [(PeerId, Bool)] = []
     var stickerPackOperations: [AccountStateUpdateStickerPacksOperation] = []
@@ -2925,6 +2931,23 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 updatedCalls.append(call)
             case let .AddCallSignalingData(callId, data):
                 addedCallSignalingData.append((callId, data))
+            case let .UpdateGroupCallParticipant(callId, _, participant):
+                var ssrc: Int32?
+                switch participant {
+                case let .groupCallParticipantAdmin(_, source):
+                    ssrc = source
+                case let .groupCallParticipant(_, _, _, source):
+                    ssrc = source
+                case .groupCallParticipantLeft:
+                    break
+                case .groupCallParticipantKicked:
+                    break
+                case .groupCallParticipantInvited:
+                    break
+                }
+                if let ssrc = ssrc {
+                    updatedGroupCallParticipants.append((callId, ssrc))
+                }
             case let .UpdateLangPack(langCode, difference):
                 if let difference = difference {
                     if langPackDifferences[langCode] == nil {
@@ -3347,5 +3370,5 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
         requestChatListFiltersSync(transaction: transaction)
     }
     
-    return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, wasScheduledMessageIds: wasScheduledMessageIds, addedSecretMessageIds: addedSecretMessageIds, deletedMessageIds: deletedMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, addedCallSignalingData: addedCallSignalingData, updatedPeersNearby: updatedPeersNearby, isContactUpdates: isContactUpdates, delayNotificatonsUntil: delayNotificatonsUntil, updatedIncomingThreadReadStates: updatedIncomingThreadReadStates, updatedOutgoingThreadReadStates: updatedOutgoingThreadReadStates)
+    return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, wasScheduledMessageIds: wasScheduledMessageIds, addedSecretMessageIds: addedSecretMessageIds, deletedMessageIds: deletedMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, addedCallSignalingData: addedCallSignalingData, updatedGroupCallParticipants: updatedGroupCallParticipants, updatedPeersNearby: updatedPeersNearby, isContactUpdates: isContactUpdates, delayNotificatonsUntil: delayNotificatonsUntil, updatedIncomingThreadReadStates: updatedIncomingThreadReadStates, updatedOutgoingThreadReadStates: updatedOutgoingThreadReadStates)
 }

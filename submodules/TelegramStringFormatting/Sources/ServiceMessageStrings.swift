@@ -404,6 +404,15 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 }
                 attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
+            case let .groupPhoneCall(_, _, duration):
+                //TODO:localize
+                let titleString: String
+                if let duration = duration {
+                    titleString = "Group Call \(duration)s"
+                } else {
+                    titleString = "Group Call"
+                }
+                attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
             case let .customText(text, entities):
                 attributedString = stringWithAppliedEntities(text, entities: entities, baseColor: primaryTextColor, linkColor: primaryTextColor, baseFont: titleFont, linkFont: titleBoldFont, boldFont: titleBoldFont, italicFont: titleFont, boldItalicFont: titleBoldFont, fixedFont: titleFont, blockQuoteFont: titleFont, underlineLinks: false)
             case let .botDomainAccessGranted(domain):

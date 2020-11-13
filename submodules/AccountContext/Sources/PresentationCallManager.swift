@@ -151,8 +151,13 @@ public protocol PresentationCall: class {
     func makeOutgoingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void)
 }
 
+public protocol PresentationGroupCall: class {
+    
+}
+
 public protocol PresentationCallManager: class {
     var currentCallSignal: Signal<PresentationCall?, NoError> { get }
     
     func requestCall(context: AccountContext, peerId: PeerId, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult
+    func requestOrJoinGroupCall(context: AccountContext, peerId: PeerId)
 }

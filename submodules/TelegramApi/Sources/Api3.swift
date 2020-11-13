@@ -1648,6 +1648,72 @@ public struct photos {
 }
 public extension Api {
 public struct phone {
+    public enum GroupCall: TypeConstructorDescription {
+        case groupCall(call: Api.GroupCall, participants: [Api.GroupCallParticipant], chats: [Api.Chat], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .groupCall(let call, let participants, let chats, let users):
+                    if boxed {
+                        buffer.appendInt32(1731723191)
+                    }
+                    call.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(participants.count))
+                    for item in participants {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .groupCall(let call, let participants, let chats, let users):
+                return ("groupCall", [("call", call), ("participants", participants), ("chats", chats), ("users", users)])
+    }
+    }
+    
+        public static func parse_groupCall(_ reader: BufferReader) -> GroupCall? {
+            var _1: Api.GroupCall?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.GroupCall
+            }
+            var _2: [Api.GroupCallParticipant]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.GroupCallParticipant.self)
+            }
+            var _3: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _4: [Api.User]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.phone.GroupCall.groupCall(call: _1!, participants: _2!, chats: _3!, users: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum PhoneCall: TypeConstructorDescription {
         case phoneCall(phoneCall: Api.PhoneCall, users: [Api.User])
     
@@ -7114,6 +7180,111 @@ public extension Api {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func createGroupCall(flags: Int32, channel: Api.InputChannel, randomId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1542553507)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    channel.serialize(buffer, true)
+                    serializeInt32(randomId, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "phone.createGroupCall", parameters: [("flags", flags), ("channel", channel), ("randomId", randomId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func joinGroupCall(call: Api.InputGroupCall, params: Api.DataJSON) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(893342305)
+                    call.serialize(buffer, true)
+                    params.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.joinGroupCall", parameters: [("call", call), ("params", params)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func leaveGroupCall(call: Api.InputGroupCall) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1625919071)
+                    call.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.leaveGroupCall", parameters: [("call", call)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func editGroupCallMember(flags: Int32, call: Api.InputGroupCall, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1662282468)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    call.serialize(buffer, true)
+                    userId.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.editGroupCallMember", parameters: [("flags", flags), ("call", call), ("userId", userId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func kickGroupCallMember(flags: Int32, call: Api.InputGroupCall, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1731080446)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    call.serialize(buffer, true)
+                    userId.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.kickGroupCallMember", parameters: [("flags", flags), ("call", call), ("userId", userId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func discardGroupCall(call: Api.InputGroupCall) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(2054648117)
+                    call.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.discardGroupCall", parameters: [("call", call)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getGroupCall(call: Api.InputGroupCall) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.GroupCall>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(209498135)
+                    call.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.getGroupCall", parameters: [("call", call)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.phone.GroupCall? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.phone.GroupCall?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.phone.GroupCall
                         }
                         return result
                     })

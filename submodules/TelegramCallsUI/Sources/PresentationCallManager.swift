@@ -60,6 +60,11 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
     private var currentCallDisposable = MetaDisposable()
     private let removeCurrentCallDisposable = MetaDisposable()
     
+    private var currentGroupCallValue: PresentationGroupCallImpl?
+    private var currentGroupCall: PresentationGroupCallImpl? {
+        return self.currentGroupCallValue
+    }
+    
     private var ringingStatesDisposable: Disposable?
     
     private let hasActiveCallsPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -70,6 +75,11 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
     private let currentCallPromise = Promise<PresentationCall?>(nil)
     public var currentCallSignal: Signal<PresentationCall?, NoError> {
         return self.currentCallPromise.get()
+    }
+    
+    private let currentGroupCallPromise = Promise<PresentationGroupCall?>(nil)
+    public var currentGroupCallSignal: Signal<PresentationGroupCall?, NoError> {
+        return self.currentGroupCallPromise.get()
     }
     
     private let startCallDisposable = MetaDisposable()
@@ -564,6 +574,102 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         if !wasEmpty && isEmpty && self.resumeMedia {
             self.resumeMedia = false
             self.resumeMediaPlayback()
+        }
+    }
+    
+    private func updateCurrentGroupCall(_ value: PresentationGroupCallImpl?) {
+        let wasEmpty = self.currentGroupCallValue == nil
+        let isEmpty = value == nil
+        if wasEmpty && !isEmpty {
+            self.resumeMedia = self.isMediaPlaying()
+        }
+        
+        self.currentGroupCallValue = value
+        
+        if !wasEmpty && isEmpty && self.resumeMedia {
+            self.resumeMedia = false
+            self.resumeMediaPlayback()
+        }
+    }
+    
+    public func requestOrJoinGroupCall(context: AccountContext, peerId: PeerId) {
+        let begin: () -> Void = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            let _ = strongSelf.startGroupCall(account: context.account, peerId: peerId).start()
+        }
+        begin()
+    }
+    
+    private func startGroupCall(
+        account: Account,
+        peerId: PeerId,
+        internalId: CallSessionInternalId = CallSessionInternalId()
+    ) -> Signal<Bool, NoError> {
+        let (presentationData, present, openSettings) = self.getDeviceAccessData()
+        
+        let isVideo = false
+        
+        let accessEnabledSignal: Signal<Bool, NoError> = Signal { subscriber in
+            DeviceAccess.authorizeAccess(to: .microphone(.voiceCall), presentationData: presentationData, present: { c, a in
+                present(c, a)
+            }, openSettings: {
+                openSettings()
+            }, { value in
+                if isVideo && value {
+                    DeviceAccess.authorizeAccess(to: .camera(.videoCall), presentationData: presentationData, present: { c, a in
+                        present(c, a)
+                    }, openSettings: {
+                        openSettings()
+                    }, { value in
+                        subscriber.putNext(value)
+                        subscriber.putCompletion()
+                    })
+                } else {
+                    subscriber.putNext(value)
+                    subscriber.putCompletion()
+                }
+            })
+            return EmptyDisposable
+        }
+        |> runOn(Queue.mainQueue())
+        
+        return accessEnabledSignal
+        |> deliverOnMainQueue
+        |> mapToSignal { [weak self] accessEnabled -> Signal<Bool, NoError> in
+            guard let strongSelf = self else {
+                return .single(false)
+            }
+            
+            if !accessEnabled {
+                return .single(false)
+            }
+                    
+            let call = PresentationGroupCallImpl(
+                account: account,
+                audioSession: strongSelf.audioSession,
+                callKitIntegration: nil,
+                getDeviceAccessData: strongSelf.getDeviceAccessData,
+                internalId: internalId,
+                peerId: peerId,
+                peer: nil
+            )
+            strongSelf.updateCurrentGroupCall(call)
+            strongSelf.currentGroupCallPromise.set(.single(call))
+            strongSelf.hasActiveCallsPromise.set(true)
+            strongSelf.removeCurrentCallDisposable.set((call.canBeRemoved.get()
+            |> deliverOnMainQueue).start(next: { [weak call] value in
+                if value, let strongSelf = self, let call = call {
+                    if strongSelf.currentGroupCall === call {
+                        strongSelf.updateCurrentGroupCall(nil)
+                        strongSelf.currentGroupCallPromise.set(.single(nil))
+                        strongSelf.hasActiveCallsPromise.set(false)
+                    }
+                }
+            }))
+        
+            return .single(true)
         }
     }
 }
