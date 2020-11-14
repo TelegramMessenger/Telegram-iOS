@@ -71,7 +71,6 @@ public enum ContainedViewLayoutTransition {
 
 public extension ContainedViewLayoutTransition {
     func updateFrame(node: ASDisplayNode, frame: CGRect, force: Bool = false, beginWithCurrentState: Bool = false, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
-        var frame = frame
         if frame.origin.x.isNaN {
             return
         }
@@ -88,6 +87,12 @@ public extension ContainedViewLayoutTransition {
             return
         }
         if frame.size.height < 0.0 {
+            return
+        }
+        if !ASIsCGRectValidForLayout(CGRect(origin: CGPoint(), size: frame.size)) {
+            return
+        }
+        if !ASIsCGPositionValidForLayout(frame.origin) {
             return
         }
         
