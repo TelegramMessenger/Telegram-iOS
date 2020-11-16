@@ -681,7 +681,7 @@ final class ChatMediaInputNode: ChatInputNode {
             return false
         }
         
-        self.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor
+        self.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0)
         
         self.collectionListPanel.addSubnode(self.listView)
         self.collectionListPanel.addSubnode(self.gifListView)
@@ -934,10 +934,12 @@ final class ChatMediaInputNode: ChatInputNode {
                 
                 if let currentView = strongSelf.currentView, let (topIndex, topItem) = visibleItems.top, let (bottomIndex, bottomItem) = visibleItems.bottom {
                     if topIndex <= 10 && currentView.lower != nil {
-                        let position: StickerPacksCollectionPosition = clipScrollPosition(.scroll(aroundIndex: (topItem as! ChatMediaInputStickerGridItem).index))
-                        if strongSelf.currentStickerPacksCollectionPosition != position {
-                            strongSelf.currentStickerPacksCollectionPosition = position
-                            strongSelf.itemCollectionsViewPosition.set(.single(position))
+                        if let topItem = topItem as? ChatMediaInputStickerGridItem {
+                            let position: StickerPacksCollectionPosition = clipScrollPosition(.scroll(aroundIndex: topItem.index))
+                            if strongSelf.currentStickerPacksCollectionPosition != position {
+                                strongSelf.currentStickerPacksCollectionPosition = position
+                                strongSelf.itemCollectionsViewPosition.set(.single(position))
+                            }
                         }
                     } else if bottomIndex >= visibleItems.count - 10 && currentView.higher != nil {
                         var position: StickerPacksCollectionPosition?
@@ -1052,7 +1054,7 @@ final class ChatMediaInputNode: ChatInputNode {
             }
             
             self.collectionListSeparator.backgroundColor = theme.chat.inputMediaPanel.panelSeparatorColor
-            self.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor
+            self.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0)
             
             self.searchContainerNode?.updateThemeAndStrings(theme: theme, strings: strings)
             
