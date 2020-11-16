@@ -65,8 +65,8 @@ public final class GroupCallController: ViewController {
             }, availableOutputsChanged: { _, _ in
             })
             
-            let videoCapturer = OngoingCallVideoCapturer()
-            self.videoCapturer = videoCapturer
+            //let videoCapturer = OngoingCallVideoCapturer()
+            //self.videoCapturer = videoCapturer
             
             let callContext = GroupCallContext(audioSessionActive: self.audioSessionActive.get(), video: videoCapturer)
             self.callContext = callContext
