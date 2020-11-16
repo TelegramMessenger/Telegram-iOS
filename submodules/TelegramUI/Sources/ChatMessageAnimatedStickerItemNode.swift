@@ -190,7 +190,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.containerNode = ContextControllerSourceNode()
         self.imageNode = TransformImageNode()
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
-        
+
         super.init(layerBacked: false)
         
         self.containerNode.shouldBegin = { [weak self] location in
@@ -1117,7 +1117,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         switch recognizer.state {
         case .ended:
             if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
-                if let action = self.gestureRecognized(gesture: gesture, location: location, recognizer: nil) {
+                if let action = self.gestureRecognized(gesture: gesture, location: location, recognizer: recognizer) {
                     if case .doubleTap = gesture {
                         self.containerNode.cancelGesture()
                     }
@@ -1224,7 +1224,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         item.controllerInteraction.displayDiceTooltip(dice)
                     })
                 } else if let _ = self.emojiFile {
-                    if let animationNode = self.animationNode as? AnimatedStickerNode {
+                    if let animationNode = self.animationNode as? AnimatedStickerNode, let _ = recognizer {
                         var startTime: Signal<Double, NoError>
                         var shouldPlay = false
                         if !animationNode.isPlaying {
@@ -1248,86 +1248,63 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         }
                                                 
                         if let text = self.item?.message.text, let firstScalar = text.unicodeScalars.first {
-                            if beatingHearts.contains(firstScalar.value) || firstScalar.value == peach {
+                            return .optionalAction({
                                 if shouldPlay {
-                                    animationNode.play()
-                                }
-                                return .optionalAction({
-                                    let _ = startTime.start(next: { [weak self] time in
+                                    let _ = (appConfiguration
+                                    |> deliverOnMainQueue).start(next: { [weak self, weak animationNode] appConfiguration in
                                         guard let strongSelf = self else {
                                             return
                                         }
-                                        
-                                        var haptic: EmojiHaptic
-                                        if let current = strongSelf.haptic {
-                                            haptic = current
-                                        } else {
-                                            if beatingHearts.contains(firstScalar.value) {
-                                                haptic = HeartbeatHaptic()
-                                            } else {
-                                                haptic = PeachHaptic()
-                                            }
-                                            haptic.enabled = true
-                                            strongSelf.haptic = haptic
-                                        }
-                                        if !haptic.active {
-                                            haptic.start(time: time)
-                                        }
-                                    })
-                                })
-                            } else {
-                                return .optionalAction({
-                                    if shouldPlay {
-                                        let _ = (appConfiguration
-                                        |> deliverOnMainQueue).start(next: { [weak self, weak animationNode] appConfiguration in
-                                            guard let strongSelf = self else {
-                                                return
-                                            }
-                                            let emojiSounds = AnimatedEmojiSoundsConfiguration.with(appConfiguration: appConfiguration, account: item.context.account)
-                                            for (emoji, file) in emojiSounds.sounds {
-                                                if emoji.unicodeScalars.first == firstScalar {
-                                                    let mediaManager = item.context.sharedContext.mediaManager
-                                                    let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: item.context.account.postbox, resourceReference: .standalone(resource: file.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true, ambient: true)
-                                                    mediaPlayer.togglePlayPause()
-                                                    mediaPlayer.actionAtEnd = .action({ [weak self] in
-                                                        self?.mediaPlayer = nil
-                                                    })
-                                                    strongSelf.mediaPlayer = mediaPlayer
-                                                    
-                                                    strongSelf.mediaStatusDisposable.set((mediaPlayer.status
-                                                    |> deliverOnMainQueue).start(next: { [weak self, weak animationNode] status in
-                                                        if let strongSelf = self {
-                                                            if firstScalar.value == coffin {
-                                                                var haptic: EmojiHaptic
-                                                                if let current = strongSelf.haptic {
-                                                                    haptic = current
-                                                                } else {
+                                        let emojiSounds = AnimatedEmojiSoundsConfiguration.with(appConfiguration: appConfiguration, account: item.context.account)
+                                        for (emoji, file) in emojiSounds.sounds {
+                                            if emoji.strippedEmoji == text.strippedEmoji {
+                                                let mediaManager = item.context.sharedContext.mediaManager
+                                                let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: item.context.account.postbox, resourceReference: .standalone(resource: file.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true, ambient: true)
+                                                mediaPlayer.togglePlayPause()
+                                                mediaPlayer.actionAtEnd = .action({ [weak self] in
+                                                    self?.mediaPlayer = nil
+                                                })
+                                                strongSelf.mediaPlayer = mediaPlayer
+                                                
+                                                strongSelf.mediaStatusDisposable.set((mediaPlayer.status
+                                                |> deliverOnMainQueue).start(next: { [weak self, weak animationNode] status in
+                                                    if let strongSelf = self {
+                                                        if firstScalar.value == coffin || firstScalar.value == peach {
+                                                            var haptic: EmojiHaptic
+                                                            if let current = strongSelf.haptic {
+                                                                haptic = current
+                                                            } else {
+                                                                if beatingHearts.contains(firstScalar.value) {
+                                                                    haptic = HeartbeatHaptic()
+                                                                } else if firstScalar.value == coffin {
                                                                     haptic = CoffinHaptic()
-                                                                    haptic.enabled = true
-                                                                    strongSelf.haptic = haptic
+                                                                } else {
+                                                                    haptic = PeachHaptic()
                                                                 }
-                                                                if !haptic.active {
-                                                                    haptic.start(time: 0.0)
-                                                                }
+                                                                haptic.enabled = true
+                                                                strongSelf.haptic = haptic
                                                             }
-                                                            
-                                                            switch status.status {
-                                                                case .playing:
-                                                                    animationNode?.play()
-                                                                    strongSelf.mediaStatusDisposable.set(nil)
-                                                                default:
-                                                                    break
+                                                            if !haptic.active {
+                                                                haptic.start(time: 0.0)
                                                             }
                                                         }
-                                                    }))
-                                                    return
-                                                }
+                                                        
+                                                        switch status.status {
+                                                            case .playing:
+                                                                animationNode?.play()
+                                                                strongSelf.mediaStatusDisposable.set(nil)
+                                                            default:
+                                                                break
+                                                        }
+                                                    }
+                                                }))
+                                                return
                                             }
-                                            animationNode?.play()
-                                        })
-                                    }
-                                })
-                            }
+                                        }
+                                        animationNode?.play()
+                                    })
+                                }
+                            })
                         }
                     }
                 }

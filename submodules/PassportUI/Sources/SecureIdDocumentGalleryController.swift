@@ -177,12 +177,13 @@ class SecureIdDocumentGalleryController: ViewController, StandalonePresentableCo
             if let strongSelf = self {
                 strongSelf.present(controller, in: .window(.root), with: arguments, blockInteraction: true)
             }
-            }, dismissController: { [weak self] in
-                self?.dismiss(forceAway: true)
-            }, replaceRootController: { [weak self] controller, ready in
-                if let strongSelf = self {
-                    strongSelf.replaceRootController(controller, ready)
-                }
+        }, dismissController: { [weak self] in
+            self?.dismiss(forceAway: true)
+        }, replaceRootController: { [weak self] controller, ready in
+            if let strongSelf = self {
+                strongSelf.replaceRootController(controller, ready)
+            }
+        }, editMedia: { _ in
         })
         self.displayNode = GalleryControllerNode(controllerInteraction: controllerInteraction)
         self.displayNodeDidLoad()

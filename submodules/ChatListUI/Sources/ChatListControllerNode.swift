@@ -264,6 +264,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
     
     private(set) var emptyNode: ChatListEmptyNode?
     var emptyShimmerEffectNode: ChatListShimmerNode?
+    private var shimmerNodeOffset: CGFloat = 0.0
     let listNode: ChatListNode
     
     private var validLayout: (CGSize, UIEdgeInsets, CGFloat)?
@@ -285,8 +286,12 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                 return
             }
             var needsShimmerNode = false
+            var shimmerNodeOffset: CGFloat = 0.0
             switch isEmptyState {
-            case let .empty(isLoading):
+            case let .empty(isLoading, hasArchiveInfo):
+                if hasArchiveInfo {
+                    shimmerNodeOffset = 253.0
+                }
                 if isLoading {
                     needsShimmerNode = true
                     
@@ -326,12 +331,13 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                 }
             }
             if needsShimmerNode {
+                strongSelf.shimmerNodeOffset = shimmerNodeOffset
                 if strongSelf.emptyShimmerEffectNode == nil {
                     let emptyShimmerEffectNode = ChatListShimmerNode()
                     strongSelf.emptyShimmerEffectNode = emptyShimmerEffectNode
                     strongSelf.insertSubnode(emptyShimmerEffectNode, belowSubnode: strongSelf.listNode)
                     if let (size, insets, _) = strongSelf.validLayout, let offset = strongSelf.floatingHeaderOffset {
-                        strongSelf.layoutEmptyShimmerEffectNode(node: emptyShimmerEffectNode, size: size, insets: insets, verticalOffset: offset, transition: .immediate)
+                        strongSelf.layoutEmptyShimmerEffectNode(node: emptyShimmerEffectNode, size: size, insets: insets, verticalOffset: offset + strongSelf.shimmerNodeOffset, transition: .immediate)
                     }
                 }
             } else if let emptyShimmerEffectNode = strongSelf.emptyShimmerEffectNode {
@@ -349,7 +355,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
             }
             strongSelf.floatingHeaderOffset = offset
             if let (size, insets, _) = strongSelf.validLayout, let emptyShimmerEffectNode = strongSelf.emptyShimmerEffectNode {
-                strongSelf.layoutEmptyShimmerEffectNode(node: emptyShimmerEffectNode, size: size, insets: insets, verticalOffset: offset, transition: transition)
+                strongSelf.layoutEmptyShimmerEffectNode(node: emptyShimmerEffectNode, size: size, insets: insets, verticalOffset: offset + strongSelf.shimmerNodeOffset, transition: transition)
             }
         }
     }

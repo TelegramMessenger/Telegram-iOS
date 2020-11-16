@@ -615,6 +615,47 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     storedState = MediaPlaybackStoredState(timestamp: timestamp, playbackRate: .x1)
                 }
                 let _ = updateMediaPlaybackStoredStateInteractively(postbox: strongSelf.context.account.postbox, messageId: messageId, state: storedState).start()
+            }, editMedia: { [weak self] messageId in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                let _ = (strongSelf.context.account.postbox.transaction { transaction -> Message? in
+                    return transaction.getMessage(messageId)
+                } |> deliverOnMainQueue).start(next: { [weak self] message in
+                    guard let strongSelf = self, let message = message else {
+                        return
+                    }
+                    
+                    var mediaReference: AnyMediaReference?
+                    for m in message.media {
+                        if let image = m as? TelegramMediaImage {
+                            mediaReference = AnyMediaReference.standalone(media: image)
+                        }
+                    }
+                    
+                    if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
+                        legacyMediaEditor(context: strongSelf.context, peer: peer, media: mediaReference, initialCaption: message.text, presentStickers: { [weak self] completion in
+                            if let strongSelf = self {
+                                let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
+                                    completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
+                                    return true
+                                })
+                                strongSelf.present(controller, in: .window(.root))
+                                return controller
+                            } else {
+                                return nil
+                            }
+                        }, sendMessagesWithSignals: { [weak self] signals, _, _ in
+                            if let strongSelf = self {
+                                strongSelf.interfaceInteraction?.setupEditMessage(messageId, { _ in })
+                                strongSelf.editMessageMediaWithLegacySignals(signals!)
+                            }
+                        }, present: { [weak self] c, a in
+                            self?.present(c, in: .window(.root), with: a)
+                        })
+                    }
+                })
             })))
         }, openPeer: { [weak self] id, navigation, fromMessage in
             self?.openPeer(peerId: id, navigation: navigation, fromMessage: fromMessage)
@@ -643,7 +684,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         break
                     }
                 }
-                let _ = combineLatest(queue: .mainQueue(), contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, context: strongSelf.context, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction), loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .animatedEmoji, forceActualized: false), ApplicationSpecificNotice.getChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager)
+                let _ = combineLatest(queue: .mainQueue(), contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, context: strongSelf.context, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction), loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .animatedEmoji, forceActualized: false), ApplicationSpecificNotice.getChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager)
                 ).start(next: { actions, animatedEmojiStickers, chatTextSelectionTips in
                     guard let strongSelf = self, !actions.isEmpty else {
                         return
@@ -2275,6 +2316,65 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 strongSelf.push(messageStatsController(context: context, messageId: id, cachedPeerData: cachedPeerData))
             })
+        }, editMessageMedia: { [weak self] messageId, draw in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            strongSelf.chatDisplayNode.dismissInput()
+            
+            if draw {
+                let _ = (strongSelf.context.account.postbox.transaction { transaction -> Message? in
+                    return transaction.getMessage(messageId)
+                } |> deliverOnMainQueue).start(next: { [weak self] message in
+                    guard let strongSelf = self, let message = message else {
+                        return
+                    }
+                    
+                    var mediaReference: AnyMediaReference?
+                    for m in message.media {
+                        if let image = m as? TelegramMediaImage {
+                            mediaReference = AnyMediaReference.standalone(media: image)
+                        }
+                    }
+                    
+                    if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
+                        legacyMediaEditor(context: strongSelf.context, peer: peer, media: mediaReference, initialCaption: message.text, presentStickers: { [weak self] completion in
+                            if let strongSelf = self {
+                                let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
+                                    completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
+                                    return true
+                                })
+                                strongSelf.present(controller, in: .window(.root))
+                                return controller
+                            } else {
+                                return nil
+                            }
+                        }, sendMessagesWithSignals: { [weak self] signals, _, _ in
+                            if let strongSelf = self {
+                                strongSelf.interfaceInteraction?.setupEditMessage(messageId, { _ in })
+                                strongSelf.editMessageMediaWithLegacySignals(signals!)
+                            }
+                        }, present: { [weak self] c, a in
+                            self?.present(c, in: .window(.root), with: a)
+                        })
+                    }
+                })
+            } else {
+                strongSelf.presentMediaPicker(fileMode: false, editingMedia: true, completion: { signals, _, _ in
+                    self?.interfaceInteraction?.setupEditMessage(messageId, { _ in })
+                    self?.editMessageMediaWithLegacySignals(signals)
+                })
+            }
+        }, copyText: { [weak self] text in
+            if let strongSelf = self {
+                storeMessageTextInPasteboard(text, entities: nil)
+                
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in
+                        return true
+                }), in: .current)
+            }
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -4326,7 +4426,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     break
                                 }
                             }
-                            var inputTextMaxLength: Int32?
+                            var inputTextMaxLength: Int32 = 4096
                             for media in message.media {
                                 if media is TelegramMediaImage || media is TelegramMediaFile {
                                     inputTextMaxLength = strongSelf.context.currentLimitsConfiguration.with { $0 }.maxMediaCaptionLength

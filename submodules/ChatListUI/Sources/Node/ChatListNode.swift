@@ -403,7 +403,7 @@ public enum ChatListNodeScrollPosition {
 
 public enum ChatListNodeEmptyState: Equatable {
     case notEmpty(containsChats: Bool)
-    case empty(isLoading: Bool)
+    case empty(isLoading: Bool, hasArchiveInfo: Bool)
 }
 
 public final class ChatListNode: ListView {
@@ -1411,6 +1411,7 @@ public final class ChatListNode: ListView {
                     
                     var isEmpty = false
                     var isLoading = false
+                    var hasArchiveInfo = false
                     if transition.chatListView.filteredEntries.isEmpty {
                         isEmpty = true
                     } else {
@@ -1421,6 +1422,9 @@ public final class ChatListNode: ListView {
                                 case .GroupReferenceEntry, .HeaderEntry, .HoleEntry:
                                     break
                                 default:
+                                    if case .ArchiveIntro = entry {
+                                        hasArchiveInfo = true
+                                    }
                                     isEmpty = false
                                     break loop1
                                 }
@@ -1441,14 +1445,21 @@ public final class ChatListNode: ListView {
                             if !hasHoles {
                                 isLoading = false
                             }
+                        } else {
+                            for entry in transition.chatListView.filteredEntries.reversed().prefix(2) {
+                                if case .ArchiveIntro = entry {
+                                    hasArchiveInfo = true
+                                    break
+                                }
+                            }
                         }
                     }
                 
                     let isEmptyState: ChatListNodeEmptyState
                     if transition.chatListView.isLoading {
-                        isEmptyState = .empty(isLoading: true)
+                        isEmptyState = .empty(isLoading: true, hasArchiveInfo: hasArchiveInfo)
                     } else if isEmpty {
-                        isEmptyState = .empty(isLoading: isLoading)
+                        isEmptyState = .empty(isLoading: isLoading, hasArchiveInfo: false)
                     } else {
                         var containsChats = false
                         loop: for entry in transition.chatListView.filteredEntries {

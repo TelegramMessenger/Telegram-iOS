@@ -312,6 +312,7 @@ public class WallpaperGalleryController: ViewController {
         }, dismissController: { [weak self] in
                 self?.dismiss(forceAway: true)
         }, replaceRootController: { controller, ready in
+        }, editMedia: { _ in
         })
         self.displayNode = WallpaperGalleryControllerNode(controllerInteraction: controllerInteraction, pageGap: 0.0)
         self.displayNodeDidLoad()
