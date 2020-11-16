@@ -136,15 +136,7 @@
 #import <LegacyComponents/TGLiveUploadInterface.h>
 #import <LegacyComponents/TGLocalMessageMetaMediaAttachment.h>
 #import <LegacyComponents/TGLocalization.h>
-#import <LegacyComponents/TGLocationLiveElapsedView.h>
-#import <LegacyComponents/TGLocationLiveSessionItemView.h>
-#import <LegacyComponents/TGLocationMapViewController.h>
 #import <LegacyComponents/TGLocationMediaAttachment.h>
-#import <LegacyComponents/TGLocationPickerController.h>
-#import <LegacyComponents/TGLocationPulseView.h>
-#import <LegacyComponents/TGLocationVenue.h>
-#import <LegacyComponents/TGLocationViewController.h>
-#import <LegacyComponents/TGLocationWavesView.h>
 #import <LegacyComponents/TGMediaAsset.h>
 #import <LegacyComponents/TGMediaAssetFetchResult.h>
 #import <LegacyComponents/TGMediaAssetFetchResultChange.h>
@@ -267,8 +259,6 @@
 #import <LegacyComponents/TGRemoteImageView.h>
 #import <LegacyComponents/TGReplyMarkupAttachment.h>
 #import <LegacyComponents/TGReplyMessageMediaAttachment.h>
-#import <LegacyComponents/TGSearchBar.h>
-#import <LegacyComponents/TGSearchDisplayMixin.h>
 #import <LegacyComponents/TGStaticBackdropAreaData.h>
 #import <LegacyComponents/TGStaticBackdropImageData.h>
 #import <LegacyComponents/TGStickerAssociation.h>
@@ -294,7 +284,6 @@
 #import <LegacyComponents/TGWebPageMediaAttachment.h>
 #import <LegacyComponents/UICollectionView+Utils.h>
 #import <LegacyComponents/UIControl+HitTestEdgeInsets.h>
-#import <LegacyComponents/UIDevice+PlatformInfo.h>
 #import <LegacyComponents/UIImage+TG.h>
 #import <LegacyComponents/UIImage+TGMediaEditableItem.h>
 #import <LegacyComponents/UIScrollView+TGHacks.h>

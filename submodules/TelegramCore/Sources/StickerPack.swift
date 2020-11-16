@@ -5,7 +5,7 @@ import SwiftSignalKit
 import SyncCore
 import MtProtoKit
 
-func telegramStickerPachThumbnailRepresentationFromApiSize(datacenterId: Int32, size: Api.PhotoSize) -> TelegramMediaImageRepresentation? {
+func telegramStickerPackThumbnailRepresentationFromApiSize(datacenterId: Int32, size: Api.PhotoSize) -> TelegramMediaImageRepresentation? {
     switch size {
         case let .photoCachedSize(_, location, w, h, _):
             switch location {
@@ -25,6 +25,8 @@ func telegramStickerPachThumbnailRepresentationFromApiSize(datacenterId: Int32, 
                     let resource = CloudStickerPackThumbnailMediaResource(datacenterId: datacenterId, volumeId: volumeId, localId: localId)
                     return TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: sizes)
             }
+        case let .photoPathSize(_, data):
+            return nil
         case .photoStrippedSize:
             return nil
         case .photoSizeEmpty:
@@ -49,7 +51,7 @@ extension StickerPackCollectionInfo {
                 
                 var thumbnailRepresentation: TelegramMediaImageRepresentation?
                 if let thumb = thumb, let thumbDcId = thumbDcId {
-                    thumbnailRepresentation = telegramStickerPachThumbnailRepresentationFromApiSize(datacenterId: thumbDcId, size: thumb)
+                    thumbnailRepresentation = telegramStickerPackThumbnailRepresentationFromApiSize(datacenterId: thumbDcId, size: thumb)
                 }
                 
                 self.init(id: ItemCollectionId(namespace: namespace, id: id), flags: setFlags, accessHash: accessHash, title: title, shortName: shortName, thumbnail: thumbnailRepresentation, hash: nHash, count: count)

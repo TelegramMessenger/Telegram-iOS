@@ -1969,6 +1969,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in
         }, openMessageStats: { _ in
+        }, editMessageMedia: { _, _ in
+        }, copyText: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
@@ -3648,19 +3650,27 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         }
         let context = self.context
         let presentationData = self.presentationData
-        let mapMedia = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: MapVenue(title: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), address: location.address, provider: nil, id: nil, type: nil), liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil)
-        let locationController = legacyLocationController(message: nil, mapMedia: mapMedia, context: context, openPeer: { _ in }, sendLiveLocation: { _, _ in }, stopLiveLocation: {}, openUrl: { url in
+        let map = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: MapVenue(title: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), address: location.address, provider: nil, id: nil, type: nil), liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil)
+        
+        let controllerParams = LocationViewParams(sendLiveLocation: { _ in
+        }, stopLiveLocation: { _ in
+        }, openUrl: { url in
             context.sharedContext.applicationBindings.openUrl(url)
-        })
-        self.controller?.push(locationController)
+        }, openPeer: { _ in
+        }, showAll: false)
+        
+        let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer, text: "", attributes: [], media: [map], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+        
+        let controller = LocationViewController(context: context, subject: message, params: controllerParams)
+        self.controller?.push(controller)
     }
     
     private func editingOpenSetupLocation() {
         guard let data = self.data, let peer = data.peer else {
             return
         }
-        let presentationData = self.presentationData
-        let locationController = legacyLocationPickerController(context: self.context, selfPeer: peer, peer: peer, sendLocation: { [weak self] coordinate, _, address in
+        
+        let controller = LocationPickerController(context: self.context, mode: .pick, completion: { [weak self] location, address in
             guard let strongSelf = self else {
                 return
             }
@@ -3668,12 +3678,12 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             if let address = address {
                 addressSignal = .single(address)
             } else {
-                addressSignal = reverseGeocodeLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                addressSignal = reverseGeocodeLocation(latitude: location.latitude, longitude: location.longitude)
                 |> map { placemark in
                     if let placemark = placemark {
                         return placemark.fullAddress
                     } else {
-                        return "\(coordinate.latitude), \(coordinate.longitude)"
+                        return "\(location.latitude), \(location.longitude)"
                     }
                 }
             }
@@ -3681,12 +3691,11 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             let context = strongSelf.context
             let _ = (addressSignal
             |> mapToSignal { address -> Signal<Bool, NoError> in
-                return updateChannelGeoLocation(postbox: context.account.postbox, network: context.account.network, channelId: peer.id, coordinate: (coordinate.latitude, coordinate.longitude), address: address)
+                return updateChannelGeoLocation(postbox: context.account.postbox, network: context.account.network, channelId: peer.id, coordinate: (location.latitude, location.longitude), address: address)
             }
             |> deliverOnMainQueue).start()
-        }, sendLiveLocation: { _, _ in }, theme: presentationData.theme, customLocationPicker: true, presentationCompleted: {
         })
-        self.controller?.push(locationController)
+        self.controller?.push(controller)
     }
     
     private func openPeerInfo(peer: Peer, isMember: Bool) {

@@ -81,7 +81,7 @@ func stringForEstimatedDuration(strings: PresentationStrings, eta: Double) -> St
             if hours == 1 && minutes == 0 {
                 string = strings.Map_ETAHours(1)
             } else {
-                string = strings.Map_ETAHours(9999).replacingOccurrences(of: "9999", with: String(format: "%d:%02d", arguments: [hours, minutes]))
+                string = strings.Map_ETAHours(10).replacingOccurrences(of: "10", with: String(format: "%d:%02d", arguments: [hours, minutes]))
             }
         } else {
             string = strings.Map_ETAMinutes(minutes)

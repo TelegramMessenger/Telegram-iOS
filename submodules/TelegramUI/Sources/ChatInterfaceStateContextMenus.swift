@@ -276,7 +276,7 @@ func updatedChatEditInterfaceMessageState(state: ChatPresentationInterfaceState,
     return updated
 }
 
-func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, messages: [Message], controllerInteraction: ChatControllerInteraction?, selectAll: Bool, interfaceInteraction: ChatPanelInterfaceInteraction?) -> Signal<[ContextMenuItem], NoError> {
+func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, messages: [Message], controllerInteraction: ChatControllerInteraction?, selectAll: Bool, interfaceInteraction: ChatPanelInterfaceInteraction?) -> Signal<[ContextMenuItem], NoError> {
     guard let interfaceInteraction = interfaceInteraction, let controllerInteraction = controllerInteraction else {
         return .single([])
     }
@@ -643,6 +643,17 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
                 
         if data.canEdit && !isPinnedMessages {
+            var mediaReference: AnyMediaReference?
+            for media in message.media {
+                if let image = media as? TelegramMediaImage, let _ = largestImageRepresentation(image.representations) {
+                    mediaReference = ImageMediaReference.standalone(media: image).abstract
+                    break
+                } else if let file = media as? TelegramMediaFile {
+                    mediaReference = FileMediaReference.standalone(media: file).abstract
+                    break
+                }
+            }
+            
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
@@ -763,7 +774,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         
                         var warnAboutPrivate = false
-                        if case let .peer = chatPresentationInterfaceState.chatLocation {
+                        if case .peer = chatPresentationInterfaceState.chatLocation {
                             if channel.addressName == nil {
                                 warnAboutPrivate = true
                             }

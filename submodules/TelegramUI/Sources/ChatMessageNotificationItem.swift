@@ -248,6 +248,24 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                                 title = nil
                                 messageText = rawText
                             }
+                        case .video:
+                            let rawText = presentationData.strings.PUSH_CHANNEL_MESSAGE_VIDEOS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
+                            if let index = rawText.firstIndex(of: "|") {
+                                title = String(rawText[rawText.startIndex ..< index])
+                                messageText = String(rawText[rawText.index(after: index)...])
+                            } else {
+                                title = nil
+                                messageText = rawText
+                            }
+                        case .file:
+                            let rawText = presentationData.strings.PUSH_CHANNEL_MESSAGE_DOCS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
+                            if let index = rawText.firstIndex(of: "|") {
+                                title = String(rawText[rawText.startIndex ..< index])
+                                messageText = String(rawText[rawText.index(after: index)...])
+                            } else {
+                                title = nil
+                                messageText = rawText
+                            }
                         default:
                             let rawText = presentationData.strings.PUSH_CHANNEL_MESSAGES(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
                             if let index = rawText.firstIndex(of: "|") {
@@ -272,6 +290,24 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                                 title = nil
                                 messageText = rawText
                             }
+                        case .video:
+                            let rawText = presentationData.strings.PUSH_CHAT_MESSAGE_VIDEOS(Int32(item.messages.count), author.compactDisplayTitle, peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
+                            if let index = rawText.firstIndex(of: "|") {
+                                title = String(rawText[rawText.startIndex ..< index])
+                                messageText = String(rawText[rawText.index(after: index)...])
+                            } else {
+                                title = nil
+                                messageText = rawText
+                            }
+                        case .file:
+                            let rawText = presentationData.strings.PUSH_CHAT_MESSAGE_DOCS(Int32(item.messages.count), author.compactDisplayTitle, peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
+                            if let index = rawText.firstIndex(of: "|") {
+                                title = String(rawText[rawText.startIndex ..< index])
+                                messageText = String(rawText[rawText.index(after: index)...])
+                            } else {
+                                title = nil
+                                messageText = rawText
+                            }
                         default:
                             let rawText = presentationData.strings.PUSH_CHAT_MESSAGES(Int32(item.messages.count), author.compactDisplayTitle, peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
                             if let index = rawText.firstIndex(of: "|") {
@@ -286,6 +322,24 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                     switch kind {
                         case .image:
                             let rawText = presentationData.strings.PUSH_MESSAGE_PHOTOS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
+                            if let index = rawText.firstIndex(of: "|") {
+                                title = String(rawText[rawText.startIndex ..< index])
+                                messageText = String(rawText[rawText.index(after: index)...])
+                            } else {
+                                title = nil
+                                messageText = rawText
+                            }
+                        case .video:
+                            let rawText = presentationData.strings.PUSH_MESSAGE_VIDEOS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
+                            if let index = rawText.firstIndex(of: "|") {
+                                title = String(rawText[rawText.startIndex ..< index])
+                                messageText = String(rawText[rawText.index(after: index)...])
+                            } else {
+                                title = nil
+                                messageText = rawText
+                            }
+                        case .file:
+                            let rawText = presentationData.strings.PUSH_MESSAGE_DOCS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
                             if let index = rawText.firstIndex(of: "|") {
                                 title = String(rawText[rawText.startIndex ..< index])
                                 messageText = String(rawText[rawText.index(after: index)...])

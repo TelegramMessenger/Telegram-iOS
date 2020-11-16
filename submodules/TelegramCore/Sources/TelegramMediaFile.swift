@@ -143,6 +143,8 @@ func telegramMediaFileThumbnailRepresentationsFromApiSizes(datacenterId: Int32, 
                         let resource = CloudDocumentSizeMediaResource(datacenterId: datacenterId, documentId: documentId, accessHash: accessHash, sizeSpec: type, volumeId: volumeId, localId: localId, fileReference: fileReference)
                         representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: sizes))
                 }
+            case let .photoPathSize(_, data):
+                immediateThumbnailData = data.makeData()
             case let .photoStrippedSize(_, data):
                 immediateThumbnailData = data.makeData()
             case .photoSizeEmpty:

@@ -17,6 +17,18 @@ import ContactsPeerItem
 import ChatListSearchItemHeader
 import ItemListUI
 
+enum ParticipantRevealActionType {
+    case promote
+    case restrict
+    case remove
+}
+
+struct ParticipantRevealAction: Equatable {
+    let type: ItemListPeerItemRevealOptionType
+    let title: String
+    let action: ParticipantRevealActionType
+}
+
 public enum ChannelMembersSearchMode {
     case searchMembers
     case searchAdmins

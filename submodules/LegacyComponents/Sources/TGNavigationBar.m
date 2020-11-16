@@ -204,9 +204,23 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
 
 - (void)layoutSubviews
 {
-    [self updateLayout];
-    
     [super layoutSubviews];
+    
+    for (UIView *view in self.subviews) {
+        if (iosMajorVersion() >= 11) {
+            view.frame = CGRectOffset(view.frame, 0.0, 6.0);
+        }
+    }
+    
+    [self updateLayout];
+}
+
+- (CGSize)sizeThatFits:(CGSize)size {
+    if (iosMajorVersion() < 11) {
+        return CGSizeMake(MAX(self.frame.size.width, size.width), 36.0 - 6.0);
+    } else {
+        return [super sizeThatFits:size];
+    }
 }
 
 - (void)updateLayout
@@ -217,7 +231,13 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
         if (iosMajorVersion() >= 11 && self.superview.safeAreaInsets.top > FLT_EPSILON)
             backgroundOverflow = self.superview.safeAreaInsets.top;
         
-        _backgroundContainerView.frame = CGRectMake(0, -backgroundOverflow, self.bounds.size.width, backgroundOverflow + self.bounds.size.height);
+        CGFloat heightAddition = 0.0;
+        if (iosMajorVersion() < 11) {
+            backgroundOverflow = 20.0;
+            heightAddition = 6.0 + TGScreenPixel;
+        }
+        
+        _backgroundContainerView.frame = CGRectMake(0, -backgroundOverflow, self.bounds.size.width, backgroundOverflow + self.bounds.size.height + heightAddition);
         
         if (_barBackgroundView != nil)
             _barBackgroundView.frame = _backgroundContainerView.bounds;
@@ -298,6 +318,10 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
 
 - (void)setFrame:(CGRect)frame
 {
+    if (frame.size.height < 56.0) {
+        frame.size.height = 56.0;
+    }
+    
     [super setFrame:frame];
     
     if (_statusBarBackgroundView != nil && _statusBarBackgroundView.superview != nil)

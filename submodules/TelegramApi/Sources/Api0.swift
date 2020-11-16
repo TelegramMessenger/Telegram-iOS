@@ -296,6 +296,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-374917894] = { return Api.PhotoSize.parse_photoCachedSize($0) }
     dict[-525288402] = { return Api.PhotoSize.parse_photoStrippedSize($0) }
     dict[1520986705] = { return Api.PhotoSize.parse_photoSizeProgressive($0) }
+    dict[-668906175] = { return Api.PhotoSize.parse_photoPathSize($0) }
     dict[-244016606] = { return Api.messages.Stickers.parse_stickersNotModified($0) }
     dict[-463889475] = { return Api.messages.Stickers.parse_stickers($0) }
     dict[-1096616924] = { return Api.GlobalPrivacySettings.parse_globalPrivacySettings($0) }

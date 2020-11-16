@@ -31,6 +31,8 @@ func telegramMediaImageRepresentationsFromApiSizes(datacenterId: Int32, photoId:
                 }
             case let .photoStrippedSize(_, data):
                 immediateThumbnailData = data.makeData()
+            case .photoPathSize:
+                break
             case .photoSizeEmpty:
                 break
         }
