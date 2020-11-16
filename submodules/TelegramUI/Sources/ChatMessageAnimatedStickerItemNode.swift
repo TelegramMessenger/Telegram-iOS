@@ -966,7 +966,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     if let immediateThumbnailData = file?.immediateThumbnailData, let placeholderNode = strongSelf.placeholderNode {
                         placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0x748391, alpha: 0.2), shimmeringColor: UIColor(rgb: 0x748391, alpha: 0.35), data: immediateThumbnailData, size: animationNodeFrame.size)
                         placeholderNode.frame = animationNodeFrame
-                        strongSelf.animationNode?.isHidden = true
                     }
                     
                     if let animationNode = strongSelf.animationNode, let parentNode = strongSelf.greetingStickerParentNode, strongSelf.animateGreeting {
