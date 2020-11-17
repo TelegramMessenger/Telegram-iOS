@@ -129,7 +129,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     }
     
     public func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
-        return self.updateLayout(width: width, previousSubtitle: nil, transition: transition)
+        return self.updateLayout(width: width, previousSubtitle: self.subtitle, transition: transition)
     }
     
     private func updateLayout(width: CGFloat, previousSubtitle: String?, transition: ContainedViewLayoutTransition) -> CGFloat {

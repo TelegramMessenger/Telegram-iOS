@@ -966,7 +966,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     if let immediateThumbnailData = file?.immediateThumbnailData, let placeholderNode = strongSelf.placeholderNode {
                         placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0x748391, alpha: 0.2), shimmeringColor: UIColor(rgb: 0x748391, alpha: 0.35), data: immediateThumbnailData, size: animationNodeFrame.size)
                         placeholderNode.frame = animationNodeFrame
-                        strongSelf.animationNode?.isHidden = true
                     }
                     
                     if let animationNode = strongSelf.animationNode, let parentNode = strongSelf.greetingStickerParentNode, strongSelf.animateGreeting {
@@ -1304,6 +1303,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         }
                         
                         let beatingHearts: [UInt32] = [0x2764, 0x1F90E, 0x1F9E1, 0x1F499, 0x1F49A, 0x1F49C, 0x1F49B, 0x1F5A4, 0x1F90D]
+                        let heart = 0x2764
                         let peach = 0x1F351
                         let coffin = 0x26B0
                         
@@ -1313,7 +1313,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
                         }
                                                 
-                        if let text = self.item?.message.text, let firstScalar = text.unicodeScalars.first {
+                        if let text = self.item?.message.text, var firstScalar = text.unicodeScalars.first {
+                            var textEmoji = text.strippedEmoji
+                            if beatingHearts.contains(firstScalar.value) {
+                                textEmoji = "❤️"
+                                firstScalar = UnicodeScalar(heart)!
+                            }
                             return .optionalAction({
                                 if shouldPlay {
                                     let _ = (appConfiguration
@@ -1323,7 +1328,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                         }
                                         let emojiSounds = AnimatedEmojiSoundsConfiguration.with(appConfiguration: appConfiguration, account: item.context.account)
                                         for (emoji, file) in emojiSounds.sounds {
-                                            if emoji.strippedEmoji == text.strippedEmoji {
+                                            if emoji.strippedEmoji == textEmoji.strippedEmoji {
                                                 let mediaManager = item.context.sharedContext.mediaManager
                                                 let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: item.context.account.postbox, resourceReference: .standalone(resource: file.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true, ambient: true)
                                                 mediaPlayer.togglePlayPause()
@@ -1335,24 +1340,24 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                                 strongSelf.mediaStatusDisposable.set((mediaPlayer.status
                                                 |> deliverOnMainQueue).start(next: { [weak self, weak animationNode] status in
                                                     if let strongSelf = self {
-                                                        if firstScalar.value == coffin || firstScalar.value == peach {
-                                                            var haptic: EmojiHaptic
-                                                            if let current = strongSelf.haptic {
-                                                                haptic = current
-                                                            } else {
-                                                                if beatingHearts.contains(firstScalar.value) {
-                                                                    haptic = HeartbeatHaptic()
-                                                                } else if firstScalar.value == coffin {
-                                                                    haptic = CoffinHaptic()
-                                                                } else {
-                                                                    haptic = PeachHaptic()
-                                                                }
-                                                                haptic.enabled = true
-                                                                strongSelf.haptic = haptic
+                                                        
+                                                        var haptic: EmojiHaptic?
+                                                        if let current = strongSelf.haptic {
+                                                            haptic = current
+                                                        } else {
+                                                            if firstScalar.value == heart {
+                                                                haptic = HeartbeatHaptic()
+                                                            } else if firstScalar.value == coffin {
+                                                                haptic = CoffinHaptic()
+                                                            } else if firstScalar.value == peach {
+                                                                haptic = PeachHaptic()
                                                             }
-                                                            if !haptic.active {
-                                                                haptic.start(time: 0.0)
-                                                            }
+                                                            haptic?.enabled = true
+                                                            strongSelf.haptic = haptic
+                                                        }
+                                                        
+                                                        if let haptic = haptic, !haptic.active {
+                                                            haptic.start(time: 0.0)
                                                         }
                                                         
                                                         switch status.status {
