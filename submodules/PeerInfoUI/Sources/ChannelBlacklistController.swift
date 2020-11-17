@@ -164,7 +164,7 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
                 switch participant.participant {
                     case let .member(_, _, _, banInfo, _):
                         if let banInfo = banInfo, let peer = participant.peers[banInfo.restrictedBy] {
-                            text = .text(strings.Channel_Management_RemovedBy(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)).0)
+                            text = .text(strings.Channel_Management_RemovedBy(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)).0, .secondary)
                         }
                     default:
                         break

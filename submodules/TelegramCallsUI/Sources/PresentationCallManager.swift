@@ -592,18 +592,16 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         }
     }
     
-    public func requestOrJoinGroupCall(context: AccountContext, peerId: PeerId) {
-        let begin: () -> Void = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            let _ = strongSelf.startGroupCall(account: context.account, peerId: peerId).start()
+    public func requestOrJoinGroupCall(context: AccountContext, peerId: PeerId) -> RequestOrJoinGroupCallResult {
+        if let currentGroupCall = self.currentGroupCallValue {
+            return .alreadyInProgress(currentGroupCall.peerId)
         }
-        begin()
+        let _ = self.startGroupCall(accountContext: context, peerId: peerId).start()
+        return .requested
     }
     
     private func startGroupCall(
-        account: Account,
+        accountContext: AccountContext,
         peerId: PeerId,
         internalId: CallSessionInternalId = CallSessionInternalId()
     ) -> Signal<Bool, NoError> {
@@ -647,7 +645,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             }
                     
             let call = PresentationGroupCallImpl(
-                account: account,
+                accountContext: accountContext,
                 audioSession: strongSelf.audioSession,
                 callKitIntegration: nil,
                 getDeviceAccessData: strongSelf.getDeviceAccessData,
@@ -658,7 +656,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             strongSelf.updateCurrentGroupCall(call)
             strongSelf.currentGroupCallPromise.set(.single(call))
             strongSelf.hasActiveCallsPromise.set(true)
-            strongSelf.removeCurrentCallDisposable.set((call.canBeRemoved.get()
+            strongSelf.removeCurrentCallDisposable.set((call.canBeRemoved
             |> deliverOnMainQueue).start(next: { [weak call] value in
                 if value, let strongSelf = self, let call = call {
                     if strongSelf.currentGroupCall === call {

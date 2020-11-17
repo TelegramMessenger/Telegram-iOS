@@ -151,10 +151,14 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)switchAudioInput:(NSString * _Nonnull)deviceId;
 @end
 
+typedef NS_ENUM(int32_t, GroupCallNetworkState) {
+    GroupCallNetworkStateConnecting,
+    GroupCallNetworkStateConnected
+};
 
 @interface GroupCallThreadLocalContext : NSObject
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue relaySdpAnswer:(void (^ _Nonnull)(NSString * _Nonnull))relaySdpAnswer incomingVideoStreamListUpdated:(void (^ _Nonnull)(NSArray<NSString *> * _Nonnull))incomingVideoStreamListUpdated videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer;
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue relaySdpAnswer:(void (^ _Nonnull)(NSString * _Nonnull))relaySdpAnswer incomingVideoStreamListUpdated:(void (^ _Nonnull)(NSArray<NSString *> * _Nonnull))incomingVideoStreamListUpdated videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated;
 
 - (void)emitOfferWithAdjustSdp:(NSString * _Nonnull (^ _Nonnull)(NSString * _Nonnull))adjustSdp completion:(void (^ _Nonnull)(NSString * _Nonnull))completion;
 - (void)setOfferSdp:(NSString * _Nonnull)offerSdp isPartial:(bool)isPartial;

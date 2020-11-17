@@ -396,6 +396,11 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                 pinnedMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: pinnedMsgId)
                                             }
                                             
+                                            var updatedActiveCallMessageId: MessageId?
+                                            if let callMsgId = callMsgId {
+                                                updatedActiveCallMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: callMsgId)
+                                            }
+                                            
                                             var minAvailableMessageId: MessageId?
                                             if let minAvailableMsgId = minAvailableMsgId {
                                                 minAvailableMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: minAvailableMsgId)
@@ -510,6 +515,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                     .withUpdatedStatsDatacenterId(statsDc ?? 0)
                                                     .withUpdatedInvitedBy(invitedBy)
                                                     .withUpdatedPhoto(photo)
+                                                    .withUpdatedActiveCallMessageId(updatedActiveCallMessageId)
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {

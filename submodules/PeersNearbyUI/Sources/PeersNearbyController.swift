@@ -231,7 +231,7 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
                 if isSelfPeer {
                     text = strings.PeopleNearby_VisibleUntil(humanReadableStringForTimestamp(strings: strings, dateTimeFormat: dateTimeFormat, timestamp: peer.expires)).0
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: .text(text), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: !isSelfPeer, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: .text(text, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: !isSelfPeer, sectionId: self.section, action: {
                     if !isSelfPeer {
                         arguments.openProfile(peer.peer.0, peer.distance)
                     }
@@ -251,9 +251,9 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
             case let .group(_, _, strings, dateTimeFormat, nameDisplayOrder, peer, highlighted):
                 var text: ItemListPeerItemText
                 if let cachedData = peer.peer.1 as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount {
-                    text = .text("\(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).0), \(memberCount > 0 ? strings.Conversation_StatusMembers(memberCount) : strings.PeopleNearby_NoMembers)")
+                    text = .text("\(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).0), \(memberCount > 0 ? strings.Conversation_StatusMembers(memberCount) : strings.PeopleNearby_NoMembers)", .secondary)
                 } else {
-                    text = .text(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).0)
+                    text = .text(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).0, .secondary)
                 }
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: text, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, highlighted: highlighted, selectable: true, sectionId: self.section, action: {
                     arguments.openChat(peer.peer.0)
@@ -265,9 +265,9 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
             case let .channel(_, _, strings, dateTimeFormat, nameDisplayOrder, peer, highlighted):
                 var text: ItemListPeerItemText
                 if let cachedData = peer.peer.1 as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount {
-                    text = .text("\(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).0), \(strings.Conversation_StatusSubscribers(memberCount))")
+                    text = .text("\(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).0), \(strings.Conversation_StatusSubscribers(memberCount))", .secondary)
                 } else {
-                    text = .text(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).0)
+                    text = .text(strings.Map_DistanceAway(shortStringForDistance(strings: strings, distance: peer.distance)).0, .secondary)
                 }
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer.peer.0, aliasHandling: .standard, nameColor: .primary, nameStyle: .distinctBold, presence: nil, text: text, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, highlighted: highlighted, selectable: true, sectionId: self.section, action: {
                     arguments.openChat(peer.peer.0)

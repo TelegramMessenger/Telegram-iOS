@@ -150,16 +150,16 @@ private enum WidgetSetupScreenEntry: ItemListNodeEntry {
             case let .peerItem(_, dateTimeFormat, nameOrder, peer, editing, enabled):
                 var text: ItemListPeerItemText = .none
                 if let group = peer.peer as? TelegramGroup {
-                    text = .text(presentationData.strings.Conversation_StatusMembers(Int32(group.participantCount)))
+                    text = .text(presentationData.strings.Conversation_StatusMembers(Int32(group.participantCount)), .secondary)
                 } else if let channel = peer.peer as? TelegramChannel {
                     if let participantCount = peer.participantCount {
-                        text = .text(presentationData.strings.Conversation_StatusMembers(Int32(participantCount)))
+                        text = .text(presentationData.strings.Conversation_StatusMembers(Int32(participantCount)), .secondary)
                     } else {
                         switch channel.info {
                             case .group:
-                                text = .text(presentationData.strings.Group_Status)
+                                text = .text(presentationData.strings.Group_Status, .secondary)
                             case .broadcast:
-                                text = .text(presentationData.strings.Channel_Status)
+                                text = .text(presentationData.strings.Channel_Status, .secondary)
                         }
                     }
                 }

@@ -11,6 +11,11 @@ public enum RequestCallResult {
     case alreadyInProgress(PeerId?)
 }
 
+public enum RequestOrJoinGroupCallResult {
+    case requested
+    case alreadyInProgress(PeerId?)
+}
+
 public struct CallAuxiliaryServer {
     public enum Connection {
         case stun
@@ -151,13 +156,59 @@ public protocol PresentationCall: class {
     func makeOutgoingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void)
 }
 
-public protocol PresentationGroupCall: class {
+public struct PresentationGroupCallState: Equatable {
+    public enum NetworkState {
+        case connecting
+        case connected
+    }
     
+    public var networkState: NetworkState
+    public var isMuted: Bool
+    
+    public init(
+        networkState: NetworkState,
+        isMuted: Bool
+    ) {
+        self.networkState = networkState
+        self.isMuted = isMuted
+    }
+}
+
+public struct PresentationGroupCallMemberState: Equatable {
+    public var ssrc: UInt32
+    public var isSpeaking: Bool
+    
+    public init(
+        ssrc: UInt32,
+        isSpeaking: Bool
+    ) {
+        self.ssrc = ssrc
+        self.isSpeaking = isSpeaking
+    }
+}
+
+public protocol PresentationGroupCall: class {
+    var account: Account { get }
+    var accountContext: AccountContext { get }
+    var internalId: CallSessionInternalId { get }
+    var peerId: PeerId { get }
+    
+    var audioOutputState: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> { get }
+    
+    var canBeRemoved: Signal<Bool, NoError> { get }
+    var state: Signal<PresentationGroupCallState, NoError> { get }
+    var members: Signal<[PeerId: PresentationGroupCallMemberState], NoError> { get }
+    
+    func leave() -> Signal<Bool, NoError>
+    
+    func toggleIsMuted()
+    func setIsMuted(_ value: Bool)
+    func setCurrentAudioOutput(_ output: AudioSessionOutput)
 }
 
 public protocol PresentationCallManager: class {
     var currentCallSignal: Signal<PresentationCall?, NoError> { get }
     
     func requestCall(context: AccountContext, peerId: PeerId, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult
-    func requestOrJoinGroupCall(context: AccountContext, peerId: PeerId)
+    func requestOrJoinGroupCall(context: AccountContext, peerId: PeerId) -> RequestOrJoinGroupCallResult
 }

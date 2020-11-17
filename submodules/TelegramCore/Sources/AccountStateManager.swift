@@ -148,8 +148,8 @@ public final class AccountStateManager {
         return self.threadReadStateUpdatesPipe.signal()
     }
     
-    private let groupCallParticipantUpdatesPipe = ValuePipe<[(Int64, Int32)]>()
-    public var groupCallParticipantUpdates: Signal<[(Int64, Int32)], NoError> {
+    private let groupCallParticipantUpdatesPipe = ValuePipe<[(Int64, PeerId, Int32, Bool)]>()
+    public var groupCallParticipantUpdates: Signal<[(Int64, PeerId, Int32, Bool)], NoError> {
         return self.groupCallParticipantUpdatesPipe.signal()
     }
     

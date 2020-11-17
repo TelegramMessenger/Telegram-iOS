@@ -800,18 +800,21 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     
     std::unique_ptr<tgcalls::GroupInstanceImpl> _instance;
     OngoingCallThreadLocalContextVideoCapturer *_videoCapturer;
+    
+    void (^_networkStateUpdated)(GroupCallNetworkState);
 }
 
 @end
 
 @implementation GroupCallThreadLocalContext
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue relaySdpAnswer:(void (^ _Nonnull)(NSString * _Nonnull))relaySdpAnswer incomingVideoStreamListUpdated:(void (^ _Nonnull)(NSArray<NSString *> * _Nonnull))incomingVideoStreamListUpdated videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue relaySdpAnswer:(void (^ _Nonnull)(NSString * _Nonnull))relaySdpAnswer incomingVideoStreamListUpdated:(void (^ _Nonnull)(NSArray<NSString *> * _Nonnull))incomingVideoStreamListUpdated videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated {
     self = [super init];
     if (self != nil) {
         _queue = queue;
         
         _videoCapturer = videoCapturer;
+        _networkStateUpdated = [networkStateUpdated copy];
         
         __weak GroupCallThreadLocalContext *weakSelf = self;
         _instance.reset(new tgcalls::GroupInstanceImpl((tgcalls::GroupInstanceDescriptor){
@@ -838,7 +841,16 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                     incomingVideoStreamListUpdated(mappedList);
                 }];
             },
-            .videoCapture = [_videoCapturer getInterface]
+            .videoCapture = [_videoCapturer getInterface],
+            .networkStateUpdated = [weakSelf, queue, networkStateUpdated](bool isConnected) {
+                [queue dispatch:^{
+                    __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
+                    if (strongSelf == nil) {
+                        return;
+                    }
+                    networkStateUpdated(isConnected ? GroupCallNetworkStateConnected : GroupCallNetworkStateConnecting);
+                }];
+            }
         }));
     }
     return self;
