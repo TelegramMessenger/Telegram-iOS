@@ -279,6 +279,19 @@ public class ContactsController: ViewController {
             openPeer(peer, false)
         }
         
+        self.contactsNode.requestAddContact = { [weak self] phoneNumber in
+            if let strongSelf = self {
+                strongSelf.view.endEditing(true)
+                strongSelf.context.sharedContext.openAddContact(context: strongSelf.context, firstName: "", lastName: "", phoneNumber: phoneNumber, label: defaultContactLabel, present: { [weak self] controller, arguments in
+                    self?.present(controller, in: .window(.root), with: arguments)
+                }, pushController: { [weak self] controller in
+                    (self?.navigationController as? NavigationController)?.pushViewController(controller)
+                }, completed: {
+                    self?.deactivateSearch(animated: false)
+                })
+            }
+        }
+        
         self.contactsNode.openPeopleNearby = { [weak self] in
             let _ = (DeviceAccess.authorizationStatus(subject: .location(.tracking))
             |> take(1)
