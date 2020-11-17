@@ -442,11 +442,13 @@ public class Window1 {
         self.keyboardFrameChangeObserver = NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillChangeFrameNotification, object: nil, queue: nil, using: { [weak self] notification in
             if let strongSelf = self {
                 var keyboardFrame: CGRect = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue ?? CGRect()
-                if let keyboardView = strongSelf.statusBarHost?.keyboardView {
+                if #available(iOSApplicationExtension 14.2, iOS 14.2, *), UIAccessibility.prefersCrossFadeTransitions {
+                } else if let keyboardView = strongSelf.statusBarHost?.keyboardView {
                     if keyboardFrame.width.isEqual(to: keyboardView.bounds.width) && keyboardFrame.height.isEqual(to: keyboardView.bounds.height) && keyboardFrame.minX.isEqual(to: keyboardView.frame.minX) {
                         keyboardFrame.origin.y = keyboardView.frame.minY
                     }
                 }
+                
                 
                 var popoverDelta: CGFloat = 0.0
                 
@@ -493,11 +495,7 @@ public class Window1 {
                 } else {
                     keyboardHeight = max(0.0, screenHeight - keyboardFrame.minY)
                     if inPopover && !keyboardHeight.isZero {
-                        if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
-                            keyboardHeight = max(0.0, keyboardHeight - popoverDelta)
-                        } else {
-                            keyboardHeight = max(0.0, keyboardHeight - popoverDelta)
-                        }
+                        keyboardHeight = max(0.0, keyboardHeight - popoverDelta)
                     }
                 }
                 
