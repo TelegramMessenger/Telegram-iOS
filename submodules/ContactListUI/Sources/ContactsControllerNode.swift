@@ -55,6 +55,7 @@ final class ContactsControllerNode: ASDisplayNode {
     
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((ContactListPeer) -> Void)?
+    var requestAddContact: ((String) -> Void)?
     var openPeopleNearby: (() -> Void)?
     var openInvite: (() -> Void)?
     
@@ -184,7 +185,11 @@ final class ContactsControllerNode: ASDisplayNode {
             return
         }
         
-        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: false, categories: [.cloudContacts, .global, .deviceContacts], openPeer: { [weak self] peer in
+        self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: false, categories: [.cloudContacts, .global, .deviceContacts], addContact: { [weak self] phoneNumber in
+            if let requestAddContact = self?.requestAddContact {
+                requestAddContact(phoneNumber)
+            }
+        }, openPeer: { [weak self] peer in
             if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                 requestOpenPeerFromSearch(peer)
             }
