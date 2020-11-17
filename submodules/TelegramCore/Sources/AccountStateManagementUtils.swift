@@ -2201,7 +2201,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     var updatedWebpages: [MediaId: TelegramMediaWebpage] = [:]
     var updatedCalls: [Api.PhoneCall] = []
     var addedCallSignalingData: [(Int64, Data)] = []
-    var updatedGroupCallParticipants: [(Int64, Int32)] = []
+    var updatedGroupCallParticipants: [(Int64, PeerId, Int32, Bool)] = []
     var updatedPeersNearby: [PeerNearby]?
     var isContactUpdates: [(PeerId, Bool)] = []
     var stickerPackOperations: [AccountStateUpdateStickerPacksOperation] = []
@@ -2932,11 +2932,14 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
             case let .AddCallSignalingData(callId, data):
                 addedCallSignalingData.append((callId, data))
             case let .UpdateGroupCallParticipant(callId, _, participant):
+                var peerId: PeerId?
                 var ssrc: Int32?
                 switch participant {
-                case let .groupCallParticipantAdmin(_, source):
+                case let .groupCallParticipantAdmin(userId, source):
+                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                     ssrc = source
-                case let .groupCallParticipant(_, _, _, source):
+                case let .groupCallParticipant(_, userId, _, source):
+                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
                     ssrc = source
                 case .groupCallParticipantLeft:
                     break
@@ -2945,8 +2948,8 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 case .groupCallParticipantInvited:
                     break
                 }
-                if let ssrc = ssrc {
-                    updatedGroupCallParticipants.append((callId, ssrc))
+                if let peerId = peerId, let ssrc = ssrc {
+                    updatedGroupCallParticipants.append((callId, peerId, ssrc, true))
                 }
             case let .UpdateLangPack(langCode, difference):
                 if let difference = difference {

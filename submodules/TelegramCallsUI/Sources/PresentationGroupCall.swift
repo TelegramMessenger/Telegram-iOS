@@ -14,11 +14,20 @@ import DeviceAccess
 import UniversalMediaPlayer
 import AccountContext
 
+private extension PresentationGroupCallState {
+    static var initialValue: PresentationGroupCallState {
+        return PresentationGroupCallState(
+            networkState: .connecting,
+            isMuted: true
+        )
+    }
+}
+
 public final class PresentationGroupCallImpl: PresentationGroupCall {
     private enum InternalState {
         case requesting
         case active(GroupCallInfo)
-        case estabilished(GroupCallInfo, String, [Int32])
+        case estabilished(GroupCallInfo, String, [UInt32: PeerId])
         
         var callInfo: GroupCallInfo? {
             switch self {
@@ -33,6 +42,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     public let account: Account
+    public let accountContext: AccountContext
     private let audioSession: ManagedAudioSession
     private let callKitIntegration: CallKitIntegration?
     public var isIntegratedWithCallKit: Bool {
@@ -48,11 +58,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var internalState: InternalState = .requesting
     
     private var callContext: OngoingGroupCallContext?
+    private var ssrcMapping: [UInt32: PeerId] = [:]
     
     private var sessionStateDisposable: Disposable?
     
-    private let isMutedPromise = ValuePromise<Bool>(false)
-    private var isMutedValue = false
+    private let isMutedPromise = ValuePromise<Bool>(true)
+    private var isMutedValue = true
     public var isMuted: Signal<Bool, NoError> {
         return self.isMutedPromise.get()
     }
@@ -72,13 +83,45 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var audioSessionActiveDisposable: Disposable?
     private var isAudioSessionActive = false
     
-    let canBeRemoved = Promise<Bool>(false)
+    private let _canBeRemoved = Promise<Bool>(false)
+    public var canBeRemoved: Signal<Bool, NoError> {
+        return self._canBeRemoved.get()
+    }
+    
+    private var stateValue = PresentationGroupCallState.initialValue {
+        didSet {
+            if self.stateValue != oldValue {
+                self.statePromise.set(self.stateValue)
+            }
+        }
+    }
+    private let statePromise = ValuePromise<PresentationGroupCallState>(PresentationGroupCallState.initialValue)
+    public var state: Signal<PresentationGroupCallState, NoError> {
+        return self.statePromise.get()
+    }
+    
+    private var membersValue: [PeerId: PresentationGroupCallMemberState] = [:] {
+        didSet {
+            if self.membersValue != oldValue {
+                self.membersPromise.set(self.membersValue)
+            }
+        }
+    }
+    private let membersPromise = ValuePromise<[PeerId: PresentationGroupCallMemberState]>([:])
+    public var members: Signal<[PeerId: PresentationGroupCallMemberState], NoError> {
+        return self.membersPromise.get()
+    }
     
     private let requestDisposable = MetaDisposable()
     private var groupCallParticipantUpdatesDisposable: Disposable?
     
+    private let networkStateDisposable = MetaDisposable()
+    private let isMutedDisposable = MetaDisposable()
+    private let memberStatesDisposable = MetaDisposable()
+    private let leaveDisposable = MetaDisposable()
+    
     init(
-        account: Account,
+        accountContext: AccountContext,
         audioSession: ManagedAudioSession,
         callKitIntegration: CallKitIntegration?,
         getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void),
@@ -86,7 +129,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         peerId: PeerId,
         peer: Peer?
     ) {
-        self.account = account
+        self.account = accountContext.account
+        self.accountContext = accountContext
         self.audioSession = audioSession
         self.callKitIntegration = callKitIntegration
         self.getDeviceAccessData = getDeviceAccessData
@@ -181,10 +225,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 return
             }
             if case let .estabilished(callInfo, _, _) = strongSelf.internalState {
-                var addedSsrc: [Int32] = []
-                for (callId, ssrc) in updates {
+                var addedSsrc: [UInt32] = []
+                for (callId, peerId, ssrc, _) in updates {
                     if callId == callInfo.id {
-                        addedSsrc.append(ssrc)
+                        let mappedSsrc = UInt32(bitPattern: ssrc)
+                        addedSsrc.append(mappedSsrc)
+                        strongSelf.ssrcMapping[mappedSsrc] = peerId
                     }
                 }
                 if !addedSsrc.isEmpty {
@@ -201,6 +247,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.audioSessionDisposable?.dispose()
         self.requestDisposable.dispose()
         self.groupCallParticipantUpdatesDisposable?.dispose()
+        self.leaveDisposable.dispose()
+        self.isMutedDisposable.dispose()
+        self.memberStatesDisposable.dispose()
+        self.networkStateDisposable.dispose()
     }
     
     private func updateSessionState(internalState: InternalState, audioSessionControl: ManagedAudioSessionControl?) {
@@ -241,9 +291,49 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             return
                         }
                         if let clientParams = joinCallResult.callInfo.clientParams {
-                            strongSelf.updateSessionState(internalState: .estabilished(joinCallResult.callInfo, clientParams, joinCallResult.ssrcs), audioSessionControl: strongSelf.audioSessionControl)
+                            strongSelf.updateSessionState(internalState: .estabilished(joinCallResult.callInfo, clientParams, joinCallResult.ssrcMapping), audioSessionControl: strongSelf.audioSessionControl)
                         }
                     }))
+                }))
+                
+                self.isMutedDisposable.set((callContext.isMuted
+                |> deliverOnMainQueue).start(next: { [weak self] isMuted in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.stateValue.isMuted = isMuted
+                }))
+                
+                self.networkStateDisposable.set((callContext.networkState
+                |> deliverOnMainQueue).start(next: { [weak self] state in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let mappedState: PresentationGroupCallState.NetworkState
+                    switch state {
+                    case .connecting:
+                        mappedState = .connecting
+                    case .connected:
+                        mappedState = .connected
+                    }
+                    strongSelf.stateValue.networkState = mappedState
+                }))
+                
+                self.memberStatesDisposable.set((callContext.memberStates
+                |> deliverOnMainQueue).start(next: { [weak self] memberStates in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    var result: [PeerId: PresentationGroupCallMemberState] = [:]
+                    for (ssrc, _) in memberStates {
+                        if let peerId = strongSelf.ssrcMapping[ssrc] {
+                            result[peerId] = PresentationGroupCallMemberState(
+                                ssrc: ssrc,
+                                isSpeaking: false
+                            )
+                        }
+                    }
+                    strongSelf.membersValue = result
                 }))
             }
         }
@@ -252,8 +342,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         case .estabilished:
             break
         default:
-            if case let .estabilished(_, clientParams, ssrcs) = internalState {
-                self.callContext?.setJoinResponse(payload: clientParams, ssrcs: ssrcs)
+            if case let .estabilished(_, clientParams, ssrcMapping) = internalState {
+                self.ssrcMapping = ssrcMapping
+                self.callContext?.setJoinResponse(payload: clientParams, ssrcs: Array(ssrcMapping.keys))
             }
         }
     }
@@ -264,8 +355,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     
-    public func hangUp() -> Signal<Bool, NoError> {
-        return .single(true)
+    public func leave() -> Signal<Bool, NoError> {
+        if case let .estabilished(callInfo, _, _) = self.internalState {
+            self.leaveDisposable.set((leaveGroupCall(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash)
+            |> deliverOnMainQueue).start(completed: { [weak self] in
+                self?._canBeRemoved.set(.single(true))
+            }))
+        } else {
+        }
+        return self._canBeRemoved.get()
     }
     
     public func toggleIsMuted() {

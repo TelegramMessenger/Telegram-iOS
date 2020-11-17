@@ -203,7 +203,7 @@ public enum JoinGroupCallError {
 
 public struct JoinGroupCallResult {
     public var callInfo: GroupCallInfo
-    public var ssrcs: [Int32]
+    public var ssrcMapping: [UInt32: PeerId]
 }
 
 public func joinGroupCall(account: Account, callId: Int64, accessHash: Int64, joinPayload: String) -> Signal<JoinGroupCallResult, JoinGroupCallError> {
@@ -239,14 +239,17 @@ public func joinGroupCall(account: Account, callId: Int64, accessHash: Int64, jo
                 guard let _ = GroupCallInfo(call) else {
                     return .fail(.generic)
                 }
-                var ssrcs: [Int32] = []
+                var ssrcMapping: [UInt32: PeerId] = [:]
                 for participant in participants {
-                    var ssrc: Int32?
+                    var peerId: PeerId?
+                    var ssrc: UInt32?
                     switch participant {
-                    case let .groupCallParticipantAdmin(_, source):
-                        ssrc = source
-                    case let .groupCallParticipant(_, _, _, source):
-                        ssrc = source
+                    case let .groupCallParticipantAdmin(userId, source):
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                        ssrc = UInt32(bitPattern: source)
+                    case let .groupCallParticipant(_, userId, _, source):
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                        ssrc = UInt32(bitPattern: source)
                     case .groupCallParticipantLeft:
                         break
                     case .groupCallParticipantKicked:
@@ -254,20 +257,32 @@ public func joinGroupCall(account: Account, callId: Int64, accessHash: Int64, jo
                     case .groupCallParticipantInvited:
                         break
                     }
-                    if let ssrc = ssrc {
-                        ssrcs.append(ssrc)
+                    if let peerId = peerId, let ssrc = ssrc {
+                        ssrcMapping[ssrc] = peerId
                     }
                 }
                 return account.postbox.transaction { transaction -> JoinGroupCallResult in
                     return JoinGroupCallResult(
                         callInfo: parsedCall,
-                        ssrcs: ssrcs
+                        ssrcMapping: ssrcMapping
                     )
                 }
                 |> castError(JoinGroupCallError.self)
             }
         }
     }
+}
+
+public enum LeaveGroupCallError {
+    case generic
+}
+
+public func leaveGroupCall(account: Account, callId: Int64, accessHash: Int64) -> Signal<Never, LeaveGroupCallError> {
+    return account.network.request(Api.functions.phone.leaveGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash)))
+    |> mapError { _ -> LeaveGroupCallError in
+        return .generic
+    }
+    |> ignoreValues
 }
 
 public enum StopGroupCallError {
