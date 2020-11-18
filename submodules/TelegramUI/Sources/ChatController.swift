@@ -5981,6 +5981,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, editMessageMedia: { [weak self] messageId, draw in
             if let strongSelf = self {
                 strongSelf.controllerInteraction?.editMessageMedia(messageId, draw)
+            }
         }, joinGroupCall: { [weak self] messageId in
             guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
