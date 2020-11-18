@@ -264,7 +264,7 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                                 }
                             }
                             if !exceptionsString.isEmpty {
-                                text = .text(exceptionsString)
+                                text = .text(exceptionsString, .secondary)
                             }
                         }
                     default:

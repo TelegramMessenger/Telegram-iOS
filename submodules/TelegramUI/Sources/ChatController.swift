@@ -421,7 +421,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.stickerSettings = ChatInterfaceStickerSettings(loopAnimatedStickers: false)
         
-        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, pendingUnpinnedAllMessages: false)
+        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil)
         
         var mediaAccessoryPanelVisibility = MediaAccessoryPanelVisibility.none
         if case .standard = mode {
@@ -1390,17 +1390,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                 }
                             })
-                            
-                            /*let _ = (context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                                return (transaction.getPeer(peer.id), transaction.getPeer(currentPeerId))
-                            }
-                            |> deliverOnMainQueue).start(next: { peer, current in
-                                if let peer = peer, let current = current {
-                                    strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                        let _ = context.sharedContext.callManager?.requestCall(context: context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: true)
-                                    })]), in: .window(.root))
-                                }
-                            })*/
                         }
                     }
                 })
@@ -3752,6 +3741,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var peerIsBlocked: Bool = false
                 var callsAvailable: Bool = true
                 var callsPrivate: Bool = false
+                var activeGroupCallInfo: ChatActiveGroupCallInfo?
                 var slowmodeState: ChatSlowmodeState?
                 if let cachedData = combinedInitialData.cachedData as? CachedChannelData {
                     pinnedMessageId = cachedData.pinnedMessageId
@@ -3759,6 +3749,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let slowmodeUntilTimestamp = calculateSlowmodeActiveUntilTimestamp(account: strongSelf.context.account, untilTimestamp: cachedData.slowModeValidUntilTimestamp) {
                             slowmodeState = ChatSlowmodeState(timeout: timeout, variant: .timestamp(slowmodeUntilTimestamp))
                         }
+                    }
+                    if let messageId = cachedData.activeCallMessageId {
+                        activeGroupCallInfo = ChatActiveGroupCallInfo(messageId: messageId)
                     }
                 } else if let cachedData = combinedInitialData.cachedData as? CachedUserData {
                     peerIsBlocked = cachedData.isBlocked
@@ -3794,6 +3787,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     updated = updated.updatedPeerIsBlocked(peerIsBlocked)
                     updated = updated.updatedCallsAvailable(callsAvailable)
                     updated = updated.updatedCallsPrivate(callsPrivate)
+                    updated = updated.updatedActiveGroupCallInfo(activeGroupCallInfo)
                     updated = updated.updatedTitlePanelContext({ context in
                         if pinnedMessageId != nil {
                             if !context.contains(where: {
@@ -3901,6 +3895,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var callsAvailable: Bool = false
                 var callsPrivate: Bool = false
                 var slowmodeState: ChatSlowmodeState?
+                var activeGroupCallInfo: ChatActiveGroupCallInfo?
                 if let cachedData = cachedData as? CachedChannelData {
                     pinnedMessageId = cachedData.pinnedMessageId
                     if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.isRestrictedBySlowmode, let timeout = cachedData.slowModeTimeout {
@@ -3909,6 +3904,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         } else if let slowmodeUntilTimestamp = calculateSlowmodeActiveUntilTimestamp(account: strongSelf.context.account, untilTimestamp: cachedData.slowModeValidUntilTimestamp) {
                             slowmodeState = ChatSlowmodeState(timeout: timeout, variant: .timestamp(slowmodeUntilTimestamp))
                         }
+                    }
+                    if let messageId = cachedData.activeCallMessageId {
+                        activeGroupCallInfo = ChatActiveGroupCallInfo(messageId: messageId)
                     }
                 } else if let cachedData = cachedData as? CachedUserData {
                     peerIsBlocked = cachedData.isBlocked
@@ -3949,10 +3947,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let callsDataUpdated = strongSelf.presentationInterfaceState.callsAvailable != callsAvailable || strongSelf.presentationInterfaceState.callsPrivate != callsPrivate
                 
-                if strongSelf.presentationInterfaceState.pinnedMessageId != pinnedMessageId || strongSelf.presentationInterfaceState.pinnedMessage != pinnedMessage || strongSelf.presentationInterfaceState.peerIsBlocked != peerIsBlocked || pinnedMessageUpdated || callsDataUpdated || strongSelf.presentationInterfaceState.slowmodeState != slowmodeState {
+                if strongSelf.presentationInterfaceState.pinnedMessageId != pinnedMessageId || strongSelf.presentationInterfaceState.pinnedMessage != pinnedMessage || strongSelf.presentationInterfaceState.peerIsBlocked != peerIsBlocked || pinnedMessageUpdated || callsDataUpdated || strongSelf.presentationInterfaceState.slowmodeState != slowmodeState || strongSelf.presentationInterfaceState.activeGroupCallInfo != activeGroupCallInfo {
                     strongSelf.updateChatPresentationInterfaceState(animated: strongSelf.willAppear, interactive: strongSelf.willAppear, { state in
                         return state
                         .updatedPinnedMessageId(pinnedMessageId)
+                        .updatedActiveGroupCallInfo(activeGroupCallInfo)
                         .updatedPinnedMessage(pinnedMessage)
                         .updatedPeerIsBlocked(peerIsBlocked)
                         .updatedCallsAvailable(callsAvailable)
@@ -5982,6 +5981,33 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, editMessageMedia: { [weak self] messageId, draw in
             if let strongSelf = self {
                 strongSelf.controllerInteraction?.editMessageMedia(messageId, draw)
+        }, joinGroupCall: { [weak self] messageId in
+            guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
+                return
+            }
+            let callResult = strongSelf.context.sharedContext.callManager?.requestOrJoinGroupCall(context: strongSelf.context, peerId: peer.id)
+            if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
+                if currentPeerId == peer.id {
+                    strongSelf.context.sharedContext.navigateToCurrentCall()
+                } else {
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
+                        return (transaction.getPeer(peer.id), currentPeerId.flatMap(transaction.getPeer))
+                    } |> deliverOnMainQueue).start(next: { [weak self] peer, current in
+                        if let peer = peer {
+                            if let strongSelf = self, let current = current {
+                                strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                                    if let strongSelf = self {
+                                        //let _ = strongSelf.context.sharedContext.callManager?.requestCall(context: context, peerId: peerId, isVideo: isVideo, endCurrentIfAny: true)
+                                    }
+                                })]), in: .window(.root))
+                            } else {
+                                strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_ExternalCallInProgressMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                                })]), in: .window(.root))
+                            }
+                        }
+                    })
+                }
             }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()))
         

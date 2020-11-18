@@ -949,6 +949,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             displayLeave = false
             if channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers) {
                 result.append(.addMember)
+                result.append(.call)
             }
         }
         switch channel.participationStatus {

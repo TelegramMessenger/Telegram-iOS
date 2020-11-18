@@ -738,22 +738,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             })
         case .voiceConference:
             return ItemListDisclosureItem(presentationData: presentationData, title: "Voice Conference (Test)", label: "", sectionId: self.section, style: .blocks, action: {
-                guard let context = arguments.context else {
-                    return
-                }
-                let controller = GroupCallController(context: context)
-                controller.navigationPresentation = .modal
-                arguments.pushController(controller)
-
-                /*let _ = (resolvePeerByName(account: context.account, name: "tgbetachat")
-                |> deliverOnMainQueue).start(next: { peerId in
-                    guard let peerId = peerId else {
-                        return
-                    }
-                    
-                    let controller = VoiceChatController(context: context, peerId: peerId)
-                    arguments.presentController(controller, nil)
-                })*/
             })
         case let .preferredVideoCodec(_, title, value, isSelected):
             return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .right, checked: isSelected, zeroSeparatorInsets: false, sectionId: self.section, action: {

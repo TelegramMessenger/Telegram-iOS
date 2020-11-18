@@ -6,11 +6,14 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[571523412] = { return $0.readDouble() }
     dict[-1255641564] = { return parseString($0) }
     dict[-1240849242] = { return Api.messages.StickerSet.parse_stickerSet($0) }
+    dict[1829443076] = { return Api.GroupCall.parse_groupCallPrivate($0) }
+    dict[-857633264] = { return Api.GroupCall.parse_groupCall($0) }
+    dict[2004925620] = { return Api.GroupCall.parse_groupCallDiscarded($0) }
     dict[-457104426] = { return Api.InputGeoPoint.parse_inputGeoPointEmpty($0) }
     dict[1210199983] = { return Api.InputGeoPoint.parse_inputGeoPoint($0) }
     dict[-784000893] = { return Api.payments.ValidatedRequestedInfo.parse_validatedRequestedInfo($0) }
     dict[461151667] = { return Api.ChatFull.parse_chatFull($0) }
-    dict[-253335766] = { return Api.ChatFull.parse_channelFull($0) }
+    dict[-428758403] = { return Api.ChatFull.parse_channelFull($0) }
     dict[-1159937629] = { return Api.PollResults.parse_pollResults($0) }
     dict[-925415106] = { return Api.ChatParticipant.parse_chatParticipant($0) }
     dict[-636267638] = { return Api.ChatParticipant.parse_chatParticipantCreator($0) }
@@ -132,6 +135,11 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1511503333] = { return Api.InputEncryptedFile.parse_inputEncryptedFile($0) }
     dict[767652808] = { return Api.InputEncryptedFile.parse_inputEncryptedFileBigUploaded($0) }
     dict[-1456996667] = { return Api.messages.InactiveChats.parse_inactiveChats($0) }
+    dict[-1513019911] = { return Api.GroupCallParticipant.parse_groupCallParticipantAdmin($0) }
+    dict[-1985949076] = { return Api.GroupCallParticipant.parse_groupCallParticipant($0) }
+    dict[1100680690] = { return Api.GroupCallParticipant.parse_groupCallParticipantLeft($0) }
+    dict[-1648085351] = { return Api.GroupCallParticipant.parse_groupCallParticipantKicked($0) }
+    dict[-874654354] = { return Api.GroupCallParticipant.parse_groupCallParticipantInvited($0) }
     dict[1443858741] = { return Api.messages.SentEncryptedMessage.parse_sentEncryptedMessage($0) }
     dict[-1802240206] = { return Api.messages.SentEncryptedMessage.parse_sentEncryptedFile($0) }
     dict[1571494644] = { return Api.ExportedMessageLink.parse_exportedMessageLink($0) }
@@ -258,6 +266,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-13975905] = { return Api.Update.parse_updateChannelUserTyping($0) }
     dict[-309990731] = { return Api.Update.parse_updatePinnedMessages($0) }
     dict[-2054649973] = { return Api.Update.parse_updatePinnedChannelMessages($0) }
+    dict[92188360] = { return Api.Update.parse_updateGroupCallParticipant($0) }
+    dict[-2046916883] = { return Api.Update.parse_updateGroupCall($0) }
     dict[136574537] = { return Api.messages.VotesList.parse_votesList($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[-373643672] = { return Api.FolderPeer.parse_folderPeer($0) }
@@ -329,11 +339,11 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-392411726] = { return Api.WebPage.parse_webPage($0) }
     dict[1930545681] = { return Api.WebPage.parse_webPageNotModified($0) }
     dict[1036876423] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageText($0) }
-    dict[-190472735] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageMediaGeo($0) }
     dict[1262639204] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageGame($0) }
     dict[864077702] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageMediaAuto($0) }
     dict[1098628881] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageMediaVenue($0) }
     dict[-1494368259] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageMediaContact($0) }
+    dict[-1768777083] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageMediaGeo($0) }
     dict[2002815875] = { return Api.KeyboardButtonRow.parse_keyboardButtonRow($0) }
     dict[-290164953] = { return Api.StickerSet.parse_stickerSet($0) }
     dict[354925740] = { return Api.SecureSecretSettings.parse_secureSecretSettings($0) }
@@ -392,6 +402,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-666824391] = { return Api.payments.PaymentResult.parse_paymentVerificationNeeded($0) }
     dict[1694474197] = { return Api.messages.Chats.parse_chats($0) }
     dict[-1663561404] = { return Api.messages.Chats.parse_chatsSlice($0) }
+    dict[-659913713] = { return Api.InputGroupCall.parse_inputGroupCall($0) }
     dict[482797855] = { return Api.InputSingleMedia.parse_inputSingleMedia($0) }
     dict[1163625789] = { return Api.MessageViews.parse_messageViews($0) }
     dict[218751099] = { return Api.InputPrivacyRule.parse_inputPrivacyValueAllowContacts($0) }
@@ -496,6 +507,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1495959709] = { return Api.MessageReplyHeader.parse_messageReplyHeader($0) }
     dict[411017418] = { return Api.SecureValue.parse_secureValue($0) }
     dict[-316748368] = { return Api.SecureValueHash.parse_secureValueHash($0) }
+    dict[1731723191] = { return Api.phone.GroupCall.parse_groupCall($0) }
     dict[-398136321] = { return Api.messages.SearchCounter.parse_searchCounter($0) }
     dict[-2128698738] = { return Api.auth.CheckedPhone.parse_checkedPhone($0) }
     dict[-1188055347] = { return Api.PageListItem.parse_pageListItemText($0) }
@@ -777,6 +789,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-648257196] = { return Api.MessageAction.parse_messageActionSecureValuesSent($0) }
     dict[-202219658] = { return Api.MessageAction.parse_messageActionContactSignUp($0) }
     dict[-1730095465] = { return Api.MessageAction.parse_messageActionGeoProximityReached($0) }
+    dict[2047704898] = { return Api.MessageAction.parse_messageActionGroupCall($0) }
     dict[1399245077] = { return Api.PhoneCall.parse_phoneCallEmpty($0) }
     dict[462375633] = { return Api.PhoneCall.parse_phoneCallWaiting($0) }
     dict[-2014659757] = { return Api.PhoneCall.parse_phoneCallRequested($0) }
@@ -914,6 +927,8 @@ public struct Api {
         switch object {
             case let _1 as Api.messages.StickerSet:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.GroupCall:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputGeoPoint:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.payments.ValidatedRequestedInfo:
@@ -993,6 +1008,8 @@ public struct Api {
             case let _1 as Api.InputEncryptedFile:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.InactiveChats:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.GroupCallParticipant:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.SentEncryptedMessage:
                 _1.serialize(buffer, boxed)
@@ -1122,6 +1139,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.Chats:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.InputGroupCall:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputSingleMedia:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.MessageViews:
@@ -1205,6 +1224,8 @@ public struct Api {
             case let _1 as Api.SecureValue:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SecureValueHash:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.phone.GroupCall:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.SearchCounter:
                 _1.serialize(buffer, boxed)

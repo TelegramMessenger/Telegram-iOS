@@ -225,8 +225,14 @@ public enum ItemListPeerItemHeight {
 }
 
 public enum ItemListPeerItemText {
+    public enum TextColor {
+        case secondary
+        case accent
+        case constructive
+    }
+    
     case presence
-    case text(String)
+    case text(String, TextColor)
     case none
 }
 
@@ -733,8 +739,17 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                 } else {
                     statusAttributedString = NSAttributedString(string: item.presentationData.strings.LastSeen_Offline, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
                 }
-            case let .text(text):
-                statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+            case let .text(text, textColor):
+                let textColorValue: UIColor
+                switch textColor {
+                case .secondary:
+                    textColorValue = item.presentationData.theme.list.itemSecondaryTextColor
+                case .accent:
+                    textColorValue = item.presentationData.theme.list.itemAccentColor
+                case .constructive:
+                    textColorValue = item.presentationData.theme.list.itemDisclosureActions.constructive.fillColor
+                }
+                statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: textColorValue)
             case .none:
                 break
             }
