@@ -438,6 +438,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, scrollToTop: {
         }, viewReplies: { _, _ in
         }, activatePinnedListPreview: { _, _ in
+        }, editMessageMedia: { _, _ in
         }, statuses: nil)
         
         self.selectionPanel.interfaceInteraction = interfaceInteraction

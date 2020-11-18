@@ -1562,7 +1562,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     self.actionButtons.sendButton.layer.animateScale(from: 1.0, to: 0.2, duration: 0.2)
                     self.actionButtons.sendButtonRadialStatusNode?.layer.animateScale(from: 1.0, to: 0.2, duration: 0.2)
                    
-                   self.actionButtons.sendButtonRadialStatusNode?.alpha = 0.0
+                    self.actionButtons.sendButtonRadialStatusNode?.alpha = 0.0
                     self.actionButtons.sendButtonRadialStatusNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                 }
             }

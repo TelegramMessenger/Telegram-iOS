@@ -5892,11 +5892,6 @@ Sorry for the inconvenience.";
 
 "ChatSettings.WidgetSettings" = "Widget";
 
-"Conversation.AddCaption" = "Add a Caption";
-"Conversation.EditCaption" = "Edit Caption";
-"Conversation.EditThisPhoto" = "Edit This Photo";
-"Conversation.ReplacePhoto" = "Replace Photo";
-"Conversation.ReplaceFile" = "Replace File";
-"Conversation.SendAsNewPhoto" = "Send as New Photo";
+"Conversation.EditingPhotoPanelTitle" = "Edit Photo";
 
 "Conversation.TextCopied" = "Text copied to clipboard";

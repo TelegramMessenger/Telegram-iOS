@@ -22,6 +22,8 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     let titleNode: ImmediateTextNode
     let textNode: ImmediateTextNode
     let imageNode: TransformImageNode
+    let dimNode: ASDisplayNode
+    let iconNode: ASImageNode
     
     private let actionArea: AccessibilityAreaNode
     
@@ -32,6 +34,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()
     private let editingMessageDisposable = MetaDisposable()
     
+    private var isPhoto = false
     private var currentMessage: Message?
     private var currentEditMediaReference: AnyMediaReference?
     private var previousMediaReference: AnyMediaReference?
@@ -96,6 +99,16 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.imageNode.isHidden = true
         self.imageNode.isUserInteractionEnabled = true
         
+        self.dimNode = ASDisplayNode()
+        self.dimNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.6)
+        self.dimNode.cornerRadius = 2.0
+        self.dimNode.isHidden = true
+        
+        self.iconNode = ASImageNode()
+        self.iconNode.contentMode = .center
+        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Draw"), color: .white)
+        self.iconNode.isHidden = true
+        
         self.activityIndicator = ActivityIndicator(type: .custom(theme.chat.inputPanel.panelControlAccentColor, 22.0, 2.0, false))
         self.activityIndicator.isHidden = true
         
@@ -114,6 +127,8 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.imageNode)
+        self.addSubnode(self.dimNode)
+        self.addSubnode(self.iconNode)
         self.addSubnode(self.activityIndicator)
         self.addSubnode(self.statusNode)
         self.addSubnode(self.tapNode)
@@ -190,11 +205,13 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         }
         self.previousMediaReference = updatedMediaReference
         
+        var isPhoto = false
         var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
         if mediaUpdated {
             if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {
                 if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
                     updateImageSignal = chatMessagePhotoThumbnail(account: self.context.account, photoReference: imageReference)
+                    isPhoto = true
                 } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
                     if fileReference.media.isVideo {
                         updateImageSignal = chatMessageVideoThumbnail(account: self.context.account, fileReference: fileReference)
@@ -206,6 +223,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
                 updateImageSignal = .single({ _ in return nil })
             }
         }
+        self.isPhoto = isPhoto
         
         let isMedia: Bool
         if let message = message {
@@ -230,7 +248,12 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             canEditMedia = false
         }
         
-        let titleString = canEditMedia ? self.strings.Conversation_EditingCaptionPanelTitle : self.strings.Conversation_EditingMessagePanelTitle
+        let titleString: String
+        if canEditMedia {
+            titleString = isPhoto ? self.strings.Conversation_EditingPhotoPanelTitle : self.strings.Conversation_EditingCaptionPanelTitle
+        } else {
+            titleString = self.strings.Conversation_EditingMessagePanelTitle
+        }
         self.titleNode.attributedText = NSAttributedString(string: titleString, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
         self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: isMedia ? self.theme.chat.inputPanel.secondaryTextColor : self.theme.chat.inputPanel.primaryTextColor)
         
@@ -242,6 +265,14 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             self.imageNode.isHidden = false
         } else {
             self.imageNode.isHidden = true
+        }
+        
+        if isPhoto && !self.imageNode.isHidden {
+            self.dimNode.isHidden = false
+            self.iconNode.isHidden = false
+        } else {
+            self.dimNode.isHidden = true
+            self.iconNode.isHidden = true
         }
         
         if let updateImageSignal = updateImageSignal {
@@ -329,6 +360,8 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             imageTextInset = 9.0 + 35.0
         }
         self.imageNode.frame = CGRect(origin: CGPoint(x: leftInset + 9.0, y: 8.0), size: CGSize(width: 35.0, height: 35.0))
+        self.dimNode.frame = self.imageNode.frame
+        self.iconNode.frame = self.imageNode.frame
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset - imageTextInset, height: bounds.size.height))
         self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset + imageTextInset, y: 7.0), size: titleSize)
@@ -347,7 +380,11 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     
     @objc func contentTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state, let message = self.currentMessage {
-            self.interfaceInteraction?.navigateToMessage(message.id, false, true, .generic)
+            if self.isPhoto {
+                self.interfaceInteraction?.editMessageMedia(message.id, true)
+            } else {
+                self.interfaceInteraction?.navigateToMessage(message.id, false, true, .generic)
+            }
         }
     }
 }

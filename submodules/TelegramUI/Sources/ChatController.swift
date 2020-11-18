@@ -5979,6 +5979,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             chatController.canReadHistory.set(false)
             let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, passthroughTouches: true)), items: .single(items), reactionItems: [], gesture: gesture)
             strongSelf.presentInGlobalOverlay(contextController)
+        }, editMessageMedia: { [weak self] messageId, draw in
+            if let strongSelf = self {
+                strongSelf.controllerInteraction?.editMessageMedia(messageId, draw)
+            }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get(), inlineSearch: self.performingInlineSearch.get()))
         
         do {
