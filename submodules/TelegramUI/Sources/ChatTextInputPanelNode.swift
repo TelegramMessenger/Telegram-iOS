@@ -1190,22 +1190,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             textInputBackgroundWidthOffset = 36.0
         }
         
-        if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState, let editMessage = presentationInterfaceState.interfaceState.editMessage, let inputTextMaxLength = editMessage.inputTextMaxLength {
-            let textCount = Int32(textInputNode.textView.text.count)
-            let counterColor: UIColor = textCount > inputTextMaxLength ? presentationInterfaceState.theme.chat.inputPanel.panelControlDestructiveColor : presentationInterfaceState.theme.chat.inputPanel.panelControlColor
-            
-            let remainingCount = max(-999, inputTextMaxLength - textCount)
-            let counterText = remainingCount >= 5 ? "" : "\(remainingCount)"
-            self.counterTextNode.attributedText = NSAttributedString(string: counterText, font: counterFont, textColor: counterColor)
-        } else {
-            self.counterTextNode.attributedText = NSAttributedString(string: "", font: counterFont, textColor: .black)
-        }
-        
-        let counterSize = self.counterTextNode.updateLayout(CGSize(width: 44.0, height: 44.0))
-        let actionButtonsOriginX = width - rightInset - 43.0 - UIScreenPixel + composeButtonsOffset
-        let counterFrame = CGRect(origin: CGPoint(x: actionButtonsOriginX, y: panelHeight - minimalHeight - counterSize.height + 3.0), size: CGSize(width: width - actionButtonsOriginX - rightInset, height: counterSize.height))
-        transition.updateFrame(node: self.counterTextNode, frame: counterFrame)
-        
+        self.updateCounterTextNode(transition: transition)
+       
         let actionButtonsFrame = CGRect(origin: CGPoint(x: width - rightInset - 43.0 - UIScreenPixel + composeButtonsOffset, y: panelHeight - minimalHeight), size: CGSize(width: 44.0, height: minimalHeight))
         transition.updateFrame(node: self.actionButtons, frame: actionButtonsFrame)
         
@@ -1478,20 +1464,40 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.interfaceInteraction?.updateInputLanguage({ _ in return textInputNode.textInputMode.primaryLanguage })
             self.updateTextNodeText(animated: true)
             
-            if let editMessage = presentationInterfaceState.interfaceState.editMessage, let inputTextMaxLength = editMessage.inputTextMaxLength {
-                let textCount = Int32(textInputNode.textView.text.count)
-                let counterColor: UIColor = textCount > inputTextMaxLength ? presentationInterfaceState.theme.chat.inputPanel.panelControlDestructiveColor : presentationInterfaceState.theme.chat.inputPanel.panelControlColor
-                
-                let remainingCount = max(-999, inputTextMaxLength - textCount)
-                let counterText = remainingCount >= 5 ? "" : "\(remainingCount)"
-                self.counterTextNode.attributedText = NSAttributedString(string: counterText, font: counterFont, textColor: counterColor)
-            } else {
-                self.counterTextNode.attributedText = NSAttributedString(string: "", font: counterFont, textColor: .black)
+            self.updateCounterTextNode(transition: .immediate)
+        }
+    }
+    
+    private func updateCounterTextNode(transition: ContainedViewLayoutTransition) {
+        if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState, let editMessage = presentationInterfaceState.interfaceState.editMessage, let inputTextMaxLength = editMessage.inputTextMaxLength {
+            let textCount = Int32(textInputNode.textView.text.count)
+            let counterColor: UIColor = textCount > inputTextMaxLength ? presentationInterfaceState.theme.chat.inputPanel.panelControlDestructiveColor : presentationInterfaceState.theme.chat.inputPanel.panelControlColor
+            
+            let remainingCount = max(-999, inputTextMaxLength - textCount)
+            let counterText = remainingCount >= 5 ? "" : "\(remainingCount)"
+            self.counterTextNode.attributedText = NSAttributedString(string: counterText, font: counterFont, textColor: counterColor)
+        } else {
+            self.counterTextNode.attributedText = NSAttributedString(string: "", font: counterFont, textColor: .black)
+        }
+        
+        if let (width, leftInset, rightInset, maxHeight, metrics, _) = self.validLayout {
+            var composeButtonsOffset: CGFloat = 0.0
+            if self.extendedSearchLayout {
+                composeButtonsOffset = 44.0
             }
             
-            if let (width, leftInset, rightInset, maxHeight, metrics, isSecondary) = self.validLayout {
-                let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: presentationInterfaceState, metrics: metrics)
+            let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width - leftInset - rightInset, maxHeight: maxHeight, metrics: metrics)
+            let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
+            var textFieldMinHeight: CGFloat = 33.0
+            if let presentationInterfaceState = self.presentationInterfaceState {
+                textFieldMinHeight = calclulateTextFieldMinHeight(presentationInterfaceState, metrics: metrics)
             }
+            let minimalHeight: CGFloat = 14.0 + textFieldMinHeight
+            
+            let counterSize = self.counterTextNode.updateLayout(CGSize(width: 44.0, height: 44.0))
+            let actionButtonsOriginX = width - rightInset - 43.0 - UIScreenPixel + composeButtonsOffset
+            let counterFrame = CGRect(origin: CGPoint(x: actionButtonsOriginX, y: panelHeight - minimalHeight - counterSize.height + 3.0), size: CGSize(width: width - actionButtonsOriginX - rightInset, height: counterSize.height))
+            transition.updateFrame(node: self.counterTextNode, frame: counterFrame)
         }
     }
     
