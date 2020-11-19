@@ -3750,8 +3750,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             slowmodeState = ChatSlowmodeState(timeout: timeout, variant: .timestamp(slowmodeUntilTimestamp))
                         }
                     }
-                    if let messageId = cachedData.activeCallMessageId {
-                        activeGroupCallInfo = ChatActiveGroupCallInfo(messageId: messageId)
+                    if let activeCall = cachedData.activeCall {
+                        activeGroupCallInfo = ChatActiveGroupCallInfo(activeCall: activeCall)
                     }
                 } else if let cachedData = combinedInitialData.cachedData as? CachedUserData {
                     peerIsBlocked = cachedData.isBlocked
@@ -3905,8 +3905,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             slowmodeState = ChatSlowmodeState(timeout: timeout, variant: .timestamp(slowmodeUntilTimestamp))
                         }
                     }
-                    if let messageId = cachedData.activeCallMessageId {
-                        activeGroupCallInfo = ChatActiveGroupCallInfo(messageId: messageId)
+                    if let activeCall = cachedData.activeCall {
+                        activeGroupCallInfo = ChatActiveGroupCallInfo(activeCall: activeCall)
                     }
                 } else if let cachedData = cachedData as? CachedUserData {
                     peerIsBlocked = cachedData.isBlocked
@@ -5978,7 +5978,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             chatController.canReadHistory.set(false)
             let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, passthroughTouches: true)), items: .single(items), reactionItems: [], gesture: gesture)
             strongSelf.presentInGlobalOverlay(contextController)
-        }, joinGroupCall: { [weak self] messageId in
+        }, joinGroupCall: { [weak self] activeCall in
             guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
             }

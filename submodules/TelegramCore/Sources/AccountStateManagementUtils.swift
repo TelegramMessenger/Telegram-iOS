@@ -1306,10 +1306,10 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.addUpdateCall(phoneCall)
             case let .updatePhoneCallSignalingData(phoneCallId, data):
                 updatedState.addCallSignalingData(callId: phoneCallId, data: data.makeData())
-            case let .updateGroupCallParticipant(call, participant):
+            case let .updateGroupCallParticipants(call, participants, version):
                 switch call {
                 case let .inputGroupCall(id, accessHash):
-                    updatedState.updateGroupCallParticipant(id: id, accessHash: accessHash, participant: participant)
+                    updatedState.updateGroupCallParticipants(id: id, accessHash: accessHash, participants: participants, version: version)
                 }
             case let .updateLangPackTooLong(langCode):
                 updatedState.updateLangPack(langCode: langCode, difference: nil)
@@ -2114,7 +2114,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddScheduledMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll/*, .UpdateMessageReactions*/, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipant:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll/*, .UpdateMessageReactions*/, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -2931,25 +2931,22 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 updatedCalls.append(call)
             case let .AddCallSignalingData(callId, data):
                 addedCallSignalingData.append((callId, data))
-            case let .UpdateGroupCallParticipant(callId, _, participant):
-                var peerId: PeerId?
-                var ssrc: Int32?
-                switch participant {
-                case let .groupCallParticipantAdmin(userId, source):
-                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                    ssrc = source
-                case let .groupCallParticipant(_, userId, _, source):
-                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                    ssrc = source
-                case .groupCallParticipantLeft:
-                    break
-                case .groupCallParticipantKicked:
-                    break
-                case .groupCallParticipantInvited:
-                    break
-                }
-                if let peerId = peerId, let ssrc = ssrc {
-                    updatedGroupCallParticipants.append((callId, peerId, ssrc, true))
+            case let .UpdateGroupCallParticipants(callId, _, participants, version):
+                for participant in participants {
+                    var peerId: PeerId?
+                    var ssrc: Int32?
+                    var isAdded = true
+                    switch participant {
+                    case let .groupCallParticipant(flags, userId, date, source):
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                        ssrc = source
+                        if flags & (1 << 1) != 0 {
+                            isAdded = false
+                        }
+                    }
+                    if let peerId = peerId, let ssrc = ssrc {
+                        updatedGroupCallParticipants.append((callId, peerId, ssrc, isAdded))
+                    }
                 }
             case let .UpdateLangPack(langCode, difference):
                 if let difference = difference {

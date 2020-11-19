@@ -147,7 +147,7 @@ final class ChatCallTitlePanelNode: ChatTitleAccessoryPanelNode {
         guard let activeGroupCallInfo = self.activeGroupCallInfo else {
             return
         }
-        interfaceInteraction.joinGroupCall(activeGroupCallInfo.messageId)
+        interfaceInteraction.joinGroupCall(activeGroupCallInfo.activeCall)
     }
 }
 

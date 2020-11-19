@@ -346,7 +346,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                     }
                                     
                                     switch fullChat {
-                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, chatPhoto, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet, minAvailableMsgId, folderId, linkedChatId, location, slowmodeSeconds, slowmodeNextSendDate, statsDc, pts, callMsgId):
+                                        case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, bannedCount, _, _, _, _, chatPhoto, _, apiExportedInvite, apiBotInfos, migratedFromChatId, migratedFromMaxId, pinnedMsgId, stickerSet, minAvailableMsgId, folderId, linkedChatId, location, slowmodeSeconds, slowmodeNextSendDate, statsDc, pts, inputCall):
                                             var channelFlags = CachedChannelFlags()
                                             if (flags & (1 << 3)) != 0 {
                                                 channelFlags.insert(.canDisplayParticipants)
@@ -396,9 +396,12 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                 pinnedMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: pinnedMsgId)
                                             }
                                             
-                                            var updatedActiveCallMessageId: MessageId?
-                                            if let callMsgId = callMsgId {
-                                                updatedActiveCallMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: callMsgId)
+                                            var updatedActiveCall: CachedChannelData.ActiveCall?
+                                            if let inputCall = inputCall {
+                                                switch inputCall {
+                                                case let .inputGroupCall(id, accessHash):
+                                                    updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash)
+                                                }
                                             }
                                             
                                             var minAvailableMessageId: MessageId?
@@ -515,7 +518,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                     .withUpdatedStatsDatacenterId(statsDc ?? 0)
                                                     .withUpdatedInvitedBy(invitedBy)
                                                     .withUpdatedPhoto(photo)
-                                                    .withUpdatedActiveCallMessageId(updatedActiveCallMessageId)
+                                                    .withUpdatedActiveCall(updatedActiveCall)
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {

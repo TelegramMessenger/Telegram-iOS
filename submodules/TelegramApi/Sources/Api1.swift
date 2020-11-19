@@ -1911,7 +1911,7 @@ public struct messages {
 public extension Api {
     public enum GroupCall: TypeConstructorDescription {
         case groupCallPrivate(flags: Int32, id: Int64, accessHash: Int64, channelId: Int32?, participantsCount: Int32, adminId: Int32)
-        case groupCall(flags: Int32, id: Int64, accessHash: Int64, channelId: Int32?, adminId: Int32, reflectorId: Int64, params: Api.DataJSON?)
+        case groupCall(flags: Int32, id: Int64, accessHash: Int64, channelId: Int32?, adminId: Int32, reflectorId: Int64, params: Api.DataJSON?, version: Int32)
         case groupCallDiscarded(id: Int64, accessHash: Int64, duration: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1927,9 +1927,9 @@ public extension Api {
                     serializeInt32(participantsCount, buffer: buffer, boxed: false)
                     serializeInt32(adminId, buffer: buffer, boxed: false)
                     break
-                case .groupCall(let flags, let id, let accessHash, let channelId, let adminId, let reflectorId, let params):
+                case .groupCall(let flags, let id, let accessHash, let channelId, let adminId, let reflectorId, let params, let version):
                     if boxed {
-                        buffer.appendInt32(-857633264)
+                        buffer.appendInt32(1441699306)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
@@ -1938,6 +1938,7 @@ public extension Api {
                     serializeInt32(adminId, buffer: buffer, boxed: false)
                     serializeInt64(reflectorId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {params!.serialize(buffer, true)}
+                    serializeInt32(version, buffer: buffer, boxed: false)
                     break
                 case .groupCallDiscarded(let id, let accessHash, let duration):
                     if boxed {
@@ -1954,8 +1955,8 @@ public extension Api {
         switch self {
                 case .groupCallPrivate(let flags, let id, let accessHash, let channelId, let participantsCount, let adminId):
                 return ("groupCallPrivate", [("flags", flags), ("id", id), ("accessHash", accessHash), ("channelId", channelId), ("participantsCount", participantsCount), ("adminId", adminId)])
-                case .groupCall(let flags, let id, let accessHash, let channelId, let adminId, let reflectorId, let params):
-                return ("groupCall", [("flags", flags), ("id", id), ("accessHash", accessHash), ("channelId", channelId), ("adminId", adminId), ("reflectorId", reflectorId), ("params", params)])
+                case .groupCall(let flags, let id, let accessHash, let channelId, let adminId, let reflectorId, let params, let version):
+                return ("groupCall", [("flags", flags), ("id", id), ("accessHash", accessHash), ("channelId", channelId), ("adminId", adminId), ("reflectorId", reflectorId), ("params", params), ("version", version)])
                 case .groupCallDiscarded(let id, let accessHash, let duration):
                 return ("groupCallDiscarded", [("id", id), ("accessHash", accessHash), ("duration", duration)])
     }
@@ -2004,6 +2005,8 @@ public extension Api {
             if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
                 _7 = Api.parse(reader, signature: signature) as? Api.DataJSON
             } }
+            var _8: Int32?
+            _8 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -2011,8 +2014,9 @@ public extension Api {
             let _c5 = _5 != nil
             let _c6 = _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.GroupCall.groupCall(flags: _1!, id: _2!, accessHash: _3!, channelId: _4, adminId: _5!, reflectorId: _6!, params: _7)
+            let _c8 = _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.GroupCall.groupCall(flags: _1!, id: _2!, accessHash: _3!, channelId: _4, adminId: _5!, reflectorId: _6!, params: _7, version: _8!)
             }
             else {
                 return nil
@@ -2097,7 +2101,7 @@ public extension Api {
     }
     public enum ChatFull: TypeConstructorDescription {
         case chatFull(flags: Int32, id: Int32, about: String, participants: Api.ChatParticipants, chatPhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo]?, pinnedMsgId: Int32?, folderId: Int32?)
-        case channelFull(flags: Int32, id: Int32, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, onlineCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo], migratedFromChatId: Int32?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?, folderId: Int32?, linkedChatId: Int32?, location: Api.ChannelLocation?, slowmodeSeconds: Int32?, slowmodeNextSendDate: Int32?, statsDc: Int32?, pts: Int32, callMsgId: Int32?)
+        case channelFull(flags: Int32, id: Int32, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, onlineCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite, botInfo: [Api.BotInfo], migratedFromChatId: Int32?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?, folderId: Int32?, linkedChatId: Int32?, location: Api.ChannelLocation?, slowmodeSeconds: Int32?, slowmodeNextSendDate: Int32?, statsDc: Int32?, pts: Int32, call: Api.InputGroupCall?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -2120,9 +2124,9 @@ public extension Api {
                     if Int(flags) & Int(1 << 6) != 0 {serializeInt32(pinnedMsgId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 11) != 0 {serializeInt32(folderId!, buffer: buffer, boxed: false)}
                     break
-                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let slowmodeSeconds, let slowmodeNextSendDate, let statsDc, let pts, let callMsgId):
+                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let slowmodeSeconds, let slowmodeNextSendDate, let statsDc, let pts, let call):
                     if boxed {
-                        buffer.appendInt32(-428758403)
+                        buffer.appendInt32(-281384243)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -2155,7 +2159,7 @@ public extension Api {
                     if Int(flags) & Int(1 << 18) != 0 {serializeInt32(slowmodeNextSendDate!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 12) != 0 {serializeInt32(statsDc!, buffer: buffer, boxed: false)}
                     serializeInt32(pts, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 21) != 0 {serializeInt32(callMsgId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 21) != 0 {call!.serialize(buffer, true)}
                     break
     }
     }
@@ -2164,8 +2168,8 @@ public extension Api {
         switch self {
                 case .chatFull(let flags, let id, let about, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let pinnedMsgId, let folderId):
                 return ("chatFull", [("flags", flags), ("id", id), ("about", about), ("participants", participants), ("chatPhoto", chatPhoto), ("notifySettings", notifySettings), ("exportedInvite", exportedInvite), ("botInfo", botInfo), ("pinnedMsgId", pinnedMsgId), ("folderId", folderId)])
-                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let slowmodeSeconds, let slowmodeNextSendDate, let statsDc, let pts, let callMsgId):
-                return ("channelFull", [("flags", flags), ("id", id), ("about", about), ("participantsCount", participantsCount), ("adminsCount", adminsCount), ("kickedCount", kickedCount), ("bannedCount", bannedCount), ("onlineCount", onlineCount), ("readInboxMaxId", readInboxMaxId), ("readOutboxMaxId", readOutboxMaxId), ("unreadCount", unreadCount), ("chatPhoto", chatPhoto), ("notifySettings", notifySettings), ("exportedInvite", exportedInvite), ("botInfo", botInfo), ("migratedFromChatId", migratedFromChatId), ("migratedFromMaxId", migratedFromMaxId), ("pinnedMsgId", pinnedMsgId), ("stickerset", stickerset), ("availableMinId", availableMinId), ("folderId", folderId), ("linkedChatId", linkedChatId), ("location", location), ("slowmodeSeconds", slowmodeSeconds), ("slowmodeNextSendDate", slowmodeNextSendDate), ("statsDc", statsDc), ("pts", pts), ("callMsgId", callMsgId)])
+                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let slowmodeSeconds, let slowmodeNextSendDate, let statsDc, let pts, let call):
+                return ("channelFull", [("flags", flags), ("id", id), ("about", about), ("participantsCount", participantsCount), ("adminsCount", adminsCount), ("kickedCount", kickedCount), ("bannedCount", bannedCount), ("onlineCount", onlineCount), ("readInboxMaxId", readInboxMaxId), ("readOutboxMaxId", readOutboxMaxId), ("unreadCount", unreadCount), ("chatPhoto", chatPhoto), ("notifySettings", notifySettings), ("exportedInvite", exportedInvite), ("botInfo", botInfo), ("migratedFromChatId", migratedFromChatId), ("migratedFromMaxId", migratedFromMaxId), ("pinnedMsgId", pinnedMsgId), ("stickerset", stickerset), ("availableMinId", availableMinId), ("folderId", folderId), ("linkedChatId", linkedChatId), ("location", location), ("slowmodeSeconds", slowmodeSeconds), ("slowmodeNextSendDate", slowmodeNextSendDate), ("statsDc", statsDc), ("pts", pts), ("call", call)])
     }
     }
     
@@ -2284,8 +2288,10 @@ public extension Api {
             if Int(_1!) & Int(1 << 12) != 0 {_26 = reader.readInt32() }
             var _27: Int32?
             _27 = reader.readInt32()
-            var _28: Int32?
-            if Int(_1!) & Int(1 << 21) != 0 {_28 = reader.readInt32() }
+            var _28: Api.InputGroupCall?
+            if Int(_1!) & Int(1 << 21) != 0 {if let signature = reader.readInt32() {
+                _28 = Api.parse(reader, signature: signature) as? Api.InputGroupCall
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -2315,7 +2321,7 @@ public extension Api {
             let _c27 = _27 != nil
             let _c28 = (Int(_1!) & Int(1 << 21) == 0) || _28 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 {
-                return Api.ChatFull.channelFull(flags: _1!, id: _2!, about: _3!, participantsCount: _4, adminsCount: _5, kickedCount: _6, bannedCount: _7, onlineCount: _8, readInboxMaxId: _9!, readOutboxMaxId: _10!, unreadCount: _11!, chatPhoto: _12!, notifySettings: _13!, exportedInvite: _14!, botInfo: _15!, migratedFromChatId: _16, migratedFromMaxId: _17, pinnedMsgId: _18, stickerset: _19, availableMinId: _20, folderId: _21, linkedChatId: _22, location: _23, slowmodeSeconds: _24, slowmodeNextSendDate: _25, statsDc: _26, pts: _27!, callMsgId: _28)
+                return Api.ChatFull.channelFull(flags: _1!, id: _2!, about: _3!, participantsCount: _4, adminsCount: _5, kickedCount: _6, bannedCount: _7, onlineCount: _8, readInboxMaxId: _9!, readOutboxMaxId: _10!, unreadCount: _11!, chatPhoto: _12!, notifySettings: _13!, exportedInvite: _14!, botInfo: _15!, migratedFromChatId: _16, migratedFromMaxId: _17, pinnedMsgId: _18, stickerset: _19, availableMinId: _20, folderId: _21, linkedChatId: _22, location: _23, slowmodeSeconds: _24, slowmodeNextSendDate: _25, statsDc: _26, pts: _27!, call: _28)
             }
             else {
                 return nil
@@ -5400,21 +5406,10 @@ public extension Api {
     
     }
     public enum GroupCallParticipant: TypeConstructorDescription {
-        case groupCallParticipantAdmin(userId: Int32, source: Int32)
         case groupCallParticipant(flags: Int32, userId: Int32, date: Int32, source: Int32)
-        case groupCallParticipantLeft(userId: Int32)
-        case groupCallParticipantKicked(userId: Int32)
-        case groupCallParticipantInvited(flags: Int32, userId: Int32, inviterId: Int32, date: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .groupCallParticipantAdmin(let userId, let source):
-                    if boxed {
-                        buffer.appendInt32(-1513019911)
-                    }
-                    serializeInt32(userId, buffer: buffer, boxed: false)
-                    serializeInt32(source, buffer: buffer, boxed: false)
-                    break
                 case .groupCallParticipant(let flags, let userId, let date, let source):
                     if boxed {
                         buffer.appendInt32(-1985949076)
@@ -5424,59 +5419,16 @@ public extension Api {
                     serializeInt32(date, buffer: buffer, boxed: false)
                     serializeInt32(source, buffer: buffer, boxed: false)
                     break
-                case .groupCallParticipantLeft(let userId):
-                    if boxed {
-                        buffer.appendInt32(1100680690)
-                    }
-                    serializeInt32(userId, buffer: buffer, boxed: false)
-                    break
-                case .groupCallParticipantKicked(let userId):
-                    if boxed {
-                        buffer.appendInt32(-1648085351)
-                    }
-                    serializeInt32(userId, buffer: buffer, boxed: false)
-                    break
-                case .groupCallParticipantInvited(let flags, let userId, let inviterId, let date):
-                    if boxed {
-                        buffer.appendInt32(-874654354)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(userId, buffer: buffer, boxed: false)
-                    serializeInt32(inviterId, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .groupCallParticipantAdmin(let userId, let source):
-                return ("groupCallParticipantAdmin", [("userId", userId), ("source", source)])
                 case .groupCallParticipant(let flags, let userId, let date, let source):
                 return ("groupCallParticipant", [("flags", flags), ("userId", userId), ("date", date), ("source", source)])
-                case .groupCallParticipantLeft(let userId):
-                return ("groupCallParticipantLeft", [("userId", userId)])
-                case .groupCallParticipantKicked(let userId):
-                return ("groupCallParticipantKicked", [("userId", userId)])
-                case .groupCallParticipantInvited(let flags, let userId, let inviterId, let date):
-                return ("groupCallParticipantInvited", [("flags", flags), ("userId", userId), ("inviterId", inviterId), ("date", date)])
     }
     }
     
-        public static func parse_groupCallParticipantAdmin(_ reader: BufferReader) -> GroupCallParticipant? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.GroupCallParticipant.groupCallParticipantAdmin(userId: _1!, source: _2!)
-            }
-            else {
-                return nil
-            }
-        }
         public static func parse_groupCallParticipant(_ reader: BufferReader) -> GroupCallParticipant? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -5492,48 +5444,6 @@ public extension Api {
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.GroupCallParticipant.groupCallParticipant(flags: _1!, userId: _2!, date: _3!, source: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_groupCallParticipantLeft(_ reader: BufferReader) -> GroupCallParticipant? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.GroupCallParticipant.groupCallParticipantLeft(userId: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_groupCallParticipantKicked(_ reader: BufferReader) -> GroupCallParticipant? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.GroupCallParticipant.groupCallParticipantKicked(userId: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_groupCallParticipantInvited(_ reader: BufferReader) -> GroupCallParticipant? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.GroupCallParticipant.groupCallParticipantInvited(flags: _1!, userId: _2!, inviterId: _3!, date: _4!)
             }
             else {
                 return nil
@@ -6467,7 +6377,7 @@ public extension Api {
         case updateChannelUserTyping(flags: Int32, channelId: Int32, topMsgId: Int32?, userId: Int32, action: Api.SendMessageAction)
         case updatePinnedMessages(flags: Int32, peer: Api.Peer, messages: [Int32], pts: Int32, ptsCount: Int32)
         case updatePinnedChannelMessages(flags: Int32, channelId: Int32, messages: [Int32], pts: Int32, ptsCount: Int32)
-        case updateGroupCallParticipant(call: Api.InputGroupCall, participant: Api.GroupCallParticipant)
+        case updateGroupCallParticipants(call: Api.InputGroupCall, participants: [Api.GroupCallParticipant], version: Int32)
         case updateGroupCall(call: Api.GroupCall)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -7204,12 +7114,17 @@ public extension Api {
                     serializeInt32(pts, buffer: buffer, boxed: false)
                     serializeInt32(ptsCount, buffer: buffer, boxed: false)
                     break
-                case .updateGroupCallParticipant(let call, let participant):
+                case .updateGroupCallParticipants(let call, let participants, let version):
                     if boxed {
-                        buffer.appendInt32(92188360)
+                        buffer.appendInt32(-219423922)
                     }
                     call.serialize(buffer, true)
-                    participant.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(participants.count))
+                    for item in participants {
+                        item.serialize(buffer, true)
+                    }
+                    serializeInt32(version, buffer: buffer, boxed: false)
                     break
                 case .updateGroupCall(let call):
                     if boxed {
@@ -7392,8 +7307,8 @@ public extension Api {
                 return ("updatePinnedMessages", [("flags", flags), ("peer", peer), ("messages", messages), ("pts", pts), ("ptsCount", ptsCount)])
                 case .updatePinnedChannelMessages(let flags, let channelId, let messages, let pts, let ptsCount):
                 return ("updatePinnedChannelMessages", [("flags", flags), ("channelId", channelId), ("messages", messages), ("pts", pts), ("ptsCount", ptsCount)])
-                case .updateGroupCallParticipant(let call, let participant):
-                return ("updateGroupCallParticipant", [("call", call), ("participant", participant)])
+                case .updateGroupCallParticipants(let call, let participants, let version):
+                return ("updateGroupCallParticipants", [("call", call), ("participants", participants), ("version", version)])
                 case .updateGroupCall(let call):
                 return ("updateGroupCall", [("call", call)])
     }
@@ -8868,19 +8783,22 @@ public extension Api {
                 return nil
             }
         }
-        public static func parse_updateGroupCallParticipant(_ reader: BufferReader) -> Update? {
+        public static func parse_updateGroupCallParticipants(_ reader: BufferReader) -> Update? {
             var _1: Api.InputGroupCall?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputGroupCall
             }
-            var _2: Api.GroupCallParticipant?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.GroupCallParticipant
+            var _2: [Api.GroupCallParticipant]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.GroupCallParticipant.self)
             }
+            var _3: Int32?
+            _3 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.Update.updateGroupCallParticipant(call: _1!, participant: _2!)
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateGroupCallParticipants(call: _1!, participants: _2!, version: _3!)
             }
             else {
                 return nil

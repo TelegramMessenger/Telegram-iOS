@@ -294,7 +294,7 @@ final class ChatPinnedMessage: Equatable {
 }
 
 struct ChatActiveGroupCallInfo: Equatable {
-    var messageId: MessageId
+    var activeCall: CachedChannelData.ActiveCall
 }
 
 final class ChatPresentationInterfaceState: Equatable {

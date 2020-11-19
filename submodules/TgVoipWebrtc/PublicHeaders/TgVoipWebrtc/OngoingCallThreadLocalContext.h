@@ -158,12 +158,12 @@ typedef NS_ENUM(int32_t, GroupCallNetworkState) {
 
 @interface GroupCallThreadLocalContext : NSObject
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue relaySdpAnswer:(void (^ _Nonnull)(NSString * _Nonnull))relaySdpAnswer incomingVideoStreamListUpdated:(void (^ _Nonnull)(NSArray<NSString *> * _Nonnull))incomingVideoStreamListUpdated videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated;
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated;
 
-- (void)emitOfferWithAdjustSdp:(NSString * _Nonnull (^ _Nonnull)(NSString * _Nonnull))adjustSdp completion:(void (^ _Nonnull)(NSString * _Nonnull))completion;
-- (void)setOfferSdp:(NSString * _Nonnull)offerSdp isPartial:(bool)isPartial;
+- (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion;
+- (void)setJoinResponsePayload:(NSString * _Nonnull)payload;
+- (void)setSsrcs:(NSArray<NSNumber *> * _Nonnull)ssrcs;
 - (void)setIsMuted:(bool)isMuted;
-- (void)makeIncomingVideoViewWithStreamId:(NSString * _Nonnull)streamId completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion;
 
 @end
 
