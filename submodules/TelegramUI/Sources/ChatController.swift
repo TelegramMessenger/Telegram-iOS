@@ -5979,6 +5979,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, passthroughTouches: true)), items: .single(items), reactionItems: [], gesture: gesture)
             strongSelf.presentInGlobalOverlay(contextController)
         }, joinGroupCall: { [weak self] activeCall in
+        }, editMessageMedia: { [weak self] messageId, draw in
+            if let strongSelf = self {
+                strongSelf.controllerInteraction?.editMessageMedia(messageId, draw)
+            }
+        }, joinGroupCall: { [weak self] messageId in
             guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
             }
