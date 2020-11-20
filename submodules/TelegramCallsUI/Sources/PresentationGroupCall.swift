@@ -27,7 +27,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private enum InternalState {
         case requesting
         case active(GroupCallInfo)
-        case estabilished(GroupCallInfo, String, [UInt32: PeerId])
+        case estabilished(GroupCallInfo, String, [UInt32], [UInt32: PeerId])
         
         var callInfo: GroupCallInfo? {
             switch self {
@@ -35,7 +35,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 return nil
             case let .active(info):
                 return info
-            case let .estabilished(info, _, _):
+            case let .estabilished(info, _, _, _):
                 return info
             }
         }
@@ -224,17 +224,25 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             guard let strongSelf = self else {
                 return
             }
-            if case let .estabilished(callInfo, _, _) = strongSelf.internalState {
+            if case let .estabilished(callInfo, _, _, _) = strongSelf.internalState {
                 var addedSsrc: [UInt32] = []
-                for (callId, peerId, ssrc, _) in updates {
+                var removedSsrc: [UInt32] = []
+                for (callId, peerId, ssrc, isAdded) in updates {
                     if callId == callInfo.id {
                         let mappedSsrc = UInt32(bitPattern: ssrc)
-                        addedSsrc.append(mappedSsrc)
-                        strongSelf.ssrcMapping[mappedSsrc] = peerId
+                        if isAdded {
+                            addedSsrc.append(mappedSsrc)
+                            strongSelf.ssrcMapping[mappedSsrc] = peerId
+                        } else {
+                            removedSsrc.append(mappedSsrc)
+                        }
                     }
                 }
                 if !addedSsrc.isEmpty {
                     strongSelf.callContext?.addSsrcs(ssrcs: addedSsrc)
+                }
+                if !removedSsrc.isEmpty {
+                    strongSelf.callContext?.removeSsrcs(ssrcs: removedSsrc)
                 }
             }
         })
@@ -291,7 +299,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             return
                         }
                         if let clientParams = joinCallResult.callInfo.clientParams {
-                            strongSelf.updateSessionState(internalState: .estabilished(joinCallResult.callInfo, clientParams, joinCallResult.ssrcMapping), audioSessionControl: strongSelf.audioSessionControl)
+                            strongSelf.updateSessionState(internalState: .estabilished(joinCallResult.callInfo, clientParams, joinCallResult.ssrcs, joinCallResult.ssrcMapping), audioSessionControl: strongSelf.audioSessionControl)
                         }
                     }))
                 }))
@@ -342,9 +350,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         case .estabilished:
             break
         default:
-            if case let .estabilished(_, clientParams, ssrcMapping) = internalState {
+            if case let .estabilished(_, clientParams, ssrcs, ssrcMapping) = internalState {
                 self.ssrcMapping = ssrcMapping
-                self.callContext?.setJoinResponse(payload: clientParams, ssrcs: Array(ssrcMapping.keys))
+                self.callContext?.setJoinResponse(payload: clientParams, ssrcs: ssrcs)
             }
         }
     }
@@ -356,7 +364,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     public func leave() -> Signal<Bool, NoError> {
-        if case let .estabilished(callInfo, _, _) = self.internalState {
+        if case let .estabilished(callInfo, _, _, _) = self.internalState {
             self.leaveDisposable.set((leaveGroupCall(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash)
             |> deliverOnMainQueue).start(completed: { [weak self] in
                 self?._canBeRemoved.set(.single(true))

@@ -808,40 +808,15 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 
 @implementation GroupCallThreadLocalContext
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue relaySdpAnswer:(void (^ _Nonnull)(NSString * _Nonnull))relaySdpAnswer incomingVideoStreamListUpdated:(void (^ _Nonnull)(NSArray<NSString *> * _Nonnull))incomingVideoStreamListUpdated videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated {
     self = [super init];
     if (self != nil) {
         _queue = queue;
         
-        _videoCapturer = videoCapturer;
         _networkStateUpdated = [networkStateUpdated copy];
         
         __weak GroupCallThreadLocalContext *weakSelf = self;
         _instance.reset(new tgcalls::GroupInstanceImpl((tgcalls::GroupInstanceDescriptor){
-            .sdpAnswerEmitted = [weakSelf, queue, relaySdpAnswer](std::string const &sdpAnswer) {
-                NSString *string = [NSString stringWithUTF8String:sdpAnswer.c_str()];
-                [queue dispatch:^{
-                    __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
-                    if (strongSelf == nil) {
-                        return;
-                    }
-                    relaySdpAnswer(string);
-                }];
-            },
-            .incomingVideoStreamListUpdated = [weakSelf, queue, incomingVideoStreamListUpdated](std::vector<std::string> const &incomingVideoStreamList) {
-                NSMutableArray<NSString *> *mappedList = [[NSMutableArray alloc] init];
-                for (auto &it : incomingVideoStreamList) {
-                    [mappedList addObject:[NSString stringWithUTF8String:it.c_str()]];
-                }
-                [queue dispatch:^{
-                    __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
-                    if (strongSelf == nil) {
-                        return;
-                    }
-                    incomingVideoStreamListUpdated(mappedList);
-                }];
-            },
-            .videoCapture = [_videoCapturer getInterface],
             .networkStateUpdated = [weakSelf, queue, networkStateUpdated](bool isConnected) {
                 [queue dispatch:^{
                     __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
@@ -850,72 +825,210 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                     }
                     networkStateUpdated(isConnected ? GroupCallNetworkStateConnected : GroupCallNetworkStateConnecting);
                 }];
+            },
+            .audioLevelsUpdated = [weakSelf, queue, audioLevelsUpdated](std::vector<std::pair<uint32_t, float>> const &levels) {
+                NSMutableArray *result = [[NSMutableArray alloc] init];
+                for (auto &it : levels) {
+                    [result addObject:@(it.first)];
+                    [result addObject:@(it.second)];
+                }
             }
         }));
     }
     return self;
 }
 
-- (void)emitOfferWithAdjustSdp:(NSString * _Nonnull (^ _Nonnull)(NSString * _Nonnull))adjustSdp completion:(void (^ _Nonnull)(NSString * _Nonnull))completion {
+- (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion {
     if (_instance) {
-        _instance->emitOffer([adjustSdp](std::string const &sdp) {
-            NSString *string = [NSString stringWithUTF8String:sdp.c_str()];
-            NSString *result = adjustSdp(string);
-            return result.UTF8String;
-        }, [completion](std::string const &sdp) {
-            NSString *string = [NSString stringWithUTF8String:sdp.c_str()];
-            completion(string);
+        _instance->emitJoinPayload([completion](tgcalls::GroupJoinPayload payload) {
+            NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+            
+            int32_t signedSsrc = *(int32_t *)&payload.ssrc;
+            
+            dict[@"ssrc"] = @(signedSsrc);
+            dict[@"ufrag"] = [NSString stringWithUTF8String:payload.ufrag.c_str()];
+            dict[@"pwd"] = [NSString stringWithUTF8String:payload.pwd.c_str()];
+            
+            NSMutableArray *fingerprints = [[NSMutableArray alloc] init];
+            for (auto &fingerprint : payload.fingerprints) {
+                [fingerprints addObject:@{
+                    @"hash": [NSString stringWithUTF8String:fingerprint.hash.c_str()],
+                    @"fingerprint": [NSString stringWithUTF8String:fingerprint.fingerprint.c_str()],
+                    @"setup": [NSString stringWithUTF8String:fingerprint.setup.c_str()]
+                }];
+            }
+            
+            dict[@"fingerprints"] = fingerprints;
+            
+            NSData *data = [NSJSONSerialization dataWithJSONObject:dict options:0 error:nil];
+            NSString *string = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+            
+            completion(string, payload.ssrc);
         });
     }
 }
 
-- (void)setOfferSdp:(NSString * _Nonnull)offerSdp isPartial:(bool)isPartial {
+- (void)setJoinResponsePayload:(NSString * _Nonnull)payload {
+    tgcalls::GroupJoinResponsePayload result;
+    
+    NSData *payloadData = [payload dataUsingEncoding:NSUTF8StringEncoding];
+    if (payloadData == nil) {
+        return;
+    }
+    
+    NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:payloadData options:0 error:nil];
+    if (![dict isKindOfClass:[NSDictionary class]]) {
+        return;
+    }
+    
+    NSDictionary *transport = dict[@"transport"];
+    if (![transport isKindOfClass:[NSDictionary class]]) {
+        return;
+    }
+    
+    NSString *pwd = transport[@"pwd"];
+    if (![pwd isKindOfClass:[NSString class]]) {
+        return;
+    }
+    
+    NSString *ufrag = transport[@"ufrag"];
+    if (![ufrag isKindOfClass:[NSString class]]) {
+        return;
+    }
+    
+    result.pwd = [pwd UTF8String];
+    result.ufrag = [ufrag UTF8String];
+    
+    NSArray *fingerprintsValue = transport[@"fingerprints"];
+    if (![fingerprintsValue isKindOfClass:[NSArray class]]) {
+        return;
+    }
+    
+    for (NSDictionary *fingerprintValue in fingerprintsValue) {
+        if (![fingerprintValue isKindOfClass:[NSDictionary class]]) {
+            continue;
+        }
+        NSString *hashValue = fingerprintValue[@"hash"];
+        if (![hashValue isKindOfClass:[NSString class]]) {
+            continue;
+        }
+        NSString *fingerprint = fingerprintValue[@"fingerprint"];
+        if (![fingerprint isKindOfClass:[NSString class]]) {
+            continue;
+        }
+        NSString *setup = fingerprintValue[@"setup"];
+        if (![setup isKindOfClass:[NSString class]]) {
+            continue;
+        }
+        tgcalls::GroupJoinPayloadFingerprint parsed;
+        parsed.fingerprint = [fingerprint UTF8String];
+        parsed.setup = [setup UTF8String];
+        parsed.hash = [hashValue UTF8String];
+        result.fingerprints.push_back(parsed);
+    }
+    
+    NSArray *candidatesValue = transport[@"candidates"];
+    if (![candidatesValue isKindOfClass:[NSArray class]]) {
+        return;
+    }
+    
+    for (NSDictionary *candidateValue in candidatesValue) {
+        if (![candidateValue isKindOfClass:[NSDictionary class]]) {
+            continue;
+        }
+        
+        NSString *portValue = candidateValue[@"port"];
+        if (![portValue isKindOfClass:[NSString class]]) {
+            continue;
+        }
+        NSString *protocolValue = candidateValue[@"protocol"];
+        if (![protocolValue isKindOfClass:[NSString class]]) {
+            continue;
+        }
+        NSString *networkValue = candidateValue[@"network"];
+        if (![networkValue isKindOfClass:[NSString class]]) {
+            continue;
+        }
+        NSString *generationValue = candidateValue[@"generation"];
+        if (![generationValue isKindOfClass:[NSString class]]) {
+            continue;
+        }
+        NSString *idValue = candidateValue[@"id"];
+        if (![idValue isKindOfClass:[NSString class]]) {
+            continue;
+        }
+        NSString *componentValue = candidateValue[@"component"];
+        if (![componentValue isKindOfClass:[NSString class]]) {
+            continue;
+        }
+        NSString *foundationValue = candidateValue[@"foundation"];
+        if (![foundationValue isKindOfClass:[NSString class]]) {
+            continue;
+        }
+        NSString *priorityValue = candidateValue[@"priority"];
+        if (![priorityValue isKindOfClass:[NSString class]]) {
+            continue;
+        }
+        NSString *ipValue = candidateValue[@"ip"];
+        if (![ipValue isKindOfClass:[NSString class]]) {
+            continue;
+        }
+        NSString *typeValue = candidateValue[@"type"];
+        if (![typeValue isKindOfClass:[NSString class]]) {
+            continue;
+        }
+        
+        NSString *tcpTypeValue = candidateValue[@"tcptype"];
+        if (![tcpTypeValue isKindOfClass:[NSString class]]) {
+            tcpTypeValue = @"";
+        }
+        NSString *relAddrValue = candidateValue[@"rel-addr"];
+        if (![relAddrValue isKindOfClass:[NSString class]]) {
+            relAddrValue = @"";
+        }
+        NSString *relPortValue = candidateValue[@"rel-port"];
+        if (![relPortValue isKindOfClass:[NSString class]]) {
+            relPortValue = @"";
+        }
+        
+        tgcalls::GroupJoinResponseCandidate candidate;
+        
+        candidate.port = [portValue UTF8String];
+        candidate.protocol = [protocolValue UTF8String];
+        candidate.network = [networkValue UTF8String];
+        candidate.generation = [generationValue UTF8String];
+        candidate.id = [idValue UTF8String];
+        candidate.component = [componentValue UTF8String];
+        candidate.foundation = [foundationValue UTF8String];
+        candidate.priority = [priorityValue UTF8String];
+        candidate.ip = [ipValue UTF8String];
+        candidate.type = [typeValue UTF8String];
+        
+        candidate.tcpType = [tcpTypeValue UTF8String];
+        candidate.relAddr = [relAddrValue UTF8String];
+        candidate.relPort = [relPortValue UTF8String];
+        
+        result.candidates.push_back(candidate);
+    }
+    
     if (_instance) {
-        _instance->setOfferSdp([offerSdp UTF8String], isPartial);
+        _instance->setJoinResponsePayload(result);
+    }
+}
+
+- (void)setSsrcs:(NSArray<NSNumber *> * _Nonnull)ssrcs {
+    if (_instance) {
+        std::vector<uint32_t> values;
+        for (NSNumber *ssrc in ssrcs) {
+            values.push_back([ssrc unsignedIntValue]);
+        }
+        _instance->setSsrcs(values);
     }
 }
 
 - (void)setIsMuted:(bool)isMuted {
     if (_instance) {
         _instance->setIsMuted(isMuted);
-    }
-}
-
-- (void)makeIncomingVideoViewWithStreamId:(NSString * _Nonnull)streamId completion:(void (^_Nonnull)(UIView<OngoingCallThreadLocalContextWebrtcVideoView> * _Nullable))completion {
-    if (_instance) {
-        __weak GroupCallThreadLocalContext *weakSelf = self;
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if ([VideoMetalView isSupported]) {
-                VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
-#if TARGET_OS_IPHONE
-                remoteRenderer.videoContentMode = UIViewContentModeScaleToFill;
-#else
-                remoteRenderer.videoContentMode = UIViewContentModeScaleAspect;
-#endif
-                
-                std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
-                __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
-                if (strongSelf) {
-                    //[remoteRenderer setOrientation:strongSelf->_remoteVideoOrientation];
-                    //strongSelf->_currentRemoteVideoRenderer = remoteRenderer;
-                    strongSelf->_instance->setIncomingVideoOutput([streamId UTF8String], sink);
-                }
-                
-                completion(remoteRenderer);
-            } else {
-                GLVideoView *remoteRenderer = [[GLVideoView alloc] initWithFrame:CGRectZero];
-                
-                std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink = [remoteRenderer getSink];
-                __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
-                if (strongSelf) {
-                    //[remoteRenderer setOrientation:strongSelf->_remoteVideoOrientation];
-                    //strongSelf->_currentRemoteVideoRenderer = remoteRenderer;
-                    strongSelf->_instance->setIncomingVideoOutput([streamId UTF8String], sink);
-                }
-                
-                completion(remoteRenderer);
-            }
-        });
     }
 }
 

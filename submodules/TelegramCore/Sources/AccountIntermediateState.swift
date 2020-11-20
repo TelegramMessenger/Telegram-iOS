@@ -110,7 +110,7 @@ enum AccountStateMutationOperation {
     case UpdateChatListFilterOrder(order: [Int32])
     case UpdateChatListFilter(id: Int32, filter: Api.DialogFilter?)
     case UpdateReadThread(threadMessageId: MessageId, readMaxId: Int32, isIncoming: Bool, mainChannelMessage: MessageId?)
-    case UpdateGroupCallParticipant(id: Int64, accessHash: Int64, participant: Api.GroupCallParticipant)
+    case UpdateGroupCallParticipants(id: Int64, accessHash: Int64, participants: [Api.GroupCallParticipant], version: Int32)
 }
 
 struct HoleFromPreviousState {
@@ -277,8 +277,8 @@ struct AccountMutableState {
         self.addOperation(.UpdateReadThread(threadMessageId: threadMessageId, readMaxId: readMaxId, isIncoming: isIncoming, mainChannelMessage: mainChannelMessage))
     }
     
-    mutating func updateGroupCallParticipant(id: Int64, accessHash: Int64, participant: Api.GroupCallParticipant) {
-        self.addOperation(.UpdateGroupCallParticipant(id: id, accessHash: accessHash, participant: participant))
+    mutating func updateGroupCallParticipants(id: Int64, accessHash: Int64, participants: [Api.GroupCallParticipant], version: Int32) {
+        self.addOperation(.UpdateGroupCallParticipants(id: id, accessHash: accessHash, participants: participants, version: version))
     }
     
     mutating func readGroupFeedInbox(groupId: PeerGroupId, index: MessageIndex) {
@@ -489,7 +489,7 @@ struct AccountMutableState {
     
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll/*, .UpdateMessageReactions*/, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilterOrder, .UpdateChatListFilter, .UpdateReadThread, .UpdateGroupCallParticipant, .UpdateMessagesPinned:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll/*, .UpdateMessageReactions*/, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilterOrder, .UpdateChatListFilter, .UpdateReadThread, .UpdateGroupCallParticipants, .UpdateMessagesPinned:
                 break
             case let .AddMessages(messages, location):
                 for message in messages {

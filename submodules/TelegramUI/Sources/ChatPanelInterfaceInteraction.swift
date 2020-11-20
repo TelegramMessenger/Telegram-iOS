@@ -127,8 +127,8 @@ final class ChatPanelInterfaceInteraction {
     let viewReplies: (MessageId?, ChatReplyThreadMessage) -> Void
     let activatePinnedListPreview: (ASDisplayNode, ContextGesture) -> Void
     let editMessageMedia: (MessageId, Bool) -> Void
+    let joinGroupCall: (CachedChannelData.ActiveCall) -> Void
     let statuses: ChatPanelInterfaceInteractionStatuses?
-    let joinGroupCall: (MessageId) -> Void
     
     init(
         setupReplyMessage: @escaping (MessageId, @escaping (ContainedViewLayoutTransition) -> Void) -> Void,
@@ -207,8 +207,8 @@ final class ChatPanelInterfaceInteraction {
         scrollToTop: @escaping () -> Void,
         viewReplies: @escaping (MessageId?, ChatReplyThreadMessage) -> Void,
         activatePinnedListPreview: @escaping (ASDisplayNode, ContextGesture) -> Void,
-        editMessageMedia: @escaping (MessageId, Bool) -> Void,
         joinGroupCall: @escaping (MessageId) -> Void,
+        editMessageMedia: @escaping (MessageId, Bool) -> Void,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
         self.setupReplyMessage = setupReplyMessage
