@@ -23,7 +23,7 @@ private extension GroupCallInfo {
                 clientParams: nil,
                 version: nil
             )
-        case let .groupCall(_, id, accessHash, channelId, _, _, params, version):
+        case let .groupCall(_, id, accessHash, _, _, params, version):
             var clientParams: String?
             if let params = params {
                 switch params {
@@ -34,7 +34,7 @@ private extension GroupCallInfo {
             self.init(
                 id: id,
                 accessHash: accessHash,
-                peerId: channelId.flatMap { PeerId(namespace: Namespaces.Peer.CloudChannel, id: $0) },
+                peerId: nil,
                 clientParams: clientParams,
                 version: version
             )
@@ -84,7 +84,7 @@ public func getCurrentGroupCall(account: Account, peerId: PeerId) -> Signal<Grou
         }
         |> mapToSignal { result -> Signal<GroupCallInfo?, GetCurrentGroupCallError> in
             switch result {
-            case let .groupCall(call, sources, participants, chats, users):
+            case let .groupCall(call, sources, participants, users):
                 return account.postbox.transaction { transaction -> GroupCallInfo? in
                     return GroupCallInfo(call)
                 }
@@ -110,7 +110,7 @@ public func createGroupCall(account: Account, peerId: PeerId) -> Signal<GroupCal
             return .fail(.generic)
         }
         
-        return account.network.request(Api.functions.phone.createGroupCall(flags: 0, channel: inputPeer, randomId: Int32.random(in: Int32.min ... Int32.max)))
+        return account.network.request(Api.functions.phone.createGroupCall(channel: inputPeer, randomId: Int32.random(in: Int32.min ... Int32.max)))
         |> mapError { _ -> CreateGroupCallError in
             return .generic
         }
@@ -220,7 +220,7 @@ public func joinGroupCall(account: Account, callId: Int64, accessHash: Int64, jo
             }
             
             switch result {
-            case let .groupCall(call, sources, participants, chats, users):
+            case let .groupCall(call, sources, participants, users):
                 guard let _ = GroupCallInfo(call) else {
                     return .fail(.generic)
                 }
