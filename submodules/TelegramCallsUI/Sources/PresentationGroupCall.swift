@@ -226,8 +226,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
         })
         
-        self.requestCall()
-        
         self.groupCallParticipantUpdatesDisposable = (self.account.stateManager.groupCallParticipantUpdates
         |> deliverOnMainQueue).start(next: { [weak self] updates in
             guard let strongSelf = self else {
@@ -255,6 +253,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 }
             }
         })
+        
+        self.requestCall()
     }
     
     deinit {
@@ -489,7 +489,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.callContext?.stop()
         self.callContext = nil
         
-        self.updateSessionState(internalState: .requesting, audioSessionControl: self.audioSessionControl)
+        self.internalState = .requesting
+        self.isCurrentlyConnecting = nil
         
         enum CallError {
             case generic
