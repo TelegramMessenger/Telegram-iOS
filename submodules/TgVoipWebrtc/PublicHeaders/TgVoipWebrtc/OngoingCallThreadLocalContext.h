@@ -160,6 +160,8 @@ typedef NS_ENUM(int32_t, GroupCallNetworkState) {
 
 - (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated;
 
+- (void)stop;
+
 - (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion;
 - (void)setJoinResponsePayload:(NSString * _Nonnull)payload;
 - (void)setSsrcs:(NSArray<NSNumber *> * _Nonnull)ssrcs;

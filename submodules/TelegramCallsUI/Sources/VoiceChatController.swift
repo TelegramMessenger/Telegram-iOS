@@ -127,7 +127,28 @@ public final class VoiceChatController: ViewController {
         }
         
         private final class Interaction {
+            private var audioLevels: [PeerId: ValuePipe<Float>] = [:]
             
+            init() {
+            }
+            
+            func getAudioLevel(_ peerId: PeerId) -> Signal<Float, NoError>? {
+                if let current = self.audioLevels[peerId] {
+                    return current.signal()
+                } else {
+                    let value = ValuePipe<Float>()
+                    self.audioLevels[peerId] = value
+                    return value.signal()
+                }
+            }
+            
+            func updateAudioLevels(levels: [(PeerId, Float)]) {
+                for (peerId, level) in levels {
+                    if let pipe = self.audioLevels[peerId] {
+                        pipe.putNext(level)
+                    }
+                }
+            }
         }
         
         private struct PeerEntry: Comparable, Identifiable {
@@ -173,7 +194,7 @@ public final class VoiceChatController: ViewController {
                     //arguments.setItemIdWithRevealedOptions(lhs.flatMap { .peer($0) }, rhs.flatMap { .peer($0) })
                 }, removePeer: { id in
                     //arguments.deleteIncludePeer(id)
-                }, noInsets: true)
+                }, noInsets: true, audioLevel: peer.id == context.account.peerId ? nil : interaction.getAudioLevel(peer.id))
             }
         }
         
@@ -225,6 +246,7 @@ public final class VoiceChatController: ViewController {
         private var audioOutputStateDisposable: Disposable?
         private var audioOutputState: ([AudioSessionOutput], AudioSessionOutput?)?
         
+        private var audioLevelsDisposable: Disposable?
         private var memberStatesDisposable: Disposable?
         
         private var itemInteraction: Interaction?
@@ -347,12 +369,21 @@ public final class VoiceChatController: ViewController {
             
             self.audioOutputStateDisposable = (call.audioOutputState
             |> deliverOnMainQueue).start(next: { [weak self] state in
-                if let strongSelf = self {
-                    strongSelf.audioOutputState = state
-                    if let (layout, navigationHeight) = strongSelf.validLayout {
-                        strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
-                    }
+                guard let strongSelf = self else {
+                    return
                 }
+                strongSelf.audioOutputState = state
+                if let (layout, navigationHeight) = strongSelf.validLayout {
+                    strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
+                }
+            })
+            
+            self.audioLevelsDisposable = (call.audioLevels
+            |> deliverOnMainQueue).start(next: { [weak self] levels in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.itemInteraction?.updateAudioLevels(levels: levels)
             })
             
             self.leaveNode.addTarget(self, action: #selector(self.leavePressed), forControlEvents: .touchUpInside)
@@ -370,6 +401,7 @@ public final class VoiceChatController: ViewController {
             self.callStateDisposable?.dispose()
             self.audioOutputStateDisposable?.dispose()
             self.memberStatesDisposable?.dispose()
+            self.audioLevelsDisposable?.dispose()
         }
         
         @objc private func leavePressed() {

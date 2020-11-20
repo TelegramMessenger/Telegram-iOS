@@ -826,16 +826,24 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                     networkStateUpdated(isConnected ? GroupCallNetworkStateConnected : GroupCallNetworkStateConnecting);
                 }];
             },
-            .audioLevelsUpdated = [weakSelf, queue, audioLevelsUpdated](std::vector<std::pair<uint32_t, float>> const &levels) {
+            .audioLevelsUpdated = [audioLevelsUpdated](std::vector<std::pair<uint32_t, float>> const &levels) {
                 NSMutableArray *result = [[NSMutableArray alloc] init];
                 for (auto &it : levels) {
                     [result addObject:@(it.first)];
                     [result addObject:@(it.second)];
                 }
+                audioLevelsUpdated(result);
             }
         }));
     }
     return self;
+}
+
+- (void)stop {
+    if (_instance) {
+        _instance->stop();
+        _instance.reset();
+    }
 }
 
 - (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion {

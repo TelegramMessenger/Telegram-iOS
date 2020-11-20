@@ -210,6 +210,7 @@ swift_library(
         "//submodules/AnimatedAvatarSetNode:AnimatedAvatarSetNode",
         "//submodules/SlotMachineAnimationNode:SlotMachineAnimationNode",
         "//submodules/AnimatedNavigationStripeNode:AnimatedNavigationStripeNode",
+        "//submodules/AudioBlob:AudioBlob",
     ],
     visibility = [
         "//visibility:public",

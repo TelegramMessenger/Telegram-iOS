@@ -207,7 +207,7 @@ final class ChatPanelInterfaceInteraction {
         scrollToTop: @escaping () -> Void,
         viewReplies: @escaping (MessageId?, ChatReplyThreadMessage) -> Void,
         activatePinnedListPreview: @escaping (ASDisplayNode, ContextGesture) -> Void,
-        joinGroupCall: @escaping (MessageId) -> Void,
+        joinGroupCall: @escaping (CachedChannelData.ActiveCall) -> Void,
         editMessageMedia: @escaping (MessageId, Bool) -> Void,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {

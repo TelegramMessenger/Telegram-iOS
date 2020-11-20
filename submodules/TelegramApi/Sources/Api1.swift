@@ -21479,6 +21479,7 @@ public extension Api {
         case messageActionContactSignUp
         case messageActionGeoProximityReached(fromId: Api.Peer, toId: Api.Peer, distance: Int32)
         case messageActionGroupCall(flags: Int32, call: Api.InputGroupCall, duration: Int32?)
+        case messageActionInviteToGroupCall(call: Api.InputGroupCall, userId: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -21666,6 +21667,13 @@ public extension Api {
                     call.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(duration!, buffer: buffer, boxed: false)}
                     break
+                case .messageActionInviteToGroupCall(let call, let userId):
+                    if boxed {
+                        buffer.appendInt32(254144570)
+                    }
+                    call.serialize(buffer, true)
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -21721,6 +21729,8 @@ public extension Api {
                 return ("messageActionGeoProximityReached", [("fromId", fromId), ("toId", toId), ("distance", distance)])
                 case .messageActionGroupCall(let flags, let call, let duration):
                 return ("messageActionGroupCall", [("flags", flags), ("call", call), ("duration", duration)])
+                case .messageActionInviteToGroupCall(let call, let userId):
+                return ("messageActionInviteToGroupCall", [("call", call), ("userId", userId)])
     }
     }
     
@@ -22024,6 +22034,22 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.MessageAction.messageActionGroupCall(flags: _1!, call: _2!, duration: _3)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionInviteToGroupCall(_ reader: BufferReader) -> MessageAction? {
+            var _1: Api.InputGroupCall?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputGroupCall
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageAction.messageActionInviteToGroupCall(call: _1!, userId: _2!)
             }
             else {
                 return nil

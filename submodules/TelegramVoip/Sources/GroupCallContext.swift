@@ -44,7 +44,7 @@ public final class OngoingGroupCallContext {
         var mainStreamAudioSsrc: UInt32?
         var otherSsrcs: [UInt32] = []
         
-        let joinPayload = Promise<String>()
+        let joinPayload = Promise<(String, UInt32)>()
         let networkState = ValuePromise<NetworkState>(.connecting, ignoreRepeated: true)
         let isMuted = ValuePromise<Bool>(true, ignoreRepeated: true)
         let memberStates = ValuePromise<[UInt32: MemberState]>([:], ignoreRepeated: true)
@@ -105,7 +105,7 @@ public final class OngoingGroupCallContext {
                         return
                     }
                     strongSelf.mainStreamAudioSsrc = ssrc
-                    strongSelf.joinPayload.set(.single(payload))
+                    strongSelf.joinPayload.set(.single((payload, ssrc)))
                 }
             })
         }
@@ -170,6 +170,10 @@ public final class OngoingGroupCallContext {
             }
         }
         
+        func stop() {
+            self.context.stop()
+        }
+        
         func setIsMuted(_ isMuted: Bool) {
             self.isMuted.set(isMuted)
             self.context.setIsMuted(isMuted)
@@ -179,7 +183,7 @@ public final class OngoingGroupCallContext {
     private let queue = Queue()
     private let impl: QueueLocalObject<Impl>
     
-    public var joinPayload: Signal<String, NoError> {
+    public var joinPayload: Signal<(String, UInt32), NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in
@@ -267,6 +271,12 @@ public final class OngoingGroupCallContext {
     public func removeSsrcs(ssrcs: [UInt32]) {
         self.impl.with { impl in
             impl.removeSsrcs(ssrcs: ssrcs)
+        }
+    }
+    
+    public func stop() {
+        self.impl.with { impl in
+            impl.stop()
         }
     }
 }

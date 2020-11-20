@@ -198,6 +198,7 @@ public protocol PresentationGroupCall: class {
     var canBeRemoved: Signal<Bool, NoError> { get }
     var state: Signal<PresentationGroupCallState, NoError> { get }
     var members: Signal<[PeerId: PresentationGroupCallMemberState], NoError> { get }
+    var audioLevels: Signal<[(PeerId, Float)], NoError> { get }
     
     func leave() -> Signal<Bool, NoError>
     

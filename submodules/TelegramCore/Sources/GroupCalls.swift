@@ -137,6 +137,44 @@ public func createGroupCall(account: Account, peerId: PeerId) -> Signal<GroupCal
     }
 }
 
+public struct GetGroupCallParticipantsResult {
+    public var ssrcMapping: [UInt32: PeerId]
+}
+
+public enum GetGroupCallParticipantsError {
+    case generic
+}
+
+public func getGroupCallParticipants(account: Account, callId: Int64, accessHash: Int64, maxDate: Int32, limit: Int32) -> Signal<GetGroupCallParticipantsResult, GetGroupCallParticipantsError> {
+    return account.network.request(Api.functions.phone.getGroupParticipants(call: .inputGroupCall(id: callId, accessHash: accessHash), maxDate: maxDate, limit: limit))
+    |> mapError { _ -> GetGroupCallParticipantsError in
+        return .generic
+    }
+    |> map { result -> GetGroupCallParticipantsResult in
+        var ssrcMapping: [UInt32: PeerId] = [:]
+        
+        switch result {
+        case let .groupParticipants(count, participants, users):
+            for participant in participants {
+                var peerId: PeerId?
+                var ssrc: UInt32?
+                switch participant {
+                case let .groupCallParticipant(flags, userId, date, source):
+                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                    ssrc = UInt32(bitPattern: source)
+                }
+                if let peerId = peerId, let ssrc = ssrc {
+                    ssrcMapping[ssrc] = peerId
+                }
+            }
+        }
+        
+        return GetGroupCallParticipantsResult(
+            ssrcMapping: ssrcMapping
+        )
+    }
+}
+
 public enum JoinGroupCallError {
     case generic
 }
@@ -153,11 +191,17 @@ public func joinGroupCall(account: Account, callId: Int64, accessHash: Int64, jo
         return .generic
     }
     |> mapToSignal { updates -> Signal<JoinGroupCallResult, JoinGroupCallError> in
-        return account.network.request(Api.functions.phone.getGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash)))
-        |> mapError { _ -> JoinGroupCallError in
-            return .generic
-        }
-        |> mapToSignal { result -> Signal<JoinGroupCallResult, JoinGroupCallError> in
+        return combineLatest(
+            account.network.request(Api.functions.phone.getGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash)))
+            |> mapError { _ -> JoinGroupCallError in
+                return .generic
+            },
+            getGroupCallParticipants(account: account, callId: callId, accessHash: accessHash, maxDate: 0, limit: 100)
+            |> mapError { _ -> JoinGroupCallError in
+                return .generic
+            }
+        )
+        |> mapToSignal { result, participantsResult -> Signal<JoinGroupCallResult, JoinGroupCallError> in
             account.stateManager.addUpdates(updates)
             
             var maybeParsedCall: GroupCallInfo?
@@ -180,7 +224,7 @@ public func joinGroupCall(account: Account, callId: Int64, accessHash: Int64, jo
                 guard let _ = GroupCallInfo(call) else {
                     return .fail(.generic)
                 }
-                var ssrcMapping: [UInt32: PeerId] = [:]
+                var ssrcMapping: [UInt32: PeerId] = participantsResult.ssrcMapping
                 for participant in participants {
                     var peerId: PeerId?
                     var ssrc: UInt32?
@@ -231,5 +275,25 @@ public func stopGroupCall(account: Account, callId: Int64, accessHash: Int64) ->
         account.stateManager.addUpdates(result)
         
         return .complete()
+    }
+}
+
+public enum CheckGroupCallResult {
+    case success
+    case restart
+}
+
+public func checkGroupCall(account: Account, callId: Int64, accessHash: Int64, ssrc: Int32) -> Signal<CheckGroupCallResult, NoError> {
+    return account.network.request(Api.functions.phone.checkGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash), source: ssrc))
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .single(.boolFalse)
+    }
+    |> map { result -> CheckGroupCallResult in
+        switch result {
+        case .boolTrue:
+            return .success
+        case .boolFalse:
+            return .restart
+        }
     }
 }
