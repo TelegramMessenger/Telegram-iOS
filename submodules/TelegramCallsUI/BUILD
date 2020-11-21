@@ -27,6 +27,11 @@ swift_library(
         "//submodules/ItemListPeerItem:ItemListPeerItem",
         "//submodules/MergeLists:MergeLists",
         "//submodules/RadialStatusNode:RadialStatusNode",
+        "//submodules/ContextUI:ContextUI",
+        "//submodules/ShareController:ShareController",
+        "//submodules/LegacyComponents:LegacyComponents",
+        "//submodules/DeleteChatPeerActionSheetItem:DeleteChatPeerActionSheetItem",
+        "//submodules/AnimationUI:AnimationUI",
     ],
     visibility = [
         "//visibility:public",

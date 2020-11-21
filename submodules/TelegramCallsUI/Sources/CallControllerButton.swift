@@ -62,7 +62,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
     private let contentNode: ASImageNode
     private let overlayHighlightNode: ASImageNode
     private var statusNode: SemanticStatusNode?
-    private let textNode: ImmediateTextNode
+    let textNode: ImmediateTextNode
     
     private let largeButtonSize: CGFloat = 72.0
     
@@ -199,7 +199,7 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                     case .green:
                         fillColor = UIColor(rgb: 0x74db58)
                     case .redDimmed:
-                        fillColor = UIColor(rgb: 0xd92326).withMultipliedBrightnessBy(0.3)
+                        fillColor = UIColor(rgb: 0x4d120e)
                     case .greenDimmed:
                         fillColor = UIColor(rgb: 0x74db58).withMultipliedBrightnessBy(0.3)
                     case .grayDimmed:

@@ -20,9 +20,7 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
             }
         }
     }
-    
-    var tapped: (() -> Void)?
-    
+        
     override init() {
         self.containerNode = ContextControllerSourceNode()
         self.avatarNode = AvatarNode(font: normalFont)
@@ -41,27 +39,11 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
         
         self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 37.0, height: 37.0)).offsetBy(dx: 10.0, dy: 1.0)
         self.avatarNode.frame = self.containerNode.bounds
-        
-        /*self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 37.0, height: 37.0))
-        self.avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 37.0, height: 37.0))*/
     }
     
     override func didLoad() {
         super.didLoad()
         self.view.isOpaque = false
-    }
-    
-    @objc private func avatarTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
-        if case .ended = recognizer.state {
-            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
-                switch gesture {
-                case .tap:
-                    self.tapped?()
-                default:
-                    break
-                }
-            }
-        }
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
