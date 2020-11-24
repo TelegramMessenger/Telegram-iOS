@@ -129,7 +129,12 @@ public final class VoiceChatController: ViewController {
         private final class Interaction {
             private var audioLevels: [PeerId: ValuePipe<Float>] = [:]
             
-            init() {
+            let updateIsMuted: (PeerId, Bool) -> Void
+            
+            init(
+                updateIsMuted: @escaping (PeerId, Bool) -> Void
+            ) {
+                self.updateIsMuted = updateIsMuted
             }
             
             func getAudioLevel(_ peerId: PeerId) -> Signal<Float, NoError>? {
@@ -161,6 +166,7 @@ public final class VoiceChatController: ViewController {
             var participant: RenderedChannelParticipant
             var activityTimestamp: Int32
             var state: State
+            var muteState: GroupCallParticipantsContext.Participant.MuteState?
             
             var stableId: PeerId {
                 return self.participant.peer.id
@@ -182,7 +188,13 @@ public final class VoiceChatController: ViewController {
                     text = .presence
                 case .listening:
                     //TODO:localize
-                    text = .text("listening", .accent)
+                    let muteString: String
+                    if self.muteState != nil {
+                        muteString = " [muted]"
+                    } else {
+                        muteString = ""
+                    }
+                    text = .text("listening\(muteString)", .accent)
                 case .speaking:
                     //TODO:localize
                     text = .text("speaking", .constructive)
@@ -190,7 +202,16 @@ public final class VoiceChatController: ViewController {
                 
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .monthFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: "."), nameDisplayOrder: .firstLast, context: context, peer: peer, height: .peerList, presence: self.participant.presences[self.participant.peer.id], text: text, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: ItemListPeerItemRevealOptions(options: [ItemListPeerItemRevealOption(type: .destructive, title: presentationData.strings.Common_Delete, action: {
                     //arguments.deleteIncludePeer(peer.peerId)
-                })]), switchValue: nil, enabled: true, selectable: false, sectionId: 0, action: nil, setPeerIdWithRevealedOptions: { lhs, rhs in
+                })]), switchValue: nil, enabled: true, selectable: true, sectionId: 0, action: {
+                    switch self.state {
+                    case .inactive:
+                        break
+                    default:
+                        if self.participant.peer.id != context.account.peerId {
+                            interaction.updateIsMuted(self.participant.peer.id, self.muteState != nil ? false : true)
+                        }
+                    }
+                }, setPeerIdWithRevealedOptions: { lhs, rhs in
                     //arguments.setItemIdWithRevealedOptions(lhs.flatMap { .peer($0) }, rhs.flatMap { .peer($0) })
                 }, removePeer: { id in
                     //arguments.deleteIncludePeer(id)
@@ -277,7 +298,9 @@ public final class VoiceChatController: ViewController {
             
             super.init()
             
-            self.itemInteraction = Interaction()
+            self.itemInteraction = Interaction(updateIsMuted: { [weak self] peerId, isMuted in
+                self?.call.updateMuteState(peerId: peerId, isMuted: isMuted)
+            })
             
             self.backgroundColor = .black
             
@@ -684,14 +707,16 @@ public final class VoiceChatController: ViewController {
             
             for member in members {
                 let memberState: PeerEntry.State
+                var memberMuteState: GroupCallParticipantsContext.Participant.MuteState?
                 if member.peer.id == self.context.account.peerId {
                     if !isMuted {
                         memberState = .speaking
                     } else {
                         memberState = .listening
                     }
-                } else if let _ = memberStates[member.peer.id] {
+                } else if let state = memberStates[member.peer.id] {
                     memberState = .listening
+                    memberMuteState = state.muteState
                 } else {
                     memberState = .inactive
                 }
@@ -699,7 +724,8 @@ public final class VoiceChatController: ViewController {
                 entries.append(PeerEntry(
                     participant: member,
                     activityTimestamp: Int32.max - 1 - index,
-                    state: memberState
+                    state: memberState,
+                    muteState: memberMuteState
                 ))
                 index += 1
             }
