@@ -5266,7 +5266,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                 bottomInset = max(bottomInset, selectionPanelNode.bounds.height)
             }
                         
-            let navigationBarHeight: CGFloat = layout.isModalOverlay ? 56.0 : 44.0
+            let navigationBarHeight: CGFloat = !self.isSettings && layout.isModalOverlay ? 56.0 : 44.0
             self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: effectiveAreaExpansionFraction, presentationData: self.presentationData, data: self.data, transition: transition)
             self.headerNode.navigationButtonContainer.frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: layout.statusBarHeight ?? 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight))
             self.headerNode.navigationButtonContainer.isWhite = self.headerNode.isAvatarExpanded

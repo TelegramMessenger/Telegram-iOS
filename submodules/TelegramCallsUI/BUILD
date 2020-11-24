@@ -32,6 +32,8 @@ swift_library(
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/DeleteChatPeerActionSheetItem:DeleteChatPeerActionSheetItem",
         "//submodules/AnimationUI:AnimationUI",
+        "//submodules/UndoUI:UndoUI",
+        "//submodules/AudioBlob:AudioBlob",
     ],
     visibility = [
         "//visibility:public",

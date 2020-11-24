@@ -3,8 +3,7 @@ import UIKit
 import Display
 import LegacyComponents
 
-final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration {
-    
+public final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration {
     private let smallBlob: BlobView
     private let mediumBlob: BlobView
     private let bigBlob: BlobView
@@ -18,9 +17,9 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
     
     private(set) var isAnimating = false
     
-    typealias BlobRange = (min: CGFloat, max: CGFloat)
+    public typealias BlobRange = (min: CGFloat, max: CGFloat)
     
-    init(
+    public init(
         frame: CGRect,
         maxLevel: CGFloat,
         smallBlobRange: BlobRange,
@@ -84,13 +83,13 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
         fatalError("init(coder:) has not been implemented")
     }
     
-    func setColor(_ color: UIColor) {
+    public func setColor(_ color: UIColor) {
         smallBlob.setColor(color)
         mediumBlob.setColor(color.withAlphaComponent(0.3))
         bigBlob.setColor(color.withAlphaComponent(0.15))
     }
     
-    func updateLevel(_ level: CGFloat) {
+    public func updateLevel(_ level: CGFloat) {
         let normalizedLevel = min(1, max(level / maxLevel, 0))
         
         smallBlob.updateSpeedLevel(to: normalizedLevel)
@@ -100,7 +99,7 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
         audioLevel = normalizedLevel
     }
     
-    func startAnimating() {
+    public func startAnimating() {
         guard !isAnimating else { return }
         isAnimating = true
         
@@ -112,7 +111,7 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
         displayLinkAnimator?.isPaused = false
     }
     
-    func stopAnimating() {
+    public func stopAnimating() {
         guard isAnimating else { return }
         isAnimating = false
         
@@ -138,7 +137,7 @@ final class VoiceBlobView: UIView, TGModernConversationInputMicButtonDecoration 
         }
     }
     
-    override func layoutSubviews() {
+    override public func layoutSubviews() {
         super.layoutSubviews()
         
         smallBlob.frame = bounds

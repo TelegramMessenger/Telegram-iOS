@@ -64,20 +64,4 @@
     return index;
 }
 
-- (NSSet *)itemsIdentifiers
-{
-    NSMutableSet *itemsIds = [[NSMutableSet alloc] init];
-    if (_concreteFetchResult != nil)
-    {
-        for (PHAsset *asset in _concreteFetchResult)
-            [itemsIds addObject:asset.localIdentifier];
-    }
-    else if (_assets.count > 0)
-    {
-        for (TGMediaAsset *asset in _assets)
-            [itemsIds addObject:asset.uniqueIdentifier];
-    }
-    return itemsIds;
-}
-
 @end

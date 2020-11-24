@@ -88,9 +88,6 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
         self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: textColorValue)
         
         let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0 - 56.0, height: .greatestFiniteMagnitude))
-        
-        let arrowInset: CGFloat = 18.0
-        
         let textFrame = CGRect(origin: CGPoint(x: sideInset, y: 12.0), size: textSize)
         
         let height = textSize.height + 24.0
@@ -103,7 +100,7 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
             }
             let switchSize = switchView.bounds.size
             
-            self.switchNode.frame = CGRect(origin: CGPoint(x: width - switchSize.width - 15.0, y: floor((height - switchSize.height) / 2.0)), size: switchSize)
+            self.switchNode.frame = CGRect(origin: CGPoint(x: width - switchSize.width - 15.0 - safeInsets.right, y: floor((height - switchSize.height) / 2.0)), size: switchSize)
             if switchView.isOn != item.value {
                 switchView.setOn(item.value, animated: !firstTime)
             }

@@ -23,7 +23,7 @@ private extension GroupCallInfo {
                 clientParams: nil,
                 version: nil
             )
-        case let .groupCall(_, id, accessHash, channelId, _, _, params, version):
+        case let .groupCall(_, id, accessHash, _, _, params, version):
             var clientParams: String?
             if let params = params {
                 switch params {
@@ -34,7 +34,7 @@ private extension GroupCallInfo {
             self.init(
                 id: id,
                 accessHash: accessHash,
-                peerId: channelId.flatMap { PeerId(namespace: Namespaces.Peer.CloudChannel, id: $0) },
+                peerId: nil,
                 clientParams: clientParams,
                 version: version
             )
@@ -84,7 +84,7 @@ public func getCurrentGroupCall(account: Account, peerId: PeerId) -> Signal<Grou
         }
         |> mapToSignal { result -> Signal<GroupCallInfo?, GetCurrentGroupCallError> in
             switch result {
-            case let .groupCall(call, sources, participants, chats, users):
+            case let .groupCall(call, sources, participants, users):
                 return account.postbox.transaction { transaction -> GroupCallInfo? in
                     return GroupCallInfo(call)
                 }
@@ -110,7 +110,7 @@ public func createGroupCall(account: Account, peerId: PeerId) -> Signal<GroupCal
             return .fail(.generic)
         }
         
-        return account.network.request(Api.functions.phone.createGroupCall(flags: 0, channel: inputPeer, randomId: Int32.random(in: Int32.min ... Int32.max)))
+        return account.network.request(Api.functions.phone.createGroupCall(channel: inputPeer, randomId: Int32.random(in: Int32.min ... Int32.max)))
         |> mapError { _ -> CreateGroupCallError in
             return .generic
         }
@@ -137,6 +137,44 @@ public func createGroupCall(account: Account, peerId: PeerId) -> Signal<GroupCal
     }
 }
 
+public struct GetGroupCallParticipantsResult {
+    public var ssrcMapping: [UInt32: PeerId]
+}
+
+public enum GetGroupCallParticipantsError {
+    case generic
+}
+
+public func getGroupCallParticipants(account: Account, callId: Int64, accessHash: Int64, maxDate: Int32, limit: Int32) -> Signal<GetGroupCallParticipantsResult, GetGroupCallParticipantsError> {
+    return account.network.request(Api.functions.phone.getGroupParticipants(call: .inputGroupCall(id: callId, accessHash: accessHash), maxDate: maxDate, limit: limit))
+    |> mapError { _ -> GetGroupCallParticipantsError in
+        return .generic
+    }
+    |> map { result -> GetGroupCallParticipantsResult in
+        var ssrcMapping: [UInt32: PeerId] = [:]
+        
+        switch result {
+        case let .groupParticipants(count, participants, users):
+            for participant in participants {
+                var peerId: PeerId?
+                var ssrc: UInt32?
+                switch participant {
+                case let .groupCallParticipant(flags, userId, date, source):
+                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                    ssrc = UInt32(bitPattern: source)
+                }
+                if let peerId = peerId, let ssrc = ssrc {
+                    ssrcMapping[ssrc] = peerId
+                }
+            }
+        }
+        
+        return GetGroupCallParticipantsResult(
+            ssrcMapping: ssrcMapping
+        )
+    }
+}
+
 public enum JoinGroupCallError {
     case generic
 }
@@ -153,11 +191,17 @@ public func joinGroupCall(account: Account, callId: Int64, accessHash: Int64, jo
         return .generic
     }
     |> mapToSignal { updates -> Signal<JoinGroupCallResult, JoinGroupCallError> in
-        return account.network.request(Api.functions.phone.getGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash)))
-        |> mapError { _ -> JoinGroupCallError in
-            return .generic
-        }
-        |> mapToSignal { result -> Signal<JoinGroupCallResult, JoinGroupCallError> in
+        return combineLatest(
+            account.network.request(Api.functions.phone.getGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash)))
+            |> mapError { _ -> JoinGroupCallError in
+                return .generic
+            },
+            getGroupCallParticipants(account: account, callId: callId, accessHash: accessHash, maxDate: 0, limit: 100)
+            |> mapError { _ -> JoinGroupCallError in
+                return .generic
+            }
+        )
+        |> mapToSignal { result, participantsResult -> Signal<JoinGroupCallResult, JoinGroupCallError> in
             account.stateManager.addUpdates(updates)
             
             var maybeParsedCall: GroupCallInfo?
@@ -176,11 +220,11 @@ public func joinGroupCall(account: Account, callId: Int64, accessHash: Int64, jo
             }
             
             switch result {
-            case let .groupCall(call, sources, participants, chats, users):
+            case let .groupCall(call, sources, participants, users):
                 guard let _ = GroupCallInfo(call) else {
                     return .fail(.generic)
                 }
-                var ssrcMapping: [UInt32: PeerId] = [:]
+                var ssrcMapping: [UInt32: PeerId] = participantsResult.ssrcMapping
                 for participant in participants {
                     var peerId: PeerId?
                     var ssrc: UInt32?
@@ -231,5 +275,54 @@ public func stopGroupCall(account: Account, callId: Int64, accessHash: Int64) ->
         account.stateManager.addUpdates(result)
         
         return .complete()
+    }
+}
+
+public enum CheckGroupCallResult {
+    case success
+    case restart
+}
+
+public func checkGroupCall(account: Account, callId: Int64, accessHash: Int64, ssrc: Int32) -> Signal<CheckGroupCallResult, NoError> {
+    return account.network.request(Api.functions.phone.checkGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash), source: ssrc))
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .single(.boolFalse)
+    }
+    |> map { result -> CheckGroupCallResult in
+        switch result {
+        case .boolTrue:
+            return .success
+        case .boolFalse:
+            return .restart
+        }
+    }
+}
+
+public enum InviteToGroupCallError {
+    case generic
+}
+
+public func inviteToGroupCall(account: Account, callId: Int64, accessHash: Int64, peerId: PeerId) -> Signal<Never, InviteToGroupCallError> {
+    return account.postbox.transaction { transaction -> Peer? in
+        return transaction.getPeer(peerId)
+    }
+    |> castError(InviteToGroupCallError.self)
+    |> mapToSignal { user -> Signal<Never, InviteToGroupCallError> in
+        guard let user = user else {
+            return .fail(.generic)
+        }
+        guard let apiUser = apiInputUser(user) else {
+            return .fail(.generic)
+        }
+        
+        return account.network.request(Api.functions.phone.inviteToGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash), userId: apiUser))
+        |> mapError { _ -> InviteToGroupCallError in
+            return .generic
+        }
+        |> mapToSignal { result -> Signal<Never, InviteToGroupCallError> in
+            account.stateManager.addUpdates(result)
+            
+            return .complete()
+        }
     }
 }

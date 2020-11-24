@@ -11,12 +11,10 @@ private let labelFont = Font.regular(13.0)
 final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
     struct Content: Equatable {
         enum Appearance: Equatable {
-            enum Color {
+            enum Color: Equatable {
                 case red
                 case green
-                case redDimmed
-                case greenDimmed
-                case grayDimmed
+                case custom(UInt32)
             }
             
             case blurred(isFilled: Bool)
@@ -198,12 +196,8 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                         fillColor = UIColor(rgb: 0xd92326)
                     case .green:
                         fillColor = UIColor(rgb: 0x74db58)
-                    case .redDimmed:
-                        fillColor = UIColor(rgb: 0x4d120e)
-                    case .greenDimmed:
-                        fillColor = UIColor(rgb: 0x74db58).withMultipliedBrightnessBy(0.3)
-                    case .grayDimmed:
-                        fillColor = UIColor(rgb: 0x1C1C1E)
+                    case let .custom(color):
+                        fillColor = UIColor(rgb: color)
                     }
                 }
                 
@@ -296,12 +290,8 @@ final class CallControllerButtonItemNode: HighlightTrackingButtonNode {
                         fillColor = UIColor(rgb: 0xd92326).withMultipliedBrightnessBy(0.2).withAlphaComponent(0.2)
                     case .green:
                         fillColor = UIColor(rgb: 0x74db58).withMultipliedBrightnessBy(0.2).withAlphaComponent(0.2)
-                    case .redDimmed:
-                        fillColor = UIColor(rgb: 0xd92326).withMultipliedBrightnessBy(0.4).withAlphaComponent(0.2)
-                    case .greenDimmed:
-                        fillColor = UIColor(rgb: 0x74db58).withMultipliedBrightnessBy(0.4).withAlphaComponent(0.2)
-                    case .grayDimmed:
-                        fillColor = UIColor(rgb: 0x1C1C1E).withAlphaComponent(0.2)
+                    case let .custom(color):
+                        fillColor = UIColor(rgb: color).withMultipliedBrightnessBy(0.2).withAlphaComponent(0.2)
                     }
                 }
                 

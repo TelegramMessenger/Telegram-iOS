@@ -16,6 +16,7 @@ import SemanticStatusNode
 import FileMediaResourceStatus
 import CheckNode
 import MusicAlbumArtResources
+import AudioBlob
 
 private struct FetchControls {
     let fetch: () -> Void

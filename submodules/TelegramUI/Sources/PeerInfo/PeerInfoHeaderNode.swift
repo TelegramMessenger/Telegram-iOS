@@ -2010,7 +2010,6 @@ final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
                     transition.updateFrameAdditiveToCenter(node: buttonNode, frame: buttonFrame)
                     let alphaFactor: CGFloat = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
                     
-                    
                     var buttonTransition = transition
                     if case let .animated(duration, curve) = buttonTransition, alphaFactor == 0.0 {
                         buttonTransition = .animated(duration: duration * 0.25, curve: curve)
@@ -3131,7 +3130,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 transition.updateSublayerTransformScale(node: self.titleNodeContainer, scale: titleScale)
                 transition.updateSublayerTransformScale(node: self.subtitleNodeContainer, scale: subtitleScale)
                 transition.updateSublayerTransformScale(node: self.usernameNodeContainer, scale: subtitleScale)
-
             } else {
                 let titleScale: CGFloat
                 let subtitleScale: CGFloat

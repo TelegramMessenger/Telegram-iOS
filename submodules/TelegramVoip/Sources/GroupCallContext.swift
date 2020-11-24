@@ -44,17 +44,19 @@ public final class OngoingGroupCallContext {
         var mainStreamAudioSsrc: UInt32?
         var otherSsrcs: [UInt32] = []
         
-        let joinPayload = Promise<String>()
+        let joinPayload = Promise<(String, UInt32)>()
         let networkState = ValuePromise<NetworkState>(.connecting, ignoreRepeated: true)
         let isMuted = ValuePromise<Bool>(true, ignoreRepeated: true)
         let memberStates = ValuePromise<[UInt32: MemberState]>([:], ignoreRepeated: true)
         let audioLevels = ValuePipe<[(UInt32, Float)]>()
+        let myAudioLevel = ValuePipe<Float>()
         
         init(queue: Queue) {
             self.queue = queue
             
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
             var audioLevelsUpdatedImpl: (([NSNumber]) -> Void)?
+            var myAudioLevelUpdatedImpl: ((Float) -> Void)?
             
             self.context = GroupCallThreadLocalContext(
                 queue: ContextQueueImpl(queue: queue),
@@ -63,6 +65,9 @@ public final class OngoingGroupCallContext {
                 },
                 audioLevelsUpdated: { levels in
                     audioLevelsUpdatedImpl?(levels)
+                },
+                myAudioLevelUpdated: { level in
+                    myAudioLevelUpdatedImpl?(level)
                 }
             )
             
@@ -99,13 +104,20 @@ public final class OngoingGroupCallContext {
                 }
             }
             
+            let myAudioLevel = self.myAudioLevel
+            myAudioLevelUpdatedImpl = { level in
+                queue.async {
+                    myAudioLevel.putNext(level)
+                }
+            }
+            
             self.context.emitJoinPayload({ [weak self] payload, ssrc in
                 queue.async {
                     guard let strongSelf = self else {
                         return
                     }
                     strongSelf.mainStreamAudioSsrc = ssrc
-                    strongSelf.joinPayload.set(.single(payload))
+                    strongSelf.joinPayload.set(.single((payload, ssrc)))
                 }
             })
         }
@@ -170,6 +182,10 @@ public final class OngoingGroupCallContext {
             }
         }
         
+        func stop() {
+            self.context.stop()
+        }
+        
         func setIsMuted(_ isMuted: Bool) {
             self.isMuted.set(isMuted)
             self.context.setIsMuted(isMuted)
@@ -179,7 +195,7 @@ public final class OngoingGroupCallContext {
     private let queue = Queue()
     private let impl: QueueLocalObject<Impl>
     
-    public var joinPayload: Signal<String, NoError> {
+    public var joinPayload: Signal<(String, UInt32), NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in
@@ -227,6 +243,18 @@ public final class OngoingGroupCallContext {
         }
     }
     
+    public var myAudioLevel: Signal<Float, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.myAudioLevel.signal().start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+    }
+    
     public var isMuted: Signal<Bool, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -267,6 +295,12 @@ public final class OngoingGroupCallContext {
     public func removeSsrcs(ssrcs: [UInt32]) {
         self.impl.with { impl in
             impl.removeSsrcs(ssrcs: ssrcs)
+        }
+    }
+    
+    public func stop() {
+        self.impl.with { impl in
+            impl.stop()
         }
     }
 }

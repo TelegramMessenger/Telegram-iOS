@@ -5923,13 +5923,15 @@ Sorry for the inconvenience.";
 "VoiceChat.Share" = "Share Invite Link";
 "VoiceChat.EndVoiceChat" = "End Voice Chat";
 
+"VoiceChat.CopyInviteLink" = "Copy Invite Link";
+
 "VoiceChat.UnmutePeer" = "Allow to Speak";
 "VoiceChat.MutePeer" = "Mute";
 "VoiceChat.RemovePeer" = "Remove";
 "VoiceChat.RemovePeerConfirmation" = "Are you sure you want to remove %@ from the group chat?";
 "VoiceChat.RemovePeerRemove" = "Remove";
 
-"VoiceChat.UserInvited" = "You invited %@ to the voice chat";
+"VoiceChat.UserInvited" = "You invited **%@** to the voice chat";
 
 "Notification.VoiceChatInvitation" = "%1$@ invited %2$@ to the voice chat";
 "Notification.VoiceChatInvitationByYou" = "You invited %1$@ to the voice chat";

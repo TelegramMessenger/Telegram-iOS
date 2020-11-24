@@ -1911,7 +1911,7 @@ public struct messages {
 public extension Api {
     public enum GroupCall: TypeConstructorDescription {
         case groupCallPrivate(flags: Int32, id: Int64, accessHash: Int64, channelId: Int32?, participantsCount: Int32, adminId: Int32)
-        case groupCall(flags: Int32, id: Int64, accessHash: Int64, channelId: Int32?, adminId: Int32, reflectorId: Int64, params: Api.DataJSON?, version: Int32)
+        case groupCall(flags: Int32, id: Int64, accessHash: Int64, adminId: Int32, reflectorId: Int64, params: Api.DataJSON?, version: Int32)
         case groupCallDiscarded(id: Int64, accessHash: Int64, duration: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1927,17 +1927,16 @@ public extension Api {
                     serializeInt32(participantsCount, buffer: buffer, boxed: false)
                     serializeInt32(adminId, buffer: buffer, boxed: false)
                     break
-                case .groupCall(let flags, let id, let accessHash, let channelId, let adminId, let reflectorId, let params, let version):
+                case .groupCall(let flags, let id, let accessHash, let adminId, let reflectorId, let params, let version):
                     if boxed {
-                        buffer.appendInt32(1441699306)
+                        buffer.appendInt32(2083222527)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(channelId!, buffer: buffer, boxed: false)}
                     serializeInt32(adminId, buffer: buffer, boxed: false)
                     serializeInt64(reflectorId, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {params!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 0) != 0 {params!.serialize(buffer, true)}
                     serializeInt32(version, buffer: buffer, boxed: false)
                     break
                 case .groupCallDiscarded(let id, let accessHash, let duration):
@@ -1955,8 +1954,8 @@ public extension Api {
         switch self {
                 case .groupCallPrivate(let flags, let id, let accessHash, let channelId, let participantsCount, let adminId):
                 return ("groupCallPrivate", [("flags", flags), ("id", id), ("accessHash", accessHash), ("channelId", channelId), ("participantsCount", participantsCount), ("adminId", adminId)])
-                case .groupCall(let flags, let id, let accessHash, let channelId, let adminId, let reflectorId, let params, let version):
-                return ("groupCall", [("flags", flags), ("id", id), ("accessHash", accessHash), ("channelId", channelId), ("adminId", adminId), ("reflectorId", reflectorId), ("params", params), ("version", version)])
+                case .groupCall(let flags, let id, let accessHash, let adminId, let reflectorId, let params, let version):
+                return ("groupCall", [("flags", flags), ("id", id), ("accessHash", accessHash), ("adminId", adminId), ("reflectorId", reflectorId), ("params", params), ("version", version)])
                 case .groupCallDiscarded(let id, let accessHash, let duration):
                 return ("groupCallDiscarded", [("id", id), ("accessHash", accessHash), ("duration", duration)])
     }
@@ -1996,27 +1995,24 @@ public extension Api {
             var _3: Int64?
             _3 = reader.readInt64()
             var _4: Int32?
-            if Int(_1!) & Int(1 << 0) != 0 {_4 = reader.readInt32() }
-            var _5: Int32?
-            _5 = reader.readInt32()
-            var _6: Int64?
-            _6 = reader.readInt64()
-            var _7: Api.DataJSON?
-            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.DataJSON
+            _4 = reader.readInt32()
+            var _5: Int64?
+            _5 = reader.readInt64()
+            var _6: Api.DataJSON?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.DataJSON
             } }
-            var _8: Int32?
-            _8 = reader.readInt32()
+            var _7: Int32?
+            _7 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            let _c4 = _4 != nil
             let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
-            let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.GroupCall.groupCall(flags: _1!, id: _2!, accessHash: _3!, channelId: _4, adminId: _5!, reflectorId: _6!, params: _7, version: _8!)
+            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.GroupCall.groupCall(flags: _1!, id: _2!, accessHash: _3!, adminId: _4!, reflectorId: _5!, params: _6, version: _7!)
             }
             else {
                 return nil
@@ -21479,6 +21475,7 @@ public extension Api {
         case messageActionContactSignUp
         case messageActionGeoProximityReached(fromId: Api.Peer, toId: Api.Peer, distance: Int32)
         case messageActionGroupCall(flags: Int32, call: Api.InputGroupCall, duration: Int32?)
+        case messageActionInviteToGroupCall(call: Api.InputGroupCall, userId: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -21666,6 +21663,13 @@ public extension Api {
                     call.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(duration!, buffer: buffer, boxed: false)}
                     break
+                case .messageActionInviteToGroupCall(let call, let userId):
+                    if boxed {
+                        buffer.appendInt32(254144570)
+                    }
+                    call.serialize(buffer, true)
+                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -21721,6 +21725,8 @@ public extension Api {
                 return ("messageActionGeoProximityReached", [("fromId", fromId), ("toId", toId), ("distance", distance)])
                 case .messageActionGroupCall(let flags, let call, let duration):
                 return ("messageActionGroupCall", [("flags", flags), ("call", call), ("duration", duration)])
+                case .messageActionInviteToGroupCall(let call, let userId):
+                return ("messageActionInviteToGroupCall", [("call", call), ("userId", userId)])
     }
     }
     
@@ -22024,6 +22030,22 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.MessageAction.messageActionGroupCall(flags: _1!, call: _2!, duration: _3)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionInviteToGroupCall(_ reader: BufferReader) -> MessageAction? {
+            var _1: Api.InputGroupCall?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputGroupCall
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageAction.messageActionInviteToGroupCall(call: _1!, userId: _2!)
             }
             else {
                 return nil
