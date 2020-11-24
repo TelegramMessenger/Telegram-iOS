@@ -15,7 +15,6 @@ import TelegramStringFormatting
 import PeerPresenceStatusManager
 import ContextUI
 import AccountContext
-import AudioBlob
 
 private final class ShimmerEffectNode: ASDisplayNode {
     private var currentBackgroundColor: UIColor?
@@ -347,9 +346,8 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
     let shimmering: ItemListPeerItemShimmering?
     let displayDecorations: Bool
     let disableInteractiveTransitionIfNecessary: Bool
-    let audioLevel: Signal<Float, NoError>?
     
-    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, height: ItemListPeerItemHeight = .peerList, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, highlighted: Bool = false, selectable: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, noInsets: Bool = false, tag: ItemListItemTag? = nil, header: ListViewItemHeader? = nil, shimmering: ItemListPeerItemShimmering? = nil, displayDecorations: Bool = true, disableInteractiveTransitionIfNecessary: Bool = false, audioLevel: Signal<Float, NoError>? = nil) {
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, height: ItemListPeerItemHeight = .peerList, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, highlighted: Bool = false, selectable: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, noInsets: Bool = false, tag: ItemListItemTag? = nil, header: ListViewItemHeader? = nil, shimmering: ItemListPeerItemShimmering? = nil, displayDecorations: Bool = true, disableInteractiveTransitionIfNecessary: Bool = false) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
@@ -382,7 +380,6 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
         self.shimmering = shimmering
         self.displayDecorations = displayDecorations
         self.disableInteractiveTransitionIfNecessary = disableInteractiveTransitionIfNecessary
-        self.audioLevel = audioLevel
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -455,7 +452,6 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     
     private let containerNode: ContextControllerSourceNode
     
-    private var audioLevelView: VoiceBlobView?
     fileprivate let avatarNode: AvatarNode
     private let titleNode: TextNode
     private let labelNode: TextNode
@@ -473,9 +469,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     
     private var editableControlNode: ItemListEditableControlNode?
     private var reorderControlNode: ItemListEditableReorderControlNode?
-    
-    private let audioLevelDisposable = MetaDisposable()
-    
+        
     override public var canBeSelected: Bool {
         if self.editableControlNode != nil || self.disabledOverlayNode != nil {
             return false
@@ -554,10 +548,6 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             }
             contextAction(strongSelf.containerNode, gesture)
         }
-    }
-    
-    deinit {
-        self.audioLevelDisposable.dispose()
     }
     
     override public func didLoad() {
@@ -1114,51 +1104,6 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     strongSelf.labelBadgeNode.frame = CGRect(origin: CGPoint(x: revealOffset + params.width - rightLabelInset - badgeWidth, y: labelFrame.minY - 1.0), size: CGSize(width: badgeWidth, height: badgeDiameter))
                     
                     let avatarFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0, y: floorToScreenPixels((layout.contentSize.height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
-                    
-                    let blobFrame = avatarFrame.insetBy(dx: -12.0, dy: -12.0)
-                    
-                    if let audioLevel = item.audioLevel {
-                        strongSelf.audioLevelView?.frame = blobFrame
-                        strongSelf.audioLevelDisposable.set((audioLevel
-                        |> deliverOnMainQueue).start(next: { value in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            
-                            if strongSelf.audioLevelView == nil {
-                                let audioLevelView = VoiceBlobView(
-                                    frame: blobFrame,
-                                    maxLevel: 0.3,
-                                    smallBlobRange: (0, 0),
-                                    mediumBlobRange: (0.7, 0.8),
-                                    bigBlobRange: (0.8, 0.9)
-                                )
-                                
-                                let maskRect = CGRect(origin: .zero, size: blobFrame.size)
-                                let playbackMaskLayer = CAShapeLayer()
-                                playbackMaskLayer.frame = maskRect
-                                playbackMaskLayer.fillRule = .evenOdd
-                                let maskPath = UIBezierPath()
-                                maskPath.append(UIBezierPath(roundedRect: maskRect.insetBy(dx: 12, dy: 12), cornerRadius: 22))
-                                maskPath.append(UIBezierPath(rect: maskRect))
-                                playbackMaskLayer.path = maskPath.cgPath
-                                audioLevelView.layer.mask = playbackMaskLayer
-                                
-                                audioLevelView.setColor(.green)
-                                strongSelf.audioLevelView = audioLevelView
-                                strongSelf.containerNode.view.insertSubview(audioLevelView, at: 0)
-                                audioLevelView.startAnimating()
-                            }
-                            
-                            strongSelf.audioLevelView?.updateLevel(CGFloat(value) * 2.0)
-                        }))
-                    } else if let audioLevelView = strongSelf.audioLevelView {
-                        strongSelf.audioLevelView = nil
-                        audioLevelView.removeFromSuperview()
-                        
-                        strongSelf.audioLevelDisposable.set(nil)
-                    }
-                    
                     transition.updateFrame(node: strongSelf.avatarNode, frame: avatarFrame)
                     
                     if item.peer.id == item.context.account.peerId, case .threatSelfAsSaved = item.aliasHandling {

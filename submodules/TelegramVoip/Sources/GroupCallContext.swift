@@ -49,12 +49,14 @@ public final class OngoingGroupCallContext {
         let isMuted = ValuePromise<Bool>(true, ignoreRepeated: true)
         let memberStates = ValuePromise<[UInt32: MemberState]>([:], ignoreRepeated: true)
         let audioLevels = ValuePipe<[(UInt32, Float)]>()
+        let myAudioLevel = ValuePipe<Float>()
         
         init(queue: Queue) {
             self.queue = queue
             
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
             var audioLevelsUpdatedImpl: (([NSNumber]) -> Void)?
+            var myAudioLevelUpdatedImpl: ((Float) -> Void)?
             
             self.context = GroupCallThreadLocalContext(
                 queue: ContextQueueImpl(queue: queue),
@@ -63,6 +65,9 @@ public final class OngoingGroupCallContext {
                 },
                 audioLevelsUpdated: { levels in
                     audioLevelsUpdatedImpl?(levels)
+                },
+                myAudioLevelUpdated: { level in
+                    myAudioLevelUpdatedImpl?(level)
                 }
             )
             
@@ -96,6 +101,13 @@ public final class OngoingGroupCallContext {
                 }
                 queue.async {
                     audioLevels.putNext(mappedLevels)
+                }
+            }
+            
+            let myAudioLevel = self.myAudioLevel
+            myAudioLevelUpdatedImpl = { level in
+                queue.async {
+                    myAudioLevel.putNext(level)
                 }
             }
             
@@ -224,6 +236,18 @@ public final class OngoingGroupCallContext {
             let disposable = MetaDisposable()
             self.impl.with { impl in
                 disposable.set(impl.audioLevels.signal().start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public var myAudioLevel: Signal<Float, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.myAudioLevel.signal().start(next: { value in
                     subscriber.putNext(value)
                 }))
             }

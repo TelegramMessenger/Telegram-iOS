@@ -47,6 +47,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case phoneNumberRequest
     case geoProximityReached(from: PeerId, to: PeerId, distance: Int32)
     case groupPhoneCall(callId: Int64, accessHash: Int64, duration: Int32?)
+    case inviteToGroupPhoneCall(callId: Int64, accessHash: Int64, peerId: PeerId)
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -101,6 +102,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 self = .geoProximityReached(from: PeerId(decoder.decodeInt64ForKey("fromId", orElse: 0)), to: PeerId(decoder.decodeInt64ForKey("toId", orElse: 0)), distance: (decoder.decodeInt32ForKey("dst", orElse: 0)))
             case 22:
                 self = .groupPhoneCall(callId: decoder.decodeInt64ForKey("callId", orElse: 0), accessHash: decoder.decodeInt64ForKey("accessHash", orElse: 0), duration: decoder.decodeOptionalInt32ForKey("duration"))
+            case 23:
+                self = .inviteToGroupPhoneCall(callId: decoder.decodeInt64ForKey("callId", orElse: 0), accessHash: decoder.decodeInt64ForKey("accessHash", orElse: 0), peerId: PeerId(decoder.decodeInt64ForKey("peerId", orElse: 0)))
             default:
                 self = .unknown
         }
@@ -200,6 +203,11 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 } else {
                     encoder.encodeNil(forKey: "duration")
                 }
+            case let .inviteToGroupPhoneCall(callId, accessHash, peerId):
+                encoder.encodeInt32(23, forKey: "_rawValue")
+                encoder.encodeInt64(callId, forKey: "callId")
+                encoder.encodeInt64(accessHash, forKey: "accessHash")
+                encoder.encodeInt64(peerId.toInt64(), forKey: "peerIdId")
         }
     }
     
@@ -217,6 +225,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 return [channelId]
             case let .geoProximityReached(from, to, _):
                 return [from, to]
+            case let .inviteToGroupPhoneCall(_, _, peerId):
+                return [peerId]
             default:
                 return []
         }

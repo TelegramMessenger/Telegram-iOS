@@ -64,8 +64,11 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             case let .inputGroupCall(id, accessHash):
                 return TelegramMediaAction(action: .groupPhoneCall(callId: id, accessHash: accessHash, duration: duration))
             }
-        case .messageActionInviteToGroupCall:
-            return nil
+        case let .messageActionInviteToGroupCall(call, userId):
+            switch call {
+            case let .inputGroupCall(id, accessHash):
+                return TelegramMediaAction(action: .inviteToGroupPhoneCall(callId: id, accessHash: accessHash, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)))
+            }
     }
 }
 

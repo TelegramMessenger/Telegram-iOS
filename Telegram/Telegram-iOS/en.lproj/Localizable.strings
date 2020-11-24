@@ -5895,3 +5895,45 @@ Sorry for the inconvenience.";
 "Conversation.EditingPhotoPanelTitle" = "Edit Photo";
 
 "Conversation.TextCopied" = "Text copied to clipboard";
+
+"Media.LimitedAccessTitle" = "Limited Access to Media";
+"Media.LimitedAccessText" = "You've given Telegram access only to select number of photos.";
+"Media.LimitedAccessManage" = "Manage";
+
+"VoiceChat.BackTitle" = "Chat";
+
+"VoiceChat.StatusSpeaking" = "speaking";
+"VoiceChat.StatusListening" = "listening";
+
+"VoiceChat.Connecting" = "Connecting...";
+"VoiceChat.Reconnecting" = "Reconnecting...";
+
+"VoiceChat.Unmute" = "Unmute";
+"VoiceChat.UnmuteHelp" = "or hold and speak";
+"VoiceChat.Live" = "You're Live";
+"VoiceChat.Mute" = "Tap to Mute";
+"VoiceChat.Muted" = "Muted";
+"VoiceChat.MutedHelp" = "You are in Listen Only mode";
+
+"VoiceChat.Audio" = "audio";
+"VoiceChat.Leave" = "leave";
+
+"VoiceChat.SpeakPermissionEveryone" = "All Members Can Speak";
+"VoiceChat.SpeakPermissionAdmin" = "Only Admins Can Speak";
+"VoiceChat.Share" = "Share Invite Link";
+"VoiceChat.EndVoiceChat" = "End Voice Chat";
+
+"VoiceChat.CopyInviteLink" = "Copy Invite Link";
+
+"VoiceChat.UnmutePeer" = "Allow to Speak";
+"VoiceChat.MutePeer" = "Mute";
+"VoiceChat.InvitePeer" = "Invite";
+"VoiceChat.RemovePeer" = "Remove";
+"VoiceChat.RemovePeerConfirmation" = "Are you sure you want to remove %@ from the group chat?";
+"VoiceChat.RemovePeerRemove" = "Remove";
+
+"VoiceChat.UserInvited" = "You invited **%@** to the voice chat";
+
+"Notification.VoiceChatInvitation" = "%1$@ invited %2$@ to the voice chat";
+"Notification.VoiceChatInvitationByYou" = "You invited %1$@ to the voice chat";
+"Notification.VoiceChatInvitationForYou" = "%1$@ invited you to the voice chat";

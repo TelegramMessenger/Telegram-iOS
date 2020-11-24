@@ -199,6 +199,7 @@ public protocol PresentationGroupCall: class {
     var state: Signal<PresentationGroupCallState, NoError> { get }
     var members: Signal<[PeerId: PresentationGroupCallMemberState], NoError> { get }
     var audioLevels: Signal<[(PeerId, Float)], NoError> { get }
+    var myAudioLevel: Signal<Float, NoError> { get }
     
     func leave() -> Signal<Bool, NoError>
     

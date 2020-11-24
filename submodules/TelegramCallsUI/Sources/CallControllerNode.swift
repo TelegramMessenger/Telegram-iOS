@@ -2022,7 +2022,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
     }
 }
 
-private final class CallPanGestureRecognizer: UIPanGestureRecognizer {
+final class CallPanGestureRecognizer: UIPanGestureRecognizer {
     private(set) var firstLocation: CGPoint?
     
     public var shouldBegin: ((CGPoint) -> Bool)?

@@ -84,6 +84,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var participantsContextStateDisposable = MetaDisposable()
     private var participantsContext: GroupCallParticipantsContext?
     
+    private let myAudioLevelPipe = ValuePipe<Float>()
+    public var myAudioLevel: Signal<Float, NoError> {
+        return self.myAudioLevelPipe.signal()
+    }
+    private var myAudioLevelDisposable = MetaDisposable()
+    
     private var audioSessionControl: ManagedAudioSessionControl?
     private var audioSessionDisposable: Disposable?
     private let audioSessionShouldBeActive = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -268,6 +274,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.checkCallDisposable?.dispose()
         self.audioLevelsDisposable.dispose()
         self.participantsContextStateDisposable.dispose()
+        self.myAudioLevelDisposable.dispose()
     }
     
     private func updateSessionState(internalState: InternalState, audioSessionControl: ManagedAudioSessionControl?) {
@@ -373,6 +380,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     if !result.isEmpty {
                         strongSelf.audioLevelsPipe.putNext(result)
                     }
+                }))
+                
+                self.myAudioLevelDisposable.set((callContext.myAudioLevel
+                |> deliverOnMainQueue).start(next: { [weak self] level in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.myAudioLevelPipe.putNext(level)
                 }))
             }
         }

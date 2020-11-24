@@ -22,7 +22,6 @@ swift_library(
         "//submodules/ContextUI:ContextUI",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/AccountContext:AccountContext",
-        "//submodules/AudioBlob:AudioBlob",
     ],
     visibility = [
         "//visibility:public",

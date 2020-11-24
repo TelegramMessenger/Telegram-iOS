@@ -672,3 +672,32 @@ extension GroupCallParticipantsContext.StateUpdate {
         )
     }
 }
+
+public enum InviteToGroupCallError {
+    case generic
+}
+
+public func inviteToGroupCall(account: Account, callId: Int64, accessHash: Int64, peerId: PeerId) -> Signal<Never, InviteToGroupCallError> {
+    return account.postbox.transaction { transaction -> Peer? in
+        return transaction.getPeer(peerId)
+    }
+    |> castError(InviteToGroupCallError.self)
+    |> mapToSignal { user -> Signal<Never, InviteToGroupCallError> in
+        guard let user = user else {
+            return .fail(.generic)
+        }
+        guard let apiUser = apiInputUser(user) else {
+            return .fail(.generic)
+        }
+        
+        return account.network.request(Api.functions.phone.inviteToGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash), userId: apiUser))
+        |> mapError { _ -> InviteToGroupCallError in
+            return .generic
+        }
+        |> mapToSignal { result -> Signal<Never, InviteToGroupCallError> in
+            account.stateManager.addUpdates(result)
+            
+            return .complete()
+        }
+    }
+}
