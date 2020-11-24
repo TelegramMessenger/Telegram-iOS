@@ -575,7 +575,7 @@ public final class VoiceChatController: ViewController {
             super.didLoad()
             
             let longTapRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.actionButtonPressGesture(_:)))
-            longTapRecognizer.minimumPressDuration = 0.3
+            longTapRecognizer.minimumPressDuration = 0.01
             self.actionButton.view.addGestureRecognizer(longTapRecognizer)
             
             let panRecognizer = CallPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
