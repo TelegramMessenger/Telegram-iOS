@@ -552,4 +552,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             strongSelf.updateSessionState(internalState: .active(value), audioSessionControl: strongSelf.audioSessionControl)
         }))
     }
+    
+    public func invitePeer(_ peerId: PeerId) {
+        guard case let .estabilished(callInfo, _, _, _, _) = self.internalState else {
+            return
+        }
+        
+        let _ = inviteToGroupCall(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, peerId: peerId).start()
+    }
 }

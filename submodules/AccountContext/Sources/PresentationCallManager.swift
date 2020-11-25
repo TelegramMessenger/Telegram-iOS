@@ -206,6 +206,8 @@ public protocol PresentationGroupCall: class {
     func toggleIsMuted()
     func setIsMuted(_ value: Bool)
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
+    
+    func invitePeer(_ peerId: PeerId)
 }
 
 public protocol PresentationCallManager: class {

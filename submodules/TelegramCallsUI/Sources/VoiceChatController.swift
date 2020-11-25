@@ -273,6 +273,8 @@ public final class VoiceChatController: ViewController {
                     ),
                     in: .current
                 )
+                
+                strongSelf.call.invitePeer(peer.id)
             }, peerContextAction: { [weak self] peer, sourceNode, gesture in
                 guard let strongSelf = self, let controller = strongSelf.controller, let sourceNode = sourceNode as? ContextExtractedContentContainingNode else {
                     return
@@ -639,6 +641,7 @@ public final class VoiceChatController: ViewController {
             let actionButtonTitle: String
             let actionButtonSubtitle: String
             let audioButtonAppearance: CallControllerButtonItemNode.Content.Appearance
+            var actionButtonEnabled = true
             if let callState = callState {
                 isMicOn = !callState.isMuted
                 
@@ -648,6 +651,7 @@ public final class VoiceChatController: ViewController {
                     actionButtonTitle = self.presentationData.strings.VoiceChat_Connecting
                     actionButtonSubtitle = ""
                     audioButtonAppearance = .color(.custom(0x1c1c1e))
+                    actionButtonEnabled = false
                 case .connected:
                     actionButtonState = .active(state: isMicOn ? .on : .muted)
                     if isMicOn {
@@ -665,8 +669,10 @@ public final class VoiceChatController: ViewController {
                 actionButtonTitle = self.presentationData.strings.VoiceChat_Connecting
                 actionButtonSubtitle = ""
                 audioButtonAppearance = .color(.custom(0x1c1c1e))
+                actionButtonEnabled = false
             }
             
+            self.actionButton.isUserInteractionEnabled = actionButtonEnabled
             self.actionButton.update(size: centralButtonSize, buttonSize: CGSize(width: 144.0, height: 144.0), state: actionButtonState, title: actionButtonTitle, subtitle: actionButtonSubtitle, animated: true)
             transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
             
@@ -703,7 +709,7 @@ public final class VoiceChatController: ViewController {
                 soundImage = .speaker
             case .speaker:
                 soundImage = .speaker
-//                soundAppearance = .blurred(isFilled: false)
+                soundAppearance = .blurred(isFilled: true)
             case .headphones:
                 soundImage = .bluetooth
             case let .bluetooth(type):

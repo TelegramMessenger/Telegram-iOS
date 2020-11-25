@@ -88,11 +88,11 @@ private final class Blob {
         }
     }
 
-    var currentShape: CGPath?
+    var currentShape: UIBezierPath?
     private var transition: CGFloat = 0 {
         didSet {
             if let currentPoints = self.currentPoints {
-                self.currentShape = UIBezierPath.smoothCurve(through: currentPoints, length: size.width, smoothness: smoothness).cgPath
+                self.currentShape = UIBezierPath.smoothCurve(through: currentPoints, length: size.width, smoothness: smoothness)
             }
         }
     }
@@ -450,7 +450,6 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         let buttonSize = CGSize(width: 144.0, height: 144.0)
         let radius = buttonSize.width / 2.0
         
-        
         let blue = UIColor(rgb: 0x0078ff)
         let lightBlue = UIColor(rgb: 0x59c7f8)
         let green = UIColor(rgb: 0x33c659)
@@ -512,7 +511,7 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         if let blobsState = parameters.state as? VoiceChatActionButtonBackgroundNodeBlobState {
             for blob in blobsState.blobs {
                 if let path = blob.currentShape {
-                    let uiPath = UIBezierPath(cgPath: path)
+                    let uiPath = path
                     let toOrigin = CGAffineTransform(translationX: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
                     let fromOrigin = CGAffineTransform(translationX: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
       
