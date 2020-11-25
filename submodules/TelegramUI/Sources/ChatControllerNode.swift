@@ -493,7 +493,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.inputPanelBackgroundSeparatorNode.backgroundColor = self.chatPresentationInterfaceState.theme.chat.inputPanel.panelSeparatorColor
         self.inputPanelBackgroundSeparatorNode.isLayerBacked = true
         
-        self.navigateButtons = ChatHistoryNavigationButtons(theme: self.chatPresentationInterfaceState.theme)
+        self.navigateButtons = ChatHistoryNavigationButtons(theme: self.chatPresentationInterfaceState.theme, dateTimeFormat: self.chatPresentationInterfaceState.dateTimeFormat)
         self.navigateButtons.accessibilityElementsHidden = true
         
         self.navigationBarBackroundNode = ASDisplayNode()
@@ -1919,7 +1919,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let updateInputTextState = self.chatPresentationInterfaceState.interfaceState.effectiveInputState != chatPresentationInterfaceState.interfaceState.effectiveInputState
             self.chatPresentationInterfaceState = chatPresentationInterfaceState
             
-            self.navigateButtons.updateTheme(theme: chatPresentationInterfaceState.theme)
+            self.navigateButtons.update(theme: chatPresentationInterfaceState.theme, dateTimeFormat: chatPresentationInterfaceState.dateTimeFormat)
             
             if themeUpdated {
                 if case let .color(color) = self.chatPresentationInterfaceState.chatWallpaper, UIColor(rgb: color).isEqual(self.chatPresentationInterfaceState.theme.chat.inputPanel.panelBackgroundColorNoWallpaper) {

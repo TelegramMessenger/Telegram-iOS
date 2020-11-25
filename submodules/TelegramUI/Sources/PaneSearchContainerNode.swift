@@ -97,7 +97,7 @@ final class PaneSearchContainerNode: ASDisplayNode {
     }
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        self.backgroundNode.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor
+        self.backgroundNode.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0)
         self.contentNode.updateThemeAndStrings(theme: theme, strings: strings)
         self.searchBar.updateThemeAndStrings(theme: theme, strings: strings)
         

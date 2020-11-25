@@ -738,12 +738,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             })
         case .voiceConference:
             return ItemListDisclosureItem(presentationData: presentationData, title: "Voice Conference (Test)", label: "", sectionId: self.section, style: .blocks, action: {
-                /*guard let context = arguments.context else {
-                    return
-                }
-                let controller = GroupCallController(context: context)
-                controller.navigationPresentation = .modal
-                arguments.pushController(controller)*/
             })
         case let .preferredVideoCodec(_, title, value, isSelected):
             return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .right, checked: isSelected, zeroSeparatorInsets: false, sectionId: self.section, action: {
@@ -824,7 +818,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
     entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
     
-    //entries.append(.voiceConference)
+    entries.append(.voiceConference)
     
     let codecs: [(String, String?)] = [
         ("No Preference", nil),

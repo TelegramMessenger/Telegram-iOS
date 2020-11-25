@@ -225,8 +225,14 @@ public enum ItemListPeerItemHeight {
 }
 
 public enum ItemListPeerItemText {
+    public enum TextColor {
+        case secondary
+        case accent
+        case constructive
+    }
+    
     case presence
-    case text(String)
+    case text(String, TextColor)
     case none
 }
 
@@ -463,7 +469,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     
     private var editableControlNode: ItemListEditableControlNode?
     private var reorderControlNode: ItemListEditableReorderControlNode?
-    
+        
     override public var canBeSelected: Bool {
         if self.editableControlNode != nil || self.disabledOverlayNode != nil {
             return false
@@ -493,7 +499,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         self.containerNode = ContextControllerSourceNode()
         
         self.avatarNode = AvatarNode(font: avatarFont)
-        self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
+        //self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
         
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
@@ -733,8 +739,17 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                 } else {
                     statusAttributedString = NSAttributedString(string: item.presentationData.strings.LastSeen_Offline, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
                 }
-            case let .text(text):
-                statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+            case let .text(text, textColor):
+                let textColorValue: UIColor
+                switch textColor {
+                case .secondary:
+                    textColorValue = item.presentationData.theme.list.itemSecondaryTextColor
+                case .accent:
+                    textColorValue = item.presentationData.theme.list.itemAccentColor
+                case .constructive:
+                    textColorValue = item.presentationData.theme.list.itemDisclosureActions.constructive.fillColor
+                }
+                statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: textColorValue)
             case .none:
                 break
             }
@@ -1088,7 +1103,8 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     
                     strongSelf.labelBadgeNode.frame = CGRect(origin: CGPoint(x: revealOffset + params.width - rightLabelInset - badgeWidth, y: labelFrame.minY - 1.0), size: CGSize(width: badgeWidth, height: badgeDiameter))
                     
-                    transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0, y: floorToScreenPixels((layout.contentSize.height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize)))
+                    let avatarFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0, y: floorToScreenPixels((layout.contentSize.height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
+                    transition.updateFrame(node: strongSelf.avatarNode, frame: avatarFrame)
                     
                     if item.peer.id == item.context.account.peerId, case .threatSelfAsSaved = item.aliasHandling {
                         strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, overrideImage: .savedMessagesIcon, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)

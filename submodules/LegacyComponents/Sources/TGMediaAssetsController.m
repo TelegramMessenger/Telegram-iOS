@@ -17,7 +17,6 @@
 
 #import "TGModernBarButton.h"
 #import <LegacyComponents/TGMediaPickerToolbarView.h>
-#import "TGMediaAssetsTipView.h"
 
 #import <LegacyComponents/TGMediaAsset+TGMediaEditableItem.h>
 #import <LegacyComponents/TGMediaAssetImageSignals.h>
@@ -310,8 +309,13 @@
                 return false;
             
             bool onlyGroupableMedia = true;
-            for (TGMediaAsset *asset in strongSelf->_selectionContext.selectedItems)
+            for (TGMediaAsset *item in strongSelf->_selectionContext.selectedItems)
             {
+                TGMediaAsset *asset = asset;
+                if ([asset isKindOfClass:[TGCameraCapturedVideo class]]) {
+                    asset = [(TGCameraCapturedVideo *)item originalAsset];
+                }
+                
                 if (asset.type == TGMediaAssetGifType)
                 {
                     onlyGroupableMedia = false;
@@ -583,23 +587,6 @@
     else if (self.singleCompletionBlock != nil)
     {
         self.singleCompletionBlock(currentItem, _editingContext);
-    }
-}
-
-- (void)viewWillAppear:(BOOL)animated
-{
-    [super viewWillAppear:animated];
-    
-    if (_intent == TGMediaAssetsControllerSendFileIntent && self.shouldShowFileTipIfNeeded && iosMajorVersion() >= 7)
-    {
-        if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"didShowDocumentPickerTip_v2"] boolValue])
-        {
-            [[NSUserDefaults standardUserDefaults] setObject:@true forKey:@"didShowDocumentPickerTip_v2"];
-            
-            TGMediaAssetsTipView *tipView = [[TGMediaAssetsTipView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, self.view.bounds.size.width, self.view.bounds.size.height)];
-            tipView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-            [self.navigationController.view addSubview:tipView];
-        }
     }
 }
 

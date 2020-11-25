@@ -38,6 +38,40 @@ static NSData * _Nullable readPublicKey(EVP_PKEY *subject) {
 
 + (MTPKCS * _Nullable)parse:(const unsigned char *)buffer size:(int)size {
 #if TARGET_OS_IOS
+#ifdef TELEGRAM_USE_BORINGSSL
+    BIO *pkcsBio = BIO_new(BIO_s_mem());
+    BIO_write(pkcsBio, buffer, size);
+    STACK_OF(X509) *signers = NULL;
+    PKCS7_get_PEM_certificates(signers, pkcsBio);
+    if (signers == NULL) {
+        BIO_free(pkcsBio);
+        return nil;
+    }
+
+    const X509* cert = sk_X509_pop(signers);
+    if (cert == NULL) {
+        if (signers) {
+            sk_X509_free(signers);
+        }
+        BIO_free(pkcsBio);
+        return nil;
+    }
+    
+    X509_NAME *issuerName = X509_get_issuer_name(cert);
+    X509_NAME *subjectName = X509_get_subject_name(cert);
+    
+    NSString *issuerNameString = readName(issuerName);
+    NSString *subjectNameString = readName(subjectName);
+    
+    EVP_PKEY *publicKey = X509_get_pubkey(cert);
+    NSData *data = readPublicKey(publicKey);
+    
+    MTPKCS *result = [[MTPKCS alloc] initWithIssuerName:issuerNameString subjectName:subjectNameString data:data];
+
+    BIO_free(pkcsBio);
+    
+    return result;
+#else
     MTPKCS * _Nullable result = nil;
     PKCS7 *pkcs7 = NULL;
     STACK_OF(X509) *signers = NULL;
@@ -86,6 +120,7 @@ static NSData * _Nullable readPublicKey(EVP_PKEY *subject) {
     result = [[MTPKCS alloc] initWithIssuerName:issuerNameString subjectName:subjectNameString data:data];
     
     return result;
+#endif
 #else
     return nil;
 #endif

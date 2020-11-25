@@ -517,6 +517,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             if let strongSelf = self {
                 strongSelf.replaceRootController(controller, ready)
             }
+        }, editMedia: { _ in
         })
         self.displayNode = GalleryControllerNode(controllerInteraction: controllerInteraction)
         self.displayNodeDidLoad()

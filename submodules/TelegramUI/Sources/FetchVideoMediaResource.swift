@@ -285,18 +285,6 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
                         if let result = next as? TGMediaVideoConversionResult {
                             var value = stat()
                             if stat(result.fileURL.path, &value) == 0 {
-//                                if config.remuxToFMp4 {
-//                                    let tempFile = TempBox.shared.tempFile(fileName: "video.mp4")
-//                                    if FFMpegRemuxer.remux(result.fileURL.path, to: tempFile.path) {
-//                                        let _ = try? FileManager.default.removeItem(atPath: result.fileURL.path)
-//                                        subscriber.putNext(.moveTempFile(file: tempFile))
-//                                    } else {
-//                                        TempBox.shared.dispose(tempFile)
-//                                        subscriber.putNext(.moveLocalFile(path: result.fileURL.path))
-//                                    }
-//                                } else {
-//                                    subscriber.putNext(.moveLocalFile(path: result.fileURL.path))
-//                                }
                                 if let data = try? Data(contentsOf: result.fileURL, options: [.mappedRead]) {
                                     var range: Range<Int>?
                                     let _ = updatedSize.modify { updatedSize in

@@ -151,4 +151,22 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)switchAudioInput:(NSString * _Nonnull)deviceId;
 @end
 
+typedef NS_ENUM(int32_t, GroupCallNetworkState) {
+    GroupCallNetworkStateConnecting,
+    GroupCallNetworkStateConnected
+};
+
+@interface GroupCallThreadLocalContext : NSObject
+
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated myAudioLevelUpdated:(void (^ _Nonnull)(float))myAudioLevelUpdated;
+
+- (void)stop;
+
+- (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion;
+- (void)setJoinResponsePayload:(NSString * _Nonnull)payload;
+- (void)setSsrcs:(NSArray<NSNumber *> * _Nonnull)ssrcs;
+- (void)setIsMuted:(bool)isMuted;
+
+@end
+
 #endif

@@ -276,7 +276,7 @@ func updatedChatEditInterfaceMessageState(state: ChatPresentationInterfaceState,
     return updated
 }
 
-func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, messages: [Message], controllerInteraction: ChatControllerInteraction?, selectAll: Bool, interfaceInteraction: ChatPanelInterfaceInteraction?) -> Signal<[ContextMenuItem], NoError> {
+func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, messages: [Message], controllerInteraction: ChatControllerInteraction?, selectAll: Bool, interfaceInteraction: ChatPanelInterfaceInteraction?) -> Signal<[ContextMenuItem], NoError> {
     guard let interfaceInteraction = interfaceInteraction, let controllerInteraction = controllerInteraction else {
         return .single([])
     }
@@ -645,7 +645,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         if data.canEdit && !isPinnedMessages {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
-            }, action: { _, f in
+            }, action: { c, f in
                 interfaceInteraction.setupEditMessage(messages[0].id, { transition in
                     f(.custom(transition))
                 })
@@ -763,7 +763,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         
                         var warnAboutPrivate = false
-                        if case let .peer = chatPresentationInterfaceState.chatLocation {
+                        if case .peer = chatPresentationInterfaceState.chatLocation {
                             if channel.addressName == nil {
                                 warnAboutPrivate = true
                             }

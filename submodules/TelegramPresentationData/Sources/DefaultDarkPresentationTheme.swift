@@ -5,6 +5,7 @@ import SyncCore
 import TelegramUIPreferences
 
 public let defaultDarkPresentationTheme = makeDefaultDarkPresentationTheme(preview: false)
+public let defaultDarkColorPresentationTheme = customizeDefaultDarkPresentationTheme(theme: defaultDarkPresentationTheme, editing: false, title: nil, accentColor: UIColor(rgb: 0x007aff), backgroundColors: nil, bubbleColors: nil, wallpaper: nil)
 
 public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, editing: Bool, title: String?, accentColor: UIColor?, backgroundColors: (UIColor, UIColor?)?, bubbleColors: (UIColor, UIColor?)?, wallpaper forcedWallpaper: TelegramWallpaper? = nil) -> PresentationTheme {
     if (theme.referenceTheme != .night) {

@@ -23,6 +23,8 @@ swift_library(
         "//submodules/StickerResources:StickerResources",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/SlotMachineAnimationNode:SlotMachineAnimationNode",
+        "//submodules/AvatarNode:AvatarNode",
+        "//submodules/AccountContext:AccountContext",
     ],
     visibility = [
         "//visibility:public",

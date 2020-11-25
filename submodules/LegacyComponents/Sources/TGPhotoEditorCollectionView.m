@@ -2,9 +2,6 @@
 
 #import "LegacyComponentsInternal.h"
 
-#import "PGPhotoFilter.h"
-
-#import "TGPhotoFilterCell.h"
 #import "TGPhotoToolCell.h"
 
 #import "TGPhotoEditorSliderView.h"
@@ -43,7 +40,6 @@ const CGPoint TGPhotoEditorEdgeScrollTriggerOffset = { 100, 150 };
         self.showsHorizontalScrollIndicator = false;
         self.showsVerticalScrollIndicator = false;
         
-        [self registerClass:[TGPhotoFilterCell class] forCellWithReuseIdentifier:TGPhotoFilterCellKind];
         [self registerClass:[TGPhotoToolCell class] forCellWithReuseIdentifier:TGPhotoToolCellKind];
     }
     return self;
@@ -106,13 +102,6 @@ const CGPoint TGPhotoEditorEdgeScrollTriggerOffset = { 100, 150 };
 
 - (void)setSelectedItemIndexPath:(NSIndexPath *)indexPath
 {
-    NSArray *visibleItemsIndexPathes = self.indexPathsForVisibleItems;
-    for (NSIndexPath *i in visibleItemsIndexPathes)
-    {
-        UICollectionViewCell *cell = [self cellForItemAtIndexPath:i];
-        if ([cell isKindOfClass:[TGPhotoFilterCell class]])
-            [(TGPhotoFilterCell *)cell setFilterSelected:[i isEqual:indexPath]];
-    }
 }
 
 - (void)selectItemAtIndexPath:(NSIndexPath *)indexPath animated:(BOOL)animated scrollPosition:(UICollectionViewScrollPosition)scrollPosition
@@ -140,12 +129,9 @@ const CGPoint TGPhotoEditorEdgeScrollTriggerOffset = { 100, 150 };
 
 - (NSInteger)collectionView:(UICollectionView *)__unused collectionView numberOfItemsInSection:(NSInteger)__unused section
 {
-    id <TGPhotoEditorCollectionViewFiltersDataSource> filtersDataSource = self.filtersDataSource;
     id <TGPhotoEditorCollectionViewToolsDataSource> toolsDataSource = self.toolsDataSource;
     
-    if ([filtersDataSource respondsToSelector:@selector(numberOfFiltersInCollectionView:)])
-        return [filtersDataSource numberOfFiltersInCollectionView:self];
-    else if ([toolsDataSource respondsToSelector:@selector(numberOfToolsInCollectionView:)])
+    if ([toolsDataSource respondsToSelector:@selector(numberOfToolsInCollectionView:)])
         return [toolsDataSource numberOfToolsInCollectionView:self];
     
     return 0;
@@ -153,29 +139,11 @@ const CGPoint TGPhotoEditorEdgeScrollTriggerOffset = { 100, 150 };
 
 - (UICollectionViewCell *)collectionView:(UICollectionView *)__unused collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath
 {
-    id<TGPhotoEditorCollectionViewFiltersDataSource> filtersDataSource = self.filtersDataSource;
     id<TGPhotoEditorCollectionViewToolsDataSource> toolsDataSource = self.toolsDataSource;
     
     UICollectionViewCell *cell = nil;
     
-    if ([filtersDataSource respondsToSelector:@selector(collectionView:filterAtIndex:)])
-    {
-        PGPhotoFilter *filter = [filtersDataSource collectionView:self filterAtIndex:indexPath.row];
-        
-        cell = [self dequeueReusableCellWithReuseIdentifier:TGPhotoFilterCellKind forIndexPath:indexPath];
-        [(TGPhotoFilterCell *)cell setPhotoFilter:filter];
-        [(TGPhotoFilterCell *)cell setFilterSelected:[_selectedItemIndexPath isEqual:indexPath]];
-        
-        [filtersDataSource collectionView:self requestThumbnailImageForFilterAtIndex:indexPath.row completion:^(UIImage *thumbnailImage, bool cached, __unused bool finished)
-        {
-            TGDispatchOnMainThread(^
-            {
-                if ([[(TGPhotoFilterCell *)cell filterIdentifier] isEqualToString:filter.identifier])
-                    [(TGPhotoFilterCell *)cell setImage:thumbnailImage animated:!cached];
-            });
-        }];
-    }
-    else if ([toolsDataSource respondsToSelector:@selector(collectionView:toolAtIndex:)])
+    if ([toolsDataSource respondsToSelector:@selector(collectionView:toolAtIndex:)])
     {
         cell = [self dequeueReusableCellWithReuseIdentifier:TGPhotoToolCellKind forIndexPath:indexPath];
         cell.alpha = 1.0f;
@@ -229,97 +197,6 @@ const CGPoint TGPhotoEditorEdgeScrollTriggerOffset = { 100, 150 };
         [UIView animateWithDuration:0.15 animations:block];
     else
         block();
-}
-
-- (void)collectionView:(UICollectionView *)__unused collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath
-{
-    id<TGPhotoEditorCollectionViewFiltersDataSource> filtersDataSource = self.filtersDataSource;
-    
-    if ([filtersDataSource respondsToSelector:@selector(collectionView:didSelectFilterWithIndex:)])
-    {
-        bool vertical = false;
-        if (self.frame.size.height > self.frame.size.width)
-            vertical = true;
-    
-        CGFloat screenSize = 0;
-        CGFloat contentSize = 0;
-        CGFloat contentOffset = 0;
-        CGFloat itemPosition = 0;
-        CGFloat itemSize = 0;
-        CGFloat targetOverlap = 0;
-        CGFloat startInset = 0;
-        CGFloat endInset = 0;
-        
-        CGFloat triggerOffset = 0;
-        
-        if (!vertical)
-        {
-            screenSize = self.frame.size.width;
-            contentSize = self.contentSize.width;
-            contentOffset = self.contentOffset.x;
-            itemPosition = [self.collectionViewLayout layoutAttributesForItemAtIndexPath:indexPath].frame.origin.x;
-            itemSize = ((UICollectionViewFlowLayout *)self.collectionViewLayout).itemSize.width;
-            startInset = self.contentInset.left;
-            endInset = self.contentInset.right;
-            triggerOffset = TGPhotoEditorEdgeScrollTriggerOffset.x;
-            targetOverlap = itemSize / 2 + ((UICollectionViewFlowLayout *)self.collectionViewLayout).minimumLineSpacing;
-        }
-        else
-        {
-            screenSize = self.frame.size.height;
-            contentSize = self.contentSize.height;
-            contentOffset = self.contentOffset.y;
-            itemPosition = [self.collectionViewLayout layoutAttributesForItemAtIndexPath:indexPath].frame.origin.y;
-            itemSize = ((UICollectionViewFlowLayout *)self.collectionViewLayout).itemSize.height;
-            startInset = self.contentInset.top;
-            endInset = self.contentInset.bottom;
-            triggerOffset = TGPhotoEditorEdgeScrollTriggerOffset.y;
-            targetOverlap = itemSize + 2 * ((UICollectionViewFlowLayout *)self.collectionViewLayout).minimumLineSpacing;
-        }
-        
-        CGFloat itemsScreenPosition = itemPosition - contentOffset;
-        
-        if (itemsScreenPosition < triggerOffset)
-        {
-            CGFloat targetContentOffset = MAX(-startInset, itemPosition - targetOverlap);
-            
-            if (!vertical && targetContentOffset < startInset + itemSize)
-                targetContentOffset = -startInset;
-            
-            if (contentOffset > targetContentOffset)
-            {
-                if (!vertical)
-                    [self setContentOffset:CGPointMake(targetContentOffset, -self.contentInset.top) animated:YES];
-                else
-                    [self setContentOffset:CGPointMake(-self.contentInset.left, targetContentOffset) animated:YES];
-                
-                self.scrollEnabled = false;
-            }
-        }
-        else if (itemsScreenPosition > screenSize - triggerOffset)
-        {
-            CGFloat targetContentOffset = MIN(contentSize - screenSize + endInset,
-                                              itemPosition - screenSize + itemSize + targetOverlap);
-            
-            if (!vertical && targetContentOffset > contentSize - screenSize - endInset - itemSize)
-                targetContentOffset = contentSize - screenSize + endInset;
-            
-            if (contentOffset < targetContentOffset)
-            {
-                if (!vertical)
-                    [self setContentOffset:CGPointMake(targetContentOffset, -self.contentInset.top) animated:YES];
-                else
-                    [self setContentOffset:CGPointMake(-self.contentInset.left, targetContentOffset) animated:YES];
-                
-                self.scrollEnabled = false;
-            }
-        }
-        
-        [filtersDataSource collectionView:self didSelectFilterWithIndex:indexPath.row];
-        
-        _selectedItemIndexPath = indexPath;
-        [self setSelectedItemIndexPath:indexPath];
-    }
 }
 
 - (BOOL)collectionView:(UICollectionView *)__unused collectionView shouldSelectItemAtIndexPath:(NSIndexPath *)__unused indexPath

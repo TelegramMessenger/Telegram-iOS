@@ -280,17 +280,22 @@
 
         _sliderView.frame = CGRectMake((self.frame.size.width - 32) / 2, TGPhotoEditorSliderViewMargin, 32, self.frame.size.height - 2 * TGPhotoEditorSliderViewMargin);
         
+        CGFloat titleOffset = 10;
+        if (MAX(_offButton.title.length, MAX(_radialButton.title.length, _linearButton.title.length)) > 7) {
+            titleOffset = -2;
+        }
+        
         [UIView performWithoutAnimation:^
         {
             if (orientation == UIInterfaceOrientationLandscapeLeft)
             {
                 _titleLabel.transform = CGAffineTransformMakeRotation(M_PI_2);
-                _titleLabel.frame = CGRectMake(self.frame.size.width - _titleLabel.frame.size.width - 10, (self.frame.size.height - _titleLabel.frame.size.height) / 2, _titleLabel.frame.size.width, _titleLabel.frame.size.height);
+                _titleLabel.frame = CGRectMake(self.frame.size.width - _titleLabel.frame.size.width - titleOffset, (self.frame.size.height - _titleLabel.frame.size.height) / 2, _titleLabel.frame.size.width, _titleLabel.frame.size.height);
             }
             else if (orientation == UIInterfaceOrientationLandscapeRight)
             {
                 _titleLabel.transform = CGAffineTransformMakeRotation(-M_PI_2);
-                _titleLabel.frame = CGRectMake(10, (self.frame.size.height - _titleLabel.frame.size.height) / 2, _titleLabel.frame.size.width, _titleLabel.frame.size.height);
+                _titleLabel.frame = CGRectMake(titleOffset, (self.frame.size.height - _titleLabel.frame.size.height) / 2, _titleLabel.frame.size.width, _titleLabel.frame.size.height);
             }
         }];
     }

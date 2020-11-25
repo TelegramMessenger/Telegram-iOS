@@ -643,7 +643,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                             break
                         case .ignore:
                             return .fail
-                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults:
+                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy:
                             return .waitForSingleTap
                     }
                 }
@@ -3122,6 +3122,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                                 item.controllerInteraction.openMessagePollResults(item.message.id, option)
                             })
                         }
+                    case let .copy(text):
+                        if let item = self.item {
+                            return .optionalAction({
+                                item.controllerInteraction.copyText(text)
+                            })
+                        }
                     }
                 }
                 return nil
@@ -3197,6 +3203,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         case .tooltip:
                             break
                         case .openPollResults:
+                            break
+                        case .copy:
                             break
                         }
                     }

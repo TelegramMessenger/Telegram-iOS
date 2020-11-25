@@ -429,6 +429,14 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                 }
                             }
                             
+                            var preset: TGMediaVideoConversionPreset = TGMediaVideoConversionPresetCompressedMedium
+                            if let selectedPreset = adjustments?.preset {
+                                preset = selectedPreset
+                            }
+                            if asAnimation {
+                                preset = TGMediaVideoConversionPresetAnimation
+                            }
+                            
                             if !asAnimation {
                                 finalDimensions = TGMediaVideoConverter.dimensions(for: finalDimensions, adjustments: adjustments, preset: TGMediaVideoConversionPresetCompressedMedium)
                             }
@@ -465,6 +473,8 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                     }
                             }
                             
+                            let estimatedSize = TGMediaVideoConverter.estimatedSize(for: preset, duration: finalDuration, hasAudio: !asAnimation)
+                            
                             var fileAttributes: [TelegramMediaFileAttribute] = []
                             fileAttributes.append(.FileName(fileName: fileName))
                             if asAnimation {
@@ -477,6 +487,9 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                         fileAttributes.append(.Animated)
                                     }
                                 }
+                            }
+                            if estimatedSize > 5 * 1024 * 1024 {
+                                fileAttributes.append(.hintFileIsLarge)
                             }
                             
                             var attributes: [MessageAttribute] = []

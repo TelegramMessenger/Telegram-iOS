@@ -3,7 +3,7 @@
 include Utils.makefile
 
 
-APP_VERSION="7.2"
+APP_VERSION="7.2.1"
 CORE_COUNT=$(shell sysctl -n hw.logicalcpu)
 CORE_COUNT_MINUS_ONE=$(shell expr ${CORE_COUNT} \- 1)
 
@@ -72,7 +72,9 @@ BAZEL_OPT_FLAGS=\
 	--features=swift.opt_uses_wmo \
 	--features=swift.opt_uses_osize \
 	--swiftcopt='-num-threads' --swiftcopt='0' \
+	--features=dead_strip \
     --objc_enable_binary_stripping \
+    --apple_bitcode=watchos=embedded \
 
 
 build_arm64: check_env
@@ -412,8 +414,6 @@ bazel_app_arm64:
 	-c opt \
 	--ios_multi_cpus=arm64 \
 	--watchos_cpus=armv7k,arm64_32 \
-	--objc_enable_binary_stripping=true \
-	--features=dead_strip \
 	--apple_generate_dsym \
 	--output_groups=+dsyms \
 	--verbose_failures
@@ -427,8 +427,6 @@ bazel_app_armv7:
 	-c opt \
 	--ios_multi_cpus=armv7 \
 	--watchos_cpus=armv7k,arm64_32 \
-	--objc_enable_binary_stripping=true \
-	--features=dead_strip \
 	--apple_generate_dsym \
 	--output_groups=+dsyms \
 	--verbose_failures
@@ -442,8 +440,6 @@ bazel_app:
 	-c opt \
 	--ios_multi_cpus=armv7,arm64 \
 	--watchos_cpus=armv7k,arm64_32 \
-	--objc_enable_binary_stripping=true \
-	--features=dead_strip \
 	--apple_generate_dsym \
 	--output_groups=+dsyms \
 	--verbose_failures

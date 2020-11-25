@@ -4,8 +4,6 @@
 #import "POPBasicAnimation.h"
 #import "Freedom.h"
 
-#import "TGSearchBar.h"
-
 #import <objc/runtime.h>
 
 @interface TGListsTableView ()
@@ -78,12 +76,6 @@
                 tableHeaderView.frame = frame;
             }
         }
-    }
-    
-    UIView *tableHeaderView = self.tableHeaderView;
-    if (tableHeaderView != nil && [tableHeaderView respondsToSelector:@selector(updateClipping:)])
-    {
-        [(TGSearchBar *)tableHeaderView updateClipping:bounds.origin.y + self.contentInset.top];
     }
     
     UIView *indexView = self.subviews.lastObject;

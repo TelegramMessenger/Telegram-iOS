@@ -179,10 +179,10 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
         }
     }
     if let fetchedData = fetchedData {
-        precondition(fetchedData.count <= readCount)
+        assert(fetchedData.count <= readCount)
         fetchedData.withUnsafeBytes { bytes -> Void in
             precondition(bytes.baseAddress != nil)
-            memcpy(buffer, bytes.baseAddress, fetchedData.count)
+            memcpy(buffer, bytes.baseAddress, min(fetchedData.count, readCount))
         }
         fetchedCount = Int32(fetchedData.count)
         context.readingOffset += Int(fetchedCount)

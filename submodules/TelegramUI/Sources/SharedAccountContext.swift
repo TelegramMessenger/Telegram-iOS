@@ -101,9 +101,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private var currentCallStatusText: CallStatusText = .none
     private var currentCallStatusTextTimer: SwiftSignalKit.Timer?
     
+    private var groupCallDisposable: Disposable?
+    
     private var callController: CallController?
     public let hasOngoingCall = ValuePromise<Bool>(false)
     private let callState = Promise<PresentationCallState?>(nil)
+    
+    private var groupCallController: VoiceChatController?
     
     private var immediateHasOngoingCallValue = Atomic<Bool>(value: false)
     public var immediateHasOngoingCall: Bool {
@@ -630,6 +634,27 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             })
             
+            self.groupCallDisposable = (callManager.currentGroupCallSignal
+            |> deliverOnMainQueue).start(next: { [weak self] call in
+                if let strongSelf = self {
+                    if call !== strongSelf.groupCallController?.call {
+                        strongSelf.groupCallController?.dismiss()
+                        strongSelf.groupCallController = nil
+                        strongSelf.hasOngoingCall.set(false)
+                        
+                        if let call = call {
+                            mainWindow.hostView.containerView.endEditing(true)
+                            let groupCallController = VoiceChatController(sharedContext: strongSelf, accountContext: call.accountContext, call: call)
+                            strongSelf.groupCallController = groupCallController
+                            strongSelf.mainWindow?.present(groupCallController, on: .calls)
+                            strongSelf.hasOngoingCall.set(true)
+                        } else {
+                            strongSelf.hasOngoingCall.set(false)
+                        }
+                    }
+                }
+            })
+            
             self.callStateDisposable = (self.callState.get()
             |> deliverOnMainQueue).start(next: { [weak self] state in
                 if let strongSelf = self {
@@ -740,6 +765,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.inAppNotificationSettingsDisposable?.dispose()
         self.mediaInputSettingsDisposable?.dispose()
         self.callDisposable?.dispose()
+        self.groupCallDisposable?.dispose()
         self.callStateDisposable?.dispose()
         self.currentCallStatusTextTimer?.invalidate()
     }
@@ -977,10 +1003,18 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func navigateToCurrentCall() {
-        if let mainWindow = self.mainWindow, let callController = self.callController {
+        guard let mainWindow = self.mainWindow else {
+            return
+        }
+        if let callController = self.callController {
             if callController.isNodeLoaded && callController.view.superview == nil {
                 mainWindow.hostView.containerView.endEditing(true)
                 mainWindow.present(callController, on: .calls)
+            }
+        } else if let groupCallController = self.groupCallController {
+            if groupCallController.isNodeLoaded && groupCallController.view.superview == nil {
+                mainWindow.hostView.containerView.endEditing(true)
+                mainWindow.present(groupCallController, on: .calls)
             }
         }
     }
@@ -1238,6 +1272,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }, openMessageReplies: { _, _, _ in
             }, openReplyThreadOriginalMessage: { _ in
             }, openMessageStats: { _ in
+            }, editMessageMedia: { _, _ in
+            }, copyText: { _ in
             }, requestMessageUpdate: { _ in
             }, cancelInteractiveKeyboardGestures: {
             }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

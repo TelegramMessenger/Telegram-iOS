@@ -347,7 +347,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     [_doneButton setTitle:TGLocalized(@"Common.Done") forState:UIControlStateNormal];
     _doneButton.titleLabel.font = TGSystemFontOfSize(17.0);
     [_doneButton sizeToFit];
-    [_wrapperView addSubview:_doneButton];
+//    [_wrapperView addSubview:_doneButton];
     
     void (^settingsPressed)(void) = ^
     {
@@ -1251,8 +1251,8 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 - (void)createNewTextLabel
 {
     TGPaintSwatch *currentSwatch = _portraitSettingsView.swatch;
-    TGPaintSwatch *whiteSwatch = [TGPaintSwatch swatchWithColor:[UIColor whiteColor] colorLocation:1.0f brushWeight:currentSwatch.brushWeight];
-    TGPaintSwatch *blackSwatch = [TGPaintSwatch swatchWithColor:[UIColor blackColor] colorLocation:0.85f brushWeight:currentSwatch.brushWeight];
+    TGPaintSwatch *whiteSwatch = [TGPaintSwatch swatchWithColor:UIColorRGB(0xffffff) colorLocation:1.0f brushWeight:currentSwatch.brushWeight];
+    TGPaintSwatch *blackSwatch = [TGPaintSwatch swatchWithColor:UIColorRGB(0x000000) colorLocation:0.85f brushWeight:currentSwatch.brushWeight];
     [self setCurrentSwatch:_selectedTextStyle == TGPhotoPaintTextEntityStyleOutlined ? blackSwatch : whiteSwatch sender:nil];
     
     CGFloat maxWidth = [self fittedContentSize].width - 26.0f;
@@ -1608,16 +1608,16 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
         
         strongSelf->_selectedTextStyle = style;
         
-        if (style == TGPhotoPaintTextEntityStyleOutlined && [strongSelf->_portraitSettingsView.swatch.color isEqual:[UIColor whiteColor]])
+        if (style == TGPhotoPaintTextEntityStyleOutlined && [strongSelf->_portraitSettingsView.swatch.color isEqual:UIColorRGB(0xffffff)])
         {
             TGPaintSwatch *currentSwatch = strongSelf->_portraitSettingsView.swatch;
-            TGPaintSwatch *blackSwatch = [TGPaintSwatch swatchWithColor:[UIColor blackColor] colorLocation:0.85f brushWeight:currentSwatch.brushWeight];
+            TGPaintSwatch *blackSwatch = [TGPaintSwatch swatchWithColor:UIColorRGB(0x000000) colorLocation:0.85f brushWeight:currentSwatch.brushWeight];
             [strongSelf setCurrentSwatch:blackSwatch sender:nil];
         }
         else if (style != TGPhotoPaintTextEntityStyleOutlined && [strongSelf->_portraitSettingsView.swatch.color isEqual:UIColorRGB(0x000000)])
         {
             TGPaintSwatch *currentSwatch = strongSelf->_portraitSettingsView.swatch;
-            TGPaintSwatch *whiteSwatch = [TGPaintSwatch swatchWithColor:[UIColor whiteColor] colorLocation:1.0f brushWeight:currentSwatch.brushWeight];
+            TGPaintSwatch *whiteSwatch = [TGPaintSwatch swatchWithColor:UIColorRGB(0xffffff) colorLocation:1.0f brushWeight:currentSwatch.brushWeight];
             [strongSelf setCurrentSwatch:whiteSwatch sender:nil];
         }
         

@@ -16,6 +16,7 @@ import SemanticStatusNode
 import FileMediaResourceStatus
 import CheckNode
 import MusicAlbumArtResources
+import AudioBlob
 
 private struct FetchControls {
     let fetch: () -> Void
@@ -940,6 +941,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             self.streamingStatusNode = streamingStatusNode
             streamingStatusNode.frame = streamingCacheStatusFrame
             self.addSubnode(streamingStatusNode)
+        } else if let streamingStatusNode = self.streamingStatusNode {
+            streamingStatusNode.backgroundNodeColor = backgroundNodeColor
         }
         
         if let statusNode = self.statusNode {

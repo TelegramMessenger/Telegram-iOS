@@ -472,48 +472,7 @@ public struct PresentationResourcesChat {
     
     public static func chatInputPanelEditAttachmentButtonImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputPanelEditAttachmentButtonImage.rawValue, { theme in
-            if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconAttachment"), color: theme.chat.inputPanel.panelControlColor) {
-                return generateImage(image.size, rotatedContext: { size, context in
-                    context.clear(CGRect(origin: CGPoint(), size: size))
-                    let imageRect = CGRect(origin: CGPoint(), size: image.size)
-                    context.saveGState()
-                    context.translateBy(x: imageRect.midX, y: imageRect.midY)
-                    context.scaleBy(x: 1.0, y: -1.0)
-                    context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
-                    context.draw(image.cgImage!, in: imageRect)
-                    context.restoreGState()
-                    
-                    context.setFillColor(UIColor.clear.cgColor)
-                    context.setBlendMode(.copy)
-                    let circleSide: CGFloat = 15.0
-                    let circleRect = CGRect(origin: CGPoint(x: size.width - circleSide - 1.0, y: size.height - circleSide - 1.0), size: CGSize(width: circleSide, height: circleSide))
-                    context.fillEllipse(in: circleRect)
-                    
-                    context.translateBy(x: circleRect.minX, y: circleRect.minY)
-                    
-                    context.saveGState()
-                    context.translateBy(x: -1.0, y: -5.0)
-                    let _ = try? drawSvgPath(context, path: "M6,0.909090909 L6,14 L13,7.45454545 Z ")
-                    context.restoreGState()
-                    
-                    context.setBlendMode(.normal)
-                    context.setFillColor(theme.chat.inputPanel.panelControlAccentColor.cgColor)
-                    let _ = try? drawSvgPath(context, path: "M6.675,-1.99172619 L11.3939989,2.72727273 L6.675,7.44627164 L6.675,-1.99172619 Z ")
-                    
-                    context.setStrokeColor(theme.chat.inputPanel.panelControlAccentColor.cgColor)
-                    context.setLineWidth(1.65)
-                    context.setLineCap(.round)
-                    
-                    context.saveGState()
-                    context.translateBy(x: 7.5, y: 7.5)
-                    context.scaleBy(x: -1.0, y: -1.0)
-                    context.translateBy(x: -7.5, y: -7.5)
-                    let _ = try? drawSvgPath(context, path: "M7.5,12.2727273 C10.1359045,12.2727273 12.2727273,10.1359045 12.2727273,7.5 C12.2727273,4.86409551 10.1359045,2.72727273 7.5,2.72727273 C4.86409551,2.72727273 2.72727273,4.86409551 2.72727273,7.5 S ")
-                    context.restoreGState()
-                })
-            } else {
-                return nil
-            }
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/Replace"), color: theme.chat.inputPanel.panelControlAccentColor)
         })
     }
     

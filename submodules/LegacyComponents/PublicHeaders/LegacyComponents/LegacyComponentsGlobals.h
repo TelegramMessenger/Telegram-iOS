@@ -58,10 +58,6 @@ typedef enum {
 
 - (id<LegacyComponentsAccessChecker>)accessChecker;
 
-- (SSignal *)stickerPacksSignal;
-- (SSignal *)maskStickerPacksSignal;
-- (SSignal *)recentStickerMasksSignal;
-
 - (id<SDisposable>)requestAudioSession:(TGAudioSessionType)type interrupted:(void (^)())interrupted;
 
 - (SThreadPool *)sharedMediaImageProcessingThreadPool;
@@ -70,11 +66,6 @@ typedef enum {
 
 - (NSString *)localDocumentDirectoryForLocalDocumentId:(int64_t)localDocumentId version:(int32_t)version;
 - (NSString *)localDocumentDirectoryForDocumentId:(int64_t)documentId version:(int32_t)version;
-
-- (SSignal *)jsonForHttpLocation:(NSString *)httpLocation;
-- (SSignal *)dataForHttpLocation:(NSString *)httpLocation;
-
-- (NSOperation<LegacyHTTPRequestOperation> *)makeHTTPRequestOperationWithRequest:(NSURLRequest *)request;
 
 - (void)pausePictureInPicturePlayback;
 - (void)resumePictureInPicturePlayback;

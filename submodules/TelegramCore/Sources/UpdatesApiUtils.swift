@@ -339,6 +339,21 @@ extension Api.Update {
 }
 
 extension Api.Updates {
+    var allUpdates: [Api.Update] {
+        switch self {
+        case let .updates(updates, _, _, _, _):
+            return updates
+        case let .updatesCombined(updates, _, _, _, _, _):
+            return updates
+        case let .updateShort(update, _):
+            return [update]
+        default:
+            return []
+        }
+    }
+}
+
+extension Api.Updates {
     var rawMessageIds: [Int32] {
         switch self {
             case let .updates(updates, _, _, _, _):

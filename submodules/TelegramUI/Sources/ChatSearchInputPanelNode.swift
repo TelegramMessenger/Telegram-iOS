@@ -34,7 +34,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         didSet {
             if let statuses = self.interfaceInteraction?.statuses {
                 self.activityDisposable.set((combineLatest((statuses.searching |> deliverOnMainQueue), (statuses.loadingMessage |> deliverOnMainQueue))).start(next: { [weak self] searching, loadingMessage in
-                    let value = searching || loadingMessage
+                    let value = searching || loadingMessage == .generic
                     if let strongSelf = self, strongSelf.displayActivity != value {
                         strongSelf.displayActivity = value
                         strongSelf.activityIndicator.isHidden = !value

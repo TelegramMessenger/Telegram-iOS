@@ -431,7 +431,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            if item.message.id.peerId != item.context.account.peerId && !item.message.id.peerId.isReplies{
+            if item.message.id.peerId != item.context.account.peerId && !item.message.id.peerId.isReplies {
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? SourceReferenceMessageAttribute {
                         if let sourcePeer = item.message.peers[attribute.messageId.peerId] {
@@ -457,7 +457,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             var updatedShareButtonNode: ChatMessageShareButton?
             if needShareButton {
-                if currentShareButtonNode != nil {
+                if let currentShareButtonNode = currentShareButtonNode {
                     updatedShareButtonNode = currentShareButtonNode
                 } else {
                     let buttonNode = ChatMessageShareButton()

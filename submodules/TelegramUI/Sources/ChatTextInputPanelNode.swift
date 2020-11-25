@@ -16,6 +16,7 @@ import ActivityIndicator
 import AnimationUI
 
 private let accessoryButtonFont = Font.medium(14.0)
+private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
 
 private final class AccessoryItemIconButton: HighlightTrackingButton {
     private let item: ChatTextInputAccessoryItem
@@ -204,6 +205,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     let textInputBackgroundNode: ASImageNode
     let actionButtons: ChatTextInputActionButtonsNode
     var mediaRecordingAccessibilityArea: AccessibilityAreaNode?
+    private let counterTextNode: ImmediateTextNode
     
     let attachmentButton: HighlightableButtonNode
     let attachmentButtonDisabledNode: HighlightableButtonNode
@@ -243,6 +245,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     private var theme: PresentationTheme?
     private var strings: PresentationStrings?
+    
+    private let hapticFeedback = HapticFeedback()
     
     var inputTextState: ChatTextInputState {
         if let textInputNode = self.textInputNode {
@@ -403,6 +407,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.searchLayoutClearButton.addSubnode(self.searchLayoutClearImageNode)
         
         self.actionButtons = ChatTextInputActionButtonsNode(theme: presentationInterfaceState.theme, strings: presentationInterfaceState.strings, presentController: presentController)
+        self.counterTextNode = ImmediateTextNode()
+        self.counterTextNode.textAlignment = .center
         
         super.init()
         
@@ -491,6 +497,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.addSubnode(self.attachmentButtonDisabledNode)
           
         self.addSubnode(self.actionButtons)
+        self.addSubnode(self.counterTextNode)
         
         self.view.addSubview(self.searchLayoutClearButton)
         
@@ -1183,6 +1190,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             textInputBackgroundWidthOffset = 36.0
         }
         
+        self.updateCounterTextNode(transition: transition)
+       
         let actionButtonsFrame = CGRect(origin: CGPoint(x: width - rightInset - 43.0 - UIScreenPixel + composeButtonsOffset, y: panelHeight - minimalHeight), size: CGSize(width: 44.0, height: minimalHeight))
         transition.updateFrame(node: self.actionButtons, frame: actionButtonsFrame)
         
@@ -1454,6 +1463,41 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.interfaceInteraction?.updateTextInputStateAndMode({ _, inputMode in return (inputTextState, inputMode) })
             self.interfaceInteraction?.updateInputLanguage({ _ in return textInputNode.textInputMode.primaryLanguage })
             self.updateTextNodeText(animated: true)
+            
+            self.updateCounterTextNode(transition: .immediate)
+        }
+    }
+    
+    private func updateCounterTextNode(transition: ContainedViewLayoutTransition) {
+        if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState, let editMessage = presentationInterfaceState.interfaceState.editMessage, let inputTextMaxLength = editMessage.inputTextMaxLength {
+            let textCount = Int32(textInputNode.textView.text.count)
+            let counterColor: UIColor = textCount > inputTextMaxLength ? presentationInterfaceState.theme.chat.inputPanel.panelControlDestructiveColor : presentationInterfaceState.theme.chat.inputPanel.panelControlColor
+            
+            let remainingCount = max(-999, inputTextMaxLength - textCount)
+            let counterText = remainingCount >= 5 ? "" : "\(remainingCount)"
+            self.counterTextNode.attributedText = NSAttributedString(string: counterText, font: counterFont, textColor: counterColor)
+        } else {
+            self.counterTextNode.attributedText = NSAttributedString(string: "", font: counterFont, textColor: .black)
+        }
+        
+        if let (width, leftInset, rightInset, maxHeight, metrics, _) = self.validLayout {
+            var composeButtonsOffset: CGFloat = 0.0
+            if self.extendedSearchLayout {
+                composeButtonsOffset = 44.0
+            }
+            
+            let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width - leftInset - rightInset, maxHeight: maxHeight, metrics: metrics)
+            let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
+            var textFieldMinHeight: CGFloat = 33.0
+            if let presentationInterfaceState = self.presentationInterfaceState {
+                textFieldMinHeight = calclulateTextFieldMinHeight(presentationInterfaceState, metrics: metrics)
+            }
+            let minimalHeight: CGFloat = 14.0 + textFieldMinHeight
+            
+            let counterSize = self.counterTextNode.updateLayout(CGSize(width: 44.0, height: 44.0))
+            let actionButtonsOriginX = width - rightInset - 43.0 - UIScreenPixel + composeButtonsOffset
+            let counterFrame = CGRect(origin: CGPoint(x: actionButtonsOriginX, y: panelHeight - minimalHeight - counterSize.height + 3.0), size: CGSize(width: width - actionButtonsOriginX - rightInset, height: counterSize.height))
+            transition.updateFrame(node: self.counterTextNode, frame: counterFrame)
         }
     }
     
@@ -1518,7 +1562,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     self.actionButtons.sendButton.layer.animateScale(from: 1.0, to: 0.2, duration: 0.2)
                     self.actionButtons.sendButtonRadialStatusNode?.layer.animateScale(from: 1.0, to: 0.2, duration: 0.2)
                    
-                   self.actionButtons.sendButtonRadialStatusNode?.alpha = 0.0
+                    self.actionButtons.sendButtonRadialStatusNode?.alpha = 0.0
                     self.actionButtons.sendButtonRadialStatusNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                 }
             }
@@ -1793,14 +1837,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
             }
         }
-        
-        let newText = (editableTextNode.textView.text as NSString).replacingCharacters(in: range, with: cleanText)
-        if let interfaceState = self.presentationInterfaceState, let editMessage = interfaceState.interfaceState.editMessage, let inputTextMaxLength = editMessage.inputTextMaxLength {
-            if newText.count > inputTextMaxLength {
-                return false
-            }
-        }
-        
+                
         if cleanText != text {
             let string = NSMutableAttributedString(attributedString: editableTextNode.attributedText ?? NSAttributedString())
             var textColor: UIColor = .black
@@ -1898,6 +1935,17 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     @objc func sendButtonPressed() {
+        if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState, let editMessage = presentationInterfaceState.interfaceState.editMessage, let inputTextMaxLength = editMessage.inputTextMaxLength {
+            let textCount = Int32(textInputNode.textView.text.count)
+            let remainingCount = inputTextMaxLength - textCount
+
+            if remainingCount < 0 {
+                textInputNode.layer.addShakeAnimation()
+                self.hapticFeedback.error()
+                return
+            }
+        }
+    
         self.sendMessage()
     }
     
