@@ -158,6 +158,18 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         return self.membersPromise.get()
     }
     
+    private var invitedPeersValue: Set<PeerId> = Set() {
+        didSet {
+            if self.invitedPeersValue != oldValue {
+                self.inivitedPeersPromise.set(self.invitedPeersValue)
+            }
+        }
+    }
+    private let inivitedPeersPromise = ValuePromise<Set<PeerId>>(Set())
+    public var invitedPeers: Signal<Set<PeerId>, NoError> {
+        return self.inivitedPeersPromise.get()
+    }
+    
     private let requestDisposable = MetaDisposable()
     private var groupCallParticipantUpdatesDisposable: Disposable?
     
@@ -640,5 +652,17 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
             strongSelf.updateSessionState(internalState: .active(value), audioSessionControl: strongSelf.audioSessionControl)
         }))
+    }
+    
+    public func invitePeer(_ peerId: PeerId) {
+        guard case let .estabilished(callInfo, _, _, _) = self.internalState, !self.invitedPeersValue.contains(peerId) else {
+            return
+        }
+
+        var updatedInvitedPeers = self.invitedPeersValue
+        updatedInvitedPeers.insert(peerId)
+        self.invitedPeersValue = updatedInvitedPeers
+        
+        let _ = inviteToGroupCall(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, peerId: peerId).start()
     }
 }

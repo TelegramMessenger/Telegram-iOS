@@ -227,7 +227,11 @@ public protocol PresentationGroupCall: class {
     func toggleIsMuted()
     func setIsMuted(_ value: Bool)
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
+    
     func updateMuteState(peerId: PeerId, isMuted: Bool)
+    
+    func invitePeer(_ peerId: PeerId)
+    var invitedPeers: Signal<Set<PeerId>, NoError> { get }
 }
 
 public protocol PresentationCallManager: class {

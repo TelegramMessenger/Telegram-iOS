@@ -667,8 +667,12 @@ final class MutableMessageHistoryView {
         
         var updatedCachedPeerDataMessages = false
         var currentCachedPeerData: CachedPeerData?
-        for i in 0 ..< self.additionalDatas.count {
-            switch self.additionalDatas[i] {
+        
+        let additionalDatas = self.additionalDatas
+        var updated = self.additionalDatas
+
+        for i in 0 ..< additionalDatas.count {
+            switch additionalDatas[i] {
             case let .cachedPeerData(peerId, currentData):
                 currentCachedPeerData = currentData
                 if let updatedData = transaction.currentUpdatedCachedPeerData[peerId] {
@@ -676,7 +680,7 @@ final class MutableMessageHistoryView {
                         updatedCachedPeerDataMessages = true
                     }
                     currentCachedPeerData = updatedData
-                    self.additionalDatas[i] = .cachedPeerData(peerId, updatedData)
+                    updated[i] = .cachedPeerData(peerId, updatedData)
                     hasChanges = true
                 }
             case .cachedPeerDataMessages:
@@ -729,13 +733,13 @@ final class MutableMessageHistoryView {
                     }
                     if updateMessage {
                         let messages = postbox.getMessageGroup(at: id) ?? []
-                        self.additionalDatas[i] = .message(id, messages)
+                        updated[i] = .message(id, messages)
                         hasChanges = true
                     }
                 }
             case let .peerChatState(peerId, _):
                 if transaction.currentUpdatedPeerChatStates.contains(peerId) {
-                    self.additionalDatas[i] = .peerChatState(peerId, postbox.peerChatStateTable.get(peerId) as? PeerChatState)
+                    updated[i] = .peerChatState(peerId, postbox.peerChatStateTable.get(peerId) as? PeerChatState)
                     hasChanges = true
                 }
             case .totalUnreadState:
@@ -744,7 +748,7 @@ final class MutableMessageHistoryView {
                 break
             case let .cacheEntry(entryId, _):
                 if transaction.updatedCacheEntryKeys.contains(entryId) {
-                    self.additionalDatas[i] = .cacheEntry(entryId, postbox.retrieveItemCacheEntry(id: entryId))
+                    updated[i] = .cacheEntry(entryId, postbox.retrieveItemCacheEntry(id: entryId))
                     hasChanges = true
                 }
             case .preferencesEntry:
@@ -759,20 +763,20 @@ final class MutableMessageHistoryView {
                     }
                     
                     if value != updatedValue {
-                        self.additionalDatas[i] = .peerIsContact(peerId, value)
+                        updated[i] = .peerIsContact(peerId, value)
                         hasChanges = true
                     }
                 }
             case let .peer(peerId, _):
                 if let peer = transaction.currentUpdatedPeers[peerId] {
-                    self.additionalDatas[i] = .peer(peerId, peer)
+                    updated[i] = .peer(peerId, peer)
                     hasChanges = true
                 }
             }
         }
         if let cachedData = currentCachedPeerData, !cachedData.messageIds.isEmpty {
-            for i in 0 ..< self.additionalDatas.count {
-                switch self.additionalDatas[i] {
+            for i in 0 ..< additionalDatas.count {
+                switch additionalDatas[i] {
                 case .cachedPeerDataMessages(_, _):
                     outer: for operationSet in operations {
                         for operation in operationSet {
@@ -802,8 +806,8 @@ final class MutableMessageHistoryView {
         
         if updatedCachedPeerDataMessages {
             hasChanges = true
-            for i in 0 ..< self.additionalDatas.count {
-                switch self.additionalDatas[i] {
+            for i in 0 ..< additionalDatas.count {
+                switch additionalDatas[i] {
                 case let .cachedPeerDataMessages(peerId, _):
                     var messages: [MessageId: Message] = [:]
                     if let cachedData = currentCachedPeerData {
@@ -813,12 +817,14 @@ final class MutableMessageHistoryView {
                             }
                         }
                     }
-                    self.additionalDatas[i] = .cachedPeerDataMessages(peerId, messages)
+                    updated[i] = .cachedPeerDataMessages(peerId, messages)
                 default:
                     break
                 }
             }
         }
+        
+        self.additionalDatas = updated
         
         if !transaction.currentPeerHoleOperations.isEmpty {
             var holePeerIdsSet: [PeerId] = []

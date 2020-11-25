@@ -1,4 +1,4 @@
-#import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
 
 #import <FFMpegBinding/FFMpegGlobals.h>
 #import <FFMpegBinding/FFMpegAVCodecContext.h>

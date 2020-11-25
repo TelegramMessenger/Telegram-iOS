@@ -207,7 +207,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 encoder.encodeInt32(23, forKey: "_rawValue")
                 encoder.encodeInt64(callId, forKey: "callId")
                 encoder.encodeInt64(accessHash, forKey: "accessHash")
-                encoder.encodeInt64(peerId.toInt64(), forKey: "peerIdId")
+                encoder.encodeInt64(peerId.toInt64(), forKey: "peerId")
         }
     }
     

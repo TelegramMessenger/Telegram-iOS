@@ -142,6 +142,7 @@ public final class VoiceChatController: ViewController {
             var activityTimestamp: Int32
             var state: State
             var muteState: GroupCallParticipantsContext.Participant.MuteState?
+            var invited: Bool
             
             var stableId: PeerId {
                 return self.peer.id
@@ -163,6 +164,9 @@ public final class VoiceChatController: ViewController {
                 if lhs.muteState != rhs.muteState {
                     return false
                 }
+                if lhs.invited != rhs.invited {
+                    return false
+                }
                 return true
             }
             
@@ -181,7 +185,7 @@ public final class VoiceChatController: ViewController {
                 switch self.state {
                 case .inactive:
                     text = .presence
-                    icon = .invite
+                    icon = .invite(self.invited)
                 case .listening:
                     text = .text(presentationData.strings.VoiceChat_StatusListening, .accent)
                     let microphoneColor: UIColor
@@ -241,6 +245,7 @@ public final class VoiceChatController: ViewController {
         
         private var currentMembers: [RenderedChannelParticipant]?
         private var currentMemberStates: [PeerId: PresentationGroupCallMemberState]?
+        private var currentInvitedPeers: Set<PeerId>?
         
         private var currentEntries: [PeerEntry] = []
         private var peersDisposable: Disposable?
@@ -261,6 +266,7 @@ public final class VoiceChatController: ViewController {
         private var audioLevelsDisposable: Disposable?
         private var myAudioLevelDisposable: Disposable?
         private var memberStatesDisposable: Disposable?
+        private var invitedPeersDisposable: Disposable?
         
         private var itemInteraction: Interaction?
         
@@ -295,6 +301,10 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 
+                if let invitedPeers = strongSelf.currentInvitedPeers, invitedPeers.contains(peer.id) {
+                    return
+                }
+                
                 strongSelf.controller?.present(
                     UndoOverlayController(
                         presentationData: strongSelf.presentationData,
@@ -310,6 +320,7 @@ public final class VoiceChatController: ViewController {
                     ),
                     in: .current
                 )
+                strongSelf.call.invitePeer(peer.id)
             }
             
             self.itemInteraction = Interaction(
@@ -327,12 +338,15 @@ public final class VoiceChatController: ViewController {
                 var items: [ContextMenuItem] = []
                 switch entry.state {
                 case .inactive:
-                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_InvitePeer, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.actionSheet.primaryTextColor)
-                    }, action: { _, f in
-                        invitePeer(peer)
-                        f(.default)
-                    })))
+                    if let invitedPeers = strongSelf.currentInvitedPeers, invitedPeers.contains(peer.id) {
+                    } else {
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_InvitePeer, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { _, f in
+                            invitePeer(peer)
+                            f(.default)
+                        })))
+                    }
                 default:
                     if entry.muteState == nil {
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_MutePeer, icon: { theme in
@@ -389,6 +403,10 @@ public final class VoiceChatController: ViewController {
                         })))
                     }
                 }
+                
+                guard !items.isEmpty else {
+                    return
+                }
             
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .extracted(VoiceChatContextExtractedContentSource(controller: controller, sourceNode: sourceNode, keepInPlace: false)), items: .single(items), reactionItems: [], gesture: gesture)
                 strongSelf.controller?.presentInGlobalOverlay(contextController)
@@ -406,7 +424,7 @@ public final class VoiceChatController: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.updateMembers(isMuted: strongSelf.callState?.isMuted ?? true, members: state.list, memberStates: strongSelf.currentMemberStates ?? [:])
+                    strongSelf.updateMembers(isMuted: strongSelf.callState?.isMuted ?? true, members: state.list, memberStates: strongSelf.currentMemberStates ?? [:], invitedPeers: strongSelf.currentInvitedPeers ?? Set())
                 }
             })
             
@@ -416,9 +434,21 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 if let members = strongSelf.currentMembers {
-                    strongSelf.updateMembers(isMuted: strongSelf.callState?.isMuted ?? true, members: members, memberStates: memberStates)
+                    strongSelf.updateMembers(isMuted: strongSelf.callState?.isMuted ?? true, members: members, memberStates: memberStates, invitedPeers: strongSelf.currentInvitedPeers ?? Set())
                 } else {
                     strongSelf.currentMemberStates = memberStates
+                }
+            })
+            
+            self.invitedPeersDisposable = (self.call.invitedPeers
+            |> deliverOnMainQueue).start(next: { [weak self] invitedPeers in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let members = strongSelf.currentMembers {
+                    strongSelf.updateMembers(isMuted: strongSelf.callState?.isMuted ?? true, members: members, memberStates: strongSelf.currentMemberStates ?? [:], invitedPeers: invitedPeers)
+                } else {
+                    strongSelf.currentInvitedPeers = invitedPeers
                 }
             })
             
@@ -470,7 +500,7 @@ public final class VoiceChatController: ViewController {
                     strongSelf.callState = state
                     
                     if wasMuted != state.isMuted, let members = strongSelf.currentMembers {
-                        strongSelf.updateMembers(isMuted: state.isMuted, members: members, memberStates: strongSelf.currentMemberStates ?? [:])
+                        strongSelf.updateMembers(isMuted: state.isMuted, members: members, memberStates: strongSelf.currentMemberStates ?? [:], invitedPeers: strongSelf.currentInvitedPeers ?? Set())
                     }
                     
                     if let (layout, navigationHeight) = strongSelf.validLayout {
@@ -568,6 +598,7 @@ public final class VoiceChatController: ViewController {
             self.callStateDisposable?.dispose()
             self.audioOutputStateDisposable?.dispose()
             self.memberStatesDisposable?.dispose()
+            self.invitedPeersDisposable?.dispose()
             self.audioLevelsDisposable?.dispose()
             self.myAudioLevelDisposable?.dispose()
         }
@@ -576,7 +607,7 @@ public final class VoiceChatController: ViewController {
             super.didLoad()
             
             let longTapRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.actionButtonPressGesture(_:)))
-            longTapRecognizer.minimumPressDuration = 0.01
+            longTapRecognizer.minimumPressDuration = 0.1
             self.actionButton.view.addGestureRecognizer(longTapRecognizer)
             
             let panRecognizer = CallPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
@@ -716,6 +747,7 @@ public final class VoiceChatController: ViewController {
             let actionButtonTitle: String
             let actionButtonSubtitle: String
             let audioButtonAppearance: CallControllerButtonItemNode.Content.Appearance
+            var actionButtonEnabled = true
             if let callState = callState {
                 isMicOn = !callState.isMuted
                 
@@ -725,6 +757,7 @@ public final class VoiceChatController: ViewController {
                     actionButtonTitle = self.presentationData.strings.VoiceChat_Connecting
                     actionButtonSubtitle = ""
                     audioButtonAppearance = .color(.custom(0x1c1c1e))
+                    actionButtonEnabled = false
                 case .connected:
                     actionButtonState = .active(state: isMicOn ? .on : .muted)
                     if isMicOn {
@@ -742,8 +775,10 @@ public final class VoiceChatController: ViewController {
                 actionButtonTitle = self.presentationData.strings.VoiceChat_Connecting
                 actionButtonSubtitle = ""
                 audioButtonAppearance = .color(.custom(0x1c1c1e))
+                actionButtonEnabled = false
             }
             
+            self.actionButton.isUserInteractionEnabled = actionButtonEnabled
             self.actionButton.update(size: centralButtonSize, buttonSize: CGSize(width: 144.0, height: 144.0), state: actionButtonState, title: actionButtonTitle, subtitle: actionButtonSubtitle, animated: true)
             transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
             
@@ -780,7 +815,7 @@ public final class VoiceChatController: ViewController {
                 soundImage = .speaker
             case .speaker:
                 soundImage = .speaker
-//                soundAppearance = .blurred(isFilled: false)
+                soundAppearance = .blurred(isFilled: true)
             case .headphones:
                 soundImage = .bluetooth
             case let .bluetooth(type):
@@ -881,7 +916,7 @@ public final class VoiceChatController: ViewController {
             })
         }
         
-        private func updateMembers(isMuted: Bool, members: [RenderedChannelParticipant], memberStates: [PeerId: PresentationGroupCallMemberState]) {
+        private func updateMembers(isMuted: Bool, members: [RenderedChannelParticipant], memberStates: [PeerId: PresentationGroupCallMemberState], invitedPeers: Set<PeerId>) {
             var members = members
             members.sort(by: { lhs, rhs in
                 if lhs.peer.id == self.context.account.peerId {
@@ -903,6 +938,7 @@ public final class VoiceChatController: ViewController {
             
             self.currentMembers = members
             self.currentMemberStates = memberStates
+            self.currentInvitedPeers = invitedPeers
             
             let previousEntries = self.currentEntries
             var entries: [PeerEntry] = []
@@ -931,9 +967,11 @@ public final class VoiceChatController: ViewController {
                 
                 entries.append(PeerEntry(
                     peer: member.peer,
+                    presence: member.presences[member.peer.id] as? TelegramUserPresence,
                     activityTimestamp: Int32.max - 1 - index,
                     state: memberState,
-                    muteState: memberMuteState
+                    muteState: memberMuteState,
+                    invited: invitedPeers.contains(member.peer.id)
                 ))
                 index += 1
             }
