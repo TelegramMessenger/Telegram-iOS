@@ -1374,9 +1374,6 @@ private let defaultChatControllerInteraction = ChatControllerInteraction.default
 private func peerInfoControllerImpl(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool) -> ViewController? {
     let useClassicUi = NGSettings.classicProfileUI
     if let _ = peer as? TelegramGroup {
-        if useClassicUi {
-            return groupInfoController(context: context, peerId: peer.id)
-        }
         return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
     } else if let channel = peer as? TelegramChannel {
         switch channel.info {
@@ -1384,10 +1381,8 @@ private func peerInfoControllerImpl(context: AccountContext, peer: Peer, mode: P
             if useClassicUi {
                 return channelInfoController(context: context, peerId: peer.id)
             }
-        case .group:
-            if useClassicUi {
-                return groupInfoController(context: context, peerId: peer.id)
-            }
+        default:
+            break
         }
         return PeerInfoScreen(context: context, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
     } else if peer is TelegramUser {
