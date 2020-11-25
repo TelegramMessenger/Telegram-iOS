@@ -5927,6 +5927,7 @@ Sorry for the inconvenience.";
 
 "VoiceChat.UnmutePeer" = "Allow to Speak";
 "VoiceChat.MutePeer" = "Mute";
+"VoiceChat.InvitePeer" = "Invite";
 "VoiceChat.RemovePeer" = "Remove";
 "VoiceChat.RemovePeerConfirmation" = "Are you sure you want to remove %@ from the group chat?";
 "VoiceChat.RemovePeerRemove" = "Remove";

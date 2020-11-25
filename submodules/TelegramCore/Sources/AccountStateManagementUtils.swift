@@ -2201,7 +2201,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     var updatedWebpages: [MediaId: TelegramMediaWebpage] = [:]
     var updatedCalls: [Api.PhoneCall] = []
     var addedCallSignalingData: [(Int64, Data)] = []
-    var updatedGroupCallParticipants: [(Int64, PeerId, Int32, Bool)] = []
+    var updatedGroupCallParticipants: [(Int64, GroupCallParticipantsContext.StateUpdate)] = []
     var updatedPeersNearby: [PeerNearby]?
     var isContactUpdates: [(PeerId, Bool)] = []
     var stickerPackOperations: [AccountStateUpdateStickerPacksOperation] = []
@@ -2932,22 +2932,10 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
             case let .AddCallSignalingData(callId, data):
                 addedCallSignalingData.append((callId, data))
             case let .UpdateGroupCallParticipants(callId, _, participants, version):
-                for participant in participants {
-                    var peerId: PeerId?
-                    var ssrc: Int32?
-                    var isAdded = true
-                    switch participant {
-                    case let .groupCallParticipant(flags, userId, date, source):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
-                        ssrc = source
-                        if flags & (1 << 1) != 0 {
-                            isAdded = false
-                        }
-                    }
-                    if let peerId = peerId, let ssrc = ssrc {
-                        updatedGroupCallParticipants.append((callId, peerId, ssrc, isAdded))
-                    }
-                }
+                updatedGroupCallParticipants.append((
+                    callId,
+                    GroupCallParticipantsContext.StateUpdate(participants: participants, version: version)
+                ))
             case let .UpdateLangPack(langCode, difference):
                 if let difference = difference {
                     if langPackDifferences[langCode] == nil {

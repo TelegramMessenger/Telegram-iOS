@@ -34,7 +34,7 @@ public final class VoiceChatParticipantItem: ListViewItem {
     public enum Icon {
         case none
         case microphone(Bool, UIColor)
-        case invite
+        case invite(Bool)
     }
     
     let presentationData: ItemListPresentationData
@@ -134,7 +134,8 @@ public class VoiceChatParticipantItemNode: ListViewItemNode {
     
     private let actionContainerNode: ASDisplayNode
     private var animationNode: VoiceChatMicrophoneNode?
-    private var actionButtonNode: HighlightableButtonNode?
+    private var iconNode: ASImageNode?
+    private var actionButtonNode: HighlightTrackingButtonNode
     
     private var audioLevelView: VoiceBlobView?
     private let audioLevelDisposable = MetaDisposable()
@@ -181,6 +182,7 @@ public class VoiceChatParticipantItemNode: ListViewItemNode {
         self.statusNode.contentsScale = UIScreen.main.scale
         
         self.actionContainerNode = ASDisplayNode()
+        self.actionButtonNode = HighlightTrackingButtonNode()
         
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
@@ -199,7 +201,10 @@ public class VoiceChatParticipantItemNode: ListViewItemNode {
         self.offsetContainerNode.addSubnode(self.titleNode)
         self.offsetContainerNode.addSubnode(self.statusNode)
         self.offsetContainerNode.addSubnode(self.actionContainerNode)
+        self.actionContainerNode.addSubnode(self.actionButtonNode)
         self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
+        
+        self.actionButtonNode.addTarget(self, action: #selector(self.actionButtonPressed), forControlEvents: .touchUpInside)
         
         self.peerPresenceManager = PeerPresenceStatusManager(update: { [weak self] in
             if let strongSelf = self, let layoutParams = strongSelf.layoutParams {
@@ -212,7 +217,7 @@ public class VoiceChatParticipantItemNode: ListViewItemNode {
             guard let strongSelf = self else {
                 return false
             }
-            if let actionButtonNode = strongSelf.actionButtonNode, actionButtonNode.frame.contains(location) {
+            if strongSelf.actionButtonNode.frame.contains(location) {
                 return false
             }
             return true
@@ -547,7 +552,7 @@ public class VoiceChatParticipantItemNode: ListViewItemNode {
                         } else {
                             animationNode = VoiceChatMicrophoneNode()
                             strongSelf.animationNode = animationNode
-                            strongSelf.actionContainerNode.addSubnode(animationNode)
+                            strongSelf.actionButtonNode.addSubnode(animationNode)
                         }
                         animationNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, color: color), animated: true)
                     } else if let animationNode = strongSelf.animationNode {
@@ -557,29 +562,34 @@ public class VoiceChatParticipantItemNode: ListViewItemNode {
                         })
                     }
                     
-                    if case .invite = item.icon {
-                        let actionButtonNode: HighlightableButtonNode
-                        if let current = strongSelf.actionButtonNode {
-                            actionButtonNode = current
+                    if case let .invite(invited) = item.icon {
+                        let iconNode: ASImageNode
+                        if let current = strongSelf.iconNode {
+                            iconNode = current
                         } else {
-                            actionButtonNode = HighlightableButtonNode()
-                            actionButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: item.presentationData.theme.list.itemAccentColor), for: .normal)
-                            actionButtonNode.addTarget(strongSelf, action: #selector(strongSelf.actionButtonPressed), forControlEvents: .touchUpInside)
-                            
-                            strongSelf.actionButtonNode = actionButtonNode
-                            strongSelf.actionContainerNode.addSubnode(actionButtonNode)
+                            iconNode = ASImageNode()
+                            iconNode.contentMode = .center
+                            strongSelf.iconNode = iconNode
+                            strongSelf.actionButtonNode.addSubnode(iconNode)
                         }
-                    } else if let actionButtonNode = strongSelf.actionButtonNode {
-                        strongSelf.actionButtonNode = nil
-                        actionButtonNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false, completion: { [weak actionButtonNode] _ in
-                            actionButtonNode?.removeFromSupernode()
+                        
+                        if invited {
+                            iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Invited"), color: UIColor(rgb: 0x979797))
+                        } else {
+                            iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: item.presentationData.theme.list.itemAccentColor)
+                        }
+                    } else if let iconNode = strongSelf.iconNode {
+                        strongSelf.iconNode = nil
+                        iconNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false, completion: { [weak iconNode] _ in
+                            iconNode?.removeFromSupernode()
                         })
                     }
                     
                     let animationSize = CGSize(width: 36.0, height: 36.0)
-                    strongSelf.animationNode?.frame = CGRect(x: params.width - animationSize.width - 6.0, y: floor((layout.contentSize.height - animationSize.height) / 2.0) + 1.0, width: animationSize.width, height: animationSize.height)
+                    strongSelf.iconNode?.frame = CGRect(origin: CGPoint(), size: animationSize)
+                    strongSelf.animationNode?.frame = CGRect(origin: CGPoint(), size: animationSize)
                     
-                    strongSelf.actionButtonNode?.frame = CGRect(x: params.width - animationSize.width - 6.0, y: floor((layout.contentSize.height - animationSize.height) / 2.0) + 1.0, width: animationSize.width, height: animationSize.height)
+                    strongSelf.actionButtonNode.frame = CGRect(x: params.width - animationSize.width - 6.0, y: floor((layout.contentSize.height - animationSize.height) / 2.0) + 1.0, width: animationSize.width, height: animationSize.height)
                     
                     if let presence = item.presence as? TelegramUserPresence {
                         strongSelf.peerPresenceManager?.reset(presence: presence)

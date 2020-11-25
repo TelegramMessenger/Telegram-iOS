@@ -1715,13 +1715,13 @@ public struct phone {
     
     }
     public enum GroupParticipants: TypeConstructorDescription {
-        case groupParticipants(count: Int32, participants: [Api.GroupCallParticipant], users: [Api.User])
+        case groupParticipants(count: Int32, participants: [Api.GroupCallParticipant], users: [Api.User], version: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .groupParticipants(let count, let participants, let users):
+                case .groupParticipants(let count, let participants, let users, let version):
                     if boxed {
-                        buffer.appendInt32(1325740111)
+                        buffer.appendInt32(1021016465)
                     }
                     serializeInt32(count, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
@@ -1734,14 +1734,15 @@ public struct phone {
                     for item in users {
                         item.serialize(buffer, true)
                     }
+                    serializeInt32(version, buffer: buffer, boxed: false)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .groupParticipants(let count, let participants, let users):
-                return ("groupParticipants", [("count", count), ("participants", participants), ("users", users)])
+                case .groupParticipants(let count, let participants, let users, let version):
+                return ("groupParticipants", [("count", count), ("participants", participants), ("users", users), ("version", version)])
     }
     }
     
@@ -1756,11 +1757,14 @@ public struct phone {
             if let _ = reader.readInt32() {
                 _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
+            var _4: Int32?
+            _4 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.phone.GroupParticipants.groupParticipants(count: _1!, participants: _2!, users: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.phone.GroupParticipants.groupParticipants(count: _1!, participants: _2!, users: _3!, version: _4!)
             }
             else {
                 return nil

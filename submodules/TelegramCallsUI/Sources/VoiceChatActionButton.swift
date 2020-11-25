@@ -510,8 +510,7 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         context.saveGState()
         if let blobsState = parameters.state as? VoiceChatActionButtonBackgroundNodeBlobState {
             for blob in blobsState.blobs {
-                if let path = blob.currentShape {
-                    let uiPath = path
+                if let path = blob.currentShape, let uiPath = path.copy() as? UIBezierPath {
                     let toOrigin = CGAffineTransform(translationX: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
                     let fromOrigin = CGAffineTransform(translationX: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
       

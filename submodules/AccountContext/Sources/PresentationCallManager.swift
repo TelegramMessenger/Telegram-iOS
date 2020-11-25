@@ -176,14 +176,14 @@ public struct PresentationGroupCallState: Equatable {
 
 public struct PresentationGroupCallMemberState: Equatable {
     public var ssrc: UInt32
-    public var isSpeaking: Bool
+    public var muteState: GroupCallParticipantsContext.Participant.MuteState?
     
     public init(
         ssrc: UInt32,
-        isSpeaking: Bool
+        muteState: GroupCallParticipantsContext.Participant.MuteState?
     ) {
         self.ssrc = ssrc
-        self.isSpeaking = isSpeaking
+        self.muteState = muteState
     }
 }
 
@@ -207,7 +207,10 @@ public protocol PresentationGroupCall: class {
     func setIsMuted(_ value: Bool)
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
     
+    func updateMuteState(peerId: PeerId, isMuted: Bool)
+    
     func invitePeer(_ peerId: PeerId)
+    var invitedPeers: Signal<Set<PeerId>, NoError> { get }
 }
 
 public protocol PresentationCallManager: class {
