@@ -208,6 +208,7 @@ public final class SecretMediaPreviewController: ViewController {
         }, dismissController: { [weak self] in
             self?.dismiss(forceAway: true)
         }, replaceRootController: { _, _ in
+        }, editMedia: { _ in
         })
         self.displayNode = SecretMediaPreviewControllerNode(controllerInteraction: controllerInteraction)
         self.displayNodeDidLoad()

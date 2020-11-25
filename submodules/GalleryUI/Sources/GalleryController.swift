@@ -450,9 +450,9 @@ public class GalleryController: ViewController, StandalonePresentableController 
                             namespaces = .not(Namespaces.Message.allScheduled)
                         }
                         return context.account.postbox.aroundMessageHistoryViewForLocation(context.chatLocationInput(for: chatLocation, contextHolder: chatLocationContextHolder), anchor: .index(message!.index), count: 50, clipHoles: false, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, namespaces: namespaces, orderStatistics: [.combinedLocation])
-                            |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
-                                let mapped = GalleryMessageHistoryView.view(view)
-                                return .single(mapped)
+                        |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
+                            let mapped = GalleryMessageHistoryView.view(view)
+                            return .single(mapped)
                         }
                     } else {
                         return .single(GalleryMessageHistoryView.entries([MessageHistoryEntry(message: message!, isRead: false, location: nil, monthLocation: nil, attributes: MutableMessageHistoryEntryAttributes(authorIsContact: false))], false, false))
@@ -919,6 +919,11 @@ public class GalleryController: ViewController, StandalonePresentableController 
         }, replaceRootController: { [weak self] controller, ready in
             if let strongSelf = self {
                 strongSelf.replaceRootController(controller, ready)
+            }
+        }, editMedia: { [weak self] messageId in
+            if let strongSelf = self {
+                strongSelf.dismiss(forceAway: true)
+                strongSelf.actionInteraction?.editMedia(messageId)
             }
         })
         self.displayNode = GalleryControllerNode(controllerInteraction: controllerInteraction)

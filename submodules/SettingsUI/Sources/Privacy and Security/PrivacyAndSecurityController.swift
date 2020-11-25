@@ -522,15 +522,15 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     
     let twoStepAuthDataValue = Promise<TwoStepVerificationAccessConfiguration?>(nil)
     let hasTwoStepAuthDataValue = twoStepAuthDataValue.get()
-    |> map { data -> Bool? in
+    |> mapToSignal { data -> Signal<Bool?, NoError> in
         if let data = data {
             if case .set = data {
-                return true
+                return .single(true)
             } else {
-                return false
+                return .single(false)
             }
         } else {
-            return nil
+            return .complete()
         }
     }
     

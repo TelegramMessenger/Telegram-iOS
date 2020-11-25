@@ -940,6 +940,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             self.streamingStatusNode = streamingStatusNode
             streamingStatusNode.frame = streamingCacheStatusFrame
             self.addSubnode(streamingStatusNode)
+        } else if let streamingStatusNode = self.streamingStatusNode {
+            streamingStatusNode.backgroundNodeColor = backgroundNodeColor
         }
         
         if let statusNode = self.statusNode {

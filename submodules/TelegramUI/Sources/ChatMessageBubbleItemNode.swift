@@ -676,7 +676,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                             break
                         case .ignore:
                             return .fail
-                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults:
+                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy:
                             return .waitForSingleTap
                     }
                 }
@@ -1562,7 +1562,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         if let mosaicRange = mosaicRange {
             let maxSize = layoutConstants.image.maxDimensions.fittedToWidthOrSmaller(maximumContentWidth - layoutConstants.image.bubbleInsets.left - layoutConstants.image.bubbleInsets.right)
-            let (innerFramesAndPositions, innerSize) = chatMessageBubbleMosaicLayout(maxSize: maxSize, itemSizes: contentPropertiesAndLayouts[mosaicRange].map { $0.0 ?? CGSize(width: 256.0, height: 256.0) })
+            let (innerFramesAndPositions, innerSize) = chatMessageBubbleMosaicLayout(maxSize: maxSize, itemSizes: contentPropertiesAndLayouts[mosaicRange].map { item in
+                guard let size = item.0, size.width > 0.0, size.height > 0 else {
+                    return CGSize(width: 256.0, height: 256.0)
+                }
+                return size
+            })
             
             let framesAndPositions = innerFramesAndPositions.map { ($0.0.offsetBy(dx: layoutConstants.image.bubbleInsets.left, dy: layoutConstants.image.bubbleInsets.top), $0.1) }
             
@@ -3281,6 +3286,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                                 item.controllerInteraction.openMessagePollResults(item.message.id, option)
                             })
                         }
+                    case let .copy(text):
+                        if let item = self.item {
+                            return .optionalAction({
+                                item.controllerInteraction.copyText(text)
+                            })
+                        }
                     }
                 }
                 return nil
@@ -3356,6 +3367,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         case .tooltip:
                             break
                         case .openPollResults:
+                            break
+                        case .copy:
                             break
                         }
                     }

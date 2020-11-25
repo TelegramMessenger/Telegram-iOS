@@ -248,7 +248,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             }, placeholder: placeholderNode)
             
         } else if let contactListNode = self.contactListNode, contactListNode.supernode != nil {
-            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: true, categories: [.cloudContacts, .global], openPeer: { [weak self] peer in
+            self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: true, categories: [.cloudContacts, .global], addContact: nil, openPeer: { [weak self] peer in
                 if let strongSelf = self {
                     switch peer {
                         case let .peer(peer, _, _):

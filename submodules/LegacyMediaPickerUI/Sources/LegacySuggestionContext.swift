@@ -17,8 +17,8 @@ public func legacySuggestionContext(context: AccountContext, peerId: PeerId, cha
                 let disposable = searchPeerMembers(context: context, peerId: peerId, chatLocation: chatLocation, query: query, scope: .mention).start(next: { peers in
                     let users = NSMutableArray()
                     for peer in peers {
-                        let user = TGUser()
                         if let peer = peer as? TelegramUser {
+                            let user = TGUser()
                             user.uid = peer.id.id
                             user.firstName = peer.firstName
                             user.lastName = peer.lastName

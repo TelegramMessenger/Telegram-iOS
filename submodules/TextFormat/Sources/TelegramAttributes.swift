@@ -40,4 +40,5 @@ public struct TelegramTextAttributes {
     public static let BankCard = "TelegramBankCard"
     public static let Timecode = "TelegramTimecode"
     public static let BlockQuote = "TelegramBlockQuote"
+    public static let Pre = "TelegramPre"
 }

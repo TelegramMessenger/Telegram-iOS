@@ -31,6 +31,15 @@ public enum EnqueueMessage {
                 return .forward(source: source, grouping: grouping, attributes: f(attributes))
         }
     }
+    
+    public func withUpdatedGroupingKey(_ f: (Int64?) -> Int64?) -> EnqueueMessage {
+        switch self {
+            case let .message(text, attributes, mediaReference, replyToMessageId, localGroupingKey):
+                return .message(text: text, attributes: attributes, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: f(localGroupingKey))
+            case .forward:
+                return self
+        }
+    }
 }
 
 func augmentMediaWithReference(_ mediaReference: AnyMediaReference) -> Media {
@@ -192,7 +201,7 @@ public func enqueueMessagesToMultiplePeers(account: Account, peerIds: [PeerId], 
         return account.postbox.transaction { transaction -> [MessageId] in
             var messageIds: [MessageId] = []
             for peerId in peerIds {
-                for id in enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: messages, disableAutoremove: false) {
+                for id in enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: messages, disableAutoremove: false, transformGroupingKeysWithPeerId: true) {
                     if let id = id {
                         messageIds.append(id)
                     }
@@ -233,12 +242,22 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
     }
 }
 
-func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId, messages: [(Bool, EnqueueMessage)], disableAutoremove: Bool = false) -> [MessageId?] {
+func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId, messages: [(Bool, EnqueueMessage)], disableAutoremove: Bool = false, transformGroupingKeysWithPeerId: Bool = false) -> [MessageId?] {
     var updatedMessages: [(Bool, EnqueueMessage)] = []
     outer: for (transformedMedia, message) in messages {
+        var updatedMessage = message
+        if transformGroupingKeysWithPeerId {
+            updatedMessage = updatedMessage.withUpdatedGroupingKey { groupingKey -> Int64? in
+                if let groupingKey = groupingKey {
+                    return groupingKey &+ peerId.toInt64()
+                } else {
+                    return nil
+                }
+            }
+        }
         switch message {
-            case let .message(desc):
-                if let replyToMessageId = desc.replyToMessageId, replyToMessageId.peerId != peerId, let replyMessage = transaction.getMessage(replyToMessageId) {
+            case let .message(_, _, _, replyToMessageId, _):
+                if let replyToMessageId = replyToMessageId, replyToMessageId.peerId != peerId, let replyMessage = transaction.getMessage(replyToMessageId) {
                     var canBeForwarded = true
                     if replyMessage.id.namespace != Namespaces.Message.Cloud {
                         canBeForwarded = false
@@ -265,7 +284,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     continue outer
                 }
         }
-        updatedMessages.append((transformedMedia, message))
+        updatedMessages.append((transformedMedia, updatedMessage))
     }
     
     if let peer = transaction.getPeer(peerId), let accountPeer = transaction.getPeer(account.peerId) {
