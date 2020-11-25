@@ -51,7 +51,6 @@ BAZEL_OPTIONS=(\
 	--spawn_strategy=standalone \
 	--strategy=SwiftCompile=standalone \
 	--features=swift.enable_batch_mode \
-	--apple_generate_dsym \
 	--swiftcopt=-j${CORE_COUNT_MINUS_ONE} \
 )
 

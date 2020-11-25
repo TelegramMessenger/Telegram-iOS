@@ -171,7 +171,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         self.tabContainerNode = ChatListFilterTabContainerNode()
         
-        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary)
+        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary, groupCallPanelSource: .all)
         
         self.tabBarItemContextActionType = .always
         

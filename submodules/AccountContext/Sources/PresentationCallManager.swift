@@ -174,6 +174,25 @@ public struct PresentationGroupCallState: Equatable {
     }
 }
 
+public struct PresentationGroupCallSummaryState: Equatable {
+    public var info: GroupCallInfo
+    public var participantCount: Int
+    public var callState: PresentationGroupCallState
+    public var topParticipants: [GroupCallParticipantsContext.Participant]
+    
+    public init(
+        info: GroupCallInfo,
+        participantCount: Int,
+        callState: PresentationGroupCallState,
+        topParticipants: [GroupCallParticipantsContext.Participant]
+    ) {
+        self.info = info
+        self.participantCount = participantCount
+        self.callState = callState
+        self.topParticipants = topParticipants
+    }
+}
+
 public struct PresentationGroupCallMemberState: Equatable {
     public var ssrc: UInt32
     public var muteState: GroupCallParticipantsContext.Participant.MuteState?
@@ -197,9 +216,11 @@ public protocol PresentationGroupCall: class {
     
     var canBeRemoved: Signal<Bool, NoError> { get }
     var state: Signal<PresentationGroupCallState, NoError> { get }
+    var summaryState: Signal<PresentationGroupCallSummaryState?, NoError> { get }
     var members: Signal<[PeerId: PresentationGroupCallMemberState], NoError> { get }
     var audioLevels: Signal<[(PeerId, Float)], NoError> { get }
     var myAudioLevel: Signal<Float, NoError> { get }
+    var isMuted: Signal<Bool, NoError> { get }
     
     func leave() -> Signal<Bool, NoError>
     
@@ -211,7 +232,8 @@ public protocol PresentationGroupCall: class {
 
 public protocol PresentationCallManager: class {
     var currentCallSignal: Signal<PresentationCall?, NoError> { get }
+    var currentGroupCallSignal: Signal<PresentationGroupCall?, NoError> { get }
     
     func requestCall(context: AccountContext, peerId: PeerId, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult
-    func requestOrJoinGroupCall(context: AccountContext, peerId: PeerId) -> RequestOrJoinGroupCallResult
+    func requestOrJoinGroupCall(context: AccountContext, peerId: PeerId, initialCall: CachedChannelData.ActiveCall?, endCurrentIfAny: Bool) -> RequestOrJoinGroupCallResult
 }

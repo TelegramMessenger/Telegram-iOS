@@ -146,9 +146,7 @@ public final class AnimatedAvatarSetNode: ASDisplayNode {
         super.init()
     }
     
-    public func update(context: AccountContext, content: AnimatedAvatarSetContext.Content, animated: Bool, synchronousLoad: Bool) -> CGSize {
-        let itemSize = CGSize(width: 30.0, height: 30.0)
-        
+    public func update(context: AccountContext, content: AnimatedAvatarSetContext.Content, itemSize: CGSize = CGSize(width: 30.0, height: 30.0), animated: Bool, synchronousLoad: Bool) -> CGSize {
         var contentWidth: CGFloat = 0.0
         let contentHeight: CGFloat = itemSize.height
         
