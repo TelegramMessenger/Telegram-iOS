@@ -966,6 +966,7 @@ public final class VoiceChatController: ViewController {
                 
                 entries.append(PeerEntry(
                     peer: member.peer,
+                    presence: member.presences[member.peer.id] as? TelegramUserPresence,
                     activityTimestamp: Int32.max - 1 - index,
                     state: memberState,
                     muteState: memberMuteState,
