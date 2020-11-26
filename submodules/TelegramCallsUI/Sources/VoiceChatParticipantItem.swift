@@ -37,6 +37,25 @@ public final class VoiceChatParticipantItem: ListViewItem {
         case invite(Bool)
     }
     
+    public struct RevealOption {
+        public enum RevealOptionType {
+            case neutral
+            case warning
+            case destructive
+            case accent
+        }
+        
+        public var type: RevealOptionType
+        public var title: String
+        public var action: () -> Void
+        
+        public init(type: RevealOptionType, title: String, action: @escaping () -> Void) {
+            self.type = type
+            self.title = title
+            self.action = action
+        }
+    }
+
     let presentationData: ItemListPresentationData
     let dateTimeFormat: PresentationDateTimeFormat
     let nameDisplayOrder: PresentationPersonNameOrder
@@ -47,10 +66,13 @@ public final class VoiceChatParticipantItem: ListViewItem {
     let icon: Icon
     let enabled: Bool
     let audioLevel: Signal<Float, NoError>?
+    let revealOptions: [RevealOption]
+    let revealed: Bool?
+    let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let action: (() -> Void)?
     let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
-    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, presence: PeerPresence?, text: ParticipantText, icon: Icon, enabled: Bool, audioLevel: Signal<Float, NoError>?, action: (() -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, presence: PeerPresence?, text: ParticipantText, icon: Icon, enabled: Bool, audioLevel: Signal<Float, NoError>?, revealOptions: [RevealOption], revealed: Bool?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, action: (() -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
@@ -61,6 +83,9 @@ public final class VoiceChatParticipantItem: ListViewItem {
         self.icon = icon
         self.enabled = enabled
         self.audioLevel = audioLevel
+        self.revealOptions = revealOptions
+        self.revealed = revealed
+        self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.action = action
         self.contextAction = contextAction
     }
@@ -113,7 +138,7 @@ public final class VoiceChatParticipantItem: ListViewItem {
 
 private let avatarFont = avatarPlaceholderFont(size: floor(40.0 * 16.0 / 37.0))
 
-public class VoiceChatParticipantItemNode: ListViewItemNode {
+public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -139,6 +164,7 @@ public class VoiceChatParticipantItemNode: ListViewItemNode {
     
     private var audioLevelView: VoiceBlobView?
     private let audioLevelDisposable = MetaDisposable()
+    private var didSetupAudioLevel = false
     
     private var absoluteLocation: (CGRect, CGSize)?
     
@@ -170,6 +196,7 @@ public class VoiceChatParticipantItemNode: ListViewItemNode {
         
         self.avatarNode = AvatarNode(font: avatarFont)
         self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
+        self.avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 40.0))
         
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
@@ -386,6 +413,31 @@ public class VoiceChatParticipantItemNode: ListViewItemNode {
                 }
             }
             
+            let peerRevealOptions: [ItemListRevealOption]
+            var mappedOptions: [ItemListRevealOption] = []
+            var index: Int32 = 0
+            for option in item.revealOptions {
+                let color: UIColor
+                let textColor: UIColor
+                switch option.type {
+                    case .neutral:
+                        color = item.presentationData.theme.list.itemDisclosureActions.constructive.fillColor
+                        textColor = item.presentationData.theme.list.itemDisclosureActions.constructive.foregroundColor
+                    case .warning:
+                        color = item.presentationData.theme.list.itemDisclosureActions.warning.fillColor
+                        textColor = item.presentationData.theme.list.itemDisclosureActions.warning.foregroundColor
+                    case .destructive:
+                        color = item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor
+                        textColor = item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor
+                    case .accent:
+                        color = item.presentationData.theme.list.itemDisclosureActions.accent.fillColor
+                        textColor = item.presentationData.theme.list.itemDisclosureActions.accent.foregroundColor
+                }
+                mappedOptions.append(ItemListRevealOption(key: index, title: option.title, icon: .none, color: color, textColor: textColor))
+                index += 1
+            }
+            peerRevealOptions = mappedOptions
+            
             return (layout, { [weak self] synchronousLoad, animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, params, first, last)
@@ -488,11 +540,12 @@ public class VoiceChatParticipantItemNode: ListViewItemNode {
                     transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: statusLayout.size))
                     
                     let avatarFrame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: floorToScreenPixels((layout.contentSize.height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
-                    transition.updateFrame(node: strongSelf.avatarNode, frame: avatarFrame)
+                    transition.updateFrameAsPositionAndBounds(node: strongSelf.avatarNode, frame: avatarFrame)
                     
                     let blobFrame = avatarFrame.insetBy(dx: -12.0, dy: -12.0)
-                    if let audioLevel = item.audioLevel {
+                    if let audioLevel = item.audioLevel, !strongSelf.didSetupAudioLevel || currentItem?.peer.id != item.peer.id {
                         strongSelf.audioLevelView?.frame = blobFrame
+                        strongSelf.didSetupAudioLevel = true
                         strongSelf.audioLevelDisposable.set((audioLevel
                         |> deliverOnMainQueue).start(next: { value in
                             guard let strongSelf = self else {
@@ -523,12 +576,20 @@ public class VoiceChatParticipantItemNode: ListViewItemNode {
                                 strongSelf.containerNode.view.insertSubview(audioLevelView, at: 0)
                             }
                             
+                            let level = min(1.0, max(0.0, CGFloat(value)))
+                            let avatarScale: CGFloat
+                            
                             strongSelf.audioLevelView?.updateLevel(CGFloat(value) * 2.0)
                             if value > 0.0 {
                                 strongSelf.audioLevelView?.startAnimating()
+                                avatarScale = 1.03 + level * 0.1
                             } else {
-                                strongSelf.audioLevelView?.stopAnimating()
+                                strongSelf.audioLevelView?.stopAnimating(duration: 0.5)
+                                avatarScale = 1.0
                             }
+                            
+                            let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .spring)
+                            transition.updateTransformScale(node: strongSelf.avatarNode, scale: avatarScale, beginWithCurrentState: true)
                         }))
                     } else if let audioLevelView = strongSelf.audioLevelView {
                         strongSelf.audioLevelView = nil
@@ -596,6 +657,9 @@ public class VoiceChatParticipantItemNode: ListViewItemNode {
                     }
                     
                     strongSelf.updateIsHighlighted(transition: transition)
+                    
+                    strongSelf.setRevealOptions((left: [], right: peerRevealOptions))
+                    strongSelf.setRevealOptionsOpened(item.revealed ?? false, animated: animated)
                 }
             })
         }
@@ -675,5 +739,48 @@ public class VoiceChatParticipantItemNode: ListViewItemNode {
         if let item = self.layoutParams?.0 {
             item.action?()
         }
+    }
+    
+    override public func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        super.updateRevealOffset(offset: offset, transition: transition)
+        
+        if let item = self.layoutParams?.0, let params = self.layoutParams?.1 {
+            var leftInset: CGFloat = 65.0 + params.leftInset
+                        
+            var avatarFrame = self.avatarNode.frame
+            avatarFrame.origin.x = offset + leftInset - 50.0
+            transition.updateFrame(node: self.avatarNode, frame: avatarFrame)
+            
+            var titleFrame = self.titleNode.frame
+            titleFrame.origin.x = leftInset + offset
+            transition.updateFrame(node: self.titleNode, frame: titleFrame)
+            
+            var statusFrame = self.statusNode.frame
+            let previousStatusFrame = statusFrame
+            statusFrame.origin.x = leftInset + offset
+            self.statusNode.frame = statusFrame
+            transition.animatePositionAdditive(node: self.statusNode, offset: CGPoint(x: previousStatusFrame.minX - statusFrame.minX, y: 0))
+        }
+    }
+    
+    override public func revealOptionsInteractivelyOpened() {
+        if let item = self.layoutParams?.0 {
+            item.setPeerIdWithRevealedOptions(item.peer.id, nil)
+        }
+    }
+    
+    override public func revealOptionsInteractivelyClosed() {
+        if let item = self.layoutParams?.0 {
+            item.setPeerIdWithRevealedOptions(nil, item.peer.id)
+        }
+    }
+    
+    override public func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
+        if let item = self.layoutParams?.0 {
+            item.revealOptions[Int(option.key)].action()
+        }
+        
+        self.setRevealOptionsOpened(false, animated: true)
+        self.revealOptionsInteractivelyClosed()
     }
 }

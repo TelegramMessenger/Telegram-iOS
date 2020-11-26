@@ -64,6 +64,69 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     
+    private class SpeakingParticipantsContext {
+        private let speakingLevelThreshold: Float = 0.15
+        private let cutoffTimeout: Int32 = 1
+        private let silentTimeout: Int32 = 2
+        
+        struct Participant {
+            let timestamp: Int32
+            let level: Float
+        }
+        
+        private var participants: [PeerId: Participant] = [:]
+        private let speakingParticipantsPromise = ValuePromise<Set<PeerId>>()
+        private var speakingParticipants = Set<PeerId>() {
+            didSet {
+                self.speakingParticipantsPromise.set(self.speakingParticipants)
+            }
+        }
+        
+        init() {
+            
+        }
+        
+        func update(levels: [(PeerId, Float)]) {
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+            let currentParticipants: [PeerId: Participant] = self.participants
+            
+            var validSpeakers: [PeerId: Participant] = [:]
+            var silentParticipants = Set<PeerId>()
+            var speakingParticipants = Set<PeerId>()
+            for (peerId, level) in levels {
+                if level > speakingLevelThreshold {
+                    validSpeakers[peerId] = Participant(timestamp: timestamp, level: level)
+                    speakingParticipants.insert(peerId)
+                } else {
+                    silentParticipants.insert(peerId)
+                }
+            }
+            
+            for (peerId, participant) in currentParticipants {
+                if let _ = validSpeakers[peerId] {
+                } else {
+                    let delta = timestamp - participant.timestamp
+                    if silentParticipants.contains(peerId) {
+                        if delta < silentTimeout {
+                            validSpeakers[peerId] = participant
+                            speakingParticipants.insert(peerId)
+                        }
+                    } else if delta < cutoffTimeout {
+                        validSpeakers[peerId] = participant
+                        speakingParticipants.insert(peerId)
+                    }
+                }
+            }
+            
+            self.participants = validSpeakers
+            self.speakingParticipants = speakingParticipants
+        }
+        
+        func get() -> Signal<Set<PeerId>, NoError> {
+            return self.speakingParticipantsPromise.get()
+        }
+    }
+    
     public let account: Account
     public let accountContext: AccountContext
     private let audioSession: ManagedAudioSession
@@ -111,6 +174,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         return self.audioLevelsPipe.signal()
     }
     private var audioLevelsDisposable = MetaDisposable()
+    
+ 
+    private let speakingParticipantsContext = SpeakingParticipantsContext()
     
     private var participantsContextStateDisposable = MetaDisposable()
     private var participantsContext: GroupCallParticipantsContext?
@@ -445,6 +511,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     if !result.isEmpty {
                         strongSelf.audioLevelsPipe.putNext(result)
                     }
+                    strongSelf.speakingParticipantsContext.update(levels: result)
                 }))
                 
                 self.myAudioLevelDisposable.set((callContext.myAudioLevel
@@ -479,8 +546,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     state: initialState
                 )
                 self.participantsContext = participantsContext
-                self.participantsContextStateDisposable.set((participantsContext.state
-                |> deliverOnMainQueue).start(next: { [weak self] state in
+                self.participantsContextStateDisposable.set((combineLatest(participantsContext.state, self.speakingParticipantsContext.get())
+                |> deliverOnMainQueue).start(next: { [weak self] state, speakingParticipants in
                     guard let strongSelf = self else {
                         return
                     }
@@ -496,7 +563,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         
                         memberStates[participant.peer.id] = PresentationGroupCallMemberState(
                             ssrc: participant.ssrc,
-                            muteState: participant.muteState
+                            muteState: participant.muteState,
+                            speaking: speakingParticipants.contains(participant.peer.id)
                         )
                     }
                     strongSelf.membersValue = memberStates

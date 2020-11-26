@@ -94,30 +94,49 @@ public final class VoiceChatController: ViewController {
             let count: Int
         }
         
+        private struct State: Equatable {
+            var revealedPeerId: PeerId?
+        }
+        
         private final class Interaction {
             let updateIsMuted: (PeerId, Bool) -> Void
             let invitePeer: (Peer) -> Void
             let peerContextAction: (PeerEntry, ASDisplayNode, ContextGesture?) -> Void
+            let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
             
             private var audioLevels: [PeerId: ValuePipe<Float>] = [:]
             
             init(
                 updateIsMuted: @escaping (PeerId, Bool) -> Void,
                 invitePeer: @escaping (Peer) -> Void,
-                peerContextAction: @escaping (PeerEntry, ASDisplayNode, ContextGesture?) -> Void
+                peerContextAction: @escaping (PeerEntry, ASDisplayNode, ContextGesture?) -> Void,
+                setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void
             ) {
                 self.updateIsMuted = updateIsMuted
                 self.invitePeer = invitePeer
                 self.peerContextAction = peerContextAction
+                self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
             }
             
             func getAudioLevel(_ peerId: PeerId) -> Signal<Float, NoError>? {
+                let signal: Signal<Float, NoError>
                 if let current = self.audioLevels[peerId] {
-                    return current.signal()
+                    signal = current.signal()
                 } else {
                     let value = ValuePipe<Float>()
                     self.audioLevels[peerId] = value
-                    return value.signal()
+                    signal = value.signal()
+                }
+                return signal
+                |> mapToSignal { value in
+                    if value > 0.0 {
+                        return .single(value)
+                        |> then(.single(0.0) |> delay(1.0, queue: Queue.mainQueue()))
+                    } else {
+                        return .single(value)
+                    }
+                } |> mapToThrottled { next -> Signal<Float, NoError> in
+                    return .single(next) |> then(.complete() |> delay(0.1, queue: Queue.mainQueue()))
                 }
             }
             
@@ -143,6 +162,7 @@ public final class VoiceChatController: ViewController {
             var state: State
             var muteState: GroupCallParticipantsContext.Participant.MuteState?
             var invited: Bool
+            var revealed: Bool?
             
             var stableId: PeerId {
                 return self.peer.id
@@ -165,6 +185,9 @@ public final class VoiceChatController: ViewController {
                     return false
                 }
                 if lhs.invited != rhs.invited {
+                    return false
+                }
+                if lhs.revealed != rhs.revealed {
                     return false
                 }
                 return true
@@ -200,7 +223,11 @@ public final class VoiceChatController: ViewController {
                     icon = .microphone(false, UIColor(rgb: 0x34c759))
                 }
                 
-                return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, presence: self.presence, text: text, icon: icon, enabled: true, audioLevel: interaction.getAudioLevel(peer.id), action: {
+                let revealOptions: [VoiceChatParticipantItem.RevealOption] = []
+                
+                return VoiceChatParticipantItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, presence: self.presence, text: text, icon: icon, enabled: true, audioLevel: interaction.getAudioLevel(peer.id), revealOptions: revealOptions, revealed: self.revealed, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
+                    interaction.setPeerIdWithRevealedOptions(peerId, fromPeerId)
+                }, action: {
                     interaction.invitePeer(peer)
                 }, contextAction: { node, gesture in
                     interaction.peerContextAction(self, node, gesture)
@@ -291,6 +318,12 @@ public final class VoiceChatController: ViewController {
             self.actionButton = VoiceChatActionButton()
                         
             super.init()
+            
+            let statePromise = ValuePromise(State(), ignoreRepeated: true)
+            let stateValue = Atomic(value: State())
+            let updateState: ((State) -> State) -> Void = { f in
+                statePromise.set(stateValue.modify { f($0) })
+            }
             
             let invitePeer: (Peer) -> Void = { [weak self] peer in
                 guard let strongSelf = self else {
@@ -406,6 +439,12 @@ public final class VoiceChatController: ViewController {
             
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .extracted(VoiceChatContextExtractedContentSource(controller: controller, sourceNode: sourceNode, keepInPlace: false)), items: .single(items), reactionItems: [], gesture: gesture)
                 strongSelf.controller?.presentInGlobalOverlay(contextController)
+            }, setPeerIdWithRevealedOptions: { peerId, _ in
+                updateState { state in
+                    var updated = state
+                    updated.revealedPeerId = peerId
+                    return updated
+                }
             })
             
             self.contentContainer.addSubnode(self.listNode)
@@ -955,7 +994,7 @@ public final class VoiceChatController: ViewController {
                         memberState = .listening
                     }
                 } else if let state = memberStates[member.peer.id] {
-                    memberState = .listening
+                    memberState = state.speaking ? .speaking : .listening
                     memberMuteState = state.muteState
                 } else {
                     memberState = .inactive
