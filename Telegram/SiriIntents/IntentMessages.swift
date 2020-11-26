@@ -17,7 +17,7 @@ extension MessageId {
     }
 }
 
-@available(iOSApplicationExtension 10.0, *)
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
 func getMessages(account: Account, ids: [MessageId]) -> Signal<[INMessage], NoError> {
     return account.postbox.transaction { transaction -> [INMessage] in
         var messages: [INMessage] = []
@@ -30,7 +30,7 @@ func getMessages(account: Account, ids: [MessageId]) -> Signal<[INMessage], NoEr
     }
 }
 
-@available(iOSApplicationExtension 10.0, *)
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
 func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
     return account.postbox.tailChatListView(groupId: .root, count: 20, summaryComponents: ChatListEntrySummaryComponents())
     |> take(1)
@@ -89,7 +89,7 @@ func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
     }
 }
 
-@available(iOSApplicationExtension 10.0, *)
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
 struct CallRecord {
     let identifier: String
     let date: Date
@@ -97,13 +97,13 @@ struct CallRecord {
     let duration: Int32?
     let unseen: Bool
     
-    @available(iOSApplicationExtension 11.0, *)
+    @available(iOSApplicationExtension 11.0, iOS 11.0, *)
     var intentCall: INCallRecord {
         return INCallRecord(identifier: self.identifier, dateCreated: self.date, caller: self.caller, callRecordType: .missed, callCapability: .audioCall, callDuration: self.duration.flatMap(Double.init), unseen: self.unseen)
     }
 }
 
-@available(iOSApplicationExtension 10.0, *)
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
 func missedCalls(account: Account) -> Signal<[CallRecord], NoError> {
     return account.viewTracker.callListView(type: .missed, index: MessageIndex.absoluteUpperBound(), count: 30)
     |> take(1)
@@ -125,7 +125,7 @@ func missedCalls(account: Account) -> Signal<[CallRecord], NoError> {
     }
 }
 
-@available(iOSApplicationExtension 10.0, *)
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
 private func callWithTelegramMessage(_ telegramMessage: Message, account: Account) -> CallRecord? {
     guard let author = telegramMessage.author, let user = telegramMessage.peers[author.id] as? TelegramUser else {
         return nil
@@ -133,7 +133,7 @@ private func callWithTelegramMessage(_ telegramMessage: Message, account: Accoun
     
     let identifier = "\(telegramMessage.id.peerId.toInt64())_\(telegramMessage.id.namespace)_\(telegramMessage.id.id)"
     let personHandle: INPersonHandle
-    if #available(iOSApplicationExtension 10.2, *) {
+    if #available(iOSApplicationExtension 10.2, iOS 10.2, *) {
         var type: INPersonHandleType
         var label: INPersonHandleLabel?
         if let username = user.username {
@@ -164,7 +164,7 @@ private func callWithTelegramMessage(_ telegramMessage: Message, account: Accoun
     return CallRecord(identifier: identifier, date: date, caller: caller, duration: duration, unseen: true)
 }
 
-@available(iOSApplicationExtension 10.0, *)
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
 private func messageWithTelegramMessage(_ telegramMessage: Message) -> INMessage? {
     guard let author = telegramMessage.author, let user = telegramMessage.peers[author.id] as? TelegramUser, user.id.id != 777000 else {
         return nil
@@ -172,7 +172,7 @@ private func messageWithTelegramMessage(_ telegramMessage: Message) -> INMessage
     
     let identifier = "\(telegramMessage.id.peerId.toInt64())_\(telegramMessage.id.namespace)_\(telegramMessage.id.id)"
     let personHandle: INPersonHandle
-    if #available(iOSApplicationExtension 10.2, *) {
+    if #available(iOSApplicationExtension 10.2, iOS 10.2, *) {
         var type: INPersonHandleType
         var label: INPersonHandleLabel?
         if let username = user.username {
@@ -195,7 +195,7 @@ private func messageWithTelegramMessage(_ telegramMessage: Message) -> INMessage
     let date = Date(timeIntervalSince1970: TimeInterval(telegramMessage.timestamp))
     
     let message: INMessage
-    if #available(iOSApplicationExtension 11.0, *) {
+    if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
         var messageType: INMessageType = .text
         loop: for media in telegramMessage.media {
             if media is TelegramMediaImage {
@@ -218,7 +218,7 @@ private func messageWithTelegramMessage(_ telegramMessage: Message) -> INMessage
                 } else if file.isAnimated {
                     messageType = .mediaVideo
                     break loop
-                } else if #available(iOSApplicationExtension 12.0, *) {
+                } else if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
                     messageType = .file
                     break loop
                 }

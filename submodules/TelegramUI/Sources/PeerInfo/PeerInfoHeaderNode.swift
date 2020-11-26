@@ -311,7 +311,7 @@ final class PeerInfoAvatarListItemNode: ASDisplayNode {
         var bufferingProgress: Float?
         if isMediaStreamable(resource: videoContent.fileReference.media.resource) {
             if let playerStatus = self.playerStatus {
-                if case let .buffering(_, _, progress) = playerStatus.status {
+                if case let .buffering(_, _, progress, _) = playerStatus.status {
                     bufferingProgress = progress
                 } else if case .playing = playerStatus.status {
                     bufferingProgress = nil
@@ -2851,6 +2851,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if let peer = peer {
             if peer.id == self.context.account.peerId && !self.isSettings {
                 titleString = NSAttributedString(string: presentationData.strings.Conversation_SavedMessages, font: Font.medium(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+            } else if peer.id == self.context.account.peerId && !self.isSettings {
+                titleString = NSAttributedString(string: presentationData.strings.DialogList_Replies, font: Font.medium(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             } else {
                 titleString = NSAttributedString(string: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), font: Font.medium(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             }
@@ -3299,7 +3301,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if buttonKeys.count > 3 {
                 if self.isOpenedFromChat {
                     switch buttonKey {
-                    case .message, .search, .videoCall:
+                    case .message, .search, .mute:
                         hiddenWhileExpanded = true
                     default:
                         hiddenWhileExpanded = false

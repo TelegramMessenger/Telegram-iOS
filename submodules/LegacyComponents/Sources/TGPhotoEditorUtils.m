@@ -26,27 +26,31 @@ CGSize TGPhotoThumbnailSizeForCurrentScreen()
     {
         if (widescreenWidth >= 896.0f - FLT_EPSILON)
         {
-            return CGSizeMake(103.0f, 103.0f);
+            return CGSizeMake(137.0f - TGScreenPixel, 137.0f - TGScreenPixel);
+        }
+        else if (widescreenWidth >= 844.0f - FLT_EPSILON)
+        {
+            return CGSizeMake(129.0f - TGScreenPixel, 129.0f - TGScreenPixel);
         }
         else if (widescreenWidth >= 812.0f - FLT_EPSILON)
         {
-            return CGSizeMake(93.0f, 93.0f);
+            return CGSizeMake(124.0f - TGScreenPixel, 124.0f - TGScreenPixel);
         }
         else if (widescreenWidth >= 736.0f - FLT_EPSILON)
         {
-            return CGSizeMake(103.0f, 103.0f);
+            return CGSizeMake(137.0f - TGScreenPixel, 137.0f - TGScreenPixel);
         }
         else if (widescreenWidth >= 667.0f - FLT_EPSILON)
         {
-            return CGSizeMake(93.0f, 93.5f);
+            return CGSizeMake(124.0f - TGScreenPixel, 124.0f - TGScreenPixel);
         }
         else
         {
-            return CGSizeMake(78.5f, 78.5f);
+            return CGSizeMake(106.0f - TGScreenPixel, 106.0f - TGScreenPixel);
         }
     }
     
-    return CGSizeMake(78.5f, 78.5f);
+    return CGSizeMake(106.0f, 106.0f);
 }
 
 CGSize TGScaleToSize(CGSize size, CGSize maxSize)

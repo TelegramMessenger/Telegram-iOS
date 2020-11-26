@@ -14,6 +14,7 @@ enum ChatNavigationButtonAction: Equatable {
     case search
     case dismiss
     case toggleInfoPanel
+    case spacer
 }
 
 struct ChatNavigationButton: Equatable {
@@ -27,12 +28,15 @@ struct ChatNavigationButton: Equatable {
 
 func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: ChatPresentationInterfaceState, subject: ChatControllerSubject?, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?) -> ChatNavigationButton? {
     if let _ = presentationInterfaceState.interfaceState.selectionState {
+        if case .replyThread = presentationInterfaceState.chatLocation {
+            return nil
+        }
         if let currentButton = currentButton, currentButton.action == .clearHistory {
             return currentButton
         } else if let peer = presentationInterfaceState.renderedPeer?.peer {
             let canClear: Bool
             var title = strings.Conversation_ClearAll
-            if presentationInterfaceState.isScheduledMessages {
+            if case .scheduledMessages = presentationInterfaceState.subject {
                 canClear = true
                 title = strings.ScheduledMessages_ClearAll
             } else {
@@ -72,7 +76,55 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
         }
     }
     
-    if presentationInterfaceState.isScheduledMessages {
+    var hasMessages = false
+    if let chatHistoryState = presentationInterfaceState.chatHistoryState {
+        if case .loaded(false) = chatHistoryState {
+            hasMessages = true
+        }
+    }
+    
+    if case .pinnedMessages = presentationInterfaceState.subject {
+        return nil
+    }
+    
+    if case .replyThread = presentationInterfaceState.chatLocation {
+        if hasMessages {
+            if case .search = currentButton?.action {
+                return currentButton
+            } else {
+                let buttonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)
+                buttonItem.accessibilityLabel = strings.Conversation_Search
+                return ChatNavigationButton(action: .search, buttonItem: buttonItem)
+            }
+        } else {
+            if case .spacer = currentButton?.action {
+                return currentButton
+            } else {
+                return ChatNavigationButton(action: .spacer, buttonItem: UIBarButtonItem(title: "", style: .plain, target: target, action: selector))
+            }
+        }
+    }
+    if case let .peer(peerId) = presentationInterfaceState.chatLocation {
+        if peerId.isReplies {
+            if hasMessages {
+                if case .search = currentButton?.action {
+                    return currentButton
+                } else {
+                    let buttonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)
+                    buttonItem.accessibilityLabel = strings.Conversation_Search
+                    return ChatNavigationButton(action: .search, buttonItem: buttonItem)
+                }
+            } else {
+                if case .spacer = currentButton?.action {
+                    return currentButton
+                } else {
+                    return ChatNavigationButton(action: .spacer, buttonItem: UIBarButtonItem(title: "", style: .plain, target: target, action: selector))
+                }
+            }
+        }
+    }
+    
+    if case .scheduledMessages = presentationInterfaceState.subject {
         return chatInfoNavigationButton
     }
     
@@ -80,7 +132,7 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
         return chatInfoNavigationButton
     } else if let peer = presentationInterfaceState.renderedPeer?.peer {
         if presentationInterfaceState.accountPeerId == peer.id {
-            if presentationInterfaceState.isScheduledMessages {
+            if case .scheduledMessages = presentationInterfaceState.subject {
                 return chatInfoNavigationButton
             } else {
                 let buttonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)

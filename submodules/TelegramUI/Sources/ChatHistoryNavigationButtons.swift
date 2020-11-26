@@ -6,6 +6,7 @@ import TelegramPresentationData
 
 final class ChatHistoryNavigationButtons: ASDisplayNode {
     private var theme: PresentationTheme
+    private var dateTimeFormat: PresentationDateTimeFormat
     
     private let mentionsButton: ChatHistoryNavigationButtonNode
     private let mentionsButtonTapNode: ASDisplayNode
@@ -31,7 +32,7 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
     var unreadCount: Int32 = 0 {
         didSet {
             if self.unreadCount != 0 {
-                self.downButton.badge = "\(self.unreadCount)"
+                self.downButton.badge = compactNumericCountString(Int(self.unreadCount), decimalSeparator: self.dateTimeFormat.decimalSeparator)
             } else {
                 self.downButton.badge = ""
             }
@@ -41,7 +42,7 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
     var mentionCount: Int32 = 0 {
         didSet {
             if self.mentionCount != 0 {
-                self.mentionsButton.badge = "\(self.mentionCount)"
+                self.mentionsButton.badge = compactNumericCountString(Int(self.mentionCount), decimalSeparator: self.dateTimeFormat.decimalSeparator)
             } else {
                 self.mentionsButton.badge = ""
             }
@@ -52,8 +53,9 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         }
     }
     
-    init(theme: PresentationTheme) {
+    init(theme: PresentationTheme, dateTimeFormat: PresentationDateTimeFormat) {
         self.theme = theme
+        self.dateTimeFormat = dateTimeFormat
         
         self.mentionsButton = ChatHistoryNavigationButtonNode(theme: theme, type: .mentions)
         self.mentionsButton.alpha = 0.0
@@ -81,9 +83,10 @@ final class ChatHistoryNavigationButtons: ASDisplayNode {
         self.mentionsButtonTapNode.view.addGestureRecognizer(tapRecognizer)
     }
     
-    func updateTheme(theme: PresentationTheme) {
-        if self.theme !== theme {
+    func update(theme: PresentationTheme, dateTimeFormat: PresentationDateTimeFormat) {
+        if self.theme !== theme || self.dateTimeFormat != dateTimeFormat {
             self.theme = theme
+            self.dateTimeFormat = dateTimeFormat
             
             self.mentionsButton.updateTheme(theme: theme)
             self.downButton.updateTheme(theme: theme)

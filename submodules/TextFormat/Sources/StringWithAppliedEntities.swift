@@ -160,15 +160,17 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                     if case .Mention = entities[i + 1].type {
                         let nextRange = NSRange(location: entities[i + 1].range.lowerBound, length: entities[i + 1].range.upperBound - entities[i + 1].range.lowerBound)
                         if nextRange.location == range.location + range.length + 1 && nsString!.character(at: range.location + range.length) == 43 {
-                            let peerName: String = nsString!.substring(with: NSRange(location: nextRange.location + 1, length: nextRange.length - 1))
-                            
                             skipEntity = true
-                            let combinedRange = NSRange(location: range.location, length: nextRange.location + nextRange.length - range.location)
-                            string.addAttribute(NSAttributedString.Key.foregroundColor, value: linkColor, range: combinedRange)
-                            if linkColor.isEqual(baseColor) {
-                                string.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: combinedRange)
+                            if nextRange.length > 0 {
+                                let peerName: String = nsString!.substring(with: NSRange(location: nextRange.location + 1, length: nextRange.length - 1))
+                                
+                                let combinedRange = NSRange(location: range.location, length: nextRange.location + nextRange.length - range.location)
+                                string.addAttribute(NSAttributedString.Key.foregroundColor, value: linkColor, range: combinedRange)
+                                if linkColor.isEqual(baseColor) {
+                                    string.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: combinedRange)
+                                }
+                                string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag), value: TelegramHashtag(peerName: peerName, hashtag: hashtag), range: combinedRange)
                             }
-                            string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag), value: TelegramHashtag(peerName: peerName, hashtag: hashtag), range: combinedRange)
                         }
                     }
                 }
@@ -190,6 +192,10 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                 string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand), value: nsString!.substring(with: range), range: range)
             case .Code, .Pre:
                 string.addAttribute(NSAttributedString.Key.font, value: fixedFont, range: range)
+                if nsString == nil {
+                    nsString = text as NSString
+                }
+                string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Pre), value: nsString!.substring(with: range), range: range)
             case .BlockQuote:
                 if let fontAttribute = fontAttributes[range] {
                     fontAttributes[range] = fontAttribute.union(.blockQuote)

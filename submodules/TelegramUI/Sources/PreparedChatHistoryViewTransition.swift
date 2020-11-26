@@ -5,6 +5,7 @@ import TelegramCore
 import SyncCore
 import Display
 import MergeLists
+import AccountContext
 
 func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toView: ChatHistoryView, reason: ChatHistoryViewTransitionReason, reverse: Bool, chatLocation: ChatLocation, controllerInteraction: ChatControllerInteraction, scrollPosition: ChatHistoryViewScrollPosition?, initialData: InitialMessageHistoryData?, keyboardButtonsMessage: Message?, cachedData: CachedPeerData?, cachedDataMessages: [MessageId: Message]?, readStateData: [PeerId: ChatHistoryCombinedInitialReadStateData]?, flashIndicators: Bool, updatedMessageSelection: Bool) -> ChatHistoryViewTransition {
     let mergeResult: (deleteIndices: [Int], indicesAndItems: [(Int, ChatHistoryEntry, Int?)], updateIndices: [(Int, ChatHistoryEntry, Int)])
@@ -88,6 +89,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
     }
     
     var scrolledToIndex: MessageHistoryAnchorIndex?
+    var scrolledToSomeIndex = false
     
     if let scrollPosition = scrollPosition {
         switch scrollPosition {
@@ -142,8 +144,8 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                         index += 1
                     }
                 }
-            case let .index(scrollIndex, position, directionHint, animated):
-                if case .center = position {
+            case let .index(scrollIndex, position, directionHint, animated, highlight):
+                if case .center = position, highlight {
                     scrolledToIndex = scrollIndex
                 }
                 var index = toView.filteredEntries.count - 1
@@ -159,6 +161,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                     var index = 0
                     for entry in toView.filteredEntries.reversed() {
                         if !scrollIndex.isLess(than: entry.index) {
+                            scrolledToSomeIndex = true
                             scrollToItem = ListViewScrollToItem(index: index, position: position, animated: animated, curve: .Default(duration: nil), directionHint: directionHint)
                             break
                         }
@@ -172,5 +175,5 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
         options.insert(.Synchronous)
     }
     
-    return ChatHistoryViewTransition(historyView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: initialData, keyboardButtonsMessage: keyboardButtonsMessage, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData, scrolledToIndex: scrolledToIndex, animateIn: animateIn, reason: reason, flashIndicators: flashIndicators)
+    return ChatHistoryViewTransition(historyView: toView, deleteItems: adjustedDeleteIndices, insertEntries: adjustedIndicesAndItems, updateEntries: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: initialData, keyboardButtonsMessage: keyboardButtonsMessage, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData, scrolledToIndex: scrolledToIndex, scrolledToSomeIndex: scrolledToSomeIndex || scrolledToIndex != nil, animateIn: animateIn, reason: reason, flashIndicators: flashIndicators)
 }

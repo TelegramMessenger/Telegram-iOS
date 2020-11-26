@@ -15,6 +15,7 @@ swift_library(
         "//submodules/ItemListUI:ItemListUI",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/OverlayStatusController:OverlayStatusController",
+        "//submodules/UrlWhitelist:UrlWhitelist",
     ],
     visibility = [
         "//visibility:public",

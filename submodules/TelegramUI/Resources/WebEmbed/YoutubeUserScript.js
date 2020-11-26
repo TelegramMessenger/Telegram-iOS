@@ -16,56 +16,56 @@ function initialize() {
 function tick() {
     var watermark = document.getElementsByClassName("ytp-watermark")[0];
     if (watermark != null) {
-        watermark.style.display = "none";
+//        watermark.style.display = "none";
     }
     
     var button = document.getElementsByClassName("ytp-large-play-button")[0];
     if (button != null) {
-        button.style.display = "none";
-        button.style.opacity = "0";
+//        button.style.display = "none";
+//        button.style.opacity = "0";
     }
     
     var progress = document.getElementsByClassName("ytp-spinner-container")[0];
     if (progress != null) {
-        progress.style.display = "none";
-        progress.style.opacity = "0";
+//        progress.style.display = "none";
+//        progress.style.opacity = "0";
     }
     
     var pause = document.getElementsByClassName("ytp-pause-overlay")[0];
     if (pause != null) {
-        pause.style.display = "none";
-        pause.style.opacity = "0";
+//        pause.style.display = "none";
+//        pause.style.opacity = "0";
     }
     
     var chrome = document.getElementsByClassName("ytp-chrome-top")[0];
     if (chrome != null) {
-        chrome.style.display = "none";
-        chrome.style.opacity = "0";
+//        chrome.style.display = "none";
+//        chrome.style.opacity = "0";
     }
     
     var paid = document.getElementsByClassName("ytp-paid-content-overlay")[0];
     if (paid != null) {
-        paid.style.display = "none";
-        paid.style.opacity = "0";
+//        paid.style.display = "none";
+//        paid.style.opacity = "0";
     }
     
     var gradient = document.getElementsByClassName("ytp-gradient-top")[0];
     if (gradient != null) {
-        gradient.style.display = "none";
-        gradient.style.opacity = "0";
+//        gradient.style.display = "none";
+//        gradient.style.opacity = "0";
     }
     
     var end = document.getElementsByClassName("html5-endscreen")[0];
     if (end != null) {
-        end.style.display = "none";
-        end.style.opacity = "0";
+//        end.style.display = "none";
+//        end.style.opacity = "0";
     }
     
     var elements = document.getElementsByClassName("ytp-ce-element");
     for (var i = 0; i < elements.length; i++) {
         var element = elements[i]
-        element.style.display = "none";
-        element.style.opacity = "0";
+//        element.style.display = "none";
+//        element.style.opacity = "0";
     }
     
     var video = document.getElementsByTagName("video")[0];

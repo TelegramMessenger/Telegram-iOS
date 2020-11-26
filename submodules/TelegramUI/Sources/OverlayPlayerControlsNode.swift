@@ -304,7 +304,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                         isPaused = false
                     case .paused:
                         isPaused = true
-                    case let .buffering(_, whilePlaying, _):
+                    case let .buffering(_, whilePlaying, _, _):
                         isPaused = !whilePlaying
                 }
                 if strongSelf.currentIsPaused != isPaused {

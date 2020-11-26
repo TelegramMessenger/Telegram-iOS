@@ -553,7 +553,7 @@ private func loadLegacyMessages(account: TemporaryAccount, basePath: String, acc
                         if let v = item.venue {
                             venue = MapVenue(title: v.title ?? "", address: v.address ?? "", provider: v.provider == "" ? nil : v.provider, id: v.venueId == "" ? nil : v.venueId, type: v.type == "" ? nil : v.type)
                         }
-                        parsedMedia.append(TelegramMediaMap(latitude: item.latitude, longitude: item.longitude, geoPlace: nil, venue: venue, liveBroadcastingTimeout: nil))
+                        parsedMedia.append(TelegramMediaMap(latitude: item.latitude, longitude: item.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: venue, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))
                     }
                 }
             }
@@ -569,8 +569,8 @@ private func loadLegacyMessages(account: TemporaryAccount, basePath: String, acc
                 parsedAttributes.append(AutoremoveTimeoutMessageAttribute(timeout: autoremoveTimeout, countdownBeginTime: countdownBeginTime))
             }
             
-            let (parsedTags, parsedGlobalTags) = tagsForStoreMessage(incoming: parsedFlags.contains(.Incoming), attributes: parsedAttributes, media: parsedMedia, textEntities: nil)
-            messages.append(StoreMessage(id: parsedId, globallyUniqueId: globallyUniqueId, groupingKey: parsedGroupingKey, timestamp: timestamp, flags: parsedFlags, tags: parsedTags, globalTags: parsedGlobalTags, localTags: [], forwardInfo: nil, authorId: parsedAuthorId, text: text, attributes: parsedAttributes, media: parsedMedia))
+            let (parsedTags, parsedGlobalTags) = tagsForStoreMessage(incoming: parsedFlags.contains(.Incoming), attributes: parsedAttributes, media: parsedMedia, textEntities: nil, isPinned: false)
+            messages.append(StoreMessage(id: parsedId, globallyUniqueId: globallyUniqueId, groupingKey: parsedGroupingKey, threadId: nil, timestamp: timestamp, flags: parsedFlags, tags: parsedTags, globalTags: parsedGlobalTags, localTags: [], forwardInfo: nil, authorId: parsedAuthorId, text: text, attributes: parsedAttributes, media: parsedMedia))
             
             //Logger.shared.log("loadLegacyMessages", "message \(messageId) completed")
             

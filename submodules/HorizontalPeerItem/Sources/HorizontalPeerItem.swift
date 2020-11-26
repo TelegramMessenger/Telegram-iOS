@@ -57,7 +57,7 @@ public final class HorizontalPeerItem: ListViewItem {
             Queue.mainQueue().async {
                 completion(node, {
                     return (nil, { _ in
-                        apply(false)
+                        apply(false, synchronousLoads)
                     })
                 })
             }
@@ -73,7 +73,7 @@ public final class HorizontalPeerItem: ListViewItem {
                     let (nodeLayout, apply) = layout(self, params)
                     Queue.mainQueue().async {
                         completion(nodeLayout, { _ in
-                            apply(animation.isAnimated)
+                            apply(animation.isAnimated, false)
                         })
                     }
                 }
@@ -126,7 +126,7 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
         self.layer.sublayerTransform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
     }
     
-    public func asyncLayout() -> (HorizontalPeerItem, ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (Bool) -> Void) {
+    public func asyncLayout() -> (HorizontalPeerItem, ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (Bool, Bool) -> Void) {
         let badgeTextLayout = TextNode.asyncLayout(self.badgeTextNode)
         let onlineLayout = self.onlineNode.asyncLayout()
         
@@ -184,11 +184,11 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
                 animateContent = true
             }
             
-            return (itemLayout, { animated in
+            return (itemLayout, { animated, synchronousLoads in
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.peerNode.theme = itemTheme
-                    strongSelf.peerNode.setup(context: item.context, theme: item.theme, strings: item.strings, peer: RenderedPeer(peer: item.peer), numberOfLines: 1, synchronousLoad: false)
+                    strongSelf.peerNode.setup(context: item.context, theme: item.theme, strings: item.strings, peer: RenderedPeer(peer: item.peer), numberOfLines: 1, synchronousLoad: synchronousLoads)
                     strongSelf.peerNode.frame = CGRect(origin: CGPoint(), size: itemLayout.size)
                     strongSelf.peerNode.updateSelection(selected: item.isPeerSelected(item.peer.id), animated: false)
                     

@@ -743,6 +743,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
     public var started: () -> Void = {}
     private var reportedStarted = false
     
+    public var completed: (Bool) -> Void = { _ in }
+    
     private let timer = Atomic<SwiftSignalKit.Timer?>(value: nil)
     private let frameSource = Atomic<QueueLocalObject<AnimatedStickerFrameSourceWrapper>?>(value: nil)
     
@@ -759,6 +761,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
     public var status: Signal<AnimatedStickerStatus, NoError> {
         return self.playbackStatus.get()
     }
+    
+    public var autoplay = false
     
     public var visibility = false {
         didSet {
@@ -830,7 +834,11 @@ public final class AnimatedStickerNode: ASDisplayNode {
                 }
                 if case let .still(position) = playbackMode {
                     strongSelf.seekTo(position)
-                } else if strongSelf.isPlaying {
+                } else if strongSelf.isPlaying || strongSelf.autoplay {
+                    if strongSelf.autoplay {
+                        strongSelf.isSetUpForPlayback = false
+                        strongSelf.isPlaying = true
+                    }
                     strongSelf.play()
                 } else if strongSelf.canDisplayFirstFrame {
                     strongSelf.play(firstFrame: true)
@@ -877,6 +885,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
     }
     
     private func updateIsPlaying() {
+        guard !self.autoplay else {
+            return
+        }
         let isPlaying = self.visibility && self.isDisplaying
         if self.isPlaying != isPlaying {
             self.isPlaying = isPlaying
@@ -898,6 +909,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
     private var isSetUpForPlayback = false
     
     public func play(firstFrame: Bool = false, fromFrame: Int = 0) {
+        if case .once = self.playbackMode {
+            self.isPlaying = true
+        }
         if self.isSetUpForPlayback {
             let directData = self.directData
             let cachedData = self.cachedData
@@ -954,29 +968,39 @@ public final class AnimatedStickerNode: ASDisplayNode {
                                 }
                             })
                             
-                            strongSelf.currentFrameIndex = frame.index
-                            
+//                            strongSelf.currentFrameIndex = frame.index
+//
+//                            if frame.isLastFrame {
+//                                if let completion = strongSelf.completion {
+//                                    completion()
+//                                    strongSelf.completion = nil
+//                                }
+//                            }
+//
+//
+//                            if case .once = strongSelf.playbackMode, frame.isLastFrame {
+//                                strongSelf.stop()
+//                                strongSelf.isPlaying = false
+//                            } else if let stopAtFrame = strongSelf.stopAtFrame, frame.index == stopAtFrame {
+//                                if let completion = strongSelf.completion {
+//                                    completion()
+//                                    strongSelf.completion = nil
+//                                }
+//                                strongSelf.stopAtFrame = nil
+//                                strongSelf.stop()
+//                                strongSelf.isPlaying = false
+
                             if frame.isLastFrame {
-                                if let completion = strongSelf.completion {
-                                    completion()
-                                    strongSelf.completion = nil
+                                var stopped = false
+                                if case .once = strongSelf.playbackMode {
+                                    strongSelf.stop()
+                                    strongSelf.isPlaying = false
+                                    stopped = true
                                 }
+                                
+                                strongSelf.completed(stopped)
                             }
-                            
-                            
-                            if case .once = strongSelf.playbackMode, frame.isLastFrame {
-                                strongSelf.stop()
-                                strongSelf.isPlaying = false
-                            } else if let stopAtFrame = strongSelf.stopAtFrame, frame.index == stopAtFrame {
-                                if let completion = strongSelf.completion {
-                                    completion()
-                                    strongSelf.completion = nil
-                                }
-                                strongSelf.stopAtFrame = nil
-                                strongSelf.stop()
-                                strongSelf.isPlaying = false
-                            }
-                            
+
                             let timestamp: Double = frameRate > 0 ? Double(frame.index) / Double(frameRate) : 0
                             strongSelf.playbackStatus.set(.single(AnimatedStickerStatus(playing: strongSelf.isPlaying, duration: duration, timestamp: timestamp)))
                         }
@@ -1042,30 +1066,41 @@ public final class AnimatedStickerNode: ASDisplayNode {
                                     strongSelf.started()
                                 }
                             })
-                            
-                            strongSelf.currentFrameIndex = frame.index
+
+//                            strongSelf.currentFrameIndex = frame.index
+//
+//                            if frame.isLastFrame {
+//                                if let completion = strongSelf.completion {
+//                                    completion()
+//                                    strongSelf.completion = nil
+//                                }
+//                            }
+//
+//                            if case .once = strongSelf.playbackMode, frame.isLastFrame {
+//
+//                                strongSelf.stop()
+//                                strongSelf.isPlaying = false
+//                            } else if let stopAtFrame = strongSelf.stopAtFrame, frame.index == stopAtFrame {
+//                               if let completion = strongSelf.completion {
+//                                   completion()
+//                                   strongSelf.completion = nil
+//                               }
+//                               strongSelf.stopAtFrame = nil
+//                               strongSelf.stop()
+//                               strongSelf.isPlaying = false
+//                           }
                             
                             if frame.isLastFrame {
-                                if let completion = strongSelf.completion {
-                                    completion()
-                                    strongSelf.completion = nil
+                                var stopped = false
+                                if case .once = strongSelf.playbackMode {
+                                    strongSelf.stop()
+                                    strongSelf.isPlaying = false
+                                    stopped = true
                                 }
+                                
+                                strongSelf.completed(stopped)
                             }
-                            
-                            if case .once = strongSelf.playbackMode, frame.isLastFrame {
-
-                                strongSelf.stop()
-                                strongSelf.isPlaying = false
-                            } else if let stopAtFrame = strongSelf.stopAtFrame, frame.index == stopAtFrame {
-                               if let completion = strongSelf.completion {
-                                   completion()
-                                   strongSelf.completion = nil
-                               }
-                               strongSelf.stopAtFrame = nil
-                               strongSelf.stop()
-                               strongSelf.isPlaying = false
-                           }
-                            
+                                                        
                             let timestamp: Double = frameRate > 0 ? Double(frame.index) / Double(frameRate) : 0
                             strongSelf.playbackStatus.set(.single(AnimatedStickerStatus(playing: strongSelf.isPlaying, duration: duration, timestamp: timestamp)))
                         }
@@ -1122,7 +1157,6 @@ public final class AnimatedStickerNode: ASDisplayNode {
             var maybeFrameSource: AnimatedStickerFrameSource? = frameSourceHolder.with { $0 }?.syncWith { $0 }?.value
             if case .timestamp = position {
             } else {
-                var maybeFrameSource: AnimatedStickerFrameSource?
                 if let directData = directData {
                     maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, fitzModifier: directData.5, currentFrame: 0)
                     if case .end = position {

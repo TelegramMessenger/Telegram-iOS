@@ -71,13 +71,13 @@ public func cachedFaqInstantPage(context: AccountContext) -> Signal<ResolvedUrl,
     }
 }
 
-func faqSearchableItems(context: AccountContext, suggestAccountDeletion: Bool) -> Signal<[SettingsSearchableItem], NoError> {
+func faqSearchableItems(context: AccountContext, resolvedUrl: Signal<ResolvedUrl?, NoError>, suggestAccountDeletion: Bool) -> Signal<[SettingsSearchableItem], NoError> {
     let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
-    return cachedFaqInstantPage(context: context)
+    return resolvedUrl
     |> map { resolvedUrl -> [SettingsSearchableItem] in
         var results: [SettingsSearchableItem] = []
         var nextIndex: Int32 = 2
-        if case let .instantView(webPage, _) = resolvedUrl {
+        if let resolvedUrl = resolvedUrl, case let .instantView(webPage, _) = resolvedUrl {
             if case let .Loaded(content) = webPage.content, let instantPage = content.instantPage {
                 var processingQuestions = false
                 var currentSection: String?

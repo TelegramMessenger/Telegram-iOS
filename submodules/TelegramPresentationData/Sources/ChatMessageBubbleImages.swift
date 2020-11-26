@@ -10,6 +10,7 @@ public enum MessageBubbleImageNeighbors {
     case bottom
     case both
     case side
+    case extracted
 }
 
 public func messageSingleBubbleLikeImage(fillColor: UIColor, strokeColor: UIColor) -> UIImage {
@@ -116,6 +117,12 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
         topRightRadius = maxCornerRadius
         bottomLeftRadius = side ? minCornerRadius : maxCornerRadius
         bottomRightRadius = minCornerRadius
+        drawTail = false
+    case .extracted:
+        topLeftRadius = maxCornerRadius
+        topRightRadius = maxCornerRadius
+        bottomLeftRadius = maxCornerRadius
+        bottomRightRadius = maxCornerRadius
         drawTail = false
     }
     

@@ -2,6 +2,13 @@
 
 set -e
 
+COMMIT_COMMENT="$(git log -1 --pretty=%B)"
+case "$COMMIT_COMMENT" in 
+  *"[nodeploy]"*)
+	exit 0
+    ;;
+esac
+
 CONFIGURATION="$1"
 
 if [ -z "$CONFIGURATION" ]; then

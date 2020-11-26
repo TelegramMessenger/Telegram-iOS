@@ -10,6 +10,7 @@ import AccountContext
 import TextSelectionNode
 import ReactionSelectionNode
 import ContextUI
+import ChatInterfaceState
 
 struct ChatInterfaceHighlightedState: Equatable {
     let messageStableId: UInt32
@@ -35,16 +36,6 @@ struct ChatInterfaceStickerSettings: Equatable {
     }
 }
 
-public enum ChatControllerInteractionLongTapAction {
-    case url(String)
-    case mention(String)
-    case peerMention(PeerId, String)
-    case command(String)
-    case hashtag(String)
-    case timecode(Double, String)
-    case bankCard(String)
-}
-
 struct ChatInterfacePollActionState: Equatable {
     var pollMessageIdsInProgress: [MessageId: [Data]] = [:]
 }
@@ -63,6 +54,7 @@ public final class ChatControllerInteraction {
     let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void
     let openMessageContextActions: (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void
     let navigateToMessage: (MessageId, MessageId) -> Void
+    let navigateToMessageStandalone: (MessageId) -> Void
     let tapMessage: ((Message) -> Void)?
     let clickThroughMessage: () -> Void
     let toggleMessagesSelection: ([MessageId], Bool) -> Void
@@ -118,9 +110,14 @@ public final class ChatControllerInteraction {
     let displayPollSolution: (TelegramMediaPollResults.Solution, ASDisplayNode) -> Void
     let displayPsa: (String, ASDisplayNode) -> Void
     let displayDiceTooltip: (TelegramMediaDice) -> Void
-    let animateDiceSuccess: () -> Void
+    let animateDiceSuccess: (Bool) -> Void
     let greetingStickerNode: () -> (ASDisplayNode, ASDisplayNode, ASDisplayNode, () -> Void)?
     let openPeerContextMenu: (Peer, ASDisplayNode, CGRect, ContextGesture?) -> Void
+    let openMessageReplies: (MessageId, Bool, Bool) -> Void
+    let openReplyThreadOriginalMessage: (Message) -> Void
+    let openMessageStats: (MessageId) -> Void
+    let editMessageMedia: (MessageId, Bool) -> Void
+    let copyText: (String) -> Void
     
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
@@ -137,14 +134,92 @@ public final class ChatControllerInteraction {
     var stickerSettings: ChatInterfaceStickerSettings
     var searchTextHighightState: (String, [MessageIndex])?
     var seenOneTimeAnimatedMedia = Set<MessageId>()
+    var currentMessageWithLoadingReplyThread: MessageId?
     
-    init(openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool, openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, Message?) -> Void, openPeerMention: @escaping (String) -> Void, openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void, openMessageContextActions: @escaping (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void, navigateToMessage: @escaping (MessageId, MessageId) -> Void, tapMessage: ((Message) -> Void)?, clickThroughMessage: @escaping () -> Void, toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void, sendCurrentMessage: @escaping (Bool) -> Void, sendMessage: @escaping (String) -> Void, sendSticker: @escaping (FileMediaReference, Bool, ASDisplayNode, CGRect) -> Bool, sendGif: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Bool, sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect) -> Bool, requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool, Bool) -> Void, requestMessageActionUrlAuth: @escaping (String, MessageId, Int32) -> Void, activateSwitchInline: @escaping (PeerId?, String) -> Void, openUrl: @escaping (String, Bool, Bool?, Message?) -> Void, shareCurrentLocation: @escaping () -> Void, shareAccountContact: @escaping () -> Void, sendBotCommand: @escaping (MessageId?, String) -> Void, openInstantPage: @escaping (Message, ChatMessageItemAssociatedData?) -> Void, openWallpaper: @escaping (Message) -> Void, openTheme: @escaping (Message) -> Void, openHashtag: @escaping (String?, String) -> Void, updateInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void, updateInputMode: @escaping ((ChatInputMode) -> ChatInputMode) -> Void, openMessageShareMenu: @escaping (MessageId) -> Void, presentController: @escaping  (ViewController, Any?) -> Void, navigationController: @escaping () -> NavigationController?, chatControllerNode: @escaping () -> ASDisplayNode?, reactionContainerNode: @escaping () -> ReactionSelectionParentNode?, presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void, callPeer: @escaping (PeerId, Bool) -> Void, longTap: @escaping (ChatControllerInteractionLongTapAction, Message?) -> Void, openCheckoutOrReceipt: @escaping (MessageId) -> Void, openSearch: @escaping () -> Void, setupReply: @escaping (MessageId) -> Void, canSetupReply: @escaping (Message) -> ChatControllerInteractionSwipeAction, navigateToFirstDateMessage: @escaping(Int32) ->Void, requestRedeliveryOfFailedMessages: @escaping (MessageId) -> Void, addContact: @escaping (String) -> Void, rateCall: @escaping (Message, CallId, Bool) -> Void, requestSelectMessagePollOptions: @escaping (MessageId, [Data]) -> Void, requestOpenMessagePollResults: @escaping (MessageId, MediaId) -> Void, openAppStorePage: @escaping () -> Void, displayMessageTooltip: @escaping (MessageId, String, ASDisplayNode?, CGRect?) -> Void, seekToTimecode: @escaping (Message, Double, Bool) -> Void, scheduleCurrentMessage: @escaping () -> Void, sendScheduledMessagesNow: @escaping ([MessageId]) -> Void, editScheduledMessagesTime: @escaping ([MessageId]) -> Void, performTextSelectionAction: @escaping (UInt32, NSAttributedString, TextSelectionAction) -> Void, updateMessageLike: @escaping (MessageId, Bool) -> Void, openMessageReactions: @escaping (MessageId) -> Void, displaySwipeToReplyHint: @escaping () -> Void, dismissReplyMarkupMessage: @escaping (Message) -> Void, openMessagePollResults: @escaping (MessageId, Data) -> Void, openPollCreation: @escaping (Bool?) -> Void, displayPollSolution: @escaping (TelegramMediaPollResults.Solution, ASDisplayNode) -> Void, displayPsa: @escaping (String, ASDisplayNode) -> Void, displayDiceTooltip: @escaping (TelegramMediaDice) -> Void, animateDiceSuccess: @escaping () -> Void, greetingStickerNode: @escaping () -> (ASDisplayNode, ASDisplayNode, ASDisplayNode, () -> Void)?, openPeerContextMenu: @escaping (Peer, ASDisplayNode, CGRect, ContextGesture?) -> Void, requestMessageUpdate: @escaping (MessageId) -> Void, cancelInteractiveKeyboardGestures: @escaping () -> Void, automaticMediaDownloadSettings: MediaAutoDownloadSettings, pollActionState: ChatInterfacePollActionState, stickerSettings: ChatInterfaceStickerSettings) {
+    init(
+        openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool,
+        openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, Message?) -> Void,
+        openPeerMention: @escaping (String) -> Void,
+        openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void,
+        openMessageContextActions: @escaping (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void,
+        navigateToMessage: @escaping (MessageId, MessageId) -> Void,
+        navigateToMessageStandalone: @escaping (MessageId) -> Void,
+        tapMessage: ((Message) -> Void)?,
+        clickThroughMessage: @escaping () -> Void,
+        toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void,
+        sendCurrentMessage: @escaping (Bool) -> Void,
+        sendMessage: @escaping (String) -> Void,
+        sendSticker: @escaping (FileMediaReference, Bool, ASDisplayNode, CGRect) -> Bool,
+        sendGif: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Bool,
+        sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect) -> Bool,
+        requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool, Bool) -> Void,
+        requestMessageActionUrlAuth: @escaping (String, MessageId, Int32) -> Void,
+        activateSwitchInline: @escaping (PeerId?, String) -> Void,
+        openUrl: @escaping (String, Bool, Bool?, Message?) -> Void,
+        shareCurrentLocation: @escaping () -> Void,
+        shareAccountContact: @escaping () -> Void,
+        sendBotCommand: @escaping (MessageId?, String) -> Void,
+        openInstantPage: @escaping (Message, ChatMessageItemAssociatedData?) -> Void,
+        openWallpaper: @escaping (Message) -> Void,
+        openTheme: @escaping (Message) -> Void,
+        openHashtag: @escaping (String?, String) -> Void,
+        updateInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void,
+        updateInputMode: @escaping ((ChatInputMode) -> ChatInputMode) -> Void,
+        openMessageShareMenu: @escaping (MessageId) -> Void,
+        presentController: @escaping  (ViewController, Any?) -> Void,
+        navigationController: @escaping () -> NavigationController?,
+        chatControllerNode: @escaping () -> ASDisplayNode?,
+        reactionContainerNode: @escaping () -> ReactionSelectionParentNode?,
+        presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void,
+        callPeer: @escaping (PeerId, Bool) -> Void,
+        longTap: @escaping (ChatControllerInteractionLongTapAction, Message?) -> Void,
+        openCheckoutOrReceipt: @escaping (MessageId) -> Void,
+        openSearch: @escaping () -> Void,
+        setupReply: @escaping (MessageId) -> Void,
+        canSetupReply: @escaping (Message) -> ChatControllerInteractionSwipeAction,
+        navigateToFirstDateMessage: @escaping(Int32) ->Void,
+        requestRedeliveryOfFailedMessages: @escaping (MessageId) -> Void,
+        addContact: @escaping (String) -> Void,
+        rateCall: @escaping (Message, CallId, Bool) -> Void,
+        requestSelectMessagePollOptions: @escaping (MessageId, [Data]) -> Void,
+        requestOpenMessagePollResults: @escaping (MessageId, MediaId) -> Void,
+        openAppStorePage: @escaping () -> Void,
+        displayMessageTooltip: @escaping (MessageId, String, ASDisplayNode?, CGRect?) -> Void,
+        seekToTimecode: @escaping (Message, Double, Bool) -> Void,
+        scheduleCurrentMessage: @escaping () -> Void,
+        sendScheduledMessagesNow: @escaping ([MessageId]) -> Void,
+        editScheduledMessagesTime: @escaping ([MessageId]) -> Void,
+        performTextSelectionAction: @escaping (UInt32, NSAttributedString, TextSelectionAction) -> Void,
+        updateMessageLike: @escaping (MessageId, Bool) -> Void,
+        openMessageReactions: @escaping (MessageId) -> Void,
+        displaySwipeToReplyHint: @escaping () -> Void,
+        dismissReplyMarkupMessage: @escaping (Message) -> Void,
+        openMessagePollResults: @escaping (MessageId, Data) -> Void,
+        openPollCreation: @escaping (Bool?) -> Void,
+        displayPollSolution: @escaping (TelegramMediaPollResults.Solution, ASDisplayNode) -> Void,
+        displayPsa: @escaping (String, ASDisplayNode) -> Void,
+        displayDiceTooltip: @escaping (TelegramMediaDice) -> Void,
+        animateDiceSuccess: @escaping (Bool) -> Void,
+        greetingStickerNode: @escaping () -> (ASDisplayNode, ASDisplayNode, ASDisplayNode, () -> Void)?,
+        openPeerContextMenu: @escaping (Peer, ASDisplayNode, CGRect, ContextGesture?) -> Void,
+        openMessageReplies: @escaping (MessageId, Bool, Bool) -> Void,
+        openReplyThreadOriginalMessage: @escaping (Message) -> Void,
+        openMessageStats: @escaping (MessageId) -> Void,
+        editMessageMedia: @escaping (MessageId, Bool) -> Void,
+        copyText: @escaping (String) -> Void,
+        requestMessageUpdate: @escaping (MessageId) -> Void,
+        cancelInteractiveKeyboardGestures: @escaping () -> Void,
+        automaticMediaDownloadSettings: MediaAutoDownloadSettings,
+        pollActionState: ChatInterfacePollActionState,
+        stickerSettings: ChatInterfaceStickerSettings
+    ) {
         self.openMessage = openMessage
         self.openPeer = openPeer
         self.openPeerMention = openPeerMention
         self.openMessageContextMenu = openMessageContextMenu
         self.openMessageContextActions = openMessageContextActions
         self.navigateToMessage = navigateToMessage
+        self.navigateToMessageStandalone = navigateToMessageStandalone
         self.tapMessage = tapMessage
         self.clickThroughMessage = clickThroughMessage
         self.toggleMessagesSelection = toggleMessagesSelection
@@ -203,6 +278,11 @@ public final class ChatControllerInteraction {
         self.animateDiceSuccess = animateDiceSuccess
         self.greetingStickerNode = greetingStickerNode
         self.openPeerContextMenu = openPeerContextMenu
+        self.openMessageReplies = openMessageReplies
+        self.openReplyThreadOriginalMessage = openReplyThreadOriginalMessage
+        self.openMessageStats = openMessageStats
+        self.editMessageMedia = editMessageMedia
+        self.copyText = copyText
         
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
@@ -215,7 +295,7 @@ public final class ChatControllerInteraction {
     
     static var `default`: ChatControllerInteraction {
         return ChatControllerInteraction(openMessage: { _, _ in
-            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in }, navigationController: {
             return nil
         }, chatControllerNode: {
@@ -247,10 +327,15 @@ public final class ChatControllerInteraction {
         }, displayPollSolution: { _, _ in
         }, displayPsa: { _, _ in
         }, displayDiceTooltip: { _ in
-        }, animateDiceSuccess: {
+        }, animateDiceSuccess: { _ in
         }, greetingStickerNode: {
             return nil
         }, openPeerContextMenu: { _, _, _, _ in
+        }, openMessageReplies: { _, _, _ in
+        }, openReplyThreadOriginalMessage: { _ in
+        }, openMessageStats: { _ in
+        }, editMessageMedia: { _, _ in
+        }, copyText: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

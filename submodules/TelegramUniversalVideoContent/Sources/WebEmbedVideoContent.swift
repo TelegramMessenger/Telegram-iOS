@@ -19,8 +19,9 @@ public final class WebEmbedVideoContent: UniversalVideoContent {
     public let dimensions: CGSize
     public let duration: Int32
     let forcedTimestamp: Int?
+    let openUrl: (URL) -> Void
     
-    public init?(webPage: TelegramMediaWebpage, webpageContent: TelegramMediaWebpageLoadedContent, forcedTimestamp: Int? = nil) {
+    public init?(webPage: TelegramMediaWebpage, webpageContent: TelegramMediaWebpageLoadedContent, forcedTimestamp: Int? = nil, openUrl: @escaping (URL) -> Void) {
         guard let embedUrl = webpageContent.embedUrl else {
             return nil
         }
@@ -30,10 +31,11 @@ public final class WebEmbedVideoContent: UniversalVideoContent {
         self.dimensions = webpageContent.embedSize?.cgSize ?? CGSize(width: 128.0, height: 128.0)
         self.duration = Int32(webpageContent.duration ?? (0 as Int))
         self.forcedTimestamp = forcedTimestamp
+        self.openUrl = openUrl
     }
     
     public func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
-        return WebEmbedVideoContentNode(postbox: postbox, audioSessionManager: audioSession, webPage: self.webPage, webpageContent: self.webpageContent, forcedTimestamp: self.forcedTimestamp)
+        return WebEmbedVideoContentNode(postbox: postbox, audioSessionManager: audioSession, webPage: self.webPage, webpageContent: self.webpageContent, forcedTimestamp: self.forcedTimestamp, openUrl: self.openUrl)
     }
 }
  
@@ -70,7 +72,7 @@ final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
         
     private var readyDisposable = MetaDisposable()
     
-    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, webPage: TelegramMediaWebpage, webpageContent: TelegramMediaWebpageLoadedContent, forcedTimestamp: Int? = nil) {
+    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, webPage: TelegramMediaWebpage, webpageContent: TelegramMediaWebpageLoadedContent, forcedTimestamp: Int? = nil, openUrl: @escaping (URL) -> Void) {
         self.webpageContent = webpageContent
         
         if let embedSize = webpageContent.embedSize {
@@ -83,7 +85,7 @@ final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
         
         let embedType = webEmbedType(content: webpageContent, forcedTimestamp: forcedTimestamp)
         let embedImpl = webEmbedImplementation(for: embedType)
-        self.playerNode = WebEmbedPlayerNode(impl: embedImpl, intrinsicDimensions: self.intrinsicDimensions)
+        self.playerNode = WebEmbedPlayerNode(impl: embedImpl, intrinsicDimensions: self.intrinsicDimensions, openUrl: openUrl)
         
         super.init()
         
@@ -181,5 +183,9 @@ final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
     }
     
     func fetchControl(_ control: UniversalVideoNodeFetchControl) {
+    }
+    
+    func notifyPlaybackControlsHidden(_ hidden: Bool) {
+        self.playerNode.notifyPlaybackControlsHidden(hidden)
     }
 }

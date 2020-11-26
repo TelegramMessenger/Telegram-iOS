@@ -24,6 +24,7 @@ objc_library(
     copts = [
         "-Dpixman_region_selfcheck(x)=1",
         "-DLOTTIE_DISABLE_ARM_NEON=1",
+        "-DLOTTIE_THREAD_SAFE=1",
         "-DLOTTIE_IMAGE_MODULE_DISABLED=1",
         "-I{}".format(package_name()),
         "-I{}/rlottie/inc".format(package_name()),

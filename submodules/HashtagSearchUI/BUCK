@@ -17,6 +17,7 @@ static_library(
         "//submodules/TelegramBaseController:TelegramBaseController",
         "//submodules/ChatListUI:ChatListUI",
         "//submodules/SegmentedControlNode:SegmentedControlNode",
+	"//submodules/ListMessageItem:ListMessageItem",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

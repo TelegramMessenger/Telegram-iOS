@@ -42,6 +42,8 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         var items: [String] = []
         if peer?.id == context.account.peerId {
             items.append(presentationData.strings.Conversation_SavedMessages)
+        } else if let id = peer?.id, id.isReplies {
+            items.append(presentationData.strings.DialogList_Replies)
         } else {
             items.append(peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) ?? "")
         }

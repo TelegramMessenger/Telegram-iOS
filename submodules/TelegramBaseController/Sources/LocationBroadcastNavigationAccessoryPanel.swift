@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import TextFormat
 import Markdown
 import LocalizedPeerData
+import LiveLocationTimerNode
 
 private let titleFont = Font.regular(12.0)
 private let subtitleFont = Font.regular(10.0)
@@ -31,7 +32,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
     private let contentNode: ASDisplayNode
     
     private let iconNode: ASImageNode
-    private let wavesNode: LocationBroadcastPanelWavesNode
+    private let wavesNode: LiveLocationWavesNode
     private let titleNode: TextNode
     private let subtitleNode: TextNode
     private let closeButton: HighlightableButtonNode
@@ -58,7 +59,7 @@ final class LocationBroadcastNavigationAccessoryPanel: ASDisplayNode {
         self.iconNode.displaysAsynchronously = false
         self.iconNode.image = PresentationResourcesRootController.navigationLiveLocationIcon(self.theme)
         
-        self.wavesNode = LocationBroadcastPanelWavesNode(color: self.theme.rootController.navigationBar.accentTextColor)
+        self.wavesNode = LiveLocationWavesNode(color: self.theme.rootController.navigationBar.accentTextColor)
         
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false

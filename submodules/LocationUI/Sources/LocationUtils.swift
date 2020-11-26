@@ -7,8 +7,8 @@ import TelegramStringFormatting
 import MapKit
 
 extension TelegramMediaMap {
-    convenience init(coordinate: CLLocationCoordinate2D, liveBroadcastingTimeout: Int32? = nil) {
-        self.init(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: liveBroadcastingTimeout)
+    convenience init(coordinate: CLLocationCoordinate2D, liveBroadcastingTimeout: Int32? = nil, proximityNotificationRadius: Int32? = nil) {
+        self.init(latitude: coordinate.latitude, longitude: coordinate.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: nil, liveBroadcastingTimeout: liveBroadcastingTimeout, liveProximityNotificationRadius: proximityNotificationRadius)
     }
     
     var coordinate: CLLocationCoordinate2D {
@@ -70,24 +70,6 @@ public func nearbyVenues(account: Account, latitude: Double, longitude: Double, 
     }
 }
 
-private var sharedDistanceFormatter: MKDistanceFormatter?
-func stringForDistance(strings: PresentationStrings, distance: CLLocationDistance) -> String {
-    let distanceFormatter: MKDistanceFormatter
-    if let currentDistanceFormatter = sharedDistanceFormatter {
-        distanceFormatter = currentDistanceFormatter
-    } else {
-        distanceFormatter = MKDistanceFormatter()
-        distanceFormatter.unitStyle = .full
-        sharedDistanceFormatter = distanceFormatter
-    }
-    
-    let locale = localeWithStrings(strings)
-    if distanceFormatter.locale != locale {
-        distanceFormatter.locale = locale
-    }
-    return distanceFormatter.string(fromDistance: distance)
-}
-
 func stringForEstimatedDuration(strings: PresentationStrings, eta: Double) -> String? {
     if eta > 0.0 && eta < 60.0 * 60.0 * 10.0 {
         let eta = max(eta, 60.0)
@@ -99,7 +81,7 @@ func stringForEstimatedDuration(strings: PresentationStrings, eta: Double) -> St
             if hours == 1 && minutes == 0 {
                 string = strings.Map_ETAHours(1)
             } else {
-                string = strings.Map_ETAHours(9999).replacingOccurrences(of: "9999", with: String(format: "%d:%02d", arguments: [hours, minutes]))
+                string = strings.Map_ETAHours(10).replacingOccurrences(of: "10", with: String(format: "%d:%02d", arguments: [hours, minutes]))
             }
         } else {
             string = strings.Map_ETAMinutes(minutes)

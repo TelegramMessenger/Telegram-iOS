@@ -64,6 +64,7 @@ public struct ChannelMemberListState {
 enum ChannelMemberListCategory {
     case recent
     case recentSearch(String)
+    case mentions(MessageId?, String?)
     case admins(String?)
     case contacts(String?)
     case bots(String?)
@@ -93,7 +94,7 @@ private func isParticipantMember(_ participant: ChannelParticipant, infoIsMember
 private extension CachedChannelAdminRank {
     init(participant: ChannelParticipant) {
         switch participant {
-            case let .creator(_, rank):
+            case let .creator(_, _, rank):
                 if let rank = rank {
                     self = .custom(rank)
                 } else {
@@ -211,6 +212,12 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
                 requestCategory = .recent(.all)
             case let .recentSearch(query):
                 requestCategory = .recent(.search(query))
+            case let .mentions(threadId, query):
+                if let query = query, !query.isEmpty {
+                    requestCategory = .mentions(threadId: threadId, filter: .search(query))
+                } else {
+                    requestCategory = .mentions(threadId: threadId, filter: .all)
+                }
             case let .admins(query):
                 requestCategory = .admins
                 adminQuery = query
@@ -521,6 +528,8 @@ private final class ChannelMemberSingleCategoryListContext: ChannelMemberCategor
                             }
                         }
                     }
+                case .mentions:
+                    break
             }
         }
         if updatedList {
@@ -728,7 +737,7 @@ final class PeerChannelMemberCategoriesContext {
                 emptyTimeout = 0.0
         }
         switch key {
-            case .recent, .recentSearch, .admins, .contacts, .bots:
+            case .recent, .recentSearch, .admins, .contacts, .bots, .mentions:
                 let mappedCategory: ChannelMemberListCategory
                 switch key {
                     case .recent:
@@ -741,6 +750,8 @@ final class PeerChannelMemberCategoriesContext {
                         mappedCategory = .contacts(query)
                     case let .bots(query):
                         mappedCategory = .bots(query)
+                    case let .mentions(threadId, query):
+                        mappedCategory = .mentions(threadId, query)
                     default:
                         mappedCategory = .recent
                 }

@@ -173,13 +173,14 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                     return postbox.transaction { transaction -> Bool in
                         switch result {
                         case let .userFull(userFull):
-                            let telegramUser = TelegramUser(user: userFull.user)
-                            updatePeers(transaction: transaction, peers: [telegramUser], update: { _, updated -> Peer in
-                                return updated
-                            })
+                            if let telegramUser = TelegramUser.merge(transaction.getPeer(userFull.user.peerId) as? TelegramUser, rhs: userFull.user) {
+                                updatePeers(transaction: transaction, peers: [telegramUser], update: { _, updated -> Peer in
+                                    return updated
+                                })
+                            }
                             transaction.updateCurrentPeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: userFull.notifySettings)])
                             if let presence = TelegramUserPresence(apiUser: userFull.user) {
-                                updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: [telegramUser.id: presence])
+                                updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: [userFull.user.peerId: presence])
                             }
                         }
                         transaction.updatePeerCachedData(peerIds: [peerId], update: { peerId, current in
@@ -267,10 +268,11 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                     }
                                 }
                                 for user in users {
-                                    let telegramUser = TelegramUser(user: user)
-                                    peers.append(telegramUser)
-                                    if let presence = TelegramUserPresence(apiUser: user) {
-                                        peerPresences[telegramUser.id] = presence
+                                    if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
+                                        peers.append(telegramUser)
+                                        if let presence = TelegramUserPresence(apiUser: user) {
+                                            peerPresences[telegramUser.id] = presence
+                                        }
                                     }
                                 }
                                 
@@ -416,10 +418,11 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                 }
                                             }
                                             for user in users {
-                                                let telegramUser = TelegramUser(user: user)
-                                                peers.append(telegramUser)
-                                                if let presence = TelegramUserPresence(apiUser: user) {
-                                                    peerPresences[telegramUser.id] = presence
+                                                if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
+                                                    peers.append(telegramUser)
+                                                    if let presence = TelegramUserPresence(apiUser: user) {
+                                                        peerPresences[telegramUser.id] = presence
+                                                    }
                                                 }
                                             }
                                             
@@ -427,10 +430,11 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                 switch participantResult {
                                                 case let .channelParticipant(_, users):
                                                     for user in users {
-                                                        let telegramUser = TelegramUser(user: user)
-                                                        peers.append(telegramUser)
-                                                        if let presence = TelegramUserPresence(apiUser: user) {
-                                                            peerPresences[telegramUser.id] = presence
+                                                        if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
+                                                            peers.append(telegramUser)
+                                                            if let presence = TelegramUserPresence(apiUser: user) {
+                                                                peerPresences[telegramUser.id] = presence
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -498,7 +502,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                     .withUpdatedStickerPack(stickerPack)
                                                     .withUpdatedMinAvailableMessageId(minAvailableMessageId)
                                                     .withUpdatedMigrationReference(migrationReference)
-                                                    .withUpdatedLinkedDiscussionPeerId(linkedDiscussionPeerId)
+                                                    .withUpdatedLinkedDiscussionPeerId(.known(linkedDiscussionPeerId))
                                                     .withUpdatedPeerGeoLocation(peerGeoLocation)
                                                     .withUpdatedSlowModeTimeout(slowmodeSeconds)
                                                     .withUpdatedSlowModeValidUntilTimestamp(slowmodeNextSendDate)

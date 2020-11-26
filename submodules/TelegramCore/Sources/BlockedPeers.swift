@@ -13,11 +13,19 @@ public func requestBlockedPeers(account: Account) -> Signal<[Peer], NoError> {
             return account.postbox.transaction { transaction -> [Peer] in
                 var peers: [Peer] = []
                 let apiUsers: [Api.User]
+                let apiChats: [Api.Chat]
                 switch result {
-                    case let .blocked(_, users):
+                    case let .blocked(_, chats, users):
                         apiUsers = users
-                    case let .blockedSlice(_, _, users):
+                        apiChats = chats
+                    case let .blockedSlice(_, _, chats, users):
                         apiUsers = users
+                        apiChats = chats
+                }
+                for chat in apiChats {
+                    if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                        peers.append(groupOrChannel)
+                    }
                 }
                 for user in apiUsers {
                     let parsed = TelegramUser(user: user)
@@ -35,12 +43,12 @@ public func requestBlockedPeers(account: Account) -> Signal<[Peer], NoError> {
 
 public func requestUpdatePeerIsBlocked(account: Account, peerId: PeerId, isBlocked: Bool) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
-        if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
+        if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             let signal: Signal<Api.Bool, MTRpcError>
             if isBlocked {
-                signal = account.network.request(Api.functions.contacts.block(id: inputUser))
+                signal = account.network.request(Api.functions.contacts.block(id: inputPeer))
             } else {
-                signal = account.network.request(Api.functions.contacts.unblock(id: inputUser))
+                signal = account.network.request(Api.functions.contacts.unblock(id: inputPeer))
             }
             return signal
                 |> map(Optional.init)

@@ -3,6 +3,17 @@ import AsyncDisplayKit
 
 private var backArrowImageCache: [Int32: UIImage] = [:]
 
+class SparseNode: ASDisplayNode {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        if result != self.view {
+            return result
+        } else {
+            return nil
+        }
+    }
+}
+
 public final class NavigationBarTheme {
     public static func generateBackArrowImage(color: UIColor) -> UIImage? {
         return generateImage(CGSize(width: 13.0, height: 22.0), rotatedContext: { size, context in
@@ -126,7 +137,8 @@ open class NavigationBar: ASDisplayNode {
     }
     
     private let stripeNode: ASDisplayNode
-    private let clippingNode: ASDisplayNode
+    private let clippingNode: SparseNode
+    private let buttonsContainerNode: ASDisplayNode
     
     public private(set) var contentNode: NavigationBarContentNode?
     public private(set) var secondaryContentNode: ASDisplayNode?
@@ -260,7 +272,7 @@ open class NavigationBar: ASDisplayNode {
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: self.presentationData.theme.primaryTextColor)
                 self.titleNode.accessibilityLabel = title
                 if self.titleNode.supernode == nil {
-                    self.clippingNode.addSubnode(self.titleNode)
+                    self.buttonsContainerNode.addSubnode(self.titleNode)
                 }
             } else {
                 self.titleNode.removeFromSupernode()
@@ -279,7 +291,7 @@ open class NavigationBar: ASDisplayNode {
             }
             
             if let titleView = self.titleView {
-                self.clippingNode.view.addSubview(titleView)
+                self.buttonsContainerNode.view.addSubview(titleView)
             }
             
             self.invalidateCalculatedLayout()
@@ -499,7 +511,7 @@ open class NavigationBar: ASDisplayNode {
                 }
                 
                 if self.leftButtonNode.supernode == nil {
-                    self.clippingNode.addSubnode(self.leftButtonNode)
+                    self.buttonsContainerNode.addSubnode(self.leftButtonNode)
                 }
                 
                 if animated {
@@ -540,9 +552,9 @@ open class NavigationBar: ASDisplayNode {
                 if let backTitle = backTitle {
                     self.backButtonNode.updateManualText(backTitle)
                     if self.backButtonNode.supernode == nil {
-                        self.clippingNode.addSubnode(self.backButtonNode)
-                        self.clippingNode.addSubnode(self.backButtonArrow)
-                        self.clippingNode.addSubnode(self.badgeNode)
+                        self.buttonsContainerNode.addSubnode(self.backButtonNode)
+                        self.buttonsContainerNode.addSubnode(self.backButtonArrow)
+                        self.buttonsContainerNode.addSubnode(self.badgeNode)
                     }
                     
                     if animated {
@@ -588,7 +600,7 @@ open class NavigationBar: ASDisplayNode {
                 }
                 self.rightButtonNode.updateItems(items)
                 if self.rightButtonNode.supernode == nil {
-                    self.clippingNode.addSubnode(self.rightButtonNode)
+                    self.buttonsContainerNode.addSubnode(self.rightButtonNode)
                 }
                 if animated {
                     self.rightButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
@@ -648,25 +660,25 @@ open class NavigationBar: ASDisplayNode {
                             if let transitionTitleNode = value.navigationBar?.makeTransitionTitleNode(foregroundColor: self.presentationData.theme.primaryTextColor) {
                                 self.transitionTitleNode = transitionTitleNode
                                 if self.leftButtonNode.supernode != nil {
-                                    self.clippingNode.insertSubnode(transitionTitleNode, belowSubnode: self.leftButtonNode)
+                                    self.buttonsContainerNode.insertSubnode(transitionTitleNode, belowSubnode: self.leftButtonNode)
                                 } else if self.backButtonNode.supernode != nil {
-                                    self.clippingNode.insertSubnode(transitionTitleNode, belowSubnode: self.backButtonNode)
+                                    self.buttonsContainerNode.insertSubnode(transitionTitleNode, belowSubnode: self.backButtonNode)
                                 } else {
-                                    self.clippingNode.addSubnode(transitionTitleNode)
+                                    self.buttonsContainerNode.addSubnode(transitionTitleNode)
                                 }
                             }
                         case .bottom:
                             if let transitionBackButtonNode = value.navigationBar?.makeTransitionBackButtonNode(accentColor: self.presentationData.theme.buttonColor) {
                                 self.transitionBackButtonNode = transitionBackButtonNode
-                                self.clippingNode.addSubnode(transitionBackButtonNode)
+                                self.buttonsContainerNode.addSubnode(transitionBackButtonNode)
                             }
                             if let transitionBackArrowNode = value.navigationBar?.makeTransitionBackArrowNode(accentColor: self.presentationData.theme.buttonColor) {
                                 self.transitionBackArrowNode = transitionBackArrowNode
-                                self.clippingNode.addSubnode(transitionBackArrowNode)
+                                self.buttonsContainerNode.addSubnode(transitionBackArrowNode)
                             }
                             if let transitionBadgeNode = value.navigationBar?.makeTransitionBadgeNode() {
                                 self.transitionBadgeNode = transitionBadgeNode
-                                self.clippingNode.addSubnode(transitionBadgeNode)
+                                self.buttonsContainerNode.addSubnode(transitionBadgeNode)
                             }
                     }
                 }
@@ -701,8 +713,11 @@ open class NavigationBar: ASDisplayNode {
         self.rightButtonNode = NavigationButtonNode()
         self.rightButtonNode.hitTestSlop = UIEdgeInsets(top: -4.0, left: -4.0, bottom: -4.0, right: -10.0)
         
-        self.clippingNode = ASDisplayNode()
+        self.clippingNode = SparseNode()
         self.clippingNode.clipsToBounds = true
+        
+        self.buttonsContainerNode = ASDisplayNode()
+        self.buttonsContainerNode.clipsToBounds = true
         
         self.backButtonNode.color = self.presentationData.theme.buttonColor
         self.backButtonNode.disabledColor = self.presentationData.theme.disabledButtonColor
@@ -720,6 +735,7 @@ open class NavigationBar: ASDisplayNode {
         
         super.init()
         
+        self.addSubnode(self.buttonsContainerNode)
         self.addSubnode(self.clippingNode)
         
         self.backgroundColor = self.presentationData.theme.backgroundColor
@@ -820,16 +836,13 @@ open class NavigationBar: ASDisplayNode {
         
         self.validLayout = (size, defaultHeight, additionalHeight, leftInset, rightInset, appearsHidden)
         
-        if let secondaryContentNode = self.secondaryContentNode {
-            transition.updateAlpha(node: secondaryContentNode, alpha: appearsHidden ? 0.0 : 1.0)
-        }
-        
         let apparentAdditionalHeight: CGFloat = self.secondaryContentNode != nil ? NavigationBar.defaultSecondaryContentHeight : 0.0
         
         let leftButtonInset: CGFloat = leftInset + 16.0
         let backButtonInset: CGFloat = leftInset + 27.0
         
         transition.updateFrame(node: self.clippingNode, frame: CGRect(origin: CGPoint(), size: size))
+        transition.updateFrame(node: self.buttonsContainerNode, frame: CGRect(origin: CGPoint(), size: size))
         var expansionHeight: CGFloat = 0.0
         if let contentNode = self.contentNode {
             var contentNodeFrame: CGRect
@@ -839,7 +852,9 @@ open class NavigationBar: ASDisplayNode {
                 contentNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
             case .expansion:
                 expansionHeight = contentNode.height
-                contentNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - expansionHeight - apparentAdditionalHeight), size: CGSize(width: size.width, height: expansionHeight))
+                
+                let additionalExpansionHeight: CGFloat = self.secondaryContentNode != nil && appearsHidden ? NavigationBar.defaultSecondaryContentHeight : 0.0
+                contentNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - expansionHeight - apparentAdditionalHeight - additionalExpansionHeight), size: CGSize(width: size.width, height: expansionHeight))
                 if appearsHidden {
                     if self.secondaryContentNode != nil {
                         contentNodeFrame.origin.y += NavigationBar.defaultSecondaryContentHeight
@@ -1174,10 +1189,10 @@ open class NavigationBar: ASDisplayNode {
                     contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
                 
-                if case .replacement = contentNode.mode, !self.clippingNode.alpha.isZero {
-                    self.clippingNode.alpha = 0.0
+                if case .replacement = contentNode.mode, !self.buttonsContainerNode.alpha.isZero {
+                    self.buttonsContainerNode.alpha = 0.0
                     if animated {
-                        self.clippingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                        self.buttonsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                     }
                 }
                 
@@ -1187,23 +1202,36 @@ open class NavigationBar: ASDisplayNode {
                 } else {
                     self.requestLayout()
                 }
-            } else if self.clippingNode.alpha.isZero {
-                self.clippingNode.alpha = 1.0
+            } else if self.buttonsContainerNode.alpha.isZero {
+                self.buttonsContainerNode.alpha = 1.0
                 if animated {
-                    self.clippingNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.buttonsContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
             }
         }
     }
     
-    public func setSecondaryContentNode(_ secondatryContentNode: ASDisplayNode?) {
-        if self.secondaryContentNode !== secondatryContentNode {
-            if let previous = self.secondaryContentNode {
-                previous.removeFromSupernode()
+    public func setSecondaryContentNode(_ secondaryContentNode: ASDisplayNode?, animated: Bool = false) {
+        if self.secondaryContentNode !== secondaryContentNode {
+            if let previous = self.secondaryContentNode, previous.supernode === self.clippingNode {
+                if animated {
+                    previous.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previous] finished in
+                        if finished {
+                            previous?.removeFromSupernode()
+                            previous?.layer.removeAllAnimations()
+                        }
+                    })
+                } else {
+                    previous.removeFromSupernode()
+                }
             }
-            self.secondaryContentNode = secondatryContentNode
-            if let secondaryContentNode = secondatryContentNode {
+            self.secondaryContentNode = secondaryContentNode
+            if let secondaryContentNode = secondaryContentNode {
                 self.clippingNode.addSubnode(secondaryContentNode)
+                
+                if animated {
+                    secondaryContentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                }
             }
         }
     }
@@ -1223,11 +1251,11 @@ open class NavigationBar: ASDisplayNode {
         if let contentNode = self.contentNode, case .replacement = contentNode.mode {
         } else {
             let targetAlpha: CGFloat = hidden ? 0.0 : 1.0
-            let previousAlpha = self.clippingNode.alpha
+            let previousAlpha = self.buttonsContainerNode.alpha
             if previousAlpha != targetAlpha {
-                self.clippingNode.alpha = targetAlpha
+                self.buttonsContainerNode.alpha = targetAlpha
                 if animated {
-                    self.clippingNode.layer.animateAlpha(from: previousAlpha, to: targetAlpha, duration: 0.2)
+                    self.buttonsContainerNode.layer.animateAlpha(from: previousAlpha, to: targetAlpha, duration: 0.2)
                 }
             }
         }
@@ -1247,7 +1275,7 @@ open class NavigationBar: ASDisplayNode {
             return nil
         }
         
-        if result == self.view || result == self.clippingNode.view {
+        if result == self.view || result == self.buttonsContainerNode.view {
             return nil
         }
         

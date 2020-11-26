@@ -123,6 +123,7 @@ public enum PresentationResourceKey: Int32 {
     case chatInfoItemBackgroundImageWithoutWallpaper
     
     case chatInputPanelCloseIconImage
+    case chatInputPanelPinnedListIconImage
     case chatInputPanelEncircledCloseIconImage
     case chatInputPanelVerticalSeparatorLineImage
     
@@ -229,6 +230,9 @@ public enum PresentationResourceKey: Int32 {
     case groupInfoMembersIcon
     
     case emptyChatListCheckIcon
+    
+    case chatFreeCommentButtonBackground
+    case chatFreeCommentButtonIcon
 }
 
 public enum PresentationResourceParameterKey: Hashable {
@@ -256,4 +260,9 @@ public enum PresentationResourceParameterKey: Hashable {
     case chatMessageLike(incoming: Bool, isSelected: Bool)
     case chatMessageFreeLike(isSelected: Bool)
     case chatMessageMediaLike(isSelected: Bool)
+    
+    case chatMessageCommentsIcon(incoming: Bool)
+    case chatMessageCommentsArrowIcon(incoming: Bool)
+    case chatMessageCommentsUnreadDotIcon(incoming: Bool)
+    case chatMessageRepliesIcon(incoming: Bool)
 }

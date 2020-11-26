@@ -5,7 +5,7 @@ import TelegramUI
 import BuildConfig
 
 @objc(NotificationViewController)
-@available(iOSApplicationExtension 10.0, *)
+@available(iOSApplicationExtension 10.0, iOS 10.0, *)
 class NotificationViewController: UIViewController, UNNotificationContentExtension {
     private var impl: NotificationViewControllerImpl?
     

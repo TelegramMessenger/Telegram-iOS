@@ -71,4 +71,6 @@
 
 - (void)_messageResendRequestFailed:(int64_t)messageId;
 
++ (NSData *)_manuallyEncryptedMessage:(NSData *)preparedData messageId:(int64_t)messageId authKey:(MTDatacenterAuthKey *)authKey;
+
 @end

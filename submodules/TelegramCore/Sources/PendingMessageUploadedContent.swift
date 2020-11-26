@@ -142,12 +142,23 @@ func mediaContentToUpload(network: Network, postbox: Postbox, auxiliaryMethods: 
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(input, text), reuploadInfo: nil)))
     } else if let map = media as? TelegramMediaMap {
         let input: Api.InputMedia
+        var flags: Int32 = 1 << 1
+        if let _ = map.heading {
+            flags |= 1 << 2
+        }
+        if let _ = map.liveProximityNotificationRadius {
+            flags |= 1 << 3
+        }
+        var geoFlags: Int32 = 0
+        if let _ = map.accuracyRadius {
+            geoFlags |= 1 << 0
+        }
         if let liveBroadcastingTimeout = map.liveBroadcastingTimeout {
-            input = .inputMediaGeoLive(flags: 1 << 1, geoPoint: Api.InputGeoPoint.inputGeoPoint(lat: map.latitude, long: map.longitude), period: liveBroadcastingTimeout)
+            input = .inputMediaGeoLive(flags: flags, geoPoint: Api.InputGeoPoint.inputGeoPoint(flags: geoFlags, lat: map.latitude, long: map.longitude, accuracyRadius: map.accuracyRadius.flatMap({ Int32($0) })), heading: map.heading, period: liveBroadcastingTimeout, proximityNotificationRadius: map.liveProximityNotificationRadius.flatMap({ Int32($0) }))
         } else if let venue = map.venue {
-            input = .inputMediaVenue(geoPoint: Api.InputGeoPoint.inputGeoPoint(lat: map.latitude, long: map.longitude), title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "", venueType: venue.type ?? "")
+            input = .inputMediaVenue(geoPoint: Api.InputGeoPoint.inputGeoPoint(flags: geoFlags, lat: map.latitude, long: map.longitude, accuracyRadius: map.accuracyRadius.flatMap({ Int32($0) })), title: venue.title, address: venue.address ?? "", provider: venue.provider ?? "", venueId: venue.id ?? "", venueType: venue.type ?? "")
         } else {
-            input = .inputMediaGeoPoint(geoPoint: Api.InputGeoPoint.inputGeoPoint(lat: map.latitude, long: map.longitude))
+            input = .inputMediaGeoPoint(geoPoint: Api.InputGeoPoint.inputGeoPoint(flags: geoFlags, lat: map.latitude, long: map.longitude, accuracyRadius: map.accuracyRadius.flatMap({ Int32($0) })))
         }
         return .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(input, text), reuploadInfo: nil)))
     } else if let poll = media as? TelegramMediaPoll {
@@ -352,7 +363,7 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, trans
                                     } else {
                                         updatedAttributes.append(OutgoingMessageInfoAttribute(uniqueId: arc4random64(), flags: [.transformedMedia], acknowledged: false))
                                     }
-                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: currentMessage.media))
+                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: currentMessage.media))
                                 })
                             }
                             return .done(media)
@@ -488,6 +499,8 @@ func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaF
             case .HasLinkedStickers:
                 attributes.append(.documentAttributeHasStickers)
             case .hintFileIsLarge:
+                break
+            case .hintIsValidated:
                 break
             case let .Video(duration, size, videoFlags):
                 var flags: Int32 = 0
@@ -641,7 +654,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                                 } else {
                                     updatedAttributes.append(OutgoingMessageInfoAttribute(uniqueId: arc4random64(), flags: [.transformedMedia], acknowledged: false))
                                 }
-                                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: currentMessage.media))
+                                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: currentMessage.media))
                             })
                         }
                         return .done(media)
@@ -716,6 +729,10 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                         
                         if !file.isAnimated {
                             flags |= 1 << 3
+                        }
+                        
+                        if !file.isVideo && file.mimeType.hasPrefix("video/") {
+                            flags |= 1 << 4
                         }
                         
                         var stickers: [Api.InputDocument]?

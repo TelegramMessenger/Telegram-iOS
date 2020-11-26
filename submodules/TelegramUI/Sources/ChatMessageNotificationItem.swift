@@ -115,7 +115,9 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                 title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
             } else if let author = firstMessage.author {
-                if author.id != peer.id {
+                if firstMessage.id.peerId.isReplies, let _ = firstMessage.sourceReference, let effectiveAuthor = firstMessage.forwardInfo?.author {
+                    title = effectiveAuthor.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder) + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                } else if author.id != peer.id {
                     if author.id == item.context.account.peerId {
                         title = presentationData.strings.DialogList_You + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                     } else {
@@ -136,14 +138,18 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
             }
             
-            if let text = title, firstMessage.flags.contains(.WasScheduled) {
+            if let _ = title, firstMessage.flags.contains(.WasScheduled) {
                 if let author = firstMessage.author, author.id == peer.id, author.id == item.context.account.peerId {
                     isReminder = true
                 } else {
                     isScheduled = true
                 }
             }
-            self.avatarNode.setPeer(context: item.context, theme: presentationData.theme, peer: peer, overrideImage: peer.id == item.context.account.peerId ? .savedMessagesIcon : nil, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
+            var avatarPeer = peer
+            if firstMessage.id.peerId.isReplies, let author = firstMessage.forwardInfo?.author {
+                avatarPeer = author
+            }
+            self.avatarNode.setPeer(context: item.context, theme: presentationData.theme, peer: avatarPeer, overrideImage: peer.id == item.context.account.peerId ? .savedMessagesIcon : nil, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
         }
         
         var titleIcon: UIImage?
@@ -242,6 +248,24 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                                 title = nil
                                 messageText = rawText
                             }
+                        case .video:
+                            let rawText = presentationData.strings.PUSH_CHANNEL_MESSAGE_VIDEOS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
+                            if let index = rawText.firstIndex(of: "|") {
+                                title = String(rawText[rawText.startIndex ..< index])
+                                messageText = String(rawText[rawText.index(after: index)...])
+                            } else {
+                                title = nil
+                                messageText = rawText
+                            }
+                        case .file:
+                            let rawText = presentationData.strings.PUSH_CHANNEL_MESSAGE_DOCS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
+                            if let index = rawText.firstIndex(of: "|") {
+                                title = String(rawText[rawText.startIndex ..< index])
+                                messageText = String(rawText[rawText.index(after: index)...])
+                            } else {
+                                title = nil
+                                messageText = rawText
+                            }
                         default:
                             let rawText = presentationData.strings.PUSH_CHANNEL_MESSAGES(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
                             if let index = rawText.firstIndex(of: "|") {
@@ -266,6 +290,24 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                                 title = nil
                                 messageText = rawText
                             }
+                        case .video:
+                            let rawText = presentationData.strings.PUSH_CHAT_MESSAGE_VIDEOS(Int32(item.messages.count), author.compactDisplayTitle, peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
+                            if let index = rawText.firstIndex(of: "|") {
+                                title = String(rawText[rawText.startIndex ..< index])
+                                messageText = String(rawText[rawText.index(after: index)...])
+                            } else {
+                                title = nil
+                                messageText = rawText
+                            }
+                        case .file:
+                            let rawText = presentationData.strings.PUSH_CHAT_MESSAGE_DOCS(Int32(item.messages.count), author.compactDisplayTitle, peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
+                            if let index = rawText.firstIndex(of: "|") {
+                                title = String(rawText[rawText.startIndex ..< index])
+                                messageText = String(rawText[rawText.index(after: index)...])
+                            } else {
+                                title = nil
+                                messageText = rawText
+                            }
                         default:
                             let rawText = presentationData.strings.PUSH_CHAT_MESSAGES(Int32(item.messages.count), author.compactDisplayTitle, peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
                             if let index = rawText.firstIndex(of: "|") {
@@ -280,6 +322,24 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                     switch kind {
                         case .image:
                             let rawText = presentationData.strings.PUSH_MESSAGE_PHOTOS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
+                            if let index = rawText.firstIndex(of: "|") {
+                                title = String(rawText[rawText.startIndex ..< index])
+                                messageText = String(rawText[rawText.index(after: index)...])
+                            } else {
+                                title = nil
+                                messageText = rawText
+                            }
+                        case .video:
+                            let rawText = presentationData.strings.PUSH_MESSAGE_VIDEOS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
+                            if let index = rawText.firstIndex(of: "|") {
+                                title = String(rawText[rawText.startIndex ..< index])
+                                messageText = String(rawText[rawText.index(after: index)...])
+                            } else {
+                                title = nil
+                                messageText = rawText
+                            }
+                        case .file:
+                            let rawText = presentationData.strings.PUSH_MESSAGE_DOCS(Int32(item.messages.count), peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder), Int32(item.messages.count))
                             if let index = rawText.firstIndex(of: "|") {
                                 title = String(rawText[rawText.startIndex ..< index])
                                 messageText = String(rawText[rawText.index(after: index)...])

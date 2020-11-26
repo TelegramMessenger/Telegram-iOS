@@ -45,6 +45,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case botSentSecureValues(types: [SentSecureValueType])
     case peerJoined
     case phoneNumberRequest
+    case geoProximityReached(from: PeerId, to: PeerId, distance: Int32)
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -95,6 +96,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 self = .peerJoined
             case 20:
                 self = .phoneNumberRequest
+            case 21:
+                self = .geoProximityReached(from: PeerId(decoder.decodeInt64ForKey("fromId", orElse: 0)), to: PeerId(decoder.decodeInt64ForKey("toId", orElse: 0)), distance: (decoder.decodeInt32ForKey("dst", orElse: 0)))
             default:
                 self = .unknown
         }
@@ -180,6 +183,11 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 encoder.encodeInt32(19, forKey: "_rawValue")
             case .phoneNumberRequest:
                 encoder.encodeInt32(20, forKey: "_rawValue")
+            case let .geoProximityReached(from, to, distance):
+                encoder.encodeInt32(21, forKey: "_rawValue")
+                encoder.encodeInt64(from.toInt64(), forKey: "fromId")
+                encoder.encodeInt64(to.toInt64(), forKey: "toId")
+                encoder.encodeInt32(distance, forKey: "dst")
         }
     }
     
@@ -195,6 +203,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 return [groupId]
             case let .groupMigratedToChannel(channelId):
                 return [channelId]
+            case let .geoProximityReached(from, to, _):
+                return [from, to]
             default:
                 return []
         }

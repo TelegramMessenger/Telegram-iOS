@@ -9,6 +9,7 @@ import AccountContext
 import LocalizedPeerData
 import ContextUI
 import ChatListUI
+import TelegramPresentationData
 
 struct ChatMessageItemWidthFill {
     var compactInset: CGFloat
@@ -715,7 +716,7 @@ public class ChatMessageItemView: ListViewItemNode {
         return nil
     }
     
-    func getMessageContextSourceNode() -> ContextExtractedContentContainingNode? {
+    func getMessageContextSourceNode(stableId: UInt32?) -> ContextExtractedContentContainingNode? {
         return nil
     }
     

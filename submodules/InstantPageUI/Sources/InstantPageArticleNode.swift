@@ -57,7 +57,7 @@ final class InstantPageArticleNode: ASDisplayNode, InstantPageNode {
             
             let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
             imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, photoReference: imageReference))
-            self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, photoReference: imageReference, storeToDownloadsPeerType: nil).start())
+            self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, photoReference: imageReference, displayAtSize: nil, storeToDownloadsPeerType: nil).start())
             
             self.imageNode = imageNode
             self.addSubnode(imageNode)

@@ -8,25 +8,6 @@ import ContextUI
 private let normalFont = avatarPlaceholderFont(size: 16.0)
 private let smallFont = avatarPlaceholderFont(size: 12.0)
 
-final class ChatAvatarNavigationNodeView: UIView, PreviewingHostView {
-    var previewingDelegate: PreviewingHostViewDelegate? {
-        return PreviewingHostViewDelegate(controllerForLocation: { [weak self] sourceView, point in
-            return self?.chatController?.avatarPreviewingController(from: sourceView)
-        }, commitController: { [weak self] controller in
-            self?.chatController?.previewingCommit(controller)
-        })
-    }
-    
-    weak var chatController: ChatControllerImpl?
-    weak var targetNode: ChatAvatarNavigationNode?
-    
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        
-        self.targetNode?.onLayout()
-    }
-}
-
 final class ChatAvatarNavigationNode: ASDisplayNode {
     private let containerNode: ContextControllerSourceNode
     let avatarNode: AvatarNode
@@ -40,14 +21,6 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
         }
     }
     
-    weak var chatController: ChatControllerImpl? {
-        didSet {
-            if self.isNodeLoaded {
-                (self.view as? ChatAvatarNavigationNodeView)?.chatController = self.chatController
-            }
-        }
-    }
-    
     var tapped: (() -> Void)?
     
     override init() {
@@ -55,10 +28,6 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
         self.avatarNode = AvatarNode(font: normalFont)
         
         super.init()
-        
-        self.setViewBlock({
-            return ChatAvatarNavigationNodeView()
-        })
         
         self.containerNode.addSubnode(self.avatarNode)
         self.addSubnode(self.containerNode)
@@ -80,11 +49,6 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
     override func didLoad() {
         super.didLoad()
         self.view.isOpaque = false
-        (self.view as? ChatAvatarNavigationNodeView)?.targetNode = self
-        (self.view as? ChatAvatarNavigationNodeView)?.chatController = self.chatController
-        
-        /*let tapRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.avatarTapGesture(_:)))
-        self.avatarNode.view.addGestureRecognizer(tapRecognizer)*/
     }
     
     @objc private func avatarTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {

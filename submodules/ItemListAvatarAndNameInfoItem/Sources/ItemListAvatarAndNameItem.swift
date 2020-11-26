@@ -425,6 +425,9 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                         } else if peer.flags.contains(.isSupport), !servicePeer {
                             statusText = item.presentationData.strings.Bot_GenericSupportStatus
                             statusColor = item.presentationData.theme.list.itemSecondaryTextColor
+                        } else if peer.id.isReplies {
+                            statusText = ""
+                            statusColor = item.presentationData.theme.list.itemPrimaryTextColor
                         } else if let _ = peer.botInfo {
                             statusText = item.presentationData.strings.Bot_GenericBotStatus
                             statusColor = item.presentationData.theme.list.itemSecondaryTextColor

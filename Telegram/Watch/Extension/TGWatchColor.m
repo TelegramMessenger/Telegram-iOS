@@ -38,7 +38,7 @@
 
 + (UIColor *)colorForUserId:(int32_t)userId myUserId:(int32_t)myUserId
 {
-    return [self placeholderColors][userId % 7];
+    return [self placeholderColors][abs(userId) % 7];
 }
 
 + (UIColor *)colorForGroupId:(int64_t)groupId

@@ -61,6 +61,10 @@ class MessageHistoryTagsTable: Table {
         }
     }
     
+    func entryExists(tag: MessageTags, index: MessageIndex) -> Bool {
+        return self.valueBox.exists(self.table, key: self.key(tag: tag, index: index, key: self.sharedKey))
+    }
+    
     func entryLocation(at index: MessageIndex, tag: MessageTags) -> MessageHistoryEntryLocation? {
         if let _ = self.valueBox.get(self.table, key: self.key(tag: tag, index: index)) {
             var greaterCount = 0

@@ -298,6 +298,55 @@ public final class AccountContextImpl: AccountContext {
             return nil
         }
     }
+    
+    public func chatLocationInput(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> ChatLocationInput {
+        switch location {
+        case let .peer(peerId):
+            return .peer(peerId)
+        case let .replyThread(data):
+            let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
+            return .external(data.messageId.peerId, makeMessageThreadId(data.messageId), context.state)
+        }
+    }
+    
+    public func chatLocationOutgoingReadState(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<MessageId?, NoError> {
+        switch location {
+        case .peer:
+            return .single(nil)
+        case let .replyThread(data):
+            let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
+            return context.maxReadOutgoingMessageId
+        }
+    }
+    
+    public func applyMaxReadIndex(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>, messageIndex: MessageIndex) {
+        switch location {
+        case .peer:
+            let _ = applyMaxReadIndexInteractively(postbox: self.account.postbox, stateManager: self.account.stateManager, index: messageIndex).start()
+        case let .replyThread(data):
+            let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
+            context.applyMaxReadIndex(messageIndex: messageIndex)
+        }
+    }
+}
+
+private func chatLocationContext(holder: Atomic<ChatLocationContextHolder?>, account: Account, data: ChatReplyThreadMessage) -> ReplyThreadHistoryContext {
+    let holder = holder.modify { current in
+        if let current = current as? ChatLocationContextHolderImpl {
+            return current
+        } else {
+            return ChatLocationContextHolderImpl(account: account, data: data)
+        }
+    } as! ChatLocationContextHolderImpl
+    return holder.context
+}
+
+private final class ChatLocationContextHolderImpl: ChatLocationContextHolder {
+    let context: ReplyThreadHistoryContext
+    
+    init(account: Account, data: ChatReplyThreadMessage) {
+        self.context = ReplyThreadHistoryContext(account: account, peerId: data.messageId.peerId, data: data)
+    }
 }
 
 func getAppConfiguration(transaction: Transaction) -> AppConfiguration {

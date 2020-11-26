@@ -196,30 +196,6 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
         return LegacyComponentsAccessCheckerImpl(context: legacyContext)
     }
     
-    public func stickerPacksSignal() -> SSignal! {
-        if let legacyContext = legacyContext {
-            return legacyComponentsStickers(postbox: legacyContext.account.postbox, namespace: Namespaces.ItemCollection.CloudStickerPacks)
-        } else {
-            var dict: [AnyHashable: Any] = [:]
-            dict["packs"] = NSArray()
-            return SSignal.single(dict)
-        }
-    }
-    
-    public func maskStickerPacksSignal() -> SSignal! {
-        if let legacyContext = legacyContext {
-            return legacyComponentsStickers(postbox: legacyContext.account.postbox, namespace: Namespaces.ItemCollection.CloudMaskPacks)
-        } else {
-            var dict: [AnyHashable: Any] = [:]
-            dict["packs"] = NSArray()
-            return SSignal.single(dict)
-        }
-    }
-    
-    public func recentStickerMasksSignal() -> SSignal! {
-        return SSignal.single(NSArray())
-    }
-    
     public func request(_ type: TGAudioSessionType, interrupted: (() -> Void)!) -> SDisposable! {
         if let legacyContext = legacyContext {
             let convertedType: ManagedAudioSessionType
@@ -260,40 +236,6 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
     
     public func localDocumentDirectory(forDocumentId documentId: Int64, version: Int32) -> String! {
         return ""
-    }
-    
-    public func json(forHttpLocation httpLocation: String!) -> SSignal! {
-        return self.data(forHttpLocation: httpLocation).map(toSignal: { next in
-            if let next = next as? Data {
-                if let object = try? JSONSerialization.jsonObject(with: next, options: []) {
-                    return SSignal.single(object)
-                }
-            }
-            return SSignal.fail(nil)
-        })
-    }
-    
-    public func data(forHttpLocation httpLocation: String!) -> SSignal! {
-        return SSignal { subscriber in
-            if let httpLocation = httpLocation, let url = URL(string: httpLocation) {
-                let disposable = MTHttpRequestOperation.data(forHttpUrl: url).start(next: { next in
-                    subscriber?.putNext(next)
-                }, error: { error in
-                    subscriber?.putError(error)
-                }, completed: {
-                    subscriber?.putCompletion()
-                })
-                return SBlockDisposable(block: {
-                    disposable?.dispose()
-                })
-            } else {
-                return nil
-            }
-        }
-    }
-    
-    public func makeHTTPRequestOperation(with request: URLRequest!) -> (Operation & LegacyHTTPRequestOperation)! {
-        return LegacyHTTPOperationImpl(request: request)
     }
     
     public func pausePictureInPicturePlayback() {
@@ -377,13 +319,7 @@ public func initializeLegacyComponents(application: UIApplication?, currentSizeC
     
     TGRemoteImageView.setSharedCache(TGCache())
     
-    TGImageDataSource.register(LegacyStickerImageDataSource(account: {
-        return legacyContext?.account
-    }))
     TGImageDataSource.register(LegacyPeerAvatarPlaceholderDataSource(account: {
-        return legacyContext?.account
-    }))
-    TGImageDataSource.register(LegacyLocationVenueIconDataSource(account: {
         return legacyContext?.account
     }))
     ASActor.registerClass(LegacyImageDownloadActor.self)

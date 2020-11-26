@@ -385,8 +385,8 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
     
     let forceUpdateLocation: () -> Void = {
         let locationCoordinates = Signal<(Double, Double), NoError> { subscriber in
-            return context.sharedContext.locationManager!.push(mode: DeviceLocationMode.precise, updated: { coordinate in
-                subscriber.putNext((coordinate.latitude, coordinate.longitude))
+            return context.sharedContext.locationManager!.push(mode: DeviceLocationMode.precise, updated: { location, _ in
+                subscriber.putNext((location.coordinate.latitude, location.coordinate.longitude))
                 subscriber.putCompletion()
             })
         }

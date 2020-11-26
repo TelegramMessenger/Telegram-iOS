@@ -4,7 +4,7 @@ import TelegramApi
 
 import SyncCore
 
-public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], media: [Media], textEntities: [MessageTextEntity]?) -> (MessageTags, GlobalMessageTags) {
+public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], media: [Media], textEntities: [MessageTextEntity]?, isPinned: Bool) -> (MessageTags, GlobalMessageTags) {
     var isSecret = false
     var isUnconsumedPersonalMention = false
     for attribute in attributes {
@@ -24,6 +24,10 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
     
     if isUnconsumedPersonalMention {
         tags.insert(.unseenPersonalMessage)
+    }
+    
+    if isPinned {
+        tags.insert(.pinned)
     }
     
     for attachment in media {
@@ -110,58 +114,33 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
 func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
     switch messsage {
         case let .message(message):
-            let flags = message.flags
-            let fromId = message.fromId
-            let toId = message.toId
-            switch toId {
-                case let .peerUser(userId):
-                    return PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
-                case let .peerChat(chatId):
-                    return PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                case let .peerChannel(channelId):
-                    return PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-            }
+            let chatPeerId = message.peerId
+            return chatPeerId.peerId
         case .messageEmpty:
             return nil
-        case let .messageService(flags, _, fromId, toId, _, _, _):
-            switch toId {
-                case let .peerUser(userId):
-                    return PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
-                case let .peerChat(chatId):
-                    return PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                case let .peerChannel(channelId):
-                    return PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-            }
+        case let .messageService(flags, _, fromId, chatPeerId, _, _, _):
+            return chatPeerId.peerId
     }
 }
 
 func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
     switch message {
-        case let .message(flags, _, fromId, toId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _):
-            let peerId: PeerId
-            switch toId {
-                case let .peerUser(userId):
-                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
-                case let .peerChat(chatId):
-                    peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                case let .peerChannel(channelId):
-                    peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-            }
+        case let .message(flags, _, fromId, chatPeerId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _, _, _):
+            let peerId: PeerId = chatPeerId.peerId
             
             var result = [peerId]
             
-            if let fromId = fromId, PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId) != peerId {
-                result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId))
+            let resolvedFromId = fromId?.peerId ?? chatPeerId.peerId
+            
+            if resolvedFromId != peerId {
+                result.append(resolvedFromId)
             }
         
             if let fwdHeader = fwdHeader {
                 switch fwdHeader {
                     case let .messageFwdHeader(messageFwdHeader):
-                        if let channelId = messageFwdHeader.channelId {
-                            result.append(PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId))
-                        }
                         if let fromId = messageFwdHeader.fromId {
-                            result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId))
+                            result.append(fromId.peerId)
                         }
                         if let savedFromPeer = messageFwdHeader.savedFromPeer {
                             result.append(savedFromPeer.peerId)
@@ -198,20 +177,14 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             return result
         case .messageEmpty:
             return []
-        case let .messageService(flags, _, fromId, toId, _, _, action):
-            let peerId: PeerId
-            switch toId {
-                case let .peerUser(userId):
-                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
-                case let .peerChat(chatId):
-                    peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                case let .peerChannel(channelId):
-                    peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-            }
+        case let .messageService(flags, _, fromId, chatPeerId, _, _, action):
+            let peerId: PeerId = chatPeerId.peerId
             var result = [peerId]
             
-            if let fromId = fromId, PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId) != peerId {
-                result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId))
+            let resolvedFromId = fromId?.peerId ?? chatPeerId.peerId
+            
+            if resolvedFromId != peerId {
+                result.append(resolvedFromId)
             }
             
             switch action {
@@ -233,6 +206,9 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
                     result.append(PeerId(namespace: Namespaces.Peer.CloudUser, id: inviterId))
                 case let .messageActionChatMigrateTo(channelId):
                     result.append(PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId))
+                case let .messageActionGeoProximityReached(fromId, toId, _):
+                    result.append(fromId.peerId)
+                    result.append(toId.peerId)
             }
         
             return result
@@ -241,35 +217,23 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
 
 func apiMessageAssociatedMessageIds(_ message: Api.Message) -> [MessageId]? {
     switch message {
-        case let .message(flags, _, fromId, toId, _, _, replyToMsgId, _, _, _, _, _, _, _, _, _, _):
-            if let replyToMsgId = replyToMsgId {
-                let peerId: PeerId
-                    switch toId {
-                    case let .peerUser(userId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
-                    case let .peerChat(chatId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                    case let .peerChannel(channelId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                }
+        case let .message(_, _, _, chatPeerId, _, _, replyTo, _, _, _, _, _, _, _, _, _, _, _, _):
+            if let replyTo = replyTo {
+                let peerId: PeerId = chatPeerId.peerId
                 
-                return [MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)]
+                switch replyTo {
+                case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, _):
+                    return [MessageId(peerId: replyToPeerId?.peerId ?? peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)]
+                }
             }
         case .messageEmpty:
             break
-        case let .messageService(flags, _, fromId, toId, replyToMsgId, _, _):
-            if let replyToMsgId = replyToMsgId {
-                let peerId: PeerId
-                switch toId {
-                    case let .peerUser(userId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
-                    case let .peerChat(chatId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                    case let .peerChannel(channelId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+        case let .messageService(_, _, _, chatPeerId, replyHeader, _, _):
+            if let replyHeader = replyHeader {
+                switch replyHeader {
+                case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, _):
+                    return [MessageId(peerId: replyToPeerId?.peerId ?? chatPeerId.peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)]
                 }
-                
-                return [MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)]
             }
     }
     return nil
@@ -291,13 +255,13 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
             let mediaContact = TelegramMediaContact(firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, peerId: contactPeerId, vCardData: vcard.isEmpty ? nil : vcard)
             return (mediaContact, nil)
         case let .messageMediaGeo(geo):
-            let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: nil)
+            let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil, heading: nil)
             return (mediaMap, nil)
         case let .messageMediaVenue(geo, title, address, provider, venueId, venueType):
-            let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: title, address: address, provider: provider, venueId: venueId, venueType: venueType, liveBroadcastingTimeout: nil)
+            let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: title, address: address, provider: provider, venueId: venueId, venueType: venueType, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil, heading: nil)
             return (mediaMap, nil)
-        case let .messageMediaGeoLive(geo, period):
-            let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: period)
+        case let .messageMediaGeoLive(_, geo, heading, period, proximityNotificationRadius):
+            let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: period, liveProximityNotificationRadius: proximityNotificationRadius, heading: heading)
             return (mediaMap, nil)
         case let .messageMediaDocument(_, document, ttlSeconds):
             if let document = document {
@@ -399,52 +363,65 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 extension StoreMessage {
     convenience init?(apiMessage: Api.Message, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
-            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, replyMarkup, entities, views, editDate, postAuthor, groupingId, restrictionReason):
+            case let .message(flags, id, fromId, chatPeerId, fwdFrom, viaBotId, replyTo, date, message, media, replyMarkup, entities, views, forwards, replies, editDate, postAuthor, groupingId, restrictionReason):
+                let resolvedFromId = fromId?.peerId ?? chatPeerId.peerId
+                
                 let peerId: PeerId
                 var authorId: PeerId?
-                switch toId {
-                    case let .peerUser(userId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
-                        if let fromId = fromId {
-                            authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
-                        } else {
-                            authorId = peerId
-                        }
+                switch chatPeerId {
+                    case .peerUser:
+                        peerId = chatPeerId.peerId
+                        authorId = resolvedFromId
                     case let .peerChat(chatId):
                         peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                        if let fromId = fromId {
-                            authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
-                        } else {
-                            authorId = peerId
-                        }
+                        authorId = resolvedFromId
                     case let .peerChannel(channelId):
                         peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                        if let fromId = fromId {
-                            authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
-                        } else {
-                            authorId = peerId
-                        }
+                        authorId = resolvedFromId
                 }
                 
                 var attributes: [MessageAttribute] = []
                 
+                var threadId: Int64?
+                if let replyTo = replyTo {
+                    var threadMessageId: MessageId?
+                    switch replyTo {
+                    case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyToTopId):
+                        let replyPeerId = replyToPeerId?.peerId ?? peerId
+                        if let replyToTopId = replyToTopId {
+                            let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
+                            threadMessageId = threadIdValue
+                            if replyPeerId == peerId {
+                                threadId = makeMessageThreadId(threadIdValue)
+                            }
+                        } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                            let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
+                            threadMessageId = threadIdValue
+                            threadId = makeMessageThreadId(threadIdValue)
+                        }
+                        attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
+                    }
+                }
+                
                 var forwardInfo: StoreMessageForwardInfo?
                 if let fwdFrom = fwdFrom {
                     switch fwdFrom {
-                        case let .messageFwdHeader(_, fromId, fromName, date, channelId, channelPost, postAuthor, savedFromPeer, savedFromMsgId, psaType):
+                        case let .messageFwdHeader(_, fromId, fromName, date, channelPost, postAuthor, savedFromPeer, savedFromMsgId, psaType):
                             var authorId: PeerId?
                             var sourceId: PeerId?
                             var sourceMessageId: MessageId?
                             
                             if let fromId = fromId {
-                                authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
-                            }
-                            if let channelId = channelId {
-                                let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                                sourceId = peerId
-                                
-                                if let channelPost = channelPost {
-                                    sourceMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: channelPost)
+                                switch fromId {
+                                case .peerChannel:
+                                    let peerId = fromId.peerId
+                                    sourceId = peerId
+                                    
+                                    if let channelPost = channelPost {
+                                        sourceMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: channelPost)
+                                    }
+                                default:
+                                    authorId = fromId.peerId
                                 }
                             }
                             
@@ -514,18 +491,14 @@ extension StoreMessage {
                     attributes.append(InlineBotMessageAttribute(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: viaBotId), title: nil))
                 }
                 
-                if let replyToMsgId = replyToMsgId {
-                    attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)))
-                }
-                
                 if namespace != Namespaces.Message.ScheduledCloud {
                     if let views = views {
                         attributes.append(ViewCountMessageAttribute(count: Int(views)))
                     }
                     
-                    /*if let forwards = forwards {
+                    if let forwards = forwards {
                         attributes.append(ForwardCountMessageAttribute(count: Int(forwards)))
-                    }*/
+                    }
                 }
                 
                 if let editDate = editDate {
@@ -564,6 +537,22 @@ extension StoreMessage {
                     attributes.append(ReactionsMessageAttribute(apiReactions: reactions))
                 }*/
                 
+                if let replies = replies {
+                    let recentRepliersPeerIds: [PeerId]?
+                    switch replies {
+                    case let .messageReplies(_, repliesCount, _, recentRepliers, channelId, maxId, readMaxId):
+                        if let recentRepliers = recentRepliers {
+                            recentRepliersPeerIds = recentRepliers.map { $0.peerId }
+                        } else {
+                            recentRepliersPeerIds = nil
+                        }
+                        
+                        let commentsPeerId = channelId.flatMap { PeerId(namespace: Namespaces.Peer.CloudChannel, id: $0) }
+                        
+                        attributes.append(ReplyThreadMessageAttribute(count: repliesCount, latestUsers: recentRepliersPeerIds ?? [], commentsPeerId: commentsPeerId, maxMessageId: maxId, maxReadMessageId: readMaxId))
+                    }
+                }
+                
                 if let restrictionReason = restrictionReason {
                     attributes.append(RestrictedContentMessageAttribute(rules: restrictionReason.map(RestrictionRule.init(apiReason:))))
                 }
@@ -600,49 +589,41 @@ extension StoreMessage {
                     attributes.append(NotificationInfoMessageAttribute(flags: notificationFlags))
                 }
                 
-                let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: medias, textEntities: entitiesAttribute?.entities)
+                let isPinned = (flags & (1 << 24)) != 0
+                
+                let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: medias, textEntities: entitiesAttribute?.entities, isPinned: isPinned)
                 
                 storeFlags.insert(.CanBeGroupedIntoFeed)
                 
-                self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
+                self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingId, threadId: threadId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
             case .messageEmpty:
                 return nil
-            case let .messageService(flags, id, fromId, toId, replyToMsgId, date, action):
-                let peerId: PeerId
-                var authorId: PeerId?
-                switch toId {
-                    case let .peerUser(userId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
-                        if let fromId = fromId {
-                            authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
-                        } else {
-                            authorId = peerId
-                        }
-                    case let .peerChat(chatId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                        if let fromId = fromId {
-                            authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
-                        } else {
-                            authorId = peerId
-                        }
-                    case let .peerChannel(channelId):
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                        if let fromId = fromId {
-                            authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
-                        } else {
-                            authorId = peerId
-                        }
-                }
+            case let .messageService(flags, id, fromId, chatPeerId, replyTo, date, action):
+                let peerId: PeerId = chatPeerId.peerId
+                let authorId: PeerId? = fromId?.peerId ?? chatPeerId.peerId
                 
                 var attributes: [MessageAttribute] = []
-                if let replyToMsgId = replyToMsgId {
-                    attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)))
+                
+                var threadId: Int64?
+                if let replyTo = replyTo {
+                    var threadMessageId: MessageId?
+                    switch replyTo {
+                    case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyToTopId):
+                        let replyPeerId = replyToPeerId?.peerId ?? peerId
+                        if let replyToTopId = replyToTopId {
+                            let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
+                            threadMessageId = threadIdValue
+                            if replyPeerId == peerId {
+                                threadId = makeMessageThreadId(threadIdValue)
+                            }
+                        }
+                        attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
+                    }
                 }
                 
                 if (flags & (1 << 17)) != 0 {
                     attributes.append(ContentRequiresValidationMessageAttribute())
                 }
-                
                 
                 var storeFlags = StoreMessageFlags()
                 if (flags & 2) == 0 {
@@ -665,7 +646,7 @@ extension StoreMessage {
                     media.append(action)
                 }
                 
-                let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: media, textEntities: nil)
+                let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: media, textEntities: nil, isPinned: false)
                 
                 storeFlags.insert(.CanBeGroupedIntoFeed)
                 
@@ -673,7 +654,7 @@ extension StoreMessage {
                     storeFlags.insert(.WasScheduled)
                 }
                 
-                self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: nil, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
+                self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: nil, threadId: threadId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
             }
     }
 }

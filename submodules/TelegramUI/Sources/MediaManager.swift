@@ -13,6 +13,7 @@ import TelegramUIPreferences
 import AccountContext
 import TelegramUniversalVideoContent
 import DeviceProximity
+import MediaResources
 
 enum SharedMediaPlayerGroup: Int {
     case music = 0
@@ -149,7 +150,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                     switch value.status.status {
                     case .playing:
                         isPlaying = true
-                    case .buffering(_, true, _):
+                    case .buffering(_, true, _, _):
                         isPlaying = true
                     default:
                         break
@@ -229,7 +230,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                     updatedGlobalControlOptions.insert(.next)
                     updatedGlobalControlOptions.insert(.seek)
                     switch state.status.status {
-                        case .playing, .buffering(_, true, _):
+                        case .playing, .buffering(_, true, _, _):
                             updatedGlobalControlOptions.insert(.pause)
                         default:
                             updatedGlobalControlOptions.insert(.play)
@@ -383,7 +384,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                 switch state.status.status {
                     case .playing:
                         isPlaying = true
-                    case let .buffering(_, whilePlaying, _):
+                    case let .buffering(_, whilePlaying, _, _):
                         isPlaying = whilePlaying
                     default:
                         break

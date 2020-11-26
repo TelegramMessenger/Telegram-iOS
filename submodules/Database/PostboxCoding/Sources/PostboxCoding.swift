@@ -172,7 +172,7 @@ public final class PostboxEncoder {
         self.buffer.write(&t, offset: 0, length: 1)
         
         let string = "\(type(of: value))"
-        var typeHash: Int32 = murMurHashString32(string)
+        var typeHash: Int32 = HashFunctions.murMurHash32(string)
         self.buffer.write(&typeHash, offset: 0, length: 4)
         
         let innerEncoder = PostboxEncoder()
@@ -189,7 +189,7 @@ public final class PostboxEncoder {
         self.buffer.write(&t, offset: 0, length: 1)
         
         let string = "\(type(of: value))"
-        var typeHash: Int32 = murMurHashString32(string)
+        var typeHash: Int32 = HashFunctions.murMurHash32(string)
         self.buffer.write(&typeHash, offset: 0, length: 4)
         
         let innerEncoder = PostboxEncoder()
@@ -232,7 +232,7 @@ public final class PostboxEncoder {
         self.buffer.write(&length, offset: 0, length: 4)
         let innerEncoder = PostboxEncoder()
         for object in value {
-            var typeHash: Int32 = murMurHashString32("\(type(of: object))")
+            var typeHash: Int32 = HashFunctions.murMurHash32("\(type(of: object))")
             self.buffer.write(&typeHash, offset: 0, length: 4)
             
             innerEncoder.reset()
@@ -252,7 +252,7 @@ public final class PostboxEncoder {
         self.buffer.write(&length, offset: 0, length: 4)
         let innerEncoder = PostboxEncoder()
         for object in value {
-            var typeHash: Int32 = murMurHashString32("\(type(of: object))")
+            var typeHash: Int32 = HashFunctions.murMurHash32("\(type(of: object))")
             self.buffer.write(&typeHash, offset: 0, length: 4)
             
             innerEncoder.reset()
@@ -272,7 +272,7 @@ public final class PostboxEncoder {
         self.buffer.write(&length, offset: 0, length: 4)
         let innerEncoder = PostboxEncoder()
         for object in value {
-            var typeHash: Int32 = murMurHashString32("\(type(of: object))")
+            var typeHash: Int32 = HashFunctions.murMurHash32("\(type(of: object))")
             self.buffer.write(&typeHash, offset: 0, length: 4)
             
             innerEncoder.reset()
@@ -322,7 +322,7 @@ public final class PostboxEncoder {
         
         let innerEncoder = PostboxEncoder()
         for record in value {
-            var keyTypeHash: Int32 = murMurHashString32("\(type(of: record.0))")
+            var keyTypeHash: Int32 = HashFunctions.murMurHash32("\(type(of: record.0))")
             self.buffer.write(&keyTypeHash, offset: 0, length: 4)
             innerEncoder.reset()
             record.0.encode(innerEncoder)
@@ -330,7 +330,7 @@ public final class PostboxEncoder {
             self.buffer.write(&keyLength, offset: 0, length: 4)
             self.buffer.write(innerEncoder.buffer.memory, offset: 0, length: Int(keyLength))
             
-            var valueTypeHash: Int32 = murMurHashString32("\(type(of: record.1))")
+            var valueTypeHash: Int32 = HashFunctions.murMurHash32("\(type(of: record.1))")
             self.buffer.write(&valueTypeHash, offset: 0, length: 4)
             innerEncoder.reset()
             record.1.encode(innerEncoder)
@@ -349,7 +349,7 @@ public final class PostboxEncoder {
         
         let innerEncoder = PostboxEncoder()
         for record in value {
-            var keyTypeHash: Int32 = murMurHashString32("\(type(of: record.0))")
+            var keyTypeHash: Int32 = HashFunctions.murMurHash32("\(type(of: record.0))")
             self.buffer.write(&keyTypeHash, offset: 0, length: 4)
             innerEncoder.reset()
             keyEncoder(record.0, innerEncoder)
@@ -357,7 +357,7 @@ public final class PostboxEncoder {
             self.buffer.write(&keyLength, offset: 0, length: 4)
             self.buffer.write(innerEncoder.buffer.memory, offset: 0, length: Int(keyLength))
             
-            var valueTypeHash: Int32 = murMurHashString32("\(type(of: record.1))")
+            var valueTypeHash: Int32 = HashFunctions.murMurHash32("\(type(of: record.1))")
             self.buffer.write(&valueTypeHash, offset: 0, length: 4)
             innerEncoder.reset()
             record.1.encode(innerEncoder)

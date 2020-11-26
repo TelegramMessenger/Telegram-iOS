@@ -94,13 +94,16 @@ private final class PeerBanTimeoutActionSheetItemNode: ActionSheetItemNode {
         self.valueChanged = valueChanged
         
         self.pickerView = UIDatePicker()
-        self.pickerView.setValue(theme.primaryTextColor, forKey: "textColor")
         self.pickerView.datePickerMode = .countDownTimer
         self.pickerView.datePickerMode = .date
         self.pickerView.date = Date(timeIntervalSince1970: Double(roundDateToDays(currentValue)))
         self.pickerView.locale = localeWithStrings(strings)
         self.pickerView.minimumDate = Date()
         self.pickerView.maximumDate = Date(timeIntervalSince1970: Double(Int32.max - 1))
+        if #available(iOS 13.4, *) {
+            self.pickerView.preferredDatePickerStyle = .wheels
+        }
+        self.pickerView.setValue(theme.primaryTextColor, forKey: "textColor")
         
         super.init(theme: theme)
         

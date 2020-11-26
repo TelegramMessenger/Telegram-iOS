@@ -64,8 +64,13 @@ public final class BlockedPeersContext {
         |> mapToSignal { result -> Signal<(peers: [RenderedPeer], canLoadMore: Bool, totalCount: Int?), NoError> in
             return postbox.transaction { transaction -> (peers: [RenderedPeer], canLoadMore: Bool, totalCount: Int?) in
                 switch result {
-                    case let .blocked(blocked, users):
+                    case let .blocked(blocked, chats, users):
                         var peers: [Peer] = []
+                        for chat in chats {
+                            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                                peers.append(groupOrChannel)
+                            }
+                        }
                         for user in users {
                             peers.append(TelegramUser(user: user))
                         }
@@ -74,16 +79,21 @@ public final class BlockedPeersContext {
                         var renderedPeers: [RenderedPeer] = []
                         for blockedPeer in blocked {
                             switch blockedPeer {
-                                case let .contactBlocked(userId, _):
-                                    if let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)) {
+                                case let .peerBlocked(peerId, _):
+                                    if let peer = transaction.getPeer(peerId.peerId) {
                                         renderedPeers.append(RenderedPeer(peer: peer))
                                     }
                             }
                         }
                         
                         return (renderedPeers, false, nil)
-                    case let .blockedSlice(count, blocked, users):
+                    case let .blockedSlice(count, blocked, chats, users):
                         var peers: [Peer] = []
+                        for chat in chats {
+                            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                                peers.append(groupOrChannel)
+                            }
+                        }
                         for user in users {
                             peers.append(TelegramUser(user: user))
                         }
@@ -92,8 +102,8 @@ public final class BlockedPeersContext {
                         var renderedPeers: [RenderedPeer] = []
                         for blockedPeer in blocked {
                             switch blockedPeer {
-                                case let .contactBlocked(userId, _):
-                                    if let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)) {
+                                case let .peerBlocked(peerId, _):
+                                    if let peer = transaction.getPeer(peerId.peerId) {
                                         renderedPeers.append(RenderedPeer(peer: peer))
                                     }
                             }
@@ -135,29 +145,32 @@ public final class BlockedPeersContext {
         
         let postbox = self.account.postbox
         let network = self.account.network
-        return self.account.postbox.transaction { transaction -> Api.InputUser? in
-            return transaction.getPeer(peerId).flatMap(apiInputUser)
+        return self.account.postbox.transaction { transaction -> Api.InputPeer? in
+            return transaction.getPeer(peerId).flatMap(apiInputPeer)
         }
         |> castError(BlockedPeersContextAddError.self)
-        |> mapToSignal { [weak self] inputUser -> Signal<Never, BlockedPeersContextAddError> in
-            guard let inputUser = inputUser else {
+        |> mapToSignal { [weak self] inputPeer -> Signal<Never, BlockedPeersContextAddError> in
+            guard let inputPeer = inputPeer else {
                 return .fail(.generic)
             }
-            return network.request(Api.functions.contacts.block(id: inputUser))
+            return network.request(Api.functions.contacts.block(id: inputPeer))
             |> mapError { _ -> BlockedPeersContextAddError in
                 return .generic
             }
             |> mapToSignal { _ -> Signal<Peer?, BlockedPeersContextAddError> in
                 return postbox.transaction { transaction -> Peer? in
-                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                        let previous: CachedUserData
-                        if let current = current as? CachedUserData {
-                            previous = current
-                        } else {
-                            previous = CachedUserData()
-                        }
-                        return previous.withUpdatedIsBlocked(true)
-                    })
+                    if peerId.namespace == Namespaces.Peer.CloudUser {
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                            let previous: CachedUserData
+                            if let current = current as? CachedUserData {
+                                previous = current
+                            } else {
+                                previous = CachedUserData()
+                            }
+                            return previous.withUpdatedIsBlocked(true)
+                        })
+                    }
+                    
                     return transaction.getPeer(peerId)
                 }
                 |> castError(BlockedPeersContextAddError.self)
@@ -192,29 +205,31 @@ public final class BlockedPeersContext {
         assert(Queue.mainQueue().isCurrent())
         let postbox = self.account.postbox
         let network = self.account.network
-        return self.account.postbox.transaction { transaction -> Api.InputUser? in
-            return transaction.getPeer(peerId).flatMap(apiInputUser)
+        return self.account.postbox.transaction { transaction -> Api.InputPeer? in
+            return transaction.getPeer(peerId).flatMap(apiInputPeer)
         }
         |> castError(BlockedPeersContextRemoveError.self)
-        |> mapToSignal { [weak self] inputUser -> Signal<Never, BlockedPeersContextRemoveError> in
-            guard let inputUser = inputUser else {
+        |> mapToSignal { [weak self] inputPeer -> Signal<Never, BlockedPeersContextRemoveError> in
+            guard let inputPeer = inputPeer else {
                 return .fail(.generic)
             }
-            return network.request(Api.functions.contacts.unblock(id: inputUser))
+            return network.request(Api.functions.contacts.unblock(id: inputPeer))
             |> mapError { _ -> BlockedPeersContextRemoveError in
                 return .generic
             }
             |> mapToSignal { value in
                 return postbox.transaction { transaction -> Peer? in
-                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                        let previous: CachedUserData
-                        if let current = current as? CachedUserData {
-                            previous = current
-                        } else {
-                            previous = CachedUserData()
-                        }
-                        return previous.withUpdatedIsBlocked(false)
-                    })
+                    if peerId.namespace == Namespaces.Peer.CloudUser {
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                            let previous: CachedUserData
+                            if let current = current as? CachedUserData {
+                                previous = current
+                            } else {
+                                previous = CachedUserData()
+                            }
+                            return previous.withUpdatedIsBlocked(false)
+                        })
+                    }
                     return transaction.getPeer(peerId)
                 }
                 |> castError(BlockedPeersContextRemoveError.self)

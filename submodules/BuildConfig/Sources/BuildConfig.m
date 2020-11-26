@@ -1,4 +1,4 @@
-#import "BuildConfig.h"
+#import <BuildConfig/BuildConfig.h>
 
 static NSString *telegramApplicationSecretKey = @"telegramApplicationSecretKey_v3";
 API_AVAILABLE(ios(10))

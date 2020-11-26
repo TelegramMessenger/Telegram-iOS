@@ -10,6 +10,7 @@ import TelegramPresentationData
 import ItemListUI
 import LocationResources
 import AppBundle
+import LiveLocationTimerNode
 
 public enum LocationActionListItemIcon: Equatable {
     case location
@@ -48,7 +49,7 @@ public enum LocationActionListItemIcon: Equatable {
 }
 
 private func generateLocationIcon(theme: PresentationTheme) -> UIImage {
-    return generateImage(CGSize(width: 40.0, height: 40.0)) { size, context in
+    return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(theme.chat.inputPanel.actionControlFillColor.cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
@@ -60,23 +61,23 @@ private func generateLocationIcon(theme: PresentationTheme) -> UIImage {
         if let image = generateTintedImage(image: UIImage(bundleImageName: "Location/SendLocationIcon"), color: theme.chat.inputPanel.actionControlForegroundColor) {
             context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
         }
-    }!
+    })!
 }
 
-private func generateLiveLocationIcon(theme: PresentationTheme) -> UIImage {
-    return generateImage(CGSize(width: 40.0, height: 40.0)) { size, context in
+private func generateLiveLocationIcon(theme: PresentationTheme, stop: Bool) -> UIImage {
+    return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(UIColor(rgb: 0x6cc139).cgColor)
+        context.setFillColor(UIColor(rgb: stop ? 0xff6464 : 0x6cc139).cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
         
         context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
         context.scaleBy(x: 1.0, y: -1.0)
         context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
         
-        if let image = generateTintedImage(image: UIImage(bundleImageName: "Location/SendLiveLocationIcon"), color: .white) {
+        if let image = generateTintedImage(image: UIImage(bundleImageName: stop ? "Location/SendLocationIcon" : "Location/SendLiveLocationIcon"), color: theme.chat.inputPanel.actionControlForegroundColor) {
             context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
         }
-    }!
+    })!
 }
 
 final class LocationActionListItem: ListViewItem {
@@ -85,15 +86,17 @@ final class LocationActionListItem: ListViewItem {
     let title: String
     let subtitle: String
     let icon: LocationActionListItemIcon
+    let beginTimeAndTimeout: (Double, Double)?
     let action: () -> Void
     let highlighted: (Bool) -> Void
     
-    public init(presentationData: ItemListPresentationData, account: Account, title: String, subtitle: String, icon: LocationActionListItemIcon, action: @escaping () -> Void, highlighted: @escaping (Bool) -> Void = { _ in }) {
+    public init(presentationData: ItemListPresentationData, account: Account, title: String, subtitle: String, icon: LocationActionListItemIcon, beginTimeAndTimeout: (Double, Double)?, action: @escaping () -> Void, highlighted: @escaping (Bool) -> Void = { _ in }) {
         self.presentationData = presentationData
         self.account = account
         self.title = title
         self.subtitle = subtitle
         self.icon = icon
+        self.beginTimeAndTimeout = beginTimeAndTimeout
         self.action = action
         self.highlighted = highlighted
     }
@@ -102,7 +105,7 @@ final class LocationActionListItem: ListViewItem {
         async {
             let node = LocationActionListItemNode()
             let makeLayout = node.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(self, params, nextItem is LocationActionListItem)
+            let (nodeLayout, nodeApply) = makeLayout(self, params, nextItem is LocationActionListItem || nextItem is LocationLiveListItem)
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
@@ -115,7 +118,7 @@ final class LocationActionListItem: ListViewItem {
             if let nodeValue = node() as? LocationActionListItemNode {
                 let layout = nodeValue.asyncLayout()
                 async {
-                    let (nodeLayout, apply) = layout(self, params, nextItem is LocationActionListItem)
+                    let (nodeLayout, apply) = layout(self, params, nextItem is LocationActionListItem || nextItem is LocationLiveListItem)
                     Queue.mainQueue().async {
                         completion(nodeLayout, { info in
                             apply().1(info)
@@ -144,6 +147,8 @@ final class LocationActionListItemNode: ListViewItemNode {
     private var subtitleNode: TextNode?
     private let iconNode: ASImageNode
     private let venueIconNode: TransformImageNode
+    private var timerNode: ChatMessageLiveLocationTimerNode?
+    private var wavesNode: LiveLocationWavesNode?
     
     private var item: LocationActionListItem?
     private var layoutParams: ListViewItemLayoutParams?
@@ -234,7 +239,10 @@ final class LocationActionListItemNode: ListViewItemNode {
             
             let titleSpacing: CGFloat = 1.0
             let bottomInset: CGFloat = hasSeparator ? 0.0 : 4.0
-            let contentSize = CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.size.height + titleSpacing + subtitleLayout.size.height + bottomInset)
+            var contentSize = CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.size.height + titleSpacing + subtitleLayout.size.height + bottomInset)
+            if hasSeparator {
+                contentSize.height = max(52.0, contentSize.height)
+            }
             let nodeLayout = ListViewItemNodeLayout(contentSize: contentSize, insets: UIEdgeInsets())
             
             return (nodeLayout, { [weak self] in
@@ -268,12 +276,22 @@ final class LocationActionListItemNode: ListViewItemNode {
                                 case .liveLocation, .stopLiveLocation:
                                     strongSelf.iconNode.isHidden = false
                                     strongSelf.venueIconNode.isHidden = true
-                                    strongSelf.iconNode.image = generateLiveLocationIcon(theme: item.presentationData.theme)
+                                    strongSelf.iconNode.image = generateLiveLocationIcon(theme: item.presentationData.theme, stop: updatedIcon == .stopLiveLocation)
                                 case let .venue(venue):
                                     strongSelf.iconNode.isHidden = true
                                     strongSelf.venueIconNode.isHidden = false
                                     strongSelf.venueIconNode.setSignal(venueIcon(postbox: item.account.postbox, type: venue.venue?.type ?? "", background: true))
                             }
+                            
+                            if updatedIcon == .stopLiveLocation {
+                                let wavesNode = LiveLocationWavesNode(color: item.presentationData.theme.chat.inputPanel.actionControlForegroundColor)
+                                strongSelf.addSubnode(wavesNode)
+                                strongSelf.wavesNode = wavesNode
+                            } else if let wavesNode = strongSelf.wavesNode {
+                                strongSelf.wavesNode = nil
+                                wavesNode.removeFromSupernode()
+                            }
+                            strongSelf.wavesNode?.color = item.presentationData.theme.chat.inputPanel.actionControlForegroundColor
                         }
                         
                         let iconApply = iconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: CGSize(width: iconSize, height: iconSize), boundingSize: CGSize(width: iconSize, height: iconSize), intrinsicInsets: UIEdgeInsets()))
@@ -304,10 +322,29 @@ final class LocationActionListItemNode: ListViewItemNode {
                         strongSelf.iconNode.frame = iconNodeFrame
                         strongSelf.venueIconNode.frame = iconNodeFrame
                         
+                        strongSelf.wavesNode?.frame = CGRect(origin: CGPoint(x: params.leftInset + 11.0, y: floorToScreenPixels((contentSize.height - bottomInset - iconSize) / 2.0) - 4.0), size: CGSize(width: 48.0, height: 48.0))
+                        
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: contentSize.width, height: contentSize.height))
                         strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: contentSize.width, height: contentSize.height + topHighlightInset))
                         strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: nodeLayout.size.width, height: separatorHeight))
                         strongSelf.separatorNode.isHidden = !hasSeparator
+                        
+                        if let (beginTimestamp, timeout) = item.beginTimeAndTimeout {
+                            let timerNode: ChatMessageLiveLocationTimerNode
+                            if let current = strongSelf.timerNode {
+                                timerNode = current
+                            } else {
+                                timerNode = ChatMessageLiveLocationTimerNode()
+                                strongSelf.addSubnode(timerNode)
+                                strongSelf.timerNode = timerNode
+                            }
+                            let timerSize = CGSize(width: 28.0, height: 28.0)
+                            timerNode.update(backgroundColor: item.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.4), foregroundColor: item.presentationData.theme.list.itemAccentColor, textColor: item.presentationData.theme.list.itemAccentColor, beginTimestamp: beginTimestamp, timeout: timeout, strings: item.presentationData.strings)
+                            timerNode.frame = CGRect(origin: CGPoint(x: contentSize.width - 16.0 - timerSize.width, y: floorToScreenPixels((contentSize.height - timerSize.height) / 2.0) - 2.0), size: timerSize)
+                        } else if let timerNode = strongSelf.timerNode {
+                            strongSelf.timerNode = nil
+                            timerNode.removeFromSupernode()
+                        }
                     }
                 })
             })

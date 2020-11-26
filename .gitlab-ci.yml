@@ -108,7 +108,7 @@ verifysanity_beta_testflight:
   artifacts:
     when: on_failure
     paths:
-      - build/verifysanity_artifacts
+      - build/artifacts
     expire_in: 1 week
 
 verify_beta_testflight:
@@ -126,5 +126,5 @@ verify_beta_testflight:
   artifacts:
     when: on_failure
     paths:
-      - build/verify_artifacts
+      - build/artifacts
     expire_in: 1 week

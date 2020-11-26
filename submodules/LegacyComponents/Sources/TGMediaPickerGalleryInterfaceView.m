@@ -720,6 +720,23 @@
 
 - (void)updateEditorButtonsForItem:(id<TGModernGalleryItem>)item animated:(bool)animated
 {
+    __weak TGMediaPickerGalleryInterfaceView *weakSelf = self;
+    id<TGModernGalleryEditableItem> galleryEditableItem = (id<TGModernGalleryEditableItem>)item;
+    if ([item conformsToProtocol:@protocol(TGModernGalleryEditableItem)])
+    {
+        id<TGMediaEditableItem> editableMediaItem = [galleryEditableItem editableMediaItem];
+        [_captionDisposable setDisposable:[[galleryEditableItem.editingContext captionSignalForItem:editableMediaItem] startWithNext:^(NSDictionary *captionWithEntities)
+        {
+            __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            NSString *caption = captionWithEntities[@"caption"];
+            NSArray *entities = captionWithEntities[@"entities"];
+            [strongSelf->_captionMixin setCaption:caption entities:entities animated:animated];
+        }]];
+    }
+    
     if (_editingContext == nil || _editingContext.inhibitEditing)
     {
         [_portraitToolbarView setEditButtonsHidden:true animated:false];
@@ -757,12 +774,10 @@
         return;
     }
     
-    id<TGModernGalleryEditableItem> galleryEditableItem = (id<TGModernGalleryEditableItem>)item;
     if ([item conformsToProtocol:@protocol(TGModernGalleryEditableItem)])
     {
         id<TGMediaEditableItem> editableMediaItem = [galleryEditableItem editableMediaItem];
         
-        __weak TGMediaPickerGalleryInterfaceView *weakSelf = self;
         __weak id<TGModernGalleryEditableItem> weakGalleryEditableItem = galleryEditableItem;
         [_adjustmentsDisposable setDisposable:[[[[galleryEditableItem.editingContext adjustmentsSignalForItem:editableMediaItem] mapToSignal:^SSignal *(id<TGMediaEditAdjustments> adjustments) {
             __strong id<TGModernGalleryEditableItem> strongGalleryEditableItem = weakGalleryEditableItem;
@@ -802,17 +817,6 @@
                 originalSize = editableMediaItem.originalSize;
 
             [strongSelf updateEditorButtonsForAdjustments:adjustments dimensions:originalSize timer:timer];
-        }]];
-        
-        [_captionDisposable setDisposable:[[galleryEditableItem.editingContext captionSignalForItem:editableMediaItem] startWithNext:^(NSDictionary *captionWithEntities)
-        {
-            __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
-            if (strongSelf == nil)
-                return;
-            
-            NSString *caption = captionWithEntities[@"caption"];
-            NSArray *entities = captionWithEntities[@"entities"];
-            [strongSelf->_captionMixin setCaption:caption entities:entities animated:animated];
         }]];
     }
     else
