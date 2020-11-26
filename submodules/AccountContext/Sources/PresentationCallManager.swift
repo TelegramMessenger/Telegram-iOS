@@ -165,18 +165,18 @@ public struct PresentationGroupCallState: Equatable {
     public var networkState: NetworkState
     public var canManageCall: Bool
     public var adminIds: Set<PeerId>
-    public var isMuted: Bool
+    public var muteState: GroupCallParticipantsContext.Participant.MuteState?
     
     public init(
         networkState: NetworkState,
         canManageCall: Bool,
         adminIds: Set<PeerId>,
-        isMuted: Bool
+        muteState: GroupCallParticipantsContext.Participant.MuteState?
     ) {
         self.networkState = networkState
         self.canManageCall = canManageCall
         self.adminIds = adminIds
-        self.isMuted = isMuted
+        self.muteState = muteState
     }
 }
 

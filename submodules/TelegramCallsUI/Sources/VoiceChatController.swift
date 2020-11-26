@@ -426,7 +426,7 @@ public final class VoiceChatController: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.updateMembers(isMuted: strongSelf.callState?.isMuted ?? true, members: state.list, memberStates: strongSelf.currentMemberStates ?? [:], invitedPeers: strongSelf.currentInvitedPeers ?? Set())
+                    strongSelf.updateMembers(muteState: strongSelf.callState?.muteState, members: state.list, memberStates: strongSelf.currentMemberStates ?? [:], invitedPeers: strongSelf.currentInvitedPeers ?? Set())
                 }
             })
             
@@ -436,7 +436,7 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 if let members = strongSelf.currentMembers {
-                    strongSelf.updateMembers(isMuted: strongSelf.callState?.isMuted ?? true, members: members, memberStates: memberStates, invitedPeers: strongSelf.currentInvitedPeers ?? Set())
+                    strongSelf.updateMembers(muteState: strongSelf.callState?.muteState, members: members, memberStates: memberStates, invitedPeers: strongSelf.currentInvitedPeers ?? Set())
                 } else {
                     strongSelf.currentMemberStates = memberStates
                 }
@@ -448,7 +448,7 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 if let members = strongSelf.currentMembers {
-                    strongSelf.updateMembers(isMuted: strongSelf.callState?.isMuted ?? true, members: members, memberStates: strongSelf.currentMemberStates ?? [:], invitedPeers: invitedPeers)
+                    strongSelf.updateMembers(muteState: strongSelf.callState?.muteState, members: members, memberStates: strongSelf.currentMemberStates ?? [:], invitedPeers: invitedPeers)
                 } else {
                     strongSelf.currentInvitedPeers = invitedPeers
                 }
@@ -498,11 +498,20 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 if strongSelf.callState != state {
-                    let wasMuted = strongSelf.callState?.isMuted ?? true
+                    let wasMuted = strongSelf.callState?.muteState != nil
                     strongSelf.callState = state
                     
-                    if wasMuted != state.isMuted, let members = strongSelf.currentMembers {
-                        strongSelf.updateMembers(isMuted: state.isMuted, members: members, memberStates: strongSelf.currentMemberStates ?? [:], invitedPeers: strongSelf.currentInvitedPeers ?? Set())
+                    if state.muteState != nil {
+                        if strongSelf.pushingToTalk {
+                            strongSelf.pushingToTalk = false
+                            strongSelf.actionButton.pressing = false
+                            strongSelf.actionButton.isUserInteractionEnabled = false
+                            strongSelf.actionButton.isUserInteractionEnabled = true
+                        }
+                    }
+                    
+                    if wasMuted != (state.muteState != nil), let members = strongSelf.currentMembers {
+                        strongSelf.updateMembers(muteState: state.muteState, members: members, memberStates: strongSelf.currentMemberStates ?? [:], invitedPeers: strongSelf.currentInvitedPeers ?? Set())
                     }
                     
                     if let (layout, navigationHeight) = strongSelf.validLayout {
@@ -536,7 +545,7 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 var effectiveLevel: Float = 0.0
-                if let state = strongSelf.callState, !state.isMuted {
+                if let state = strongSelf.callState, state.muteState == nil {
                     effectiveLevel = level
                 }
                 strongSelf.itemInteraction?.updateAudioLevels([(strongSelf.context.account.peerId, effectiveLevel)])
@@ -651,11 +660,16 @@ public final class VoiceChatController: ViewController {
             guard let callState = self.callState else {
                 return
             }
+            if let muteState = callState.muteState {
+                if !muteState.canUnmute {
+                    return
+                }
+            }
             switch gestureRecognizer.state {
                 case .began:
                     self.actionButtonPressGestureStartTime = CACurrentMediaTime()
                     self.actionButton.pressing = true
-                    if callState.isMuted {
+                    if callState.muteState != nil {
                         self.pushingToTalk = true
                         self.call.setIsMuted(action: .muted(isPushToTalkActive: true))
                     }
@@ -663,7 +677,7 @@ public final class VoiceChatController: ViewController {
                     self.pushingToTalk = false
                     self.actionButton.pressing = false
                     let timestamp = CACurrentMediaTime()
-                    if callState.isMuted || timestamp - self.actionButtonPressGestureStartTime < 0.1 {
+                    if callState.muteState != nil || timestamp - self.actionButtonPressGestureStartTime < 0.1 {
                         self.call.toggleIsMuted()
                     } else {
                         self.call.setIsMuted(action: .muted(isPushToTalkActive: false))
@@ -768,16 +782,12 @@ public final class VoiceChatController: ViewController {
             
             let actionButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - centralButtonSize.width) / 2.0), y: layout.size.height - bottomAreaHeight + floor((bottomAreaHeight - centralButtonSize.height) / 2.0)), size: centralButtonSize)
             
-            var isMicOn = false
-            
             let actionButtonState: VoiceChatActionButtonState
             let actionButtonTitle: String
             let actionButtonSubtitle: String
             let audioButtonAppearance: CallControllerButtonItemNode.Content.Appearance
             var actionButtonEnabled = true
             if let callState = self.callState {
-                isMicOn = !callState.isMuted
-                
                 switch callState.networkState {
                 case .connecting:
                     actionButtonState = .connecting
@@ -786,15 +796,26 @@ public final class VoiceChatController: ViewController {
                     audioButtonAppearance = .color(.custom(0x1c1c1e))
                     actionButtonEnabled = false
                 case .connected:
-                    actionButtonState = .active(state: isMicOn ? .on : .muted)
-                    if isMicOn {
+                    if let muteState = callState.muteState {
+                        if muteState.canUnmute {
+                            actionButtonState = .active(state: .muted)
+                            
+                            actionButtonTitle = self.presentationData.strings.VoiceChat_Unmute
+                            actionButtonSubtitle = self.presentationData.strings.VoiceChat_UnmuteHelp
+                            audioButtonAppearance = .color(.custom(0x00274d))
+                        } else {
+                            actionButtonState = .active(state: .cantSpeak)
+                            
+                            actionButtonTitle = self.presentationData.strings.VoiceChat_Muted
+                            actionButtonSubtitle = self.presentationData.strings.VoiceChat_MutedHelp
+                            audioButtonAppearance = .color(.custom(0x00274d))
+                        }
+                    } else {
+                        actionButtonState = .active(state: .on)
+                        
                         actionButtonTitle = self.pushingToTalk ? self.presentationData.strings.VoiceChat_Live : self.presentationData.strings.VoiceChat_Mute
                         actionButtonSubtitle = ""
                         audioButtonAppearance = .color(.custom(0x005720))
-                    } else {
-                        actionButtonTitle = self.presentationData.strings.VoiceChat_Unmute
-                        actionButtonSubtitle = self.presentationData.strings.VoiceChat_UnmuteHelp
-                        audioButtonAppearance = .color(.custom(0x00274d))
                     }
                 }
             } else {
@@ -943,7 +964,7 @@ public final class VoiceChatController: ViewController {
             })
         }
         
-        private func updateMembers(isMuted: Bool, members: [RenderedChannelParticipant], memberStates: [PeerId: PresentationGroupCallMemberState], invitedPeers: Set<PeerId>) {
+        private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, members: [RenderedChannelParticipant], memberStates: [PeerId: PresentationGroupCallMemberState], invitedPeers: Set<PeerId>) {
             var members = members
             members.sort(by: { lhs, rhs in
                 if lhs.peer.id == self.context.account.peerId {
@@ -980,7 +1001,7 @@ public final class VoiceChatController: ViewController {
                 let memberState: PeerEntry.State
                 var memberMuteState: GroupCallParticipantsContext.Participant.MuteState?
                 if member.peer.id == self.context.account.peerId {
-                    if !isMuted {
+                    if muteState == nil {
                         memberState = .speaking
                     } else {
                         memberState = .listening

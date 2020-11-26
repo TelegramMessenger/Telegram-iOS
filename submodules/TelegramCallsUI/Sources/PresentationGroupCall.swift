@@ -20,7 +20,7 @@ private extension PresentationGroupCallState {
             networkState: .connecting,
             canManageCall: false,
             adminIds: Set(),
-            isMuted: true
+            muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true)
         )
     }
 }
@@ -406,14 +406,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     }))
                 }))
                 
-                self.isMutedDisposable.set((callContext.isMuted
-                |> deliverOnMainQueue).start(next: { [weak self] isMuted in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.stateValue.isMuted = isMuted
-                }))
-                
                 self.networkStateDisposable.set((callContext.networkState
                 |> deliverOnMainQueue).start(next: { [weak self] state in
                     guard let strongSelf = self else {
@@ -512,6 +504,16 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             ssrc: participant.ssrc,
                             muteState: participant.muteState
                         )
+                        
+                        if participant.peer.id == strongSelf.accountContext.account.peerId {
+                            if let muteState = participant.muteState {
+                                strongSelf.stateValue.muteState = muteState
+                                strongSelf.callContext?.setIsMuted(true)
+                            } else if let currentMuteState = strongSelf.stateValue.muteState, !currentMuteState.canUnmute {
+                                strongSelf.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true)
+                                strongSelf.callContext?.setIsMuted(true)
+                            }
+                        }
                     }
                     strongSelf.membersValue = memberStates
                     
@@ -598,6 +600,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         if self.isMutedValue == action {
             return
         }
+        if let muteState = self.stateValue.muteState, !muteState.canUnmute {
+            return
+        }
         self.isMutedValue = action
         self.isMutedPromise.set(self.isMutedValue)
         let isEffectivelyMuted: Bool
@@ -610,6 +615,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.updateMuteState(peerId: self.accountContext.account.peerId, isMuted: false)
         }
         self.callContext?.setIsMuted(isEffectivelyMuted)
+        
+        if isEffectivelyMuted {
+            self.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true)
+        } else {
+            self.stateValue.muteState = nil
+        }
     }
     
     public func setCurrentAudioOutput(_ output: AudioSessionOutput) {
