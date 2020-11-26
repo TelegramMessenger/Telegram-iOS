@@ -26,11 +26,11 @@ private let typeStore = { () -> EncodableTypeStore in
 
 public func declareEncodable(_ type: Any.Type, f: @escaping(PostboxDecoder) -> PostboxCoding) {
     let string = "\(type)"
-    let hash = murMurHashString32(string)
+    let hash = HashFunctions.murMurHash32(string)
     if typeStore.dict[hash] != nil {
         assertionFailure("Encodable type hash collision for \(type)")
     }
-    typeStore.dict[murMurHashString32("\(type)")] = f
+    typeStore.dict[HashFunctions.murMurHash32("\(type)")] = f
 }
 
 public func declareEncodable(typeHash: Int32, _ f: @escaping(PostboxDecoder) -> PostboxCoding) {
@@ -41,7 +41,7 @@ public func declareEncodable(typeHash: Int32, _ f: @escaping(PostboxDecoder) -> 
 }
 
 public func persistentHash32(_ string: String) -> Int32 {
-    return murMurHashString32(string)
+    return HashFunctions.murMurHash32(string)
 }
 
 private enum ValueType: Int8 {
