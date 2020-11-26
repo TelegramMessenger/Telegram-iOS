@@ -13,6 +13,7 @@ public enum TelegramChannelPermission {
     case addAdmins
     case changeInfo
     case canBeAnonymous
+    case manageCalls
 }
 
 public extension TelegramChannel {
@@ -121,6 +122,11 @@ public extension TelegramChannel {
                 }
             case .addAdmins:
                 if let adminRights = self.adminRights, adminRights.flags.contains(.canAddAdmins) {
+                    return true
+                }
+                return false
+            case .manageCalls:
+                if let adminRights = self.adminRights, adminRights.flags.contains(.canManageCalls) {
                     return true
                 }
                 return false

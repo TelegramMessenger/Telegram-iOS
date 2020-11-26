@@ -598,7 +598,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         }
         if let currentGroupCall = self.currentGroupCallValue {
             if endCurrentIfAny {
-                let endSignal = currentGroupCall.leave()
+                let endSignal = currentGroupCall.leave(terminateIfPossible: false)
                 |> filter { $0 }
                 |> take(1)
                 |> deliverOnMainQueue

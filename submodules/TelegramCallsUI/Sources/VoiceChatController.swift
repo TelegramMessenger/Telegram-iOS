@@ -348,28 +348,30 @@ public final class VoiceChatController: ViewController {
                         })))
                     }
                 default:
-                    if entry.muteState == nil {
-                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_MutePeer, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Mute"), color: theme.actionSheet.primaryTextColor)
-                        }, action: { _, f in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            
-                            strongSelf.call.updateMuteState(peerId: peer.id, isMuted: true)
-                            f(.default)
-                        })))
-                    } else {
-                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_UnmutePeer, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Unmute"), color: theme.actionSheet.primaryTextColor)
-                        }, action: { _, f in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            
-                            strongSelf.call.updateMuteState(peerId: peer.id, isMuted: false)
-                            f(.default)
-                        })))
+                    if let callState = strongSelf.callState, (callState.canManageCall || callState.adminIds.contains(strongSelf.context.account.peerId)) {
+                        if let muteState = entry.muteState, !muteState.canUnmute {
+                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_UnmutePeer, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Unmute"), color: theme.actionSheet.primaryTextColor)
+                            }, action: { _, f in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                
+                                strongSelf.call.updateMuteState(peerId: peer.id, isMuted: false)
+                                f(.default)
+                            })))
+                        } else {
+                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_MutePeer, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Mute"), color: theme.actionSheet.primaryTextColor)
+                            }, action: { _, f in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                
+                                strongSelf.call.updateMuteState(peerId: peer.id, isMuted: true)
+                                f(.default)
+                            })))
+                        }
                     }
                     
                     if peer.id != strongSelf.context.account.peerId {
@@ -574,12 +576,24 @@ public final class VoiceChatController: ViewController {
                         strongSelf.controller?.present(shareController, in: .window(.root))
                     }
                 })))
-                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EndVoiceChat, textColor: .destructive, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
-                }, action: { _, f in
-                    f(.dismissWithoutContent)
-                    
-                })))
+                
+                if let callState = strongSelf.callState, callState.canManageCall {
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_EndVoiceChat, textColor: .destructive, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
+                    }, action: { _, f in
+                        f(.dismissWithoutContent)
+                        
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let _ = (strongSelf.call.leave(terminateIfPossible: true)
+                        |> filter { $0 }
+                        |> take(1)
+                        |> deliverOnMainQueue).start(completed: {
+                            self?.controller?.dismiss()
+                        })
+                    })))
+                }
             
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme), source: .extracted(VoiceChatContextExtractedContentSource(controller: controller, sourceNode: strongOptionsButton.extractedContainerNode, keepInPlace: true)), items: .single(items), reactionItems: [], gesture: gesture)
                 strongSelf.controller?.presentInGlobalOverlay(contextController)
@@ -607,12 +621,12 @@ public final class VoiceChatController: ViewController {
             super.didLoad()
             
             let longTapRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.actionButtonPressGesture(_:)))
-            longTapRecognizer.minimumPressDuration = 0.1
+            longTapRecognizer.minimumPressDuration = 0.001
             self.actionButton.view.addGestureRecognizer(longTapRecognizer)
             
             let panRecognizer = CallPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
             panRecognizer.shouldBegin = { [weak self] _ in
-                guard let strongSelf = self else {
+                guard let _ = self else {
                     return false
                 }
                 return true
@@ -625,22 +639,35 @@ public final class VoiceChatController: ViewController {
         }
         
         @objc private func leavePressed() {
-            self.leaveDisposable.set((self.call.leave()
+            self.leaveDisposable.set((self.call.leave(terminateIfPossible: false)
             |> deliverOnMainQueue).start(completed: { [weak self] in
                 self?.controller?.dismiss()
             }))
         }
         
+        private var actionButtonPressGestureStartTime: Double = 0.0
+        
         @objc private func actionButtonPressGesture(_ gestureRecognizer: UILongPressGestureRecognizer) {
+            guard let callState = self.callState else {
+                return
+            }
             switch gestureRecognizer.state {
                 case .began:
-                    self.pushingToTalk = true
+                    self.actionButtonPressGestureStartTime = CACurrentMediaTime()
                     self.actionButton.pressing = true
-                    self.call.setIsMuted(false)
+                    if callState.isMuted {
+                        self.pushingToTalk = true
+                        self.call.setIsMuted(action: .muted(isPushToTalkActive: true))
+                    }
                 case .ended, .cancelled:
                     self.pushingToTalk = false
                     self.actionButton.pressing = false
-                    self.call.setIsMuted(true)
+                    let timestamp = CACurrentMediaTime()
+                    if callState.isMuted || timestamp - self.actionButtonPressGestureStartTime < 0.1 {
+                        self.call.toggleIsMuted()
+                    } else {
+                        self.call.setIsMuted(action: .muted(isPushToTalkActive: false))
+                    }
                 default:
                     break
             }
@@ -748,7 +775,7 @@ public final class VoiceChatController: ViewController {
             let actionButtonSubtitle: String
             let audioButtonAppearance: CallControllerButtonItemNode.Content.Appearance
             var actionButtonEnabled = true
-            if let callState = callState {
+            if let callState = self.callState {
                 isMicOn = !callState.isMuted
                 
                 switch callState.networkState {

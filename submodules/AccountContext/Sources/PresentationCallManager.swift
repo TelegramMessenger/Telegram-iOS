@@ -163,13 +163,19 @@ public struct PresentationGroupCallState: Equatable {
     }
     
     public var networkState: NetworkState
+    public var canManageCall: Bool
+    public var adminIds: Set<PeerId>
     public var isMuted: Bool
     
     public init(
         networkState: NetworkState,
+        canManageCall: Bool,
+        adminIds: Set<PeerId>,
         isMuted: Bool
     ) {
         self.networkState = networkState
+        self.canManageCall = canManageCall
+        self.adminIds = adminIds
         self.isMuted = isMuted
     }
 }
@@ -206,6 +212,11 @@ public struct PresentationGroupCallMemberState: Equatable {
     }
 }
 
+public enum PresentationGroupCallMuteAction: Equatable {
+    case muted(isPushToTalkActive: Bool)
+    case unmuted
+}
+
 public protocol PresentationGroupCall: class {
     var account: Account { get }
     var accountContext: AccountContext { get }
@@ -222,10 +233,10 @@ public protocol PresentationGroupCall: class {
     var myAudioLevel: Signal<Float, NoError> { get }
     var isMuted: Signal<Bool, NoError> { get }
     
-    func leave() -> Signal<Bool, NoError>
+    func leave(terminateIfPossible: Bool) -> Signal<Bool, NoError>
     
     func toggleIsMuted()
-    func setIsMuted(_ value: Bool)
+    func setIsMuted(action: PresentationGroupCallMuteAction)
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
     
     func updateMuteState(peerId: PeerId, isMuted: Bool)
