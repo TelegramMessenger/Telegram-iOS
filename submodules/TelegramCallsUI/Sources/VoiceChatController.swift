@@ -189,16 +189,12 @@ public final class VoiceChatController: ViewController {
                 case .listening:
                     text = .text(presentationData.strings.VoiceChat_StatusListening, .accent)
                     let microphoneColor: UIColor
-                    if let muteState = self.muteState {
-                        if muteState.canUnmute {
-                            microphoneColor = UIColor(rgb: 0x979797)
-                        } else {
-                            microphoneColor = UIColor(rgb: 0xff3b30)
-                        }
+                    if let muteState = self.muteState, !muteState.canUnmute {
+                        microphoneColor = UIColor(rgb: 0xff3b30)
                     } else {
                         microphoneColor = UIColor(rgb: 0x979797)
                     }
-                    icon = .microphone(self.muteState != nil, microphoneColor)
+                    icon = .microphone(true, microphoneColor)
                 case .speaking:
                     text = .text(presentationData.strings.VoiceChat_StatusSpeaking, .constructive)
                     icon = .microphone(false, UIColor(rgb: 0x34c759))
@@ -717,13 +713,13 @@ public final class VoiceChatController: ViewController {
             
             transition.updateFrame(node: self.contentContainer, frame: CGRect(origin: CGPoint(), size: layout.size))
             
-            let bottomAreaHeight: CGFloat = 333.0
+            let bottomAreaHeight: CGFloat = 290.0
             
             let listOrigin = CGPoint(x: 16.0, y: navigationHeight + 10.0)
             
             var listHeight: CGFloat = 56.0
             if let maxListHeight = self.maxListHeight {
-                listHeight = min(max(1.0, layout.size.height - bottomAreaHeight - listOrigin.y), maxListHeight)
+                listHeight = min(max(1.0, layout.size.height - bottomAreaHeight - listOrigin.y - layout.intrinsicInsets.bottom + 25.0), maxListHeight)
             }
             
             let listFrame = CGRect(origin: listOrigin, size: CGSize(width: layout.size.width - 16.0 * 2.0, height: listHeight))
@@ -738,7 +734,7 @@ public final class VoiceChatController: ViewController {
             let centralButtonSize = CGSize(width: 244.0, height: 244.0)
             let sideButtonInset: CGFloat = 27.0
             
-            let actionButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - centralButtonSize.width) / 2.0), y: layout.size.height - bottomAreaHeight + floor((bottomAreaHeight - centralButtonSize.height) / 2.0)), size: centralButtonSize)
+            let actionButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - centralButtonSize.width) / 2.0), y: layout.size.height - bottomAreaHeight - layout.intrinsicInsets.bottom + floor((bottomAreaHeight - centralButtonSize.height) / 2.0)), size: centralButtonSize)
             
             var isMicOn = false
             
@@ -832,8 +828,8 @@ public final class VoiceChatController: ViewController {
             
             self.leaveNode.update(size: sideButtonSize, content: CallControllerButtonItemNode.Content(appearance: .color(.custom(0x4d120e)), image: .end), text: self.presentationData.strings.VoiceChat_Leave, transition: .immediate)
             
-            transition.updateFrame(node: self.audioOutputNode, frame: CGRect(origin: CGPoint(x: sideButtonInset, y: layout.size.height - bottomAreaHeight + floor((bottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize))
-            transition.updateFrame(node: self.leaveNode, frame: CGRect(origin: CGPoint(x: layout.size.width - sideButtonInset - sideButtonSize.width, y: layout.size.height - bottomAreaHeight + floor((bottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize))
+            transition.updateFrame(node: self.audioOutputNode, frame: CGRect(origin: CGPoint(x: sideButtonInset, y: layout.size.height - bottomAreaHeight - layout.intrinsicInsets.bottom + floor((bottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize))
+            transition.updateFrame(node: self.leaveNode, frame: CGRect(origin: CGPoint(x: layout.size.width - sideButtonInset - sideButtonSize.width, y: layout.size.height - bottomAreaHeight - layout.intrinsicInsets.bottom + floor((bottomAreaHeight - sideButtonSize.height) / 2.0)), size: sideButtonSize))
             
             if isFirstTime {
                 while !self.enqueuedTransitions.isEmpty {

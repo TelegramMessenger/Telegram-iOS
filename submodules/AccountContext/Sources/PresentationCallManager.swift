@@ -215,6 +215,7 @@ public protocol PresentationGroupCall: class {
 
 public protocol PresentationCallManager: class {
     var currentCallSignal: Signal<PresentationCall?, NoError> { get }
+    var currentGroupCallSignal: Signal<PresentationGroupCall?, NoError> { get }
     
     func requestCall(context: AccountContext, peerId: PeerId, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult
     func requestOrJoinGroupCall(context: AccountContext, peerId: PeerId) -> RequestOrJoinGroupCallResult

@@ -492,7 +492,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             |> deliverOnMainQueue).start(completed: { [weak self] in
                 self?._canBeRemoved.set(.single(true))
             }))
-        } else {
+        } else if case .requesting = self.internalState {
+            self.callContext?.stop()
+            self.callContext = nil
+            self.requestDisposable.set(nil)
+            self._canBeRemoved.set(.single(true))
         }
         return self._canBeRemoved.get()
     }
