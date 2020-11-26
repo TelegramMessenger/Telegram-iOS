@@ -51,7 +51,7 @@ public final class OngoingGroupCallContext {
         let audioLevels = ValuePipe<[(UInt32, Float)]>()
         let myAudioLevel = ValuePipe<Float>()
         
-        init(queue: Queue) {
+        init(queue: Queue, inputDeviceId: String, outputDeviceId: String) {
             self.queue = queue
             
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
@@ -68,7 +68,9 @@ public final class OngoingGroupCallContext {
                 },
                 myAudioLevelUpdated: { level in
                     myAudioLevelUpdatedImpl?(level)
-                }
+                },
+                inputDeviceId: inputDeviceId,
+                outputDeviceId: outputDeviceId
             )
             
             let queue = self.queue
@@ -190,6 +192,13 @@ public final class OngoingGroupCallContext {
             self.isMuted.set(isMuted)
             self.context.setIsMuted(isMuted)
         }
+        
+        func switchAudioInput(_ deviceId: String) {
+            self.context.switchAudioInput(deviceId)
+        }
+        func switchAudioOutput(_ deviceId: String) {
+            self.context.switchAudioOutput(deviceId)
+        }
     }
     
     private let queue = Queue()
@@ -267,10 +276,10 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public init() {
+    public init(inputDeviceId: String = "", outputDeviceId: String = "") {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue)
+            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId)
         })
     }
     
@@ -280,6 +289,16 @@ public final class OngoingGroupCallContext {
         }
     }
     
+    public func switchAudioInput(_ deviceId: String) {
+        self.impl.with { impl in
+            impl.switchAudioInput(deviceId)
+        }
+    }
+    public func switchAudioOutput(_ deviceId: String) {
+        self.impl.with { impl in
+            impl.switchAudioOutput(deviceId)
+        }
+    }
     public func setJoinResponse(payload: String, ssrcs: [UInt32]) {
         self.impl.with { impl in
             impl.setJoinResponse(payload: payload, ssrcs: ssrcs)

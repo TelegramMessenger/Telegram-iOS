@@ -158,7 +158,7 @@ typedef NS_ENUM(int32_t, GroupCallNetworkState) {
 
 @interface GroupCallThreadLocalContext : NSObject
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated myAudioLevelUpdated:(void (^ _Nonnull)(float))myAudioLevelUpdated;
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated myAudioLevelUpdated:(void (^ _Nonnull)(float))myAudioLevelUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId;
 
 - (void)stop;
 
@@ -166,6 +166,9 @@ typedef NS_ENUM(int32_t, GroupCallNetworkState) {
 - (void)setJoinResponsePayload:(NSString * _Nonnull)payload;
 - (void)setSsrcs:(NSArray<NSNumber *> * _Nonnull)ssrcs;
 - (void)setIsMuted:(bool)isMuted;
+
+- (void)switchAudioOutput:(NSString * _Nonnull)deviceId;
+- (void)switchAudioInput:(NSString * _Nonnull)deviceId;
 
 @end
 
