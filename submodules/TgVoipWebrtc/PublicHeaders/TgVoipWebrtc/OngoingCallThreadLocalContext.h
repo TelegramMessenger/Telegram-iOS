@@ -164,7 +164,7 @@ typedef NS_ENUM(int32_t, GroupCallNetworkState) {
 
 - (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion;
 - (void)setJoinResponsePayload:(NSString * _Nonnull)payload;
-- (void)setSsrcs:(NSArray<NSNumber *> * _Nonnull)ssrcs;
+- (void)removeSsrcs:(NSArray<NSNumber *> * _Nonnull)ssrcs;
 - (void)setIsMuted:(bool)isMuted;
 
 - (void)switchAudioOutput:(NSString * _Nonnull)deviceId;
