@@ -808,7 +808,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 
 @implementation GroupCallThreadLocalContext
 
-- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated myAudioLevelUpdated:(void (^ _Nonnull)(float))myAudioLevelUpdated {
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated myAudioLevelUpdated:(void (^ _Nonnull)(float))myAudioLevelUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -836,7 +836,9 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             },
             .myAudioLevelUpdated = [myAudioLevelUpdated](float level) {
                 myAudioLevelUpdated(level);
-            }
+            },
+            .initialInputDeviceId = inputDeviceId.UTF8String,
+            .initialOutputDeviceId = outputDeviceId.UTF8String
         }));
     }
     return self;
@@ -1040,6 +1042,17 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 - (void)setIsMuted:(bool)isMuted {
     if (_instance) {
         _instance->setIsMuted(isMuted);
+    }
+}
+
+- (void)switchAudioOutput:(NSString * _Nonnull)deviceId {
+    if (_instance) {
+        _instance->setAudioOutputDevice(deviceId.UTF8String);
+    }
+}
+- (void)switchAudioInput:(NSString * _Nonnull)deviceId {
+    if (_instance) {
+        _instance->setAudioInputDevice(deviceId.UTF8String);
     }
 }
 
