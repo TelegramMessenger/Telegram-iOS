@@ -397,13 +397,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.peekData = peekData
         
         var locationBroadcastPanelSource: LocationBroadcastPanelSource
+        var groupCallPanelSource: GroupCallPanelSource
         
         switch chatLocation {
             case let .peer(peerId):
                 locationBroadcastPanelSource = .peer(peerId)
+                groupCallPanelSource = .peer(peerId)
                 self.chatLocationInfoData = .peer(Promise())
             case let .replyThread(replyThreadMessage):
                 locationBroadcastPanelSource = .none
+                groupCallPanelSource = .all
                 let promise = Promise<Message?>()
                 let key = PostboxViewKey.messages([replyThreadMessage.messageId])
                 promise.set(context.account.postbox.combinedView(keys: [key])
@@ -428,6 +431,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             mediaAccessoryPanelVisibility = .specific(size: .compact)
         } else {
             locationBroadcastPanelSource = .none
+            groupCallPanelSource = .none
         }
         let navigationBarPresentationData: NavigationBarPresentationData?
         switch mode {
@@ -436,7 +440,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             default:
                 navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData, hideBackground: self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding ? true : false, hideBadge: false)
         }
-        super.init(context: context, navigationBarPresentationData: navigationBarPresentationData, mediaAccessoryPanelVisibility: mediaAccessoryPanelVisibility, locationBroadcastPanelSource: locationBroadcastPanelSource)
+        super.init(context: context, navigationBarPresentationData: navigationBarPresentationData, mediaAccessoryPanelVisibility: mediaAccessoryPanelVisibility, locationBroadcastPanelSource: locationBroadcastPanelSource, groupCallPanelSource: groupCallPanelSource)
         
         self.automaticallyControlPresentationContextLayout = false
         self.blocksBackgroundWhenInOverlay = true
@@ -5982,7 +5986,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
             }
-            let callResult = strongSelf.context.sharedContext.callManager?.requestOrJoinGroupCall(context: strongSelf.context, peerId: peer.id)
+            let callResult = strongSelf.context.sharedContext.callManager?.requestOrJoinGroupCall(context: strongSelf.context, peerId: peer.id, initialCall: activeCall, endCurrentIfAny: false)
             if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
                 if currentPeerId == peer.id {
                     strongSelf.context.sharedContext.navigateToCurrentCall()
@@ -5990,12 +5994,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                     let _ = (strongSelf.context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
                         return (transaction.getPeer(peer.id), currentPeerId.flatMap(transaction.getPeer))
-                    } |> deliverOnMainQueue).start(next: { [weak self] peer, current in
+                    } |> deliverOnMainQueue).start(next: { peer, current in
                         if let peer = peer {
                             if let strongSelf = self, let current = current {
                                 strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                                     if let strongSelf = self {
-                                        //let _ = strongSelf.context.sharedContext.callManager?.requestCall(context: context, peerId: peerId, isVideo: isVideo, endCurrentIfAny: true)
+                                        let _ = strongSelf.context.sharedContext.callManager?.requestOrJoinGroupCall(context: strongSelf.context, peerId: peer.id, initialCall: activeCall, endCurrentIfAny: true)
                                     }
                                 })]), in: .window(.root))
                             } else {

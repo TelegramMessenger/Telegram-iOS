@@ -468,6 +468,7 @@ public final class VoiceChatController: ViewController {
                 guard let peer = view.peers[view.peerId] else {
                     return
                 }
+                //TODO:localize
                 var subtitle = "group"
                 if let cachedData = view.cachedData as? CachedChannelData {
                     if let memberCount = cachedData.participantsSummary.memberCount {
@@ -476,7 +477,7 @@ public final class VoiceChatController: ViewController {
                 }
                 
                 let titleView = VoiceChatControllerTitleView(theme: strongSelf.presentationData.theme)
-                titleView.set(title: peer.debugDisplayTitle, subtitle: subtitle)
+                titleView.set(title: "Voice Chat", subtitle: subtitle)
                 strongSelf.controller?.navigationItem.titleView = titleView
                 
                 if !strongSelf.didSetDataReady {
@@ -548,7 +549,7 @@ public final class VoiceChatController: ViewController {
                 }
    
                 var items: [ContextMenuItem] = []
-                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_SpeakPermissionEveryone, icon: { theme in
+                /*items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_SpeakPermissionEveryone, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
                     f(.dismissWithoutContent)
@@ -558,7 +559,7 @@ public final class VoiceChatController: ViewController {
                     f(.dismissWithoutContent)
                   
                 })))
-                items.append(.separator)
+                items.append(.separator)*/
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_Share, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
                 }, action: { [weak self] _, f in

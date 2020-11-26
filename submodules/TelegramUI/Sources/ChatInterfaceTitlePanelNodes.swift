@@ -64,16 +64,6 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
         }
     }
     
-    if chatPresentationInterfaceState.activeGroupCallInfo != nil {
-        if let currentPanel = currentPanel as? ChatCallTitlePanelNode {
-            return currentPanel
-        } else {
-            let panel = ChatCallTitlePanelNode(context: context)
-            panel.interfaceInteraction = interfaceInteraction
-            return panel
-        }
-    }
-    
     if let selectedContext = selectedContext {
         switch selectedContext {
             case .pinnedMessage:

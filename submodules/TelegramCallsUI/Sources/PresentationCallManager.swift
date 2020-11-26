@@ -592,17 +592,32 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         }
     }
     
-    public func requestOrJoinGroupCall(context: AccountContext, peerId: PeerId) -> RequestOrJoinGroupCallResult {
-        if let currentGroupCall = self.currentGroupCallValue {
-            return .alreadyInProgress(currentGroupCall.peerId)
+    public func requestOrJoinGroupCall(context: AccountContext, peerId: PeerId, initialCall: CachedChannelData.ActiveCall?, endCurrentIfAny: Bool) -> RequestOrJoinGroupCallResult {
+        let begin: () -> Void = { [weak self] in
+            let _ = self?.startGroupCall(accountContext: context, peerId: peerId, initialCall: initialCall).start()
         }
-        let _ = self.startGroupCall(accountContext: context, peerId: peerId).start()
+        if let currentGroupCall = self.currentGroupCallValue {
+            if endCurrentIfAny {
+                let endSignal = currentGroupCall.leave()
+                |> filter { $0 }
+                |> take(1)
+                |> deliverOnMainQueue
+                self.startCallDisposable.set(endSignal.start(next: { _ in
+                    begin()
+                }))
+            } else {
+                return .alreadyInProgress(currentGroupCall.peerId)
+            }
+        } else {
+            begin()
+        }
         return .requested
     }
     
     private func startGroupCall(
         accountContext: AccountContext,
         peerId: PeerId,
+        initialCall: CachedChannelData.ActiveCall?,
         internalId: CallSessionInternalId = CallSessionInternalId()
     ) -> Signal<Bool, NoError> {
         let (presentationData, present, openSettings) = self.getDeviceAccessData()
@@ -649,6 +664,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 audioSession: strongSelf.audioSession,
                 callKitIntegration: nil,
                 getDeviceAccessData: strongSelf.getDeviceAccessData,
+                initialCall: initialCall,
                 internalId: internalId,
                 peerId: peerId,
                 peer: nil

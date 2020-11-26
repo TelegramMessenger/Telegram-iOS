@@ -655,23 +655,26 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             })
             
-            self.callStateDisposable = (self.callState.get()
-            |> deliverOnMainQueue).start(next: { [weak self] state in
+            self.callStateDisposable = combineLatest(queue: .mainQueue(),
+                self.callState.get(),
+                callManager.currentGroupCallSignal
+                |> map { call -> Bool in
+                    return call != nil
+                }
+            ).start(next: { [weak self] state, hasGroupCall in
                 if let strongSelf = self {
                     let resolvedText: CallStatusText
                     if let state = state {
-//                        if [.active, .paused].contains(state.videoState) || [.active, .paused].contains(state.remoteVideoState) {
-//                            resolvedText = .none
-//                        } else {
-                            switch state.state {
-                                case .connecting, .requesting, .terminating, .ringing, .waiting:
-                                    resolvedText = .inProgress(nil)
-                                case .terminated:
-                                    resolvedText = .none
-                                case .active(let timestamp, _, _), .reconnecting(let timestamp, _, _):
-                                    resolvedText = .inProgress(timestamp)
-                            }
-//                        }
+                        switch state.state {
+                            case .connecting, .requesting, .terminating, .ringing, .waiting:
+                                resolvedText = .inProgress(nil)
+                            case .terminated:
+                                resolvedText = .none
+                            case .active(let timestamp, _, _), .reconnecting(let timestamp, _, _):
+                                resolvedText = .inProgress(timestamp)
+                        }
+                    } else if hasGroupCall {
+                        resolvedText = .inProgress(nil)
                     } else {
                         resolvedText = .none
                     }
@@ -705,13 +708,23 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             })
             
             mainWindow.inCallNavigate = { [weak self] in
-                if let strongSelf = self, let callController = strongSelf.callController {
+                guard let strongSelf = self else {
+                    return
+                }
+                if let callController = strongSelf.callController {
                     if callController.isNodeLoaded {
                         mainWindow.hostView.containerView.endEditing(true)
                         if callController.view.superview == nil {
                             mainWindow.present(callController, on: .calls)
                         } else {
                             callController.expandFromPipIfPossible()
+                        }
+                    }
+                } else if let groupCallController = strongSelf.groupCallController {
+                    if groupCallController.isNodeLoaded {
+                        mainWindow.hostView.containerView.endEditing(true)
+                        if groupCallController.view.superview == nil {
+                            mainWindow.present(groupCallController, on: .calls)
                         }
                     }
                 }

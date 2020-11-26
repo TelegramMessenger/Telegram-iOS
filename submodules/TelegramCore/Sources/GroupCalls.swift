@@ -7,19 +7,19 @@ import SyncCore
 public struct GroupCallInfo: Equatable {
     public var id: Int64
     public var accessHash: Int64
+    public var participantCount: Int
     public var clientParams: String?
+}
+
+public struct GroupCallSummary: Equatable {
+    public var info: GroupCallInfo
+    public var topParticipants: [GroupCallParticipantsContext.Participant]
 }
 
 private extension GroupCallInfo {
     init?(_ call: Api.GroupCall) {
         switch call {
-        case let .groupCallPrivate(id, accessHash, _):
-            self.init(
-                id: id,
-                accessHash: accessHash,
-                clientParams: nil
-            )
-        case let .groupCall(_, id, accessHash, _, params, _):
+        case let .groupCall(_, id, accessHash, participantCount, params, _):
             var clientParams: String?
             if let params = params {
                 switch params {
@@ -30,6 +30,7 @@ private extension GroupCallInfo {
             self.init(
                 id: id,
                 accessHash: accessHash,
+                participantCount: Int(participantCount),
                 clientParams: clientParams
             )
         case .groupCallDiscarded:
@@ -42,49 +43,66 @@ public enum GetCurrentGroupCallError {
     case generic
 }
 
-public func getCurrentGroupCall(account: Account, peerId: PeerId) -> Signal<GroupCallInfo?, GetCurrentGroupCallError> {
-    return account.postbox.transaction { transaction -> Api.InputChannel? in
-        transaction.getPeer(peerId).flatMap(apiInputChannel)
+public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int64) -> Signal<GroupCallSummary?, GetCurrentGroupCallError> {
+    return account.network.request(Api.functions.phone.getGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash)))
+    |> mapError { _ -> GetCurrentGroupCallError in
+        return .generic
     }
-    |> castError(GetCurrentGroupCallError.self)
-    |> mapToSignal { inputPeer -> Signal<Api.InputGroupCall?, GetCurrentGroupCallError> in
-        guard let inputPeer = inputPeer else {
-            return .fail(.generic)
-        }
-        return account.network.request(Api.functions.channels.getFullChannel(channel: inputPeer))
-        |> mapError { _ -> GetCurrentGroupCallError in
-            return .generic
-        }
-        |> mapToSignal { result -> Signal<Api.InputGroupCall?, GetCurrentGroupCallError> in
-            switch result {
-            case let .chatFull(fullChat, _, _):
-                switch fullChat {
-                case let .channelFull(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, inputCall):
-                    return .single(inputCall)
-                default:
-                    return .single(nil)
+    |> mapToSignal { result -> Signal<GroupCallSummary?, GetCurrentGroupCallError> in
+        switch result {
+        case let .groupCall(call, _, participants, users):
+            return account.postbox.transaction { transaction -> GroupCallSummary? in
+                guard let info = GroupCallInfo(call) else {
+                    return nil
                 }
+                
+                var peers: [Peer] = []
+                var peerPresences: [PeerId: PeerPresence] = [:]
+                
+                for user in users {
+                    let telegramUser = TelegramUser(user: user)
+                    peers.append(telegramUser)
+                    if let presence = TelegramUserPresence(apiUser: user) {
+                        peerPresences[telegramUser.id] = presence
+                    }
+                }
+                
+                updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
+                    return updated
+                })
+                updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                
+                var parsedParticipants: [GroupCallParticipantsContext.Participant] = []
+                
+                loop: for participant in participants {
+                    switch participant {
+                    case let .groupCallParticipant(flags, userId, date, source):
+                        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                        let ssrc = UInt32(bitPattern: source)
+                        guard let peer = transaction.getPeer(peerId) else {
+                            continue loop
+                        }
+                        var muteState: GroupCallParticipantsContext.Participant.MuteState?
+                        if (flags & (1 << 0)) != 0 {
+                            let canUnmute = (flags & (1 << 2)) != 0
+                            muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: canUnmute)
+                        }
+                        parsedParticipants.append(GroupCallParticipantsContext.Participant(
+                            peer: peer,
+                            ssrc: ssrc,
+                            joinTimestamp: date,
+                            muteState: muteState
+                        ))
+                    }
+                }
+                
+                return GroupCallSummary(
+                    info: info,
+                    topParticipants: parsedParticipants
+                )
             }
-        }
-    }
-    |> mapToSignal { inputCall -> Signal<GroupCallInfo?, GetCurrentGroupCallError> in
-        guard let inputCall = inputCall else {
-            return .single(nil)
-        }
-        
-        return account.network.request(Api.functions.phone.getGroupCall(call: inputCall))
-        |> mapError { _ -> GetCurrentGroupCallError in
-            return .generic
-        }
-        |> mapToSignal { result -> Signal<GroupCallInfo?, GetCurrentGroupCallError> in
-            switch result {
-            case let .groupCall(call, _, _, _):
-                return account.postbox.transaction { transaction -> GroupCallInfo? in
-                    return GroupCallInfo(call)
-                }
-                |> mapError { _ -> GetCurrentGroupCallError in
-                    return .generic
-                }
+            |> mapError { _ -> GetCurrentGroupCallError in
+                return .generic
             }
         }
     }

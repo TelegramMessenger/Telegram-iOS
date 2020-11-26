@@ -41,6 +41,29 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     
+    private struct SummaryInfoState: Equatable {
+        public var info: GroupCallInfo
+        
+        public init(
+            info: GroupCallInfo
+        ) {
+            self.info = info
+        }
+    }
+    
+    private struct SummaryParticipantsState: Equatable {
+        public var participantCount: Int
+        public var topParticipants: [GroupCallParticipantsContext.Participant]
+        
+        public init(
+            participantCount: Int,
+            topParticipants: [GroupCallParticipantsContext.Participant]
+        ) {
+            self.participantCount = participantCount
+            self.topParticipants = topParticipants
+        }
+    }
+    
     public let account: Account
     public let accountContext: AccountContext
     private let audioSession: ManagedAudioSession
@@ -51,6 +74,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private let getDeviceAccessData: () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void)
     
+    private let initialCall: CachedChannelData.ActiveCall?
     public let internalId: CallSessionInternalId
     public let peerId: PeerId
     public let peer: Peer?
@@ -60,7 +84,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var callContext: OngoingGroupCallContext?
     private var ssrcMapping: [UInt32: PeerId] = [:]
     
-    private var sessionStateDisposable: Disposable?
+    private var summaryInfoState = Promise<SummaryInfoState?>(nil)
+    private var summaryParticipantsState = Promise<SummaryParticipantsState?>(nil)
+    
+    private let summaryStatePromise = Promise<PresentationGroupCallSummaryState?>(nil)
+    public var summaryState: Signal<PresentationGroupCallSummaryState?, NoError> {
+        return self.summaryStatePromise.get()
+    }
+    private var summaryStateDisposable: Disposable?
     
     private let isMutedPromise = ValuePromise<Bool>(true)
     private var isMutedValue = true
@@ -155,6 +186,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         audioSession: ManagedAudioSession,
         callKitIntegration: CallKitIntegration?,
         getDeviceAccessData: @escaping () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void),
+        initialCall: CachedChannelData.ActiveCall?,
         internalId: CallSessionInternalId,
         peerId: PeerId,
         peer: Peer?
@@ -165,6 +197,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.callKitIntegration = callKitIntegration
         self.getDeviceAccessData = getDeviceAccessData
         
+        self.initialCall = initialCall
         self.internalId = internalId
         self.peerId = peerId
         self.peer = peer
@@ -269,13 +302,33 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
         })
         
+        self.summaryStatePromise.set(combineLatest(queue: .mainQueue(),
+            self.summaryInfoState.get(),
+            self.summaryParticipantsState.get(),
+            self.statePromise.get()
+        )
+        |> map { infoState, participantsState, callState -> PresentationGroupCallSummaryState? in
+            guard let infoState = infoState else {
+                return nil
+            }
+            guard let participantsState = participantsState else {
+                return nil
+            }
+            return PresentationGroupCallSummaryState(
+                info: infoState.info,
+                participantCount: participantsState.participantCount,
+                callState: callState,
+                topParticipants: participantsState.topParticipants
+            )
+        })
+        
         self.requestCall()
     }
     
     deinit {
         self.audioSessionShouldBeActiveDisposable?.dispose()
         self.audioSessionActiveDisposable?.dispose()
-        self.sessionStateDisposable?.dispose()
+        self.summaryStateDisposable?.dispose()
         self.audioSessionDisposable?.dispose()
         self.requestDisposable.dispose()
         self.groupCallParticipantUpdatesDisposable?.dispose()
@@ -409,6 +462,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             break
         default:
             if case let .estabilished(callInfo, clientParams, _, initialState) = internalState {
+                self.summaryInfoState.set(.single(SummaryInfoState(info: callInfo)))
+                
                 self.ssrcMapping.removeAll()
                 var ssrcs: [UInt32] = []
                 for participant in initialState.participants {
@@ -431,7 +486,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     }
                     
                     var memberStates: [PeerId: PresentationGroupCallMemberState] = [:]
+                    var topParticipants: [GroupCallParticipantsContext.Participant] = []
                     for participant in state.participants {
+                        if topParticipants.count < 3 {
+                            topParticipants.append(participant)
+                        }
+                        
                         strongSelf.ssrcMapping[participant.ssrc] = participant.peer.id
                         
                         memberStates[participant.peer.id] = PresentationGroupCallMemberState(
@@ -440,6 +500,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         )
                     }
                     strongSelf.membersValue = memberStates
+                    
+                    strongSelf.summaryParticipantsState.set(.single(SummaryParticipantsState(
+                        participantCount: state.totalCount,
+                        topParticipants: topParticipants
+                    )))
                 }))
                 
                 if let isCurrentlyConnecting = self.isCurrentlyConnecting, isCurrentlyConnecting {
@@ -546,9 +611,17 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         let account = self.account
         let peerId = self.peerId
         
-        let currentCall = getCurrentGroupCall(account: account, peerId: peerId)
-        |> mapError { _ -> CallError in
-            return .generic
+        let currentCall: Signal<GroupCallInfo?, CallError>
+        if let initialCall = self.initialCall {
+            currentCall = getCurrentGroupCall(account: account, callId: initialCall.id, accessHash: initialCall.accessHash)
+            |> mapError { _ -> CallError in
+                return .generic
+            }
+            |> map { summary -> GroupCallInfo? in
+                return summary?.info
+            }
+        } else {
+            currentCall = .single(nil)
         }
         
         let currentOrRequestedCall = currentCall

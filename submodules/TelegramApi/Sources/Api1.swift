@@ -1910,19 +1910,18 @@ public struct messages {
 }
 public extension Api {
     public enum GroupCall: TypeConstructorDescription {
-        case groupCallPrivate(id: Int64, accessHash: Int64, participantsCount: Int32)
-        case groupCall(flags: Int32, id: Int64, accessHash: Int64, participantsCount: Int32, params: Api.DataJSON?, version: Int32)
         case groupCallDiscarded(id: Int64, accessHash: Int64, duration: Int32)
+        case groupCall(flags: Int32, id: Int64, accessHash: Int64, participantsCount: Int32, params: Api.DataJSON?, version: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .groupCallPrivate(let id, let accessHash, let participantsCount):
+                case .groupCallDiscarded(let id, let accessHash, let duration):
                     if boxed {
-                        buffer.appendInt32(-1331534976)
+                        buffer.appendInt32(2004925620)
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    serializeInt32(participantsCount, buffer: buffer, boxed: false)
+                    serializeInt32(duration, buffer: buffer, boxed: false)
                     break
                 case .groupCall(let flags, let id, let accessHash, let participantsCount, let params, let version):
                     if boxed {
@@ -1935,29 +1934,19 @@ public extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {params!.serialize(buffer, true)}
                     serializeInt32(version, buffer: buffer, boxed: false)
                     break
-                case .groupCallDiscarded(let id, let accessHash, let duration):
-                    if boxed {
-                        buffer.appendInt32(2004925620)
-                    }
-                    serializeInt64(id, buffer: buffer, boxed: false)
-                    serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    serializeInt32(duration, buffer: buffer, boxed: false)
-                    break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .groupCallPrivate(let id, let accessHash, let participantsCount):
-                return ("groupCallPrivate", [("id", id), ("accessHash", accessHash), ("participantsCount", participantsCount)])
-                case .groupCall(let flags, let id, let accessHash, let participantsCount, let params, let version):
-                return ("groupCall", [("flags", flags), ("id", id), ("accessHash", accessHash), ("participantsCount", participantsCount), ("params", params), ("version", version)])
                 case .groupCallDiscarded(let id, let accessHash, let duration):
                 return ("groupCallDiscarded", [("id", id), ("accessHash", accessHash), ("duration", duration)])
+                case .groupCall(let flags, let id, let accessHash, let participantsCount, let params, let version):
+                return ("groupCall", [("flags", flags), ("id", id), ("accessHash", accessHash), ("participantsCount", participantsCount), ("params", params), ("version", version)])
     }
     }
     
-        public static func parse_groupCallPrivate(_ reader: BufferReader) -> GroupCall? {
+        public static func parse_groupCallDiscarded(_ reader: BufferReader) -> GroupCall? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int64?
@@ -1968,7 +1957,7 @@ public extension Api {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
-                return Api.GroupCall.groupCallPrivate(id: _1!, accessHash: _2!, participantsCount: _3!)
+                return Api.GroupCall.groupCallDiscarded(id: _1!, accessHash: _2!, duration: _3!)
             }
             else {
                 return nil
@@ -1997,23 +1986,6 @@ public extension Api {
             let _c6 = _6 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
                 return Api.GroupCall.groupCall(flags: _1!, id: _2!, accessHash: _3!, participantsCount: _4!, params: _5, version: _6!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_groupCallDiscarded(_ reader: BufferReader) -> GroupCall? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.GroupCall.groupCallDiscarded(id: _1!, accessHash: _2!, duration: _3!)
             }
             else {
                 return nil

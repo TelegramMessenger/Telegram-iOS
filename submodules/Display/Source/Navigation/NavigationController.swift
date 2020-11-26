@@ -391,7 +391,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
         
         if let inCallStatusBar = self.inCallStatusBar {
-            let inCallStatusBarFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(40.0, layout.safeInsets.top)))
+            let inCallStatusBarFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(layout.statusBarHeight ?? 0.0, max(40.0, layout.safeInsets.top))))
             if inCallStatusBar.frame.isEmpty {
                 inCallStatusBar.frame = inCallStatusBarFrame
             } else {
