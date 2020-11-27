@@ -481,9 +481,15 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 if let groupMembers = strongSelf.currentGroupMembers {
-                    strongSelf.updateMembers(muteState: strongSelf.callState?.muteState, groupMembers: groupMembers, callMembers: callMembers.participants, speakingPeers: callMembers.speakingParticipants ?? Set(), invitedPeers: strongSelf.currentInvitedPeers ?? Set())
+                    strongSelf.updateMembers(muteState: strongSelf.callState?.muteState, groupMembers: groupMembers, callMembers: callMembers.participants, speakingPeers: callMembers.speakingParticipants, invitedPeers: strongSelf.currentInvitedPeers ?? Set())
                 } else {
                     strongSelf.currentCallMembers = callMembers.participants
+                }
+                
+                //TODO:localize
+                let subtitle = strongSelf.presentationData.strings.Conversation_StatusMembers(Int32(callMembers.totalCount))
+                if let titleView = strongSelf.controller?.navigationItem.titleView as? VoiceChatControllerTitleView {
+                    titleView.set(title: "Voice Chat", subtitle: subtitle)
                 }
             })
             
@@ -515,21 +521,6 @@ public final class VoiceChatController: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                
-                guard let peer = view.peers[view.peerId] else {
-                    return
-                }
-                //TODO:localize
-                var subtitle = "group"
-                if let cachedData = view.cachedData as? CachedChannelData {
-                    if let memberCount = cachedData.participantsSummary.memberCount {
-                        subtitle = strongSelf.presentationData.strings.Conversation_StatusMembers(memberCount)
-                    }
-                }
-                
-                let titleView = VoiceChatControllerTitleView(theme: strongSelf.presentationData.theme)
-                titleView.set(title: "Voice Chat", subtitle: subtitle)
-                strongSelf.controller?.navigationItem.titleView = titleView
                 
                 if !strongSelf.didSetDataReady {
                     strongSelf.didSetDataReady = true
@@ -673,6 +664,10 @@ public final class VoiceChatController: ViewController {
         
         override func didLoad() {
             super.didLoad()
+            
+            let titleView = VoiceChatControllerTitleView(theme: self.presentationData.theme)
+            titleView.set(title: "Voice Chat", subtitle: "connecting")
+            self.controller?.navigationItem.titleView = titleView
             
             let longTapRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.actionButtonPressGesture(_:)))
             longTapRecognizer.minimumPressDuration = 0.001

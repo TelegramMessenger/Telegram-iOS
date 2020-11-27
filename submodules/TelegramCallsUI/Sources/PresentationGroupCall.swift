@@ -73,7 +73,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private class SpeakingParticipantsContext {
         private let speakingLevelThreshold: Float = 0.15
         private let cutoffTimeout: Int32 = 1
-        private let silentTimeout: Int32 = 2
+        private let silentTimeout: Int32 = 3
         
         struct Participant {
             let timestamp: Int32
