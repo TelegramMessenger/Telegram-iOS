@@ -15,7 +15,35 @@ import AnimatedAvatarSetNode
 private let titleFont = Font.semibold(15.0)
 private let subtitleFont = Font.regular(13.0)
 
-final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
+public enum GroupCallPanelSource {
+    case none
+    case all
+    case peer(PeerId)
+}
+
+public final class GroupCallPanelData {
+    public let peerId: PeerId
+    public let info: GroupCallInfo
+    public let topParticipants: [GroupCallParticipantsContext.Participant]
+    public let participantCount: Int
+    public let groupCall: PresentationGroupCall?
+    
+    public init(
+        peerId: PeerId,
+        info: GroupCallInfo,
+        topParticipants: [GroupCallParticipantsContext.Participant],
+        participantCount: Int,
+        groupCall: PresentationGroupCall?
+    ) {
+        self.peerId = peerId
+        self.info = info
+        self.topParticipants = topParticipants
+        self.participantCount = participantCount
+        self.groupCall = groupCall
+    }
+}
+
+public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     private let context: AccountContext
     private var theme: PresentationTheme
     private var strings: PresentationStrings
@@ -31,12 +59,11 @@ final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     private let joinButtonBackgroundNode: ASImageNode
     
     private let micButton: HighlightTrackingButtonNode
-    private let micButtonForegroundMutedNode: ASImageNode
-    private let micButtonForegroundUnmutedNode: ASImageNode
+    private let micButtonForegroundNode: VoiceChatMicrophoneNode
     private let micButtonBackgroundNode: ASImageNode
     
-    private let titleNode: ImmediateTextNode
-    private let textNode: ImmediateTextNode
+    let titleNode: ImmediateTextNode
+    let textNode: ImmediateTextNode
     private let muteIconNode: ASImageNode
     
     private let avatarsContext: AnimatedAvatarSetContext
@@ -51,7 +78,7 @@ final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     private var currentData: GroupCallPanelData?
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    init(context: AccountContext, presentationData: PresentationData, tapAction: @escaping () -> Void) {
+    public init(context: AccountContext, presentationData: PresentationData, tapAction: @escaping () -> Void) {
         self.context = context
         self.theme = presentationData.theme
         self.strings = presentationData.strings
@@ -67,8 +94,7 @@ final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.joinButtonBackgroundNode = ASImageNode()
         
         self.micButton = HighlightTrackingButtonNode()
-        self.micButtonForegroundMutedNode = ASImageNode()
-        self.micButtonForegroundUnmutedNode = ASImageNode()
+        self.micButtonForegroundNode = VoiceChatMicrophoneNode()
         self.micButtonBackgroundNode = ASImageNode()
         
         self.titleNode = ImmediateTextNode()
@@ -117,8 +143,7 @@ final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.joinButton.addTarget(self, action: #selector(self.tapped), forControlEvents: [.touchUpInside])
         
         self.micButton.addSubnode(self.micButtonBackgroundNode)
-        self.micButton.addSubnode(self.micButtonForegroundMutedNode)
-        self.micButton.addSubnode(self.micButtonForegroundUnmutedNode)
+        self.micButton.addSubnode(self.micButtonForegroundNode)
         self.contentNode.addSubnode(self.micButton)
         self.micButton.addTarget(self, action: #selector(self.micTapped), forControlEvents: [.touchUpInside])
         
@@ -132,7 +157,7 @@ final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.isMutedDisposable.dispose()
     }
     
-    override func didLoad() {
+    public override func didLoad() {
         super.didLoad()
         
         let longTapRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.micButtonPressGesture(_:)))
@@ -187,9 +212,7 @@ final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.joinButtonBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 28.0, color: presentationData.theme.chat.inputPanel.actionControlFillColor)
         
         //TODO:localize
-        self.micButtonBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 36.0, color: UIColor(rgb: 0x30B251))
-        self.micButtonForegroundMutedNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Mute"), color: .white)
-        self.micButtonForegroundUnmutedNode.image = generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Unmute"), color: .white)
+        self.micButtonBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 36.0, color: UIColor(rgb: 0x30b251))
         
         //TODO:localize
         self.titleNode.attributedText = NSAttributedString(string: "Voice Chat", font: Font.semibold(15.0), textColor: presentationData.theme.chat.inputPanel.primaryTextColor)
@@ -198,7 +221,7 @@ final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.muteIconNode.image = PresentationResourcesChat.chatTitleMuteIcon(presentationData.theme)
     }
     
-    func update(data: GroupCallPanelData) {
+    public func update(data: GroupCallPanelData) {
         let previousData = self.currentData
         self.currentData = data
         
@@ -244,8 +267,7 @@ final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.micButtonForegroundMutedNode.isHidden = !isMuted
-                    strongSelf.micButtonForegroundUnmutedNode.isHidden = isMuted
+                    strongSelf.micButtonForegroundNode.update(state: VoiceChatMicrophoneNode.State(muted: isMuted, color: UIColor.white), animated: true)
                 }))
             }
         } else if data.groupCall == nil {
@@ -266,7 +288,7 @@ final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         }
     }
     
-    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, leftInset, rightInset)
         
         let panelHeight = size.height
@@ -291,17 +313,14 @@ final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         let micButtonFrame = CGRect(origin: CGPoint(x: size.width - rightInset - 7.0 - micButtonSize.width, y: floor((panelHeight - micButtonSize.height) / 2.0)), size: micButtonSize)
         transition.updateFrame(node: self.micButton, frame: micButtonFrame)
         transition.updateFrame(node: self.micButtonBackgroundNode, frame: CGRect(origin: CGPoint(), size: micButtonFrame.size))
-        if let image = self.micButtonForegroundMutedNode.image {
-            transition.updateFrame(node: self.micButtonForegroundMutedNode, frame: CGRect(origin: CGPoint(x: floor((micButtonFrame.width - image.size.width) / 2.0), y: floor((micButtonFrame.height - image.size.height) / 2.0)), size: image.size))
-        }
-        if let image = self.micButtonForegroundUnmutedNode.image {
-            transition.updateFrame(node: self.micButtonForegroundUnmutedNode, frame: CGRect(origin: CGPoint(x: floor((micButtonFrame.width - image.size.width) / 2.0), y: floor((micButtonFrame.height - image.size.height) / 2.0)), size: image.size))
-        }
+        
+        let animationSize = CGSize(width: 36.0, height: 36.0)
+        transition.updateFrame(node: self.micButtonForegroundNode, frame: CGRect(origin: CGPoint(x: floor((micButtonFrame.width - animationSize.width) / 2.0), y: floor((micButtonFrame.height - animationSize.height) / 2.0)), size: animationSize))
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
         let textSize = self.textNode.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
         
-        let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: 10.0), size: titleSize)
+        let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: 9.0), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: titleFrame.maxY + 1.0), size: textSize))
         
@@ -315,7 +334,7 @@ final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel)))
     }
     
-    func animateIn(_ transition: ContainedViewLayoutTransition) {
+    public func animateIn(_ transition: ContainedViewLayoutTransition) {
         self.clipsToBounds = true
         let contentPosition = self.contentNode.layer.position
         transition.animatePosition(node: self.contentNode, from: CGPoint(x: contentPosition.x, y: contentPosition.y - 50.0), completion: { [weak self] _ in
@@ -323,12 +342,44 @@ final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         })
     }
     
-    func animateOut(_ transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+    public func animateOut(_ transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         self.clipsToBounds = true
         let contentPosition = self.contentNode.layer.position
         transition.animatePosition(node: self.contentNode, to: CGPoint(x: contentPosition.x, y: contentPosition.y - 50.0), removeOnCompletion: false, completion: { [weak self] _ in
             self?.clipsToBounds = false
             completion()
         })
+    }
+    
+    func rightButtonSnapshotViews() -> (background: UIView, foreground: UIView)? {
+        if !self.joinButton.isHidden {
+            if let foregroundView = self.joinButtonTitleNode.view.snapshotContentTree() {
+                let backgroundFrame = self.joinButtonBackgroundNode.view.convert(self.joinButtonBackgroundNode.bounds, to: nil)
+                let foregroundFrame = self.joinButtonTitleNode.view.convert(self.joinButtonTitleNode.bounds, to: nil)
+                
+                let backgroundView = UIView()
+                backgroundView.backgroundColor = self.theme.chat.inputPanel.actionControlFillColor
+                backgroundView.frame = backgroundFrame
+                backgroundView.layer.cornerRadius = backgroundFrame.height / 2.0
+                    
+                foregroundView.frame = foregroundFrame
+                return (backgroundView, foregroundView)
+            }
+        } else if !self.micButton.isHidden {
+            if let foregroundView = self.micButtonForegroundNode.view.snapshotContentTree() {
+                let backgroundFrame = self.micButtonBackgroundNode.view.convert(self.micButtonBackgroundNode.bounds, to: nil)
+                let foregroundFrame = self.micButtonForegroundNode.view.convert(self.micButtonForegroundNode.bounds, to: nil)
+                
+                let backgroundView = UIView()
+                backgroundView.backgroundColor = UIColor(rgb: 0x30b251)
+                backgroundView.frame = backgroundFrame
+                backgroundView.layer.cornerRadius = backgroundFrame.height / 2.0
+                    
+                foregroundView.frame = foregroundFrame
+                return (backgroundView, foregroundView)
+            }
+        }
+        
+        return nil
     }
 }

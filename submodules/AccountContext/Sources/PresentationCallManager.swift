@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SyncCore
@@ -246,6 +247,8 @@ public protocol PresentationGroupCall: class {
     
     func invitePeer(_ peerId: PeerId)
     var invitedPeers: Signal<Set<PeerId>, NoError> { get }
+    
+    var sourcePanel: ASDisplayNode? { get set }
 }
 
 public protocol PresentationCallManager: class {
@@ -253,5 +256,5 @@ public protocol PresentationCallManager: class {
     var currentGroupCallSignal: Signal<PresentationGroupCall?, NoError> { get }
     
     func requestCall(context: AccountContext, peerId: PeerId, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult
-    func requestOrJoinGroupCall(context: AccountContext, peerId: PeerId, initialCall: CachedChannelData.ActiveCall?, endCurrentIfAny: Bool) -> RequestOrJoinGroupCallResult
+    func requestOrJoinGroupCall(context: AccountContext, peerId: PeerId, initialCall: CachedChannelData.ActiveCall?, endCurrentIfAny: Bool, sourcePanel: ASDisplayNode?) -> RequestOrJoinGroupCallResult
 }

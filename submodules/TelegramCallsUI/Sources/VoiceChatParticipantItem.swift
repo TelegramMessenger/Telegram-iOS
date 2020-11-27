@@ -271,6 +271,8 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                 transition.updateFrame(node: strongSelf.extractedBackgroundImageNode, frame: rect)
             }
             
+            transition.updateAlpha(node: strongSelf.actionContainerNode, alpha: isExtracted ? 0.0 : 1.0)
+            
             transition.updateSublayerTransformOffset(layer: strongSelf.offsetContainerNode.layer, offset: CGPoint(x: isExtracted ? 12.0 : 0.0, y: 0.0))
            
             transition.updateSublayerTransformOffset(layer: strongSelf.actionContainerNode.layer, offset: CGPoint(x: isExtracted ? -24.0 : 0.0, y: 0.0))

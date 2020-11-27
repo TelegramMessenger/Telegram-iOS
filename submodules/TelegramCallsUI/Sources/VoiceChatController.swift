@@ -55,6 +55,12 @@ private final class VoiceChatControllerTitleView: UIView {
         self.infoNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: UIColor.white.withAlphaComponent(0.5))
     }
     
+    func animateIn(duration: Double) {
+        self.titleNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 49.0), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        self.infoNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 49.0), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        self.titleNode.layer.animateScale(from: 0.882, to: 1.0, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+    }
+    
     override func layoutSubviews() {
         super.layoutSubviews()
         
@@ -377,33 +383,34 @@ public final class VoiceChatController: ViewController {
                         })))
                     }
                 default:
-                    if let callState = strongSelf.callState, (callState.canManageCall || callState.adminIds.contains(strongSelf.context.account.peerId)) {
-                        if let muteState = entry.muteState, !muteState.canUnmute {
-                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_UnmutePeer, icon: { theme in
-                                return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Unmute"), color: theme.actionSheet.primaryTextColor)
-                            }, action: { _, f in
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                
-                                strongSelf.call.updateMuteState(peerId: peer.id, isMuted: false)
-                                f(.default)
-                            })))
-                        } else {
-                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_MutePeer, icon: { theme in
-                                return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Mute"), color: theme.actionSheet.primaryTextColor)
-                            }, action: { _, f in
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                
-                                strongSelf.call.updateMuteState(peerId: peer.id, isMuted: true)
-                                f(.default)
-                            })))
-                        }
-                    }
-                    
                     if peer.id != strongSelf.context.account.peerId {
+                        if let callState = strongSelf.callState, (callState.canManageCall || callState.adminIds.contains(strongSelf.context.account.peerId)) {
+                            if let muteState = entry.muteState, !muteState.canUnmute {
+                                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_UnmutePeer, icon: { theme in
+                                    return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Unmute"), color: theme.actionSheet.primaryTextColor)
+                                }, action: { _, f in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    
+                                    strongSelf.call.updateMuteState(peerId: peer.id, isMuted: false)
+                                    f(.default)
+                                })))
+                            } else {
+                                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_MutePeer, icon: { theme in
+                                    return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Mute"), color: theme.actionSheet.primaryTextColor)
+                                }, action: { _, f in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    
+                                    strongSelf.call.updateMuteState(peerId: peer.id, isMuted: true)
+                                    f(.default)
+                                })))
+                            }
+                        }
+                    
+                    
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_RemovePeer, textColor: .destructive, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
                         }, action: { [weak self] _, f in
@@ -420,6 +427,8 @@ public final class VoiceChatController: ViewController {
 
                             items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.VoiceChat_RemovePeerRemove, color: .destructive, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
+                                
+                                
                             }))
 
                             actionSheet.setItemGroups([
@@ -812,7 +821,7 @@ public final class VoiceChatController: ViewController {
             self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             
             let sideButtonSize = CGSize(width: 60.0, height: 60.0)
-            let centralButtonSize = CGSize(width: 244.0, height: 244.0)
+            let centralButtonSize = CGSize(width: 300.0, height: 300.0)
             let sideButtonInset: CGFloat = 27.0
             
             let actionButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - centralButtonSize.width) / 2.0), y: layout.size.height - bottomAreaHeight - layout.intrinsicInsets.bottom + floor((bottomAreaHeight - centralButtonSize.height) / 2.0)), size: centralButtonSize)
@@ -898,7 +907,7 @@ public final class VoiceChatController: ViewController {
                 soundImage = .speaker
             case .speaker:
                 soundImage = .speaker
-                soundAppearance = .blurred(isFilled: true)
+//                soundAppearance = .blurred(isFilled: true)
             case .headphones:
                 soundImage = .bluetooth
             case let .bluetooth(type):
@@ -926,30 +935,116 @@ public final class VoiceChatController: ViewController {
             }
         }
         
-        func animateIn() {
+        func animateIn(sourcePanel: ASDisplayNode?) {
             self.alpha = 1.0
-            self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             
-            self.listNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            guard let (layout, _) = self.validLayout else {
+                return
+            }
+            
+            if let sourcePanel = sourcePanel as? GroupCallNavigationAccessoryPanel {
+                let sourceFrame = sourcePanel.view.convert(sourcePanel.bounds, to: self.view)
+                self.contentContainer.clipsToBounds = true
+                     
+                let duration: Double = 0.4
+                if let titleView = self.controller?.navigationItem.titleView as? VoiceChatControllerTitleView {
+                    titleView.animateIn(duration: duration)
+                    
+                    self.controller?.navigationBar?.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+                    
+                    if let panelTitleView = sourcePanel.titleNode.view.snapshotContentTree() {
+                        let frame = sourcePanel.titleNode.view.convert(sourcePanel.titleNode.bounds, to: self.view)
+                        panelTitleView.frame = frame
+                        self.view.addSubview(panelTitleView)
                         
-            self.actionButton.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-            
-            self.audioOutputNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-            self.leaveNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-            
-            self.actionButton.titleLabel.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
-            self.actionButton.subtitleLabel.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
-            self.audioOutputNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
-            self.leaveNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
-            
-            self.contentContainer.layer.animateBoundsOriginYAdditive(from: 80.0, to: 0.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+                        panelTitleView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -49.0), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+                        panelTitleView.layer.animateScale(from: 1.0, to: 1.13, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                        panelTitleView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false, completion: { [weak panelTitleView] _ in
+                            panelTitleView?.removeFromSuperview()
+                        })
+                    }
+                    if let panelTextView = sourcePanel.textNode.view.snapshotContentTree() {
+                        let frame = sourcePanel.textNode.view.convert(sourcePanel.textNode.bounds, to: self.view)
+                        panelTextView.frame = frame
+                        self.view.addSubview(panelTextView)
+                        
+                        panelTextView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -49.0), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+                        panelTextView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false, completion: { [weak panelTextView] _ in
+                            panelTextView?.removeFromSuperview()
+                        })
+                    }
+                }
+                
+                if let (backgroundView, foregroundView) = sourcePanel.rightButtonSnapshotViews() {
+                    self.view.addSubview(backgroundView)
+                    self.view.addSubview(foregroundView)
+                    
+                    self.optionsButton.isHidden = true
+                    let optionsFrame = self.optionsButton.view.convert(self.optionsButton.bounds, to: self.view)
+                    
+                    let dotsView = UIImageView(image: optionsButtonImage())
+                    dotsView.center = foregroundView.center
+                    self.view.addSubview(dotsView)
+                    
+                    backgroundView.layer.animateBounds(from: backgroundView.bounds, to: CGRect(origin: CGPoint(), size: CGSize(width: backgroundView.bounds.height, height: backgroundView.bounds.height)), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                    backgroundView.layer.animatePosition(from: backgroundView.center, to: CGPoint(x: optionsFrame.midX, y: optionsFrame.midY), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                    backgroundView.layer.animateScale(from: 1.0, to: optionsFrame.height / backgroundView.frame.height, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                    foregroundView.layer.animatePosition(from: foregroundView.center, to: CGPoint(x: optionsFrame.midX, y: optionsFrame.midY), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                    
+                    backgroundView.layer.animate(from: backgroundView.backgroundColor!.cgColor, to: UIColor(rgb: 0x1c1c1e).cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: duration - 0.1, removeOnCompletion: false)
+                    foregroundView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration - 0.1, removeOnCompletion: false, completion: { [weak self, weak foregroundView, weak backgroundView, weak dotsView] _ in
+                        backgroundView?.removeFromSuperview()
+                        foregroundView?.removeFromSuperview()
+                        dotsView?.removeFromSuperview()
+                        
+                        self?.optionsButton.isHidden = false
+                    })
+                    
+                    foregroundView.layer.animateScale(from: 1.0, to: 0.3, duration: duration - 0.1, timingFunction: kCAMediaTimingFunctionSpring)
+                    
+                    dotsView.layer.animatePosition(from: dotsView.center, to: CGPoint(x: optionsFrame.midX, y: optionsFrame.midY), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                    dotsView.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration - 0.1, removeOnCompletion: false)
+                }
+                
+                self.contentContainer.layer.animateFrame(from: sourceFrame, to: self.contentContainer.frame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                self.contentContainer.layer.animate(from: 0.0 as NSNumber, to: layout.deviceMetrics.screenCornerRadius as NSNumber, keyPath: "cornerRadius", timingFunction: kCAMediaTimingFunctionSpring, duration: duration, removeOnCompletion: true, completion: { [weak self] value in
+                    if value {
+                        self?.contentContainer.clipsToBounds = false
+                    }
+                })
+                
+                self.contentContainer.layer.animate(from: self.presentationData.theme.rootController.navigationBar.backgroundColor.cgColor, to: UIColor.black.cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: duration - 0.1)
+                
+                self.listNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+                self.actionButton.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+                self.audioOutputNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+                self.leaveNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+                self.actionButton.titleLabel.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+                self.actionButton.subtitleLabel.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+                self.audioOutputNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+                self.leaveNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+            } else {
+                self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                self.listNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                self.actionButton.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+                self.audioOutputNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+                self.leaveNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+                self.actionButton.titleLabel.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+                self.actionButton.subtitleLabel.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+                self.audioOutputNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+                self.leaveNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+                self.contentContainer.layer.animateBoundsOriginYAdditive(from: 80.0, to: 0.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+            }
         }
         
         func animateOut(completion: (() -> Void)?) {
             self.alpha = 0.0
-            self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { _ in
+            self.layer.allowsGroupOpacity = true
+            self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { [weak self] _ in
                 completion?()
+                self?.layer.allowsGroupOpacity = false
             })
+            self.contentContainer.layer.animateScale(from: 1.0, to: 1.04, duration: 0.3)
         }
         
         private func enqueueTransition(_ transition: ListTransition) {
@@ -1108,6 +1203,7 @@ public final class VoiceChatController: ViewController {
                             initialBounds.origin = CGPoint()
                             self?.bounds = initialBounds
                             self?.controller?.statusBar.statusBarStyle = .White
+                            self?.contentContainer.cornerRadius = 0.0
                         })
                     }
                 default:
@@ -1119,6 +1215,8 @@ public final class VoiceChatController: ViewController {
     private let sharedContext: SharedAccountContext
     public let call: PresentationGroupCall
     private let presentationData: PresentationData
+    
+    public weak var sourcePanel: ASDisplayNode?
     
     fileprivate let contentsReady = ValuePromise<Bool>(false, ignoreRepeated: true)
     fileprivate let dataReady = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -1187,7 +1285,8 @@ public final class VoiceChatController: ViewController {
         if !self.didAppearOnce {
             self.didAppearOnce = true
             
-            self.controllerNode.animateIn()
+            self.controllerNode.animateIn(sourcePanel: self.sourcePanel)
+            self.sourcePanel = nil
         }
     }
     

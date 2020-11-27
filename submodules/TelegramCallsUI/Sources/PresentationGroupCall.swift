@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SyncCore
@@ -255,6 +256,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private var checkCallDisposable: Disposable?
     private var isCurrentlyConnecting: Bool?
+    
+    public weak var sourcePanel: ASDisplayNode?
     
     init(
         accountContext: AccountContext,

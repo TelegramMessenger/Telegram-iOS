@@ -1375,7 +1375,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let callResult = context.sharedContext.callManager?.requestCall(context: context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
                     if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
                         if currentPeerId == peer.id {
-                            context.sharedContext.navigateToCurrentCall()
+                            context.sharedContext.navigateToCurrentCall(sourcePanel: nil)
                         } else {
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             let _ = (context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
@@ -5986,10 +5986,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
             }
-            let callResult = strongSelf.context.sharedContext.callManager?.requestOrJoinGroupCall(context: strongSelf.context, peerId: peer.id, initialCall: activeCall, endCurrentIfAny: false)
+            let callResult = strongSelf.context.sharedContext.callManager?.requestOrJoinGroupCall(context: strongSelf.context, peerId: peer.id, initialCall: activeCall, endCurrentIfAny: false, sourcePanel: nil)
             if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
                 if currentPeerId == peer.id {
-                    strongSelf.context.sharedContext.navigateToCurrentCall()
+                    strongSelf.context.sharedContext.navigateToCurrentCall(sourcePanel: nil)
                 } else {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                     let _ = (strongSelf.context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
@@ -5999,7 +5999,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if let strongSelf = self, let current = current {
                                 strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                                     if let strongSelf = self {
-                                        let _ = strongSelf.context.sharedContext.callManager?.requestOrJoinGroupCall(context: strongSelf.context, peerId: peer.id, initialCall: activeCall, endCurrentIfAny: true)
+                                        let _ = strongSelf.context.sharedContext.callManager?.requestOrJoinGroupCall(context: strongSelf.context, peerId: peer.id, initialCall: activeCall, endCurrentIfAny: true, sourcePanel: nil)
                                     }
                                 })]), in: .window(.root))
                             } else {

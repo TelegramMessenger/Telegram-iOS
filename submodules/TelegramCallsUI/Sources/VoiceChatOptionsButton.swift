@@ -3,6 +3,17 @@ import UIKit
 import AsyncDisplayKit
 import Display
 
+func optionsButtonImage() -> UIImage? {
+    return generateImage(CGSize(width: 28.0, height: 28.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.setFillColor(UIColor.white.cgColor)
+        context.fillEllipse(in: CGRect(x: 6.0, y: 12.0, width: 4.0, height: 4.0))
+        context.fillEllipse(in: CGRect(x: 12.0, y: 12.0, width: 4.0, height: 4.0))
+        context.fillEllipse(in: CGRect(x: 18.0, y: 12.0, width: 4.0, height: 4.0))
+    })
+}
+
 final class VoiceChatOptionsButton: HighlightableButtonNode {
     let extractedContainerNode: ContextExtractedContentContainingNode
     let containerNode: ContextControllerSourceNode

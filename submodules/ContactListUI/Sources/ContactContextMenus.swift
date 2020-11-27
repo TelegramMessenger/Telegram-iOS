@@ -126,7 +126,7 @@ func contactContextMenuItems(context: AccountContext, peerId: PeerId, contactsCo
                     let callResult = context.sharedContext.callManager?.requestCall(context: context, peerId: peerId, isVideo: false, endCurrentIfAny: false)
                     if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
                         if currentPeerId == peerId {
-                            context.sharedContext.navigateToCurrentCall()
+                            context.sharedContext.navigateToCurrentCall(sourcePanel: nil)
                         } else {
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             let _ = (context.account.postbox.transaction { transaction -> (Peer?, Peer?) in

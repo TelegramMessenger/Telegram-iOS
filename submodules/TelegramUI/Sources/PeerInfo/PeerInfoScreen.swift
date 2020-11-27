@@ -3169,7 +3169,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             guard let cachedChannelData = self.data?.cachedData as? CachedChannelData else {
                 return
             }
-            let _ = self.context.sharedContext.callManager?.requestOrJoinGroupCall(context: self.context, peerId: peer.id, initialCall: cachedChannelData.activeCall, endCurrentIfAny: false)
+            let _ = self.context.sharedContext.callManager?.requestOrJoinGroupCall(context: self.context, peerId: peer.id, initialCall: cachedChannelData.activeCall, endCurrentIfAny: false, sourcePanel: nil)
             
             return
         }
@@ -3185,7 +3185,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
         let callResult = self.context.sharedContext.callManager?.requestCall(context: self.context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
         if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
             if currentPeerId == peer.id {
-                self.context.sharedContext.navigateToCurrentCall()
+                self.context.sharedContext.navigateToCurrentCall(sourcePanel: nil)
             } else {
                 let presentationData = self.presentationData
                 let _ = (self.context.account.postbox.transaction { transaction -> (Peer?, Peer?) in

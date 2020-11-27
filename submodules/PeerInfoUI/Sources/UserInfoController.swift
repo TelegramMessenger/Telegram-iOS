@@ -876,7 +876,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
             let callResult = context.sharedContext.callManager?.requestCall(context: context, peerId: peer.id, isVideo: isVideo, endCurrentIfAny: false)
             if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
                 if currentPeerId == peer.id {
-                    context.sharedContext.navigateToCurrentCall()
+                    context.sharedContext.navigateToCurrentCall(sourcePanel: nil)
                 } else {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     let _ = (context.account.postbox.transaction { transaction -> (Peer?, Peer?) in

@@ -12,6 +12,7 @@ import UniversalMediaPlayer
 import AccountContext
 import OverlayStatusController
 import PresentationDataUtils
+import TelegramCallsUI
 
 public enum MediaAccessoryPanelVisibility {
     case none
@@ -23,34 +24,6 @@ public enum LocationBroadcastPanelSource {
     case none
     case summary
     case peer(PeerId)
-}
-
-public enum GroupCallPanelSource {
-    case none
-    case all
-    case peer(PeerId)
-}
-
-final class GroupCallPanelData {
-    let peerId: PeerId
-    let info: GroupCallInfo
-    let topParticipants: [GroupCallParticipantsContext.Participant]
-    let participantCount: Int
-    let groupCall: PresentationGroupCall?
-    
-    init(
-        peerId: PeerId,
-        info: GroupCallInfo,
-        topParticipants: [GroupCallParticipantsContext.Participant],
-        participantCount: Int,
-        groupCall: PresentationGroupCall?
-    ) {
-        self.peerId = peerId
-        self.info = info
-        self.topParticipants = topParticipants
-        self.participantCount = participantCount
-        self.groupCall = groupCall
-    }
 }
 
 private func presentLiveLocationController(context: AccountContext, peerId: PeerId, controller: ViewController) {
@@ -430,7 +403,8 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     }
                     strongSelf.joinGroupCall(
                         peerId: groupCallPanelData.peerId,
-                        info: groupCallPanelData.info
+                        info: groupCallPanelData.info,
+                        sourcePanel: strongSelf.groupCallAccessoryPanel
                     )
                 })
                 if let navigationBar = self.navigationBar {
@@ -847,11 +821,11 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         })]
     }
     
-    private func joinGroupCall(peerId: PeerId, info: GroupCallInfo) {
-        let callResult = self.context.sharedContext.callManager?.requestOrJoinGroupCall(context: self.context, peerId: peerId, initialCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash), endCurrentIfAny: false)
+    private func joinGroupCall(peerId: PeerId, info: GroupCallInfo, sourcePanel: GroupCallNavigationAccessoryPanel?) {
+        let callResult = self.context.sharedContext.callManager?.requestOrJoinGroupCall(context: self.context, peerId: peerId, initialCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash), endCurrentIfAny: false, sourcePanel: sourcePanel)
         if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
             if currentPeerId == peerId {
-                self.context.sharedContext.navigateToCurrentCall()
+                self.context.sharedContext.navigateToCurrentCall(sourcePanel: sourcePanel)
             } else {
                 let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
                 let _ = (self.context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
@@ -867,7 +841,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     if let current = current {
                         strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                             if let strongSelf = self {
-                                let _ = strongSelf.context.sharedContext.callManager?.requestOrJoinGroupCall(context: strongSelf.context, peerId: peerId, initialCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash), endCurrentIfAny: true)
+                                let _ = strongSelf.context.sharedContext.callManager?.requestOrJoinGroupCall(context: strongSelf.context, peerId: peerId, initialCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash), endCurrentIfAny: true, sourcePanel: sourcePanel)
                             }
                         })]), in: .window(.root))
                     } else {

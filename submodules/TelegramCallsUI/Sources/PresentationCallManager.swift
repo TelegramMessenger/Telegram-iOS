@@ -1,4 +1,5 @@
 import Foundation
+import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SyncCore
@@ -592,9 +593,9 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         }
     }
     
-    public func requestOrJoinGroupCall(context: AccountContext, peerId: PeerId, initialCall: CachedChannelData.ActiveCall?, endCurrentIfAny: Bool) -> RequestOrJoinGroupCallResult {
+    public func requestOrJoinGroupCall(context: AccountContext, peerId: PeerId, initialCall: CachedChannelData.ActiveCall?, endCurrentIfAny: Bool, sourcePanel: ASDisplayNode?) -> RequestOrJoinGroupCallResult {
         let begin: () -> Void = { [weak self] in
-            let _ = self?.startGroupCall(accountContext: context, peerId: peerId, initialCall: initialCall).start()
+            let _ = self?.startGroupCall(accountContext: context, peerId: peerId, initialCall: initialCall, sourcePanel: sourcePanel).start()
         }
         if let currentGroupCall = self.currentGroupCallValue {
             if endCurrentIfAny {
@@ -618,7 +619,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         accountContext: AccountContext,
         peerId: PeerId,
         initialCall: CachedChannelData.ActiveCall?,
-        internalId: CallSessionInternalId = CallSessionInternalId()
+        internalId: CallSessionInternalId = CallSessionInternalId(),
+        sourcePanel: ASDisplayNode?
     ) -> Signal<Bool, NoError> {
         let (presentationData, present, openSettings) = self.getDeviceAccessData()
         
@@ -669,6 +671,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 peerId: peerId,
                 peer: nil
             )
+            call.sourcePanel = sourcePanel
             strongSelf.updateCurrentGroupCall(call)
             strongSelf.currentGroupCallPromise.set(.single(call))
             strongSelf.hasActiveCallsPromise.set(true)
