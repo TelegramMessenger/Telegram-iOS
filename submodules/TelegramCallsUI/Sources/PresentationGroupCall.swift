@@ -361,19 +361,20 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 return
             }
             if case let .estabilished(callInfo, _, _, _) = strongSelf.internalState {
-                /*var addedSsrc: [UInt32] = []
-                var removedSsrc: [UInt32] = []*/
+                var removedSsrc: [UInt32] = []
                 for (callId, update) in updates {
                     if callId == callInfo.id {
+                        for participantUpdate in update.participantUpdates {
+                            if participantUpdate.isRemoved {
+                                removedSsrc.append(participantUpdate.ssrc)
+                            }
+                        }
                         strongSelf.participantsContext?.addUpdates(updates: [update])
                     }
                 }
-                /*if !addedSsrc.isEmpty {
-                    strongSelf.callContext?.addSsrcs(ssrcs: addedSsrc)
-                }
                 if !removedSsrc.isEmpty {
                     strongSelf.callContext?.removeSsrcs(ssrcs: removedSsrc)
-                }*/
+                }
             }
         })
         

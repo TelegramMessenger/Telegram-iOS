@@ -32,22 +32,15 @@ public final class OngoingGroupCallContext {
         case connected
     }
     
-    public struct MemberState: Equatable {
-        public var isSpeaking: Bool
-    }
-    
     private final class Impl {
         let queue: Queue
         let context: GroupCallThreadLocalContext
         
         let sessionId = UInt32.random(in: 0 ..< UInt32(Int32.max))
-        var mainStreamAudioSsrc: UInt32?
-        var otherSsrcs: [UInt32] = []
         
         let joinPayload = Promise<(String, UInt32)>()
         let networkState = ValuePromise<NetworkState>(.connecting, ignoreRepeated: true)
         let isMuted = ValuePromise<Bool>(true, ignoreRepeated: true)
-        let memberStates = ValuePromise<[UInt32: MemberState]>([:], ignoreRepeated: true)
         let audioLevels = ValuePipe<[(UInt32, Float)]>()
         let myAudioLevel = ValuePipe<Float>()
         
@@ -118,7 +111,6 @@ public final class OngoingGroupCallContext {
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.mainStreamAudioSsrc = ssrc
                     strongSelf.joinPayload.set(.single((payload, ssrc)))
                 }
             })
@@ -130,58 +122,15 @@ public final class OngoingGroupCallContext {
         }
         
         func addSsrcs(ssrcs: [UInt32]) {
-            if ssrcs.isEmpty {
-                return
-            }
-            guard let mainStreamAudioSsrc = self.mainStreamAudioSsrc else {
-                return
-            }
-            let mappedSsrcs = ssrcs
-            var otherSsrcs = self.otherSsrcs
-            for ssrc in mappedSsrcs {
-                if ssrc == mainStreamAudioSsrc {
-                    continue
-                }
-                if !otherSsrcs.contains(ssrc) {
-                    otherSsrcs.append(ssrc)
-                }
-            }
-            if self.otherSsrcs != otherSsrcs {
-                self.otherSsrcs = otherSsrcs
-                var memberStatesValue: [UInt32: MemberState] = [:]
-                for ssrc in otherSsrcs {
-                    memberStatesValue[ssrc] = MemberState(isSpeaking: false)
-                }
-                self.memberStates.set(memberStatesValue)
-                
-                self.context.setSsrcs(self.otherSsrcs.map { ssrc in
-                    return ssrc as NSNumber
-                })
-            }
         }
         
         func removeSsrcs(ssrcs: [UInt32]) {
             if ssrcs.isEmpty {
                 return
             }
-            guard let mainStreamAudioSsrc = self.mainStreamAudioSsrc else {
-                return
-            }
-            var otherSsrcs = self.otherSsrcs.filter { ssrc in
-                return !ssrcs.contains(ssrc)
-            }
-            if self.otherSsrcs != otherSsrcs {
-                self.otherSsrcs = otherSsrcs
-                var memberStatesValue: [UInt32: MemberState] = [:]
-                for ssrc in otherSsrcs {
-                    memberStatesValue[ssrc] = MemberState(isSpeaking: false)
-                }
-                self.memberStates.set(memberStatesValue)
-                
-                self.context.setSsrcs(self.otherSsrcs.map { ssrc in
-                    return ssrc as NSNumber
-                })
-            }
+            self.context.removeSsrcs(ssrcs.map { ssrc in
+                return ssrc as NSNumber
+            })
         }
         
         func stop() {
@@ -221,18 +170,6 @@ public final class OngoingGroupCallContext {
             let disposable = MetaDisposable()
             self.impl.with { impl in
                 disposable.set(impl.networkState.get().start(next: { value in
-                    subscriber.putNext(value)
-                }))
-            }
-            return disposable
-        }
-    }
-    
-    public var memberStates: Signal<[UInt32: MemberState], NoError> {
-        return Signal { subscriber in
-            let disposable = MetaDisposable()
-            self.impl.with { impl in
-                disposable.set(impl.memberStates.get().start(next: { value in
                     subscriber.putNext(value)
                 }))
             }

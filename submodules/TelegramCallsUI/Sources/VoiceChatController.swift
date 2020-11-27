@@ -536,7 +536,7 @@ public final class VoiceChatController: ViewController {
                     let wasMuted = strongSelf.callState?.muteState != nil
                     strongSelf.callState = state
                     
-                    if state.muteState != nil {
+                    if let muteState = state.muteState, !muteState.canUnmute {
                         if strongSelf.pushingToTalk {
                             strongSelf.pushingToTalk = false
                             strongSelf.actionButton.pressing = false

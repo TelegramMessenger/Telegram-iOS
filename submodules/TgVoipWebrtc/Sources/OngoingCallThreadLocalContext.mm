@@ -1029,13 +1029,13 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
-- (void)setSsrcs:(NSArray<NSNumber *> * _Nonnull)ssrcs {
+- (void)removeSsrcs:(NSArray<NSNumber *> * _Nonnull)ssrcs {
     if (_instance) {
         std::vector<uint32_t> values;
         for (NSNumber *ssrc in ssrcs) {
             values.push_back([ssrc unsignedIntValue]);
         }
-        _instance->setSsrcs(values);
+        _instance->removeSsrcs(values);
     }
 }
 
