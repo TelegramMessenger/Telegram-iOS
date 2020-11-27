@@ -62,7 +62,7 @@ public func getCurrentGroupCall(account: Account, callId: Int64, accessHash: Int
     }
     |> mapToSignal { result -> Signal<GroupCallSummary?, GetCurrentGroupCallError> in
         switch result {
-        case let .groupCall(call, _, participants, _, users):
+        case let .groupCall(call, participants, _, users):
             return account.postbox.transaction { transaction -> GroupCallSummary? in
                 guard let info = GroupCallInfo(call) else {
                     return nil
@@ -177,7 +177,7 @@ public enum GetGroupCallParticipantsError {
 }
 
 public func getGroupCallParticipants(account: Account, callId: Int64, accessHash: Int64, offset: String, limit: Int32) -> Signal<GroupCallParticipantsContext.State, GetGroupCallParticipantsError> {
-    return account.network.request(Api.functions.phone.getGroupParticipants(call: .inputGroupCall(id: callId, accessHash: accessHash), offset: offset, limit: limit))
+    return account.network.request(Api.functions.phone.getGroupParticipants(call: .inputGroupCall(id: callId, accessHash: accessHash), ids: [], sources: [], offset: offset, limit: limit))
     |> mapError { _ -> GetGroupCallParticipantsError in
         return .generic
     }
@@ -353,7 +353,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, callId: Int64, acces
             state.adminIds = adminIds
             
             switch result {
-            case let .groupCall(call, sources, _, _, users):
+            case let .groupCall(call, _, _, users):
                 guard let _ = GroupCallInfo(call) else {
                     return .fail(.generic)
                 }
