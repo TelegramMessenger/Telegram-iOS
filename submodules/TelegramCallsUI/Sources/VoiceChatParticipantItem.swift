@@ -624,6 +624,7 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.actionButtonNode.addSubnode(animationNode)
                         }
                         animationNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, color: color), animated: true)
+                        strongSelf.actionButtonNode.isUserInteractionEnabled = false
                     } else if let animationNode = strongSelf.animationNode {
                         strongSelf.animationNode = nil
                         animationNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false, completion: { [weak animationNode] _ in
@@ -647,6 +648,7 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                         } else {
                             iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: item.presentationData.theme.list.itemAccentColor)
                         }
+                        strongSelf.actionButtonNode.isUserInteractionEnabled = !invited
                     } else if let iconNode = strongSelf.iconNode {
                         strongSelf.iconNode = nil
                         iconNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false, completion: { [weak iconNode] _ in

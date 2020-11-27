@@ -993,7 +993,7 @@ public final class ChatListNode: ListView {
             var cachedResult: [PeerId: [(Peer, PeerInputActivity)]] = [:]
             previousPeerCache.with { dict -> Void in
                 for (chatPeerId, activities) in activitiesByPeerId {
-                    if chatPeerId.threadId != nil {
+                    guard case .global = chatPeerId.category else {
                         continue
                     }
                     var cachedChatResult: [(Peer, PeerInputActivity)] = []
@@ -1015,7 +1015,7 @@ public final class ChatListNode: ListView {
                     var result: [PeerId: [(Peer, PeerInputActivity)]] = [:]
                     var peerCache: [PeerId: Peer] = [:]
                     for (chatPeerId, activities) in activitiesByPeerId {
-                        if chatPeerId.threadId != nil {
+                        guard case .global = chatPeerId.category else {
                             continue
                         }
                         var chatResult: [(Peer, PeerInputActivity)] = []

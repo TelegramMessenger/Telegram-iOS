@@ -26,6 +26,7 @@ public final class GroupCallPanelData {
     public let info: GroupCallInfo
     public let topParticipants: [GroupCallParticipantsContext.Participant]
     public let participantCount: Int
+    public let numberOfActiveSpeakers: Int
     public let groupCall: PresentationGroupCall?
     
     public init(
@@ -33,12 +34,14 @@ public final class GroupCallPanelData {
         info: GroupCallInfo,
         topParticipants: [GroupCallParticipantsContext.Participant],
         participantCount: Int,
+        numberOfActiveSpeakers: Int,
         groupCall: PresentationGroupCall?
     ) {
         self.peerId = peerId
         self.info = info
         self.topParticipants = topParticipants
         self.participantCount = participantCount
+        self.numberOfActiveSpeakers = numberOfActiveSpeakers
         self.groupCall = groupCall
     }
 }
@@ -248,15 +251,28 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                     }
                     
                     let membersText: String
-                    if summaryState.participantCount == 0 {
-                        membersText = strongSelf.strings.PeopleNearby_NoMembers
+                    let membersTextIsActive: Bool
+                    if summaryState.numberOfActiveSpeakers != 0 {
+                        //TODO:localize
+                        if summaryState.numberOfActiveSpeakers == 1 {
+                            membersText = "1 member speaking"
+                        } else {
+                            membersText = "\(summaryState.numberOfActiveSpeakers) members speaking"
+                        }
+                        membersTextIsActive = true
                     } else {
-                        membersText = strongSelf.strings.Conversation_StatusMembers(Int32(summaryState.participantCount))
+                        if summaryState.participantCount == 0 {
+                            membersText = strongSelf.strings.PeopleNearby_NoMembers
+                        } else {
+                            membersText = strongSelf.strings.Conversation_StatusMembers(Int32(summaryState.participantCount))
+                        }
+                        membersTextIsActive = false
                     }
+                    
+                    strongSelf.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: membersTextIsActive ? strongSelf.theme.chat.inputPanel.panelControlAccentColor : strongSelf.theme.chat.inputPanel.secondaryTextColor)
                     
                     strongSelf.avatarsContent = strongSelf.avatarsContext.update(peers: summaryState.topParticipants.map { $0.peer }, animated: false)
                     
-                    strongSelf.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor)
                     if let (size, leftInset, rightInset) = strongSelf.validLayout {
                         strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
                     }
@@ -272,15 +288,27 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             }
         } else if data.groupCall == nil {
             let membersText: String
-            if data.participantCount == 0 {
-                membersText = self.strings.PeopleNearby_NoMembers
+            let membersTextIsActive: Bool
+            if data.numberOfActiveSpeakers != 0 {
+                //TODO:localize
+                if data.numberOfActiveSpeakers == 1 {
+                    membersText = "1 member speaking"
+                } else {
+                    membersText = "\(data.numberOfActiveSpeakers) members speaking"
+                }
+                membersTextIsActive = true
             } else {
-                membersText = self.strings.Conversation_StatusMembers(Int32(data.participantCount))
+                if data.participantCount == 0 {
+                    membersText = self.strings.PeopleNearby_NoMembers
+                } else {
+                    membersText = self.strings.Conversation_StatusMembers(Int32(data.participantCount))
+                }
+                membersTextIsActive = false
             }
             
-            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }, animated: false)
+            self.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: membersTextIsActive ? self.theme.chat.inputPanel.panelControlAccentColor : self.theme.chat.inputPanel.secondaryTextColor)
             
-            self.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: self.theme.chat.inputPanel.secondaryTextColor)
+            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }, animated: false)
         }
         
         if let (size, leftInset, rightInset) = self.validLayout {

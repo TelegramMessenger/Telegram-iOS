@@ -523,6 +523,7 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         context.interpolationQuality = .low
         
         var appearanceProgress: CGFloat = 1.0
+        var glowScale: CGFloat = 0.75
         if let transition = parameters.transition, transition.previousState is VoiceChatActionButtonBackgroundNodeConnectingState {
             appearanceProgress = transition.progress(time: parameters.timestamp)
         }
@@ -535,6 +536,8 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                     gradientTransition = 1.0 - gradientTransition
                 }
             }
+            glowScale += gradientTransition * 0.3
+            
             gradientImage = gradientTransition.isZero ? blobsState.blueGradient : blobsState.greenGradient
             if gradientTransition > 0.0 && gradientTransition < 1.0 {
                 gradientImage = generateImage(CGSize(width: 100.0, height: 100.0), contextGenerator: { size, context in
@@ -551,11 +554,10 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             }
             
             context.saveGState()
-            var maskBounds = bounds
-            if let transition = parameters.transition, transition.previousState is VoiceChatActionButtonBackgroundNodeConnectingState {
-                let progress = 1.0 - appearanceProgress
-                maskBounds = maskBounds.insetBy(dx: bounds.width / 3.0 * progress,  dy: bounds.width / 3.0 * progress)
-            }
+
+            let progress = 1.0 - (appearanceProgress * glowScale)
+            let maskBounds = bounds.insetBy(dx: bounds.width / 3.0 * progress,  dy: bounds.width / 3.0 * progress)
+            
             context.clip(to: maskBounds, mask: radialMaskImage.cgImage!)
             
             if let gradient = gradientImage?.cgImage {
@@ -569,7 +571,8 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         if let blobsState = parameters.state as? VoiceChatActionButtonBackgroundNodeBlobState {
             for blob in blobsState.blobs {
                 if let path = blob.currentShape, let uiPath = path.copy() as? UIBezierPath {
-                    let toOrigin = CGAffineTransform(translationX: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
+                    let offset = (bounds.size.width - blob.size.width) / 2.0
+                    let toOrigin = CGAffineTransform(translationX: -bounds.size.width / 2.0 + offset, y: -bounds.size.height / 2.0 + offset)
                     let fromOrigin = CGAffineTransform(translationX: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
 
                     uiPath.apply(toOrigin)

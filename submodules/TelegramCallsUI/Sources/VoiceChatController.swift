@@ -272,8 +272,9 @@ public final class VoiceChatController: ViewController {
         private var didSetContentsReady: Bool = false
         private var didSetDataReady: Bool = false
         
-        private var currentMembers: [RenderedChannelParticipant]?
-        private var currentMemberStates: [PeerId: PresentationGroupCallMemberState]?
+        private var currentGroupMembers: [RenderedChannelParticipant]?
+        private var currentCallMembers: [GroupCallParticipantsContext.Participant]?
+        private var currentSpeakingPeers: Set<PeerId>?
         private var currentInvitedPeers: Set<PeerId>?
         
         private var currentEntries: [PeerEntry] = []
@@ -470,19 +471,19 @@ public final class VoiceChatController: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.updateMembers(muteState: strongSelf.callState?.muteState, members: state.list, memberStates: strongSelf.currentMemberStates ?? [:], invitedPeers: strongSelf.currentInvitedPeers ?? Set())
+                    strongSelf.updateMembers(muteState: strongSelf.callState?.muteState, groupMembers: state.list, callMembers: strongSelf.currentCallMembers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set(), invitedPeers: strongSelf.currentInvitedPeers ?? Set())
                 }
             })
             
             self.memberStatesDisposable = (self.call.members
-            |> deliverOnMainQueue).start(next: { [weak self] memberStates in
-                guard let strongSelf = self else {
+            |> deliverOnMainQueue).start(next: { [weak self] callMembers in
+                guard let strongSelf = self, let callMembers = callMembers else {
                     return
                 }
-                if let members = strongSelf.currentMembers {
-                    strongSelf.updateMembers(muteState: strongSelf.callState?.muteState, members: members, memberStates: memberStates, invitedPeers: strongSelf.currentInvitedPeers ?? Set())
+                if let groupMembers = strongSelf.currentGroupMembers {
+                    strongSelf.updateMembers(muteState: strongSelf.callState?.muteState, groupMembers: groupMembers, callMembers: callMembers.participants, speakingPeers: callMembers.speakingParticipants ?? Set(), invitedPeers: strongSelf.currentInvitedPeers ?? Set())
                 } else {
-                    strongSelf.currentMemberStates = memberStates
+                    strongSelf.currentCallMembers = callMembers.participants
                 }
             })
             
@@ -491,8 +492,8 @@ public final class VoiceChatController: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                if let members = strongSelf.currentMembers {
-                    strongSelf.updateMembers(muteState: strongSelf.callState?.muteState, members: members, memberStates: strongSelf.currentMemberStates ?? [:], invitedPeers: invitedPeers)
+                if let groupMembers = strongSelf.currentGroupMembers {
+                    strongSelf.updateMembers(muteState: strongSelf.callState?.muteState, groupMembers: groupMembers, callMembers: strongSelf.currentCallMembers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set(), invitedPeers: invitedPeers)
                 } else {
                     strongSelf.currentInvitedPeers = invitedPeers
                 }
@@ -554,8 +555,8 @@ public final class VoiceChatController: ViewController {
                         }
                     }
                     
-                    if wasMuted != (state.muteState != nil), let members = strongSelf.currentMembers {
-                        strongSelf.updateMembers(muteState: state.muteState, members: members, memberStates: strongSelf.currentMemberStates ?? [:], invitedPeers: strongSelf.currentInvitedPeers ?? Set())
+                    if wasMuted != (state.muteState != nil), let groupMembers = strongSelf.currentGroupMembers {
+                        strongSelf.updateMembers(muteState: state.muteState, groupMembers: groupMembers, callMembers: strongSelf.currentCallMembers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set(), invitedPeers: strongSelf.currentInvitedPeers ?? Set())
                     }
                     
                     if let (layout, navigationHeight) = strongSelf.validLayout {
@@ -1094,28 +1095,43 @@ public final class VoiceChatController: ViewController {
             })
         }
         
-        private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, members: [RenderedChannelParticipant], memberStates: [PeerId: PresentationGroupCallMemberState], invitedPeers: Set<PeerId>) {
-            var members = members
-            members.sort(by: { lhs, rhs in
+        private func updateMembers(muteState: GroupCallParticipantsContext.Participant.MuteState?, groupMembers: [RenderedChannelParticipant], callMembers: [GroupCallParticipantsContext.Participant], speakingPeers: Set<PeerId>, invitedPeers: Set<PeerId>) {
+            var groupMembers = groupMembers
+            groupMembers.sort(by: { lhs, rhs in
                 if lhs.peer.id == self.context.account.peerId {
                     return true
                 } else if rhs.peer.id == self.context.account.peerId {
                     return false
                 }
-                let lhsHasState = memberStates[lhs.peer.id] != nil
-                let rhsHasState = memberStates[rhs.peer.id] != nil
-                if lhsHasState != rhsHasState {
-                    if lhsHasState {
-                        return true
-                    } else {
-                        return false
-                    }
+                
+                let lhsPresence = lhs.presences[lhs.peer.id]
+                let rhsPresence = lhs.presences[lhs.peer.id]
+                
+                if let lhsPresence = lhsPresence as? TelegramUserPresence, let rhsPresence = rhsPresence as? TelegramUserPresence {
+                    return lhsPresence.status > rhsPresence.status
+                } else if let _ = lhsPresence as? TelegramUserPresence {
+                    return true
+                } else if let _ = rhsPresence as? TelegramUserPresence {
+                    return false
                 }
+                
                 return lhs.peer.id < rhs.peer.id
             })
             
-            self.currentMembers = members
-            self.currentMemberStates = memberStates
+            var callMembers = callMembers
+            
+            for i in 0 ..< callMembers.count {
+                if callMembers[i].peer.id == self.context.account.peerId {
+                    let member = callMembers[i]
+                    callMembers.remove(at: i)
+                    callMembers.insert(member, at: i)
+                    break
+                }
+            }
+            
+            self.currentGroupMembers = groupMembers
+            self.currentCallMembers = callMembers
+            self.currentSpeakingPeers = speakingPeers
             self.currentInvitedPeers = invitedPeers
             
             let previousEntries = self.currentEntries
@@ -1123,7 +1139,44 @@ public final class VoiceChatController: ViewController {
             
             var index: Int32 = 0
             
-            for member in members {
+            var processedPeerIds = Set<PeerId>()
+            
+            for member in callMembers {
+                if processedPeerIds.contains(member.peer.id) {
+                    continue
+                }
+                processedPeerIds.insert(member.peer.id)
+                
+                let memberState: PeerEntry.State
+                var memberMuteState: GroupCallParticipantsContext.Participant.MuteState?
+                if member.peer.id == self.context.account.peerId {
+                    if muteState == nil {
+                        memberState = .speaking
+                    } else {
+                        memberState = .listening
+                    }
+                } else {
+                    memberState = speakingPeers.contains(member.peer.id) ? .speaking : .listening
+                    memberMuteState = member.muteState
+                }
+                
+                entries.append(PeerEntry(
+                    peer: member.peer,
+                    presence: nil,
+                    activityTimestamp: Int32.max - 1 - index,
+                    state: memberState,
+                    muteState: memberMuteState,
+                    invited: false
+                ))
+                index += 1
+            }
+            
+            for member in groupMembers {
+                if processedPeerIds.contains(member.peer.id) {
+                    continue
+                }
+                processedPeerIds.insert(member.peer.id)
+                
                 if let user = member.peer as? TelegramUser, user.botInfo != nil || user.isDeleted {
                     continue
                 }
@@ -1136,9 +1189,6 @@ public final class VoiceChatController: ViewController {
                     } else {
                         memberState = .listening
                     }
-                } else if let state = memberStates[member.peer.id] {
-                    memberState = state.speaking ? .speaking : .listening
-                    memberMuteState = state.muteState
                 } else {
                     memberState = .inactive
                 }

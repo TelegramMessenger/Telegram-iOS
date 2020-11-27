@@ -285,6 +285,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                             info: summary.info,
                             topParticipants: summary.topParticipants,
                             participantCount: summary.participantCount,
+                            numberOfActiveSpeakers: summary.numberOfActiveSpeakers,
                             groupCall: call
                         )
                     }
@@ -304,21 +305,59 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         guard let activeCall = activeCall else {
                             return .single(nil)
                         }
-                        return getCurrentGroupCall(account: context.account, callId: activeCall.id, accessHash: activeCall.accessHash)
-                        |> `catch` { _ -> Signal<GroupCallSummary?, NoError> in
+                        return getGroupCallParticipants(account: context.account, callId: activeCall.id, accessHash: activeCall.accessHash, offset: "", limit: 10)
+                        |> map(Optional.init)
+                        |> `catch` { _ -> Signal<GroupCallParticipantsContext.State?, NoError> in
                             return .single(nil)
                         }
-                        |> map { summary -> GroupCallPanelData? in
-                            guard let summary = summary else {
-                                return nil
+                        |> mapToSignal { initialState -> Signal<GroupCallPanelData?, NoError> in
+                            guard let initialState = initialState else {
+                                return .single(nil)
                             }
-                            return GroupCallPanelData(
-                                peerId: peerId,
-                                info: summary.info,
-                                topParticipants: summary.topParticipants,
-                                participantCount: summary.info.participantCount,
-                                groupCall: nil
-                            )
+                            
+                            return Signal<GroupCallPanelData?, NoError> { subscriber in
+                                let participantsContext = QueueLocalObject<GroupCallParticipantsContext>(queue: .mainQueue(), generate: {
+                                    return GroupCallParticipantsContext(
+                                        account: context.account,
+                                        peerId: peerId,
+                                        id: activeCall.id,
+                                        accessHash: activeCall.accessHash,
+                                        state: initialState
+                                    )
+                                })
+                                
+                                let disposable = MetaDisposable()
+                                participantsContext.with { participantsContext in
+                                    disposable.set(combineLatest(queue: .mainQueue(),
+                                        participantsContext.state,
+                                        participantsContext.numberOfActiveSpeakers
+                                    ).start(next: { state, numberOfActiveSpeakers in
+                                        var topParticipants: [GroupCallParticipantsContext.Participant] = []
+                                        for participant in state.participants {
+                                            if topParticipants.count >= 3 {
+                                                break
+                                            }
+                                            topParticipants.append(participant)
+                                        }
+                                        let data = GroupCallPanelData(
+                                            peerId: peerId,
+                                            info: GroupCallInfo(id: activeCall.id, accessHash: activeCall.accessHash, participantCount: state.totalCount, clientParams: nil),
+                                            topParticipants: topParticipants,
+                                            participantCount: state.totalCount,
+                                            numberOfActiveSpeakers: numberOfActiveSpeakers,
+                                            groupCall: nil
+                                        )
+                                        subscriber.putNext(data)
+                                    }))
+                                }
+                                
+                                return ActionDisposable {
+                                    disposable.dispose()
+                                    participantsContext.with { _ in
+                                    }
+                                }
+                            }
+                            |> runOn(.mainQueue())
                         }
                     }
                 } else {
