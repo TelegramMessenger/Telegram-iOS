@@ -616,10 +616,29 @@ public final class VoiceChatController: ViewController {
                 }, action: { [weak self] _, f in
                     f(.dismissWithoutContent)
                   
-                    if let strongSelf = self {
-                        let shareController = ShareController(context: strongSelf.context, subject: .url("url"), forcedTheme: strongSelf.darkTheme, forcedActionTitle: strongSelf.presentationData.strings.VoiceChat_CopyInviteLink)
-                        strongSelf.controller?.present(shareController, in: .window(.root))
+                    guard let strongSelf = self else {
+                        return
                     }
+                    
+                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> String? in
+                        if let peer = transaction.getPeer(call.peerId), let addressName = peer.addressName, !addressName.isEmpty {
+                            return "https://t.me/\(addressName)"
+                        } else if let cachedData = transaction.getPeerCachedData(peerId: call.peerId) {
+                            if let cachedData = cachedData as? CachedChannelData {
+                                return cachedData.exportedInvitation?.link
+                            } else if let cachedData = cachedData as? CachedGroupData {
+                                return cachedData.exportedInvitation?.link
+                            }
+                        }
+                        return nil
+                    } |> deliverOnMainQueue).start(next: { link in
+                        if let link = link {
+                            if let strongSelf = self {
+                                let shareController = ShareController(context: strongSelf.context, subject: .url(link), forcedTheme: strongSelf.darkTheme, forcedActionTitle: strongSelf.presentationData.strings.VoiceChat_CopyInviteLink)
+                                strongSelf.controller?.present(shareController, in: .window(.root))
+                            }
+                        }
+                    })
                 })))
                 
                 if let callState = strongSelf.callState, callState.canManageCall {
@@ -647,6 +666,8 @@ public final class VoiceChatController: ViewController {
             optionsButtonItem.target = self
             optionsButtonItem.action = #selector(self.rightNavigationButtonAction)
             self.controller?.navigationItem.setRightBarButton(optionsButtonItem, animated: false)
+            
+            let _ = ensuredExistingPeerExportedInvitation(account: self.context.account, peerId: call.peerId).start()
         }
         
         deinit {
