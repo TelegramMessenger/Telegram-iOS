@@ -718,7 +718,8 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                     (.canEditMessages, self.presentationData.strings.Channel_AdminLog_CanEditMessages),
                                     (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanInviteUsers),
                                     (.canPinMessages, self.presentationData.strings.Channel_AdminLog_CanPinMessages),
-                                    (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins)
+                                    (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins),
+                                    (.canManageCalls, self.presentationData.strings.Channel_AdminLog_CanManageCalls)
                                 ]
                             } else {
                                 order = [
@@ -728,7 +729,8 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                     (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanInviteUsers),
                                     (.canPinMessages, self.presentationData.strings.Channel_AdminLog_CanPinMessages),
                                     (.canBeAnonymous, self.presentationData.strings.Channel_AdminLog_CanBeAnonymous),
-                                    (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins)
+                                    (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins),
+                                    (.canManageCalls, self.presentationData.strings.Channel_AdminLog_CanManageCalls)
                                 ]
                             }
                             

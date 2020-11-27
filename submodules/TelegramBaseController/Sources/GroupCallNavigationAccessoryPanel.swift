@@ -151,15 +151,23 @@ final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         call.toggleIsMuted()
     }
     
+    private var actionButtonPressGestureStartTime: Double = 0.0
+    
     @objc private func micButtonPressGesture(_ gestureRecognizer: UILongPressGestureRecognizer) {
         guard let call = self.currentData?.groupCall else {
             return
         }
         switch gestureRecognizer.state {
             case .began:
-                call.setIsMuted(false)
+                self.actionButtonPressGestureStartTime = CACurrentMediaTime()
+                call.setIsMuted(action: .muted(isPushToTalkActive: true))
             case .ended, .cancelled:
-                call.setIsMuted(true)
+                let timestamp = CACurrentMediaTime()
+                if timestamp - self.actionButtonPressGestureStartTime < 0.2 {
+                    call.toggleIsMuted()
+                } else {
+                    call.setIsMuted(action: .muted(isPushToTalkActive: false))
+                }
             default:
                 break
         }

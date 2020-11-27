@@ -242,13 +242,25 @@ public extension UIColor {
     func interpolateTo(_ color: UIColor, fraction: CGFloat) -> UIColor? {
         let f = min(max(0, fraction), 1)
         
-        guard let c1 = self.cgColor.components, let c2 = color.cgColor.components else { return nil }
-        let r: CGFloat = CGFloat(c1[0] + (c2[0] - c1[0]) * f)
-        let g: CGFloat = CGFloat(c1[1] + (c2[1] - c1[1]) * f)
-        let b: CGFloat = CGFloat(c1[2] + (c2[2] - c1[2]) * f)
-        let a: CGFloat = CGFloat(c1[3] + (c2[3] - c1[3]) * f)
-        
-        return UIColor(red: r, green: g, blue: b, alpha: a)
+        var r1: CGFloat = 0.0
+        var r2: CGFloat = 0.0
+        var g1: CGFloat = 0.0
+        var g2: CGFloat = 0.0
+        var b1: CGFloat = 0.0
+        var b2: CGFloat = 0.0
+        var a1: CGFloat = 0.0
+        var a2: CGFloat = 0.0
+        if self.getRed(&r1, green: &g1, blue: &b1, alpha: &a1) &&
+            color.getRed(&r2, green: &g2, blue: &b2, alpha: &a2) {
+            let r: CGFloat = CGFloat(r1 + (r2 - r1) * f)
+            let g: CGFloat = CGFloat(g1 + (g2 - g1) * f)
+            let b: CGFloat = CGFloat(b1 + (b2 - b1) * f)
+            let a: CGFloat = CGFloat(a1 + (a2 - a1) * f)
+            
+            return UIColor(red: r, green: g, blue: b, alpha: a)
+        } else {
+            return self
+        }
     }
     
     private var colorComponents: (r: Int32, g: Int32, b: Int32) {

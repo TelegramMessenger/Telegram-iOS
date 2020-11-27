@@ -65,14 +65,14 @@ public final class VoiceChatParticipantItem: ListViewItem {
     let text: ParticipantText
     let icon: Icon
     let enabled: Bool
-    let audioLevel: Signal<Float, NoError>?
+    let getAudioLevel: (() -> Signal<Float, NoError>)?
     let revealOptions: [RevealOption]
     let revealed: Bool?
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let action: (() -> Void)?
     let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
-    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, presence: PeerPresence?, text: ParticipantText, icon: Icon, enabled: Bool, audioLevel: Signal<Float, NoError>?, revealOptions: [RevealOption], revealed: Bool?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, action: (() -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: Peer, presence: PeerPresence?, text: ParticipantText, icon: Icon, enabled: Bool, getAudioLevel: (() -> Signal<Float, NoError>)?, revealOptions: [RevealOption], revealed: Bool?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, action: (() -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
@@ -82,7 +82,7 @@ public final class VoiceChatParticipantItem: ListViewItem {
         self.text = text
         self.icon = icon
         self.enabled = enabled
-        self.audioLevel = audioLevel
+        self.getAudioLevel = getAudioLevel
         self.revealOptions = revealOptions
         self.revealed = revealed
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
@@ -543,54 +543,60 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrameAsPositionAndBounds(node: strongSelf.avatarNode, frame: avatarFrame)
                     
                     let blobFrame = avatarFrame.insetBy(dx: -12.0, dy: -12.0)
-                    if let audioLevel = item.audioLevel, !strongSelf.didSetupAudioLevel || currentItem?.peer.id != item.peer.id {
-                        strongSelf.audioLevelView?.frame = blobFrame
-                        strongSelf.didSetupAudioLevel = true
-                        strongSelf.audioLevelDisposable.set((audioLevel
-                        |> deliverOnMainQueue).start(next: { value in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            
-                            if strongSelf.audioLevelView == nil {
-                                let audioLevelView = VoiceBlobView(
-                                    frame: blobFrame,
-                                    maxLevel: 0.3,
-                                    smallBlobRange: (0, 0),
-                                    mediumBlobRange: (0.7, 0.8),
-                                    bigBlobRange: (0.8, 0.9)
-                                )
+                    if let getAudioLevel = item.getAudioLevel {
+                        if !strongSelf.didSetupAudioLevel || currentItem?.peer.id != item.peer.id {
+                            strongSelf.audioLevelView?.frame = blobFrame
+                            strongSelf.didSetupAudioLevel = true
+                            strongSelf.audioLevelDisposable.set((getAudioLevel()
+                            |> deliverOnMainQueue).start(next: { value in
+                                guard let strongSelf = self else {
+                                    return
+                                }
                                 
-                                let maskRect = CGRect(origin: .zero, size: blobFrame.size)
-                                let playbackMaskLayer = CAShapeLayer()
-                                playbackMaskLayer.frame = maskRect
-                                playbackMaskLayer.fillRule = .evenOdd
-                                let maskPath = UIBezierPath()
-                                maskPath.append(UIBezierPath(roundedRect: maskRect.insetBy(dx: 12, dy: 12), cornerRadius: 22))
-                                maskPath.append(UIBezierPath(rect: maskRect))
-                                playbackMaskLayer.path = maskPath.cgPath
-                                audioLevelView.layer.mask = playbackMaskLayer
+                                if strongSelf.audioLevelView == nil {
+                                    let audioLevelView = VoiceBlobView(
+                                        frame: blobFrame,
+                                        maxLevel: 0.3,
+                                        smallBlobRange: (0, 0),
+                                        mediumBlobRange: (0.7, 0.8),
+                                        bigBlobRange: (0.8, 0.9)
+                                    )
+                                    
+                                    let maskRect = CGRect(origin: .zero, size: blobFrame.size)
+                                    let playbackMaskLayer = CAShapeLayer()
+                                    playbackMaskLayer.frame = maskRect
+                                    playbackMaskLayer.fillRule = .evenOdd
+                                    let maskPath = UIBezierPath()
+                                    maskPath.append(UIBezierPath(roundedRect: maskRect.insetBy(dx: 12, dy: 12), cornerRadius: 22))
+                                    maskPath.append(UIBezierPath(rect: maskRect))
+                                    playbackMaskLayer.path = maskPath.cgPath
+                                    audioLevelView.layer.mask = playbackMaskLayer
+                                    
+                                    audioLevelView.setColor(.green)
+                                    strongSelf.audioLevelView = audioLevelView
+                                    strongSelf.offsetContainerNode.view.insertSubview(audioLevelView, at: 0)
+                                }
                                 
-                                audioLevelView.setColor(.green)
-                                strongSelf.audioLevelView = audioLevelView
-                                strongSelf.containerNode.view.insertSubview(audioLevelView, at: 0)
-                            }
-                            
-                            let level = min(1.0, max(0.0, CGFloat(value)))
-                            let avatarScale: CGFloat
-                            
-                            strongSelf.audioLevelView?.updateLevel(CGFloat(value) * 2.0)
-                            if value > 0.0 {
-                                strongSelf.audioLevelView?.startAnimating()
-                                avatarScale = 1.03 + level * 0.1
-                            } else {
-                                strongSelf.audioLevelView?.stopAnimating(duration: 0.5)
-                                avatarScale = 1.0
-                            }
-                            
-                            let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .spring)
-                            transition.updateTransformScale(node: strongSelf.avatarNode, scale: avatarScale, beginWithCurrentState: true)
-                        }))
+                                var value = value
+                                if value <= 0.15 {
+                                    value = 0.0
+                                }
+                                let level = min(1.0, max(0.0, CGFloat(value)))
+                                let avatarScale: CGFloat
+                                
+                                strongSelf.audioLevelView?.updateLevel(CGFloat(value) * 2.0)
+                                if value > 0.0 {
+                                    strongSelf.audioLevelView?.startAnimating()
+                                    avatarScale = 1.03 + level * 0.1
+                                } else {
+                                    strongSelf.audioLevelView?.stopAnimating(duration: 0.5)
+                                    avatarScale = 1.0
+                                }
+                                
+                                let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .spring)
+                                transition.updateTransformScale(node: strongSelf.avatarNode, scale: avatarScale, beginWithCurrentState: true)
+                            }))
+                        }
                     } else if let audioLevelView = strongSelf.audioLevelView {
                         strongSelf.audioLevelView = nil
                         audioLevelView.removeFromSuperview()

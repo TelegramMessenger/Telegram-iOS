@@ -1534,7 +1534,7 @@ ios_application(
         ":NotificationContentExtension",
         ":NotificationServiceExtension",
         ":IntentsExtension",
-        ":WidgetExtension",
+        #":WidgetExtension",
     ],
     watch_application = ":TelegramWatchApp",
     deps = [
