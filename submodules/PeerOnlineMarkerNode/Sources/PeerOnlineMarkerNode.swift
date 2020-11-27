@@ -24,8 +24,8 @@ public final class PeerOnlineMarkerNode: ASDisplayNode {
         self.iconNode.image = image
     }
     
-    public func asyncLayout() -> (Bool) -> (CGSize, (Bool) -> Void) {
-        return { [weak self] online in
+    public func asyncLayout() -> (Bool, Bool) -> (CGSize, (Bool) -> Void) {
+        return { [weak self] online, isVoiceChat in
             return (CGSize(width: 14.0, height: 14.0), { animated in
                 if let strongSelf = self {
                     strongSelf.iconNode.frame = CGRect(x: 0.0, y: 0.0, width: 14.0, height: 14.0)

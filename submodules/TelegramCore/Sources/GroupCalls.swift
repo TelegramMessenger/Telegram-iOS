@@ -9,6 +9,18 @@ public struct GroupCallInfo: Equatable {
     public var accessHash: Int64
     public var participantCount: Int
     public var clientParams: String?
+    
+    public init(
+        id: Int64,
+        accessHash: Int64,
+        participantCount: Int,
+        clientParams: String?
+    ) {
+        self.id = id
+        self.accessHash = accessHash
+        self.participantCount = participantCount
+        self.clientParams = clientParams
+    }
 }
 
 public struct GroupCallSummary: Equatable {
@@ -385,7 +397,11 @@ public func leaveGroupCall(account: Account, callId: Int64, accessHash: Int64, s
     |> mapError { _ -> LeaveGroupCallError in
         return .generic
     }
-    |> ignoreValues
+    |> mapToSignal { result -> Signal<Never, LeaveGroupCallError> in
+        account.stateManager.addUpdates(result)
+        
+        return .complete()
+    }
 }
 
 public enum StopGroupCallError {
@@ -569,20 +585,63 @@ public final class GroupCallParticipantsContext {
         }
     }
     
+    private var numberOfActiveSpeakersValue: Int = 0 {
+        didSet {
+            if self.numberOfActiveSpeakersValue != oldValue {
+                self.numberOfActiveSpeakersPromise.set(self.numberOfActiveSpeakersValue)
+            }
+        }
+    }
+    private let numberOfActiveSpeakersPromise = ValuePromise<Int>(0)
+    public var numberOfActiveSpeakers: Signal<Int, NoError> {
+        return self.numberOfActiveSpeakersPromise.get()
+    }
+    
     private var updateQueue: [StateUpdate] = []
     private var isProcessingUpdate: Bool = false
     private let disposable = MetaDisposable()
     
-    public init(account: Account, id: Int64, accessHash: Int64, state: State) {
+    private let updatesDisposable = MetaDisposable()
+    private var activitiesDisposable: Disposable?
+    
+    public init(account: Account, peerId: PeerId, id: Int64, accessHash: Int64, state: State) {
         self.account = account
         self.id = id
         self.accessHash = accessHash
         self.stateValue = InternalState(state: state, overlayState: OverlayState())
         self.statePromise = ValuePromise<InternalState>(self.stateValue)
+        
+        self.updatesDisposable.set((self.account.stateManager.groupCallParticipantUpdates
+        |> deliverOnMainQueue).start(next: { [weak self] updates in
+            guard let strongSelf = self else {
+                return
+            }
+            var filteredUpdates: [StateUpdate] = []
+            for (callId, update) in updates {
+                if callId == id {
+                    filteredUpdates.append(update)
+                }
+            }
+            if !filteredUpdates.isEmpty {
+                strongSelf.addUpdates(updates: filteredUpdates)
+            }
+        }))
+        
+        let activityCategory: PeerActivitySpace.Category = .voiceChat
+        self.activitiesDisposable = (self.account.peerInputActivities(peerId: PeerActivitySpace(peerId: peerId, category: activityCategory))
+        |> deliverOnMainQueue).start(next: { [weak self] activities in
+            guard let strongSelf = self else {
+                return
+            }
+        
+            strongSelf.numberOfActiveSpeakersValue = activities.count
+        })
     }
     
     deinit {
         self.disposable.dispose()
+        self.updatesDisposable.dispose()
+        self.activitiesDisposable?.dispose()
     }
     
     public func addUpdates(updates: [StateUpdate]) {
@@ -625,6 +684,8 @@ public final class GroupCallParticipantsContext {
             return
         }
         
+        let isVersionUpdate = update.version != self.stateValue.state.version
+        
         let _ = (self.account.postbox.transaction { transaction -> [PeerId: Peer] in
             var peers: [PeerId: Peer] = [:]
             
@@ -648,7 +709,9 @@ public final class GroupCallParticipantsContext {
                 if participantUpdate.isRemoved {
                     if let index = updatedParticipants.firstIndex(where: { $0.peer.id == participantUpdate.peerId }) {
                         updatedParticipants.remove(at: index)
-                        updatedTotalCount -= 1
+                        updatedTotalCount = max(0, updatedTotalCount - 1)
+                    } else if isVersionUpdate {
+                        updatedTotalCount = max(0, updatedTotalCount - 1)
                     }
                 } else {
                     guard let peer = peers[participantUpdate.peerId] else {

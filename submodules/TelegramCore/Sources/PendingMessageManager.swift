@@ -554,7 +554,13 @@ public final class PendingMessageManager {
         for subscriber in messageContext.statusSubscribers.copyItems() {
             subscriber(messageContext.status, messageContext.error)
         }
-        self.addContextActivityIfNeeded(messageContext, peerId: PeerActivitySpace(peerId: id.peerId, threadId: threadId))
+        let activityCategory: PeerActivitySpace.Category
+        if let threadId = threadId {
+            activityCategory = .thread(threadId)
+        } else {
+            activityCategory = .global
+        }
+        self.addContextActivityIfNeeded(messageContext, peerId: PeerActivitySpace(peerId: id.peerId, category: activityCategory))
         
         let queue = self.queue
         
@@ -624,7 +630,15 @@ public final class PendingMessageManager {
                     for subscriber in context.statusSubscribers.copyItems() {
                         subscriber(context.status, context.error)
                     }
-                    self.addContextActivityIfNeeded(context, peerId: PeerActivitySpace(peerId: peerId, threadId: context.threadId))
+                    
+                    let activityCategory: PeerActivitySpace.Category
+                    if let threadId = context.threadId {
+                        activityCategory = .thread(threadId)
+                    } else {
+                        activityCategory = .global
+                    }
+                    
+                    self.addContextActivityIfNeeded(context, peerId: PeerActivitySpace(peerId: peerId, category: activityCategory))
                     context.uploadDisposable.set((uploadSignal
                     |> deliverOn(self.queue)).start(next: { [weak self] next in
                         if let strongSelf = self {

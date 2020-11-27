@@ -185,36 +185,42 @@ public struct PresentationGroupCallSummaryState: Equatable {
     public var participantCount: Int
     public var callState: PresentationGroupCallState
     public var topParticipants: [GroupCallParticipantsContext.Participant]
+    public var numberOfActiveSpeakers: Int
     
     public init(
         info: GroupCallInfo,
         participantCount: Int,
         callState: PresentationGroupCallState,
-        topParticipants: [GroupCallParticipantsContext.Participant]
+        topParticipants: [GroupCallParticipantsContext.Participant],
+        numberOfActiveSpeakers: Int
     ) {
         self.info = info
         self.participantCount = participantCount
         self.callState = callState
         self.topParticipants = topParticipants
-    }
-}
-
-public struct PresentationGroupCallMemberState: Equatable {
-    public var ssrc: UInt32
-    public var muteState: GroupCallParticipantsContext.Participant.MuteState?
-    
-    public init(
-        ssrc: UInt32,
-        muteState: GroupCallParticipantsContext.Participant.MuteState?
-    ) {
-        self.ssrc = ssrc
-        self.muteState = muteState
+        self.numberOfActiveSpeakers = numberOfActiveSpeakers
     }
 }
 
 public enum PresentationGroupCallMuteAction: Equatable {
     case muted(isPushToTalkActive: Bool)
     case unmuted
+}
+
+public struct PresentationGroupCallMembers: Equatable {
+    public var participants: [GroupCallParticipantsContext.Participant]
+    public var totalCount: Int
+    public var loadMoreToken: String?
+    
+    public init(
+        participants: [GroupCallParticipantsContext.Participant],
+        totalCount: Int,
+        loadMoreToken: String?
+    ) {
+        self.participants = participants
+        self.totalCount = totalCount
+        self.loadMoreToken = loadMoreToken
+    }
 }
 
 public protocol PresentationGroupCall: class {
@@ -228,7 +234,7 @@ public protocol PresentationGroupCall: class {
     var canBeRemoved: Signal<Bool, NoError> { get }
     var state: Signal<PresentationGroupCallState, NoError> { get }
     var summaryState: Signal<PresentationGroupCallSummaryState?, NoError> { get }
-    var members: Signal<[PeerId: PresentationGroupCallMemberState], NoError> { get }
+    var members: Signal<PresentationGroupCallMembers?, NoError> { get }
     var audioLevels: Signal<[(PeerId, Float)], NoError> { get }
     var myAudioLevel: Signal<Float, NoError> { get }
     var isMuted: Signal<Bool, NoError> { get }

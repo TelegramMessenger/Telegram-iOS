@@ -178,7 +178,7 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
                 badgeSize += max(currentBadgeBackgroundImage.size.width, badgeLayout.size.width + 10.0) + 5.0
             }
             
-            let (onlineLayout, onlineApply) = onlineLayout(online)
+            let (onlineLayout, onlineApply) = onlineLayout(online, false)
             var animateContent = false
             if let currentItem = currentItem, currentItem.peer.id == item.peer.id {
                 animateContent = true

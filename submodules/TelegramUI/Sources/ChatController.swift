@@ -3167,9 +3167,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let activitySpace: PeerActivitySpace
         switch self.chatLocation {
         case let .peer(peerId):
-            activitySpace = PeerActivitySpace(peerId: peerId, threadId: nil)
+            activitySpace = PeerActivitySpace(peerId: peerId, category: .global)
         case let .replyThread(replyThreadMessage):
-            activitySpace = PeerActivitySpace(peerId: replyThreadMessage.messageId.peerId, threadId: makeMessageThreadId(replyThreadMessage.messageId))
+            activitySpace = PeerActivitySpace(peerId: replyThreadMessage.messageId.peerId, category: .thread(makeMessageThreadId(replyThreadMessage.messageId)))
         }
         
         self.inputActivityDisposable = (self.typingActivityPromise.get()
@@ -6074,11 +6074,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let postbox = self.context.account.postbox
                 let previousPeerCache = Atomic<[PeerId: Peer]>(value: [:])
-                var activityThreadId: Int64?
+                var activityCategory: PeerActivitySpace.Category = .global
                 if case let .replyThread(replyThreadMessage) = self.chatLocation {
-                    activityThreadId = makeMessageThreadId(replyThreadMessage.messageId)
+                    activityCategory = .thread(makeMessageThreadId(replyThreadMessage.messageId))
                 }
-                self.peerInputActivitiesDisposable = (self.context.account.peerInputActivities(peerId: PeerActivitySpace(peerId: peerId, threadId: activityThreadId))
+                self.peerInputActivitiesDisposable = (self.context.account.peerInputActivities(peerId: PeerActivitySpace(peerId: peerId, category: activityCategory))
                 |> mapToSignal { activities -> Signal<[(Peer, PeerInputActivity)], NoError> in
                     var foundAllPeers = true
                     var cachedResult: [(Peer, PeerInputActivity)] = []
