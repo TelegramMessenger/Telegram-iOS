@@ -57,6 +57,7 @@ final class VoiceChatOptionsButton: HighlightableButtonNode {
         
         self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 28.0, height: 28.0))
         self.extractedContainerNode.frame = self.containerNode.bounds
+        self.extractedContainerNode.contentRect = self.containerNode.bounds
         self.iconNode.frame = self.containerNode.bounds
     }
     
