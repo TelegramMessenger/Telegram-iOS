@@ -440,7 +440,6 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                 self.transition = VoiceChatActionButtonBackgroundNodeTransition(startTime: CACurrentMediaTime(), duration: 0.3, previousState: self.state)
             }
             self.state = state
-            self.animator?.frameInterval = state.frameInterval
         } else if let blobState = self.state as? VoiceChatActionButtonBackgroundNodeBlobState, let nextState = state as? VoiceChatActionButtonBackgroundNodeBlobState {
             blobState.update(with: nextState)
         }
@@ -480,10 +479,10 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                 animator = ConstantDisplayLinkAnimator(update: { [weak self] in
                     self?.updateAnimations()
                 })
-                animator.frameInterval = 2
                 self.animator = animator
             }
             animator.isPaused = false
+            animator.frameInterval = state.frameInterval
         } else {
             self.animator?.isPaused = true
         }
