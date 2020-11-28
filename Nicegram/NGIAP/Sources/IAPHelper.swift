@@ -148,6 +148,7 @@ extension IAPHelper: SKPaymentTransactionObserver {
         
         ngLog("restore... \(productIdentifier)", LOGTAG)
         deliverPurchaseNotificationFor(identifier: productIdentifier)
+        ngLog("finish restore...\(productIdentifier)", LOGTAG)
         SKPaymentQueue.default().finishTransaction(transaction)
     }
     
@@ -168,13 +169,31 @@ extension IAPHelper: SKPaymentTransactionObserver {
         
         purchasedProductIdentifiers.insert(identifier)
         UserDefaults.standard.set(true, forKey: identifier)
-        if identifier == NicegramProducts.Premium {
-            patchPurchasePremium()
+        if #available(iOS 13.0, *) {
+            NotificationCenter.default.post(name: .IAPHelperPurchaseNotification, object: identifier)
+        } else {
+            if identifier == NicegramProducts.Premium {
+                patchPurchasePremium()
+            }
+            let alertController = UIAlertController(title: "✅ Premium activated", message: "Please, restart the app!", preferredStyle: .alert)
+            let alertAction = UIAlertAction(title: "OK", style: .default) { (action) in
+            }
+
+            alertController.addAction(alertAction)
+            alertController.show()
         }
-        NotificationCenter.default.post(name: .IAPHelperPurchaseNotification, object: identifier)
     }
     
     private func deliverPurchaseErrorNotificationFor(error: String) {
-        NotificationCenter.default.post(name: .IAPHelperErrorNotification, object: error)
+        if #available(iOS 13.0, *) {
+            NotificationCenter.default.post(name: .IAPHelperErrorNotification, object: error)
+        } else {
+            let alertController = UIAlertController(title: "❌ Error", message: error, preferredStyle: .alert)
+            let alertAction = UIAlertAction(title: "OK", style: .default) { (action) in
+            }
+
+            alertController.addAction(alertAction)
+            alertController.show(backgroundColor: .red)
+        }
     }
 }

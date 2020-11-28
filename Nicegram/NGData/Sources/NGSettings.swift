@@ -99,8 +99,14 @@ public func isPremium() -> Bool {
     if bb.last != "1" {
         return false
     }
-    
-    return NGSettings.premium
+    let premium = NGSettings.premium
+    if !premium {
+        if  #available(iOS 13, *) {
+        } else {
+            return UserDefaults.standard.bool(forKey: "ng:premiumLegacy")
+        }
+    }
+    return premium
 }
 
 public func usetrButton() -> [(Bool, [String])] {
