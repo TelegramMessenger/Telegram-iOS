@@ -5968,3 +5968,5 @@ Sorry for the inconvenience.";
 "VoiceChat.Panel.MembersSpeaking_3_10" = "%@ members speaking";
 "VoiceChat.Panel.MembersSpeaking_many" = "%@ members speaking";
 "VoiceChat.Panel.MembersSpeaking_any" = "%@ members speaking";
+
+"ChannelInfo.CreateVoiceChat" = "Create Voice Chat";
