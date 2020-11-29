@@ -694,7 +694,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     self?._canBeRemoved.set(.single(true))
                 }))
             }
-        }  else if case .requesting = self.internalState {
+        } else if case .requesting = self.internalState {
             self.callContext?.stop()
             self.callContext = nil
             self.requestDisposable.set(nil)

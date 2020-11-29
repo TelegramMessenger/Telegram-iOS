@@ -231,9 +231,9 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         if previousData?.groupCall !== data.groupCall {
             let membersText: String
             if data.participantCount == 0 {
-                membersText = self.strings.PeopleNearby_NoMembers
+                membersText = self.strings.VoiceChat_Panel_TapToJoin
             } else {
-                membersText = self.strings.Conversation_StatusMembers(Int32(data.participantCount))
+                membersText = self.strings.VoiceChat_Panel_Members(Int32(data.participantCount))
             }
             
             self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }, animated: false)
@@ -253,18 +253,13 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                     let membersText: String
                     let membersTextIsActive: Bool
                     if summaryState.numberOfActiveSpeakers != 0 {
-                        //TODO:localize
-                        if summaryState.numberOfActiveSpeakers == 1 {
-                            membersText = "1 member speaking"
-                        } else {
-                            membersText = "\(summaryState.numberOfActiveSpeakers) members speaking"
-                        }
+                        membersText = strongSelf.strings.VoiceChat_Panel_MembersSpeaking(Int32(summaryState.numberOfActiveSpeakers))
                         membersTextIsActive = true
                     } else {
                         if summaryState.participantCount == 0 {
-                            membersText = strongSelf.strings.PeopleNearby_NoMembers
+                            membersText = strongSelf.strings.VoiceChat_Panel_TapToJoin
                         } else {
-                            membersText = strongSelf.strings.Conversation_StatusMembers(Int32(summaryState.participantCount))
+                            membersText = strongSelf.strings.VoiceChat_Panel_Members(Int32(summaryState.participantCount))
                         }
                         membersTextIsActive = false
                     }
@@ -290,18 +285,13 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             let membersText: String
             let membersTextIsActive: Bool
             if data.numberOfActiveSpeakers != 0 {
-                //TODO:localize
-                if data.numberOfActiveSpeakers == 1 {
-                    membersText = "1 member speaking"
-                } else {
-                    membersText = "\(data.numberOfActiveSpeakers) members speaking"
-                }
+                membersText = self.strings.VoiceChat_Panel_MembersSpeaking(Int32(data.numberOfActiveSpeakers))
                 membersTextIsActive = true
             } else {
                 if data.participantCount == 0 {
-                    membersText = self.strings.PeopleNearby_NoMembers
+                    membersText = self.strings.VoiceChat_Panel_TapToJoin
                 } else {
-                    membersText = self.strings.Conversation_StatusMembers(Int32(data.participantCount))
+                    membersText = self.strings.VoiceChat_Panel_Members(Int32(data.participantCount))
                 }
                 membersTextIsActive = false
             }
