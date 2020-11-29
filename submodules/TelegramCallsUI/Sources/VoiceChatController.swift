@@ -287,6 +287,7 @@ public final class VoiceChatController: ViewController {
         private var callStateDisposable: Disposable?
         
         private var pushingToTalk = false
+        private let hapticFeedback = HapticFeedback()
         
         private var callState: PresentationGroupCallState?
         
@@ -488,7 +489,7 @@ public final class VoiceChatController: ViewController {
                 }
                 
                 //TODO:localize
-                let subtitle = strongSelf.presentationData.strings.Conversation_StatusMembers(Int32(callMembers.totalCount))
+                let subtitle = strongSelf.presentationData.strings.Conversation_StatusMembers(Int32(max(1, callMembers.totalCount)))
                 if let titleView = strongSelf.controller?.navigationItem.titleView as? VoiceChatControllerTitleView {
                     titleView.set(title: "Voice Chat", subtitle: subtitle)
                 }
@@ -521,6 +522,14 @@ public final class VoiceChatController: ViewController {
             |> deliverOnMainQueue).start(next: { [weak self] view in
                 guard let strongSelf = self else {
                     return
+                }
+                
+                if let peer = peerViewMainPeer(view), let channel = peer as? TelegramChannel {
+                    if !(channel.addressName ?? "").isEmpty || (channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers)) {
+                        strongSelf.optionsButton.isHidden = false
+                    } else {
+                        strongSelf.optionsButton.isHidden = true
+                    }
                 }
                 
                 if !strongSelf.didSetDataReady {
@@ -750,7 +759,14 @@ public final class VoiceChatController: ViewController {
         }
         
         @objc private func actionButtonPressed() {
-            self.call.toggleIsMuted()
+            if let callState = self.callState, case .connected = callState.networkState, let muteState = callState.muteState, !muteState.canUnmute {
+      
+                return
+            }
+            
+            self.hapticFeedback.error()
+            self.actionButton.layer.addShakeAnimation()
+//            self.call.toggleIsMuted()
         }
         
         @objc private func audioOutputPressed() {
@@ -996,7 +1012,7 @@ public final class VoiceChatController: ViewController {
                     }
                 }
                 
-                if let (backgroundView, foregroundView) = sourcePanel.rightButtonSnapshotViews() {
+                if let (backgroundView, foregroundView) = sourcePanel.rightButtonSnapshotViews(), !self.optionsButton.isHidden {
                     self.view.addSubview(backgroundView)
                     self.view.addSubview(foregroundView)
                     
@@ -1034,7 +1050,7 @@ public final class VoiceChatController: ViewController {
                     }
                 })
                 
-                self.contentContainer.layer.animate(from: self.presentationData.theme.rootController.navigationBar.backgroundColor.cgColor, to: UIColor.black.cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: duration - 0.1)
+                self.contentContainer.layer.animate(from: self.presentationData.theme.rootController.navigationBar.backgroundColor.cgColor, to: UIColor.black.cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: duration - 0.25)
                 
                 self.listNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
                 self.actionButton.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
