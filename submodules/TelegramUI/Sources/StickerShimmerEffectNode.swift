@@ -123,7 +123,7 @@ private final class ShimmerEffectForegroundNode: ASDisplayNode {
     }
 }
 
-private let decodingMap: [String] = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "-", ","]
+private let decodingMap: [String] = ["A", "A", "C", "A", "A", "A", "A", "H", "A", "A", "A", "L", "M", "A", "A", "A", "Q", "A", "S", "T", "A", "V", "A", "A", "A", "Z", "a", "a", "c", "a", "a", "a", "a", "h", "a", "a", "a", "l", "m", "a", "a", "a", "q", "a", "s", "t", "a", "v", "a", ".", "a", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "-", ","]
 private func decodeStickerThumbnailData(_ data: Data) -> String {
     var string = "M"
     data.forEach { byte in
