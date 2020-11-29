@@ -5986,7 +5986,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
             }
-            let callResult = strongSelf.context.sharedContext.callManager?.requestOrJoinGroupCall(context: strongSelf.context, peerId: peer.id, initialCall: activeCall, endCurrentIfAny: false, sourcePanel: nil)
+            let callResult = strongSelf.context.sharedContext.callManager?.joinGroupCall(context: strongSelf.context, peerId: peer.id, initialCall: activeCall, endCurrentIfAny: false, sourcePanel: nil)
             if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
                 if currentPeerId == peer.id {
                     strongSelf.context.sharedContext.navigateToCurrentCall(sourcePanel: nil)
@@ -5999,7 +5999,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if let strongSelf = self, let current = current {
                                 strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                                     if let strongSelf = self {
-                                        let _ = strongSelf.context.sharedContext.callManager?.requestOrJoinGroupCall(context: strongSelf.context, peerId: peer.id, initialCall: activeCall, endCurrentIfAny: true, sourcePanel: nil)
+                                        let _ = strongSelf.context.sharedContext.callManager?.joinGroupCall(context: strongSelf.context, peerId: peer.id, initialCall: activeCall, endCurrentIfAny: true, sourcePanel: nil)
                                     }
                                 })]), in: .window(.root))
                             } else {

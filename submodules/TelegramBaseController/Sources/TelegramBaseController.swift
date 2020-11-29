@@ -262,20 +262,19 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         
         if let callManager = context.sharedContext.callManager {
             switch groupCallPanelSource {
-            case .none:
+            case .none, .all:
                 break
-            default:
+            case let .peer(peerId):
                 let currentGroupCall: Signal<GroupCallPanelData?, NoError> = callManager.currentGroupCallSignal
                 |> distinctUntilChanged(isEqual: { lhs, rhs in
                     return lhs?.internalId == rhs?.internalId
                 })
                 |> mapToSignal { call -> Signal<GroupCallPanelData?, NoError> in
-                    guard let call = call else {
+                    guard let call = call, call.peerId == peerId else {
                         return .single(nil)
                     }
                     return call.summaryState
                     |> filter { $0 != nil }
-                    |> take(1)
                     |> map { summary -> GroupCallPanelData? in
                         guard let summary = summary else {
                             return nil
@@ -289,6 +288,13 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                             groupCall: call
                         )
                     }
+                    |> take(until: { summary in
+                        if summary != nil {
+                            return SignalTakeAction(passthrough: true, complete: true)
+                        } else {
+                            return SignalTakeAction(passthrough: true, complete: false)
+                        }
+                    })
                 }
                 
                 let availableGroupCall: Signal<GroupCallPanelData?, NoError>
@@ -861,7 +867,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
     }
     
     private func joinGroupCall(peerId: PeerId, info: GroupCallInfo, sourcePanel: GroupCallNavigationAccessoryPanel?) {
-        let callResult = self.context.sharedContext.callManager?.requestOrJoinGroupCall(context: self.context, peerId: peerId, initialCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash), endCurrentIfAny: false, sourcePanel: sourcePanel)
+        let callResult = self.context.sharedContext.callManager?.joinGroupCall(context: self.context, peerId: peerId, initialCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash), endCurrentIfAny: false, sourcePanel: sourcePanel)
         if let callResult = callResult, case let .alreadyInProgress(currentPeerId) = callResult {
             if currentPeerId == peerId {
                 self.context.sharedContext.navigateToCurrentCall(sourcePanel: sourcePanel)
@@ -880,7 +886,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     if let current = current {
                         strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
                             if let strongSelf = self {
-                                let _ = strongSelf.context.sharedContext.callManager?.requestOrJoinGroupCall(context: strongSelf.context, peerId: peerId, initialCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash), endCurrentIfAny: true, sourcePanel: sourcePanel)
+                                let _ = strongSelf.context.sharedContext.callManager?.joinGroupCall(context: strongSelf.context, peerId: peerId, initialCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash), endCurrentIfAny: true, sourcePanel: sourcePanel)
                             }
                         })]), in: .window(.root))
                     } else {

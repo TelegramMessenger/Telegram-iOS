@@ -10,7 +10,7 @@ public enum PeerInputActivity: Comparable {
     case playingGame
     case recordingInstantVideo
     case uploadingInstantVideo(progress: Int32)
-    case speakingInGroupCall
+    case speakingInGroupCall(timestamp: Int32)
     
     public var key: Int32 {
         switch self {
@@ -41,7 +41,7 @@ public enum PeerInputActivity: Comparable {
 }
 
 extension PeerInputActivity {
-    init?(apiType: Api.SendMessageAction) {
+    init?(apiType: Api.SendMessageAction, timestamp: Int32) {
         switch apiType {
             case .sendMessageCancelAction, .sendMessageChooseContactAction, .sendMessageGeoLocationAction, .sendMessageRecordVideoAction:
                 return nil
@@ -62,7 +62,7 @@ extension PeerInputActivity {
             case let .sendMessageUploadRoundAction(progress):
                 self = .uploadingInstantVideo(progress: progress)
             case .speakingInGroupCallAction:
-                self = .speakingInGroupCall
+                self = .speakingInGroupCall(timestamp: timestamp)
         }
     }
 }

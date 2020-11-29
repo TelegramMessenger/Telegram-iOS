@@ -593,7 +593,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         }
     }
     
-    public func requestOrJoinGroupCall(context: AccountContext, peerId: PeerId, initialCall: CachedChannelData.ActiveCall?, endCurrentIfAny: Bool, sourcePanel: ASDisplayNode?) -> RequestOrJoinGroupCallResult {
+    public func joinGroupCall(context: AccountContext, peerId: PeerId, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool, sourcePanel: ASDisplayNode?) -> JoinGroupCallManagerResult {
         let begin: () -> Void = { [weak self] in
             let _ = self?.startGroupCall(accountContext: context, peerId: peerId, initialCall: initialCall, sourcePanel: sourcePanel).start()
         }
@@ -612,13 +612,13 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         } else {
             begin()
         }
-        return .requested
+        return .joined
     }
     
     private func startGroupCall(
         accountContext: AccountContext,
         peerId: PeerId,
-        initialCall: CachedChannelData.ActiveCall?,
+        initialCall: CachedChannelData.ActiveCall,
         internalId: CallSessionInternalId = CallSessionInternalId(),
         sourcePanel: ASDisplayNode?
     ) -> Signal<Bool, NoError> {
