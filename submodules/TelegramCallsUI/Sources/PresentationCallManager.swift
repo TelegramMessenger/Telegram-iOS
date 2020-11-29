@@ -60,6 +60,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
     }
     private var currentCallDisposable = MetaDisposable()
     private let removeCurrentCallDisposable = MetaDisposable()
+    private let removeCurrentGroupCallDisposable = MetaDisposable()
     
     private var currentGroupCallValue: PresentationGroupCallImpl?
     private var currentGroupCall: PresentationGroupCallImpl? {
@@ -68,9 +69,17 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
     
     private var ringingStatesDisposable: Disposable?
     
-    private let hasActiveCallsPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    private let hasActivePersonalCallsPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    private let hasActiveGroupCallsPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     public var hasActiveCalls: Signal<Bool, NoError> {
-        return self.hasActiveCallsPromise.get()
+        return combineLatest(queue: .mainQueue(),
+            self.hasActivePersonalCallsPromise.get(),
+            self.hasActiveGroupCallsPromise.get()
+        )
+        |> map { value1, value2 -> Bool in
+            return value1 || value2
+        }
+        |> distinctUntilChanged
     }
     
     private let currentCallPromise = Promise<PresentationCall?>(nil)
@@ -254,6 +263,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         self.currentCallDisposable.dispose()
         self.ringingStatesDisposable?.dispose()
         self.removeCurrentCallDisposable.dispose()
+        self.removeCurrentGroupCallDisposable.dispose()
         self.startCallDisposable.dispose()
         self.proxyServerDisposable?.dispose()
         self.callSettingsDisposable?.dispose()
@@ -300,14 +310,14 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     )
                     strongSelf.updateCurrentCall(call)
                     strongSelf.currentCallPromise.set(.single(call))
-                    strongSelf.hasActiveCallsPromise.set(true)
+                    strongSelf.hasActivePersonalCallsPromise.set(true)
                     strongSelf.removeCurrentCallDisposable.set((call.canBeRemoved
                     |> deliverOnMainQueue).start(next: { [weak self, weak call] value in
                         if value, let strongSelf = self, let call = call {
                             if strongSelf.currentCall === call {
                                 strongSelf.updateCurrentCall(nil)
                                 strongSelf.currentCallPromise.set(.single(nil))
-                                strongSelf.hasActiveCallsPromise.set(false)
+                                strongSelf.hasActivePersonalCallsPromise.set(false)
                             }
                         }
                     }))
@@ -331,6 +341,9 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         if let call = self.currentCall {
             alreadyInCall = true
             alreadyInCallWithPeerId = call.peerId
+        } else if let currentGroupCall = self.currentGroupCallValue {
+            alreadyInCall = true
+            alreadyInCallWithPeerId = currentGroupCall.peerId
         } else {
             if #available(iOS 10.0, *) {
                 if CXCallObserver().calls.contains(where: { $0.hasEnded == false }) {
@@ -395,6 +408,13 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 |> deliverOnMainQueue).start(next: { _ in
                     begin()
                 }))
+            } else if let currentGroupCall = self.currentGroupCallValue {
+                self.startCallDisposable.set((currentGroupCall.leave(terminateIfPossible: false)
+                |> filter { $0 }
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { _ in
+                    begin()
+                }))
             } else {
                 begin()
             }
@@ -407,6 +427,13 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             }
             if let currentCall = self.currentCall {
                 self.startCallDisposable.set((currentCall.hangUp()
+                |> deliverOnMainQueue).start(next: { _ in
+                    begin()
+                }))
+            } else if let currentGroupCall = self.currentGroupCallValue {
+                self.startCallDisposable.set((currentGroupCall.leave(terminateIfPossible: false)
+                |> filter { $0 }
+                |> take(1)
                 |> deliverOnMainQueue).start(next: { _ in
                     begin()
                 }))
@@ -544,14 +571,14 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     )
                     strongSelf.updateCurrentCall(call)
                     strongSelf.currentCallPromise.set(.single(call))
-                    strongSelf.hasActiveCallsPromise.set(true)
+                    strongSelf.hasActivePersonalCallsPromise.set(true)
                     strongSelf.removeCurrentCallDisposable.set((call.canBeRemoved
                     |> deliverOnMainQueue).start(next: { [weak call] value in
                         if value, let strongSelf = self, let call = call {
                             if strongSelf.currentCall === call {
                                 strongSelf.updateCurrentCall(nil)
                                 strongSelf.currentCallPromise.set(.single(nil))
-                                strongSelf.hasActiveCallsPromise.set(false)
+                                strongSelf.hasActivePersonalCallsPromise.set(false)
                             }
                         }
                     }))
@@ -597,6 +624,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         let begin: () -> Void = { [weak self] in
             let _ = self?.startGroupCall(accountContext: context, peerId: peerId, initialCall: initialCall, sourcePanel: sourcePanel).start()
         }
+        
         if let currentGroupCall = self.currentGroupCallValue {
             if endCurrentIfAny {
                 let endSignal = currentGroupCall.leave(terminateIfPossible: false)
@@ -608,6 +636,16 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 }))
             } else {
                 return .alreadyInProgress(currentGroupCall.peerId)
+            }
+        } else if let currentCall = self.currentCall {
+            if endCurrentIfAny {
+                self.callKitIntegration?.dropCall(uuid: currentCall.internalId)
+                self.startCallDisposable.set((currentCall.hangUp()
+                |> deliverOnMainQueue).start(next: { _ in
+                    begin()
+                }))
+            } else {
+                return .alreadyInProgress(currentCall.peerId)
             }
         } else {
             begin()
@@ -674,14 +712,19 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             call.sourcePanel = sourcePanel
             strongSelf.updateCurrentGroupCall(call)
             strongSelf.currentGroupCallPromise.set(.single(call))
-            strongSelf.hasActiveCallsPromise.set(true)
-            strongSelf.removeCurrentCallDisposable.set((call.canBeRemoved
+            strongSelf.hasActiveGroupCallsPromise.set(true)
+            strongSelf.removeCurrentGroupCallDisposable.set((call.canBeRemoved
+            |> filter { $0 }
+            |> take(1)
             |> deliverOnMainQueue).start(next: { [weak call] value in
-                if value, let strongSelf = self, let call = call {
+                guard let strongSelf = self, let call = call else {
+                    return
+                }
+                if value {
                     if strongSelf.currentGroupCall === call {
                         strongSelf.updateCurrentGroupCall(nil)
                         strongSelf.currentGroupCallPromise.set(.single(nil))
-                        strongSelf.hasActiveCallsPromise.set(false)
+                        strongSelf.hasActiveGroupCallsPromise.set(false)
                     }
                 }
             }))

@@ -695,11 +695,13 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 }))
             } else {
                 self.leaveDisposable.set((leaveGroupCall(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, source: localSsrc)
-                |> deliverOnMainQueue).start(completed: { [weak self] in
+                |> deliverOnMainQueue).start(error: { [weak self] _ in
+                    self?._canBeRemoved.set(.single(true))
+                }, completed: { [weak self] in
                     self?._canBeRemoved.set(.single(true))
                 }))
             }
-        } else if case .requesting = self.internalState {
+        } else {
             self.callContext?.stop()
             self.callContext = nil
             self.requestDisposable.set(nil)
