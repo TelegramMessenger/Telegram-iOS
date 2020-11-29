@@ -28,7 +28,7 @@ public struct GroupCallSummary: Equatable {
     public var topParticipants: [GroupCallParticipantsContext.Participant]
 }
 
-private extension GroupCallInfo {
+extension GroupCallInfo {
     init?(_ call: Api.GroupCall) {
         switch call {
         case let .groupCall(_, id, accessHash, participantCount, params, _):
@@ -142,7 +142,7 @@ public func createGroupCall(account: Account, peerId: PeerId) -> Signal<GroupCal
             var parsedCall: GroupCallInfo?
             loop: for update in result.allUpdates {
                 switch update {
-                case let .updateGroupCall(call):
+                case let .updateGroupCall(_, call):
                     parsedCall = GroupCallInfo(call)
                     break loop
                 default:
@@ -316,7 +316,7 @@ public func joinGroupCall(account: Account, peerId: PeerId, callId: Int64, acces
             var maybeParsedCall: GroupCallInfo?
             loop: for update in updates.allUpdates {
                 switch update {
-                case let .updateGroupCall(call):
+                case let .updateGroupCall(_, call):
                     maybeParsedCall = GroupCallInfo(call)
                     break loop
                 default:

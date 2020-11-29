@@ -111,7 +111,7 @@ enum AccountStateMutationOperation {
     case UpdateChatListFilter(id: Int32, filter: Api.DialogFilter?)
     case UpdateReadThread(threadMessageId: MessageId, readMaxId: Int32, isIncoming: Bool, mainChannelMessage: MessageId?)
     case UpdateGroupCallParticipants(id: Int64, accessHash: Int64, participants: [Api.GroupCallParticipant], version: Int32)
-    case UpdateGroupCall(call: Api.GroupCall)
+    case UpdateGroupCall(peerId: PeerId, call: Api.GroupCall)
 }
 
 struct HoleFromPreviousState {
@@ -282,8 +282,8 @@ struct AccountMutableState {
         self.addOperation(.UpdateGroupCallParticipants(id: id, accessHash: accessHash, participants: participants, version: version))
     }
     
-    mutating func updateGroupCall(call: Api.GroupCall) {
-        self.addOperation(.UpdateGroupCall(call: call))
+    mutating func updateGroupCall(peerId: PeerId, call: Api.GroupCall) {
+        self.addOperation(.UpdateGroupCall(peerId: peerId, call: call))
     }
     
     mutating func readGroupFeedInbox(groupId: PeerGroupId, index: MessageIndex) {

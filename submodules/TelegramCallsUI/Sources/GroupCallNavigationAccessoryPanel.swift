@@ -211,14 +211,13 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         
         self.separatorNode.backgroundColor = presentationData.theme.chat.historyNavigation.strokeColor
         
-        self.joinButtonTitleNode.attributedText = NSAttributedString(string: presentationData.strings.Channel_JoinChannel.uppercased(), font: Font.semibold(15.0), textColor: presentationData.theme.chat.inputPanel.actionControlForegroundColor)
+        self.joinButtonTitleNode.attributedText = NSAttributedString(string: presentationData.strings.VoiceChat_PanelJoin.uppercased(), font: Font.semibold(15.0), textColor: presentationData.theme.chat.inputPanel.actionControlForegroundColor)
         self.joinButtonBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 28.0, color: presentationData.theme.chat.inputPanel.actionControlFillColor)
         
         //TODO:localize
         self.micButtonBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 36.0, color: UIColor(rgb: 0x30b251))
         
-        //TODO:localize
-        self.titleNode.attributedText = NSAttributedString(string: "Voice Chat", font: Font.semibold(15.0), textColor: presentationData.theme.chat.inputPanel.primaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: presentationData.strings.VoiceChat_Title, font: Font.semibold(15.0), textColor: presentationData.theme.chat.inputPanel.primaryTextColor)
         self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: Font.regular(13.0), textColor: presentationData.theme.chat.inputPanel.secondaryTextColor)
         
         self.muteIconNode.image = PresentationResourcesChat.chatTitleMuteIcon(presentationData.theme)
@@ -253,12 +252,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                     let membersText: String
                     let membersTextIsActive: Bool
                     if summaryState.numberOfActiveSpeakers != 0 {
-                        //TODO:localize
-                        if summaryState.numberOfActiveSpeakers == 1 {
-                            membersText = "1 member speaking"
-                        } else {
-                            membersText = "\(summaryState.numberOfActiveSpeakers) members speaking"
-                        }
+                        membersText = strongSelf.strings.VoiceChat_StatusMembersSpeaking(Int32(summaryState.numberOfActiveSpeakers))
                         membersTextIsActive = true
                     } else {
                         if summaryState.participantCount == 0 {
@@ -290,12 +284,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             let membersText: String
             let membersTextIsActive: Bool
             if data.numberOfActiveSpeakers != 0 {
-                //TODO:localize
-                if data.numberOfActiveSpeakers == 1 {
-                    membersText = "1 member speaking"
-                } else {
-                    membersText = "\(data.numberOfActiveSpeakers) members speaking"
-                }
+                membersText = self.strings.VoiceChat_StatusMembersSpeaking(Int32(data.numberOfActiveSpeakers))
                 membersTextIsActive = true
             } else {
                 if data.participantCount == 0 {

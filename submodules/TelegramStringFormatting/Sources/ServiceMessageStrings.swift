@@ -405,12 +405,11 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
                 attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
             case let .groupPhoneCall(_, _, duration):
-                //TODO:localize
                 let titleString: String
                 if let duration = duration {
-                    titleString = "Voice chat ended (\(duration)s)"
+                    titleString = strings.Message_VoiceChat_Ended
                 } else {
-                    titleString = "Voice chat started"
+                    titleString = strings.Message_VoiceChat_Started
                 }
                 attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
             case let .customText(text, entities):

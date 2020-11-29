@@ -5933,7 +5933,22 @@ Sorry for the inconvenience.";
 "VoiceChat.RemovePeerConfirmation" = "Are you sure you want to remove %@ from the group chat?";
 "VoiceChat.RemovePeerRemove" = "Remove";
 
+"VoiceChat.PanelJoin" = "Join";
+"VoiceChat.Title" = "Voice Chat";
+
+"Message.VoiceChat.Started" = "Voice chat started";
+"Message.VoiceChat.Ended" = "Voice chat ended";
+
+"VoiceChat.StatusMembersSpeaking_0" = "%@ members speaking";
+"VoiceChat.StatusMembersSpeaking_1" = "1 member speaking";
+"VoiceChat.StatusMembersSpeaking_2" = "2 members speaking";
+"VoiceChat.StatusMembersSpeaking_3_10" = "%@ members speaking";
+"VoiceChat.StatusMembersSpeaking_many" = "%@ members speaking";
+"VoiceChat.StatusMembersSpeaking_any" = "%@ members speaking";
+
 "VoiceChat.UserInvited" = "You invited **%@** to the voice chat";
+
+"PeerInfo.CreateVoiceChat" = "Create Voice Chat";
 
 "Notification.VoiceChatInvitation" = "%1$@ invited %2$@ to the voice chat";
 "Notification.VoiceChatInvitationByYou" = "You invited %1$@ to the voice chat";

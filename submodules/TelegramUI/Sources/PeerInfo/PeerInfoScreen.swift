@@ -2968,8 +2968,7 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             } else if let channel = peer as? TelegramChannel {
                 if case .group = channel.info, !channel.flags.contains(.hasVoiceChat) {
                     if channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls) {
-                        //TODO:localize
-                        items.append(ActionSheetButtonItem(title: "Create Voice Chat", color: .accent, action: { [weak self] in
+                        items.append(ActionSheetButtonItem(title: presentationData.strings.PeerInfo_CreateVoiceChat, color: .accent, action: { [weak self] in
                             dismissAction()
                             self?.requestCall(isVideo: false)
                         }))

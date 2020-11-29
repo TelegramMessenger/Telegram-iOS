@@ -487,10 +487,9 @@ public final class VoiceChatController: ViewController {
                     strongSelf.currentCallMembers = callMembers.participants
                 }
                 
-                //TODO:localize
                 let subtitle = strongSelf.presentationData.strings.Conversation_StatusMembers(Int32(callMembers.totalCount))
                 if let titleView = strongSelf.controller?.navigationItem.titleView as? VoiceChatControllerTitleView {
-                    titleView.set(title: "Voice Chat", subtitle: subtitle)
+                    titleView.set(title: strongSelf.presentationData.strings.VoiceChat_Title, subtitle: subtitle)
                 }
             })
             
