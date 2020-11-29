@@ -407,9 +407,9 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             case let .groupPhoneCall(_, _, duration):
                 let titleString: String
                 if let duration = duration {
-                    titleString = strings.Message_VoiceChat_Ended
+                    titleString = strings.Notification_VoiceChatEnded(callDurationString(strings: strings, value: duration)).0
                 } else {
-                    titleString = strings.Message_VoiceChat_Started
+                    titleString = strings.Notification_VoiceChatStarted
                 }
                 attributedString = NSAttributedString(string: titleString, font: titleFont, textColor: primaryTextColor)
             case let .customText(text, entities):
