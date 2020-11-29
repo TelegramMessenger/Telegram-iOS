@@ -800,7 +800,7 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
-    func updateSublayerTransformScale(node: ASDisplayNode, scale: CGPoint, completion: ((Bool) -> Void)? = nil) {
+    func updateSublayerTransformScale(node: ASDisplayNode, scale: CGPoint, beginWithCurrentState: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if !node.isNodeLoaded {
             node.subnodeTransform = CATransform3DMakeScale(scale.x, scale.y, 1.0)
             completion?(true)
@@ -826,8 +826,15 @@ public extension ContainedViewLayoutTransition {
                     completion(true)
                 }
             case let .animated(duration, curve):
+                let initialTransform: CATransform3D
+                if beginWithCurrentState, node.isNodeLoaded {
+                    initialTransform = node.layer.presentation()?.sublayerTransform ?? t
+                } else {
+                    initialTransform = t
+                }
+                
                 node.layer.sublayerTransform = CATransform3DMakeScale(scale.x, scale.y, 1.0)
-                node.layer.animate(from: NSValue(caTransform3D: t), to: NSValue(caTransform3D: node.layer.sublayerTransform), keyPath: "sublayerTransform", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: true, additive: false, completion: {
+                node.layer.animate(from: NSValue(caTransform3D: initialTransform), to: NSValue(caTransform3D: node.layer.sublayerTransform), keyPath: "sublayerTransform", timingFunction: curve.timingFunction, duration: duration, delay: 0.0, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: true, additive: false, completion: {
                     result in
                     if let completion = completion {
                         completion(result)

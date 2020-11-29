@@ -852,7 +852,9 @@ public func rebuildControllerStackAfterSupergroupUpgrade(controller: ViewControl
         if controllers[i] === controller {
             for j in 0 ..< i {
                 if controllers[j] is ChatController {
-                    controllers.removeSubrange(j + 1 ... i - 1)
+                    if j + 1 <= i - 1 {
+                        controllers.removeSubrange(j + 1 ... i - 1)
+                    }
                     break
                 }
             }

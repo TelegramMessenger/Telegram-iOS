@@ -11,6 +11,7 @@ import AccountContext
 import AppBundle
 import SwiftSignalKit
 import AnimatedAvatarSetNode
+import AudioBlob
 
 private let titleFont = Font.semibold(15.0)
 private let subtitleFont = Font.regular(13.0)
@@ -61,9 +62,12 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     private let joinButtonTitleNode: ImmediateTextNode
     private let joinButtonBackgroundNode: ASImageNode
     
+    private var audioLevelView: VoiceBlobView?
+    
     private let micButton: HighlightTrackingButtonNode
     private let micButtonForegroundNode: VoiceChatMicrophoneNode
     private let micButtonBackgroundNode: ASImageNode
+    private var micButtonBackgroundNodeIsMuted: Bool?
     
     let titleNode: ImmediateTextNode
     let textNode: ImmediateTextNode
@@ -77,6 +81,9 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     
     private let membersDisposable = MetaDisposable()
     private let isMutedDisposable = MetaDisposable()
+    private let audioLevelDisposable = MetaDisposable()
+    
+    private var callState: PresentationGroupCallState?
     
     private var currentData: GroupCallPanelData?
     private var validLayout: (CGSize, CGFloat, CGFloat)?
@@ -182,16 +189,18 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     private var actionButtonPressGestureStartTime: Double = 0.0
     
     @objc private func micButtonPressGesture(_ gestureRecognizer: UILongPressGestureRecognizer) {
-        guard let call = self.currentData?.groupCall else {
+        guard let call = self.currentData?.groupCall, let callState = self.callState else {
             return
         }
         switch gestureRecognizer.state {
             case .began:
                 self.actionButtonPressGestureStartTime = CACurrentMediaTime()
-                call.setIsMuted(action: .muted(isPushToTalkActive: true))
+                if callState.muteState != nil {
+                    call.setIsMuted(action: .muted(isPushToTalkActive: true))
+                }
             case .ended, .cancelled:
                 let timestamp = CACurrentMediaTime()
-                if timestamp - self.actionButtonPressGestureStartTime < 0.2 {
+                if callState.muteState != nil || timestamp - self.actionButtonPressGestureStartTime < 0.1 {
                     call.toggleIsMuted()
                 } else {
                     call.setIsMuted(action: .muted(isPushToTalkActive: false))
@@ -214,9 +223,6 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.joinButtonTitleNode.attributedText = NSAttributedString(string: presentationData.strings.VoiceChat_PanelJoin.uppercased(), font: Font.semibold(15.0), textColor: presentationData.theme.chat.inputPanel.actionControlForegroundColor)
         self.joinButtonBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 28.0, color: presentationData.theme.chat.inputPanel.actionControlFillColor)
         
-        //TODO:localize
-        self.micButtonBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 36.0, color: UIColor(rgb: 0x30b251))
-        
         self.titleNode.attributedText = NSAttributedString(string: presentationData.strings.VoiceChat_Title, font: Font.semibold(15.0), textColor: presentationData.theme.chat.inputPanel.primaryTextColor)
         self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: Font.regular(13.0), textColor: presentationData.theme.chat.inputPanel.secondaryTextColor)
         
@@ -238,6 +244,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { $0.peer }, animated: false)
             
             self.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: self.theme.chat.inputPanel.secondaryTextColor)
+            
+            self.callState = nil
             
             self.membersDisposable.set(nil)
             self.isMutedDisposable.set(nil)
@@ -272,15 +280,80 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                     }
                 }))
                 
-                self.isMutedDisposable.set((groupCall.isMuted
-                |> deliverOnMainQueue).start(next: { [weak self] isMuted in
+                self.isMutedDisposable.set((groupCall.state
+                |> deliverOnMainQueue).start(next: { [weak self] callState in
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.micButtonForegroundNode.update(state: VoiceChatMicrophoneNode.State(muted: isMuted, color: UIColor.white), animated: true)
+                    
+                    var transition: ContainedViewLayoutTransition = .immediate
+                    if strongSelf.callState != nil {
+                        transition = .animated(duration: 0.3, curve: .spring)
+                    }
+                    
+                    strongSelf.callState = callState
+                    
+                    if let (size, leftInset, rightInset) = strongSelf.validLayout {
+                        strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: transition)
+                    }
+                }))
+                
+                self.audioLevelDisposable.set((groupCall.myAudioLevel
+                |> deliverOnMainQueue).start(next: { [weak self] value in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    if strongSelf.audioLevelView == nil {
+                        let blobFrame = CGRect(origin: CGPoint(), size: CGSize(width: 36.0, height: 36.0)).insetBy(dx: -12.0, dy: -12.0)
+                        
+                        let audioLevelView = VoiceBlobView(
+                            frame: blobFrame,
+                            maxLevel: 0.3,
+                            smallBlobRange: (0, 0),
+                            mediumBlobRange: (0.7, 0.8),
+                            bigBlobRange: (0.8, 0.9)
+                        )
+                        
+                        let maskRect = CGRect(origin: .zero, size: blobFrame.size)
+                        let playbackMaskLayer = CAShapeLayer()
+                        playbackMaskLayer.frame = maskRect
+                        playbackMaskLayer.fillRule = .evenOdd
+                        let maskPath = UIBezierPath()
+                        maskPath.append(UIBezierPath(roundedRect: maskRect.insetBy(dx: 12, dy: 12), cornerRadius: 22))
+                        maskPath.append(UIBezierPath(rect: maskRect))
+                        playbackMaskLayer.path = maskPath.cgPath
+                        audioLevelView.layer.mask = playbackMaskLayer
+                        
+                        audioLevelView.setColor(UIColor(rgb: 0x30B251))
+                        strongSelf.audioLevelView = audioLevelView
+                        
+                        strongSelf.micButton.view.insertSubview(audioLevelView, at: 0)
+                    }
+                    
+                    var value = value
+                    if value <= 0.15 {
+                        value = 0.0
+                    }
+                    let level = min(1.0, max(0.0, CGFloat(value)))
+                    let avatarScale: CGFloat
+                    
+                    strongSelf.audioLevelView?.updateLevel(CGFloat(value) * 2.0)
+                    if value > 0.0 {
+                        strongSelf.audioLevelView?.startAnimating()
+                        avatarScale = 1.03 + level * 0.1
+                    } else {
+                        strongSelf.audioLevelView?.stopAnimating(duration: 0.5)
+                        avatarScale = 1.0
+                    }
+                    
+                    //let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .spring)
+                    //transition.updateSublayerTransformScale(node: strongSelf.avatarNode, scale: avatarScale, beginWithCurrentState: true)
                 }))
             }
         } else if data.groupCall == nil {
+            self.audioLevelDisposable.set(nil)
+            
             let membersText: String
             let membersTextIsActive: Bool
             if data.numberOfActiveSpeakers != 0 {
@@ -333,6 +406,26 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         
         let animationSize = CGSize(width: 36.0, height: 36.0)
         transition.updateFrame(node: self.micButtonForegroundNode, frame: CGRect(origin: CGPoint(x: floor((micButtonFrame.width - animationSize.width) / 2.0), y: floor((micButtonFrame.height - animationSize.height) / 2.0)), size: animationSize))
+        
+        var isMuted = true
+        if let _ = self.callState?.muteState {
+            isMuted = true
+        } else {
+            isMuted = false
+        }
+        self.micButtonForegroundNode.update(state: VoiceChatMicrophoneNode.State(muted: isMuted, color: UIColor.white), animated: transition.isAnimated)
+        
+        if isMuted != self.micButtonBackgroundNodeIsMuted {
+            self.micButtonBackgroundNodeIsMuted = isMuted
+            let updatedImage = generateStretchableFilledCircleImage(diameter: 36.0, color: isMuted ? UIColor(rgb: 0xb6b6bb) : UIColor(rgb: 0x30b251))
+            
+            if let updatedImage = updatedImage, let previousImage = self.micButtonBackgroundNode.image?.cgImage, transition.isAnimated {
+                self.micButtonBackgroundNode.image = updatedImage
+                self.micButtonBackgroundNode.layer.animate(from: previousImage, to: updatedImage.cgImage!, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.25, delay: 0.0)
+            } else {
+                self.micButtonBackgroundNode.image = updatedImage
+            }
+        }
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
         let textSize = self.textNode.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))

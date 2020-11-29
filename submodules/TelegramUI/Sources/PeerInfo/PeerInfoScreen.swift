@@ -3032,6 +3032,29 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                 }
             } else if let group = peer as? TelegramGroup {
+                if case .creator = group.role {
+                    items.append(ActionSheetButtonItem(title: presentationData.strings.ChannelInfo_CreateVoiceChat, color: .accent, action: { [weak self] in
+                        dismissAction()
+                        
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        strongSelf.activeActionDisposable.set((convertGroupToSupergroup(account: strongSelf.context.account, peerId: group.id)
+                        |> deliverOnMainQueue).start(next: { peerId in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            if let controller = strongSelf.controller, let navigationController = controller.navigationController as? NavigationController {
+                                rebuildControllerStackAfterSupergroupUpgrade(controller: controller, navigationController: navigationController)
+                                
+                                strongSelf.createAndJoinGroupCall(peerId: peerId)
+                            }
+                        }))
+                    }))
+                }
+                
                 if case .Member = group.membership {
                     items.append(ActionSheetButtonItem(title: presentationData.strings.Group_LeaveGroup, color: .destructive, action: { [weak self] in
                         dismissAction()
@@ -3181,72 +3204,8 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             
             if let activeCall = cachedChannelData.activeCall {
                 let _ = self.context.sharedContext.callManager?.joinGroupCall(context: self.context, peerId: peer.id, initialCall: activeCall, endCurrentIfAny: false, sourcePanel: nil)
-            } else if let callManager = self.context.sharedContext.callManager {
-                let startCall: (Bool) -> Void = { [weak self] endCurrentIfAny in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    
-                    var dismissStatus: (() -> Void)?
-                    let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: {
-                        dismissStatus?()
-                    }))
-                    dismissStatus = { [weak self, weak statusController] in
-                        self?.activeActionDisposable.set(nil)
-                        statusController?.dismiss()
-                    }
-                    strongSelf.controller?.present(statusController, in: .window(.root))
-                    strongSelf.activeActionDisposable.set((createGroupCall(account: strongSelf.context.account, peerId: peer.id)
-                    |> deliverOnMainQueue).start(next: { [weak self] info in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        let _ = strongSelf.context.sharedContext.callManager?.joinGroupCall(context: strongSelf.context, peerId: peer.id, initialCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash), endCurrentIfAny: endCurrentIfAny, sourcePanel: nil)
-                    }, error: { [weak self] _ in
-                        dismissStatus?()
-                        
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
-                    }, completed: { [weak self] in
-                        dismissStatus?()
-                        
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
-                    }))
-                }
-                
-                let _ = (callManager.currentGroupCallSignal
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak self] activeCall in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    
-                    if let activeCall = activeCall {
-                        let currentPeerId = activeCall.peerId
-                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
-                            return (transaction.getPeer(peer.id), transaction.getPeer(currentPeerId))
-                        } |> deliverOnMainQueue).start(next: { [weak self] peer, current in
-                            if let peer = peer {
-                                if let strongSelf = self, let current = current {
-                                    strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                            startCall(true)
-                                    })]), in: .window(.root))
-                                } else {
-                                    strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_ExternalCallInProgressMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                    })]), in: .window(.root))
-                                }
-                            }
-                        })
-                    } else {
-                        startCall(false)
-                    }
-                })
+            } else {
+                self.createAndJoinGroupCall(peerId: peer.id)
             }
             return
         }
@@ -3299,6 +3258,76 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                 })*/
             }
+        }
+    }
+    
+    private func createAndJoinGroupCall(peerId: PeerId) {
+        if let callManager = self.context.sharedContext.callManager {
+            let startCall: (Bool) -> Void = { [weak self] endCurrentIfAny in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                var dismissStatus: (() -> Void)?
+                let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: {
+                    dismissStatus?()
+                }))
+                dismissStatus = { [weak self, weak statusController] in
+                    self?.activeActionDisposable.set(nil)
+                    statusController?.dismiss()
+                }
+                strongSelf.controller?.present(statusController, in: .window(.root))
+                strongSelf.activeActionDisposable.set((createGroupCall(account: strongSelf.context.account, peerId: peerId)
+                |> deliverOnMainQueue).start(next: { [weak self] info in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let _ = strongSelf.context.sharedContext.callManager?.joinGroupCall(context: strongSelf.context, peerId: peerId, initialCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash), endCurrentIfAny: endCurrentIfAny, sourcePanel: nil)
+                }, error: { [weak self] _ in
+                    dismissStatus?()
+                    
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
+                }, completed: { [weak self] in
+                    dismissStatus?()
+                    
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
+                }))
+            }
+            
+            let _ = (callManager.currentGroupCallSignal
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] activeCall in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                if let activeCall = activeCall {
+                    let currentPeerId = activeCall.peerId
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> (Peer?, Peer?) in
+                        return (transaction.getPeer(peerId), transaction.getPeer(currentPeerId))
+                    } |> deliverOnMainQueue).start(next: { [weak self] peer, current in
+                        if let peer = peer {
+                            if let strongSelf = self, let current = current {
+                                strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_CallInProgressMessage(current.compactDisplayTitle, peer.compactDisplayTitle).0, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                                        startCall(true)
+                                })]), in: .window(.root))
+                            } else {
+                                strongSelf.controller?.present(textAlertController(context: strongSelf.context, title: presentationData.strings.Call_CallInProgressTitle, text: presentationData.strings.Call_ExternalCallInProgressMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                                })]), in: .window(.root))
+                            }
+                        }
+                    })
+                } else {
+                    startCall(false)
+                }
+            })
         }
     }
     
