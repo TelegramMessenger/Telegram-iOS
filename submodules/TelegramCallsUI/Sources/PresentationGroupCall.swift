@@ -497,6 +497,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         if let clientParams = joinCallResult.callInfo.clientParams {
                             strongSelf.updateSessionState(internalState: .estabilished(info: joinCallResult.callInfo, clientParams: clientParams, localSsrc: ssrc, initialState: joinCallResult.state), audioSessionControl: strongSelf.audioSessionControl)
                         }
+                    }, error: { _ in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf._canBeRemoved.set(.single(true))
                     }))
                 }))
                 
