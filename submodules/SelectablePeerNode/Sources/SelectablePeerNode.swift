@@ -166,7 +166,7 @@ public final class SelectablePeerNode: ASDisplayNode {
         let (onlineSize, onlineApply) = onlineLayout(online, false)
         let _ = onlineApply(false)
         
-        self.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(theme, state: .panel))
+        self.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(theme, state: .panel), color: nil)
         self.onlineNode.frame = CGRect(origin: CGPoint(), size: onlineSize)
         
         self.setNeedsLayout()

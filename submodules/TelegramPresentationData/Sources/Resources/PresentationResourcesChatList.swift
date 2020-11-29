@@ -135,20 +135,21 @@ public struct PresentationResourcesChatList {
         })
     }
     
-    public static func recentStatusOnlineIcon(_ theme: PresentationTheme, state: RecentStatusOnlineIconState) -> UIImage? {
+    public static func recentStatusOnlineIcon(_ theme: PresentationTheme, state: RecentStatusOnlineIconState, voiceChat: Bool = false) -> UIImage? {
         let key: PresentationResourceKey
         switch state {
             case .regular:
-                key = PresentationResourceKey.chatListRecentStatusOnlineIcon
+                key = voiceChat ? PresentationResourceKey.chatListRecentStatusVoiceChatIcon : PresentationResourceKey.chatListRecentStatusOnlineIcon
             case .highlighted:
-                key = PresentationResourceKey.chatListRecentStatusOnlineHighlightedIcon
+                key = voiceChat ? PresentationResourceKey.chatListRecentStatusVoiceChatHighlightedIcon : PresentationResourceKey.chatListRecentStatusOnlineHighlightedIcon
             case .pinned:
-                key = PresentationResourceKey.chatListRecentStatusOnlinePinnedIcon
+                key = voiceChat ? PresentationResourceKey.chatListRecentStatusVoiceChatPinnedIcon : PresentationResourceKey.chatListRecentStatusOnlinePinnedIcon
             case .panel:
-                key = PresentationResourceKey.chatListRecentStatusOnlinePanelIcon
+                key = voiceChat ? PresentationResourceKey.chatListRecentStatusVoiceChatPanelIcon : PresentationResourceKey.chatListRecentStatusOnlinePanelIcon
         }
         return theme.image(key.rawValue, { theme in
-            return generateImage(CGSize(width: 14.0, height: 14.0), rotatedContext: { size, context in
+            let size: CGFloat = voiceChat ? 22.0 : 14.0
+            return generateImage(CGSize(width: size, height: size), rotatedContext: { size, context in
                 let bounds = CGRect(origin: CGPoint(), size: size)
                 context.clear(bounds)
                 switch state {

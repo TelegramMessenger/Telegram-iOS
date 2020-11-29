@@ -3,8 +3,106 @@ import UIKit
 import AsyncDisplayKit
 import Display
 
+private final class VoiceChatIndicatorNode: ASDisplayNode {
+    private let leftLine: ASDisplayNode
+    private let centerLine: ASDisplayNode
+    private let rightLine: ASDisplayNode
+    
+    private var isCurrentlyInHierarchy = false
+    private var shouldBeAnimating = false
+    
+    var color: UIColor = UIColor(rgb: 0xffffff) {
+        didSet {
+            self.leftLine.backgroundColor = self.color
+            self.centerLine.backgroundColor = self.color
+            self.rightLine.backgroundColor = self.color
+        }
+    }
+    
+    override init() {
+        self.leftLine = ASDisplayNode()
+        self.leftLine.isLayerBacked = true
+        self.leftLine.cornerRadius = 1.0
+        self.leftLine.frame = CGRect(x: 6.0, y: 6.0, width: 2.0, height: 10.0)
+        
+        self.centerLine = ASDisplayNode()
+        self.centerLine.isLayerBacked = true
+        self.centerLine.cornerRadius = 1.0
+        self.centerLine.frame = CGRect(x: 10.0, y: 5.0, width: 2.0, height: 12.0)
+        
+        self.rightLine = ASDisplayNode()
+        self.rightLine.isLayerBacked = true
+        self.rightLine.cornerRadius = 1.0
+        self.rightLine.frame = CGRect(x: 14.0, y: 6.0, width: 2.0, height: 10.0)
+        
+        super.init()
+        
+        self.isLayerBacked = true
+        
+        self.addSubnode(self.leftLine)
+        self.addSubnode(self.centerLine)
+        self.addSubnode(self.rightLine)
+    }
+    
+    override func didEnterHierarchy() {
+        super.didEnterHierarchy()
+        
+        self.isCurrentlyInHierarchy = true
+        self.updateAnimation()
+    }
+    
+    override func didExitHierarchy() {
+        super.didExitHierarchy()
+        
+        self.isCurrentlyInHierarchy = false
+        self.updateAnimation()
+    }
+    
+    private func updateAnimation() {
+        let shouldBeAnimating = self.isCurrentlyInHierarchy
+        if shouldBeAnimating != self.shouldBeAnimating {
+            self.shouldBeAnimating = shouldBeAnimating
+            if shouldBeAnimating {
+                let timingFunctions: [CAMediaTimingFunction] = (0 ..< 5).map { _ in CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut) }
+                
+                let leftAnimation = CAKeyframeAnimation(keyPath: "bounds.size.height")
+                leftAnimation.timingFunctions = timingFunctions
+                leftAnimation.values = [NSNumber(value: 10.0), NSNumber(value: 4.0), NSNumber(value: 8.0), NSNumber(value: 4.0), NSNumber(value: 10.0)]
+                leftAnimation.repeatCount = Float.infinity
+                leftAnimation.duration = 2.0
+                self.leftLine.layer.add(leftAnimation, forKey: "animation")
+
+                let centerAnimation = CAKeyframeAnimation(keyPath: "bounds.size.height")
+                centerAnimation.timingFunctions = timingFunctions
+                centerAnimation.values = [NSNumber(value: 6.0), NSNumber(value: 10.0), NSNumber(value: 4.0), NSNumber(value: 12.0), NSNumber(value: 6.0)]
+                centerAnimation.repeatCount = Float.infinity
+                centerAnimation.duration = 2.0
+                self.centerLine.layer.add(centerAnimation, forKey: "animation")
+                
+                let rightAnimation = CAKeyframeAnimation(keyPath: "bounds.size.height")
+                rightAnimation.timingFunctions = timingFunctions
+                rightAnimation.values = [NSNumber(value: 10.0), NSNumber(value: 4.0), NSNumber(value: 8.0), NSNumber(value: 4.0), NSNumber(value: 10.0)]
+                rightAnimation.repeatCount = Float.infinity
+                rightAnimation.duration = 2.0
+                self.rightLine.layer.add(rightAnimation, forKey: "animation")
+            } else {
+                self.leftLine.layer.removeAnimation(forKey: "animation")
+                self.centerLine.layer.removeAnimation(forKey: "animation")
+                self.rightLine.layer.removeAnimation(forKey: "animation")
+            }
+        }
+    }
+}
+
 public final class PeerOnlineMarkerNode: ASDisplayNode {
     private let iconNode: ASImageNode
+    private var animationNode: VoiceChatIndicatorNode?
+    
+    private var color: UIColor = UIColor(rgb: 0xffffff) {
+        didSet {
+            self.animationNode?.color = self.color
+        }
+    }
     
     override public init() {
         self.iconNode = ASImageNode()
@@ -20,16 +118,31 @@ public final class PeerOnlineMarkerNode: ASDisplayNode {
         self.addSubnode(self.iconNode)
     }
     
-    public func setImage(_ image: UIImage?) {
+    public func setImage(_ image: UIImage?, color: UIColor?) {
         self.iconNode.image = image
+        if let color = color {
+            self.color = color
+        }
     }
     
     public func asyncLayout() -> (Bool, Bool) -> (CGSize, (Bool) -> Void) {
         return { [weak self] online, isVoiceChat in
-            return (CGSize(width: 14.0, height: 14.0), { animated in
+            let size: CGFloat = isVoiceChat ? 22.0 : 14.0
+            return (CGSize(width: size, height: size), { animated in
                 if let strongSelf = self {
-                    strongSelf.iconNode.frame = CGRect(x: 0.0, y: 0.0, width: 14.0, height: 14.0)
+                    strongSelf.iconNode.frame = CGRect(x: 0.0, y: 0.0, width: size, height: size)
 
+                    if isVoiceChat {
+                        if let _ = strongSelf.animationNode {
+                        } else {
+                            let animationNode = VoiceChatIndicatorNode()
+                            animationNode.color = strongSelf.color
+                            animationNode.frame = strongSelf.iconNode.bounds
+                            strongSelf.animationNode = animationNode
+                            strongSelf.iconNode.addSubnode(animationNode)
+                        }
+                    }
+                    
                     if animated {
                         let initialScale: CGFloat = strongSelf.iconNode.isHidden ? 0.0 : CGFloat((strongSelf.iconNode.value(forKeyPath: "layer.presentationLayer.transform.scale.x") as? NSNumber)?.floatValue ?? 1.0)
                         let targetScale: CGFloat = online ? 1.0 : 0.0
@@ -37,10 +150,18 @@ public final class PeerOnlineMarkerNode: ASDisplayNode {
                         strongSelf.iconNode.layer.animateScale(from: initialScale, to: targetScale, duration: 0.2, removeOnCompletion: false, completion: { [weak self] finished in
                             if let strongSelf = self, finished {
                                 strongSelf.iconNode.isHidden = !online
+                                
+                                if let animationNode = strongSelf.animationNode, !isVoiceChat {
+                                    animationNode.removeFromSupernode()
+                                }
                             }
                         })
                     } else {
                         strongSelf.iconNode.isHidden = !online
+                        
+                        if let animationNode = strongSelf.animationNode, !isVoiceChat {
+                            animationNode.removeFromSupernode()
+                        }
                     }
                 }
             })

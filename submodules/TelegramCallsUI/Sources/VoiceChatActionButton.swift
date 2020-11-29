@@ -40,19 +40,26 @@ private enum VoiceChatActionButtonBackgroundNodeType {
     case blob
 }
 
+private protocol VoiceChatActionButtonBackgroundNodeContext {
+    var type: VoiceChatActionButtonBackgroundNodeType { get }
+    var frameInterval: Int { get }
+    var isAnimating: Bool { get }
+    
+    func updateAnimations()
+    func drawingState() -> VoiceChatActionButtonBackgroundNodeState
+}
+
 private protocol VoiceChatActionButtonBackgroundNodeState: NSObjectProtocol {
     var blueGradient: UIImage? { get set }
     var greenGradient: UIImage? { get set }
-    
-    var frameInterval: Int { get }
-    var isAnimating: Bool { get }
-    var type: VoiceChatActionButtonBackgroundNodeType { get }
-    func updateAnimations()
 }
 
-private final class VoiceChatActionButtonBackgroundNodeConnectingState: NSObject, VoiceChatActionButtonBackgroundNodeState {
+private final class VoiceChatActionButtonBackgroundNodeConnectingContext: VoiceChatActionButtonBackgroundNodeContext {
     var blueGradient: UIImage?
-    var greenGradient: UIImage?
+    
+    init(blueGradient: UIImage?) {
+        self.blueGradient = blueGradient
+    }
     
     var isAnimating: Bool {
         return true
@@ -69,15 +76,21 @@ private final class VoiceChatActionButtonBackgroundNodeConnectingState: NSObject
     func updateAnimations() {
     }
     
+    func drawingState() -> VoiceChatActionButtonBackgroundNodeState {
+        return VoiceChatActionButtonBackgroundNodeConnectingState(blueGradient: self.blueGradient)
+    }
+}
+
+private final class VoiceChatActionButtonBackgroundNodeConnectingState: NSObject, VoiceChatActionButtonBackgroundNodeState {
+    var blueGradient: UIImage?
+    var greenGradient: UIImage?
+    
     init(blueGradient: UIImage?) {
         self.blueGradient = blueGradient
     }
 }
 
-private final class VoiceChatActionButtonBackgroundNodeDisabledState: NSObject, VoiceChatActionButtonBackgroundNodeState {
-    var blueGradient: UIImage?
-    var greenGradient: UIImage?
-    
+private final class VoiceChatActionButtonBackgroundNodeDisabledContext: VoiceChatActionButtonBackgroundNodeContext {
     var isAnimating: Bool {
         return false
     }
@@ -92,6 +105,15 @@ private final class VoiceChatActionButtonBackgroundNodeDisabledState: NSObject, 
     
     func updateAnimations() {
     }
+    
+    func drawingState() -> VoiceChatActionButtonBackgroundNodeState {
+        return VoiceChatActionButtonBackgroundNodeDisabledState()
+    }
+}
+
+private final class VoiceChatActionButtonBackgroundNodeDisabledState: NSObject, VoiceChatActionButtonBackgroundNodeState {
+    var blueGradient: UIImage?
+    var greenGradient: UIImage?
 }
 
 private final class Blob {
@@ -305,7 +327,7 @@ private final class Blob {
     }
 }
 
-private final class VoiceChatActionButtonBackgroundNodeBlobState: NSObject, VoiceChatActionButtonBackgroundNodeState {
+private final class VoiceChatActionButtonBackgroundNodeBlobContext: VoiceChatActionButtonBackgroundNodeContext {
     var blueGradient: UIImage?
     var greenGradient: UIImage?
     
@@ -321,13 +343,15 @@ private final class VoiceChatActionButtonBackgroundNodeBlobState: NSObject, Voic
         return .blob
     }
     
-    typealias BlobRange = (min: CGFloat, max: CGFloat)
-    let blobs: [Blob]
-    
+    let size: CGSize
     var active: Bool
     var activeTransitionArguments: (startTime: Double, duration: Double)?
     
+    typealias BlobRange = (min: CGFloat, max: CGFloat)
+    let blobs: [Blob]
+    
     init(size: CGSize, active: Bool, blueGradient: UIImage, greenGradient: UIImage) {
+        self.size = size
         self.active = active
         self.blueGradient = blueGradient
         self.greenGradient = greenGradient
@@ -340,8 +364,8 @@ private final class VoiceChatActionButtonBackgroundNodeBlobState: NSObject, Voic
  
         self.blobs = [largeBlob, mediumBlob]
     }
-        
-    func update(with state: VoiceChatActionButtonBackgroundNodeBlobState) {
+    
+    func update(with state: VoiceChatActionButtonBackgroundNodeBlobContext) {
         if self.active != state.active {
             self.active = state.active
             
@@ -364,14 +388,69 @@ private final class VoiceChatActionButtonBackgroundNodeBlobState: NSObject, Voic
             blob.updateAnimations()
         }
     }
+    
+    func drawingState() -> VoiceChatActionButtonBackgroundNodeState {
+        var blobs: [BlobDrawingState] = []
+        for blob in self.blobs {
+            if let path = blob.currentShape?.copy() as? UIBezierPath {
+                blobs.append(BlobDrawingState(size: blob.size, path: path, scale: blob.currentScale, alpha: blob.alpha))
+            }
+        }
+        return VoiceChatActionButtonBackgroundNodeBlobState(size: self.size, active: self.active, activeTransitionArguments: self.activeTransitionArguments, blueGradient: self.blueGradient, greenGradient: self.greenGradient, blobs: blobs)
+    }
 }
 
-private final class VoiceChatActionButtonBackgroundNodeTransition {
+private class BlobDrawingState: NSObject {
+    let size: CGSize
+    let path: UIBezierPath
+    let scale: CGFloat
+    let alpha: CGFloat
+    
+    init(size: CGSize, path: UIBezierPath, scale: CGFloat, alpha: CGFloat) {
+        self.size = size
+        self.path = path
+        self.scale = scale
+        self.alpha = alpha
+    }
+}
+
+private final class VoiceChatActionButtonBackgroundNodeBlobState: NSObject, VoiceChatActionButtonBackgroundNodeState {
+    var blueGradient: UIImage?
+    var greenGradient: UIImage?
+        
+    let active: Bool
+    let activeTransitionArguments: (startTime: Double, duration: Double)?
+    
+    let blobs: [BlobDrawingState]
+    
+    init(size: CGSize, active: Bool, activeTransitionArguments: (startTime: Double, duration: Double)?, blueGradient: UIImage?, greenGradient: UIImage?, blobs: [BlobDrawingState]) {
+        self.active = active
+        self.activeTransitionArguments = activeTransitionArguments
+        self.blueGradient = blueGradient
+        self.greenGradient = greenGradient
+        self.blobs = blobs
+    }
+}
+
+private final class VoiceChatActionButtonBackgroundNodeTransitionState: NSObject {
+    let startTime: Double
+    let transition: CGFloat
+    let previousState: VoiceChatActionButtonBackgroundNodeType
+    
+    init(startTime: Double, transition: CGFloat, previousState: VoiceChatActionButtonBackgroundNodeType) {
+        self.startTime = startTime
+        self.transition = transition
+        self.previousState = previousState
+    }
+}
+
+
+private final class VoiceChatActionButtonBackgroundNodeTransitionContext {
     let startTime: Double
     let duration: Double
-    let previousState: VoiceChatActionButtonBackgroundNodeState?
+    let previousState: VoiceChatActionButtonBackgroundNodeContext
     
-    init(startTime: Double, duration: Double, previousState: VoiceChatActionButtonBackgroundNodeState?) {
+    init(startTime: Double, duration: Double, previousState: VoiceChatActionButtonBackgroundNodeContext) {
         self.startTime = startTime
         self.duration = duration
         self.previousState = previousState
@@ -384,15 +463,20 @@ private final class VoiceChatActionButtonBackgroundNodeTransition {
             return 0.0
         }
     }
+    
+    func drawingTransitionState(time: Double) -> VoiceChatActionButtonBackgroundNodeTransitionState {
+        let transition = CGFloat(max(0.0, min(1.0, (time - startTime) / duration)))
+        return VoiceChatActionButtonBackgroundNodeTransitionState(startTime: self.startTime, transition: transition, previousState: previousState.type)
+    }
 }
 
 private class VoiceChatActionButtonBackgroundNodeDrawingState: NSObject {
     let timestamp: Double
     let state: VoiceChatActionButtonBackgroundNodeState
     let simplified: Bool
-    let transition: VoiceChatActionButtonBackgroundNodeTransition?
+    let transition: VoiceChatActionButtonBackgroundNodeTransitionState?
     
-    init(timestamp: Double, state: VoiceChatActionButtonBackgroundNodeState, simplified: Bool, transition: VoiceChatActionButtonBackgroundNodeTransition?) {
+    init(timestamp: Double, state: VoiceChatActionButtonBackgroundNodeState, simplified: Bool, transition: VoiceChatActionButtonBackgroundNodeTransitionState?) {
         self.timestamp = timestamp
         self.state = state
         self.simplified = simplified
@@ -401,14 +485,14 @@ private class VoiceChatActionButtonBackgroundNodeDrawingState: NSObject {
 }
 
 private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
-    private var state: VoiceChatActionButtonBackgroundNodeState
+    private var state: VoiceChatActionButtonBackgroundNodeContext
     private var hasState = false
-    private var transition: VoiceChatActionButtonBackgroundNodeTransition?
+    private var transition: VoiceChatActionButtonBackgroundNodeTransitionContext?
     private var simplified = false
     
     var audioLevel: CGFloat = 0.0  {
         didSet {
-            if let blobsState = self.state as? VoiceChatActionButtonBackgroundNodeBlobState {
+            if let blobsState = self.state as? VoiceChatActionButtonBackgroundNodeBlobContext {
                 for blob in blobsState.blobs {
                     blob.loop = audioLevel.isZero
                     blob.updateSpeedLevel(to: self.audioLevel)
@@ -421,7 +505,7 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     private var animator: ConstantDisplayLinkAnimator?
     
     override init() {
-        self.state = VoiceChatActionButtonBackgroundNodeConnectingState(blueGradient: nil)
+        self.state = VoiceChatActionButtonBackgroundNodeConnectingContext(blueGradient: nil)
         
         super.init()
         
@@ -429,7 +513,7 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.displaysAsynchronously = true
     }
     
-    func update(state: VoiceChatActionButtonBackgroundNodeState, simplified: Bool, animated: Bool) {
+    func update(state: VoiceChatActionButtonBackgroundNodeContext, simplified: Bool, animated: Bool) {
         var animated = animated
         var hadState = true
         if !self.hasState {
@@ -442,10 +526,10 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         
         if state.type != self.state.type || !hadState {
             if animated {
-                self.transition = VoiceChatActionButtonBackgroundNodeTransition(startTime: CACurrentMediaTime(), duration: 0.3, previousState: self.state)
+                self.transition = VoiceChatActionButtonBackgroundNodeTransitionContext(startTime: CACurrentMediaTime(), duration: 0.3, previousState: self.state)
             }
             self.state = state
-        } else if let blobState = self.state as? VoiceChatActionButtonBackgroundNodeBlobState, let nextState = state as? VoiceChatActionButtonBackgroundNodeBlobState {
+        } else if let blobState = self.state as? VoiceChatActionButtonBackgroundNodeBlobContext, let nextState = state as? VoiceChatActionButtonBackgroundNodeBlobContext {
             blobState.update(with: nextState)
         }
         
@@ -457,7 +541,7 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         let timestamp = CACurrentMediaTime()
         
         self.presentationAudioLevel = self.presentationAudioLevel * 0.9 + max(0.1, self.audioLevel) * 0.1
-        if let blobsState = self.state as? VoiceChatActionButtonBackgroundNodeBlobState {
+        if let blobsState = self.state as? VoiceChatActionButtonBackgroundNodeBlobContext {
             for blob in blobsState.blobs {
                 blob.level = self.presentationAudioLevel
             }
@@ -496,14 +580,13 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     }
     
     override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return VoiceChatActionButtonBackgroundNodeDrawingState(timestamp: CACurrentMediaTime(), state: self.state, simplified: self.simplified, transition: self.transition)
+        let timestamp = CACurrentMediaTime()
+        return VoiceChatActionButtonBackgroundNodeDrawingState(timestamp: timestamp, state: self.state.drawingState(), simplified: self.simplified, transition: self.transition?.drawingTransitionState(time: timestamp))
     }
 
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
         let context = UIGraphicsGetCurrentContext()!
         
-//        let drawStart = CACurrentMediaTime()
-
         if !isRasterizing {
             context.setBlendMode(.copy)
             context.setFillColor(UIColor.clear.cgColor)
@@ -529,8 +612,8 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         
         var appearanceProgress: CGFloat = 1.0
         var glowScale: CGFloat = 0.75
-        if let transition = parameters.transition, transition.previousState is VoiceChatActionButtonBackgroundNodeConnectingState {
-            appearanceProgress = transition.progress(time: parameters.timestamp)
+        if let transition = parameters.transition, transition.previousState == .connecting {
+            appearanceProgress = transition.transition
         }
         
         if let blobsState = parameters.state as? VoiceChatActionButtonBackgroundNodeBlobState {
@@ -582,26 +665,25 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         
         if let blobsState = parameters.state as? VoiceChatActionButtonBackgroundNodeBlobState {
             for blob in blobsState.blobs {
-                if let path = blob.currentShape, let uiPath = path.copy() as? UIBezierPath {
-                    let offset = (bounds.size.width - blob.size.width) / 2.0
-                    let toOrigin = CGAffineTransform(translationX: -bounds.size.width / 2.0 + offset, y: -bounds.size.height / 2.0 + offset)
-                    let fromOrigin = CGAffineTransform(translationX: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
+                let uiPath = blob.path
+                let offset = (bounds.size.width - blob.size.width) / 2.0
+                let toOrigin = CGAffineTransform(translationX: -bounds.size.width / 2.0 + offset, y: -bounds.size.height / 2.0 + offset)
+                let fromOrigin = CGAffineTransform(translationX: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
 
-                    uiPath.apply(toOrigin)
-                    uiPath.apply(CGAffineTransform(scaleX: blob.currentScale * appearanceProgress, y: blob.currentScale * appearanceProgress))
-                    uiPath.apply(fromOrigin)
+                uiPath.apply(toOrigin)
+                uiPath.apply(CGAffineTransform(scaleX: blob.scale * appearanceProgress, y: blob.scale * appearanceProgress))
+                uiPath.apply(fromOrigin)
 
-                    context.addPath(uiPath.cgPath)
-                    context.clip()
+                context.addPath(uiPath.cgPath)
+                context.clip()
 
-                    context.setAlpha(blob.alpha)
+                context.setAlpha(blob.alpha)
 
-                    if parameters.simplified {
-                        context.setFillColor(simpleColor.cgColor)
-                        context.fill(bounds)
-                    } else if let gradient = gradientImage?.cgImage {
-                        context.draw(gradient, in: CGRect(origin: CGPoint(x: gradientCenter.x - gradientSize / 2.0, y: gradientCenter.y - gradientSize / 2.0), size: CGSize(width: gradientSize, height: gradientSize)))
-                    }
+                if parameters.simplified {
+                    context.setFillColor(simpleColor.cgColor)
+                    context.fill(bounds)
+                } else if let gradient = gradientImage?.cgImage {
+                    context.draw(gradient, in: CGRect(origin: CGPoint(x: gradientCenter.x - gradientSize / 2.0, y: gradientCenter.y - gradientSize / 2.0), size: CGSize(width: gradientSize, height: gradientSize)))
                 }
             }
         }
@@ -614,7 +696,7 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
 
         var drawGradient = false
         let lineWidth = 3.0 + UIScreenPixel
-        if parameters.state is VoiceChatActionButtonBackgroundNodeConnectingState || parameters.transition?.previousState is VoiceChatActionButtonBackgroundNodeConnectingState {
+        if parameters.state is VoiceChatActionButtonBackgroundNodeConnectingState || parameters.transition?.previousState == .connecting {
             var globalAngle: CGFloat = CGFloat(parameters.timestamp.truncatingRemainder(dividingBy: Double.pi * 2.0))
             globalAngle *= 4.0
             globalAngle = CGFloat(globalAngle.truncatingRemainder(dividingBy: CGFloat.pi * 2.0))
@@ -627,7 +709,7 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             var skip = false
             var progress = CGFloat(1.0 + timestamp.remainder(dividingBy: 2.0))
             if let transition = parameters.transition {
-                var transitionProgress = transition.progress(time: parameters.timestamp)
+                var transitionProgress = transition.transition
                 if parameters.state is VoiceChatActionButtonBackgroundNodeBlobState {
                     transitionProgress = min(1.0, transitionProgress / 0.5)
                     progress = progress + (2.0 - progress) * transitionProgress
@@ -635,7 +717,7 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                         skip = true
                     }
                 } else if parameters.state is VoiceChatActionButtonBackgroundNodeDisabledState {
-                    progress = progress + (1.0 - progress) * transition.progress(time: parameters.timestamp)
+                    progress = progress + (1.0 - progress) * transition.transition
                     if transitionProgress >= 1.0 {
                         skip = true
                     }
@@ -668,8 +750,8 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             path.addEllipse(in: buttonRect.insetBy(dx: -lineWidth / 2.0, dy: -lineWidth / 2.0))
             context.addPath(path)
             context.clip()
-            if let transition = parameters.transition, transition.previousState is VoiceChatActionButtonBackgroundNodeConnectingState || transition.previousState is VoiceChatActionButtonBackgroundNodeDisabledState, transition.progress(time: parameters.timestamp) > 0.5 {
-                let progress = (transition.progress(time: parameters.timestamp) - 0.5) / 0.5
+            if let transition = parameters.transition, transition.previousState == .connecting || transition.previousState == .disabled, transition.transition > 0.5 {
+                let progress = (transition.transition - 0.5) / 0.5
                 clearInside = progress
             }
             
@@ -798,21 +880,21 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         
         var iconMuted = true
         var iconColor: UIColor = .white
-        var backgroundState: VoiceChatActionButtonBackgroundNodeState
+        var backgroundState: VoiceChatActionButtonBackgroundNodeContext
         switch state {
             case let .active(state):
                 switch state {
                     case .on:
                         iconMuted = false
-                        backgroundState = VoiceChatActionButtonBackgroundNodeBlobState(size: blobSize, active: true, blueGradient: self.blueGradient, greenGradient: self.greenGradient)
+                        backgroundState = VoiceChatActionButtonBackgroundNodeBlobContext(size: blobSize, active: true, blueGradient: self.blueGradient, greenGradient: self.greenGradient)
                     case .muted:
-                        backgroundState = VoiceChatActionButtonBackgroundNodeBlobState(size: blobSize, active: false, blueGradient: self.blueGradient, greenGradient: self.greenGradient)
+                        backgroundState = VoiceChatActionButtonBackgroundNodeBlobContext(size: blobSize, active: false, blueGradient: self.blueGradient, greenGradient: self.greenGradient)
                     case .cantSpeak:
                         iconColor = UIColor(rgb: 0xff3b30)
-                        backgroundState = VoiceChatActionButtonBackgroundNodeDisabledState()
+                        backgroundState = VoiceChatActionButtonBackgroundNodeDisabledContext()
                 }
             case .connecting:
-                backgroundState = VoiceChatActionButtonBackgroundNodeConnectingState(blueGradient: self.blueGradient)
+                backgroundState = VoiceChatActionButtonBackgroundNodeConnectingContext(blueGradient: self.blueGradient)
         }
         self.backgroundNode.update(state: backgroundState, simplified: simplified, animated: true)
 
@@ -871,7 +953,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     }
 }
 
-private extension UIBezierPath {
+extension UIBezierPath {
     static func smoothCurve(through points: [CGPoint], length: CGFloat, smoothness: CGFloat) -> UIBezierPath {
         var smoothPoints = [SmoothPoint]()
         for index in (0 ..< points.count) {

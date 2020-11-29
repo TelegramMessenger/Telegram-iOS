@@ -25,6 +25,178 @@ private class CallStatusBarBackgroundNodeDrawingState: NSObject {
     }
 }
 
+private final class Curve {
+    let pointsCount: Int
+    let smoothness: CGFloat
+
+    let minRandomness: CGFloat
+    let maxRandomness: CGFloat
+
+    let minSpeed: CGFloat
+    let maxSpeed: CGFloat
+
+    let size: CGSize
+    var currentOffset: CGFloat = 1.0
+    var minOffset: CGFloat = 0.0
+    var maxOffset: CGFloat = 2.0
+    let scaleSpeed: CGFloat
+    
+    private var speedLevel: CGFloat = 0.0
+    private var lastSpeedLevel: CGFloat = 0.0
+
+    private var fromPoints: [CGPoint]?
+    private var toPoints: [CGPoint]?
+    
+    private var currentPoints: [CGPoint]? {
+        guard let fromPoints = self.fromPoints, let toPoints = self.toPoints else { return nil }
+
+        return fromPoints.enumerated().map { offset, fromPoint in
+            let toPoint = toPoints[offset]
+            return CGPoint(x: fromPoint.x + (toPoint.x - fromPoint.x) * transition, y: fromPoint.y + (toPoint.y - fromPoint.y) * transition)
+        }
+    }
+
+    var currentShape: UIBezierPath?
+    private var transition: CGFloat = 0 {
+        didSet {
+            if let currentPoints = self.currentPoints {
+                self.currentShape = UIBezierPath.smoothCurve(through: currentPoints, length: size.width, smoothness: smoothness)
+            }
+        }
+    }
+    
+    var level: CGFloat = 0.0 {
+        didSet {
+            self.currentOffset = self.minOffset + (self.maxOffset - self.minOffset) * self.level
+        }
+    }
+    
+    private var transitionArguments: (startTime: Double, duration: Double)?
+    
+    var loop: Bool = true {
+        didSet {
+            if let _ = transitionArguments {
+            } else {
+                self.animateToNewShape()
+            }
+        }
+    }
+    
+    init(
+        size: CGSize,
+        pointsCount: Int,
+        minRandomness: CGFloat,
+        maxRandomness: CGFloat,
+        minSpeed: CGFloat,
+        maxSpeed: CGFloat,
+        minOffset: CGFloat,
+        maxOffset: CGFloat,
+        scaleSpeed: CGFloat
+    ) {
+        self.size = size
+//        self.alpha = alpha
+        self.pointsCount = pointsCount
+        self.minRandomness = minRandomness
+        self.maxRandomness = maxRandomness
+        self.minSpeed = minSpeed
+        self.maxSpeed = maxSpeed
+        self.minOffset = minOffset
+        self.maxOffset = maxOffset
+        self.scaleSpeed = scaleSpeed
+
+        let angle = (CGFloat.pi * 2) / CGFloat(pointsCount)
+        self.smoothness = ((4 / 3) * tan(angle / 4)) / sin(angle / 2) / 2
+
+        self.currentOffset = minOffset
+        
+        self.animateToNewShape()
+    }
+    
+    func updateSpeedLevel(to newSpeedLevel: CGFloat) {
+        self.speedLevel = max(self.speedLevel, newSpeedLevel)
+
+        if abs(lastSpeedLevel - newSpeedLevel) > 0.3 {
+            animateToNewShape()
+        }
+    }
+    
+    private func animateToNewShape() {
+        if let _ = self.transitionArguments {
+            self.fromPoints = self.currentPoints
+            self.toPoints = nil
+            self.transition = 0.0
+            self.transitionArguments = nil
+        }
+
+        if self.fromPoints == nil {
+            self.fromPoints = generateNextCurve(for: self.size)
+        }
+        if self.toPoints == nil {
+            self.toPoints = generateNextCurve(for: self.size)
+        }
+
+        let duration: Double = 1.0 / Double(minSpeed + (maxSpeed - minSpeed) * speedLevel)
+        self.transitionArguments = (CACurrentMediaTime(), duration)
+
+        self.lastSpeedLevel = self.speedLevel
+        self.speedLevel = 0
+
+        self.updateAnimations()
+    }
+    
+    func updateAnimations() {
+        var animate = false
+        let timestamp = CACurrentMediaTime()
+
+        if let (startTime, duration) = self.transitionArguments, duration > 0.0 {
+            self.transition = max(0.0, min(1.0, CGFloat((timestamp - startTime) / duration)))
+            if self.transition < 1.0 {
+                animate = true
+            } else {
+                if self.loop {
+                    self.animateToNewShape()
+                } else {
+                    self.fromPoints = self.currentPoints
+                    self.toPoints = nil
+                    self.transition = 0.0
+                    self.transitionArguments = nil
+                }
+            }
+        }
+    }
+    
+    private func generateNextCurve(for size: CGSize) -> [CGPoint] {
+        let randomness = minRandomness + (maxRandomness - minRandomness) * speedLevel
+        return blob(pointsCount: pointsCount, randomness: randomness).map {
+            return CGPoint(x: size.width / 2.0 + $0.x * CGFloat(size.width), y: size.height / 2.0 + $0.y * CGFloat(size.height))
+        }
+    }
+
+    private func blob(pointsCount: Int, randomness: CGFloat) -> [CGPoint] {
+        let angle = (CGFloat.pi * 2) / CGFloat(pointsCount)
+
+        let rgen = { () -> CGFloat in
+            let accuracy: UInt32 = 1000
+            let random = arc4random_uniform(accuracy)
+            return CGFloat(random) / CGFloat(accuracy)
+        }
+        let rangeStart: CGFloat = 1.0 / (1.0 + randomness / 10.0)
+
+        let startAngle = angle * CGFloat(arc4random_uniform(100)) / CGFloat(100)
+
+        let points = (0 ..< pointsCount).map { i -> CGPoint in
+            let randPointOffset = (rangeStart + CGFloat(rgen()) * (1 - rangeStart)) / 2
+            let angleRandomness: CGFloat = angle * 0.1
+            let randAngle = angle + angle * ((angleRandomness * CGFloat(arc4random_uniform(100)) / CGFloat(100)) - angleRandomness * 0.5)
+            let pointX = sin(startAngle + CGFloat(i) * randAngle)
+            let pointY = cos(startAngle + CGFloat(i) * randAngle)
+            return CGPoint(x: pointX * randPointOffset, y: pointY * randPointOffset)
+        }
+
+        return points
+    }
+}
+
 private class CallStatusBarBackgroundNode: ASDisplayNode {
     var muted = true
     
