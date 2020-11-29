@@ -6346,7 +6346,7 @@ public extension Api {
         case updatePinnedMessages(flags: Int32, peer: Api.Peer, messages: [Int32], pts: Int32, ptsCount: Int32)
         case updatePinnedChannelMessages(flags: Int32, channelId: Int32, messages: [Int32], pts: Int32, ptsCount: Int32)
         case updateGroupCallParticipants(call: Api.InputGroupCall, participants: [Api.GroupCallParticipant], version: Int32)
-        case updateGroupCall(call: Api.GroupCall)
+        case updateGroupCall(channelId: Int32, call: Api.GroupCall)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -7094,10 +7094,11 @@ public extension Api {
                     }
                     serializeInt32(version, buffer: buffer, boxed: false)
                     break
-                case .updateGroupCall(let call):
+                case .updateGroupCall(let channelId, let call):
                     if boxed {
-                        buffer.appendInt32(-2046916883)
+                        buffer.appendInt32(1462009966)
                     }
+                    serializeInt32(channelId, buffer: buffer, boxed: false)
                     call.serialize(buffer, true)
                     break
     }
@@ -7277,8 +7278,8 @@ public extension Api {
                 return ("updatePinnedChannelMessages", [("flags", flags), ("channelId", channelId), ("messages", messages), ("pts", pts), ("ptsCount", ptsCount)])
                 case .updateGroupCallParticipants(let call, let participants, let version):
                 return ("updateGroupCallParticipants", [("call", call), ("participants", participants), ("version", version)])
-                case .updateGroupCall(let call):
-                return ("updateGroupCall", [("call", call)])
+                case .updateGroupCall(let channelId, let call):
+                return ("updateGroupCall", [("channelId", channelId), ("call", call)])
     }
     }
     
@@ -8773,13 +8774,16 @@ public extension Api {
             }
         }
         public static func parse_updateGroupCall(_ reader: BufferReader) -> Update? {
-            var _1: Api.GroupCall?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.GroupCall?
             if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.GroupCall
+                _2 = Api.parse(reader, signature: signature) as? Api.GroupCall
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.Update.updateGroupCall(call: _1!)
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.Update.updateGroupCall(channelId: _1!, call: _2!)
             }
             else {
                 return nil

@@ -133,9 +133,16 @@ public final class SharedWakeupManager {
                     return call?.account.id == account.id
                 }
                 |> distinctUntilChanged
-                let isPlayingBackgroundActiveCall = combineLatest(queue: .mainQueue(), hasActiveCalls, hasActiveAudioSession)
-                |> map { hasActiveCalls, hasActiveAudioSession -> Bool in
-                    return hasActiveCalls && hasActiveAudioSession
+                
+                let hasActiveGroupCalls = (callManager?.currentGroupCallSignal ?? .single(nil))
+                |> map { call in
+                    return call?.accountContext.account.id == account.id
+                }
+                |> distinctUntilChanged
+                
+                let isPlayingBackgroundActiveCall = combineLatest(queue: .mainQueue(), hasActiveCalls, hasActiveGroupCalls, hasActiveAudioSession)
+                |> map { hasActiveCalls, hasActiveGroupCalls, hasActiveAudioSession -> Bool in
+                    return (hasActiveCalls || hasActiveGroupCalls) && hasActiveAudioSession
                 }
                 |> distinctUntilChanged
                 

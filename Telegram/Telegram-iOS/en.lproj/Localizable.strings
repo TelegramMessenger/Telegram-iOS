@@ -5946,6 +5946,9 @@ Sorry for the inconvenience.";
 "VoiceChat.RemovePeerConfirmation" = "Are you sure you want to remove %@ from the group chat?";
 "VoiceChat.RemovePeerRemove" = "Remove";
 
+"VoiceChat.PanelJoin" = "Join";
+"VoiceChat.Title" = "Voice Chat";
+
 "VoiceChat.UserInvited" = "You invited **%@** to the voice chat";
 
 "Notification.VoiceChatInvitation" = "%1$@ invited %2$@ to the voice chat";

@@ -211,14 +211,13 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         
         self.separatorNode.backgroundColor = presentationData.theme.chat.historyNavigation.strokeColor
         
-        self.joinButtonTitleNode.attributedText = NSAttributedString(string: presentationData.strings.Channel_JoinChannel.uppercased(), font: Font.semibold(15.0), textColor: presentationData.theme.chat.inputPanel.actionControlForegroundColor)
+        self.joinButtonTitleNode.attributedText = NSAttributedString(string: presentationData.strings.VoiceChat_PanelJoin.uppercased(), font: Font.semibold(15.0), textColor: presentationData.theme.chat.inputPanel.actionControlForegroundColor)
         self.joinButtonBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 28.0, color: presentationData.theme.chat.inputPanel.actionControlFillColor)
         
         //TODO:localize
         self.micButtonBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 36.0, color: UIColor(rgb: 0x30b251))
         
-        //TODO:localize
-        self.titleNode.attributedText = NSAttributedString(string: "Voice Chat", font: Font.semibold(15.0), textColor: presentationData.theme.chat.inputPanel.primaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: presentationData.strings.VoiceChat_Title, font: Font.semibold(15.0), textColor: presentationData.theme.chat.inputPanel.primaryTextColor)
         self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: Font.regular(13.0), textColor: presentationData.theme.chat.inputPanel.secondaryTextColor)
         
         self.muteIconNode.image = PresentationResourcesChat.chatTitleMuteIcon(presentationData.theme)

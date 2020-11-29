@@ -1332,8 +1332,8 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 case let .inputGroupCall(id, accessHash):
                     updatedState.updateGroupCallParticipants(id: id, accessHash: accessHash, participants: participants, version: version)
                 }
-            case let .updateGroupCall(call):
-                updatedState.updateGroupCall(call: call)
+            case let .updateGroupCall(channelId, call):
+                updatedState.updateGroupCall(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), call: call)
             case let .updateLangPackTooLong(langCode):
                 updatedState.updateLangPack(langCode: langCode, difference: nil)
             case let .updateLangPack(difference):
@@ -2959,15 +2959,35 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                     callId,
                     .state(update: GroupCallParticipantsContext.Update.StateUpdate(participants: participants, version: version))
                 ))
-            case let .UpdateGroupCall(call):
+            case let .UpdateGroupCall(peerId, call):
                 switch call {
                 case .groupCall:
-                    break
+                    if let info = GroupCallInfo(call) {
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                            if let current = current as? CachedChannelData {
+                                return current.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash))
+                            } else {
+                                return current
+                            }
+                        })
+                    }
                 case let .groupCallDiscarded(callId, _, _):
                     updatedGroupCallParticipants.append((
                         callId,
                         .call(isTerminated: true)
                     ))
+                    
+                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                        if let current = current as? CachedChannelData {
+                            if let activeCall = current.activeCall, activeCall.id == callId {
+                                return current.withUpdatedActiveCall(nil)
+                            } else {
+                                return current
+                            }
+                        } else {
+                            return current
+                        }
+                    })
                 }
             case let .UpdateLangPack(langCode, difference):
                 if let difference = difference {

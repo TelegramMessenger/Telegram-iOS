@@ -390,6 +390,8 @@ open class NavigationController: UINavigationController, ContainableController, 
             globalScrollToTopNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -1.0), size: CGSize(width: layout.size.width, height: 1.0))
         }
         
+        var overlayContainerLayout = layout
+        
         if let inCallStatusBar = self.inCallStatusBar {
             var inCallStatusBarFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(layout.statusBarHeight ?? 0.0, max(40.0, layout.safeInsets.top))))
             if layout.deviceMetrics.hasTopNotch {
@@ -541,8 +543,8 @@ open class NavigationController: UINavigationController, ContainableController, 
                 containerTransition = transition
             }
             
-            containerTransition.updateFrame(node: overlayContainer, frame: CGRect(origin: CGPoint(), size: layout.size))
-            overlayContainer.update(layout: layout, transition: containerTransition)
+            containerTransition.updateFrame(node: overlayContainer, frame: CGRect(origin: CGPoint(), size: overlayContainerLayout.size))
+            overlayContainer.update(layout: overlayContainerLayout, transition: containerTransition)
             
             modalStyleOverlayTransitionFactor = max(modalStyleOverlayTransitionFactor, overlayContainer.controller.modalStyleOverlayTransitionFactor)
             
@@ -586,7 +588,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         var previousModalContainer: NavigationModalContainer?
         var visibleModalCount = 0
         var topModalIsFlat = false
-        var isLandscape = layout.orientation == .landscape
+        let isLandscape = layout.orientation == .landscape
         var hasVisibleStandaloneModal = false
         var topModalDismissProgress: CGFloat = 0.0
         

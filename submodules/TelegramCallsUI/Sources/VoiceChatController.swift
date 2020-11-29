@@ -488,10 +488,9 @@ public final class VoiceChatController: ViewController {
                     strongSelf.currentCallMembers = callMembers.participants
                 }
                 
-                //TODO:localize
-                let subtitle = strongSelf.presentationData.strings.Conversation_StatusMembers(Int32(max(1, callMembers.totalCount)))
+                let subtitle = strongSelf.presentationData.strings.VoiceChat_Panel_Members(Int32(max(1, callMembers.totalCount)))
                 if let titleView = strongSelf.controller?.navigationItem.titleView as? VoiceChatControllerTitleView {
-                    titleView.set(title: "Voice Chat", subtitle: subtitle)
+                    titleView.set(title: strongSelf.presentationData.strings.VoiceChat_Title, subtitle: subtitle)
                 }
             })
             
@@ -760,13 +759,12 @@ public final class VoiceChatController: ViewController {
         
         @objc private func actionButtonPressed() {
             if let callState = self.callState, case .connected = callState.networkState, let muteState = callState.muteState, !muteState.canUnmute {
-      
+                self.hapticFeedback.error()
+                self.actionButton.layer.addShakeAnimation()
                 return
             }
-            
-            self.hapticFeedback.error()
-            self.actionButton.layer.addShakeAnimation()
-//            self.call.toggleIsMuted()
+
+            self.call.toggleIsMuted()
         }
         
         @objc private func audioOutputPressed() {

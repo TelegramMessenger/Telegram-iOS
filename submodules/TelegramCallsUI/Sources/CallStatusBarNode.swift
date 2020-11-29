@@ -32,6 +32,15 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
     var presentationAudioLevel: CGFloat = 0.0
     var phase: CGFloat = 0.0
     
+    var transitionArguments: (Double, Double)?
+    var speaking = false {
+        didSet {
+            if self.speaking != oldValue {
+                self.transitionArguments = (CACurrentMediaTime(), 0.3)
+            }
+        }
+    }
+    
     private var animator: ConstantDisplayLinkAnimator?
     
     override init() {
@@ -61,7 +70,7 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
     }
     
     override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return CallStatusBarBackgroundNodeDrawingState(timestamp: CACurrentMediaTime(), amplitude: self.presentationAudioLevel, phase: self.phase, speaking: false, transitionArguments: nil)
+        return CallStatusBarBackgroundNodeDrawingState(timestamp: CACurrentMediaTime(), amplitude: self.presentationAudioLevel, phase: self.phase, speaking: self.speaking, transitionArguments: self.transitionArguments)
     }
 
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -96,7 +105,7 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
         let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
        
         let position: CGFloat = bounds.height - 6.0
-        let maxAmplitude: CGFloat = 8.0
+        let maxAmplitude: CGFloat = 12.0
         
         let amplitude = max(0.35, parameters.amplitude)
         
@@ -126,7 +135,7 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
             context.clip()
         }
         
-        for i in (0 ..< 2).reversed() {
+        for i in (0 ..< 3).reversed() {
             let progress = 1.0 - CGFloat(i) / 3.0
             var normalizedAmplitude = (1.5 * progress - 0.8) * amplitude
             if i == 1 {
@@ -255,7 +264,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                         if !strongSelf.currentIsMuted {
                             effectiveLevel = level
                         }
-                        strongSelf.backgroundNode.audioLevel = effectiveLevel
+                        strongSelf.backgroundNode.audioLevel = max(0.0, min(1.0, effectiveLevel / 8.0))
                     }))
             }
             self.didSetupData = true
@@ -297,6 +306,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         self.titleNode.frame = CGRect(origin: CGPoint(x: horizontalOrigin + animationSize + iconSpacing, y: verticalOrigin + floor((contentHeight - titleSize.height) / 2.0)), size: titleSize)
         self.subtitleNode.frame = CGRect(origin: CGPoint(x: horizontalOrigin + animationSize + iconSpacing + titleSize.width + spacing, y: verticalOrigin + floor((contentHeight - subtitleSize.height) / 2.0)), size: subtitleSize)
         
+        self.backgroundNode.speaking = !self.currentIsMuted
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + 7.0))
     }
 }

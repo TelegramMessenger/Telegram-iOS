@@ -168,9 +168,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         |> map { value -> Bool in
             switch value {
             case let .muted(isPushToTalkActive):
-                return isPushToTalkActive
+                return !isPushToTalkActive
             case .unmuted:
-                return true
+                return false
             }
         }
     }
