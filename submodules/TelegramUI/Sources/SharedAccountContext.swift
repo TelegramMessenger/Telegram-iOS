@@ -652,36 +652,26 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             })
             
-            let callAndStateSignal: Signal<(PresentationCall, PresentationCallState)?, NoError> = .single(nil)
+            let callSignal: Signal<PresentationCall?, NoError> = .single(nil)
             |> then(
                 callManager.currentCallSignal
-                |> mapToSignal { call in
-                    if let call = call {
-                        return call.state
-                        |> map { state in
-                            return (call, state)
-                        }
-                    } else {
-                        return .single(nil)
-                    }
-                }
             )
-            let groupCallAndStateSignal: Signal<PresentationGroupCall?, NoError> = .single(nil)
+            let groupCallSignal: Signal<PresentationGroupCall?, NoError> = .single(nil)
             |> then(
                 callManager.currentGroupCallSignal
             )
             
             self.callStateDisposable = combineLatest(queue: .mainQueue(),
-                callAndStateSignal,
-                groupCallAndStateSignal
-            ).start(next: { [weak self] callAndState, groupCall in
+                callSignal,
+                groupCallSignal
+            ).start(next: { [weak self] call, groupCall in
                 if let strongSelf = self {
                     let statusBarContent: CallStatusBarNodeImpl.Content?
-                    
-                    if let (call, state) = callAndState {
-                        statusBarContent = .call(call)
+                                        
+                    if let call = call {
+                        statusBarContent = .call(strongSelf, call.account, call)
                     } else if let groupCall = groupCall {
-                        statusBarContent = .groupCall(groupCall)
+                        statusBarContent = .groupCall(strongSelf, groupCall.account, groupCall)
                     } else {
                         statusBarContent = nil
                     }
