@@ -7303,12 +7303,16 @@ public extension Api {
                     })
                 }
             
-                public static func inviteToGroupCall(call: Api.InputGroupCall, userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                public static func inviteToGroupCall(call: Api.InputGroupCall, users: [Api.InputUser]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-580284540)
+                    buffer.appendInt32(2067345760)
                     call.serialize(buffer, true)
-                    userId.serialize(buffer, true)
-                    return (FunctionDescription(name: "phone.inviteToGroupCall", parameters: [("call", call), ("userId", userId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription(name: "phone.inviteToGroupCall", parameters: [("call", call), ("users", users)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

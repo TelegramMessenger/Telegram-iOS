@@ -459,14 +459,22 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 } else {
                     attributedString = addAttributesToStringWithRanges(strings.Notification_ProximityReached(message.peers[fromId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? "", distanceString, message.peers[toId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, fromId), (2, toId)]))
                 }
-            case let .inviteToGroupPhoneCall(_, _, userId):
-                if message.author?.id == accountPeerId {
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_VoiceChatInvitationByYou( message.peers[userId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, userId)]))
-                } else if userId == accountPeerId {
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_VoiceChatInvitationForYou(authorName), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+            case let .inviteToGroupPhoneCall(_, _, peerIds):
+                var attributePeerIds: [(Int, PeerId?)] = [(0, message.author?.id)]
+                let resultTitleString: (String, [(Int, NSRange)])
+                if peerIds.count == 1 {
+                    if peerIds[0] == accountPeerId {
+                        attributePeerIds.append((1, peerIds.first))
+                        resultTitleString = strings.Notification_VoiceChatInvitationForYou(authorName)
+                    } else {
+                        attributePeerIds.append((1, peerIds.first))
+                        resultTitleString = strings.Notification_VoiceChatInvitation(authorName, peerDebugDisplayTitles(peerIds, message.peers))
+                    }
                 } else {
-                    attributedString = addAttributesToStringWithRanges(strings.Notification_VoiceChatInvitation(authorName, message.peers[userId]?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""), body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id), (1, userId)]))
+                    resultTitleString = strings.Notification_VoiceChatInvitation(authorName, peerDebugDisplayTitles(peerIds, message.peers))
                 }
+                
+                attributedString = addAttributesToStringWithRanges(resultTitleString, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: attributePeerIds))
             case .unknown:
                 attributedString = nil
             }
