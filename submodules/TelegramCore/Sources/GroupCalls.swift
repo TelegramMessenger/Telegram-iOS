@@ -1001,7 +1001,7 @@ public func inviteToGroupCall(account: Account, callId: Int64, accessHash: Int64
             return .fail(.generic)
         }
         
-        return account.network.request(Api.functions.phone.inviteToGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash), userId: apiUser))
+        return account.network.request(Api.functions.phone.inviteToGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash), users: [apiUser]))
         |> mapError { _ -> InviteToGroupCallError in
             return .generic
         }

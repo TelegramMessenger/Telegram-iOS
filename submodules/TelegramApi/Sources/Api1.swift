@@ -21451,7 +21451,7 @@ public extension Api {
         case messageActionContactSignUp
         case messageActionGeoProximityReached(fromId: Api.Peer, toId: Api.Peer, distance: Int32)
         case messageActionGroupCall(flags: Int32, call: Api.InputGroupCall, duration: Int32?)
-        case messageActionInviteToGroupCall(call: Api.InputGroupCall, userId: Int32)
+        case messageActionInviteToGroupCall(call: Api.InputGroupCall, users: [Int32])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -21639,12 +21639,16 @@ public extension Api {
                     call.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(duration!, buffer: buffer, boxed: false)}
                     break
-                case .messageActionInviteToGroupCall(let call, let userId):
+                case .messageActionInviteToGroupCall(let call, let users):
                     if boxed {
-                        buffer.appendInt32(254144570)
+                        buffer.appendInt32(1991897370)
                     }
                     call.serialize(buffer, true)
-                    serializeInt32(userId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
                     break
     }
     }
@@ -21701,8 +21705,8 @@ public extension Api {
                 return ("messageActionGeoProximityReached", [("fromId", fromId), ("toId", toId), ("distance", distance)])
                 case .messageActionGroupCall(let flags, let call, let duration):
                 return ("messageActionGroupCall", [("flags", flags), ("call", call), ("duration", duration)])
-                case .messageActionInviteToGroupCall(let call, let userId):
-                return ("messageActionInviteToGroupCall", [("call", call), ("userId", userId)])
+                case .messageActionInviteToGroupCall(let call, let users):
+                return ("messageActionInviteToGroupCall", [("call", call), ("users", users)])
     }
     }
     
@@ -22016,12 +22020,14 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputGroupCall
             }
-            var _2: Int32?
-            _2 = reader.readInt32()
+            var _2: [Int32]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             if _c1 && _c2 {
-                return Api.MessageAction.messageActionInviteToGroupCall(call: _1!, userId: _2!)
+                return Api.MessageAction.messageActionInviteToGroupCall(call: _1!, users: _2!)
             }
             else {
                 return nil
