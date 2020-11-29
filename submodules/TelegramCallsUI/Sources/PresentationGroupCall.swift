@@ -142,7 +142,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private let getDeviceAccessData: () -> (presentationData: PresentationData, present: (ViewController, Any?) -> Void, openSettings: () -> Void)
     
-    private let initialCall: CachedChannelData.ActiveCall?
+    private var initialCall: CachedChannelData.ActiveCall?
     public let internalId: CallSessionInternalId
     public let peerId: PeerId
     public let peer: Peer?
@@ -374,12 +374,26 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 var removedSsrc: [UInt32] = []
                 for (callId, update) in updates {
                     if callId == callInfo.id {
-                        for participantUpdate in update.participantUpdates {
-                            if participantUpdate.isRemoved {
-                                removedSsrc.append(participantUpdate.ssrc)
+                        switch update {
+                        case let .state(update):
+                            for participantUpdate in update.participantUpdates {
+                                if participantUpdate.isRemoved {
+                                    removedSsrc.append(participantUpdate.ssrc)
+                                    
+                                    if participantUpdate.peerId == strongSelf.accountContext.account.peerId {
+                                        strongSelf._canBeRemoved.set(.single(true))
+                                    }
+                                } else if participantUpdate.peerId == strongSelf.accountContext.account.peerId {
+                                    if case let .estabilished(_, _, ssrc, _) = strongSelf.internalState, ssrc != participantUpdate.ssrc {
+                                        strongSelf._canBeRemoved.set(.single(true))
+                                    }
+                                }
+                            }
+                        case let .call(isTerminated):
+                            if isTerminated {
+                                strongSelf._canBeRemoved.set(.single(true))
                             }
                         }
-                        strongSelf.participantsContext?.addUpdates(updates: [update])
                     }
                 }
                 if !removedSsrc.isEmpty {
@@ -553,7 +567,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             if case let .estabilished(callInfo, clientParams, _, initialState) = internalState {
                 self.summaryInfoState.set(.single(SummaryInfoState(info: callInfo)))
                 
-                self.stateValue.canManageCall = initialState.isCreator
+                self.stateValue.canManageCall = initialState.isCreator || initialState.adminIds.contains(self.accountContext.account.peerId)
                 
                 self.ssrcMapping.removeAll()
                 var ssrcs: [UInt32] = []
@@ -780,7 +794,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
         
         let account = self.account
-        let peerId = self.peerId
         
         let currentCall: Signal<GroupCallInfo?, CallError>
         if let initialCall = self.initialCall {
@@ -796,36 +809,27 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
         
         let currentOrRequestedCall = currentCall
-        |> mapToSignal { callInfo -> Signal<GroupCallInfo, CallError> in
+        |> mapToSignal { callInfo -> Signal<GroupCallInfo?, CallError> in
             if let callInfo = callInfo {
                 return .single(callInfo)
             } else {
-                return createGroupCall(account: account, peerId: peerId)
-                |> mapError { _ -> CallError in
-                    return .generic
-                }
+                return .single(nil)
             }
         }
-        
-        /*let restartedCall = currentOrRequestedCall
-        |> mapToSignal { value -> Signal<GroupCallInfo, CallError> in
-            let stopped: Signal<GroupCallInfo, CallError> = stopGroupCall(account: account, callId: value.id, accessHash: value.accessHash)
-            |> mapError { _ -> CallError in
-                return .generic
-            }
-            |> map { _ -> GroupCallInfo in
-            }
-                
-            return stopped
-            |> then(currentOrRequestedCall)
-        }*/
         
         self.requestDisposable.set((currentOrRequestedCall
         |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.updateSessionState(internalState: .active(value), audioSessionControl: strongSelf.audioSessionControl)
+            
+            if let value = value {
+                strongSelf.initialCall = CachedChannelData.ActiveCall(id: value.id, accessHash: value.accessHash)
+                
+                strongSelf.updateSessionState(internalState: .active(value), audioSessionControl: strongSelf.audioSessionControl)
+            } else {
+                strongSelf._canBeRemoved.set(.single(true))
+            }
         }))
     }
     
@@ -868,7 +872,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             if shouldBeSendingTyping != strongSelf.isSendingTyping {
                 strongSelf.isSendingTyping = shouldBeSendingTyping
                 if shouldBeSendingTyping {
-                    strongSelf.typingDisposable.set(strongSelf.accountContext.account.acquireLocalInputActivity(peerId: PeerActivitySpace(peerId: strongSelf.peerId, category: .voiceChat), activity: .speakingInGroupCall))
+                    strongSelf.typingDisposable.set(strongSelf.accountContext.account.acquireLocalInputActivity(peerId: PeerActivitySpace(peerId: strongSelf.peerId, category: .voiceChat), activity: .speakingInGroupCall(timestamp: 0)))
                     strongSelf.restartMyAudioLevelTimer()
                 } else {
                     strongSelf.typingDisposable.set(nil)

@@ -223,7 +223,7 @@ public final class VoiceChatController: ViewController {
                     } else {
                         microphoneColor = UIColor(rgb: 0x979797)
                     }
-                    icon = .microphone(true, microphoneColor)
+                    icon = .microphone(self.muteState != nil, microphoneColor)
                 case .speaking:
                     text = .text(presentationData.strings.VoiceChat_StatusSpeaking, .constructive)
                     icon = .microphone(false, UIColor(rgb: 0x34c759))
@@ -411,37 +411,38 @@ public final class VoiceChatController: ViewController {
                             }
                         }
                     
-                    
-                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_RemovePeer, textColor: .destructive, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
-                        }, action: { [weak self] _, f in
-                            f(.dismissWithoutContent)
-                            
-                            guard let strongSelf = self else {
-                                return
-                            }
-
-                            let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme))
-                            var items: [ActionSheetItem] = []
-
-                            items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: peer, chatPeer: peer, action: .removeFromGroup, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
-
-                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.VoiceChat_RemovePeerRemove, color: .destructive, action: { [weak actionSheet] in
-                                actionSheet?.dismissAnimated()
+                        if let callState = strongSelf.callState, (callState.canManageCall && !callState.adminIds.contains(strongSelf.context.account.peerId)) {
+                            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_RemovePeer, textColor: .destructive, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
+                            }, action: { [weak self] _, f in
+                                f(.dismissWithoutContent)
                                 
-                                
-                            }))
+                                guard let strongSelf = self else {
+                                    return
+                                }
 
-                            actionSheet.setItemGroups([
-                                ActionSheetItemGroup(items: items),
-                                ActionSheetItemGroup(items: [
-                                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                        actionSheet?.dismissAnimated()
-                                    })
+                                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData.withUpdated(theme: strongSelf.darkTheme))
+                                var items: [ActionSheetItem] = []
+
+                                items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: peer, chatPeer: peer, action: .removeFromGroup, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+
+                                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.VoiceChat_RemovePeerRemove, color: .destructive, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                    
+                                    
+                                }))
+
+                                actionSheet.setItemGroups([
+                                    ActionSheetItemGroup(items: items),
+                                    ActionSheetItemGroup(items: [
+                                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                            actionSheet?.dismissAnimated()
+                                        })
+                                    ])
                                 ])
-                            ])
-                            strongSelf.controller?.present(actionSheet, in: .window(.root))
-                        })))
+                                strongSelf.controller?.present(actionSheet, in: .window(.root))
+                            })))
+                        }
                     }
                 }
                 
@@ -1139,11 +1140,13 @@ public final class VoiceChatController: ViewController {
             
             var callMembers = callMembers
             
+            callMembers.sort()
+            
             for i in 0 ..< callMembers.count {
                 if callMembers[i].peer.id == self.context.account.peerId {
                     let member = callMembers[i]
                     callMembers.remove(at: i)
-                    callMembers.insert(member, at: i)
+                    callMembers.insert(member, at: 0)
                     break
                 }
             }

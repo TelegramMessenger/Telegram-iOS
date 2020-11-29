@@ -1221,7 +1221,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.readSecretOutbox(peerId: PeerId(namespace: Namespaces.Peer.SecretChat, id: chatId), timestamp: maxDate, actionTimestamp: date)
             case let .updateUserTyping(userId, type):
                 if let date = updatesDate, date + 60 > serverTime {
-                    let activity = PeerInputActivity(apiType: type)
+                    let activity = PeerInputActivity(apiType: type, timestamp: date)
                     var category: PeerActivitySpace.Category = .global
                     if case .speakingInGroupCall = activity {
                         category = .voiceChat
@@ -1231,7 +1231,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 }
             case let .updateChatUserTyping(chatId, userId, type):
                 if let date = updatesDate, date + 60 > serverTime {
-                    let activity = PeerInputActivity(apiType: type)
+                    let activity = PeerInputActivity(apiType: type, timestamp: date)
                     var category: PeerActivitySpace.Category = .global
                     if case .speakingInGroupCall = activity {
                         category = .voiceChat
@@ -1244,7 +1244,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                     let channelPeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                     let threadId = topMsgId.flatMap { makeMessageThreadId(MessageId(peerId: channelPeerId, namespace: Namespaces.Message.Cloud, id: $0)) }
                     
-                    let activity = PeerInputActivity(apiType: type)
+                    let activity = PeerInputActivity(apiType: type, timestamp: date)
                     var category: PeerActivitySpace.Category = .global
                     if case .speakingInGroupCall = activity {
                         category = .voiceChat
@@ -1332,6 +1332,8 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 case let .inputGroupCall(id, accessHash):
                     updatedState.updateGroupCallParticipants(id: id, accessHash: accessHash, participants: participants, version: version)
                 }
+            case let .updateGroupCall(call):
+                updatedState.updateGroupCall(call: call)
             case let .updateLangPackTooLong(langCode):
                 updatedState.updateLangPack(langCode: langCode, difference: nil)
             case let .updateLangPack(difference):
@@ -2135,7 +2137,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddScheduledMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll/*, .UpdateMessageReactions*/, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll/*, .UpdateMessageReactions*/, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -2222,7 +2224,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     var updatedWebpages: [MediaId: TelegramMediaWebpage] = [:]
     var updatedCalls: [Api.PhoneCall] = []
     var addedCallSignalingData: [(Int64, Data)] = []
-    var updatedGroupCallParticipants: [(Int64, GroupCallParticipantsContext.StateUpdate)] = []
+    var updatedGroupCallParticipants: [(Int64, GroupCallParticipantsContext.Update)] = []
     var updatedPeersNearby: [PeerNearby]?
     var isContactUpdates: [(PeerId, Bool)] = []
     var stickerPackOperations: [AccountStateUpdateStickerPacksOperation] = []
@@ -2955,8 +2957,18 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
             case let .UpdateGroupCallParticipants(callId, _, participants, version):
                 updatedGroupCallParticipants.append((
                     callId,
-                    GroupCallParticipantsContext.StateUpdate(participants: participants, version: version)
+                    .state(update: GroupCallParticipantsContext.Update.StateUpdate(participants: participants, version: version))
                 ))
+            case let .UpdateGroupCall(call):
+                switch call {
+                case .groupCall:
+                    break
+                case let .groupCallDiscarded(callId, _, _):
+                    updatedGroupCallParticipants.append((
+                        callId,
+                        .call(isTerminated: true)
+                    ))
+                }
             case let .UpdateLangPack(langCode, difference):
                 if let difference = difference {
                     if langPackDifferences[langCode] == nil {

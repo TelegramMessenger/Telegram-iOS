@@ -12,8 +12,8 @@ public enum RequestCallResult {
     case alreadyInProgress(PeerId?)
 }
 
-public enum RequestOrJoinGroupCallResult {
-    case requested
+public enum JoinGroupCallManagerResult {
+    case joined
     case alreadyInProgress(PeerId?)
 }
 
@@ -278,5 +278,5 @@ public protocol PresentationCallManager: class {
     var currentGroupCallSignal: Signal<PresentationGroupCall?, NoError> { get }
     
     func requestCall(context: AccountContext, peerId: PeerId, isVideo: Bool, endCurrentIfAny: Bool) -> RequestCallResult
-    func requestOrJoinGroupCall(context: AccountContext, peerId: PeerId, initialCall: CachedChannelData.ActiveCall?, endCurrentIfAny: Bool, sourcePanel: ASDisplayNode?) -> RequestOrJoinGroupCallResult
+    func joinGroupCall(context: AccountContext, peerId: PeerId, initialCall: CachedChannelData.ActiveCall, endCurrentIfAny: Bool, sourcePanel: ASDisplayNode?) -> JoinGroupCallManagerResult
 }

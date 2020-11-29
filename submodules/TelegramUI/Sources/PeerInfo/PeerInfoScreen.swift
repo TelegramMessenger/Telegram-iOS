@@ -2966,6 +2966,16 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
                     }
                 }
             } else if let channel = peer as? TelegramChannel {
+                if case .group = channel.info, !channel.flags.contains(.hasVoiceChat) {
+                    if channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls) {
+                        //TODO:localize
+                        items.append(ActionSheetButtonItem(title: "Create Voice Chat", color: .accent, action: { [weak self] in
+                            dismissAction()
+                            self?.requestCall(isVideo: false)
+                        }))
+                    }
+                }
+                
                 if let cachedData = self.data?.cachedData as? CachedChannelData, cachedData.flags.contains(.canViewStats) {
                     items.append(ActionSheetButtonItem(title: presentationData.strings.ChannelInfo_Stats, color: .accent, action: { [weak self] in
                         dismissAction()
@@ -3169,7 +3179,41 @@ private final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewD
             guard let cachedChannelData = self.data?.cachedData as? CachedChannelData else {
                 return
             }
-            let _ = self.context.sharedContext.callManager?.requestOrJoinGroupCall(context: self.context, peerId: peer.id, initialCall: cachedChannelData.activeCall, endCurrentIfAny: false, sourcePanel: nil)
+            
+            if let activeCall = cachedChannelData.activeCall {
+                let _ = self.context.sharedContext.callManager?.joinGroupCall(context: self.context, peerId: peer.id, initialCall: activeCall, endCurrentIfAny: false, sourcePanel: nil)
+            } else {
+                var dismissStatus: (() -> Void)?
+                let statusController = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: {
+                    dismissStatus?()
+                }))
+                dismissStatus = { [weak self, weak statusController] in
+                    self?.activeActionDisposable.set(nil)
+                    statusController?.dismiss()
+                }
+                self.controller?.present(statusController, in: .window(.root))
+                self.activeActionDisposable.set((createGroupCall(account: self.context.account, peerId: peer.id)
+                |> deliverOnMainQueue).start(next: { [weak self] info in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let _ = strongSelf.context.sharedContext.callManager?.joinGroupCall(context: strongSelf.context, peerId: peer.id, initialCall: CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash), endCurrentIfAny: false, sourcePanel: nil)
+                }, error: { [weak self] _ in
+                    dismissStatus?()
+                    
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
+                }, completed: { [weak self] in
+                    dismissStatus?()
+                    
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.headerNode.navigationButtonContainer.performAction?(.cancel)
+                }))
+            }
             
             return
         }
