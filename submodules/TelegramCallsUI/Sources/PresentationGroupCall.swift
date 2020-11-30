@@ -759,7 +759,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         let isEffectivelyMuted: Bool
         switch self.isMutedValue {
         case let .muted(isPushToTalkActive):
-            isEffectivelyMuted = !isPushToTalkActive
+            isEffectivelyMuted = true
             self.updateMuteState(peerId: self.accountContext.account.peerId, isMuted: true)
         case .unmuted:
             isEffectivelyMuted = false

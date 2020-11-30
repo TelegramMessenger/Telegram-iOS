@@ -797,14 +797,20 @@ public final class VoiceChatController: ViewController {
                         self.pushingToTalk = true
                         self.call.setIsMuted(action: .muted(isPushToTalkActive: true))
                     }
+                    if let (layout, navigationHeight) = self.validLayout {
+                        self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
+                    }
                 case .ended, .cancelled:
                     self.pushingToTalk = false
                     self.actionButton.pressing = false
                     let timestamp = CACurrentMediaTime()
-                    if callState.muteState != nil || timestamp - self.actionButtonPressGestureStartTime < 0.1 {
+                    if timestamp - self.actionButtonPressGestureStartTime < 0.1 {
                         self.call.toggleIsMuted()
                     } else {
                         self.call.setIsMuted(action: .muted(isPushToTalkActive: false))
+                    }
+                    if let (layout, navigationHeight) = self.validLayout {
+                        self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
                     }
                 default:
                     break
@@ -925,7 +931,7 @@ public final class VoiceChatController: ViewController {
                     audioButtonAppearance = .color(.custom(0x1c1c1e))
                     actionButtonEnabled = false
                 case .connected:
-                    if let muteState = callState.muteState {
+                    if let muteState = callState.muteState, !self.pushingToTalk {
                         if muteState.canUnmute {
                             actionButtonState = .active(state: .muted)
                             
