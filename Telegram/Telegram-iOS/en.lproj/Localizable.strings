@@ -5977,3 +5977,11 @@ Sorry for the inconvenience.";
 "ChannelInfo.CreateVoiceChat" = "Create Voice Chat";
 
 "VoiceChat.AnonymousDisabledAlertText" = "Sorry, you can't join voice chat as an anonymous admin.";
+
+"VoiceChat.EndConfirmationTitle" = "End voice chat";
+"VoiceChat.EndConfirmationText" = "Are you sure you want to end this voice chat?";
+"VoiceChat.EndConfirmationEnd" = "End";
+
+"CHAT_VOICECHAT_START" = "%1$@ has started voice chat in the group %2$@";
+"CHAT_VOICECHAT_INVITE" = "%1$@ has invited %3$@ in the group %2$@";
+"CHAT_VOICECHAT_INVITE_YOU" = "%1$@ has invited you to voice chat in the group %1$@";

@@ -18,6 +18,8 @@ import ContextUI
 import ShareController
 import DeleteChatPeerActionSheetItem
 import UndoUI
+import AlertUI
+import PresentationDataUtils
 
 private final class VoiceChatControllerTitleView: UIView {
     private var theme: PresentationTheme
@@ -690,12 +692,24 @@ public final class VoiceChatController: ViewController {
                         guard let strongSelf = self else {
                             return
                         }
-                        let _ = (strongSelf.call.leave(terminateIfPossible: true)
-                        |> filter { $0 }
-                        |> take(1)
-                        |> deliverOnMainQueue).start(completed: {
-                            self?.controller?.dismiss()
-                        })
+                        
+                        let action: () -> Void = {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            let _ = (strongSelf.call.leave(terminateIfPossible: true)
+                            |> filter { $0 }
+                            |> take(1)
+                            |> deliverOnMainQueue).start(completed: {
+                                self?.controller?.dismiss()
+                            })
+                        }
+                        
+                        let alert = textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationTitle, text: strongSelf.presentationData.strings.VoiceChat_EndConfirmationText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.VoiceChat_EndConfirmationEnd, action: {
+                            action()
+                        })])
+                        strongSelf.controller?.present(alert, in: .window(.root))
                     })))
                 }
             
