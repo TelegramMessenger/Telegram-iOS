@@ -244,6 +244,7 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                 nextParticipantsFetchOffset: nextParticipantsFetchOffset,
                 adminIds: Set(),
                 isCreator: false,
+                defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: false, canChange: false),
                 totalCount: totalCount,
                 version: version
             )
@@ -322,6 +323,16 @@ public func joinGroupCall(account: Account, peerId: PeerId, callId: Int64, acces
                 switch update {
                 case let .updateGroupCall(_, call):
                     maybeParsedCall = GroupCallInfo(call)
+                    
+                    switch call {
+                    case let .groupCall(flags, _, _, _, _, _):
+                        let isMuted = (flags & (1 << 1)) != 0
+                        let canChange = (flags & (1 << 2)) != 0
+                        state.defaultParticipantsAreMuted = GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: isMuted, canChange: canChange)
+                    default:
+                        break
+                    }
+                    
                     break loop
                 default:
                     break
@@ -525,10 +536,16 @@ public final class GroupCallParticipantsContext {
     }
     
     public struct State: Equatable {
+        public struct DefaultParticipantsAreMuted: Equatable {
+            public var isMuted: Bool
+            public var canChange: Bool
+        }
+        
         public var participants: [Participant]
         public var nextParticipantsFetchOffset: String?
         public var adminIds: Set<PeerId>
         public var isCreator: Bool
+        public var defaultParticipantsAreMuted: DefaultParticipantsAreMuted
         public var totalCount: Int
         public var version: Int32
     }
@@ -582,7 +599,7 @@ public final class GroupCallParticipantsContext {
         }
         
         case state(update: StateUpdate)
-        case call(isTerminated: Bool)
+        case call(isTerminated: Bool, defaultParticipantsAreMuted: State.DefaultParticipantsAreMuted)
     }
     
     private let account: Account
@@ -630,6 +647,8 @@ public final class GroupCallParticipantsContext {
     
     private let updatesDisposable = MetaDisposable()
     private var activitiesDisposable: Disposable?
+    
+    private let updateDefaultMuteDisposable = MetaDisposable()
     
     public init(account: Account, peerId: PeerId, id: Int64, accessHash: Int64, state: State) {
         self.account = account
@@ -703,6 +722,7 @@ public final class GroupCallParticipantsContext {
                         nextParticipantsFetchOffset: strongSelf.stateValue.state.nextParticipantsFetchOffset,
                         adminIds: strongSelf.stateValue.state.adminIds,
                         isCreator: strongSelf.stateValue.state.isCreator,
+                        defaultParticipantsAreMuted: strongSelf.stateValue.state.defaultParticipantsAreMuted,
                         totalCount: strongSelf.stateValue.state.totalCount,
                         version: strongSelf.stateValue.state.version
                     ),
@@ -716,6 +736,7 @@ public final class GroupCallParticipantsContext {
         self.disposable.dispose()
         self.updatesDisposable.dispose()
         self.activitiesDisposable?.dispose()
+        self.updateDefaultMuteDisposable.dispose()
     }
     
     public func addUpdates(updates: [Update]) {
@@ -723,6 +744,8 @@ public final class GroupCallParticipantsContext {
         for update in updates {
             if case let .state(update) = update {
                 stateUpdates.append(update)
+            } else if case let .call(_, defaultParticipantsAreMuted) = update {
+                self.stateValue.state.defaultParticipantsAreMuted = defaultParticipantsAreMuted
             }
         }
         
@@ -835,6 +858,7 @@ public final class GroupCallParticipantsContext {
             let nextParticipantsFetchOffset = strongSelf.stateValue.state.nextParticipantsFetchOffset
             let adminIds = strongSelf.stateValue.state.adminIds
             let isCreator = strongSelf.stateValue.state.isCreator
+            let defaultParticipantsAreMuted = strongSelf.stateValue.state.defaultParticipantsAreMuted
             
             updatedParticipants.sort()
             for i in 0 ..< updatedParticipants.count {
@@ -852,6 +876,7 @@ public final class GroupCallParticipantsContext {
                     nextParticipantsFetchOffset: nextParticipantsFetchOffset,
                     adminIds: adminIds,
                     isCreator: isCreator,
+                    defaultParticipantsAreMuted: defaultParticipantsAreMuted,
                     totalCount: updatedTotalCount,
                     version: update.version
                 ),
@@ -951,6 +976,22 @@ public final class GroupCallParticipantsContext {
             } else {
                 strongSelf.stateValue.overlayState.pendingMuteStateChanges.removeValue(forKey: peerId)
             }
+        }))
+    }
+    
+    public func updateDefaultParticipantsAreMuted(isMuted: Bool) {
+        if isMuted == self.stateValue.state.defaultParticipantsAreMuted.isMuted {
+            return
+        }
+        self.stateValue.state.defaultParticipantsAreMuted.isMuted = isMuted
+        
+
+        self.updateDefaultMuteDisposable.set((self.account.network.request(Api.functions.phone.toggleGroupCallSettings(flags: 1 << 0, call: .inputGroupCall(id: self.id, accessHash: self.accessHash), joinMuted: isMuted ? .boolTrue : .boolFalse))
+        |> deliverOnMainQueue).start(next: { [weak self] updates in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.account.stateManager.addUpdates(updates)
         }))
     }
 }

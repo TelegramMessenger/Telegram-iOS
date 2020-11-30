@@ -21,7 +21,8 @@ private extension PresentationGroupCallState {
             networkState: .connecting,
             canManageCall: false,
             adminIds: Set(),
-            muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true)
+            muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true),
+            defaultParticipantMuteState: nil
         )
     }
 }
@@ -389,7 +390,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                     }
                                 }
                             }
-                        case let .call(isTerminated):
+                        case let .call(isTerminated, _):
                             if isTerminated {
                                 strongSelf._canBeRemoved.set(.single(true))
                             }
@@ -579,6 +580,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 self.summaryInfoState.set(.single(SummaryInfoState(info: callInfo)))
                 
                 self.stateValue.canManageCall = initialState.isCreator || initialState.adminIds.contains(self.accountContext.account.peerId)
+                if self.stateValue.canManageCall && initialState.defaultParticipantsAreMuted.canChange {
+                    self.stateValue.defaultParticipantMuteState = initialState.defaultParticipantsAreMuted.isMuted ? .muted : .unmuted
+                }
                 
                 self.ssrcMapping.removeAll()
                 var ssrcs: [UInt32] = []
@@ -639,6 +643,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     strongSelf.membersValue = members
                     
                     strongSelf.stateValue.adminIds = state.adminIds
+                    
+                    if (state.isCreator || state.adminIds.contains(strongSelf.accountContext.account.peerId)) && state.defaultParticipantsAreMuted.canChange {
+                        strongSelf.stateValue.defaultParticipantMuteState = state.defaultParticipantsAreMuted.isMuted ? .muted : .unmuted
+                    }
                     
                     strongSelf.summaryParticipantsState.set(.single(SummaryParticipantsState(
                         participantCount: state.totalCount,
@@ -920,5 +928,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 self.restartMyAudioLevelTimer()
             }
         }
+    }
+    
+    public func updateDefaultParticipantsAreMuted(isMuted: Bool) {
+        self.participantsContext?.updateDefaultParticipantsAreMuted(isMuted: isMuted)
     }
 }

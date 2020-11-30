@@ -614,16 +614,36 @@ public final class VoiceChatController: ViewController {
    
                 var items: [ContextMenuItem] = []
                 
-                if let callState = strongSelf.callState, callState.canManageCall {
+                if let callState = strongSelf.callState, callState.canManageCall, let defaultParticipantMuteState = callState.defaultParticipantMuteState {
+                    let isMuted = defaultParticipantMuteState == .muted
+                    
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_SpeakPermissionEveryone, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.actionSheet.primaryTextColor)
+                        if isMuted {
+                            return nil
+                        } else {
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.actionSheet.primaryTextColor)
+                        }
                     }, action: { _, f in
                         f(.dismissWithoutContent)
                       
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.call.updateDefaultParticipantsAreMuted(isMuted: false)
                     })))
-                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_SpeakPermissionAdmin, icon: { _ in return nil}, action: { _, f in
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_SpeakPermissionAdmin, icon: { theme in
+                        if !isMuted {
+                            return nil
+                        } else {
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.actionSheet.primaryTextColor)
+                        }
+                    }, action: { _, f in
                         f(.dismissWithoutContent)
                       
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.call.updateDefaultParticipantsAreMuted(isMuted: true)
                     })))
                 }
                 

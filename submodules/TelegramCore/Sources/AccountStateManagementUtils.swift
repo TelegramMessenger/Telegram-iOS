@@ -2970,11 +2970,24 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                                 return current
                             }
                         })
+                        
+                        switch call {
+                        case let .groupCall(flags, _, _, _, _, _):
+                            let isMuted = (flags & (1 << 1)) != 0
+                            let canChange = (flags & (1 << 2)) != 0
+                            let defaultParticipantsAreMuted = GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: isMuted, canChange: isMuted)
+                            updatedGroupCallParticipants.append((
+                                info.id,
+                                .call(isTerminated: false, defaultParticipantsAreMuted: defaultParticipantsAreMuted)
+                            ))
+                        default:
+                            break
+                        }
                     }
                 case let .groupCallDiscarded(callId, _, _):
                     updatedGroupCallParticipants.append((
                         callId,
-                        .call(isTerminated: true)
+                        .call(isTerminated: true, defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: false, canChange: false))
                     ))
                     
                     transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
