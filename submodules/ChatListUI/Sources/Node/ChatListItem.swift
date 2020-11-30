@@ -1872,7 +1872,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             transition.updateFrame(node: self.avatarNode, frame: avatarFrame)
             
             var onlineFrame = self.onlineNode.frame
-            onlineFrame.origin.x = avatarFrame.maxX - onlineFrame.width - 2.0
+            if self.onlineIsVoiceChat {
+                onlineFrame.origin.x = avatarFrame.maxX - onlineFrame.width + 1.0 - UIScreenPixel
+            } else {
+                onlineFrame.origin.x = avatarFrame.maxX - onlineFrame.width - 2.0
+            }
             transition.updateFrame(node: self.onlineNode, frame: onlineFrame)
             
             var titleOffset: CGFloat = 0.0

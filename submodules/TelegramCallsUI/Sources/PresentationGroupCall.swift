@@ -610,7 +610,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     for participant in state.participants {
                         members.participants.append(participant)
                         
-                        
                         if topParticipants.count < 3 {
                             topParticipants.append(participant)
                         }

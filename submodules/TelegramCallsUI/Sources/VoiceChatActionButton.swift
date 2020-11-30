@@ -46,7 +46,7 @@ private protocol VoiceChatActionButtonBackgroundNodeContext {
     var isAnimating: Bool { get }
     
     func updateAnimations()
-    func drawingState() -> VoiceChatActionButtonBackgroundNodeState
+    func drawingState(transition: VoiceChatActionButtonBackgroundNodeTransitionState?) -> VoiceChatActionButtonBackgroundNodeState
 }
 
 private protocol VoiceChatActionButtonBackgroundNodeState: NSObjectProtocol {
@@ -76,7 +76,7 @@ private final class VoiceChatActionButtonBackgroundNodeConnectingContext: VoiceC
     func updateAnimations() {
     }
     
-    func drawingState() -> VoiceChatActionButtonBackgroundNodeState {
+    func drawingState(transition: VoiceChatActionButtonBackgroundNodeTransitionState?) -> VoiceChatActionButtonBackgroundNodeState {
         return VoiceChatActionButtonBackgroundNodeConnectingState(blueGradient: self.blueGradient)
     }
 }
@@ -106,7 +106,7 @@ private final class VoiceChatActionButtonBackgroundNodeDisabledContext: VoiceCha
     func updateAnimations() {
     }
     
-    func drawingState() -> VoiceChatActionButtonBackgroundNodeState {
+    func drawingState(transition: VoiceChatActionButtonBackgroundNodeTransitionState?) -> VoiceChatActionButtonBackgroundNodeState {
         return VoiceChatActionButtonBackgroundNodeDisabledState()
     }
 }
@@ -347,11 +347,24 @@ private final class VoiceChatActionButtonBackgroundNodeBlobContext: VoiceChatAct
         }
     }
     
-    func drawingState() -> VoiceChatActionButtonBackgroundNodeState {
+    func drawingState(transition: VoiceChatActionButtonBackgroundNodeTransitionState?) -> VoiceChatActionButtonBackgroundNodeState {
         var blobs: [BlobDrawingState] = []
         for blob in self.blobs {
             if let path = blob.currentShape?.copy() as? UIBezierPath {
-                blobs.append(BlobDrawingState(size: blob.size, path: path, scale: blob.currentScale, alpha: blob.alpha))
+                let size = CGSize(width: 300.0, height: 300.0)
+                var appearanceProgress: CGFloat = 1.0
+                if let transition = transition, transition.previousState == .connecting || transition.previousState == .disabled {
+                    appearanceProgress = transition.transition
+                }
+                let offset = (size.width - blob.size.width) / 2.0
+                let toOrigin = CGAffineTransform(translationX: -size.width / 2.0 + offset, y: -size.height / 2.0 + offset)
+                let fromOrigin = CGAffineTransform(translationX: size.width / 2.0, y: size.height / 2.0)
+    
+                path.apply(toOrigin)
+                path.apply(CGAffineTransform(scaleX: blob.currentScale * appearanceProgress, y: blob.currentScale * appearanceProgress))
+                path.apply(fromOrigin)
+
+                blobs.append(BlobDrawingState(size: blob.size, path: path.cgPath, scale: blob.currentScale, alpha: blob.alpha))
             }
         }
         return VoiceChatActionButtonBackgroundNodeBlobState(size: self.size, active: self.active, activeTransitionArguments: self.activeTransitionArguments, blueGradient: self.blueGradient, greenGradient: self.greenGradient, blobs: blobs)
@@ -360,11 +373,11 @@ private final class VoiceChatActionButtonBackgroundNodeBlobContext: VoiceChatAct
 
 private class BlobDrawingState: NSObject {
     let size: CGSize
-    let path: UIBezierPath
+    let path: CGPath
     let scale: CGFloat
     let alpha: CGFloat
     
-    init(size: CGSize, path: UIBezierPath, scale: CGFloat, alpha: CGFloat) {
+    init(size: CGSize, path: CGPath, scale: CGFloat, alpha: CGFloat) {
         self.size = size
         self.path = path
         self.scale = scale
@@ -564,7 +577,7 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         if !self.isCurrentlyInHierarchy {
             animate = false
         }
-        
+                
         if animate {
             let animator: ConstantDisplayLinkAnimator
             if let current = self.animator {
@@ -588,7 +601,8 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     
     override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
         let timestamp = CACurrentMediaTime()
-        return VoiceChatActionButtonBackgroundNodeDrawingState(timestamp: timestamp, state: self.state.drawingState(), simplified: self.simplified, gradientMovement: self.gradientMovement, transition: self.transition?.drawingTransitionState(time: timestamp))
+        let transitionState = self.transition?.drawingTransitionState(time: timestamp)
+        return VoiceChatActionButtonBackgroundNodeDrawingState(timestamp: timestamp, state: self.state.drawingState(transition: transitionState), simplified: self.simplified, gradientMovement: self.gradientMovement, transition: transitionState)
     }
 
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -674,16 +688,7 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         
         if let blobsState = parameters.state as? VoiceChatActionButtonBackgroundNodeBlobState {
             for blob in blobsState.blobs {
-                let uiPath = blob.path
-                let offset = (bounds.size.width - blob.size.width) / 2.0
-                let toOrigin = CGAffineTransform(translationX: -bounds.size.width / 2.0 + offset, y: -bounds.size.height / 2.0 + offset)
-                let fromOrigin = CGAffineTransform(translationX: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
-
-                uiPath.apply(toOrigin)
-                uiPath.apply(CGAffineTransform(scaleX: blob.scale * appearanceProgress, y: blob.scale * appearanceProgress))
-                uiPath.apply(fromOrigin)
-
-                context.addPath(uiPath.cgPath)
+                context.addPath(blob.path)
                 context.clip()
 
                 context.setAlpha(blob.alpha)
