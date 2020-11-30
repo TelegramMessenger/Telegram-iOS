@@ -14,14 +14,16 @@ private class CallStatusBarBackgroundNodeDrawingState: NSObject {
     let amplitude: CGFloat
     let phase: CGFloat
     let speaking: Bool
-    let transitionArguments: (startTime: Double, duration: Double)?
+    let gradientTransition: CGFloat
+    let gradientMovement: CGFloat
     
-    init(timestamp: Double, amplitude: CGFloat, phase: CGFloat, speaking: Bool, transitionArguments: (Double, Double)?) {
+    init(timestamp: Double, amplitude: CGFloat, phase: CGFloat, speaking: Bool, gradientTransition: CGFloat, gradientMovement: CGFloat) {
         self.timestamp = timestamp
         self.amplitude = amplitude
         self.phase = phase
         self.speaking = speaking
-        self.transitionArguments = transitionArguments
+        self.gradientTransition = gradientTransition
+        self.gradientMovement = gradientMovement
     }
 }
 
@@ -204,7 +206,10 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
     var presentationAudioLevel: CGFloat = 0.0
     var phase: CGFloat = 0.0
     
-    var transitionArguments: (Double, Double)?
+    private var gradientMovementArguments: (from: CGFloat, to: CGFloat, startTime: Double, duration: Double)?
+    private var gradientMovement: CGFloat = 0.0
+    
+    var transitionArguments: (startTime: Double, duration: Double)?
     var speaking = false {
         didSet {
             if self.speaking != oldValue {
@@ -226,6 +231,30 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
     func updateAnimations() {
         self.presentationAudioLevel = self.presentationAudioLevel * 0.9 + max(0.1, CGFloat(self.audioLevel)) * 0.1
         
+        if self.gradientMovementArguments == nil {
+            self.gradientMovementArguments = (0.0, 0.7, CACurrentMediaTime(), 1.0)
+        }
+        
+        let timestamp = CACurrentMediaTime()
+        if let (from, to, startTime, duration) = self.gradientMovementArguments, duration > 0.0 {
+            let progress = max(0.0, min(1.0, CGFloat((timestamp - startTime) / duration)))
+            self.gradientMovement = from + (to - from) * progress
+            if progress < 1.0 {
+            } else {
+                var nextTo: CGFloat
+                if to > 0.5 {
+                    nextTo = CGFloat.random(in: 0.0 ..< 0.3)
+                } else {
+                    if self.presentationAudioLevel > 0.3 {
+                        nextTo = CGFloat.random(in: 0.75 ..< 1.0)
+                    } else {
+                        nextTo = CGFloat.random(in: 0.5 ..< 1.0)
+                    }
+                }
+                self.gradientMovementArguments = (to, nextTo, timestamp, Double.random(in: 0.8 ..< 1.5))
+            }
+        }
+        
         let animator: ConstantDisplayLinkAnimator
         if let current = self.animator {
             animator = current
@@ -242,7 +271,18 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
     }
     
     override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return CallStatusBarBackgroundNodeDrawingState(timestamp: CACurrentMediaTime(), amplitude: self.presentationAudioLevel, phase: self.phase, speaking: self.speaking, transitionArguments: self.transitionArguments)
+        let timestamp = CACurrentMediaTime()
+        
+        var gradientTransition: CGFloat = 0.0
+        gradientTransition = self.speaking ? 1.0 : 0.0
+        if let transition = self.transitionArguments {
+            gradientTransition = CGFloat((timestamp - transition.startTime) / transition.duration)
+            if !self.speaking {
+                gradientTransition = 1.0 - gradientTransition
+            }
+        }
+        
+        return CallStatusBarBackgroundNodeDrawingState(timestamp: timestamp, amplitude: self.presentationAudioLevel, phase: self.phase, speaking: self.speaking, gradientTransition: gradientTransition, gradientMovement: self.gradientMovement)
     }
 
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -259,18 +299,8 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
         }
         
         var locations: [CGFloat] = [0.0, 1.0]
-        
-        var gradientTransition: CGFloat = 0.0
-        gradientTransition = parameters.speaking ? 1.0 : 0.0
-        if let transition = parameters.transitionArguments {
-            gradientTransition = CGFloat((parameters.timestamp - transition.startTime) / transition.duration)
-            if !parameters.speaking {
-                gradientTransition = 1.0 - gradientTransition
-            }
-        }
-    
-        let leftColor = UIColor(rgb: 0x007fff).interpolateTo(UIColor(rgb: 0x2bb76b), fraction: gradientTransition)!
-        let rightColor = UIColor(rgb: 0x00afff).interpolateTo(UIColor(rgb: 0x007fff), fraction: gradientTransition)!
+        let leftColor = UIColor(rgb: 0x007fff).interpolateTo(UIColor(rgb: 0x2bb76b), fraction: parameters.gradientTransition)!
+        let rightColor = UIColor(rgb: 0x00afff).interpolateTo(UIColor(rgb: 0x007fff), fraction: parameters.gradientTransition)!
         let colors: [CGColor] = [leftColor.cgColor, rightColor.cgColor]
         
         let colorSpace = CGColorSpaceCreateDeviceRGB()
@@ -321,7 +351,7 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
                 context.setFillColor(UIColor(rgb: 0x007fff, alpha: 0.3).cgColor)
                 context.fill(bounds)
             } else {
-                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: bounds.width, y: 0.0), options: CGGradientDrawingOptions())
+                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: bounds.width + parameters.gradientMovement * bounds.width, y: 0.0), options: CGGradientDrawingOptions())
             }
             context.restoreGState()
         }

@@ -21,16 +21,19 @@ private final class VoiceChatIndicatorNode: ASDisplayNode {
     
     override init() {
         self.leftLine = ASDisplayNode()
+        self.leftLine.clipsToBounds = true
         self.leftLine.isLayerBacked = true
         self.leftLine.cornerRadius = 1.0
         self.leftLine.frame = CGRect(x: 6.0, y: 6.0, width: 2.0, height: 10.0)
         
         self.centerLine = ASDisplayNode()
+        self.centerLine.clipsToBounds = true
         self.centerLine.isLayerBacked = true
         self.centerLine.cornerRadius = 1.0
         self.centerLine.frame = CGRect(x: 10.0, y: 5.0, width: 2.0, height: 12.0)
         
         self.rightLine = ASDisplayNode()
+        self.rightLine.clipsToBounds = true
         self.rightLine.isLayerBacked = true
         self.rightLine.cornerRadius = 1.0
         self.rightLine.frame = CGRect(x: 14.0, y: 6.0, width: 2.0, height: 10.0)
@@ -69,21 +72,21 @@ private final class VoiceChatIndicatorNode: ASDisplayNode {
                 leftAnimation.timingFunctions = timingFunctions
                 leftAnimation.values = [NSNumber(value: 10.0), NSNumber(value: 4.0), NSNumber(value: 8.0), NSNumber(value: 4.0), NSNumber(value: 10.0)]
                 leftAnimation.repeatCount = Float.infinity
-                leftAnimation.duration = 2.0
+                leftAnimation.duration = 2.2
                 self.leftLine.layer.add(leftAnimation, forKey: "animation")
 
                 let centerAnimation = CAKeyframeAnimation(keyPath: "bounds.size.height")
                 centerAnimation.timingFunctions = timingFunctions
                 centerAnimation.values = [NSNumber(value: 6.0), NSNumber(value: 10.0), NSNumber(value: 4.0), NSNumber(value: 12.0), NSNumber(value: 6.0)]
                 centerAnimation.repeatCount = Float.infinity
-                centerAnimation.duration = 2.0
+                centerAnimation.duration = 2.2
                 self.centerLine.layer.add(centerAnimation, forKey: "animation")
                 
                 let rightAnimation = CAKeyframeAnimation(keyPath: "bounds.size.height")
                 rightAnimation.timingFunctions = timingFunctions
                 rightAnimation.values = [NSNumber(value: 10.0), NSNumber(value: 4.0), NSNumber(value: 8.0), NSNumber(value: 4.0), NSNumber(value: 10.0)]
                 rightAnimation.repeatCount = Float.infinity
-                rightAnimation.duration = 2.0
+                rightAnimation.duration = 2.2
                 self.rightLine.layer.add(rightAnimation, forKey: "animation")
             } else {
                 self.leftLine.layer.removeAnimation(forKey: "animation")

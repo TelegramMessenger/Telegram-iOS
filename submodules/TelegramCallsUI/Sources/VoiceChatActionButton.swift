@@ -239,28 +239,10 @@ private final class Blob {
     }
     
     func updateAnimations() {
-        var animate = false
         let timestamp = CACurrentMediaTime()
-
-//        if let (startTime, duration) = self.gradientTransitionArguments, duration > 0.0 {
-//            if let fromLoop = self.fromLoop {
-//                if fromLoop {
-//                    self.gradientTransition = max(0.0, min(1.0, CGFloat((timestamp - startTime) / duration)))
-//                } else {
-//                    self.gradientTransition = max(0.0, min(1.0, 1.0 - CGFloat((timestamp - startTime) / duration)))
-//                }
-//            }
-//            if self.gradientTransition < 1.0 {
-//                animate = true
-//            } else {
-//                self.gradientTransitionArguments = nil
-//            }
-//        }
-
         if let (startTime, duration) = self.transitionArguments, duration > 0.0 {
             self.transition = max(0.0, min(1.0, CGFloat((timestamp - startTime) / duration)))
             if self.transition < 1.0 {
-                animate = true
             } else {
                 if self.loop {
                     self.animateToNewShape()
@@ -272,27 +254,6 @@ private final class Blob {
                 }
             }
         }
-
-//        let gradientMovementStartTime: Double
-//        let gradientMovementDuration: Double
-//        let gradientMovementReverse: Bool
-//        if let (startTime, duration, reverse) = self.gradientMovementTransitionArguments, duration > 0.0 {
-//            gradientMovementStartTime = startTime
-//            gradientMovementDuration = duration
-//            gradientMovementReverse = reverse
-//        } else {
-//            gradientMovementStartTime = CACurrentMediaTime()
-//            gradientMovementDuration = 1.0
-//            gradientMovementReverse = false
-//            self.gradientMovementTransitionArguments = (gradientMovementStartTime, gradientMovementStartTime, gradientMovementReverse)
-//        }
-//        let movementT = CGFloat((timestamp - gradientMovementStartTime) / gradientMovementDuration)
-//        self.gradientMovementTransition = gradientMovementReverse ? 1.0 - movementT : movementT
-//        if gradientMovementReverse && self.gradientMovementTransition <= 0.0 {
-//            self.gradientMovementTransitionArguments = (CACurrentMediaTime(), 1.0, false)
-//        } else if !gradientMovementReverse && self.gradientMovementTransition >= 1.0 {
-//            self.gradientMovementTransitionArguments = (CACurrentMediaTime(), 1.0, true)
-//        }
     }
     
     private func generateNextBlob(for size: CGSize) -> [CGPoint] {
@@ -474,12 +435,14 @@ private class VoiceChatActionButtonBackgroundNodeDrawingState: NSObject {
     let timestamp: Double
     let state: VoiceChatActionButtonBackgroundNodeState
     let simplified: Bool
+    let gradientMovement: CGPoint
     let transition: VoiceChatActionButtonBackgroundNodeTransitionState?
     
-    init(timestamp: Double, state: VoiceChatActionButtonBackgroundNodeState, simplified: Bool, transition: VoiceChatActionButtonBackgroundNodeTransitionState?) {
+    init(timestamp: Double, state: VoiceChatActionButtonBackgroundNodeState, simplified: Bool, gradientMovement: CGPoint, transition: VoiceChatActionButtonBackgroundNodeTransitionState?) {
         self.timestamp = timestamp
         self.state = state
         self.simplified = simplified
+        self.gradientMovement = gradientMovement
         self.transition = transition
     }
 }
@@ -489,6 +452,9 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     private var hasState = false
     private var transition: VoiceChatActionButtonBackgroundNodeTransitionContext?
     private var simplified = false
+    
+    private var gradientMovementArguments: (from: CGPoint, to: CGPoint, startTime: Double, duration: Double)?
+    private var gradientMovement = CGPoint()
     
     var audioLevel: CGFloat = 0.0  {
         didSet {
@@ -555,6 +521,29 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             }
         }
         
+        if self.gradientMovementArguments == nil {
+            self.gradientMovementArguments = (CGPoint(), CGPoint(x: 0.25, y: 0.25), CACurrentMediaTime(), 1.5)
+        }
+        if let (from, to, startTime, duration) = self.gradientMovementArguments, duration > 0.0 {
+            let progress = max(0.0, min(1.0, CGFloat((timestamp - startTime) / duration)))
+            self.gradientMovement = CGPoint(x: from.x + (to.x - from.x) * progress, y: from.y + (to.y - from.y) * progress)
+            
+            if progress < 1.0 {
+            } else {
+                var nextTo: CGPoint
+                if presentationAudioLevel > 0.3 {
+                    nextTo = CGPoint(x: CGFloat.random(in: 0.0 ..< 0.1), y: CGFloat.random(in: 0.0 ..< 0.9))
+                } else {
+                    if to.x > 0.5 {
+                        nextTo = CGPoint(x: CGFloat.random(in: 0.0 ..< 0.4), y: CGFloat.random(in: 0.0 ..< 0.6))
+                    } else {
+                        nextTo = CGPoint(x: CGFloat.random(in: 0.5 ..< 1.0), y: CGFloat.random(in: 0.0 ..< 0.7))
+                    }
+                }
+                self.gradientMovementArguments = (to, nextTo, timestamp, Double.random(in: 1.2 ..< 2.0))
+            }
+        }
+        
         if self.state.isAnimating {
             animate = true
             self.state.updateAnimations()
@@ -581,7 +570,7 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     
     override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
         let timestamp = CACurrentMediaTime()
-        return VoiceChatActionButtonBackgroundNodeDrawingState(timestamp: timestamp, state: self.state.drawingState(), simplified: self.simplified, transition: self.transition?.drawingTransitionState(time: timestamp))
+        return VoiceChatActionButtonBackgroundNodeDrawingState(timestamp: timestamp, state: self.state.drawingState(), simplified: self.simplified, gradientMovement: self.gradientMovement, transition: self.transition?.drawingTransitionState(time: timestamp))
     }
 
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -601,7 +590,9 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         let buttonSize = CGSize(width: 144.0, height: 144.0)
         let radius = buttonSize.width / 2.0
         
-        var gradientCenter = CGPoint(x: bounds.size.width - 30.0, y: 50.0)
+        var gradientCenter = CGPoint(x: bounds.size.width, y: 50.0)
+        gradientCenter.x -= 90.0 * parameters.gradientMovement.x
+        gradientCenter.y += 120.0 * parameters.gradientMovement.y
         
         var gradientTransition: CGFloat = 0.0
         var gradientImage: UIImage? = parameters.state.blueGradient

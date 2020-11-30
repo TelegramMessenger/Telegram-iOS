@@ -872,7 +872,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             let contentHeight = max(imageSize.height, layoutConstants.image.minDimensions.height)
             
-            
             var forwardSource: Peer?
             var forwardAuthorSignature: String?
             var forwardPsaType: String?
