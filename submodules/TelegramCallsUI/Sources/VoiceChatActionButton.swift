@@ -132,7 +132,6 @@ private final class Blob {
     var currentScale: CGFloat = 1.0
     var minScale: CGFloat
     var maxScale: CGFloat
-    let scaleSpeed: CGFloat
     
     private var speedLevel: CGFloat = 0.0
     private var lastSpeedLevel: CGFloat = 0.0
@@ -184,8 +183,7 @@ private final class Blob {
         minSpeed: CGFloat,
         maxSpeed: CGFloat,
         minScale: CGFloat,
-        maxScale: CGFloat,
-        scaleSpeed: CGFloat
+        maxScale: CGFloat
     ) {
         self.size = size
         self.alpha = alpha
@@ -196,7 +194,6 @@ private final class Blob {
         self.maxSpeed = maxSpeed
         self.minScale = minScale
         self.maxScale = maxScale
-        self.scaleSpeed = scaleSpeed
 
         let angle = (CGFloat.pi * 2) / CGFloat(pointsCount)
         self.smoothness = ((4 / 3) * tan(angle / 4)) / sin(angle / 2) / 2
@@ -320,8 +317,8 @@ private final class VoiceChatActionButtonBackgroundNodeBlobContext: VoiceChatAct
         let mediumBlobRange: BlobRange = (0.69, 0.87)
         let bigBlobRange: BlobRange = (0.71, 1.00)
         
-        let mediumBlob = Blob(size: size, alpha: 0.55, pointsCount: 8, minRandomness: 1, maxRandomness: 1, minSpeed: 1.5, maxSpeed: 7, minScale: mediumBlobRange.min, maxScale: mediumBlobRange.max, scaleSpeed: 0.2)
-        let largeBlob = Blob(size: size, alpha: 0.35, pointsCount: 8, minRandomness: 1, maxRandomness: 1, minSpeed: 1.5, maxSpeed: 7, minScale: bigBlobRange.min, maxScale: bigBlobRange.max, scaleSpeed: 0.2)
+        let mediumBlob = Blob(size: size, alpha: 0.55, pointsCount: 8, minRandomness: 1, maxRandomness: 1, minSpeed: 1.5, maxSpeed: 7, minScale: mediumBlobRange.min, maxScale: mediumBlobRange.max)
+        let largeBlob = Blob(size: size, alpha: 0.35, pointsCount: 8, minRandomness: 1, maxRandomness: 1, minSpeed: 1.5, maxSpeed: 7, minScale: bigBlobRange.min, maxScale: bigBlobRange.max)
  
         self.blobs = [largeBlob, mediumBlob]
     }
@@ -502,6 +499,21 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         self.updateAnimations()
     }
     
+    var isCurrentlyInHierarchy = false
+    override func didEnterHierarchy() {
+        super.didEnterHierarchy()
+        
+        self.isCurrentlyInHierarchy = true
+        self.updateAnimations()
+    }
+    
+    override func didExitHierarchy() {
+        super.didExitHierarchy()
+        
+        self.isCurrentlyInHierarchy = false
+        self.updateAnimations()
+    }
+    
     private func updateAnimations() {
         var animate = false
         let timestamp = CACurrentMediaTime()
@@ -547,6 +559,10 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         if self.state.isAnimating {
             animate = true
             self.state.updateAnimations()
+        }
+        
+        if !self.isCurrentlyInHierarchy {
+            animate = false
         }
         
         if animate {
@@ -852,7 +868,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     }
     
     func updateLevel(_ level: CGFloat) {
-        let maxLevel: CGFloat = 1.0
+        let maxLevel: CGFloat = 6.0
         let normalizedLevel = min(1, max(level / maxLevel, 0))
 
         self.backgroundNode.audioLevel = normalizedLevel
@@ -945,7 +961,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
 }
 
 extension UIBezierPath {
-    static func smoothCurve(through points: [CGPoint], length: CGFloat, smoothness: CGFloat) -> UIBezierPath {
+    static func smoothCurve(through points: [CGPoint], length: CGFloat, smoothness: CGFloat, curve: Bool = false) -> UIBezierPath {
         var smoothPoints = [SmoothPoint]()
         for index in (0 ..< points.count) {
             let prevIndex = index - 1
@@ -976,13 +992,23 @@ extension UIBezierPath {
         }
 
         let resultPath = UIBezierPath()
-        resultPath.move(to: smoothPoints[0].point)
-        for index in (0 ..< smoothPoints.count) {
+        if curve {
+            resultPath.move(to: CGPoint())
+            resultPath.addLine(to: smoothPoints[0].point)
+        } else {
+            resultPath.move(to: smoothPoints[0].point)
+        }
+
+        let smoothCount = curve ? smoothPoints.count - 1 : smoothPoints.count
+        for index in (0 ..< smoothCount) {
             let curr = smoothPoints[index]
             let next = smoothPoints[(index + 1) % points.count]
             let currSmoothOut = curr.smoothOut()
             let nextSmoothIn = next.smoothIn()
             resultPath.addCurve(to: next.point, controlPoint1: currSmoothOut, controlPoint2: nextSmoothIn)
+        }
+        if curve {
+            resultPath.addLine(to: CGPoint(x: length, y: 0.0))
         }
         resultPath.close()
         return resultPath

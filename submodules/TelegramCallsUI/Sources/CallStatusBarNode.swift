@@ -9,18 +9,28 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 
+private class CurveDrawingState: NSObject {
+    let path: UIBezierPath
+    let offset: CGFloat
+    let alpha: CGFloat
+    
+    init(path: UIBezierPath, offset: CGFloat, alpha: CGFloat) {
+        self.path = path
+        self.offset = offset
+        self.alpha = alpha
+    }
+}
+
 private class CallStatusBarBackgroundNodeDrawingState: NSObject {
     let timestamp: Double
-    let amplitude: CGFloat
-    let phase: CGFloat
+    let curves: [CurveDrawingState]
     let speaking: Bool
     let gradientTransition: CGFloat
     let gradientMovement: CGFloat
     
-    init(timestamp: Double, amplitude: CGFloat, phase: CGFloat, speaking: Bool, gradientTransition: CGFloat, gradientMovement: CGFloat) {
+    init(timestamp: Double, curves: [CurveDrawingState], speaking: Bool, gradientTransition: CGFloat, gradientMovement: CGFloat) {
         self.timestamp = timestamp
-        self.amplitude = amplitude
-        self.phase = phase
+        self.curves = curves
         self.speaking = speaking
         self.gradientTransition = gradientTransition
         self.gradientMovement = gradientMovement
@@ -37,11 +47,11 @@ private final class Curve {
     let minSpeed: CGFloat
     let maxSpeed: CGFloat
 
-    let size: CGSize
+    var size: CGSize
+    let alpha: CGFloat
     var currentOffset: CGFloat = 1.0
     var minOffset: CGFloat = 0.0
     var maxOffset: CGFloat = 2.0
-    let scaleSpeed: CGFloat
     
     private var speedLevel: CGFloat = 0.0
     private var lastSpeedLevel: CGFloat = 0.0
@@ -62,14 +72,14 @@ private final class Curve {
     private var transition: CGFloat = 0 {
         didSet {
             if let currentPoints = self.currentPoints {
-                self.currentShape = UIBezierPath.smoothCurve(through: currentPoints, length: size.width, smoothness: smoothness)
+                self.currentShape = UIBezierPath.smoothCurve(through: currentPoints, length: size.width, smoothness: smoothness, curve: true)
             }
         }
     }
     
     var level: CGFloat = 0.0 {
         didSet {
-            self.currentOffset = self.minOffset + (self.maxOffset - self.minOffset) * self.level
+            self.currentOffset = min(self.maxOffset, max(self.minOffset, self.minOffset + (self.maxOffset - self.minOffset) * self.level))
         }
     }
     
@@ -86,17 +96,17 @@ private final class Curve {
     
     init(
         size: CGSize,
+        alpha: CGFloat,
         pointsCount: Int,
         minRandomness: CGFloat,
         maxRandomness: CGFloat,
         minSpeed: CGFloat,
         maxSpeed: CGFloat,
         minOffset: CGFloat,
-        maxOffset: CGFloat,
-        scaleSpeed: CGFloat
+        maxOffset: CGFloat
     ) {
         self.size = size
-//        self.alpha = alpha
+        self.alpha = alpha
         self.pointsCount = pointsCount
         self.minRandomness = minRandomness
         self.maxRandomness = maxRandomness
@@ -104,7 +114,6 @@ private final class Curve {
         self.maxSpeed = maxSpeed
         self.minOffset = minOffset
         self.maxOffset = maxOffset
-        self.scaleSpeed = scaleSpeed
 
         let angle = (CGFloat.pi * 2) / CGFloat(pointsCount)
         self.smoothness = ((4 / 3) * tan(angle / 4)) / sin(angle / 2) / 2
@@ -147,13 +156,11 @@ private final class Curve {
     }
     
     func updateAnimations() {
-        var animate = false
         let timestamp = CACurrentMediaTime()
 
         if let (startTime, duration) = self.transitionArguments, duration > 0.0 {
             self.transition = max(0.0, min(1.0, CGFloat((timestamp - startTime) / duration)))
             if self.transition < 1.0 {
-                animate = true
             } else {
                 if self.loop {
                     self.animateToNewShape()
@@ -169,13 +176,13 @@ private final class Curve {
     
     private func generateNextCurve(for size: CGSize) -> [CGPoint] {
         let randomness = minRandomness + (maxRandomness - minRandomness) * speedLevel
-        return blob(pointsCount: pointsCount, randomness: randomness).map {
-            return CGPoint(x: size.width / 2.0 + $0.x * CGFloat(size.width), y: size.height / 2.0 + $0.y * CGFloat(size.height))
+        return curve(pointsCount: pointsCount, randomness: randomness).map {
+            return CGPoint(x: $0.x * CGFloat(size.width), y: size.height - 14.0 + $0.y * 12.0)
         }
     }
 
-    private func blob(pointsCount: Int, randomness: CGFloat) -> [CGPoint] {
-        let angle = (CGFloat.pi * 2) / CGFloat(pointsCount)
+    private func curve(pointsCount: Int, randomness: CGFloat) -> [CGPoint] {
+        let segment = 1.0 / CGFloat(pointsCount)
 
         let rgen = { () -> CGFloat in
             let accuracy: UInt32 = 1000
@@ -184,15 +191,27 @@ private final class Curve {
         }
         let rangeStart: CGFloat = 1.0 / (1.0 + randomness / 10.0)
 
-        let startAngle = angle * CGFloat(arc4random_uniform(100)) / CGFloat(100)
-
         let points = (0 ..< pointsCount).map { i -> CGPoint in
             let randPointOffset = (rangeStart + CGFloat(rgen()) * (1 - rangeStart)) / 2
-            let angleRandomness: CGFloat = angle * 0.1
-            let randAngle = angle + angle * ((angleRandomness * CGFloat(arc4random_uniform(100)) / CGFloat(100)) - angleRandomness * 0.5)
-            let pointX = sin(startAngle + CGFloat(i) * randAngle)
-            let pointY = cos(startAngle + CGFloat(i) * randAngle)
-            return CGPoint(x: pointX * randPointOffset, y: pointY * randPointOffset)
+            let segmentRandomness: CGFloat = randomness
+
+            let pointX: CGFloat
+            let pointY: CGFloat
+            let randomXDelta: CGFloat
+            if i == 0 {
+                pointX = 0.0
+                pointY = 0.0
+                randomXDelta = 0.0
+            } else if i == pointsCount - 1 {
+                pointX = 1.0
+                pointY = 0.0
+                randomXDelta = 0.0
+            } else {
+                pointX = segment * CGFloat(i)
+                pointY = cos(segment * CGFloat(i)) * ((segmentRandomness * CGFloat(arc4random_uniform(100)) / CGFloat(100)) - segmentRandomness * 0.5) * randPointOffset
+                randomXDelta = segment - segment * randPointOffset
+            }
+            return CGPoint(x: pointX + randomXDelta, y: pointY)
         }
 
         return points
@@ -202,9 +221,18 @@ private final class Curve {
 private class CallStatusBarBackgroundNode: ASDisplayNode {
     var muted = true
     
-    var audioLevel: Float = 0.0
+    var audioLevel: Float = 0.0 {
+        didSet {
+            for curve in self.curves {
+                curve.loop = audioLevel.isZero
+                curve.updateSpeedLevel(to: CGFloat(self.audioLevel))
+            }
+        }
+    }
     var presentationAudioLevel: CGFloat = 0.0
-    var phase: CGFloat = 0.0
+    
+    typealias CurveRange = (min: CGFloat, max: CGFloat)
+    let curves: [Curve]
     
     private var gradientMovementArguments: (from: CGFloat, to: CGFloat, startTime: Double, duration: Double)?
     private var gradientMovement: CGFloat = 0.0
@@ -221,8 +249,19 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
     private var animator: ConstantDisplayLinkAnimator?
     
     override init() {
+        let smallCurveRange: CurveRange = (0.0, 0.0)
+        let mediumCurveRange: CurveRange = (0.1, 0.55)
+        let bigCurveRange: CurveRange = (0.1, 1.0)
+        
+        let size = CGSize(width: 375.0, height: 44.0)
+        let smallCurve = Curve(size: size, alpha: 1.0, pointsCount: 10, minRandomness: 1, maxRandomness: 1, minSpeed: 1.5, maxSpeed: 7, minOffset: smallCurveRange.min, maxOffset: smallCurveRange.max)
+        let mediumCurve = Curve(size: size, alpha: 0.55, pointsCount: 10, minRandomness: 1, maxRandomness: 2, minSpeed: 1.5, maxSpeed: 7, minOffset: mediumCurveRange.min, maxOffset: mediumCurveRange.max)
+        let largeCurve = Curve(size: size, alpha: 0.35, pointsCount: 10, minRandomness: 1, maxRandomness: 2, minSpeed: 1.5, maxSpeed: 7, minOffset: bigCurveRange.min, maxOffset: bigCurveRange.max)
+
+        self.curves = [smallCurve, mediumCurve, largeCurve]
+        
         super.init()
-                
+        
         self.isOpaque = false
         
         self.updateAnimations()
@@ -230,6 +269,9 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
     
     func updateAnimations() {
         self.presentationAudioLevel = self.presentationAudioLevel * 0.9 + max(0.1, CGFloat(self.audioLevel)) * 0.1
+        for curve in self.curves {
+            curve.level = self.presentationAudioLevel
+        }
         
         if self.gradientMovementArguments == nil {
             self.gradientMovementArguments = (0.0, 0.7, CACurrentMediaTime(), 1.0)
@@ -266,8 +308,19 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
         }
         animator.isPaused = false
         
-        self.phase -= 0.05
+        for curve in self.curves {
+            curve.updateAnimations()
+        }
+        
         self.setNeedsDisplay()
+    }
+    
+    override var frame: CGRect {
+        didSet {
+            for curve in self.curves {
+                curve.size = self.frame.size
+            }
+        }
     }
     
     override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
@@ -282,7 +335,14 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
             }
         }
         
-        return CallStatusBarBackgroundNodeDrawingState(timestamp: timestamp, amplitude: self.presentationAudioLevel, phase: self.phase, speaking: self.speaking, gradientTransition: gradientTransition, gradientMovement: self.gradientMovement)
+        var curves: [CurveDrawingState] = []
+        for curve in self.curves {
+            if let path = curve.currentShape?.copy() as? UIBezierPath {
+                curves.append(CurveDrawingState(path: path, offset: curve.currentOffset, alpha: curve.alpha))
+            }
+        }
+        
+        return CallStatusBarBackgroundNodeDrawingState(timestamp: timestamp, curves: curves, speaking: self.speaking, gradientTransition: gradientTransition, gradientMovement: self.gradientMovement)
     }
 
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -298,6 +358,8 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
             return
         }
         
+        context.setBlendMode(.normal)
+        
         var locations: [CGFloat] = [0.0, 1.0]
         let leftColor = UIColor(rgb: 0x007fff).interpolateTo(UIColor(rgb: 0x2bb76b), fraction: parameters.gradientTransition)!
         let rightColor = UIColor(rgb: 0x00afff).interpolateTo(UIColor(rgb: 0x007fff), fraction: parameters.gradientTransition)!
@@ -306,54 +368,24 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
        
-        let position: CGFloat = bounds.height - 6.0
-        let maxAmplitude: CGFloat = 12.0
-        
-        let amplitude = max(0.35, parameters.amplitude)
-        
-        func drawWave(_ index: Int, maxAmplitude: CGFloat, normalizedAmplitude: CGFloat) {
-            let path = UIBezierPath()
-            let mid = bounds.width / 2.0
+        var i = 0
+        for curve in parameters.curves.reversed() {
+            context.saveGState()
             
-            var offset: CGFloat = 0.0
-            if index > 0 {
-                offset = 3.0 * parameters.amplitude * CGFloat(index)
+            let path = curve.path
+            if i < 2 {
+                let transform = CGAffineTransform(translationX: 0.0, y: min(1.0, curve.offset) * 16.0)
+                path.apply(transform)
             }
-            
-            let frequency: CGFloat = 3.5
-            let density: CGFloat = 2.0
-            for x in stride(from: 0.0, to: bounds.width + density, by: density) {
-                let scaling = -pow(1 / mid * (x - mid), 2) + 1
-                let y = scaling * maxAmplitude * normalizedAmplitude * sin(CGFloat(2 * Double.pi) * frequency * (x / bounds.width)  + parameters.phase) + position + offset
-                if x == 0 {
-                    path.move(to: CGPoint())
-                }
-                path.addLine(to: CGPoint(x: x, y: y))
-            }
-            path.addLine(to: CGPoint(x: bounds.width, y: 0.0))
-            path.close()
             
             context.addPath(path.cgPath)
             context.clip()
-        }
-        
-        for i in (0 ..< 3).reversed() {
-            let progress = 1.0 - CGFloat(i) / 3.0
-            var normalizedAmplitude = (1.5 * progress - 0.8) * amplitude
-            if i == 1 {
-                normalizedAmplitude *= -1.0
-            }
-        
-            context.saveGState()
-            drawWave(i, maxAmplitude: maxAmplitude, normalizedAmplitude: normalizedAmplitude)
             
-            if i == 1 {
-                context.setFillColor(UIColor(rgb: 0x007fff, alpha: 0.3).cgColor)
-                context.fill(bounds)
-            } else {
-                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: bounds.width + parameters.gradientMovement * bounds.width, y: 0.0), options: CGGradientDrawingOptions())
-            }
+            context.setAlpha(curve.alpha)
+            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: bounds.width + parameters.gradientMovement * bounds.width, y: 0.0), options: CGGradientDrawingOptions())
+            
             context.restoreGState()
+            i += 1
         }
     }
 }
@@ -457,16 +489,20 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
                             strongSelf.update()
                         }
                     }))
-                    self.audioLevelDisposable.set((call.myAudioLevel
-                    |> deliverOnMainQueue).start(next: { [weak self] level in
+                    self.audioLevelDisposable.set((combineLatest(call.myAudioLevel, .single([]) |> then(call.audioLevels))
+                    |> deliverOnMainQueue).start(next: { [weak self] myAudioLevel, audioLevels in
                         guard let strongSelf = self else {
                             return
                         }
                         var effectiveLevel: Float = 0.0
+                        let maxLevel: Float = 3.0
                         if !strongSelf.currentIsMuted {
-                            effectiveLevel = level
+                            effectiveLevel = min(1.0, max(myAudioLevel / maxLevel, 0))
+                        } else {
+                            let level = audioLevels.map { $0.1 }.max() ?? 0.0
+                            effectiveLevel = min(1.0, max(level / maxLevel, 0))
                         }
-                        strongSelf.backgroundNode.audioLevel = max(0.0, min(1.0, effectiveLevel / 8.0))
+                        strongSelf.backgroundNode.audioLevel = effectiveLevel
                     }))
             }
             self.didSetupData = true
@@ -509,6 +545,6 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         self.subtitleNode.frame = CGRect(origin: CGPoint(x: horizontalOrigin + animationSize + iconSpacing + titleSize.width + spacing, y: verticalOrigin + floor((contentHeight - subtitleSize.height) / 2.0)), size: subtitleSize)
         
         self.backgroundNode.speaking = !self.currentIsMuted
-        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + 7.0))
+        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + 14.0))
     }
 }
