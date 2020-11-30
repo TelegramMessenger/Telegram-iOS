@@ -2625,7 +2625,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.CanAddAdmins" = "Add New Admins";
 "Channel.AdminLog.CanBeAnonymous" = "Remain Anonymous";
 "Channel.AdminLog.CanEditMessages" = "Edit Messages";
-"Channel.AdminLog.CanManageCalls" = "Manage Calls";
+"Channel.AdminLog.CanManageCalls" = "Manage Voice Chats";
 
 "Channel.AdminLog.MessageToggleInvitesOn" = "%@ enabled group invites";
 "Channel.AdminLog.MessageToggleInvitesOff" = "%@ disabled group invites";
