@@ -13,7 +13,7 @@ private let green = UIColor(rgb: 0x33c659)
 private let deviceScale = UIScreen.main.scale
 private let colorSpace = CGColorSpaceCreateDeviceRGB()
 
-private let radialMaskImage = generateImage(CGSize(width: 300.0, height: 300.0), contextGenerator: { size, context in
+private let radialMaskImage = generateImage(CGSize(width: 200.0, height: 200.0), contextGenerator: { size, context in
     context.clear(CGRect(origin: CGPoint(), size: size))
     var locations: [CGFloat] = [0.0, 1.0]
         
@@ -22,7 +22,7 @@ private let radialMaskImage = generateImage(CGSize(width: 300.0, height: 300.0),
     let maskGradientCenter = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
 
     context.drawRadialGradient(maskGradient, startCenter: maskGradientCenter, startRadius: 0.0, endCenter: maskGradientCenter, endRadius: size.width / 2.0, options: .drawsAfterEndLocation)
-}, opaque: false, scale: deviceScale)!
+}, opaque: false, scale: 1.0)!
 
 enum VoiceChatActionButtonState {
     enum ActiveState {
@@ -51,17 +51,10 @@ private protocol VoiceChatActionButtonBackgroundNodeContext {
 }
 
 private protocol VoiceChatActionButtonBackgroundNodeState: NSObjectProtocol {
-    var blueGradient: UIImage? { get set }
-    var greenGradient: UIImage? { get set }
+
 }
 
 private final class VoiceChatActionButtonBackgroundNodeConnectingContext: VoiceChatActionButtonBackgroundNodeContext {
-    var blueGradient: UIImage?
-    
-    init(blueGradient: UIImage?) {
-        self.blueGradient = blueGradient
-    }
-    
     var isAnimating: Bool {
         return true
     }
@@ -78,17 +71,12 @@ private final class VoiceChatActionButtonBackgroundNodeConnectingContext: VoiceC
     }
     
     func drawingState(transition: VoiceChatActionButtonBackgroundNodeTransitionState?) -> VoiceChatActionButtonBackgroundNodeState {
-        return VoiceChatActionButtonBackgroundNodeConnectingState(blueGradient: self.blueGradient)
+        return VoiceChatActionButtonBackgroundNodeConnectingState()
     }
 }
 
 private final class VoiceChatActionButtonBackgroundNodeConnectingState: NSObject, VoiceChatActionButtonBackgroundNodeState {
-    var blueGradient: UIImage?
-    var greenGradient: UIImage?
-    
-    init(blueGradient: UIImage?) {
-        self.blueGradient = blueGradient
-    }
+
 }
 
 private final class VoiceChatActionButtonBackgroundNodeDisabledContext: VoiceChatActionButtonBackgroundNodeContext {
@@ -113,8 +101,7 @@ private final class VoiceChatActionButtonBackgroundNodeDisabledContext: VoiceCha
 }
 
 private final class VoiceChatActionButtonBackgroundNodeDisabledState: NSObject, VoiceChatActionButtonBackgroundNodeState {
-    var blueGradient: UIImage?
-    var greenGradient: UIImage?
+
 }
 
 private final class Blob {
@@ -287,9 +274,6 @@ private final class Blob {
 }
 
 private final class VoiceChatActionButtonBackgroundNodeBlobContext: VoiceChatActionButtonBackgroundNodeContext {
-    var blueGradient: UIImage?
-    var greenGradient: UIImage?
-    
     var isAnimating: Bool {
         return true
     }
@@ -309,12 +293,10 @@ private final class VoiceChatActionButtonBackgroundNodeBlobContext: VoiceChatAct
     typealias BlobRange = (min: CGFloat, max: CGFloat)
     let blobs: [Blob]
     
-    init(size: CGSize, active: Bool, blueGradient: UIImage, greenGradient: UIImage) {
+    init(size: CGSize, active: Bool) {
         self.size = size
         self.active = active
-        self.blueGradient = blueGradient
-        self.greenGradient = greenGradient
-        
+
         let mediumBlobRange: BlobRange = (0.69, 0.87)
         let bigBlobRange: BlobRange = (0.71, 1.00)
         
@@ -368,7 +350,7 @@ private final class VoiceChatActionButtonBackgroundNodeBlobContext: VoiceChatAct
                 blobs.append(BlobDrawingState(size: blob.size, path: path.cgPath, scale: blob.currentScale, alpha: blob.alpha))
             }
         }
-        return VoiceChatActionButtonBackgroundNodeBlobState(size: self.size, active: self.active, activeTransitionArguments: self.activeTransitionArguments, blueGradient: self.blueGradient, greenGradient: self.greenGradient, blobs: blobs)
+        return VoiceChatActionButtonBackgroundNodeBlobState(size: self.size, active: self.active, activeTransitionArguments: self.activeTransitionArguments, blobs: blobs)
     }
 }
 
@@ -387,19 +369,13 @@ private class BlobDrawingState: NSObject {
 }
 
 private final class VoiceChatActionButtonBackgroundNodeBlobState: NSObject, VoiceChatActionButtonBackgroundNodeState {
-    var blueGradient: UIImage?
-    var greenGradient: UIImage?
-        
     let active: Bool
     let activeTransitionArguments: (startTime: Double, duration: Double)?
-    
     let blobs: [BlobDrawingState]
     
-    init(size: CGSize, active: Bool, activeTransitionArguments: (startTime: Double, duration: Double)?, blueGradient: UIImage?, greenGradient: UIImage?, blobs: [BlobDrawingState]) {
+    init(size: CGSize, active: Bool, activeTransitionArguments: (startTime: Double, duration: Double)?, blobs: [BlobDrawingState]) {
         self.active = active
         self.activeTransitionArguments = activeTransitionArguments
-        self.blueGradient = blueGradient
-        self.greenGradient = greenGradient
         self.blobs = blobs
     }
 }
@@ -436,9 +412,16 @@ private final class VoiceChatActionButtonBackgroundNodeTransitionContext {
         }
     }
     
+    func transition(time: Double) -> CGFloat {
+        var transition = CGFloat(max(0.0, min(1.0, (time - startTime) / duration)))
+        if previousState.type == .connecting {
+            transition *= transition
+        }
+        return transition
+    }
+    
     func drawingTransitionState(time: Double) -> VoiceChatActionButtonBackgroundNodeTransitionState {
-        let transition = CGFloat(max(0.0, min(1.0, (time - startTime) / duration)))
-        return VoiceChatActionButtonBackgroundNodeTransitionState(startTime: self.startTime, transition: transition, previousState: previousState.type)
+        return VoiceChatActionButtonBackgroundNodeTransitionState(startTime: self.startTime, transition: self.transition(time: time), previousState: previousState.type)
     }
 }
 
@@ -482,10 +465,11 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
     private var animator: ConstantDisplayLinkAnimator?
     
     override init() {
-        self.state = VoiceChatActionButtonBackgroundNodeConnectingContext(blueGradient: nil)
+        self.state = VoiceChatActionButtonBackgroundNodeConnectingContext()
         
         super.init()
         
+        self.isLayerBacked = true
         self.isOpaque = false
         self.displaysAsynchronously = true
     }
@@ -503,7 +487,15 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         
         if state.type != self.state.type || !hadState {
             if animated {
-                self.transition = VoiceChatActionButtonBackgroundNodeTransitionContext(startTime: CACurrentMediaTime(), duration: 0.45, previousState: self.state)
+                let duration: Double
+                if self.state.type == .connecting {
+                    duration = 0.7
+                } else if self.state.type == .disabled {
+                    duration = 0.3
+                } else {
+                    duration = 0.3
+                }
+                self.transition = VoiceChatActionButtonBackgroundNodeTransitionContext(startTime: CACurrentMediaTime(), duration: duration, previousState: self.state)
             }
             self.state = state
         } else if let blobState = self.state as? VoiceChatActionButtonBackgroundNodeBlobContext, let nextState = state as? VoiceChatActionButtonBackgroundNodeBlobContext {
@@ -590,7 +582,7 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                 self.animator = animator
             }
             animator.isPaused = false
-            if self.transition == nil {
+            if self.transition == nil || self.transition!.transition(time: timestamp) > 0.5 {
                 animator.frameInterval = state.frameInterval
             }
         } else {
@@ -608,13 +600,7 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
 
     @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
         let context = UIGraphicsGetCurrentContext()!
-        
-        if !isRasterizing {
-            context.setBlendMode(.copy)
-            context.setFillColor(UIColor.clear.cgColor)
-            context.fill(bounds)
-        }
-
+                
         guard let parameters = parameters as? VoiceChatActionButtonBackgroundNodeDrawingState else {
             return
         }
@@ -641,7 +627,7 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         if let transition = parameters.transition, transition.previousState == .connecting || transition.previousState == .disabled {
             appearanceProgress = transition.transition
         }
-                        
+                 
         let width: Int = Int(bounds.width * deviceScale)
         let height: Int = Int(bounds.height * deviceScale)
         let bytesPerRow = width
@@ -659,7 +645,13 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         maskContext.interpolationQuality = .low
         maskContext.scaleBy(x: CGFloat(width) / bounds.width, y: CGFloat(height) / bounds.height)
         
-        if let blobsState = parameters.state as? VoiceChatActionButtonBackgroundNodeBlobState {
+        var skipBlobs = false
+        if parameters.state is VoiceChatActionButtonBackgroundNodeBlobState, let transition = parameters.transition, transition.previousState == .connecting, transition.transition < 0.5 {
+            skipBlobs = true
+        }
+        
+        var drawGradient = false
+        if let blobsState = parameters.state as? VoiceChatActionButtonBackgroundNodeBlobState, !skipBlobs {
             gradientTransition = blobsState.active ? 1.0 : 0.0
             if let transition = blobsState.activeTransitionArguments {
                 gradientTransition = CGFloat((parameters.timestamp - transition.startTime) / transition.duration)
@@ -669,27 +661,24 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             }
             glowScale += gradientTransition * 0.3
             
+            simpleColor = blue.interpolateTo(green, fraction: gradientTransition)!
             firstColor = firstColor.interpolateTo(blue, fraction: gradientTransition)!
             secondColor = secondColor.interpolateTo(green, fraction: gradientTransition)!
             
             let progress = 1.0 - (appearanceProgress * glowScale)
             let maskBounds = bounds.insetBy(dx: bounds.width / 3.0 * progress,  dy: bounds.width / 3.0 * progress)
-            
             if let radialMask = radialMaskImage.cgImage {
                 maskContext.setBlendMode(.copy)
                 maskContext.draw(radialMask, in: maskBounds)
                 maskContext.setBlendMode(.normal)
             }
-        }
-
-        var drawGradient = false
-        if let blobsState = parameters.state as? VoiceChatActionButtonBackgroundNodeBlobState {
-            drawGradient = true
+  
             for blob in blobsState.blobs {
                 maskContext.addPath(blob.path)
                 maskContext.setFillColor(UIColor(rgb: 0xffffff, alpha: blob.alpha).cgColor)
                 maskContext.fillPath()
             }
+            drawGradient = true
         }
         
         var skipProgressDrawing = true
@@ -748,9 +737,7 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         
         var clearInsideTransition: CGFloat?
         if parameters.state is VoiceChatActionButtonBackgroundNodeBlobState {
-            if !skipProgressDrawing {
-                
-            } else {
+            if skipProgressDrawing {
                 maskContext.setFillColor(UIColor(rgb: 0xffffff).cgColor)
                 maskContext.fillEllipse(in: buttonRect.insetBy(dx: -lineWidth / 2.0, dy: -lineWidth / 2.0))
             }
@@ -768,7 +755,7 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         
         context.setFillColor(greyColor.cgColor)
         context.fillEllipse(in: buttonRect)
-                
+
         if drawGradient {
             context.saveGState()
             if let alphaMask = maskContext.makeImage() {
@@ -783,7 +770,7 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                 var locations: [CGFloat] = [0.0, 1.0]
                 let gradientStartRadius: CGFloat = 0.0
                 let gradientEndRadius: CGFloat = 141.0
-                
+
                 let colors: [CGColor] = [firstColor.cgColor, secondColor.cgColor]
                 let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
                 context.drawRadialGradient(gradient, startCenter: gradientCenter, startRadius: gradientStartRadius, endCenter: gradientCenter, endRadius: gradientEndRadius, options: .drawsAfterEndLocation)
@@ -793,8 +780,10 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
 
         if let transition = clearInsideTransition {
             context.setFillColor(greyColor.cgColor)
-            context.fillEllipse(in: buttonRect.insetBy(dx: transition * radius, dy: transition * radius))
+            context.fillEllipse(in: buttonRect.insetBy(dx: lineWidth / 2.0 + transition * radius, dy: lineWidth / 2.0 + transition * radius))
         }
+        
+//        print("drawn in \(CACurrentMediaTime() - start)")
     }
 }
 
@@ -804,10 +793,7 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
     let iconNode: VoiceChatMicrophoneNode
     let titleLabel: ImmediateTextNode
     let subtitleLabel: ImmediateTextNode
-    
-    let blueGradient: UIImage
-    let greenGradient: UIImage
-    
+        
     private var currentParams: (size: CGSize, buttonSize: CGSize, state: VoiceChatActionButtonState, title: String, subtitle: String)?
     
     var pressing: Bool = false {
@@ -829,34 +815,6 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
         
         self.titleLabel = ImmediateTextNode()
         self.subtitleLabel = ImmediateTextNode()
-        
-        self.blueGradient = generateImage(CGSize(width: 180.0, height: 180.0), contextGenerator: { size, context in
-            let firstColor = lightBlue
-            let secondColor = blue
-
-            var locations: [CGFloat] = [0.0, 1.0]
-            let gradientCenter = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
-            let gradientStartRadius: CGFloat = 0.0
-            let gradientEndRadius: CGFloat = 85.0
-            
-            let colors: [CGColor] = [firstColor.cgColor, secondColor.cgColor]
-            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-            context.drawRadialGradient(gradient, startCenter: gradientCenter, startRadius: gradientStartRadius, endCenter: gradientCenter, endRadius: gradientEndRadius, options: .drawsAfterEndLocation)
-        }, opaque: true, scale: min(2.0, deviceScale))!
-        
-        self.greenGradient = generateImage(CGSize(width: 180.0, height: 180.0), contextGenerator: { size, context in
-            let firstColor = blue
-            let secondColor = green
-
-            var locations: [CGFloat] = [0.0, 1.0]
-            let gradientCenter = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
-            let gradientStartRadius: CGFloat = 0.0
-            let gradientEndRadius: CGFloat = 85.0
-            
-            let colors: [CGColor] = [firstColor.cgColor, secondColor.cgColor]
-            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-            context.drawRadialGradient(gradient, startCenter: gradientCenter, startRadius: gradientStartRadius, endCenter: gradientCenter, endRadius: gradientEndRadius, options: .drawsAfterEndLocation)
-        }, opaque: true, scale: min(2.0, deviceScale))!
         
         super.init()
     
@@ -906,15 +864,15 @@ final class VoiceChatActionButton: HighlightTrackingButtonNode {
                 switch state {
                     case .on:
                         iconMuted = false
-                        backgroundState = VoiceChatActionButtonBackgroundNodeBlobContext(size: blobSize, active: true, blueGradient: self.blueGradient, greenGradient: self.greenGradient)
+                        backgroundState = VoiceChatActionButtonBackgroundNodeBlobContext(size: blobSize, active: true)
                     case .muted:
-                        backgroundState = VoiceChatActionButtonBackgroundNodeBlobContext(size: blobSize, active: false, blueGradient: self.blueGradient, greenGradient: self.greenGradient)
+                        backgroundState = VoiceChatActionButtonBackgroundNodeBlobContext(size: blobSize, active: false)
                     case .cantSpeak:
                         iconColor = UIColor(rgb: 0xff3b30)
                         backgroundState = VoiceChatActionButtonBackgroundNodeDisabledContext()
                 }
             case .connecting:
-                backgroundState = VoiceChatActionButtonBackgroundNodeConnectingContext(blueGradient: self.blueGradient)
+                backgroundState = VoiceChatActionButtonBackgroundNodeConnectingContext()
         }
         self.backgroundNode.update(state: backgroundState, simplified: simplified, animated: true)
 
