@@ -576,7 +576,9 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
                 self.animator = animator
             }
             animator.isPaused = false
-            animator.frameInterval = state.frameInterval
+            if self.transition == nil {
+                animator.frameInterval = state.frameInterval
+            }
         } else {
             self.animator?.isPaused = true
         }
@@ -619,7 +621,7 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
         
         var appearanceProgress: CGFloat = 1.0
         var glowScale: CGFloat = 0.75
-        if let transition = parameters.transition, transition.previousState == .connecting {
+        if let transition = parameters.transition, transition.previousState == .connecting || transition.previousState == .disabled {
             appearanceProgress = transition.transition
         }
         
@@ -751,15 +753,18 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             }
         }
         
-        var clearInside: CGFloat?
+        var clearInsideTransition: CGFloat?
         if parameters.state is VoiceChatActionButtonBackgroundNodeBlobState {
             let path = CGMutablePath()
             path.addEllipse(in: buttonRect.insetBy(dx: -lineWidth / 2.0, dy: -lineWidth / 2.0))
             context.addPath(path)
             context.clip()
-            if let transition = parameters.transition, transition.previousState == .connecting || transition.previousState == .disabled, transition.transition > 0.5 {
-                let progress = (transition.transition - 0.5) / 0.5
-                clearInside = progress
+            if let transition = parameters.transition {
+                if transition.previousState == .connecting, transition.transition > 0.5  {
+                    clearInsideTransition = (transition.transition - 0.5) / 0.5
+                } else if transition.previousState == .disabled {
+                    clearInsideTransition = transition.transition
+                }
             }
             
             drawGradient = true
@@ -774,9 +779,9 @@ private class VoiceChatActionButtonBackgroundNode: ASDisplayNode {
             }
         }
         
-        if let clearInside = clearInside {
+        if let transition = clearInsideTransition {
             context.setFillColor(greyColor.cgColor)
-            context.fillEllipse(in: buttonRect.insetBy(dx: clearInside * radius, dy: clearInside * radius))
+            context.fillEllipse(in: buttonRect.insetBy(dx: transition * radius, dy: transition * radius))
         }
     }
 }

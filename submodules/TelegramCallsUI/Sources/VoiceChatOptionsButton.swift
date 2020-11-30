@@ -14,14 +14,14 @@ func optionsButtonImage() -> UIImage? {
     })
 }
 
-final class VoiceChatOptionsButton: HighlightableButtonNode {
+final class VoiceChatOptionsButton: ASDisplayNode {
     let extractedContainerNode: ContextExtractedContentContainingNode
     let containerNode: ContextControllerSourceNode
     private let iconNode: ASImageNode
     
     var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
-    init() {
+    override init() {
         self.extractedContainerNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
         self.containerNode.isGestureEnabled = false

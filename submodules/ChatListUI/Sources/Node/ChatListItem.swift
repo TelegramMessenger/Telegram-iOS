@@ -1353,7 +1353,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 case let .peer(_, renderedPeer, _, _, presence, _ ,_ ,_, _, _, displayAsMessage, _):
                     if !displayAsMessage {
                         if let peer = renderedPeer.peer as? TelegramUser, let presence = presence as? TelegramUserPresence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != item.context.account.peerId {
-                            var updatedPresence = TelegramUserPresence(status: presence.status, lastActivity: 0)
+                            let updatedPresence = TelegramUserPresence(status: presence.status, lastActivity: 0)
                             let relativeStatus = relativeUserPresenceStatus(updatedPresence, relativeTo: timestamp)
                             if case .online = relativeStatus {
                                 online = true
@@ -1361,10 +1361,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             animateOnline = true
                         } else if let channel = renderedPeer.peer as? TelegramChannel {
                             onlineIsVoiceChat = true
-                            if channel.flags.contains(.hasVoiceChat) {
+                            if channel.flags.contains(.hasVoiceChat) && item.interaction.searchTextHighightState == nil {
                                 online = true
-                                animateOnline = true
                             }
+                            animateOnline = true
                         }
                     }
                     

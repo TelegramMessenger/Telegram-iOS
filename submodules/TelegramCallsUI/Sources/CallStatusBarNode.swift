@@ -47,7 +47,15 @@ private final class Curve {
     let minSpeed: CGFloat
     let maxSpeed: CGFloat
 
-    var size: CGSize
+    var size: CGSize {
+        didSet {
+            if self.size != oldValue {
+                self.fromPoints = nil
+                self.toPoints = nil
+                self.animateToNewShape()
+            }
+        }
+    }
     let alpha: CGFloat
     var currentOffset: CGFloat = 1.0
     var minOffset: CGFloat = 0.0
@@ -177,7 +185,7 @@ private final class Curve {
     private func generateNextCurve(for size: CGSize) -> [CGPoint] {
         let randomness = minRandomness + (maxRandomness - minRandomness) * speedLevel
         return curve(pointsCount: pointsCount, randomness: randomness).map {
-            return CGPoint(x: $0.x * CGFloat(size.width), y: size.height - 14.0 + $0.y * 12.0)
+            return CGPoint(x: $0.x * CGFloat(size.width), y: size.height - 17.0 + $0.y * 12.0)
         }
     }
 
@@ -545,6 +553,6 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         self.subtitleNode.frame = CGRect(origin: CGPoint(x: horizontalOrigin + animationSize + iconSpacing + titleSize.width + spacing, y: verticalOrigin + floor((contentHeight - subtitleSize.height) / 2.0)), size: subtitleSize)
         
         self.backgroundNode.speaking = !self.currentIsMuted
-        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + 14.0))
+        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height + 17.0))
     }
 }

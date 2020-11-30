@@ -71,6 +71,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     
     let titleNode: ImmediateTextNode
     let textNode: ImmediateTextNode
+    private var textIsActive = false
     private let muteIconNode: ASImageNode
     
     private let avatarsContext: AnimatedAvatarSetContext
@@ -229,6 +230,22 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.muteIconNode.image = PresentationResourcesChat.chatTitleMuteIcon(presentationData.theme)
     }
     
+    private func animateTextChange() {
+        if let snapshotView = self.textNode.view.snapshotContentTree() {
+            let offset: CGFloat = self.textIsActive ? -7.0 : 7.0
+            self.textNode.view.superview?.insertSubview(snapshotView, belowSubview: self.textNode.view)
+
+            snapshotView.frame = self.textNode.frame
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                snapshotView?.removeFromSuperview()
+            })
+            snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -offset), duration: 0.2, removeOnCompletion: false, additive: true)
+            
+            self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.textNode.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: 0.2, additive: true)
+        }
+    }
+    
     public func update(data: GroupCallPanelData) {
         let previousData = self.currentData
         self.currentData = data
@@ -269,6 +286,11 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                             membersText = strongSelf.strings.VoiceChat_Panel_Members(Int32(summaryState.participantCount))
                         }
                         membersTextIsActive = false
+                    }
+                    
+                    if strongSelf.textIsActive != membersTextIsActive {
+                        strongSelf.textIsActive = membersTextIsActive
+                        strongSelf.animateTextChange()
                     }
                     
                     strongSelf.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: membersTextIsActive ? strongSelf.theme.chat.inputPanel.panelControlAccentColor : strongSelf.theme.chat.inputPanel.secondaryTextColor)
@@ -366,6 +388,11 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                     membersText = self.strings.VoiceChat_Panel_Members(Int32(data.participantCount))
                 }
                 membersTextIsActive = false
+            }
+            
+            if self.textIsActive != membersTextIsActive {
+                self.textIsActive = membersTextIsActive
+                self.animateTextChange()
             }
             
             self.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: membersTextIsActive ? self.theme.chat.inputPanel.panelControlAccentColor : self.theme.chat.inputPanel.secondaryTextColor)
@@ -481,7 +508,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                 let foregroundFrame = self.micButtonForegroundNode.view.convert(self.micButtonForegroundNode.bounds, to: nil)
                 
                 let backgroundView = UIView()
-                backgroundView.backgroundColor = UIColor(rgb: 0x30b251)
+                backgroundView.backgroundColor = (self.micButtonBackgroundNodeIsMuted ?? true) ? UIColor(rgb: 0xb6b6bb) : UIColor(rgb: 0x30b251)
                 backgroundView.frame = backgroundFrame
                 backgroundView.layer.cornerRadius = backgroundFrame.height / 2.0
                     

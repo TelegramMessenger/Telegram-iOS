@@ -89,7 +89,7 @@ private final class VoiceChatControllerTitleView: UIView {
 }
 
 public final class VoiceChatController: ViewController {
-    private final class Node: ViewControllerTracingNode {
+    private final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
         private struct ListTransition {
             let deletions: [ListViewDeleteItem]
             let insertions: [ListViewInsertItem]
@@ -412,7 +412,7 @@ public final class VoiceChatController: ViewController {
                             }
                         }
                     
-                        if let callState = strongSelf.callState, (callState.canManageCall && !callState.adminIds.contains(strongSelf.context.account.peerId)) {
+                        if let callState = strongSelf.callState, (callState.canManageCall && !callState.adminIds.contains(peer.id)) {
                             items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_RemovePeer, textColor: .destructive, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.destructiveActionTextColor)
                             }, action: { [weak self] _, f in
@@ -523,15 +523,19 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 
-                if let peer = peerViewMainPeer(view), let channel = peer as? TelegramChannel {
-                    if !(channel.addressName ?? "").isEmpty || (channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers)) {
-                        strongSelf.optionsButton.isHidden = false
-                    } else {
-                        strongSelf.optionsButton.isHidden = true
-                    }
-                }
-                
                 if !strongSelf.didSetDataReady {
+                    if let peer = peerViewMainPeer(view), let channel = peer as? TelegramChannel {
+                        let addressName = channel.addressName ?? ""
+                        if !addressName.isEmpty || (channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers)) {
+                            if addressName.isEmpty {
+                                let _ = ensuredExistingPeerExportedInvitation(account: strongSelf.context.account, peerId: call.peerId).start()
+                            }
+                        } else {
+                            strongSelf.optionsButton.isUserInteractionEnabled = false
+                            strongSelf.optionsButton.alpha = 0.0
+                        }
+                    }
+                    
                     strongSelf.didSetDataReady = true
                     strongSelf.controller?.dataReady.set(true)
                 }
@@ -675,8 +679,6 @@ public final class VoiceChatController: ViewController {
             optionsButtonItem.target = self
             optionsButtonItem.action = #selector(self.rightNavigationButtonAction)
             self.controller?.navigationItem.setRightBarButton(optionsButtonItem, animated: false)
-            
-            let _ = ensuredExistingPeerExportedInvitation(account: self.context.account, peerId: call.peerId).start()
         }
         
         deinit {
@@ -701,6 +703,7 @@ public final class VoiceChatController: ViewController {
             
             let longTapRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.actionButtonPressGesture(_:)))
             longTapRecognizer.minimumPressDuration = 0.001
+            longTapRecognizer.delegate = self
             self.actionButton.view.addGestureRecognizer(longTapRecognizer)
             
             let panRecognizer = CallPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
@@ -714,7 +717,9 @@ public final class VoiceChatController: ViewController {
         }
         
         @objc private func rightNavigationButtonAction() {
-            self.optionsButton.contextAction?(self.optionsButton.containerNode, nil)
+            if self.optionsButton.isUserInteractionEnabled {
+                self.optionsButton.contextAction?(self.optionsButton.containerNode, nil)
+            }
         }
         
         @objc private func leavePressed() {
@@ -725,6 +730,14 @@ public final class VoiceChatController: ViewController {
         }
         
         private var actionButtonPressGestureStartTime: Double = 0.0
+        
+        override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            if let callState = self.callState, case .connected = callState.networkState, let muteState = callState.muteState, !muteState.canUnmute {
+                return false
+            } else {
+                return true
+            }
+        }
         
         @objc private func actionButtonPressGesture(_ gestureRecognizer: UILongPressGestureRecognizer) {
             guard let callState = self.callState else {
@@ -1010,7 +1023,7 @@ public final class VoiceChatController: ViewController {
                     }
                 }
                 
-                if let (backgroundView, foregroundView) = sourcePanel.rightButtonSnapshotViews(), !self.optionsButton.isHidden {
+                if let (backgroundView, foregroundView) = sourcePanel.rightButtonSnapshotViews(), self.optionsButton.isUserInteractionEnabled {
                     self.view.addSubview(backgroundView)
                     self.view.addSubview(foregroundView)
                     
@@ -1190,6 +1203,7 @@ public final class VoiceChatController: ViewController {
                         memberState = .speaking
                     } else {
                         memberState = .listening
+                        memberMuteState = member.muteState
                     }
                 } else {
                     memberState = speakingPeers.contains(member.peer.id) ? .speaking : .listening

@@ -379,8 +379,8 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             let verticalOffset: CGFloat = 0.0
             let avatarSize: CGFloat = 40.0
                               
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 12.0 - rightInset - 25.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - rightInset - 25.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 12.0 - rightInset - 30.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - rightInset - 30.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let insets = UIEdgeInsets()
     
@@ -622,11 +622,16 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             animationNode = VoiceChatMicrophoneNode()
                             strongSelf.animationNode = animationNode
                             strongSelf.actionButtonNode.addSubnode(animationNode)
+                            if let _ = strongSelf.iconNode {
+                                animationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                animationNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
+                            }
                         }
                         animationNode.update(state: VoiceChatMicrophoneNode.State(muted: muted, color: color), animated: true)
                         strongSelf.actionButtonNode.isUserInteractionEnabled = false
                     } else if let animationNode = strongSelf.animationNode {
                         strongSelf.animationNode = nil
+                        animationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
                         animationNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false, completion: { [weak animationNode] _ in
                             animationNode?.removeFromSupernode()
                         })
@@ -641,6 +646,11 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                             iconNode.contentMode = .center
                             strongSelf.iconNode = iconNode
                             strongSelf.actionButtonNode.addSubnode(iconNode)
+                            
+                            if let _ = strongSelf.animationNode {
+                                iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                iconNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
+                            }
                         }
                         
                         if invited {
@@ -651,6 +661,7 @@ public class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.actionButtonNode.isUserInteractionEnabled = !invited
                     } else if let iconNode = strongSelf.iconNode {
                         strongSelf.iconNode = nil
+                        iconNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
                         iconNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false, completion: { [weak iconNode] _ in
                             iconNode?.removeFromSupernode()
                         })
