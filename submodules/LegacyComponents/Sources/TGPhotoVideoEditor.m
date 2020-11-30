@@ -204,9 +204,11 @@
     controllerWindow.hidden = false;
     galleryController.view.clipsToBounds = true;
     
-//    if (paint) {
-//        [model presentPhotoEditorForItem:galleryItem tab:TGPhotoEditorPaintTab];
-//    }
+    if (paint) {
+        TGDispatchAfter(0.05, dispatch_get_main_queue(), ^{
+            [model presentPhotoEditorForItem:galleryItem tab:TGPhotoEditorPaintTab];
+        });
+    }
 }
 
 @end

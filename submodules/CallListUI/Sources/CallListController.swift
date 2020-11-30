@@ -281,7 +281,7 @@ public final class CallListController: ViewController {
                     if case let .alreadyInProgress(currentPeerId) = callResult {
                         if currentPeerId == peerId {
                             began?()
-                            strongSelf.context.sharedContext.navigateToCurrentCall()
+                            strongSelf.context.sharedContext.navigateToCurrentCall(sourcePanel: nil)
                         } else {
                             let presentationData = strongSelf.presentationData
                             let _ = (strongSelf.context.account.postbox.transaction { transaction -> (Peer?, Peer?) in

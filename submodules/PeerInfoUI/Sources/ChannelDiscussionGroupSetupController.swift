@@ -157,7 +157,7 @@ private enum ChannelDiscussionGroupSetupControllerEntry: ItemListNodeEntry {
                 } else {
                     text = strings.Channel_DiscussionGroup_PrivateChannel
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .monthFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: "."), nameDisplayOrder: nameOrder, context: arguments.context, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .text(text), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .monthFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: "."), nameDisplayOrder: nameOrder, context: arguments.context, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .text(text, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.selectGroup(peer.id)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
             case let .groupsInfo(theme, title):

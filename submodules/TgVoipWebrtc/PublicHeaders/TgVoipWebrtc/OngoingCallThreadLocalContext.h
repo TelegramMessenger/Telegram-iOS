@@ -147,6 +147,28 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)setRequestedVideoAspect:(float)aspect;
 - (void)disableVideo;
 - (void)addSignalingData:(NSData * _Nonnull)data;
+- (void)switchAudioOutput:(NSString * _Nonnull)deviceId;
+- (void)switchAudioInput:(NSString * _Nonnull)deviceId;
+@end
+
+typedef NS_ENUM(int32_t, GroupCallNetworkState) {
+    GroupCallNetworkStateConnecting,
+    GroupCallNetworkStateConnected
+};
+
+@interface GroupCallThreadLocalContext : NSObject
+
+- (instancetype _Nonnull)initWithQueue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue networkStateUpdated:(void (^ _Nonnull)(GroupCallNetworkState))networkStateUpdated audioLevelsUpdated:(void (^ _Nonnull)(NSArray<NSNumber *> * _Nonnull))audioLevelsUpdated myAudioLevelUpdated:(void (^ _Nonnull)(float))myAudioLevelUpdated inputDeviceId:(NSString * _Nonnull)inputDeviceId outputDeviceId:(NSString * _Nonnull)outputDeviceId;
+
+- (void)stop;
+
+- (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion;
+- (void)setJoinResponsePayload:(NSString * _Nonnull)payload;
+- (void)removeSsrcs:(NSArray<NSNumber *> * _Nonnull)ssrcs;
+- (void)setIsMuted:(bool)isMuted;
+
+- (void)switchAudioOutput:(NSString * _Nonnull)deviceId;
+- (void)switchAudioInput:(NSString * _Nonnull)deviceId;
 
 @end
 

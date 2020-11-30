@@ -656,7 +656,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
-            }, action: { _, f in
+            }, action: { c, f in
                 interfaceInteraction.setupEditMessage(messages[0].id, { transition in
                     f(.custom(transition))
                 })

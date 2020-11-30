@@ -12,10 +12,10 @@ if [ -z "$CONFIGURATION" ] || [ -z "$MODE" ] ; then
 fi
 
 if [ "$MODE" == "cached" ]; then
-	BUCK_HTTP_CACHE="$BUCK_HTTP_CACHE"
+	BAZEL_HTTP_CACHE_URL="$BAZEL_HTTP_CACHE_URL"
 	ERROR_OUTPUT_PATH="build/verifysanity_artifacts"
 elif [ "$MODE" == "full" ]; then
-	BUCK_HTTP_CACHE=""
+	BAZEL_HTTP_CACHE_URL=""
 	ERROR_OUTPUT_PATH="build/verify_artifacts"
 else
 	echo "Unknown mode $MODE"
@@ -25,7 +25,9 @@ fi
 OUTPUT_PATH="build/artifacts"
 
 if [ "$CONFIGURATION" == "appstore" ]; then
-	IPA_PATH="$OUTPUT_PATH/Telegram.ipa"
+	if [ -z "$IPA_PATH" ]; then
+		IPA_PATH="$OUTPUT_PATH/Telegram.ipa"
+	fi
 else
 	echo "Unknown configuration $CONFIGURATION"
 	exit 1
@@ -38,9 +40,10 @@ fi
 
 VERIFY_PATH="TelegramVerifyBuild.ipa"
 
-mv "$IPA_PATH" "$VERIFY_PATH"
+rm -f "$VERIFY_PATH"
+cp "$IPA_PATH" "$VERIFY_PATH"
 
-BUCK_HTTP_CACHE="$BUCK_HTTP_CACHE" sh buildbox/build-telegram.sh verify
+BAZEL_HTTP_CACHE_URL="$BAZEL_HTTP_CACHE_URL" sh buildbox/build-telegram.sh verify
 
 python3 tools/ipadiff.py "$IPA_PATH" "$VERIFY_PATH"
 retVal=$?

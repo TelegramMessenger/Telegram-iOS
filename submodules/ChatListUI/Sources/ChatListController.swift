@@ -171,7 +171,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         self.tabContainerNode = ChatListFilterTabContainerNode()
         
-        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary)
+        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary, groupCallPanelSource: .all)
         
         self.tabBarItemContextActionType = .always
         
@@ -1285,6 +1285,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             if hasFilters {
                                 text = strongSelf.presentationData.strings.ChatList_TabIconFoldersTooltipNonEmptyFolders
                                 let _ = markChatListFeaturedFiltersAsSeen(postbox: strongSelf.context.account.postbox).start()
+                                return
                             } else {
                                 text = strongSelf.presentationData.strings.ChatList_TabIconFoldersTooltipEmptyFolders
                             }

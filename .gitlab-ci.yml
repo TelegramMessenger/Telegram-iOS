@@ -24,7 +24,7 @@ internal:
     name: internal
   artifacts:
     paths:
-      - build/artifacts/Telegram.DSYMs.zip
+      - build/artifacts
     expire_in: 1 week
 
 experimental:

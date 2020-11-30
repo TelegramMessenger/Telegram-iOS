@@ -22,9 +22,17 @@ private func getAdjacentEntryGroupInfo(_ entry: IntermediateMessageHistoryEntry?
     if let entry = entry {
         if let groupingKey = entry.message.groupingKey, let groupInfo = entry.message.groupInfo {
             if groupingKey == key {
-                return (entry, .sameGroup(groupInfo))
+                if let groupInfo = entry.message.groupInfo {
+                    return (entry, .sameGroup(groupInfo))
+                } else {
+                    return (entry, .none)
+                }
             } else {
-                return (entry, .otherGroup(groupInfo))
+                if let groupInfo = entry.message.groupInfo {
+                    return (entry, .otherGroup(groupInfo))
+                } else {
+                    return (entry, .none)
+                }
             }
         } else {
             return (entry, .none)

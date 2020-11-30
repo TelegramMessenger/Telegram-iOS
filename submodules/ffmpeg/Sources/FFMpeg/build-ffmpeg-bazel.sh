@@ -120,6 +120,7 @@ then
 	do
 		echo "building $ARCH..."
 		mkdir -p "$SCRATCH/$ARCH"
+		pushd "$SCRATCH/$ARCH"
 
 		LIBOPUS_PATH="$SOURCE_DIR/libopus"
 
@@ -178,6 +179,8 @@ then
 
 		CORE_COUNT=`sysctl -n hw.logicalcpu`
 		make -j$CORE_COUNT install $EXPORT || exit 1
+
+		popd
 	done
 fi
 

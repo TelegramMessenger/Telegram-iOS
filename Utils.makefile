@@ -31,9 +31,6 @@ ifneq ($(BUCK_DIR_CACHE),)
 endif
 
 check_env:
-ifndef BUCK
-	$(error BUCK is not set)
-endif
 	sh check_env.sh
 
 kill_xcode:

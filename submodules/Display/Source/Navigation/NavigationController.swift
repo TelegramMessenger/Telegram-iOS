@@ -390,13 +390,20 @@ open class NavigationController: UINavigationController, ContainableController, 
             globalScrollToTopNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -1.0), size: CGSize(width: layout.size.width, height: 1.0))
         }
         
+        var overlayContainerLayout = layout
+        
         if let inCallStatusBar = self.inCallStatusBar {
-            let inCallStatusBarFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(40.0, layout.safeInsets.top)))
+            var inCallStatusBarFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(layout.statusBarHeight ?? 0.0, max(40.0, layout.safeInsets.top))))
+            if layout.deviceMetrics.hasTopNotch {
+                inCallStatusBarFrame.size.height += 12.0
+            }
             if inCallStatusBar.frame.isEmpty {
                 inCallStatusBar.frame = inCallStatusBarFrame
             } else {
                 transition.updateFrame(node: inCallStatusBar, frame: inCallStatusBarFrame)
             }
+            inCallStatusBar.callStatusBarNode?.update(size: inCallStatusBarFrame.size)
+            inCallStatusBar.callStatusBarNode?.frame = inCallStatusBarFrame
             layout.statusBarHeight = inCallStatusBarFrame.height
             self.inCallStatusBar?.frame = inCallStatusBarFrame
         }
@@ -536,8 +543,8 @@ open class NavigationController: UINavigationController, ContainableController, 
                 containerTransition = transition
             }
             
-            containerTransition.updateFrame(node: overlayContainer, frame: CGRect(origin: CGPoint(), size: layout.size))
-            overlayContainer.update(layout: layout, transition: containerTransition)
+            containerTransition.updateFrame(node: overlayContainer, frame: CGRect(origin: CGPoint(), size: overlayContainerLayout.size))
+            overlayContainer.update(layout: overlayContainerLayout, transition: containerTransition)
             
             modalStyleOverlayTransitionFactor = max(modalStyleOverlayTransitionFactor, overlayContainer.controller.modalStyleOverlayTransitionFactor)
             
@@ -581,7 +588,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         var previousModalContainer: NavigationModalContainer?
         var visibleModalCount = 0
         var topModalIsFlat = false
-        var isLandscape = layout.orientation == .landscape
+        let isLandscape = layout.orientation == .landscape
         var hasVisibleStandaloneModal = false
         var topModalDismissProgress: CGFloat = 0.0
         
@@ -1339,13 +1346,14 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
     }
     
-    public func setForceInCallStatusBar(_ forceInCallStatusBarText: String?, transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)) {
-        if let forceInCallStatusBarText = forceInCallStatusBarText {
+    public func setForceInCallStatusBar(_ forceInCallStatusBar: CallStatusBarNode?, transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)) {
+        if let forceInCallStatusBar = forceInCallStatusBar {
             let inCallStatusBar: StatusBar
             if let current = self.inCallStatusBar {
                 inCallStatusBar = current
             } else {
                 inCallStatusBar = StatusBar()
+                inCallStatusBar.clipsToBounds = false
                 inCallStatusBar.inCallNavigate = { [weak self] in
                     self?.scrollToTop(.master)
                 }
@@ -1371,7 +1379,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
             if let layout = self.validLayout {
                 self.containerLayoutUpdated(layout, transition: transition)
-                inCallStatusBar.updateState(statusBar: nil, withSafeInsets: !layout.safeInsets.top.isZero, inCallText: forceInCallStatusBarText, animated: false)
+                inCallStatusBar.updateState(statusBar: nil, withSafeInsets: !layout.safeInsets.top.isZero, inCallNode: forceInCallStatusBar, animated: false)
             }
         } else if let inCallStatusBar = self.inCallStatusBar {
             self.inCallStatusBar = nil

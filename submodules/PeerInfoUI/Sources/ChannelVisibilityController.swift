@@ -343,7 +343,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 if let addressName = peer.addressName {
                     label = "t.me/" + addressName
                 }
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text(label), label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text(label, .secondary), label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
                 }, removePeer: { peerId in
                     arguments.revokePeerId(peerId)

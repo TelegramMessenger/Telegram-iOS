@@ -14,6 +14,4 @@
 - (TGMediaAsset *)assetAtIndex:(NSUInteger)index;
 - (NSUInteger)indexOfAsset:(TGMediaAsset *)asset;
 
-- (NSSet *)itemsIdentifiers;
-
 @end

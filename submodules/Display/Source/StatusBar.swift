@@ -25,7 +25,11 @@ public class StatusBarSurface {
     }
 }
 
-private let inCallBackgroundColor = UIColor(rgb: 0x43d551)
+open class CallStatusBarNode: ASDisplayNode {
+    open func update(size: CGSize) {
+        
+    }
+}
 
 private func addInCallAnimation(_ layer: CALayer) {
     let animation = CAKeyframeAnimation(keyPath: "opacity")
@@ -92,10 +96,7 @@ public final class StatusBar: ASDisplayNode {
     private var removeProxyNodeScheduled = false
     
     let offsetNode = ASDisplayNode()
-    private let inCallBackgroundNode = ASDisplayNode()
-    private let inCallLabel: StatusBarLabelNode
-    
-    private var inCallText: String? = nil
+    var callStatusBarNode: CallStatusBarNode? = nil
     
     public var verticalOffset: CGFloat = 0.0 {
         didSet {
@@ -113,13 +114,7 @@ public final class StatusBar: ASDisplayNode {
     }
     
     public override init() {
-        self.inCallLabel = StatusBarLabelNode()
-        self.inCallLabel.isUserInteractionEnabled = false
-        
         self.offsetNode.isUserInteractionEnabled = false
-        
-        let labelSize = self.inCallLabel.updateLayout(CGSize(width: 300.0, height: 300.0))
-        self.inCallLabel.frame = CGRect(origin: CGPoint(x: 10.0, y: 20.0 + 4.0), size: labelSize)
         
         super.init()
         
@@ -130,18 +125,17 @@ public final class StatusBar: ASDisplayNode {
         (self.view as! StatusBarView).node = self
         
         self.addSubnode(self.offsetNode)
-        self.addSubnode(self.inCallBackgroundNode)
         
         self.clipsToBounds = true
         
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    func updateState(statusBar: UIView?, withSafeInsets: Bool, inCallText: String?, animated: Bool) {
+    func updateState(statusBar: UIView?, withSafeInsets: Bool, inCallNode: CallStatusBarNode?, animated: Bool) {
         if let statusBar = statusBar {
             self.removeProxyNodeScheduled = false
             let resolvedStyle: StatusBarStyle
-            if inCallText != nil && !self.ignoreInCall {
+            if inCallNode != nil && !self.ignoreInCall {
                 resolvedStyle = .White
             } else {
                 resolvedStyle = self.statusBarStyle
@@ -176,46 +170,35 @@ public final class StatusBar: ASDisplayNode {
                 ignoreInCall = true
         }
         
-        var resolvedInCallText: String? = inCallText
+        var resolvedCallStatusBarNode: CallStatusBarNode? = inCallNode
         if ignoreInCall {
-            resolvedInCallText = nil
+            resolvedCallStatusBarNode = nil
         }
         
-        if (resolvedInCallText != nil) != (self.inCallText != nil) {
-            if let _ = resolvedInCallText {
-                if !withSafeInsets {
-                    self.addSubnode(self.inCallLabel)
-                }
-                addInCallAnimation(self.inCallLabel.layer)
-                
-                self.inCallBackgroundNode.layer.backgroundColor = inCallBackgroundColor.cgColor
+        if (resolvedCallStatusBarNode != nil) != (self.callStatusBarNode != nil) {
+            if let resolvedCallStatusBarNode = resolvedCallStatusBarNode {
+                self.addSubnode(resolvedCallStatusBarNode)
                 if animated {
-                    self.inCallBackgroundNode.layer.animate(from: UIColor.clear.cgColor, to: inCallBackgroundColor.cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.3)
+                    resolvedCallStatusBarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                 }
-            } else {
-                self.inCallLabel.removeFromSupernode()
+            } else if let callStatusBarNode = self.callStatusBarNode {
+                self.callStatusBarNode = nil
                 
-                self.inCallBackgroundNode.layer.backgroundColor = UIColor.clear.cgColor
                 if animated {
-                    self.inCallBackgroundNode.layer.animate(from: inCallBackgroundColor.cgColor, to: UIColor.clear.cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.3)
+                    callStatusBarNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { [weak callStatusBarNode] _ in
+                        callStatusBarNode?.removeFromSupernode()
+                    })
+                } else {
+                    callStatusBarNode.removeFromSupernode()
                 }
             }
         }
         
-        
-        if let resolvedInCallText = resolvedInCallText {
-            if self.inCallText != resolvedInCallText {
-                self.inCallLabel.attributedText = NSAttributedString(string: resolvedInCallText, font: Font.regular(14.0), textColor: .white)
-            }
-            
-            self.layoutInCallLabel()
-        }
-        
-        self.inCallText = resolvedInCallText
+        self.callStatusBarNode = resolvedCallStatusBarNode
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if self.bounds.contains(point) && self.inCallText != nil {
+        if self.bounds.contains(point) && self.callStatusBarNode != nil {
             return self.view
         } else {
             return nil
@@ -223,42 +206,8 @@ public final class StatusBar: ASDisplayNode {
     }
     
     @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
-        if case .ended = recognizer.state, self.inCallText != nil {
+        if case .ended = recognizer.state, self.callStatusBarNode != nil {
             self.inCallNavigate?()
-        }
-    }
-    
-    override public func layout() {
-        super.layout()
-        
-        self.layoutInCallLabel()
-    }
-    
-    override public var frame: CGRect {
-        didSet {
-            if oldValue.size != self.frame.size {
-                let bounds = self.bounds
-                self.inCallBackgroundNode.frame = CGRect(origin: CGPoint(), size: bounds.size)
-            }
-        }
-    }
-    
-    override public var bounds: CGRect {
-        didSet {
-            if oldValue.size != self.bounds.size {
-                let bounds = self.bounds
-                self.inCallBackgroundNode.frame = CGRect(origin: CGPoint(), size: bounds.size)
-            }
-        }
-    }
-    
-    private func layoutInCallLabel() {
-        if self.inCallLabel.supernode != nil {
-            let size = self.bounds.size
-            if !size.width.isZero && !size.height.isZero {
-                let labelSize = self.inCallLabel.updateLayout(size)
-                self.inCallLabel.frame = CGRect(origin: CGPoint(x: floor((size.width - labelSize.width) / 2.0), y: 20.0 + floor((20.0 - labelSize.height) / 2.0)), size: labelSize)
-            }
         }
     }
 }

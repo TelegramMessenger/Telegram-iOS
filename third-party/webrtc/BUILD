@@ -1,4 +1,4 @@
-use_gn_build = True
+use_gn_build = False
 
 webrtc_libs = [
     "libwebrtc.a",
@@ -27,7 +27,7 @@ genrule(
     """
         OUT_DIR="ios"
         if [ "$(TARGET_CPU)" == "ios_armv7" ]; then
-            BUILD_ARCH="armv7"
+            BUILD_ARCH="arm"
         elif [ "$(TARGET_CPU)" == "ios_arm64" ]; then
             BUILD_ARCH="arm64"
         elif [ "$(TARGET_CPU)" == "ios_x86_64" ]; then
@@ -37,7 +37,7 @@ genrule(
             echo "Unsupported architecture $(TARGET_CPU)"
         fi
         BUILD_DIR="$(RULEDIR)/$$BUILD_ARCH"
-        #rm -rf "$$BUILD_DIR"
+        rm -rf "$$BUILD_DIR"
         mkdir -p "$$BUILD_DIR"
 
         SOURCE_PATH="third-party/webrtc/webrtc-ios/src"
@@ -625,6 +625,7 @@ webrtc_sources = [
     "pc/data_channel.cc",
     "pc/data_channel_controller.cc",
     "pc/datagram_rtp_transport.cc",
+    "pc/dtls_srtp_transport.h",
     "pc/dtls_srtp_transport.cc",
     "pc/dtls_transport.cc",
     "pc/dtmf_sender.cc",
@@ -699,9 +700,12 @@ webrtc_sources = [
     "media/engine/simulcast.cc",
     "media/engine/simulcast_encoder_adapter.cc",
     "media/engine/unhandled_packets_buffer.cc",
+    "media/engine/webrtc_media_engine.h",
     "media/engine/webrtc_media_engine.cc",
     "media/engine/webrtc_media_engine_defaults.cc",
+    "media/engine/webrtc_video_engine.h",
     "media/engine/webrtc_video_engine.cc",
+    "media/engine/webrtc_voice_engine.h",
     "media/engine/webrtc_voice_engine.cc",
     "media/sctp/noop.cc",
     "media/sctp/sctp_transport.cc",
@@ -1967,7 +1971,8 @@ cc_library(
         "-DPACKAGE_STRING='\"\"'",
     ] + arch_specific_cflags,
     deps = [
-        "//submodules/openssl:openssl",
+        "//third-party/boringssl:crypto",
+        "//third-party/boringssl:ssl",
     ],
     visibility = ["//visibility:public"],
 )
@@ -2091,56 +2096,10 @@ cc_library(
 )
 
 objc_library(
-    name = "webrtc_objc_sdk",
-    enable_modules = True,
-    module_name = "webrtc_objc_sdk",
-    srcs = ["webrtc-ios/src/sdk/" + path for path in ios_objc_sources],
-    copts = [
-        "-Ithird-party/webrtc/webrtc-ios/src",
-        "-Ithird-party/webrtc/webrtc-ios/src/third_party/abseil-cpp",
-        "-Ithird-party/webrtc/webrtc-ios/src/third_party/usrsctp/usrsctplib",
-        "-Ithird-party/webrtc/webrtc-ios/src/third_party/usrsctp/usrsctplib/usrsctplib",
-        "-Ithird-party/webrtc/webrtc-ios/src/third_party/libsrtp/include",
-        "-Ithird-party/webrtc/webrtc-ios/src/third_party/libsrtp/crypto/include",
-        "-Ithird-party/webrtc/webrtc-ios/src/third_party/libyuv/include",
-        "-Ithird-party/webrtc/webrtc-ios/src/third_party/libvpx/source/libvpx",
-        "-Ithird-party/webrtc/webrtc-ios/src/testing/gtest/include",
-        "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc",
-        "-Ithird-party/webrtc/webrtc-ios/src/sdk/objc/base",
-        "-Ithird-party/webrtc/additional-files",
-        "-DWEBRTC_IOS",
-        "-DWEBRTC_MAC",
-        "-DWEBRTC_POSIX",
-        "-DRTC_ENABLE_VP9",
-        "-DBSD=1",
-        "-DUSE_KISS_FFT",
-        "-DHAVE_PTHREAD",
-        "-DWEBRTC_APM_DEBUG_DUMP=0",
-        "-DWEBRTC_USE_BUILTIN_ISAC_FLOAT",
-        "-DWEBRTC_OPUS_VARIABLE_COMPLEXITY=0",
-        "-DHAVE_NETINET_IN_H",
-        "-DWEBRTC_INCLUDE_INTERNAL_AUDIO_DEVICE",
-        "-DSCTP_SIMPLE_ALLOCATOR",
-        "-DSCTP_PROCESS_LEVEL_LOCKS",
-        "-D__Userspace__",
-        "-D__Userspace_os_Darwin",
-        "-DPACKAGE_VERSION='\"\"'",
-    ] + arch_specific_cflags,
-    deps = [
-        "//submodules/openssl:openssl",
-        "//submodules/Opus:opus",
-        ":usrsctp",
-        ":libsrtp",
-        ":libevent",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-objc_library(
     name = "webrtc_objcpp_sdk",
     enable_modules = True,
     module_name = "webrtc_objcpp_sdk",
-    srcs = ["webrtc-ios/src/sdk/" + path for path in ios_sources],
+    srcs = ["webrtc-ios/src/sdk/" + path for path in ios_sources + ios_objc_sources],
     copts = [
         "-Ithird-party/webrtc/webrtc-ios/src",
         "-Ithird-party/webrtc/webrtc-ios/src/third_party/abseil-cpp",
@@ -2171,10 +2130,10 @@ objc_library(
         "-D__Userspace__",
         "-D__Userspace_os_Darwin",
         "-DPACKAGE_VERSION='\"\"'",
-        "-std=c++14",
     ] + arch_specific_cflags,
     deps = [
-        "//submodules/openssl:openssl",
+        "//third-party/boringssl:crypto",
+        "//third-party/boringssl:ssl",
         "//submodules/Opus:opus",
         ":usrsctp",
         ":libsrtp",
@@ -2215,13 +2174,13 @@ objc_library(
         "-DPACKAGE_VERSION='\"\"'",
     ] + arch_specific_cflags,
     deps = [
-        "//submodules/openssl:openssl",
+        "//third-party/boringssl:crypto",
+        "//third-party/boringssl:ssl",
         "//submodules/Opus:opus",
         ":usrsctp",
         ":libsrtp",
         ":libevent",
         ":libyuv",
-        ":webrtc_objc_sdk",
         ":webrtc_objcpp_sdk",
         "//third-party/libvpx:vpx",
     ],

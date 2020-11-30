@@ -4,10 +4,82 @@ import Photos
 import Postbox
 import SwiftSignalKit
 import ImageCompression
+import Accelerate.vImage
 
 private final class RequestId {
     var id: PHImageRequestID?
     var invalidated: Bool = false
+}
+
+private func resizedImage(_ image: UIImage, for size: CGSize) -> UIImage? {
+    guard let cgImage = image.cgImage else {
+        return nil
+    }
+
+    var format = vImage_CGImageFormat(bitsPerComponent: 8,
+                                      bitsPerPixel: 32,
+                                      colorSpace: nil,
+                                      bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.first.rawValue),
+                                      version: 0,
+                                      decode: nil,
+                                      renderingIntent: .defaultIntent)
+
+    var error: vImage_Error
+    var sourceBuffer = vImage_Buffer()
+    defer { sourceBuffer.data.deallocate() }
+    error = vImageBuffer_InitWithCGImage(&sourceBuffer,
+                                         &format,
+                                         nil,
+                                         cgImage,
+                                         vImage_Flags(kvImageNoFlags))
+    guard error == kvImageNoError else { return nil }
+
+    var destinationBuffer = vImage_Buffer()
+    error = vImageBuffer_Init(&destinationBuffer,
+                              vImagePixelCount(size.height),
+                              vImagePixelCount(size.width),
+                              format.bitsPerPixel,
+                              vImage_Flags(kvImageNoFlags))
+    guard error == kvImageNoError else {
+        return nil
+    }
+
+    error = vImageScale_ARGB8888(&sourceBuffer,
+                                 &destinationBuffer,
+                                 nil,
+                                 vImage_Flags(kvImageHighQualityResampling))
+    guard error == kvImageNoError else {
+        return nil
+    }
+
+    guard let resizedImage =
+        vImageCreateCGImageFromBuffer(&destinationBuffer,
+                                      &format,
+                                      nil,
+                                      nil,
+                                      vImage_Flags(kvImageNoAllocate),
+                                      &error)?.takeRetainedValue(),
+        error == kvImageNoError
+    else {
+        return nil
+    }
+
+    return UIImage(cgImage: resizedImage)
+}
+
+extension UIImage.Orientation {
+    init(_ cgOrientation: CGImagePropertyOrientation) {
+        switch cgOrientation {
+            case .up: self = .up
+            case .upMirrored: self = .upMirrored
+            case .down: self = .down
+            case .downMirrored: self = .downMirrored
+            case .left: self = .left
+            case .leftMirrored: self = .leftMirrored
+            case .right: self = .right
+            case .rightMirrored: self = .rightMirrored
+        }
+    }
 }
 
 public func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
@@ -28,7 +100,9 @@ public func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaRe
             }
             let size = CGSize(width: 1280.0, height: 1280.0)
             
-            let requestIdValue = PHImageManager.default().requestImage(for: asset, targetSize: size, contentMode: .aspectFit, options: option, resultHandler: { (image, info) -> Void in
+            let startTime = CACurrentMediaTime()
+            
+            let requestIdValue = PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .aspectFit, options: option, resultHandler: { (image, info) -> Void in
                 Queue.concurrentDefaultQueue().async {
                     requestId.with { current -> Void in
                         if !current.invalidated {
@@ -42,17 +116,24 @@ public func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaRe
                                 //subscriber.putNext(.reset)
                             }
                         } else {
-                            _ = madeProgress.swap(true)
+                            #if DEBUG
+                            print("load completion \((CACurrentMediaTime() - startTime) * 1000.0) ms")
+                            #endif
                             
+                            _ = madeProgress.swap(true)
+
                             let scale = min(1.0, min(size.width / max(1.0, image.size.width), size.height / max(1.0, image.size.height)))
                             let scaledSize = CGSize(width: floor(image.size.width * scale), height: floor(image.size.height * scale))
-                            
-                            UIGraphicsBeginImageContextWithOptions(scaledSize, true, 1.0)
-                            image.draw(in: CGRect(origin: CGPoint(), size: scaledSize))
-                            let scaledImage = UIGraphicsGetImageFromCurrentImageContext()
-                            UIGraphicsEndImageContext()
+                            let scaledImage = resizedImage(image, for: scaledSize)
+
+                            #if DEBUG
+                            print("scaled completion \((CACurrentMediaTime() - startTime) * 1000.0) ms")
+                            #endif
                             
                             if let scaledImage = scaledImage, let data = compressImageToJPEG(scaledImage, quality: 0.6) {
+                                #if DEBUG
+                                print("compression completion \((CACurrentMediaTime() - startTime) * 1000.0) ms")
+                                #endif
                                 subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
                                 subscriber.putCompletion()
                             } else {
@@ -149,3 +230,4 @@ public func fetchPhotoLibraryImage(localIdentifier: String, thumbnail: Bool) -> 
         }
     }
 }
+

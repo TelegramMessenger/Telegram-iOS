@@ -2089,6 +2089,9 @@ final class SharedApplicationContext {
                         if #available(iOS 12.0, *) {
                             authorizationOptions.insert(.providesAppNotificationSettings)
                         }
+                        if #available(iOS 13.0, *) {
+                            authorizationOptions.insert(.announcement)
+                        }
                         notificationCenter.requestAuthorization(options: authorizationOptions, completionHandler: { result, _ in
                             completion(result)
                             if result {

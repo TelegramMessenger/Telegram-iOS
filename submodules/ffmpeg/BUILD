@@ -127,9 +127,19 @@ genrule(
     ],
     cmd_bash =
     """
-        SOURCE_PATH="submodules/ffmpeg/Sources/FFMpeg"
+        #random:2
 
-        BUILD_DIR="$(RULEDIR)/build"
+        set -x
+
+        ABS_RULEDIR="$$(pwd)/$(RULEDIR)"
+        echo "ABS_RULEDIR=$$ABS_RULEDIR"
+
+        SOURCE_PATH="$$ABS_RULEDIR/FFMpegSource"
+        rm -rf "$$SOURCE_PATH"
+
+        cp -R "submodules/ffmpeg/Sources/FFMpeg" "$$SOURCE_PATH"
+
+        BUILD_DIR="$$ABS_RULEDIR/build"
         rm -rf "$$BUILD_DIR"
         mkdir -p "$$BUILD_DIR"
         YASM_DIR="$$BUILD_DIR/yasm"
@@ -167,6 +177,9 @@ genrule(
 cc_library(
     name = "ffmpeg_lib",
     srcs = ffmpeg_libs,
+    visibility = [
+        "//visibility:public",
+    ]
 )
 
 objc_library(

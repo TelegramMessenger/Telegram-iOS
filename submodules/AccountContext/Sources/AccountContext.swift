@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SyncCore
@@ -568,7 +569,7 @@ public protocol SharedAccountContext: class {
     
     func makeRecentSessionsController(context: AccountContext, activeSessionsContext: ActiveSessionsContext) -> ViewController & RecentSessionsController
     
-    func navigateToCurrentCall()
+    func navigateToCurrentCall(sourcePanel: ASDisplayNode?)
     var hasOngoingCall: ValuePromise<Bool> { get }
     var immediateHasOngoingCall: Bool { get }
     

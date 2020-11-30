@@ -27,7 +27,7 @@ private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
 protocol GenericAnimatedStickerNode: ASDisplayNode {
-    
+    func setOverlayColor(_ color: UIColor?, animated: Bool)
 }
 
 extension AnimatedStickerNode: GenericAnimatedStickerNode {
@@ -143,6 +143,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
     let imageNode: TransformImageNode
+    private var placeholderNode: StickerShimmerEffectNode?
     private var animationNode: GenericAnimatedStickerNode?
     private var didSetUpAnimationNode = false
     private var isPlaying = false
@@ -190,7 +191,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.containerNode = ContextControllerSourceNode()
         self.imageNode = TransformImageNode()
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
-
+        
+        self.placeholderNode = StickerShimmerEffectNode()
+        self.placeholderNode?.isUserInteractionEnabled = false
+        
         super.init(layerBacked: false)
         
         self.containerNode.shouldBegin = { [weak self] location in
@@ -230,12 +234,28 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
             }
         }
+        
+        var firstTime = true
+        self.imageNode.imageUpdated = { [weak self] image in
+            guard let strongSelf = self else {
+                return
+            }
+            if image != nil {
+                strongSelf.removePlaceholder(animated: !firstTime)
+            }
+            firstTime = false
+        }
                 
         self.imageNode.displaysAsynchronously = false
         self.containerNode.addSubnode(self.contextSourceNode)
         self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
         self.addSubnode(self.containerNode)
         self.contextSourceNode.contentNode.addSubnode(self.imageNode)
+        
+        if let placeholderNode = self.placeholderNode {
+            self.contextSourceNode.contentNode.addSubnode(placeholderNode)
+        }
+        
         self.contextSourceNode.contentNode.addSubnode(self.dateAndStatusNode)
         
         self.dateAndStatusNode.openReactions = { [weak self] in
@@ -253,6 +273,20 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func removePlaceholder(animated: Bool) {
+        if let placeholderNode = self.placeholderNode {
+            self.placeholderNode = nil
+            if !animated {
+                placeholderNode.removeFromSupernode()
+            } else {
+                placeholderNode.alpha = 0.0
+                placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak placeholderNode] _ in
+                    placeholderNode?.removeFromSupernode()
+                })
+            }
+        }
     }
     
     override func didLoad() {
@@ -388,7 +422,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         if let animationNode = self.animationNode, !self.animateGreeting {
-            self.contextSourceNode.contentNode.insertSubnode(animationNode, aboveSubnode: self.imageNode)
+            if let placeholderNode = self.placeholderNode {
+                self.contextSourceNode.contentNode.insertSubnode(animationNode, aboveSubnode: placeholderNode)
+            } else {
+                self.contextSourceNode.contentNode.insertSubnode(animationNode, aboveSubnode: self.imageNode)
+            }
         }
     }
     
@@ -518,6 +556,20 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     override func updateStickerSettings() {
         self.updateVisibility()
+    }
+    
+    
+    private var absoluteRect: (CGRect, CGSize)?
+    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        self.absoluteRect = (rect, containerSize)
+        if !self.contextSourceNode.isExtractedToContextPreview {
+            var rect = rect
+            rect.origin.y = containerSize.height - rect.maxY + self.insets.top
+
+            if let placeholderNode = self.placeholderNode {
+                placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + placeholderNode.frame.minX, y: rect.minY + placeholderNode.frame.minY), size: placeholderNode.frame.size), within: containerSize)
+            }
+        }
     }
     
     override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
@@ -720,7 +772,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .minimal, reactionCount: dateReactionCount)
+            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .regular, reactionCount: dateReactionCount)
             
             var isReplyThread = false
             if case .replyThread = item.chatLocation {
@@ -820,7 +872,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             let contentHeight = max(imageSize.height, layoutConstants.image.minDimensions.height)
             
-            
             var forwardSource: Peer?
             var forwardAuthorSignature: String?
             var forwardPsaType: String?
@@ -903,6 +954,19 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     strongSelf.imageNode.frame = updatedContentFrame
                     
                     let animationNodeFrame = updatedContentFrame.insetBy(dx: imageInset, dy: imageInset)
+
+                    var file: TelegramMediaFile?
+                    if let emojiFile = emojiFile {
+                        file = emojiFile
+                    } else if let telegramFile = telegramFile {
+                        file = telegramFile
+                    }
+                    
+                    if let immediateThumbnailData = file?.immediateThumbnailData, let placeholderNode = strongSelf.placeholderNode {
+                        placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0x748391, alpha: 0.2), shimmeringColor: UIColor(rgb: 0x748391, alpha: 0.35), data: immediateThumbnailData, size: animationNodeFrame.size)
+                        placeholderNode.frame = animationNodeFrame
+                    }
+                    
                     if let animationNode = strongSelf.animationNode, let parentNode = strongSelf.greetingStickerParentNode, strongSelf.animateGreeting {
                         strongSelf.animateGreeting = false
                         
@@ -1525,8 +1589,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 
                 if highlighted {
                     self.imageNode.setOverlayColor(item.presentationData.theme.theme.chat.message.mediaHighlightOverlayColor, animated: false)
+                    self.animationNode?.setOverlayColor(item.presentationData.theme.theme.chat.message.mediaHighlightOverlayColor, animated: false)
                 } else {
                     self.imageNode.setOverlayColor(nil, animated: animated)
+                    self.animationNode?.setOverlayColor(nil, animated: false)
                 }
             }
         }

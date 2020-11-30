@@ -157,6 +157,13 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
                 case .trendingGifs:
                     self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelTrendingGifsIcon(theme)
                 case let .gifEmoji(emoji):
+                    var emoji = emoji
+                    if emoji == "🥳" {
+                        if #available(iOSApplicationExtension 12.1, iOS 12.1, *) {
+                        } else {
+                            emoji = "🎉"
+                        }
+                    }
                     self.imageNode.image = nil
                     self.textNode.attributedText = NSAttributedString(string: emoji, font: Font.regular(27.0), textColor: .black)
                     let textSize = self.textNode.updateLayout(CGSize(width: 100.0, height: 100.0))

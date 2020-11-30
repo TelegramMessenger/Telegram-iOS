@@ -208,11 +208,13 @@ private final class LoadingShimmerNode: ASDisplayNode {
 public struct ItemListPeerItemEditing: Equatable {
     public var editable: Bool
     public var editing: Bool
+    public var canBeReordered: Bool
     public var revealed: Bool?
     
-    public init(editable: Bool, editing: Bool, revealed: Bool?) {
+    public init(editable: Bool, editing: Bool, canBeReordered: Bool = false, revealed: Bool?) {
         self.editable = editable
         self.editing = editing
+        self.canBeReordered = canBeReordered
         self.revealed = revealed
     }
 }
@@ -223,8 +225,14 @@ public enum ItemListPeerItemHeight {
 }
 
 public enum ItemListPeerItemText {
+    public enum TextColor {
+        case secondary
+        case accent
+        case constructive
+    }
+    
     case presence
-    case text(String)
+    case text(String, TextColor)
     case none
 }
 
@@ -460,7 +468,8 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     private var layoutParams: (ItemListPeerItem, ListViewItemLayoutParams, ItemListNeighbors, Bool)?
     
     private var editableControlNode: ItemListEditableControlNode?
-    
+    private var reorderControlNode: ItemListEditableReorderControlNode?
+        
     override public var canBeSelected: Bool {
         if self.editableControlNode != nil || self.disabledOverlayNode != nil {
             return false
@@ -490,7 +499,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         self.containerNode = ContextControllerSourceNode()
         
         self.avatarNode = AvatarNode(font: avatarFont)
-        self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
+        //self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
         
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
@@ -560,6 +569,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         let editableControlLayout = ItemListEditableControlNode.asyncLayout(self.editableControlNode)
+        let reorderControlLayout = ItemListEditableReorderControlNode.asyncLayout(self.reorderControlNode)
         
         var currentDisabledOverlayNode = self.disabledOverlayNode
         
@@ -729,8 +739,17 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                 } else {
                     statusAttributedString = NSAttributedString(string: item.presentationData.strings.LastSeen_Offline, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
                 }
-            case let .text(text):
-                statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+            case let .text(text, textColor):
+                let textColorValue: UIColor
+                switch textColor {
+                case .secondary:
+                    textColorValue = item.presentationData.theme.list.itemSecondaryTextColor
+                case .accent:
+                    textColorValue = item.presentationData.theme.list.itemAccentColor
+                case .constructive:
+                    textColorValue = item.presentationData.theme.list.itemDisclosureActions.constructive.fillColor
+                }
+                statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: textColorValue)
             case .none:
                 break
             }
@@ -761,12 +780,20 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             }
             
             var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
+            var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool, ContainedViewLayoutTransition) -> ItemListEditableReorderControlNode)?
             
             let editingOffset: CGFloat
+            var reorderInset: CGFloat = 0.0
             if item.editing.editing {
                 let sizeAndApply = editableControlLayout(item.presentationData.theme, false)
                 editableControlSizeAndApply = sizeAndApply
                 editingOffset = sizeAndApply.0
+                
+                if item.editing.canBeReordered {
+                    let reorderSizeAndApply = reorderControlLayout(item.presentationData.theme)
+                    reorderControlSizeAndApply = reorderSizeAndApply
+                    reorderInset = reorderSizeAndApply.0
+                }
             } else {
                 editingOffset = 0.0
             }
@@ -803,6 +830,8 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     labelAttributedString = NSAttributedString(string: text, font: badgeFont, textColor: item.presentationData.theme.list.itemCheckColors.foregroundColor)
                     labelInset += 15.0
             }
+            
+            labelInset += reorderInset
             
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: labelAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 16.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -928,6 +957,23 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                         transition.updateAlpha(node: editableControlNode, alpha: 0.0)
                         transition.updateFrame(node: editableControlNode, frame: editableControlFrame, completion: { [weak editableControlNode] _ in
                             editableControlNode?.removeFromSupernode()
+                        })
+                    }
+                    
+                    if let reorderControlSizeAndApply = reorderControlSizeAndApply {
+                        if strongSelf.reorderControlNode == nil {
+                            let reorderControlNode = reorderControlSizeAndApply.1(layout.contentSize.height, false, .immediate)
+                            strongSelf.reorderControlNode = reorderControlNode
+                            strongSelf.addSubnode(reorderControlNode)
+                            reorderControlNode.alpha = 0.0
+                            transition.updateAlpha(node: reorderControlNode, alpha: 1.0)
+                        }
+                        let reorderControlFrame = CGRect(origin: CGPoint(x: params.width + revealOffset - params.rightInset - reorderControlSizeAndApply.0, y: 0.0), size: CGSize(width: reorderControlSizeAndApply.0, height: layout.contentSize.height))
+                        strongSelf.reorderControlNode?.frame = reorderControlFrame
+                    } else if let reorderControlNode = strongSelf.reorderControlNode {
+                        strongSelf.reorderControlNode = nil
+                        transition.updateAlpha(node: reorderControlNode, alpha: 0.0, completion: { [weak reorderControlNode] _ in
+                            reorderControlNode?.removeFromSupernode()
                         })
                     }
                     
@@ -1057,7 +1103,8 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     
                     strongSelf.labelBadgeNode.frame = CGRect(origin: CGPoint(x: revealOffset + params.width - rightLabelInset - badgeWidth, y: labelFrame.minY - 1.0), size: CGSize(width: badgeWidth, height: badgeDiameter))
                     
-                    transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0, y: floorToScreenPixels((layout.contentSize.height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize)))
+                    let avatarFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0, y: floorToScreenPixels((layout.contentSize.height - avatarSize) / 2.0)), size: CGSize(width: avatarSize, height: avatarSize))
+                    transition.updateFrame(node: strongSelf.avatarNode, frame: avatarFrame)
                     
                     if item.peer.id == item.context.account.peerId, case .threatSelfAsSaved = item.aliasHandling {
                         strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, overrideImage: .savedMessagesIcon, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
@@ -1292,6 +1339,13 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         if let shimmerNode = self.shimmerNode {
             shimmerNode.updateAbsoluteRect(rect, within: containerSize)
         }
+    }
+    
+    override public func isReorderable(at point: CGPoint) -> Bool {
+        if let reorderControlNode = self.reorderControlNode, reorderControlNode.frame.contains(point), !self.isDisplayingRevealedOptions {
+            return true
+        }
+        return false
     }
 }
 

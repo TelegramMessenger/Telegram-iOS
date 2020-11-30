@@ -7,12 +7,18 @@ import MtProtoKit
 import SyncCore
 
 public struct PeerActivitySpace: Hashable {
-    public var peerId: PeerId
-    public var threadId: Int64?
+    public enum Category: Equatable, Hashable {
+        case global
+        case thread(Int64)
+        case voiceChat
+    }
     
-    public init(peerId: PeerId, threadId: Int64?) {
+    public var peerId: PeerId
+    public var category: Category
+    
+    public init(peerId: PeerId, category: Category) {
         self.peerId = peerId
-        self.threadId = threadId
+        self.category = category
     }
 }
 
@@ -83,7 +89,14 @@ func managedLocalTypingActivities(activities: Signal<[PeerActivitySpace: [PeerId
             }
             
             for (peerId, activity, disposable) in start {
-                disposable.set(requestActivity(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId.peerId, threadId: peerId.threadId, activity: activity?.activity).start())
+                var threadId: Int64?
+                switch peerId.category {
+                case let .thread(id):
+                    threadId = id
+                default:
+                    break
+                }
+                disposable.set(requestActivity(postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: peerId.peerId, threadId: threadId, activity: activity?.activity).start())
             }
         })
         return ActionDisposable {
@@ -115,6 +128,8 @@ private func actionFromActivity(_ activity: PeerInputActivity?) -> Api.SendMessa
                 return .sendMessageRecordRoundAction
             case let .uploadingInstantVideo(progress):
                 return .sendMessageUploadRoundAction(progress: progress)
+            case .speakingInGroupCall:
+                return .speakingInGroupCallAction
         }
     } else {
         return .sendMessageCancelAction

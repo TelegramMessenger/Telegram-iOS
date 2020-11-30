@@ -269,7 +269,7 @@ open class NavigationBar: ASDisplayNode {
     private var title: String? {
         didSet {
             if let title = self.title {
-                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: self.presentationData.theme.primaryTextColor)
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(17.0), textColor: self.presentationData.theme.primaryTextColor)
                 self.titleNode.accessibilityLabel = title
                 if self.titleNode.supernode == nil {
                     self.buttonsContainerNode.addSubnode(self.titleNode)

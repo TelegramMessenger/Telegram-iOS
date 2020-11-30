@@ -614,7 +614,7 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
             
             for peerId in fetchedChats.chatPeerIds {
                 if let peer = transaction.getPeer(peerId) {
-                    transaction.updatePeerChatListInclusion(peerId, inclusion: .ifHasMessagesOrOneOf(groupId: groupId, pinningIndex: nil, minTimestamp: minTimestampForPeerInclusion(peer)))
+                    transaction.updatePeerChatListInclusion(peerId, inclusion: .ifHasMessagesOrOneOf(groupId: groupId, pinningIndex: transaction.getPeerChatListIndex(peerId)?.1.pinningIndex, minTimestamp: minTimestampForPeerInclusion(peer)))
                 } else {
                     assertionFailure()
                 }
