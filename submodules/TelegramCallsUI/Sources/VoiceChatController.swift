@@ -922,7 +922,7 @@ public final class VoiceChatController: ViewController {
             }
             
             self.actionButton.isUserInteractionEnabled = actionButtonEnabled
-            self.actionButton.update(size: centralButtonSize, buttonSize: CGSize(width: 144.0, height: 144.0), state: actionButtonState, title: actionButtonTitle, subtitle: actionButtonSubtitle, simplified: layout.size.width < 330.0, animated: true)
+            self.actionButton.update(size: centralButtonSize, buttonSize: CGSize(width: 144.0, height: 144.0), state: actionButtonState, title: actionButtonTitle, subtitle: actionButtonSubtitle, simplified: layout.size.width < 330.0 || layout.deviceMetrics.type == .tablet, animated: true)
             transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
             
             var audioMode: CallControllerButtonsSpeakerMode = .none

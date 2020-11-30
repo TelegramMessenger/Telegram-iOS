@@ -262,9 +262,9 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
         let bigCurveRange: CurveRange = (0.1, 1.0)
         
         let size = CGSize(width: 375.0, height: 44.0)
-        let smallCurve = Curve(size: size, alpha: 1.0, pointsCount: 10, minRandomness: 1, maxRandomness: 1, minSpeed: 1.5, maxSpeed: 7, minOffset: smallCurveRange.min, maxOffset: smallCurveRange.max)
-        let mediumCurve = Curve(size: size, alpha: 0.55, pointsCount: 10, minRandomness: 1, maxRandomness: 2, minSpeed: 1.5, maxSpeed: 7, minOffset: mediumCurveRange.min, maxOffset: mediumCurveRange.max)
-        let largeCurve = Curve(size: size, alpha: 0.35, pointsCount: 10, minRandomness: 1, maxRandomness: 2, minSpeed: 1.5, maxSpeed: 7, minOffset: bigCurveRange.min, maxOffset: bigCurveRange.max)
+        let smallCurve = Curve(size: size, alpha: 1.0, pointsCount: 6, minRandomness: 1, maxRandomness: 1, minSpeed: 2.5, maxSpeed: 7, minOffset: smallCurveRange.min, maxOffset: smallCurveRange.max)
+        let mediumCurve = Curve(size: size, alpha: 0.55, pointsCount: 6, minRandomness: 1, maxRandomness: 2, minSpeed: 2.5, maxSpeed: 7, minOffset: mediumCurveRange.min, maxOffset: mediumCurveRange.max)
+        let largeCurve = Curve(size: size, alpha: 0.35, pointsCount: 6, minRandomness: 1, maxRandomness: 2, minSpeed: 2.5, maxSpeed: 7, minOffset: bigCurveRange.min, maxOffset: bigCurveRange.max)
 
         self.curves = [smallCurve, mediumCurve, largeCurve]
         
@@ -312,6 +312,7 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
             animator = ConstantDisplayLinkAnimator(update: { [weak self] in
                 self?.updateAnimations()
             })
+            animator.frameInterval = 2
             self.animator = animator
         }
         animator.isPaused = false
@@ -366,6 +367,7 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
             return
         }
         
+        context.interpolationQuality = .low
         context.setBlendMode(.normal)
         
         var locations: [CGFloat] = [0.0, 1.0]
