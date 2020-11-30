@@ -643,6 +643,17 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
                 
         if data.canEdit && !isPinnedMessages {
+            var mediaReference: AnyMediaReference?
+            for media in message.media {
+                if let image = media as? TelegramMediaImage, let _ = largestImageRepresentation(image.representations) {
+                    mediaReference = ImageMediaReference.standalone(media: image).abstract
+                    break
+                } else if let file = media as? TelegramMediaFile {
+                    mediaReference = FileMediaReference.standalone(media: file).abstract
+                    break
+                }
+            }
+            
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
             }, action: { c, f in

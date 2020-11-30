@@ -443,6 +443,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         if origin == nil {
             self.editButton.isHidden = true
             self.deleteButton.isHidden = true
+            self.editButton.isHidden = true
         }
     }
     

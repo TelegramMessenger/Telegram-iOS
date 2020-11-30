@@ -386,7 +386,7 @@ public final class VoiceChatController: ViewController {
                     }
                 default:
                     if peer.id != strongSelf.context.account.peerId {
-                        if let callState = strongSelf.callState, (callState.canManageCall || callState.adminIds.contains(strongSelf.context.account.peerId)) {
+                        if let callState = strongSelf.callState, (callState.canManageCall || callState.adminIds.contains(strongSelf.context.account.peerId)), !callState.adminIds.contains(peer.id) {
                             if let muteState = entry.muteState, !muteState.canUnmute {
                                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_UnmutePeer, icon: { theme in
                                     return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/Unmute"), color: theme.actionSheet.primaryTextColor)
@@ -613,17 +613,44 @@ public final class VoiceChatController: ViewController {
                 }
    
                 var items: [ContextMenuItem] = []
-                /*items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_SpeakPermissionEveryone, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.actionSheet.primaryTextColor)
-                }, action: { _, f in
-                    f(.dismissWithoutContent)
-                  
-                })))
-                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_SpeakPermissionAdmin, icon: { _ in return nil}, action: { _, f in
-                    f(.dismissWithoutContent)
-                  
-                })))
-                items.append(.separator)*/
+                
+                if let callState = strongSelf.callState, callState.canManageCall, let defaultParticipantMuteState = callState.defaultParticipantMuteState {
+                    let isMuted = defaultParticipantMuteState == .muted
+                    
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_SpeakPermissionEveryone, icon: { theme in
+                        if isMuted {
+                            return nil
+                        } else {
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.actionSheet.primaryTextColor)
+                        }
+                    }, action: { _, f in
+                        f(.dismissWithoutContent)
+                      
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.call.updateDefaultParticipantsAreMuted(isMuted: false)
+                    })))
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_SpeakPermissionAdmin, icon: { theme in
+                        if !isMuted {
+                            return nil
+                        } else {
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.actionSheet.primaryTextColor)
+                        }
+                    }, action: { _, f in
+                        f(.dismissWithoutContent)
+                      
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.call.updateDefaultParticipantsAreMuted(isMuted: true)
+                    })))
+                }
+                
+                if !items.isEmpty {
+                    items.append(.separator)
+                }
+                
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.VoiceChat_Share, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
                 }, action: { [weak self] _, f in
@@ -698,7 +725,7 @@ public final class VoiceChatController: ViewController {
             super.didLoad()
             
             let titleView = VoiceChatControllerTitleView(theme: self.presentationData.theme)
-            titleView.set(title: "Voice Chat", subtitle: "connecting")
+            titleView.set(title: self.presentationData.strings.VoiceChat_Title, subtitle: self.presentationData.strings.SocksProxySetup_ProxyStatusConnecting)
             self.controller?.navigationItem.titleView = titleView
             
             let longTapRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.actionButtonPressGesture(_:)))

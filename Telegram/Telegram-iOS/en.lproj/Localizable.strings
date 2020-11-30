@@ -2493,6 +2493,9 @@ Unused sets are archived when you add more.";
 "Call.CallInProgressMessage" = "Finish call with %1$@ and start a new one with %2$@?";
 "Call.ExternalCallInProgressMessage" = "Please finish the current call first.";
 
+"Call.VoiceChatInProgressTitle" = "Voice Chat in Progress";
+"Call.VoiceChatInProgressMessage" = "Leave voice chat in %1$@ and start a new one with %2$@?";
+
 "Call.Message" = "Message";
 
 "UserInfo.TapToCall" = "Tap to make an end-to-end encrypted call";
@@ -5972,3 +5975,5 @@ Sorry for the inconvenience.";
 "VoiceChat.Panel.MembersSpeaking_any" = "%@ members speaking";
 
 "ChannelInfo.CreateVoiceChat" = "Create Voice Chat";
+
+"VoiceChat.AnonymousDisabledAlertText" = "Sorry, you can't join voice chat as an anonymous admin.";

@@ -21,7 +21,8 @@ private extension PresentationGroupCallState {
             networkState: .connecting,
             canManageCall: false,
             adminIds: Set(),
-            muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true)
+            muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: true),
+            defaultParticipantMuteState: nil
         )
     }
 }
@@ -389,7 +390,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                     }
                                 }
                             }
-                        case let .call(isTerminated):
+                        case let .call(isTerminated, _):
                             if isTerminated {
                                 strongSelf._canBeRemoved.set(.single(true))
                             }
@@ -497,9 +498,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         if let clientParams = joinCallResult.callInfo.clientParams {
                             strongSelf.updateSessionState(internalState: .estabilished(info: joinCallResult.callInfo, clientParams: clientParams, localSsrc: ssrc, initialState: joinCallResult.state), audioSessionControl: strongSelf.audioSessionControl)
                         }
-                    }, error: { _ in
+                    }, error: { error in
                         guard let strongSelf = self else {
                             return
+                        }
+                        if case .anonymousNotAllowed = error {
+                            let presentationData = strongSelf.accountContext.sharedContext.currentPresentationData.with { $0 }
+                            strongSelf.accountContext.sharedContext.mainWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.VoiceChat_AnonymousDisabledAlertText, actions: [
+                                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
+                            ]), on: .root, blockInteraction: false, completion: {})
                         }
                         strongSelf._canBeRemoved.set(.single(true))
                     }))
@@ -573,6 +580,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 self.summaryInfoState.set(.single(SummaryInfoState(info: callInfo)))
                 
                 self.stateValue.canManageCall = initialState.isCreator || initialState.adminIds.contains(self.accountContext.account.peerId)
+                if self.stateValue.canManageCall && initialState.defaultParticipantsAreMuted.canChange {
+                    self.stateValue.defaultParticipantMuteState = initialState.defaultParticipantsAreMuted.isMuted ? .muted : .unmuted
+                }
                 
                 self.ssrcMapping.removeAll()
                 var ssrcs: [UInt32] = []
@@ -634,6 +644,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     
                     strongSelf.stateValue.adminIds = state.adminIds
                     
+                    if (state.isCreator || state.adminIds.contains(strongSelf.accountContext.account.peerId)) && state.defaultParticipantsAreMuted.canChange {
+                        strongSelf.stateValue.defaultParticipantMuteState = state.defaultParticipantsAreMuted.isMuted ? .muted : .unmuted
+                    }
+                    
                     strongSelf.summaryParticipantsState.set(.single(SummaryParticipantsState(
                         participantCount: state.totalCount,
                         topParticipants: topParticipants,
@@ -690,14 +704,29 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             if terminateIfPossible {
                 self.leaveDisposable.set((stopGroupCall(account: self.account, peerId: self.peerId, callId: callInfo.id, accessHash: callInfo.accessHash)
                 |> deliverOnMainQueue).start(completed: { [weak self] in
-                    self?._canBeRemoved.set(.single(true))
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.callContext?.stop()
+                    strongSelf.callContext = nil
+                    strongSelf._canBeRemoved.set(.single(true))
                 }))
             } else {
                 self.leaveDisposable.set((leaveGroupCall(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, source: localSsrc)
                 |> deliverOnMainQueue).start(error: { [weak self] _ in
-                    self?._canBeRemoved.set(.single(true))
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.callContext?.stop()
+                    strongSelf.callContext = nil
+                    strongSelf._canBeRemoved.set(.single(true))
                 }, completed: { [weak self] in
-                    self?._canBeRemoved.set(.single(true))
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.callContext?.stop()
+                    strongSelf.callContext = nil
+                    strongSelf._canBeRemoved.set(.single(true))
                 }))
             }
         } else {
@@ -899,5 +928,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 self.restartMyAudioLevelTimer()
             }
         }
+    }
+    
+    public func updateDefaultParticipantsAreMuted(isMuted: Bool) {
+        self.participantsContext?.updateDefaultParticipantsAreMuted(isMuted: isMuted)
     }
 }

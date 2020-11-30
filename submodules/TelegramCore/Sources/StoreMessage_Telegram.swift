@@ -639,6 +639,11 @@ extension StoreMessage {
                     if (flags & (1 << 4)) != 0 {
                         notificationFlags.insert(.personal)
                     }
+                    if (flags & (1 << 4)) != 0 {
+                        notificationFlags.insert(.personal)
+                        let notConsumed = (flags & (1 << 5)) != 0
+                        attributes.append(ConsumablePersonalMentionMessageAttribute(consumed: !notConsumed, pending: false))
+                    }
                     if (flags & (1 << 13)) != 0 {
                         notificationFlags.insert(.muted)
                     }

@@ -244,7 +244,6 @@ official_apple_pay_merchants = [
     "merchant.sberbank.test.ph.telegra.Telegraph",
     "merchant.privatbank.test.telergramios",
     "merchant.privatbank.prod.telergram",
-    "merchant.telegram.tranzzo.test",
 ]
 
 official_bundle_ids = [

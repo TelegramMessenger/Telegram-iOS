@@ -20,7 +20,7 @@ private enum AdjacentEntryGroupInfo {
 
 private func getAdjacentEntryGroupInfo(_ entry: IntermediateMessageHistoryEntry?, key: Int64) -> (IntermediateMessageHistoryEntry?, AdjacentEntryGroupInfo) {
     if let entry = entry {
-        if let groupingKey = entry.message.groupingKey {
+        if let groupingKey = entry.message.groupingKey, let groupInfo = entry.message.groupInfo {
             if groupingKey == key {
                 if let groupInfo = entry.message.groupInfo {
                     return (entry, .sameGroup(groupInfo))
