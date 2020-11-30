@@ -254,6 +254,7 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
 
 public enum JoinGroupCallError {
     case generic
+    case anonymousNotAllowed
 }
 
 public struct JoinGroupCallResult {
@@ -267,7 +268,10 @@ public func joinGroupCall(account: Account, peerId: PeerId, callId: Int64, acces
         flags |= (1 << 0)
     }
     return account.network.request(Api.functions.phone.joinGroupCall(flags: flags, call: .inputGroupCall(id: callId, accessHash: accessHash), params: .dataJSON(data: joinPayload)))
-    |> mapError { _ -> JoinGroupCallError in
+    |> mapError { error -> JoinGroupCallError in
+        if error.errorDescription == "GROUP_CALL_ANONYMOUS_FORBIDDEN" {
+            return .anonymousNotAllowed
+        }
         return .generic
     }
     |> mapToSignal { updates -> Signal<JoinGroupCallResult, JoinGroupCallError> in

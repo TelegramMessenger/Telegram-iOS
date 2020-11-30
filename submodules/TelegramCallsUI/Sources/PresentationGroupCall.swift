@@ -497,9 +497,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         if let clientParams = joinCallResult.callInfo.clientParams {
                             strongSelf.updateSessionState(internalState: .estabilished(info: joinCallResult.callInfo, clientParams: clientParams, localSsrc: ssrc, initialState: joinCallResult.state), audioSessionControl: strongSelf.audioSessionControl)
                         }
-                    }, error: { _ in
+                    }, error: { error in
                         guard let strongSelf = self else {
                             return
+                        }
+                        if case .anonymousNotAllowed = error {
+                            let presentationData = strongSelf.accountContext.sharedContext.currentPresentationData.with { $0 }
+                            strongSelf.accountContext.sharedContext.mainWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.VoiceChat_AnonymousDisabledAlertText, actions: [
+                                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
+                            ]), on: .root, blockInteraction: false, completion: {})
                         }
                         strongSelf._canBeRemoved.set(.single(true))
                     }))
@@ -691,14 +697,29 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             if terminateIfPossible {
                 self.leaveDisposable.set((stopGroupCall(account: self.account, peerId: self.peerId, callId: callInfo.id, accessHash: callInfo.accessHash)
                 |> deliverOnMainQueue).start(completed: { [weak self] in
-                    self?._canBeRemoved.set(.single(true))
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.callContext?.stop()
+                    strongSelf.callContext = nil
+                    strongSelf._canBeRemoved.set(.single(true))
                 }))
             } else {
                 self.leaveDisposable.set((leaveGroupCall(account: self.account, callId: callInfo.id, accessHash: callInfo.accessHash, source: localSsrc)
                 |> deliverOnMainQueue).start(error: { [weak self] _ in
-                    self?._canBeRemoved.set(.single(true))
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.callContext?.stop()
+                    strongSelf.callContext = nil
+                    strongSelf._canBeRemoved.set(.single(true))
                 }, completed: { [weak self] in
-                    self?._canBeRemoved.set(.single(true))
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.callContext?.stop()
+                    strongSelf.callContext = nil
+                    strongSelf._canBeRemoved.set(.single(true))
                 }))
             }
         } else {
