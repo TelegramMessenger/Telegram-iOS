@@ -9,6 +9,8 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 
+private let colorSpace = CGColorSpaceCreateDeviceRGB()
+
 private class CurveDrawingState: NSObject {
     let path: UIBezierPath
     let offset: CGFloat
@@ -375,7 +377,6 @@ private class CallStatusBarBackgroundNode: ASDisplayNode {
         let rightColor = UIColor(rgb: 0x00afff).interpolateTo(UIColor(rgb: 0x007fff), fraction: parameters.gradientTransition)!
         let colors: [CGColor] = [leftColor.cgColor, rightColor.cgColor]
         
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
         let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
        
         var i = 0
