@@ -217,7 +217,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         }
     }
     
-    func updatePresentationData(_ presentationData: PresentationData) {
+    public func updatePresentationData(_ presentationData: PresentationData) {
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         

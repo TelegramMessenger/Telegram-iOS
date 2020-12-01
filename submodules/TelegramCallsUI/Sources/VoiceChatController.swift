@@ -139,12 +139,10 @@ public final class VoiceChatController: ViewController {
                 |> mapToSignal { value in
                     if value > 0.0 {
                         return .single(value)
-                        |> then(.single(0.0) |> delay(1.0, queue: Queue.mainQueue()))
+                        |> then(.single(0.0) |> delay(0.1, queue: Queue.mainQueue()))
                     } else {
                         return .single(value)
                     }
-                } |> mapToThrottled { next -> Signal<Float, NoError> in
-                    return .single(next) |> then(.complete() |> delay(0.1, queue: Queue.mainQueue()))
                 }
             }
             
@@ -582,7 +580,7 @@ public final class VoiceChatController: ViewController {
                 }
             })
             
-            self.audioLevelsDisposable = (call.audioLevels
+            self.audioLevelsDisposable = (call.speakingAudioLevels
             |> deliverOnMainQueue).start(next: { [weak self] levels in
                 guard let strongSelf = self else {
                     return
