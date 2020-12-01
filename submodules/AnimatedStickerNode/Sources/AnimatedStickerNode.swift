@@ -968,28 +968,15 @@ public final class AnimatedStickerNode: ASDisplayNode {
                                 }
                             })
                             
-//                            strongSelf.currentFrameIndex = frame.index
-//
-//                            if frame.isLastFrame {
-//                                if let completion = strongSelf.completion {
-//                                    completion()
-//                                    strongSelf.completion = nil
-//                                }
-//                            }
-//
-//
-//                            if case .once = strongSelf.playbackMode, frame.isLastFrame {
-//                                strongSelf.stop()
-//                                strongSelf.isPlaying = false
-//                            } else if let stopAtFrame = strongSelf.stopAtFrame, frame.index == stopAtFrame {
-//                                if let completion = strongSelf.completion {
-//                                    completion()
-//                                    strongSelf.completion = nil
-//                                }
-//                                strongSelf.stopAtFrame = nil
-//                                strongSelf.stop()
-//                                strongSelf.isPlaying = false
-
+                            strongSelf.currentFrameIndex = frame.index
+                            
+                            if frame.isLastFrame {
+                                if let completion = strongSelf.completion {
+                                    completion()
+                                    strongSelf.completion = nil
+                                }
+                            }
+                            
                             if frame.isLastFrame {
                                 var stopped = false
                                 if case .once = strongSelf.playbackMode {
@@ -999,6 +986,16 @@ public final class AnimatedStickerNode: ASDisplayNode {
                                 }
                                 
                                 strongSelf.completed(stopped)
+                            } else if let stopAtFrame = strongSelf.stopAtFrame, frame.index == stopAtFrame {
+                                if let completion = strongSelf.completion {
+                                    completion()
+                                    strongSelf.completion = nil
+                                }
+                                
+                                strongSelf.stopAtFrame = nil
+                                strongSelf.stop()
+                                strongSelf.isPlaying = false
+                                strongSelf.completed(true)
                             }
 
                             let timestamp: Double = frameRate > 0 ? Double(frame.index) / Double(frameRate) : 0
@@ -1067,28 +1064,14 @@ public final class AnimatedStickerNode: ASDisplayNode {
                                 }
                             })
 
-//                            strongSelf.currentFrameIndex = frame.index
-//
-//                            if frame.isLastFrame {
-//                                if let completion = strongSelf.completion {
-//                                    completion()
-//                                    strongSelf.completion = nil
-//                                }
-//                            }
-//
-//                            if case .once = strongSelf.playbackMode, frame.isLastFrame {
-//
-//                                strongSelf.stop()
-//                                strongSelf.isPlaying = false
-//                            } else if let stopAtFrame = strongSelf.stopAtFrame, frame.index == stopAtFrame {
-//                               if let completion = strongSelf.completion {
-//                                   completion()
-//                                   strongSelf.completion = nil
-//                               }
-//                               strongSelf.stopAtFrame = nil
-//                               strongSelf.stop()
-//                               strongSelf.isPlaying = false
-//                           }
+                            strongSelf.currentFrameIndex = frame.index
+                            
+                            if frame.isLastFrame {
+                                if let completion = strongSelf.completion {
+                                    completion()
+                                    strongSelf.completion = nil
+                                }
+                            }
                             
                             if frame.isLastFrame {
                                 var stopped = false
@@ -1099,6 +1082,15 @@ public final class AnimatedStickerNode: ASDisplayNode {
                                 }
                                 
                                 strongSelf.completed(stopped)
+                            } else if let stopAtFrame = strongSelf.stopAtFrame, frame.index == stopAtFrame {
+                                if let completion = strongSelf.completion {
+                                    completion()
+                                    strongSelf.completion = nil
+                                }
+                                strongSelf.stopAtFrame = nil
+                                strongSelf.stop()
+                                strongSelf.isPlaying = false
+                                strongSelf.completed(true)
                             }
                                                         
                             let timestamp: Double = frameRate > 0 ? Double(frame.index) / Double(frameRate) : 0
