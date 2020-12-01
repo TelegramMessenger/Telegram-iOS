@@ -771,17 +771,20 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.isMutedValue = action
         self.isMutedPromise.set(self.isMutedValue)
         let isEffectivelyMuted: Bool
+        let isVisuallyMuted: Bool
         switch self.isMutedValue {
         case let .muted(isPushToTalkActive):
-            isEffectivelyMuted = true
+            isEffectivelyMuted = !isPushToTalkActive
+            isVisuallyMuted = true
             self.updateMuteState(peerId: self.accountContext.account.peerId, isMuted: true)
         case .unmuted:
             isEffectivelyMuted = false
+            isVisuallyMuted = false
             self.updateMuteState(peerId: self.accountContext.account.peerId, isMuted: false)
         }
         self.callContext?.setIsMuted(isEffectivelyMuted)
         
-        if isEffectivelyMuted {
+        if isVisuallyMuted {
             self.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true)
         } else {
             self.stateValue.muteState = nil
