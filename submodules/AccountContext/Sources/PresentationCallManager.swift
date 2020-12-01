@@ -265,6 +265,7 @@ public protocol PresentationGroupCall: class {
     var members: Signal<PresentationGroupCallMembers?, NoError> { get }
     var audioLevels: Signal<[(PeerId, Float)], NoError> { get }
     var myAudioLevel: Signal<Float, NoError> { get }
+    var speakingAudioLevels: Signal<[(PeerId, Float)], NoError> { get }
     var isMuted: Signal<Bool, NoError> { get }
     
     func leave(terminateIfPossible: Bool) -> Signal<Bool, NoError>

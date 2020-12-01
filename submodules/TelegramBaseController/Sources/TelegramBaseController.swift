@@ -403,6 +403,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                 if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
                     strongSelf.mediaAccessoryPanel?.0.containerNode.updatePresentationData(presentationData)
                     strongSelf.locationBroadcastAccessoryPanel?.updatePresentationData(presentationData)
+                    strongSelf.groupCallAccessoryPanel?.updatePresentationData(presentationData)
                 }
             }
         })

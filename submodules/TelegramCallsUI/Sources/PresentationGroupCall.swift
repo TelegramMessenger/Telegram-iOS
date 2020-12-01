@@ -72,9 +72,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     private class SpeakingParticipantsContext {
-        private let speakingLevelThreshold: Float = 0.15
-        private let cutoffTimeout: Int32 = 1
-        private let silentTimeout: Int32 = 3
+        private let speakingLevelThreshold: Float = 0.1
+        private let cutoffTimeout: Int32 = 3
+        private let silentTimeout: Int32 = 2
         
         struct Participant {
             let timestamp: Int32
@@ -88,6 +88,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 self.speakingParticipantsPromise.set(self.speakingParticipants)
             }
         }
+        
+        private let audioLevelsPromise = Promise<[(PeerId, Float)]>()
         
         init() {
         }
@@ -124,12 +126,22 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 }
             }
             
+            var audioLevels: [(PeerId, Float)] = []
+            for (peerId, speaker) in validSpeakers {
+                audioLevels.append((peerId, speaker.level))
+            }
+            
             self.participants = validSpeakers
             self.speakingParticipants = speakingParticipants
+            self.audioLevelsPromise.set(.single(audioLevels))
         }
         
         func get() -> Signal<Set<PeerId>, NoError> {
             return self.speakingParticipantsPromise.get() |> distinctUntilChanged
+        }
+        
+        func getAudioLevels() -> Signal<[(PeerId, Float)], NoError> {
+            return self.audioLevelsPromise.get()
         }
     }
     
@@ -189,9 +201,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     private var audioLevelsDisposable = MetaDisposable()
     
- 
     private let speakingParticipantsContext = SpeakingParticipantsContext()
     private var speakingParticipantsReportTimestamp: [PeerId: Double] = [:]
+    public var speakingAudioLevels: Signal<[(PeerId, Float)], NoError> {
+        return self.speakingParticipantsContext.getAudioLevels()
+    }
     
     private var participantsContextStateDisposable = MetaDisposable()
     private var participantsContext: GroupCallParticipantsContext?

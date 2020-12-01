@@ -137,21 +137,23 @@ public final class VoiceChatController: ViewController {
                 }
                 return signal
                 |> mapToSignal { value in
-                    if value > 0.0 {
-                        return .single(value)
-                        |> then(.single(0.0) |> delay(1.0, queue: Queue.mainQueue()))
-                    } else {
-                        return .single(value)
-                    }
-                } |> mapToThrottled { next -> Signal<Float, NoError> in
-                    return .single(next) |> then(.complete() |> delay(0.1, queue: Queue.mainQueue()))
+                    return .single(value)
                 }
             }
             
-            func updateAudioLevels(_ levels: [(PeerId, Float)]) {
+            func updateAudioLevels(_ levels: [(PeerId, Float)], ignore: Set<PeerId> = Set()) {
+                var updated = Set<PeerId>()
                 for (peerId, level) in levels {
                     if let pipe = self.audioLevels[peerId] {
-                        pipe.putNext(level)
+                        pipe.putNext(max(0.001, level))
+                        updated.insert(peerId)
+                    }
+                }
+                if !ignore.isEmpty {
+                    for (peerId, pipe) in self.audioLevels {
+                        if !updated.contains(peerId) && !ignore.contains(peerId) {
+                            pipe.putNext(0.0)
+                        }
                     }
                 }
             }
@@ -595,12 +597,12 @@ public final class VoiceChatController: ViewController {
                 }
             })
             
-            self.audioLevelsDisposable = (call.audioLevels
+            self.audioLevelsDisposable = (call.speakingAudioLevels
             |> deliverOnMainQueue).start(next: { [weak self] levels in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.itemInteraction?.updateAudioLevels(levels)
+                strongSelf.itemInteraction?.updateAudioLevels(levels, ignore: Set([strongSelf.context.account.peerId]))
             })
             
             self.myAudioLevelDisposable = (call.myAudioLevel
