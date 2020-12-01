@@ -5935,8 +5935,8 @@ Sorry for the inconvenience.";
 "VoiceChat.Audio" = "audio";
 "VoiceChat.Leave" = "leave";
 
-"VoiceChat.SpeakPermissionEveryone" = "All Members Can Speak";
-"VoiceChat.SpeakPermissionAdmin" = "Only Admins Can Speak";
+"VoiceChat.SpeakPermissionEveryone" = "New participants can speak";
+"VoiceChat.SpeakPermissionAdmin" = "New paricipants are muted";
 "VoiceChat.Share" = "Share Invite Link";
 "VoiceChat.EndVoiceChat" = "End Voice Chat";
 
@@ -5974,7 +5974,7 @@ Sorry for the inconvenience.";
 "VoiceChat.Panel.MembersSpeaking_many" = "%@ members speaking";
 "VoiceChat.Panel.MembersSpeaking_any" = "%@ members speaking";
 
-"ChannelInfo.CreateVoiceChat" = "Create Voice Chat";
+"ChannelInfo.CreateVoiceChat" = "Start Voice Chat";
 
 "VoiceChat.AnonymousDisabledAlertText" = "Sorry, you can't join voice chat as an anonymous admin.";
 
