@@ -28,6 +28,7 @@ public struct TelegramChatAdminRightsFlags: OptionSet {
         .canBanUsers,
         .canInviteUsers,
         .canPinMessages,
+        .canManageCalls,
         .canBeAnonymous,
         .canAddAdmins,
         .canManageCalls
