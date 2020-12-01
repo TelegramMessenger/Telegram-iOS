@@ -493,6 +493,11 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 if let groupMembers = strongSelf.currentGroupMembers {
+                    print("update UI members")
+                    for member in callMembers.participants {
+                        print("    \(member.peer.debugDisplayTitle) \(member.activityTimestamp ?? 0.0)")
+                    }
+                    
                     strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: groupMembers, callMembers: callMembers.participants, speakingPeers: callMembers.speakingParticipants, invitedPeers: strongSelf.currentInvitedPeers ?? Set())
                 } else {
                     strongSelf.currentCallMembers = callMembers.participants
@@ -604,7 +609,7 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 var effectiveLevel: Float = 0.0
-                if let state = strongSelf.callState, state.muteState == nil {
+                if let state = strongSelf.callState, state.muteState == nil, !strongSelf.pushingToTalk {
                     effectiveLevel = level
                 }
                 strongSelf.itemInteraction?.updateAudioLevels([(strongSelf.context.account.peerId, effectiveLevel)])
@@ -1226,18 +1231,20 @@ public final class VoiceChatController: ViewController {
                 return lhs.peer.id < rhs.peer.id
             })
             
-            var callMembers = callMembers
+            var sortedCallMembers = callMembers
             
-            callMembers.sort()
+            sortedCallMembers.sort()
             
-            for i in 0 ..< callMembers.count {
-                if callMembers[i].peer.id == self.context.account.peerId {
-                    let member = callMembers[i]
-                    callMembers.remove(at: i)
-                    callMembers.insert(member, at: 0)
+            /*for i in 0 ..< sortedCallMembers.count {
+                if sortedCallMembers[i].peer.id == self.context.account.peerId {
+                    let member = sortedCallMembers[i]
+                    sortedCallMembers.remove(at: i)
+                    sortedCallMembers.insert(member, at: 0)
                     break
                 }
-            }
+            }*/
+            
+            //assert(sortedCallMembers == callMembers)
             
             self.currentGroupMembers = groupMembers
             self.currentCallMembers = callMembers
@@ -1251,11 +1258,14 @@ public final class VoiceChatController: ViewController {
             
             var processedPeerIds = Set<PeerId>()
             
+            print("UI members")
             for member in callMembers {
                 if processedPeerIds.contains(member.peer.id) {
                     continue
                 }
                 processedPeerIds.insert(member.peer.id)
+                
+                print("    \(member.peer.debugDisplayTitle) \(member.activityTimestamp ?? 0.0)")
                 
                 let memberState: PeerEntry.State
                 var memberMuteState: GroupCallParticipantsContext.Participant.MuteState?

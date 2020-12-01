@@ -232,7 +232,7 @@ public func getGroupCallParticipants(account: Account, callId: Int64, accessHash
                             peer: peer,
                             ssrc: ssrc,
                             joinTimestamp: date,
-                            activityTimestamp: activeDate,
+                            activityTimestamp: activeDate.flatMap(Double.init),
                             muteState: muteState
                         ))
                     }
@@ -494,7 +494,7 @@ public final class GroupCallParticipantsContext {
         public var peer: Peer
         public var ssrc: UInt32
         public var joinTimestamp: Int32
-        public var activityTimestamp: Int32?
+        public var activityTimestamp: Double?
         public var muteState: MuteState?
         
         public static func ==(lhs: Participant, rhs: Participant) -> Bool {
@@ -587,7 +587,7 @@ public final class GroupCallParticipantsContext {
                 public var peerId: PeerId
                 public var ssrc: UInt32
                 public var joinTimestamp: Int32
-                public var activityTimestamp: Int32?
+                public var activityTimestamp: Double?
                 public var muteState: Participant.MuteState?
                 public var isRemoved: Bool
             }
@@ -606,9 +606,20 @@ public final class GroupCallParticipantsContext {
     private let id: Int64
     private let accessHash: Int64
     
+    private var hasReceivedSpeackingParticipantsReport: Bool = false
+    
     private var stateValue: InternalState {
         didSet {
-            self.statePromise.set(self.stateValue)
+            if self.stateValue != oldValue {
+                if self.hasReceivedSpeackingParticipantsReport {
+                    print("set stateValue")
+                    for participant in self.stateValue.state.participants {
+                        print("    \(participant.peer.debugDisplayTitle) \(participant.activityTimestamp ?? 0)")
+                    }
+                }
+                
+                self.statePromise.set(self.stateValue)
+            }
         }
     }
     private let statePromise: ValuePromise<InternalState>
@@ -682,52 +693,56 @@ public final class GroupCallParticipantsContext {
         
             strongSelf.numberOfActiveSpeakersValue = activities.count
             
-            var updatedParticipants = strongSelf.stateValue.state.participants
-            var indexMap: [PeerId: Int] = [:]
-            for i in 0 ..< updatedParticipants.count {
-                indexMap[updatedParticipants[i].peer.id] = i
-            }
-            var updated = false
-            
-            for (activityPeerId, activity) in activities {
-                if case let .speakingInGroupCall(timestamp) = activity {
-                    if let index = indexMap[activityPeerId] {
-                        if let activityTimestamp = updatedParticipants[index].activityTimestamp {
-                            if activityTimestamp < timestamp {
+            if !strongSelf.hasReceivedSpeackingParticipantsReport {
+                var updatedParticipants = strongSelf.stateValue.state.participants
+                var indexMap: [PeerId: Int] = [:]
+                for i in 0 ..< updatedParticipants.count {
+                    indexMap[updatedParticipants[i].peer.id] = i
+                }
+                var updated = false
+                
+                for (activityPeerId, activity) in activities {
+                    if case let .speakingInGroupCall(intTimestamp) = activity {
+                        let timestamp = Double(intTimestamp)
+                        
+                        if let index = indexMap[activityPeerId] {
+                            if let activityTimestamp = updatedParticipants[index].activityTimestamp {
+                                if activityTimestamp < timestamp {
+                                    updatedParticipants[index].activityTimestamp = timestamp
+                                    updated = true
+                                }
+                            } else {
                                 updatedParticipants[index].activityTimestamp = timestamp
                                 updated = true
                             }
-                        } else {
-                            updatedParticipants[index].activityTimestamp = timestamp
-                            updated = true
                         }
                     }
                 }
-            }
-            
-            if updated {
-                updatedParticipants.sort()
-                for i in 0 ..< updatedParticipants.count {
-                    if updatedParticipants[i].peer.id == strongSelf.account.peerId {
-                        let member = updatedParticipants[i]
-                        updatedParticipants.remove(at: i)
-                        updatedParticipants.insert(member, at: 0)
-                        break
-                    }
-                }
                 
-                strongSelf.stateValue = InternalState(
-                    state: State(
-                        participants: updatedParticipants,
-                        nextParticipantsFetchOffset: strongSelf.stateValue.state.nextParticipantsFetchOffset,
-                        adminIds: strongSelf.stateValue.state.adminIds,
-                        isCreator: strongSelf.stateValue.state.isCreator,
-                        defaultParticipantsAreMuted: strongSelf.stateValue.state.defaultParticipantsAreMuted,
-                        totalCount: strongSelf.stateValue.state.totalCount,
-                        version: strongSelf.stateValue.state.version
-                    ),
-                    overlayState: strongSelf.stateValue.overlayState
-                )
+                if updated {
+                    updatedParticipants.sort()
+                    for i in 0 ..< updatedParticipants.count {
+                        if updatedParticipants[i].peer.id == strongSelf.account.peerId {
+                            let member = updatedParticipants[i]
+                            updatedParticipants.remove(at: i)
+                            updatedParticipants.insert(member, at: 0)
+                            break
+                        }
+                    }
+                    
+                    strongSelf.stateValue = InternalState(
+                        state: State(
+                            participants: updatedParticipants,
+                            nextParticipantsFetchOffset: strongSelf.stateValue.state.nextParticipantsFetchOffset,
+                            adminIds: strongSelf.stateValue.state.adminIds,
+                            isCreator: strongSelf.stateValue.state.isCreator,
+                            defaultParticipantsAreMuted: strongSelf.stateValue.state.defaultParticipantsAreMuted,
+                            totalCount: strongSelf.stateValue.state.totalCount,
+                            version: strongSelf.stateValue.state.version
+                        ),
+                        overlayState: strongSelf.stateValue.overlayState
+                    )
+                }
             }
         })
     }
@@ -752,6 +767,71 @@ public final class GroupCallParticipantsContext {
         if !stateUpdates.isEmpty {
             self.updateQueue.append(contentsOf: stateUpdates)
             self.beginProcessingUpdatesIfNeeded()
+        }
+    }
+    
+    public func reportSpeakingParticipants(ids: [PeerId]) {
+        if !ids.isEmpty {
+            self.hasReceivedSpeackingParticipantsReport = true
+        }
+        
+        let strongSelf = self
+        
+        var updatedParticipants = strongSelf.stateValue.state.participants
+        var indexMap: [PeerId: Int] = [:]
+        for i in 0 ..< updatedParticipants.count {
+            indexMap[updatedParticipants[i].peer.id] = i
+        }
+        var updated = false
+        
+        let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+        
+        for activityPeerId in ids {
+            if let index = indexMap[activityPeerId] {
+                var updateTimestamp = false
+                if let activityTimestamp = updatedParticipants[index].activityTimestamp {
+                    if activityTimestamp < timestamp {
+                        updateTimestamp = true
+                    }
+                } else {
+                    updateTimestamp = true
+                }
+                if updateTimestamp {
+                    updatedParticipants[index].activityTimestamp = timestamp
+                    updated = true
+                    
+                    print("update \(updatedParticipants[index].peer.debugDisplayTitle) to \(timestamp)")
+                }
+            }
+        }
+        
+        if updated {
+            updatedParticipants.sort()
+            for i in 0 ..< updatedParticipants.count {
+                if updatedParticipants[i].peer.id == strongSelf.account.peerId {
+                    let member = updatedParticipants[i]
+                    updatedParticipants.remove(at: i)
+                    updatedParticipants.insert(member, at: 0)
+                    break
+                }
+            }
+            
+            for participant in updatedParticipants {
+                print("    \(participant.peer.debugDisplayTitle) \(participant.activityTimestamp ?? 0)")
+            }
+            
+            strongSelf.stateValue = InternalState(
+                state: State(
+                    participants: updatedParticipants,
+                    nextParticipantsFetchOffset: strongSelf.stateValue.state.nextParticipantsFetchOffset,
+                    adminIds: strongSelf.stateValue.state.adminIds,
+                    isCreator: strongSelf.stateValue.state.isCreator,
+                    defaultParticipantsAreMuted: strongSelf.stateValue.state.defaultParticipantsAreMuted,
+                    totalCount: strongSelf.stateValue.state.totalCount,
+                    version: strongSelf.stateValue.state.version
+                ),
+                overlayState: strongSelf.stateValue.overlayState
+            )
         }
     }
     
@@ -824,7 +904,7 @@ public final class GroupCallParticipantsContext {
                         assertionFailure()
                         continue
                     }
-                    var previousActivityTimestamp: Int32?
+                    var previousActivityTimestamp: Double?
                     if let index = updatedParticipants.firstIndex(where: { $0.peer.id == participantUpdate.peerId }) {
                         previousActivityTimestamp = updatedParticipants[index].activityTimestamp
                         updatedParticipants.remove(at: index)
@@ -832,7 +912,7 @@ public final class GroupCallParticipantsContext {
                         updatedTotalCount += 1
                     }
                     
-                    var activityTimestamp: Int32?
+                    var activityTimestamp: Double?
                     if let previousActivityTimestamp = previousActivityTimestamp, let updatedActivityTimestamp = participantUpdate.activityTimestamp {
                         activityTimestamp = max(updatedActivityTimestamp, previousActivityTimestamp)
                     } else {
@@ -867,6 +947,13 @@ public final class GroupCallParticipantsContext {
                     updatedParticipants.remove(at: i)
                     updatedParticipants.insert(member, at: 0)
                     break
+                }
+            }
+            
+            if strongSelf.hasReceivedSpeackingParticipantsReport {
+                print("processUpdate participants")
+                for participant in updatedParticipants {
+                    print("    \(participant.peer.debugDisplayTitle) \(participant.activityTimestamp ?? 0)")
                 }
             }
             
@@ -1014,7 +1101,7 @@ extension GroupCallParticipantsContext.Update.StateUpdate {
                     peerId: peerId,
                     ssrc: ssrc,
                     joinTimestamp: date,
-                    activityTimestamp: activeDate,
+                    activityTimestamp: activeDate.flatMap(Double.init),
                     muteState: muteState,
                     isRemoved: isRemoved
                 ))
