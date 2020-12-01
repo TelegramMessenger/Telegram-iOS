@@ -293,6 +293,14 @@ public final class VoiceChatController: ViewController {
         
         private var callState: PresentationGroupCallState?
         
+        private var effectiveMuteState: GroupCallParticipantsContext.Participant.MuteState? {
+            if self.pushingToTalk {
+                return nil
+            } else {
+                return self.callState?.muteState
+            }
+        }
+        
         private var audioOutputStateDisposable: Disposable?
         private var audioOutputState: ([AudioSessionOutput], AudioSessionOutput?)?
         
@@ -475,7 +483,7 @@ public final class VoiceChatController: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.updateMembers(muteState: strongSelf.callState?.muteState, groupMembers: state.list, callMembers: strongSelf.currentCallMembers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set(), invitedPeers: strongSelf.currentInvitedPeers ?? Set())
+                    strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: state.list, callMembers: strongSelf.currentCallMembers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set(), invitedPeers: strongSelf.currentInvitedPeers ?? Set())
                 }
             })
             
@@ -485,7 +493,7 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 if let groupMembers = strongSelf.currentGroupMembers {
-                    strongSelf.updateMembers(muteState: strongSelf.callState?.muteState, groupMembers: groupMembers, callMembers: callMembers.participants, speakingPeers: callMembers.speakingParticipants, invitedPeers: strongSelf.currentInvitedPeers ?? Set())
+                    strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: groupMembers, callMembers: callMembers.participants, speakingPeers: callMembers.speakingParticipants, invitedPeers: strongSelf.currentInvitedPeers ?? Set())
                 } else {
                     strongSelf.currentCallMembers = callMembers.participants
                 }
@@ -502,7 +510,7 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 if let groupMembers = strongSelf.currentGroupMembers {
-                    strongSelf.updateMembers(muteState: strongSelf.callState?.muteState, groupMembers: groupMembers, callMembers: strongSelf.currentCallMembers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set(), invitedPeers: invitedPeers)
+                    strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: groupMembers, callMembers: strongSelf.currentCallMembers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set(), invitedPeers: invitedPeers)
                 } else {
                     strongSelf.currentInvitedPeers = invitedPeers
                 }
@@ -562,7 +570,7 @@ public final class VoiceChatController: ViewController {
                     }
                     
                     if wasMuted != (state.muteState != nil), let groupMembers = strongSelf.currentGroupMembers {
-                        strongSelf.updateMembers(muteState: state.muteState, groupMembers: groupMembers, callMembers: strongSelf.currentCallMembers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set(), invitedPeers: strongSelf.currentInvitedPeers ?? Set())
+                        strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: groupMembers, callMembers: strongSelf.currentCallMembers ?? [], speakingPeers: strongSelf.currentSpeakingPeers ?? Set(), invitedPeers: strongSelf.currentInvitedPeers ?? Set())
                     }
                     
                     if let (layout, navigationHeight) = strongSelf.validLayout {
@@ -802,6 +810,7 @@ public final class VoiceChatController: ViewController {
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
                     }
+                    self.updateMembers(muteState: self.effectiveMuteState, groupMembers: self.currentGroupMembers ?? [], callMembers: self.currentCallMembers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set(), invitedPeers: self.currentInvitedPeers ?? Set())
                 case .ended, .cancelled:
                     self.hapticFeedback.impact(.veryLight)
                     
@@ -816,6 +825,7 @@ public final class VoiceChatController: ViewController {
                     if let (layout, navigationHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
                     }
+                    self.updateMembers(muteState: self.effectiveMuteState, groupMembers: self.currentGroupMembers ?? [], callMembers: self.currentCallMembers ?? [], speakingPeers: self.currentSpeakingPeers ?? Set(), invitedPeers: self.currentInvitedPeers ?? Set())
                 default:
                     break
             }
