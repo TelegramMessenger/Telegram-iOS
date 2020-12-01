@@ -86,6 +86,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     
     private var callState: PresentationGroupCallState?
     
+    private let hapticFeedback = HapticFeedback()
+    
     private var currentData: GroupCallPanelData?
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
@@ -195,11 +197,15 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         }
         switch gestureRecognizer.state {
             case .began:
+                self.hapticFeedback.impact(.veryLight)
+                
                 self.actionButtonPressGestureStartTime = CACurrentMediaTime()
                 if callState.muteState != nil {
                     call.setIsMuted(action: .muted(isPushToTalkActive: true))
                 }
             case .ended, .cancelled:
+                self.hapticFeedback.impact(.veryLight)
+                
                 let timestamp = CACurrentMediaTime()
                 if callState.muteState != nil || timestamp - self.actionButtonPressGestureStartTime < 0.1 {
                     call.toggleIsMuted()

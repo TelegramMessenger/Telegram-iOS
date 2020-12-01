@@ -791,6 +791,8 @@ public final class VoiceChatController: ViewController {
             }
             switch gestureRecognizer.state {
                 case .began:
+                    self.hapticFeedback.impact(.veryLight)
+                    
                     self.actionButtonPressGestureStartTime = CACurrentMediaTime()
                     self.actionButton.pressing = true
                     if callState.muteState != nil {
@@ -801,6 +803,8 @@ public final class VoiceChatController: ViewController {
                         self.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.3, curve: .spring))
                     }
                 case .ended, .cancelled:
+                    self.hapticFeedback.impact(.veryLight)
+                    
                     self.pushingToTalk = false
                     self.actionButton.pressing = false
                     let timestamp = CACurrentMediaTime()
