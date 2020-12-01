@@ -495,11 +495,6 @@ public final class VoiceChatController: ViewController {
                     return
                 }
                 if let groupMembers = strongSelf.currentGroupMembers {
-                    print("update UI members")
-                    for member in callMembers.participants {
-                        print("    \(member.peer.debugDisplayTitle) \(member.activityTimestamp ?? 0.0)")
-                    }
-                    
                     strongSelf.updateMembers(muteState: strongSelf.effectiveMuteState, groupMembers: groupMembers, callMembers: callMembers.participants, speakingPeers: callMembers.speakingParticipants, invitedPeers: strongSelf.currentInvitedPeers ?? Set())
                 } else {
                     strongSelf.currentCallMembers = callMembers.participants
@@ -1266,8 +1261,6 @@ public final class VoiceChatController: ViewController {
                     continue
                 }
                 processedPeerIds.insert(member.peer.id)
-                
-                print("    \(member.peer.debugDisplayTitle) \(member.activityTimestamp ?? 0.0)")
                 
                 let memberState: PeerEntry.State
                 var memberMuteState: GroupCallParticipantsContext.Participant.MuteState?

@@ -611,13 +611,6 @@ public final class GroupCallParticipantsContext {
     private var stateValue: InternalState {
         didSet {
             if self.stateValue != oldValue {
-                if self.hasReceivedSpeackingParticipantsReport {
-                    print("set stateValue")
-                    for participant in self.stateValue.state.participants {
-                        print("    \(participant.peer.debugDisplayTitle) \(participant.activityTimestamp ?? 0)")
-                    }
-                }
-                
                 self.statePromise.set(self.stateValue)
             }
         }
@@ -799,8 +792,6 @@ public final class GroupCallParticipantsContext {
                 if updateTimestamp {
                     updatedParticipants[index].activityTimestamp = timestamp
                     updated = true
-                    
-                    print("update \(updatedParticipants[index].peer.debugDisplayTitle) to \(timestamp)")
                 }
             }
         }
@@ -814,10 +805,6 @@ public final class GroupCallParticipantsContext {
                     updatedParticipants.insert(member, at: 0)
                     break
                 }
-            }
-            
-            for participant in updatedParticipants {
-                print("    \(participant.peer.debugDisplayTitle) \(participant.activityTimestamp ?? 0)")
             }
             
             strongSelf.stateValue = InternalState(
@@ -947,13 +934,6 @@ public final class GroupCallParticipantsContext {
                     updatedParticipants.remove(at: i)
                     updatedParticipants.insert(member, at: 0)
                     break
-                }
-            }
-            
-            if strongSelf.hasReceivedSpeackingParticipantsReport {
-                print("processUpdate participants")
-                for participant in updatedParticipants {
-                    print("    \(participant.peer.debugDisplayTitle) \(participant.activityTimestamp ?? 0)")
                 }
             }
             

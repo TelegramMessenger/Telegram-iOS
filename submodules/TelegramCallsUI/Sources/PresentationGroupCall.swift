@@ -618,12 +618,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 )
                 self.participantsContext = participantsContext
                 self.participantsContextStateDisposable.set(combineLatest(queue: .mainQueue(),
-                    participantsContext.state |> beforeNext { state in
-                        print("before received members")
-                        for member in state.participants {
-                            print("    \(member.peer.debugDisplayTitle) \(member.activityTimestamp ?? 0.0)")
-                        }
-                    },
+                    participantsContext.state,
                     participantsContext.numberOfActiveSpeakers |> deliverOnMainQueue,
                     self.speakingParticipantsContext.get() |> deliverOnMainQueue
                 ).start(next: { [weak self] state, numberOfActiveSpeakers, speakingParticipants in
@@ -649,7 +644,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     }
                     
                     if !reportSpeakingParticipants.isEmpty {
-                        strongSelf.participantsContext?.reportSpeakingParticipants(ids: reportSpeakingParticipants)
+                        Queue.mainQueue().justDispatch {
+                            self?.participantsContext?.reportSpeakingParticipants(ids: reportSpeakingParticipants)
+                        }
                     }
                     
                     var members = PresentationGroupCallMembers(
@@ -680,15 +677,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     
                     members.totalCount = state.totalCount
                     members.loadMoreToken = state.nextParticipantsFetchOffset
-                    
-                    print("received members")
-                    for member in members.participants {
-                        print("    \(member.peer.debugDisplayTitle) \(member.activityTimestamp ?? 0.0)")
-                    }
-                    print("received state members")
-                    for member in state.participants {
-                        print("    \(member.peer.debugDisplayTitle) \(member.activityTimestamp ?? 0.0)")
-                    }
                     
                     strongSelf.membersValue = members
                     
