@@ -359,24 +359,13 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                         strongSelf.micButton.view.insertSubview(audioLevelView, at: 0)
                     }
                     
-                    var value = value
-                    if value <= 0.15 {
-                        value = 0.0
-                    }
                     let level = min(1.0, max(0.0, CGFloat(value)))
-                    let avatarScale: CGFloat
-                    
                     strongSelf.audioLevelView?.updateLevel(CGFloat(value) * 2.0)
                     if value > 0.0 {
                         strongSelf.audioLevelView?.startAnimating()
-                        avatarScale = 1.03 + level * 0.1
                     } else {
                         strongSelf.audioLevelView?.stopAnimating(duration: 0.5)
-                        avatarScale = 1.0
                     }
-                    
-                    //let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .spring)
-                    //transition.updateSublayerTransformScale(node: strongSelf.avatarNode, scale: avatarScale, beginWithCurrentState: true)
                 }))
             }
         } else if data.groupCall == nil {
