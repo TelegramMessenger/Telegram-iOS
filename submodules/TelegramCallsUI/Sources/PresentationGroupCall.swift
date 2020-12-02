@@ -72,9 +72,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     private class SpeakingParticipantsContext {
-        private let speakingLevelThreshold: Float = 0.15
-        private let cutoffTimeout: Int32 = 1
-        private let silentTimeout: Int32 = 3
+        private let speakingLevelThreshold: Float = 0.1
+        private let cutoffTimeout: Int32 = 3
+        private let silentTimeout: Int32 = 2
         
         struct Participant {
             let timestamp: Int32
@@ -88,6 +88,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 self.speakingParticipantsPromise.set(self.speakingParticipants)
             }
         }
+        
+        private let audioLevelsPromise = Promise<[(PeerId, Float)]>()
         
         init() {
         }
@@ -124,12 +126,22 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 }
             }
             
+            var audioLevels: [(PeerId, Float)] = []
+            for (peerId, speaker) in validSpeakers {
+                audioLevels.append((peerId, speaker.level))
+            }
+            
             self.participants = validSpeakers
             self.speakingParticipants = speakingParticipants
+            self.audioLevelsPromise.set(.single(audioLevels))
         }
         
         func get() -> Signal<Set<PeerId>, NoError> {
             return self.speakingParticipantsPromise.get() |> distinctUntilChanged
+        }
+        
+        func getAudioLevels() -> Signal<[(PeerId, Float)], NoError> {
+            return self.audioLevelsPromise.get()
         }
     }
     
@@ -183,14 +195,13 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         return self.audioOutputStatePromise.get()
     }
     
-    private let audioLevelsPipe = ValuePipe<[(PeerId, Float)]>()
-    public var audioLevels: Signal<[(PeerId, Float)], NoError> {
-        return self.audioLevelsPipe.signal()
-    }
     private var audioLevelsDisposable = MetaDisposable()
     
- 
     private let speakingParticipantsContext = SpeakingParticipantsContext()
+    private var speakingParticipantsReportTimestamp: [PeerId: Double] = [:]
+    public var audioLevels: Signal<[(PeerId, Float)], NoError> {
+        return self.speakingParticipantsContext.getAudioLevels()
+    }
     
     private var participantsContextStateDisposable = MetaDisposable()
     private var participantsContext: GroupCallParticipantsContext?
@@ -382,7 +393,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                     removedSsrc.append(participantUpdate.ssrc)
                                     
                                     if participantUpdate.peerId == strongSelf.accountContext.account.peerId {
-                                        strongSelf._canBeRemoved.set(.single(true))
+                                        if case let .estabilished(_, _, ssrc, _) = strongSelf.internalState, ssrc == participantUpdate.ssrc {
+                                            strongSelf._canBeRemoved.set(.single(true))
+                                        }
                                     }
                                 } else if participantUpdate.peerId == strongSelf.accountContext.account.peerId {
                                     if case let .estabilished(_, _, ssrc, _) = strongSelf.internalState, ssrc != participantUpdate.ssrc {
@@ -552,9 +565,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             result.append((peerId, level))
                         }
                     }
-                    if !result.isEmpty {
-                        strongSelf.audioLevelsPipe.putNext(result)
-                    }
                     strongSelf.speakingParticipantsContext.update(levels: result)
                 }))
                 
@@ -568,6 +578,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     
                     strongSelf.myAudioLevelPipe.putNext(mappedLevel)
                     strongSelf.processMyAudioLevel(level: mappedLevel)
+                    if !strongSelf.isMutedValue.isEffectivelyMuted {
+                        strongSelf.speakingParticipantsContext.update(levels: [(strongSelf.account.peerId, mappedLevel)])
+                    }
                 }))
             }
         }
@@ -602,14 +615,35 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 self.participantsContext = participantsContext
                 self.participantsContextStateDisposable.set(combineLatest(queue: .mainQueue(),
                     participantsContext.state,
-                    participantsContext.numberOfActiveSpeakers,
-                    self.speakingParticipantsContext.get()
+                    participantsContext.numberOfActiveSpeakers |> deliverOnMainQueue,
+                    self.speakingParticipantsContext.get() |> deliverOnMainQueue
                 ).start(next: { [weak self] state, numberOfActiveSpeakers, speakingParticipants in
                     guard let strongSelf = self else {
                         return
                     }
                     
                     var topParticipants: [GroupCallParticipantsContext.Participant] = []
+                    
+                    var reportSpeakingParticipants: [PeerId] = []
+                    let timestamp = CACurrentMediaTime()
+                    for peerId in speakingParticipants {
+                        let shouldReport: Bool
+                        if let previousTimestamp = strongSelf.speakingParticipantsReportTimestamp[peerId] {
+                            shouldReport = previousTimestamp + 1.0 < timestamp
+                        } else {
+                            shouldReport = true
+                        }
+                        if shouldReport {
+                            strongSelf.speakingParticipantsReportTimestamp[peerId] = timestamp
+                            reportSpeakingParticipants.append(peerId)
+                        }
+                    }
+                    
+                    if !reportSpeakingParticipants.isEmpty {
+                        Queue.mainQueue().justDispatch {
+                            self?.participantsContext?.reportSpeakingParticipants(ids: reportSpeakingParticipants)
+                        }
+                    }
                     
                     var members = PresentationGroupCallMembers(
                         participants: [],

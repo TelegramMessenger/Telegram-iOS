@@ -230,6 +230,15 @@ public struct PresentationGroupCallMemberState: Equatable {
 public enum PresentationGroupCallMuteAction: Equatable {
     case muted(isPushToTalkActive: Bool)
     case unmuted
+    
+    public var isEffectivelyMuted: Bool {
+        switch self {
+            case let .muted(isPushToTalkActive):
+                return !isPushToTalkActive
+            case .unmuted:
+                return false
+        }
+    }
 }
 
 public struct PresentationGroupCallMembers: Equatable {

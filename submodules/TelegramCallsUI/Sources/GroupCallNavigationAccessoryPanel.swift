@@ -143,7 +143,6 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         
         self.contentNode.addSubnode(self.titleNode)
         self.contentNode.addSubnode(self.textNode)
-        self.contentNode.addSubnode(self.muteIconNode)
         
         self.contentNode.addSubnode(self.avatarsNode)
         
@@ -217,7 +216,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         }
     }
     
-    func updatePresentationData(_ presentationData: PresentationData) {
+    public func updatePresentationData(_ presentationData: PresentationData) {
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         
@@ -282,17 +281,12 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                     
                     let membersText: String
                     let membersTextIsActive: Bool
-                    if summaryState.numberOfActiveSpeakers != 0 {
-                        membersText = strongSelf.strings.VoiceChat_Panel_MembersSpeaking(Int32(summaryState.numberOfActiveSpeakers))
-                        membersTextIsActive = true
+                    if summaryState.participantCount == 0 {
+                        membersText = strongSelf.strings.VoiceChat_Panel_TapToJoin
                     } else {
-                        if summaryState.participantCount == 0 {
-                            membersText = strongSelf.strings.VoiceChat_Panel_TapToJoin
-                        } else {
-                            membersText = strongSelf.strings.VoiceChat_Panel_Members(Int32(summaryState.participantCount))
-                        }
-                        membersTextIsActive = false
+                        membersText = strongSelf.strings.VoiceChat_Panel_Members(Int32(summaryState.participantCount))
                     }
+                    membersTextIsActive = false
                     
                     if strongSelf.textIsActive != membersTextIsActive {
                         strongSelf.textIsActive = membersTextIsActive
@@ -359,24 +353,13 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                         strongSelf.micButton.view.insertSubview(audioLevelView, at: 0)
                     }
                     
-                    var value = value
-                    if value <= 0.15 {
-                        value = 0.0
-                    }
                     let level = min(1.0, max(0.0, CGFloat(value)))
-                    let avatarScale: CGFloat
-                    
                     strongSelf.audioLevelView?.updateLevel(CGFloat(value) * 2.0)
                     if value > 0.0 {
                         strongSelf.audioLevelView?.startAnimating()
-                        avatarScale = 1.03 + level * 0.1
                     } else {
                         strongSelf.audioLevelView?.stopAnimating(duration: 0.5)
-                        avatarScale = 1.0
                     }
-                    
-                    //let transition: ContainedViewLayoutTransition = .animated(duration: 0.15, curve: .spring)
-                    //transition.updateSublayerTransformScale(node: strongSelf.avatarNode, scale: avatarScale, beginWithCurrentState: true)
                 }))
             }
         } else if data.groupCall == nil {
@@ -384,17 +367,12 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             
             let membersText: String
             let membersTextIsActive: Bool
-            if data.numberOfActiveSpeakers != 0 {
-                membersText = self.strings.VoiceChat_Panel_MembersSpeaking(Int32(data.numberOfActiveSpeakers))
-                membersTextIsActive = true
+            if data.participantCount == 0 {
+                membersText = self.strings.VoiceChat_Panel_TapToJoin
             } else {
-                if data.participantCount == 0 {
-                    membersText = self.strings.VoiceChat_Panel_TapToJoin
-                } else {
-                    membersText = self.strings.VoiceChat_Panel_Members(Int32(data.participantCount))
-                }
-                membersTextIsActive = false
+                membersText = self.strings.VoiceChat_Panel_Members(Int32(data.participantCount))
             }
+            membersTextIsActive = false
             
             if self.textIsActive != membersTextIsActive {
                 self.textIsActive = membersTextIsActive
@@ -422,7 +400,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         
         if let avatarsContent = self.avatarsContent {
             let avatarsSize = self.avatarsNode.update(context: self.context, content: avatarsContent, itemSize: CGSize(width: 32.0, height: 32.0), animated: true, synchronousLoad: true)
-            transition.updateFrame(node: self.avatarsNode, frame: CGRect(origin: CGPoint(x: 7.0, y: floor((size.height - avatarsSize.height) / 2.0)), size: avatarsSize))
+            transition.updateFrame(node: self.avatarsNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - avatarsSize.width) / 2.0), y: floor((size.height - avatarsSize.height) / 2.0)), size: avatarsSize))
         }
         
         let joinButtonTitleSize = self.joinButtonTitleNode.updateLayout(CGSize(width: 150.0, height: .greatestFiniteMagnitude))
@@ -463,9 +441,9 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
         let textSize = self.textNode.updateLayout(CGSize(width: size.width, height: .greatestFiniteMagnitude))
         
-        let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: 9.0), size: titleSize)
+        let titleFrame = CGRect(origin: CGPoint(x: leftInset + 16.0, y: 9.0), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: titleFrame.maxY + 1.0), size: textSize))
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset + 16.0, y: titleFrame.maxY + 1.0), size: textSize))
         
         if let image = self.muteIconNode.image {
             transition.updateFrame(node: self.muteIconNode, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: titleFrame.minY + 5.0), size: image.size))

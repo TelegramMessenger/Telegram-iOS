@@ -640,8 +640,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         if let call = call {
                             mainWindow.hostView.containerView.endEditing(true)
                             let groupCallController = VoiceChatController(sharedContext: strongSelf, accountContext: call.accountContext, call: call)
-                            groupCallController.sourcePanel = call.sourcePanel
-                            call.sourcePanel = nil
+                            groupCallController.parentNavigationController = mainWindow.viewController as? NavigationController
                             strongSelf.groupCallController = groupCallController
                             strongSelf.mainWindow?.present(groupCallController, on: .calls)
                             strongSelf.hasOngoingCall.set(true)
@@ -987,7 +986,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
         } else if let groupCallController = self.groupCallController {
             if groupCallController.isNodeLoaded && groupCallController.view.superview == nil {
-                groupCallController.sourcePanel = sourcePanel
                 mainWindow.hostView.containerView.endEditing(true)
                 mainWindow.present(groupCallController, on: .calls)
             }

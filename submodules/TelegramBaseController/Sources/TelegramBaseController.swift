@@ -378,7 +378,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         return
                     }
                     
-                    let panelData = currentState ?? availableState
+                    let panelData = currentState != nil ? nil : availableState
                     
                     let wasEmpty = strongSelf.groupCallPanelData == nil
                     strongSelf.groupCallPanelData = panelData
@@ -403,6 +403,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                 if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
                     strongSelf.mediaAccessoryPanel?.0.containerNode.updatePresentationData(presentationData)
                     strongSelf.locationBroadcastAccessoryPanel?.updatePresentationData(presentationData)
+                    strongSelf.groupCallAccessoryPanel?.updatePresentationData(presentationData)
                 }
             }
         })

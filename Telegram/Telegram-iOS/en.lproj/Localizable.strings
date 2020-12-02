@@ -5917,8 +5917,6 @@ Sorry for the inconvenience.";
 "Media.LimitedAccessText" = "You've given Telegram access only to select number of photos.";
 "Media.LimitedAccessManage" = "Manage";
 
-"VoiceChat.BackTitle" = "Chat";
-
 "VoiceChat.StatusSpeaking" = "speaking";
 "VoiceChat.StatusListening" = "listening";
 
@@ -5944,7 +5942,6 @@ Sorry for the inconvenience.";
 
 "VoiceChat.UnmutePeer" = "Allow to Speak";
 "VoiceChat.MutePeer" = "Mute";
-"VoiceChat.InvitePeer" = "Invite";
 "VoiceChat.RemovePeer" = "Remove";
 "VoiceChat.RemovePeerConfirmation" = "Are you sure you want to remove %@ from the group chat?";
 "VoiceChat.RemovePeerRemove" = "Remove";
@@ -5985,3 +5982,6 @@ Sorry for the inconvenience.";
 "CHAT_VOICECHAT_START" = "%1$@ has started voice chat in the group %2$@";
 "CHAT_VOICECHAT_INVITE" = "%1$@ has invited %3$@ in the group %2$@";
 "CHAT_VOICECHAT_INVITE_YOU" = "%1$@ has invited you to voice chat in the group %1$@";
+
+"Call.VoiceChatInProgressTitle" = "Voice Chat in Progress";
+"Call.VoiceChatInProgressMessageCall" = "Leave voice chat in %1$@ and start a call with %2$@?";
